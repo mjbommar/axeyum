@@ -7,16 +7,20 @@ opened this session by generalizing the proven bounded packed-bit-vector string
 layout (ADR-0029) from bytes to fixed-width `E`-elements: a bounded `(Seq E)` is
 the same structure a bounded `String` uses (`String` ≈ `Seq` of bytes).
 
-- `cvc5-regress-clean/` — **15** clean files: **9** from the cvc5 sequences
+- `cvc5-regress-clean/` — **24** clean files: **10** from the cvc5 sequences
   regression suite (`references/cvc5/test/regress/cli/regress0/{seq,strings}`, a
-  gitignored shallow clone) plus **6** hand-authored `seq.nth`/`seq.at` files
-  (slice 2, each with a Z3-confirmed `:status`). Filtered to: a fixed-width
-  element sort (`Int`, `Bool`, or `(_ BitVec w)`); only the wired sequence
-  operators (slice 1 + `seq.nth`/`seq.at`; no
-  `seq.update`/`seq.rev`/`seq.replace`/`seq.indexof`); a machine-readable
+  gitignored shallow clone — `array3.smt2` is the slice-3 `seq.update` addition)
+  plus **6** hand-authored `seq.nth`/`seq.at` files (slice 2) and **8**
+  hand-authored `seq.update`/`seq.rev` files (slice 3), each with a `:status`
+  ground truth. Filtered to: a fixed-width element sort (`Int`, `Bool`, or
+  `(_ BitVec w)`); only the wired sequence operators (slice 1 + `seq.nth`/`seq.at`
+  + `seq.update`/`seq.rev`; no `seq.replace`/`seq.indexof`); a machine-readable
   `(set-info :status sat|unsat)` ground truth; and only plain commands (no
   `push`/`pop`, `get-value`, quantifiers, or datatypes). Files are prefixed with
-  their declared `:status`.
+  their declared `:status`. **Note:** Z3 4.13.3 does not support `seq.update` or
+  `seq.rev` (it errors on those constants), so those files have **no Z3
+  head-to-head** — the binary declines and the instance is `oracle_skipped`; the
+  `:status` ground truth (cvc5-semantics-derived) is the binding soundness check.
 
 ```sh
 target/release/axeyum-bench \
@@ -28,16 +32,32 @@ target/release/axeyum-bench \
 ## QF_SEQ numbers (axeyum solver vs Z3, 10 s)
 
 Slice 1 (open, 9 files): `files=9 sat=6 unsat=0 unknown=2 unsupported=1 agree=6
-DISAGREE=0`. Slice 2 (`seq.nth`/`seq.at`, 15 files):
+DISAGREE=0`. Slice 2 (`seq.nth`/`seq.at`, 15 files): `files=15 sat=10 unsat=1
+unknown=3 unsupported=1 agree=11 DISAGREE=0`. Slice 3
+(`seq.update`/`seq.rev`, 24 files):
 
 ```
-files=15 sat=10 unsat=1 unknown=3 unsupported=1 errors=0 agree=11 DISAGREE=0
+files=24 sat=15 unsat=4 unknown=4 unsupported=1 errors=0 agree=19 DISAGREE=0
 ```
 
-**DISAGREE=0** against both Z3 and the declared `:status`. Decided rose 6 → 11
-(the five new `seq.nth`/`seq.at` decides — four `sat`, one `unsat` — all agree
-with Z3). The three unknowns and one unsupported are sound declines (never a
-wrong verdict):
+**DISAGREE=0** against both Z3 (where Z3 supports the ops) and the declared
+`:status`. Decided rose 11 → 19 — the slice-3 additions: `seq.update`/`seq.rev`
+decide five `sat` (`array3`, `ground-reverse`, `ground-replace`, `oob-noop`,
+`span-truncate`) and three `unsat` (`not-identity`, `wrong-result`,
+`span-truncate`); plus a QF_S file (`issue6653-3-seq`) that the wider seq support
+now decides. The unknowns and one unsupported are sound declines (never a wrong
+verdict):
+
+- `unsat__rev__not-identity.smt2` — decided `unsat`: `rev([1,2]) = [1,2]` is
+  false; a no-op model of `seq.rev` would wrongly satisfy it.
+- `unsat__update__wrong-result.smt2` / `unsat__update__span-truncate.smt2` —
+  decided `unsat`: the asserted result contradicts the `STRING_UPDATE` overlay /
+  span-truncation semantics.
+- `sat__update__oob-noop.smt2` — decided `sat`: an out-of-bounds index makes
+  `seq.update` a no-op (`(seq.update [1,2] 5 [9]) = [1,2]`), total semantics.
+- `unsat__update__distinct-elems.smt2` — `unknown`: it threads `(seq.len x)`
+  through the `Int` bridge (the bounded-integer search cannot close it) — a sound
+  decline, never a wrong `sat`.
 
 - `unsat__nth__oob-functional.smt2` — decided `unsat`: the **same** out-of-bounds
   `(seq.nth s 0)` cannot equal both `7` and `9` (`seq.nth` is a function — the
@@ -69,8 +89,8 @@ same canonical well-formedness (length ≤ m; padding elements zero) a bounded
 - **Modeled operators** (denotation-preserving over the packed layout, mirroring
   their `str.*` counterparts with the element width swapped in for `8`):
   `seq.empty`, `seq.unit`, `seq.++`, `seq.len`, `seq.extract`, `=`/`distinct`,
-  `seq.prefixof`, `seq.suffixof`, `seq.contains` (slice 1), and `seq.nth`/`seq.at`
-  (slice 2).
+  `seq.prefixof`, `seq.suffixof`, `seq.contains` (slice 1), `seq.nth`/`seq.at`
+  (slice 2), and `seq.update`/`seq.rev` (slice 3).
 - **`seq.nth` (slice 2, sound out-of-bounds).** `(seq.nth s i)` is the SMT-LIB
   **partial** function: in-bounds (`0 ≤ i < len(s)`) the `i`-th element (the
   position mux); out-of-bounds an **unconstrained, fresh** value of the element
@@ -81,8 +101,17 @@ same canonical well-formedness (length ≤ m; padding elements zero) a bounded
   is explicitly **not** used (it would force a wrong `unsat` for out-of-bounds
   reads). `seq.at` (slice 2) is total: in-bounds the length-1 sub-sequence
   `[s[i]]`, out-of-bounds the empty sequence (mirrors `str.at`).
-- **Declined (slice 3):**
-  `seq.update`/`seq.rev`/`seq.replace`/`seq.replace_all`/`seq.indexof` — clean
+- **`seq.update`/`seq.rev` (slice 3, both total, no OOB subtlety).**
+  `(seq.update s i t)` overlays the sequence `t` onto `s` starting at index `i`,
+  **truncated to fit** within `s` (length unchanged), and is a **no-op** when
+  `i < 0` or `i ≥ len(s)` — exactly cvc5's `STRING_UPDATE`. `t` may be any
+  `(Seq E)` (the corpus uses `(seq.unit e)`, the length-1 span); the general span
+  is modeled. A **constant** index uses a pure-BV encoding (no `bv2nat`/integer
+  bridge) so a ground update stays bit-blastable. `(seq.rev s)` reverses the first
+  `len(s)` elements (`out[j] = s[len−1−j]`, a permutation; length unchanged) via a
+  pure-BV `k+j+1 = len` mux. Both copy the length field verbatim and preserve the
+  canonical padding, so `=`/`distinct` keep deciding via plain BV (in)equality.
+- **Declined (slice 4):** `seq.replace`/`seq.replace_all`/`seq.indexof` — clean
   `Unsupported` (Unknown), never a wrong verdict.
 - Element sorts with no sound fixed-width packing — `Real`, `String`, a nested
   `(Seq …)`, an uninterpreted/parametric sort, or `(_ BitVec 8)` — and sequences

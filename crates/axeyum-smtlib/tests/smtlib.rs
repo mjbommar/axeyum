@@ -2132,14 +2132,117 @@ fn seq_at_out_of_bounds_is_empty() {
     );
 }
 
+/// Evaluates a `(Seq Int)` script whose `seq.update`/`seq.rev` identity is fully
+/// ground — the lone declared `unused` sequence symbol (present only to register
+/// the `(Seq Int)` element width for `seq.unit`) is bound to a well-formed empty
+/// witness so its `declare`-time well-formedness assertion holds vacuously.
+fn eval_seq_ground(text: &str) -> bool {
+    eval_seq_script(text, "unused", SEQ_INT_TOTAL, pack_seq_int(&[]))
+}
+
 #[test]
-fn seq_update_family_still_declined() {
-    // The slice-3 ops stay cleanly declined (Unsupported), never a wrong verdict.
-    for op in ["seq.update", "seq.rev", "seq.replace", "seq.indexof"] {
+fn seq_rev_reverses_present_elements() {
+    // (seq.rev [1,2]) = [2,1]; a ground identity, oracle-checked by concrete eval.
+    let text = "(declare-fun unused () (Seq Int))\n\
+                (assert (= (seq.rev (seq.++ (seq.unit 1) (seq.unit 2)))\n\
+                           (seq.++ (seq.unit 2) (seq.unit 1))))\n(check-sat)\n";
+    assert!(eval_seq_ground(text), "rev [1,2] = [2,1]");
+    // The wrong reversal target [1,2] does NOT hold (rev is a real permutation).
+    let bad = "(declare-fun unused () (Seq Int))\n\
+               (assert (= (seq.rev (seq.++ (seq.unit 1) (seq.unit 2)))\n\
+                          (seq.++ (seq.unit 1) (seq.unit 2))))\n(check-sat)\n";
+    assert!(!eval_seq_ground(bad), "rev [1,2] ≠ [1,2]");
+}
+
+#[test]
+fn seq_rev_of_rev_is_identity_shape() {
+    // rev(rev [1,2,3]) = [1,2,3]: the involution holds (a permutation composed
+    // with itself is the identity over the present elements).
+    let three = "(seq.++ (seq.unit 1) (seq.++ (seq.unit 2) (seq.unit 3)))";
+    let text = format!(
+        "(declare-fun unused () (Seq Int))\n\
+         (assert (= (seq.rev (seq.rev {three})) {three}))\n(check-sat)\n"
+    );
+    assert!(eval_seq_ground(&text), "rev(rev s) = s");
+}
+
+#[test]
+fn seq_update_replaces_in_bounds_element() {
+    // (seq.update [1,2] 0 [9]) = [9,2]: the span at index 0 (a length-1 `t`) is
+    // overwritten, length unchanged. Ground identity, oracle by concrete eval.
+    let text = "(declare-fun unused () (Seq Int))\n\
+                (assert (= (seq.update (seq.++ (seq.unit 1) (seq.unit 2)) 0 (seq.unit 9))\n\
+                           (seq.++ (seq.unit 9) (seq.unit 2))))\n(check-sat)\n";
+    assert!(eval_seq_ground(text), "update [1,2]@0:=9 = [9,2]");
+    // Replacing the second slot instead: (seq.update [1,2] 1 [9]) = [1,9].
+    let text1 = "(declare-fun unused () (Seq Int))\n\
+                 (assert (= (seq.update (seq.++ (seq.unit 1) (seq.unit 2)) 1 (seq.unit 9))\n\
+                            (seq.++ (seq.unit 1) (seq.unit 9))))\n(check-sat)\n";
+    assert!(eval_seq_ground(text1), "update [1,2]@1:=9 = [1,9]");
+}
+
+#[test]
+fn seq_update_out_of_bounds_is_unchanged() {
+    // OOB index (i ≥ len): (seq.update [1,2] 5 [9]) = [1,2] (a no-op, total).
+    let text = "(declare-fun unused () (Seq Int))\n\
+                (assert (= (seq.update (seq.++ (seq.unit 1) (seq.unit 2)) 5 (seq.unit 9))\n\
+                           (seq.++ (seq.unit 1) (seq.unit 2))))\n(check-sat)\n";
+    assert!(eval_seq_ground(text), "OOB update is unchanged");
+    // Negative index is also out of bounds → unchanged.
+    let neg = "(declare-fun unused () (Seq Int))\n\
+               (assert (= (seq.update (seq.++ (seq.unit 1) (seq.unit 2)) (- 1) (seq.unit 9))\n\
+                          (seq.++ (seq.unit 1) (seq.unit 2))))\n(check-sat)\n";
+    assert!(eval_seq_ground(neg), "negative-index update is unchanged");
+}
+
+#[test]
+fn seq_update_multi_element_span_truncates() {
+    // A multi-element `t` overlays a span, truncated to fit `s`:
+    // (seq.update [1,2,3] 1 [8,9]) = [1,8,9] (the span [8,9] lands at indices 1,2).
+    let s = "(seq.++ (seq.unit 1) (seq.++ (seq.unit 2) (seq.unit 3)))";
+    let t = "(seq.++ (seq.unit 8) (seq.unit 9))";
+    let text = format!(
+        "(declare-fun unused () (Seq Int))\n\
+         (assert (= (seq.update {s} 1 {t})\n\
+                    (seq.++ (seq.unit 1) (seq.++ (seq.unit 8) (seq.unit 9)))))\n(check-sat)\n"
+    );
+    assert!(
+        eval_seq_ground(&text),
+        "span update [1,2,3]@1:=[8,9] = [1,8,9]"
+    );
+    // Truncation: (seq.update [1,2,3] 2 [8,9]) = [1,2,8] (the 9 overhangs the end).
+    let text2 = format!(
+        "(declare-fun unused () (Seq Int))\n\
+         (assert (= (seq.update {s} 2 {t})\n\
+                    (seq.++ (seq.unit 1) (seq.++ (seq.unit 2) (seq.unit 8)))))\n(check-sat)\n"
+    );
+    assert!(eval_seq_ground(&text2), "span overhang is truncated");
+}
+
+#[test]
+fn seq_update_eq_distinct_elements_is_unsat_shaped() {
+    // Mirrors cvc5 `distinct-update`: y = update x 0 [a], z = update x 0 [b],
+    // a ≠ b, |x| > 0 ⇒ y ≠ z, so (= y z) is unsatisfiable. Checked over a witness
+    // x = [5] with a = 1, b = 2: the update equality is structurally false.
+    let text = "(declare-fun x () (Seq Int))\n\
+                (assert (= (seq.update x 0 (seq.unit 1)) (seq.update x 0 (seq.unit 2))))\n\
+                (assert (= (seq.len x) 1))\n(check-sat)\n";
+    // With x = [5], LHS = [1], RHS = [2], so the equality (the first assertion) is
+    // false: no witness of this shape satisfies it (a wrong `unsat` would be a bug).
+    assert!(
+        !eval_seq_script(text, "x", SEQ_INT_TOTAL, pack_seq_int(&[5])),
+        "update x@0:=1 ≠ update x@0:=2 for nonempty x"
+    );
+}
+
+#[test]
+fn seq_replace_family_still_declined() {
+    // The slice-4 ops stay cleanly declined (Unsupported), never a wrong verdict.
+    for op in ["seq.replace", "seq.replace_all", "seq.indexof"] {
         let text = format!(
-            "(declare-fun s () (Seq Int))\n(assert (= (seq.len ({op} s)) 0))\n(check-sat)\n"
+            "(declare-fun s () (Seq Int))\n(assert (= (seq.len ({op} s s s)) 0))\n(check-sat)\n"
         );
-        let err = parse_script(&text).expect_err("slice-3 op declines");
+        let err = parse_script(&text).expect_err("slice-4 op declines");
         assert!(matches!(err, SmtError::Unsupported(_)), "{op}: got {err:?}");
     }
 }

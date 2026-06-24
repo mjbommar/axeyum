@@ -3396,8 +3396,14 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
 // ([`SeqInfo::drain_nth_congruence`]) closing semantically-equal operands —
 // `seq.nth` stays a function even where its value is unspecified. `seq.at` is the
 // **total** unit-sub-sequence (empty out-of-bounds), mirroring `str.at`.
-// `seq.update`/`seq.rev`/`seq.replace`/`seq.replace_all`/`seq.indexof` remain
-// declined (slice 3).
+//
+// `seq.update` / `seq.rev` are wired (slice 3). Both are **total** functions over
+// the packed layout with no unconstrained-out-of-bounds subtlety: `(seq.update s
+// i t)` overlays `t`'s elements onto `s` at `[i, i+len(t))` (truncated to fit;
+// out-of-bounds `i` is a no-op), keeping `len(s)` ([`seq_update`]); `(seq.rev s)`
+// reverses the first `len(s)` elements ([`seq_rev`]) — a permutation. Both copy
+// the length field verbatim and preserve the canonical padding.
+// `seq.replace`/`seq.replace_all`/`seq.indexof` remain declined (slice 4).
 
 /// Bounded-int element width for `(Seq Int)`: an `Int` element is modeled as a
 /// two's-complement `BitVec(SEQ_INT_WIDTH)`. The slice-1 sequence operators only
@@ -4348,6 +4354,205 @@ fn seq_at(arena: &mut TermArena, seq: &SeqInfo, s: TermId, i: TermId) -> Result<
     arena.concat(content, rlen).map_err(SmtError::Ir)
 }
 
+/// `(seq.rev s)` — the **total** reversal of `s`: the first `len(s)` elements in
+/// reverse order, `len(s)` unchanged, padding (above the length) zero. Per
+/// SMT-LIB Sequences / cvc5 `STRING_REV` this is a pure permutation of the
+/// present elements (`out[j] = s[len−1−j]` for `j < len(s)`), so it is
+/// denotation-preserving within the bound and packs back into `s`'s own
+/// max-length layout (length field copied verbatim).
+///
+/// Each output slot `j` selects its source element by a bounded **pure-BV** mux
+/// over the `≤ m` source slots `k`: `out[j] = s[k]` exactly when `k + j + 1 = len`
+/// (i.e. `k = len − 1 − j`), which already implies `j < len` and `k < len`. The
+/// match `k + j + 1 = len` is decided as a plain bit-vector equality (no `bv2nat`
+/// / integer bridge — keeping the result a ground BV problem the bit-blaster can
+/// close). Slots at or above the length match no `k`, so the slot folds to the
+/// zero default, preserving the canonical well-formed padding so `=`/`distinct`
+/// keep deciding via plain BV equality.
+fn seq_rev(arena: &mut TermArena, seq: &SeqInfo, s: TermId) -> Result<TermId, SmtError> {
+    let (ew, m) = seq_max_len(arena, seq, s)?;
+    let lwm = len_width(m);
+    let len_field = seq_len_field(arena, s, m)?;
+    // Compare `k + j + 1` (a small constant, ≤ 2m) against `len` in a width wide
+    // enough to hold `2m` so the constant never overflows: `len_width(2m)` bits.
+    let cw = len_width(2 * m);
+    let len_w = if cw > lwm {
+        arena.zero_ext(cw - lwm, len_field)?
+    } else {
+        len_field
+    };
+    // `out[j]` for `j = 0..m`, low slot first; assembled high-to-low below.
+    let mut out_elems = Vec::with_capacity(m as usize);
+    for j in 0..m {
+        // Mux: pick `s[k]` when `k + j + 1 == len`. This is the (unique) source
+        // index `len−1−j`; it also forces `j < len` (else `k+j+1 > len` for all k).
+        let mut elem = arena.bv_const(ew, 0)?;
+        for k in 0..m {
+            let kj1 = arena.bv_const(cw, u128::from(k + j + 1))?;
+            let hit = arena.eq(kj1, len_w)?;
+            let ek = seq_elem_m(arena, s, k, m, ew)?;
+            elem = arena.ite(hit, ek, elem)?;
+        }
+        out_elems.push(elem);
+    }
+    let mut content: Option<TermId> = None;
+    for j in (0..m as usize).rev() {
+        let e = out_elems[j];
+        content = Some(match content {
+            None => e,
+            Some(acc) => arena.concat(acc, e)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    // Length is unchanged by reversal.
+    arena.concat(content, len_field).map_err(SmtError::Ir)
+}
+
+/// `(seq.update s i t)` — `s` with the span starting at index `i` overwritten by
+/// the sequence `t`, **truncated to fit within `s`** (length unchanged); the
+/// SMT-LIB Sequences / cvc5 `STRING_UPDATE` **total** function. Out of bounds
+/// (`i < 0` or `i ≥ len(s)`) it is `s` **unchanged** (a no-op). In bounds, output
+/// slot `j` is `t[j − i]` for `i ≤ j < i + len(t)` (and `j < len(s)`, so any
+/// overhang of `t` past the end is dropped), else `s[j]`. The corpus's
+/// `seq.update`s are span replacements (`(seq.update s i (seq.unit e))`, the
+/// length-1 case), but `t` may be any `(Seq E)`; this models the general span,
+/// not just the single element. The result is packed in `s`'s own layout (length
+/// field copied verbatim, padding preserved).
+// `s` (target), `i` (index), `t` (replacement) mirror the SMT-LIB argument order.
+#[allow(clippy::many_single_char_names)]
+fn seq_update(
+    arena: &mut TermArena,
+    seq: &SeqInfo,
+    s: TermId,
+    i: TermId,
+    t: TermId,
+) -> Result<TermId, SmtError> {
+    let (ews, m) = seq_max_len(arena, seq, s)?;
+    let (ewt, mt) = seq_max_len(arena, seq, t)?;
+    if ews != ewt {
+        return Err(SmtError::Unsupported(format!(
+            "seq.update replacement element width ({ewt}) differs from the target's ({ews})"
+        )));
+    }
+    let ew = ews;
+    // Constant index → a pure-BV encoding (no `bv2nat`/integer bridge), so a
+    // ground `seq.update` stays a bit-blastable BV problem the solver can decide.
+    if let TermNode::IntConst(iv) = arena.node(i) {
+        return seq_update_const(arena, s, t, *iv, ew, m, mt);
+    }
+    let lwm = len_width(m);
+    let len_field = seq_len_field(arena, s, m)?;
+    let len_i = arena.bv2nat(len_field)?;
+    let tlen_field = seq_len_field(arena, t, mt)?;
+    // `in_bounds(i)`: `0 ≤ i < len(s)`. Out of bounds the whole op is a no-op.
+    let zero_i = arena.int_const(0);
+    let i_nonneg = arena.int_ge(i, zero_i)?;
+    let i_below = arena.int_lt(i, len_i)?;
+    let i_in_bounds = arena.and(i_nonneg, i_below)?;
+    let mut out_elems = Vec::with_capacity(m as usize);
+    for j in 0..m {
+        let s_elem = seq_elem_m(arena, s, j, m, ew)?;
+        // `rel = j − i`: the index into `t` for this output slot (valid only when
+        // `0 ≤ rel < len(t)`). Pick `t[rel]` by a bounded `Int`-equality mux over
+        // `t`'s `≤ mt` source slots, gated by `rel < len(t)` (truncate overhang).
+        let jconst = arena.int_const(i128::from(j));
+        let rel = arena.int_sub(jconst, i)?;
+        let mut t_elem = arena.bv_const(ew, 0)?;
+        let mut from_t = arena.bool_const(false);
+        for k in 0..mt {
+            let kconst = arena.int_const(i128::from(k));
+            let is_k = arena.eq(rel, kconst)?;
+            let kbv = arena.bv_const(len_width(mt), u128::from(k))?;
+            let k_active = arena.bv_ult(kbv, tlen_field)?;
+            let hit = arena.and(is_k, k_active)?;
+            let ek = seq_elem_m(arena, t, k, mt, ew)?;
+            t_elem = arena.ite(hit, ek, t_elem)?;
+            from_t = arena.or(from_t, hit)?;
+        }
+        // This slot takes `t`'s element only when `i` is in bounds, `j` is within
+        // `s`'s length (so the slot is real content, not padding), and `j` falls
+        // in the replacement span `[i, i+len(t))` (`from_t`). Otherwise it keeps
+        // `s[j]` (the slot's existing value, padding included).
+        let jbv = arena.bv_const(lwm, u128::from(j))?;
+        let j_active = arena.bv_ult(jbv, len_field)?;
+        let take0 = arena.and(i_in_bounds, j_active)?;
+        let take = arena.and(take0, from_t)?;
+        let slot = arena.ite(take, t_elem, s_elem)?;
+        out_elems.push(slot);
+    }
+    let mut content: Option<TermId> = None;
+    for j in (0..m as usize).rev() {
+        let e = out_elems[j];
+        content = Some(match content {
+            None => e,
+            Some(acc) => arena.concat(acc, e)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    // Length is unchanged by update.
+    arena.concat(content, len_field).map_err(SmtError::Ir)
+}
+
+/// `(seq.update s i t)` for a **constant** index `iv`, encoded in pure BV (no
+/// `bv2nat`/integer bridge) so a ground update stays bit-blastable. The index is
+/// resolved against the literal directly: `iv < 0` or `iv ≥ m` (≥ the max length,
+/// hence ≥ `len(s)`) is the no-op (return `s`); otherwise each affected output
+/// slot `j ∈ [iv, iv+len(t))` (with `j < m`) takes `t[j−iv]` exactly when `iv` is
+/// truly in bounds (`iv < len(s)`), the slot is real content (`j < len(s)`), and
+/// `t`'s source slot is present (`j−iv < len(t)`) — all decided in BV. Slots
+/// outside the span keep `s[j]`. Length and padding are `s`'s, copied verbatim.
+fn seq_update_const(
+    arena: &mut TermArena,
+    s: TermId,
+    t: TermId,
+    iv: i128,
+    ew: u32,
+    m: u32,
+    mt: u32,
+) -> Result<TermId, SmtError> {
+    // Out of bounds for **every** possible `len(s) ≤ m`: a no-op. (`iv ≥ m ⇒ iv ≥
+    // len(s)`; `iv < 0` is the negative-index no-op.)
+    if iv < 0 || iv >= i128::from(m) {
+        return Ok(s);
+    }
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let iu = iv as u32; // 0 ≤ iv < m, fits.
+    let lwm = len_width(m);
+    let len_field = seq_len_field(arena, s, m)?;
+    // `iv < len(s)` (truly in bounds): a BV comparison against the literal `iv`.
+    let iv_bv = arena.bv_const(lwm, u128::from(iu))?;
+    let i_in_bounds = arena.bv_ult(iv_bv, len_field)?;
+    let tlen_field = seq_len_field(arena, t, mt)?;
+    let mut content: Option<TermId> = None;
+    for j in (0..m).rev() {
+        let s_elem = seq_elem_m(arena, s, j, m, ew)?;
+        let out = if j >= iu && (j - iu) < mt {
+            // `j` is inside the span `[iv, iv+mt)` and reads `t`'s slot `k = j−iv`.
+            let k = j - iu;
+            let t_elem = seq_elem_m(arena, t, k, mt, ew)?;
+            // The slot takes `t[k]` only when `iv` is in bounds, `j` is below
+            // `len(s)` (real content), and `k` is below `len(t)` (`t` has that
+            // element — truncates any overhang). All three in BV.
+            let jbv = arena.bv_const(lwm, u128::from(j))?;
+            let j_active = arena.bv_ult(jbv, len_field)?;
+            let kbv = arena.bv_const(len_width(mt), u128::from(k))?;
+            let k_active = arena.bv_ult(kbv, tlen_field)?;
+            let take0 = arena.and(i_in_bounds, j_active)?;
+            let take = arena.and(take0, k_active)?;
+            arena.ite(take, t_elem, s_elem)?
+        } else {
+            // Outside the replacement span: keep `s`'s slot verbatim.
+            s_elem
+        };
+        content = Some(match content {
+            None => out,
+            Some(acc) => arena.concat(acc, out)?,
+        });
+    }
+    let content = content.expect("m ≥ 1");
+    arena.concat(content, len_field).map_err(SmtError::Ir)
+}
+
 /// Coerces a `seq.unit` element argument to a `BitVec(ew)`: an `Int` element is
 /// `int2bv`-narrowed to the bounded width (its low `ew` bits, two's-complement),
 /// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through. An
@@ -4450,11 +4655,23 @@ fn apply_seq_op(
             need(2)?;
             seq_at(arena, seq, args[0], args[1])?
         }
-        // Declined (slice 3): the in-place rewrites and search ops.
-        "seq.update" | "seq.rev" | "seq.replace" | "seq.replace_all" | "seq.indexof"
-        | "seq.nth_total" => {
+        // `(seq.update s i t)` — `s` with the span at `i` overwritten by `t`,
+        // truncated to fit (length unchanged); out-of-bounds `i` is a no-op. A
+        // total function with no unconstrained-OOB subtlety (slice 3).
+        "seq.update" => {
+            need(3)?;
+            seq_update(arena, seq, args[0], args[1], args[2])?
+        }
+        // `(seq.rev s)` — the total reversal of `s` (length unchanged), a
+        // permutation of the present elements (slice 3).
+        "seq.rev" => {
+            need(1)?;
+            seq_rev(arena, seq, args[0])?
+        }
+        // Declined (slice 4): the search/replace ops.
+        "seq.replace" | "seq.replace_all" | "seq.indexof" | "seq.nth_total" => {
             return Err(SmtError::Unsupported(format!(
-                "sequence operator `{op}` is outside the slice-2 sound subset (ADR-0029)"
+                "sequence operator `{op}` is outside the slice-3 sound subset (ADR-0029)"
             )));
         }
         _ => return Ok(None),
