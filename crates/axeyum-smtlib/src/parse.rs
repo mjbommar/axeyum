@@ -272,6 +272,10 @@ fn parse_command<'a>(
         "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
         "define-fun" => parse_define_fun(script, aliases, macros, sort_aliases, named, items)?,
+        // `(define-const c S body)` is exact sugar for `(define-fun c () S body)`
+        // (SMT-LIB §3.7.2 abbreviation): a nullary definition. We reuse the
+        // no-args alias path verbatim, so soundness is identical to `define-fun`.
+        "define-const" => parse_define_const(script, aliases, macros, sort_aliases, named, items)?,
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
         // `(declare-sort U 0)` — an arity-0 uninterpreted sort, modeled as a
         // `BitVec(W)` (soundness on [`uninterpreted_sort_width`]). Arity ≥ 1
@@ -535,6 +539,35 @@ fn parse_define_fun<'a>(
         );
         Ok(())
     }
+}
+
+/// `(define-const c S body)` — the nullary `define-fun` abbreviation
+/// (SMT-LIB §3.7.2). Items are `[define-const, c, S, body]` (length 4), versus
+/// `define-fun`'s `[define-fun, c, (), S, body]`. We parse the same pieces and
+/// dispatch straight to [`parse_define_fun_alias`], so the binding semantics
+/// (sort check + `aliases` insertion) are byte-for-byte identical to a no-args
+/// `define-fun`.
+fn parse_define_const<'a>(
+    script: &mut Script,
+    aliases: &mut HashMap<String, TermId>,
+    macros: &mut HashMap<String, MacroDef<'a>>,
+    sort_aliases: &HashMap<String, Sort>,
+    named: &mut HashMap<String, TermId>,
+    items: &'a [SExpr],
+) -> Result<(), SmtError> {
+    exact_len(items, 4, "define-const")?;
+    let name = atom_at(items, 1)?;
+    let declared_sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
+    let body_expr = sexpr_at(items, 3)?;
+    parse_define_fun_alias(
+        script,
+        aliases,
+        macros,
+        named,
+        name,
+        declared_sort,
+        body_expr,
+    )
 }
 
 fn parse_define_fun_alias(
@@ -1020,6 +1053,16 @@ fn queue_list_eval<'a>(
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
         let is_forall = head.atom() == Some("forall");
         queue_quantifier(arena, items, is_forall, frames)?;
+    } else if head.atom() == Some("as") && items.len() == 3 {
+        // Sort ascription `(as t S)` denotes `t` — it only annotates the sort of
+        // an otherwise-determined term (SMT-LIB §3.6, "qualified identifier").
+        // Quantifier-free axeyum already infers every term's sort, so the
+        // ascription is an identity we drop: evaluate the inner term and ignore
+        // the trailing sort s-expr (which is a *sort*, not a term, so it must
+        // not be queued for term evaluation). The `((as const S) v)` constant-
+        // array form is an *application* whose head is itself `(as const S)`;
+        // it has a list head and is handled in [`apply_op`], not here.
+        frames.push(Frame::Eval(&items[1]));
     } else if let Some(name) = head.atom()
         && is_fp_rounded_op(name)
     {
@@ -2242,6 +2285,12 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
             let bytes = string_concat_const(arena, args)?;
             pack_string_literal(arena, &bytes)?
         }
+        // `(and x)` / `(or x)` with a single operand denote `x`: an n-ary
+        // connective folded over one argument is that argument (the identity of
+        // `∧`/`∨`). SMT-LIB's `:left-assoc` grammar nominally wants ≥2 operands,
+        // but cvc5/Z3 both accept the unary form, so we mirror them. Zero or ≥2
+        // operands keep the existing `fold` path (which rejects 0 and folds ≥2).
+        "and" | "or" if args.len() == 1 => args[0],
         "and" => fold(arena, TermArena::and)?,
         "or" => fold(arena, TermArena::or)?,
         "xor" => fold(arena, TermArena::xor)?,
@@ -2609,9 +2658,12 @@ fn apply_op(arena: &mut TermArena, items: &[SExpr], args: &[TermId]) -> Result<T
                 _ => arena.real_is_int(args[0])?,
             }
         }
-        "bv2nat" => {
+        // `bv2nat` (SMT-LIB 2.6) and `ubv_to_int` (the SMT-LIB 2.7 / cvc5 spelling)
+        // are the *same* operator: the unsigned (natural) value of a bit-vector.
+        // Both map to [`TermArena::bv2nat`] verbatim.
+        "bv2nat" | "ubv_to_int" => {
             if args.len() != 1 {
-                return Err(SmtError::Syntax("`bv2nat` expects 1 argument".to_owned()));
+                return Err(SmtError::Syntax(format!("`{op}` expects 1 argument")));
             }
             arena.bv2nat(args[0])?
         }
@@ -3042,7 +3094,11 @@ fn apply_parameterized(
                 .ok_or_else(|| SmtError::Syntax("`divisible` index".to_owned()))?;
             arena.int_divisible(args[0], n)?
         }
-        "int2bv" => {
+        // `(_ int2bv N)` (SMT-LIB 2.6) and `(_ int_to_bv N)` (the SMT-LIB 2.7 /
+        // cvc5 spelling) are the *same* indexed operator: the `N`-bit two's-
+        // complement pattern of an integer reduced modulo `2^N`. Both map to
+        // [`TermArena::int2bv`] verbatim.
+        "int2bv" | "int_to_bv" => {
             expect_head_len(3)?;
             arena.int2bv(index(2)?, args[0])?
         }

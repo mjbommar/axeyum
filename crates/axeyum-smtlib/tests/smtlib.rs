@@ -1823,6 +1823,145 @@ fn declared_symbol_wins_over_named_alias() {
     );
 }
 
+#[test]
+fn define_const_is_nullary_define_fun() {
+    // `(define-const g Bool body)` must bind `g` exactly like
+    // `(define-fun g () Bool body)`: a later bare `g` resolves to `body`.
+    let s = parse_script(
+        "(set-logic QF_UF)\n(declare-const y Bool)\n\
+         (define-const g Bool (not y))\n(assert g)",
+    )
+    .unwrap();
+    // Under y = false, `g = (not y) = true`, so the assertion is true.
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&s, "y"), Value::Bool(false));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(true),
+        "`g` must alias `(not y)`"
+    );
+    // A wrong arity (the `define-fun` `()` slot accidentally present) is rejected.
+    assert!(matches!(
+        parse_script("(set-logic QF_UF)\n(define-const g () Bool true)"),
+        Err(SmtError::Syntax(_))
+    ));
+}
+
+#[test]
+fn define_const_sort_mismatch_is_rejected() {
+    // Body sort must match the declared sort, exactly as `define-fun` enforces.
+    assert!(parse_script("(set-logic QF_BV)\n(define-const g Bool (_ bv1 8))").is_err());
+}
+
+#[test]
+fn sort_ascription_is_identity() {
+    // `(as e0 I)` denotes `e0`: the assertion `(= (as e0 I) (as e0 I))` is the
+    // reflexive equality `e0 = e0`, true under every assignment. Critically the
+    // sort `I` must NOT be parsed as a term (it is an uninterpreted sort here).
+    let s = parse_script(
+        "(set-logic QF_UF)\n(declare-sort I 0)\n(declare-fun e0 () I)\n\
+         (assert (= (as e0 I) (as e0 I)))",
+    )
+    .unwrap();
+    assert_eq!(s.assertions.len(), 1);
+    // Concrete check over a Bool-sorted ascription (so `eval` needs no UF model):
+    // `(as x Bool)` denotes `x`, so `(= (as x Bool) (not x))` is false under any x.
+    let sb =
+        parse_script("(set-logic QF_UF)\n(declare-const x Bool)\n(assert (= (as x Bool) (not x)))")
+            .unwrap();
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&sb, "x"), Value::Bool(true));
+    assert_eq!(
+        eval(&sb.arena, sb.assertions[0], &asg).unwrap(),
+        Value::Bool(false),
+        "`(as x Bool)` must denote `x`"
+    );
+    // The ascribed term shares structure with the bare term: `(as e0 I) = e0`.
+    let bare = parse_script(
+        "(set-logic QF_UF)\n(declare-sort I 0)\n(declare-fun e0 () I)\n(assert (= e0 e0))",
+    )
+    .unwrap();
+    assert_eq!(
+        TermStats::compute(&s.arena, &s.assertions).dag_nodes,
+        TermStats::compute(&bare.arena, &bare.assertions).dag_nodes,
+        "ascription adds no nodes"
+    );
+}
+
+#[test]
+fn unary_and_or_are_identity() {
+    // `(and x)` / `(or x)` denote `x`. Under x = false both assertions reduce to
+    // `x`, so both evaluate to false.
+    let s = parse_script(
+        "(set-logic QF_UF)\n(declare-const x Bool)\n(assert (and x))\n(assert (or x))",
+    )
+    .unwrap();
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&s, "x"), Value::Bool(false));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
+    assert_eq!(
+        eval(&s.arena, s.assertions[1], &asg).unwrap(),
+        Value::Bool(false)
+    );
+    // `(and x)` is structurally just `x` (no extra connective node).
+    assert_eq!(
+        s.assertions[0], s.assertions[1],
+        "both alias the same `x` node"
+    );
+}
+
+#[test]
+fn ubv_to_int_aliases_bv2nat() {
+    // `ubv_to_int` (SMT-LIB 2.7) and `bv2nat` (2.6) are the same operator; the
+    // two parses must produce structurally identical terms.
+    let a = parse_script(
+        "(set-logic QF_UFBVLIA)\n(declare-fun a () (_ BitVec 4))\n(assert (= (ubv_to_int a) 5))",
+    )
+    .unwrap();
+    let b = parse_script(
+        "(set-logic QF_UFBVLIA)\n(declare-fun a () (_ BitVec 4))\n(assert (= (bv2nat a) 5))",
+    )
+    .unwrap();
+    // Concrete check: under a = #b0101 = 5, the assertion is true.
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&a, "a"), Value::Bv { width: 4, value: 5 });
+    assert_eq!(
+        eval(&a.arena, a.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        TermStats::compute(&a.arena, &a.assertions).dag_nodes,
+        TermStats::compute(&b.arena, &b.assertions).dag_nodes,
+        "ubv_to_int and bv2nat lower identically"
+    );
+}
+
+#[test]
+fn int_to_bv_aliases_int2bv() {
+    // `(_ int_to_bv N)` (SMT-LIB 2.7) and `(_ int2bv N)` (2.6) are the same
+    // indexed operator (integer reduced mod 2^N to an N-bit pattern).
+    let a = parse_script("(set-logic QF_UFBVLIA)\n(declare-fun t () Int)\n(assert (= ((_ int_to_bv 3) t) (_ bv2 3)))").unwrap();
+    // Under t = 10, 10 mod 8 = 2 = #b010, so the assertion is true.
+    let mut asg = Assignment::new();
+    asg.set(sym_of(&a, "t"), Value::Int(10));
+    assert_eq!(
+        eval(&a.arena, a.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    let b = parse_script(
+        "(set-logic QF_UFBVLIA)\n(declare-fun t () Int)\n(assert (= ((_ int2bv 3) t) (_ bv2 3)))",
+    )
+    .unwrap();
+    assert_eq!(
+        TermStats::compute(&a.arena, &a.assertions).dag_nodes,
+        TermStats::compute(&b.arena, &b.assertions).dag_nodes,
+        "int_to_bv and int2bv lower identically"
+    );
+}
+
 fn dt_of(script: &axeyum_smtlib::Script, name: &str) -> axeyum_ir::DatatypeId {
     script
         .arena
