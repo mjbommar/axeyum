@@ -1,0 +1,561 @@
+{
+  "config": {
+    "backend": "axeyum-solver check_auto",
+    "backend_kind": "solver",
+    "cnf_clause_budget": null,
+    "cnf_inprocessing": false,
+    "cnf_variable_budget": null,
+    "cnf_vivify": false,
+    "compare_backend": "z3 4.13.3.0",
+    "compare_z3": true,
+    "config_hash": "7d194dc67c7efa06",
+    "corpus": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean",
+    "corpus_hash": "69436a4b2485a85e",
+    "corpus_source": null,
+    "hardware": {
+      "arch": "x86_64",
+      "hostname": null,
+      "os": "linux",
+      "parallelism": 16
+    },
+    "harness": "axeyum-bench 0.1.0",
+    "jobs": 4,
+    "limit": null,
+    "logic": "QF_AUFBV",
+    "native_cdcl": false,
+    "node_budget": null,
+    "preprocess": false,
+    "query_plan": {
+      "mode": "full",
+      "refine_adaptive_batch": false,
+      "refine_batch": 1,
+      "refine_rounds": 16,
+      "refine_select": "first",
+      "sat_replay_failure_policy": "soundness-alarm"
+    },
+    "rewrite": {
+      "enabled_rule_ids": [],
+      "mode": "off",
+      "rule_set": null
+    },
+    "seed": "none",
+    "selected_families": null,
+    "timeout_ms": 10000
+  },
+  "instances": [
+    {
+      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), List([Atom(\"_\"), Atom(\"BitVec\"), Atom(\"8\")]), Atom(\"Bool\")])",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__arrays__issue4240.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.300813
+      },
+      "dag_nodes": 17,
+      "distinct_symbols": 1,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__aufbv__bug338.smt2",
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support array symbols",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 15,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 17,
+          "digest": "56582899bafd1979",
+          "tree_nodes": 27
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 17,
+            "digest": "56582899bafd1979",
+            "tree_nodes": 27
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 17,
+        "input_tree_nodes": 27,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 17,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 9,
+        "output_tree_nodes": 27,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 27
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.27261100000000005
+      },
+      "dag_nodes": 37,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__aufbv__bug580.delta.smt2",
+      "max_depth": 14,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support array symbols",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 37,
+          "digest": "9ca04fabd540ee89",
+          "tree_nodes": 114
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 37,
+            "digest": "9ca04fabd540ee89",
+            "tree_nodes": 114
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 37,
+        "input_tree_nodes": 114,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 37,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 14,
+        "output_tree_nodes": 114,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 114
+    },
+    {
+      "detail": "operator `eqrange`",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__eqrange1.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), List([Atom(\"_\"), Atom(\"BitVec\"), Atom(\"1\")]), Atom(\"Bool\")])",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__issue5743.smt2",
+      "outcome": "unsupported"
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.095997
+      },
+      "dag_nodes": 13,
+      "detail": "EncodingBudget: estimated 157298694 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+      "distinct_symbols": 5,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__unconstrained__array1.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 13,
+          "digest": "f3ad2a6c9f01341b",
+          "tree_nodes": 16
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 13,
+            "digest": "f3ad2a6c9f01341b",
+            "tree_nodes": 16
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 13,
+        "input_tree_nodes": 16,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 13,
+        "output_distinct_symbols": 5,
+        "output_max_depth": 6,
+        "output_tree_nodes": 16,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 16
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.30522900000000003
+      },
+      "dag_nodes": 8,
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__unconstrained__ite.smt2",
+      "max_depth": 4,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support array symbols",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "(error \"line 5 column 43: logic supports only arrays from bitvectors to bitvectors\")",
+          "solve_ms": 9,
+          "verdict": null
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "3c1d81f213934f2a",
+          "tree_nodes": 8
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "3c1d81f213934f2a",
+            "tree_nodes": 8
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 8,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 4,
+        "output_tree_nodes": 8,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 8
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.6403
+      },
+      "dag_nodes": 150,
+      "distinct_symbols": 2,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress1__aufbv__bug580.smt2",
+      "max_depth": 19,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support array symbols",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 11,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 150,
+          "digest": "929eabf47660189a",
+          "tree_nodes": 1184
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 150,
+            "digest": "929eabf47660189a",
+            "tree_nodes": 1184
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 150,
+        "input_tree_nodes": 1184,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 150,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 19,
+        "output_tree_nodes": 1184,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 1184
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "check_auto_ms": 0.575833
+      },
+      "dag_nodes": 37,
+      "distinct_symbols": 3,
+      "expected": "sat",
+      "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress1__ite5.smt2",
+      "max_depth": 11,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support array symbols",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 9,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 37,
+          "digest": "d0812455e2ac859d",
+          "tree_nodes": 46
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 37,
+            "digest": "d0812455e2ac859d",
+            "tree_nodes": 46
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 37,
+        "input_tree_nodes": 46,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 37,
+        "output_distinct_symbols": 3,
+        "output_max_depth": 11,
+        "output_tree_nodes": 46,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 46
+    }
+  ],
+  "summary": {
+    "agree": 5,
+    "blocker_buckets": {
+      "unknown:EncodingBudget": 1
+    },
+    "disagree": 0,
+    "errors": 0,
+    "files": 9,
+    "layer_attribution": null,
+    "model_replay_failures": 0,
+    "oracle": {
+      "agree": 4,
+      "backend": "z3 4.13.3.0",
+      "compared": 4,
+      "disagree": 0,
+      "enabled": true,
+      "skipped": 2
+    },
+    "par2_mean_s": 3.3336824643333327,
+    "query_plan": {
+      "original_dag_nodes": 262,
+      "original_tree_nodes": 1395,
+      "slice_changed_instances": 0,
+      "slice_dag_nodes": 262,
+      "slice_dropped_terms": 0,
+      "slice_tree_nodes": 1395
+    },
+    "rewrite": {
+      "applications": 0,
+      "changed_instances": 0,
+      "decision_changes": 0,
+      "decision_matches": 0,
+      "input_dag_nodes": 0,
+      "input_tree_nodes": 0,
+      "mode": "off",
+      "output_dag_nodes": 0,
+      "output_tree_nodes": 0,
+      "sat_unsat_conflicts": 0
+    },
+    "sat": 5,
+    "unknown": 1,
+    "unsat": 0,
+    "unsupported": 3
+  },
+  "triage": {
+    "errors": [],
+    "rewrite_decision_changes": [],
+    "soundness": {
+      "model_replay_failures": 0,
+      "oracle_disagreements": 0,
+      "rewrite_sat_unsat_conflicts": 0,
+      "status_disagreements": 0
+    },
+    "unsupported": [
+      {
+        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), List([Atom(\"_\"), Atom(\"BitVec\"), Atom(\"8\")]), Atom(\"Bool\")])",
+        "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__arrays__issue4240.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "operator `eqrange`",
+        "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__eqrange1.smt2",
+        "outcome": "unsupported"
+      },
+      {
+        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), List([Atom(\"_\"), Atom(\"BitVec\"), Atom(\"1\")]), Atom(\"Bool\")])",
+        "file": "corpus/public-curated/non-incremental/QF_AUFBV/cvc5-regress-clean/cli__regress0__issue5743.smt2",
+        "outcome": "unsupported"
+      }
+    ]
+  },
+  "version": 14
+}
