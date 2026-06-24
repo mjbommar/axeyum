@@ -3451,10 +3451,62 @@ fn distinct_free_sets_are_satisfiable() {
     );
 }
 
-/// `set.card` ranges over the whole (possibly infinite) element sort, so it is
-/// **declined** — gracefully `Unsupported`, never a wrong verdict.
+/// `set.card` over a free set is soundly modeled as a popcount over a *slack
+/// universe* (see the `parse` module note). `(= (set.card (set.singleton 1)) 1)`
+/// is valid, and `(= (set.card (as set.empty (Set E))) 0)` is valid — checked by
+/// `eval` (ground, no free vars).
 #[test]
-fn set_card_is_declined_not_wrong() {
+fn set_card_singleton_and_empty() {
+    // |{1}| = 1.
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (= (set.card (set.singleton 1)) 1))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // |∅| = 0.
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (= (set.card (as set.empty (Set E))) 0))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// `|{1} ∪ {2}| = 2` (two distinct named elements) — a ground popcount, by `eval`.
+#[test]
+fn set_card_union_of_two_singletons() {
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (= (set.card (set.union (set.singleton 1) (set.singleton 2))) 2))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    // The over-count `… = 3` is false (only two distinct elements).
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (assert (= (set.card (set.union (set.singleton 1) (set.singleton 2))) 3))",
+    )
+    .unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// `set.card` over a free set resolves the whole formula to a pure BV/Int problem
+/// (the set var is a `BitVec` and `set.card` an `Int`), so it is *not* declined.
+#[test]
+fn set_card_of_free_set_is_modeled() {
     let text = r"
         (set-logic QF_UFLIAFS)
         (declare-sort E 0)
@@ -3462,10 +3514,86 @@ fn set_card_is_declined_not_wrong() {
         (assert (>= (set.card s) 5))
         (check-sat)
     ";
+    let script = parse_script(text).expect("set.card is modeled, not declined");
+    let s = sym_of(&script, "s");
+    assert!(
+        matches!(script.arena.symbol(s).1, Sort::BitVec(_)),
+        "a (Set E) constant must resolve to a BitVec sort"
+    );
+    // The cardinality assertion is an Int comparison (a Bool).
+    assert_eq!(script.arena.sort_of(script.assertions[0]), Sort::Bool);
+}
+
+/// `set.card` combined with a *non-literal* element (`(set.member x s)` with `x`
+/// of the element sort) would need an element-index model, so it is **declined** —
+/// gracefully `Unsupported`, never a wrong verdict. (This is the `card-4`/`card-5`
+/// regress shape.)
+#[test]
+fn set_card_with_element_variable_is_declined() {
+    let text = r"
+        (set-logic QF_UFLIAFS)
+        (declare-sort E 0)
+        (declare-fun s () (Set E))
+        (declare-fun x () E)
+        (assert (<= (set.card s) 5))
+        (assert (set.member x s))
+        (check-sat)
+    ";
     assert!(
         matches!(parse_script(text), Err(SmtError::Unsupported(_))),
-        "set.card must be declined as Unsupported"
+        "set.card with a non-literal element variable must be declined"
     );
+}
+
+/// A `card-6`-style over-count is **unsatisfiable**: `B ⊆ A`, `|B| ≥ 2`, `|A| ≤ 1`
+/// forces `|B| ≤ |A| ≤ 1 < 2`. The `set.card` comparisons become pure-BV popcount
+/// comparisons, so the whole formula is a finite BV/Bool problem; checked here by
+/// exhausting the (small) modeled universe with `eval` — no satisfying assignment.
+#[test]
+fn set_card_over_count_is_unsat_pure_bv() {
+    let s = parse_script(
+        "(set-logic QF_UFLIAFS)\n(declare-sort E 0)\n\
+         (declare-fun a () (Set E))\n(declare-fun b () (Set E))\n\
+         (assert (set.subset b a))\n\
+         (assert (>= (set.card b) 2))\n\
+         (assert (<= (set.card a) 1))",
+    )
+    .unwrap();
+    // Every assertion is a Bool over BitVec set vars (no Int/unsupported sort leaks).
+    for &x in &s.assertions {
+        assert_eq!(s.arena.sort_of(x), Sort::Bool);
+    }
+    let av = sym_of(&s, "a");
+    let bv = sym_of(&s, "b");
+    let Sort::BitVec(w) = s.arena.symbol(av).1 else {
+        panic!("set var must be a BitVec");
+    };
+    // Exhaust all assignments of (a, b) over the modeled universe: never sat.
+    let mut any_sat = false;
+    for va in 0u128..(1u128 << w) {
+        for vb in 0u128..(1u128 << w) {
+            let mut asg = Assignment::new();
+            asg.set(
+                av,
+                Value::Bv {
+                    width: w,
+                    value: va,
+                },
+            );
+            asg.set(
+                bv,
+                Value::Bv {
+                    width: w,
+                    value: vb,
+                },
+            );
+            any_sat |= s
+                .assertions
+                .iter()
+                .all(|&x| eval(&s.arena, x, &asg).unwrap() == Value::Bool(true));
+        }
+    }
+    assert!(!any_sat, "B ⊆ A ∧ |B| ≥ 2 ∧ |A| ≤ 1 must be unsatisfiable");
 }
 
 /// `set.complement`/`set.universe`/`set.comprehension` are likewise declined.

@@ -236,11 +236,11 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
 //     The `MARGIN` junk bits let a *free* set variable differ from another set on
 //     unnamed elements (so `(not (= x y))` over two free sets is `sat`, and an
 //     equality never wrongly forces two free sets equal on the unnamed tail).
-//     `set.card`, `set.complement`, and `set.universe` are **not** pointwise on a
-//     finite projection — they quantify over the *whole* (possibly infinite)
-//     element sort — so they are declined (a `BitVec` popcount/complement over the
-//     modeled domain would give a *wrong* cardinality/complement for the unnamed
-//     tail). `set.comprehension`/`set.choose`/`set.insert` are likewise declined.
+//     `set.complement` and `set.universe` are **not** pointwise on a finite
+//     projection — they quantify over the *whole* (possibly infinite) element
+//     sort — so they are declined (a `BitVec` complement over the modeled domain
+//     would give a *wrong* complement for the unnamed tail).
+//     `set.comprehension`/`set.choose`/`set.insert`/etc. are likewise declined.
 //
 // Under (1) and (2) every set term denotes a subset of the modeled domain and
 // every operator is computed exactly on that domain, so a model of the `BitVec`
@@ -248,12 +248,65 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
 // junk bits with that many fresh distinct unnamed elements) and vice-versa: the
 // encoding is **equisatisfiable**, so neither a wrong `sat` nor a wrong `unsat`
 // is possible.
+//
+// # Cardinality over a slack universe
+//
+// `set.card S` is the *count* of elements in `S`. Naive popcount over the
+// `D + MARGIN` named-element width above would be **wrong**: a free set ranges
+// over the infinite element sort, so its true cardinality includes the unnamed
+// tail, which the few junk bits cannot represent. Instead, when (and only when) a
+// script uses `set.card`, we **widen the modeled universe** to a *slack universe*
+// of `N` abstract element slots, where
+//
+//   `N = D + (sum of every numeric literal in the script)
+//          + (number of `set.card` occurrences) + MARGIN`.
+//
+// At this width each `(Set E)` free variable is a free `BitVec(N)`, every set
+// operator is the same pointwise `bv*` as above, and
+//
+//   `set.card S` → `Σ_{i<N} bv2nat((_ extract i i) S)`  (an `Int` popcount).
+//
+// **Soundness (no wrong sat, no wrong unsat).** This is exactly the theory of
+// *subsets of an `N`-element universe* — sound and complete for that theory. The
+// only question is whether restricting from arbitrary subsets of the infinite
+// sort down to subsets of `N` slots can change satisfiability:
+//
+//  * **No wrong sat (encoding ⇒ real).** Any satisfying bit assignment lifts to a
+//    real set model: pick `N` distinct elements of the (infinite) sort, one per
+//    slot; every `bv*` operator then *is* the corresponding set operator and
+//    popcount *is* cardinality, so every satisfied constraint is a true statement
+//    about genuine finite sets.
+//
+//  * **No wrong unsat (real ⇒ encoding).** A real satisfying model can be
+//    *compressed* to use at most `N` distinct elements. Because the accepted
+//    subset has **no complement/universe** and only **distinct-literal** elements,
+//    two unnamed elements sharing the same Venn region (w.r.t. the set variables)
+//    are indistinguishable, so any unnamed element not needed to *meet a
+//    cardinality lower bound* can be deleted without violating any constraint
+//    (deletion only lowers cardinalities; it never breaks an upper bound, a set
+//    equality/subset, or a named-literal membership). The total unnamed elements a
+//    minimal model needs is therefore at most the sum of the cardinality
+//    lower-bound constants, each of which is a numeric literal of the script. So
+//    `N`, summing *all* literals (plus one slot per `set.card` to absorb any
+//    strict `>` bound's `k+1` demand, plus `D` and the margin), is a *conservative
+//    over-approximation* of the slots any minimal model needs — never too small.
+//
+// Cardinality is supported **only** when the element-soundness conditions (1)
+// above still hold; in particular a `set.member`/`set.singleton` with a
+// *non-literal* element (a free element variable, e.g. `(set.member x s)` with `x`
+// of sort `E`) combined with cardinality would need an element-index/select model
+// and is **declined** by [`scan_set_ops`] (the non-literal-element rule), never
+// guessed.
 
 /// Operators that quantify over the *entire* element sort (not just the modeled
 /// finite projection) or otherwise fall outside the sound `BitVec` subset; any
 /// occurrence makes [`desugar_sets`] decline the whole script.
+///
+/// `set.card` is **not** here: it is soundly modeled as a popcount over a
+/// *slack universe* large enough to realize any model the formula's cardinality
+/// constants demand (see [`set_card_universe_width`] and the module note,
+/// "Cardinality over a slack universe").
 const UNSUPPORTED_SET_OPS: &[&str] = &[
-    "set.card",
     "set.complement",
     "set.universe",
     "set.comprehension",
@@ -297,15 +350,22 @@ fn desugar_sets(exprs: &mut [SExpr]) -> Result<(), SmtError> {
     let mut element_keys: Vec<String> = Vec::new();
     scan_set_ops(exprs, &mut element_keys)?;
     let d = u32::try_from(element_keys.len()).unwrap_or(u32::MAX);
-    let width = d
-        .checked_add(SET_MARGIN_BITS)
-        .filter(|&w| w <= MAX_SET_WIDTH)
-        .ok_or_else(|| {
-            SmtError::Unsupported(format!(
-                "finite-set modeling needs {d} element bits, over the {MAX_SET_WIDTH}-bit cap"
-            ))
-        })?
-        .max(1);
+    // Cardinality mode: if the script uses `set.card`, widen to a *slack universe*
+    // large enough to realize any model the cardinality constants demand (see the
+    // module note, "Cardinality over a slack universe"). Otherwise the named-domain
+    // width `D + MARGIN` is exact for the pointwise operators.
+    let width = if exprs.iter().any(uses_set_card) {
+        set_card_universe_width(exprs, d)?
+    } else {
+        d.checked_add(SET_MARGIN_BITS)
+            .filter(|&w| w <= MAX_SET_WIDTH)
+            .ok_or_else(|| {
+                SmtError::Unsupported(format!(
+                    "finite-set modeling needs {d} element bits, over the {MAX_SET_WIDTH}-bit cap"
+                ))
+            })?
+            .max(1)
+    };
     let bit_index: HashMap<String, u32> = element_keys
         .into_iter()
         .enumerate()
@@ -323,6 +383,75 @@ fn mentions_sets(e: &SExpr) -> bool {
         SExpr::Atom(a) => a.starts_with("set."),
         SExpr::List(items) => {
             items.first().and_then(SExpr::atom) == Some("Set") || items.iter().any(mentions_sets)
+        }
+    }
+}
+
+/// Whether `e` uses the `(set.card ...)` operator anywhere.
+fn uses_set_card(e: &SExpr) -> bool {
+    match e {
+        SExpr::Atom(_) => false,
+        SExpr::List(items) => {
+            items.first().and_then(SExpr::atom) == Some("set.card")
+                || items.iter().any(uses_set_card)
+        }
+    }
+}
+
+/// The slack-universe width `N` for a script that uses `set.card` (see the module
+/// note, "Cardinality over a slack universe"):
+///
+///   `N = D + Σ(numeric literals) + (#`set.card` occurrences) + MARGIN`,
+///
+/// a conservative over-approximation of the distinct element slots any minimal
+/// model can need, capped at [`MAX_SET_WIDTH`]. Summing **all** numeric literals
+/// (not just cardinality lower bounds) only over-allocates; the per-`set.card`
+/// slot absorbs any strict `>` bound's `k+1` demand. Never under-allocates, so
+/// no wrong `unsat`.
+///
+/// # Errors
+///
+/// [`SmtError::Unsupported`] if the demanded universe exceeds [`MAX_SET_WIDTH`]
+/// (the popcount stays exact but the singleton one-hot constant must fit `u128`).
+fn set_card_universe_width(exprs: &[SExpr], d: u32) -> Result<u32, SmtError> {
+    let mut literal_sum: u64 = 0;
+    let mut card_count: u64 = 0;
+    for e in exprs {
+        accumulate_card_budget(e, &mut literal_sum, &mut card_count);
+    }
+    let demand = u64::from(d)
+        .saturating_add(literal_sum)
+        .saturating_add(card_count)
+        .saturating_add(u64::from(SET_MARGIN_BITS))
+        .max(1);
+    if demand > u64::from(MAX_SET_WIDTH) {
+        return Err(SmtError::Unsupported(format!(
+            "finite-set cardinality needs a {demand}-slot universe, over the \
+             {MAX_SET_WIDTH}-bit cap"
+        )));
+    }
+    Ok(u32::try_from(demand).expect("demand <= MAX_SET_WIDTH fits u32"))
+}
+
+/// Sums every non-negative integer numeric literal in `e` into `literal_sum` and
+/// counts `set.card` occurrences into `card_count` (both saturating). Decimals and
+/// bit-vector literals do not contribute to the cardinality budget (only integer
+/// cardinality bounds drive element demand).
+fn accumulate_card_budget(e: &SExpr, literal_sum: &mut u64, card_count: &mut u64) {
+    match e {
+        SExpr::Atom(a) => {
+            // A bare non-negative integer numeral.
+            if !a.is_empty() && a.bytes().all(|c| c.is_ascii_digit()) {
+                *literal_sum = literal_sum.saturating_add(a.parse::<u64>().unwrap_or(u64::MAX));
+            }
+        }
+        SExpr::List(items) => {
+            if items.first().and_then(SExpr::atom) == Some("set.card") {
+                *card_count = card_count.saturating_add(1);
+            }
+            for child in items {
+                accumulate_card_budget(child, literal_sum, card_count);
+            }
         }
     }
 }
@@ -423,6 +552,21 @@ fn is_set_element_literal_atom(a: &str) -> bool {
 /// bit-vector encoding at width `width`, using `bit_index` for element positions.
 fn rewrite_set_sexpr(e: &mut SExpr, width: u32, bit_index: &HashMap<String, u32>) {
     let SExpr::List(items) = e else { return };
+    // Direct cardinality comparison `(CMP (set.card S) k)` / `(CMP k (set.card S))`
+    // with `k` a numeric literal → a **pure-BV** popcount comparison, kept entirely
+    // in `QF_BV` (a bit-blasted adder tree compared with a BV constant) so the
+    // backend decides it *completely* — the `Int`/BV combined path is incomplete
+    // for the multi-set cardinality shapes (`card`/`card-3`/`card-6`). This must run
+    // **before** the bottom-up recursion below turns the inner `set.card` into an
+    // `Int` popcount. Other `set.card` positions (e.g. inside a `+`) still fall
+    // through to the sound `Int` popcount.
+    if let Some(rewritten) = try_card_compare_bv(items, width, bit_index) {
+        *e = rewritten;
+        return;
+    }
+    let SExpr::List(items) = e else {
+        unreachable!("e is a List (matched above)")
+    };
     // Rewrite children first (bottom-up), so set sub-terms become BV before the
     // parent operator consumes them.
     for child in items.iter_mut() {
@@ -475,6 +619,14 @@ fn rewrite_set_sexpr(e: &mut SExpr, width: u32, bit_index: &HashMap<String, u32>
                 a.clone(),
                 SExpr::List(vec![atom("bvand"), a, b]),
             ]);
+        }
+        "set.card" if items.len() == 2 => {
+            // `(set.card S)` → the `Int` popcount over the slack universe:
+            //   `(+ (bv2nat ((_ extract 0 0) S)) … (bv2nat ((_ extract N-1 N-1) S)))`.
+            // Each bit's `bv2nat` is `0` or `1`, so the sum is exactly `|S|` over the
+            // modeled universe (see the module note, "Cardinality over a slack
+            // universe").
+            *e = card_popcount_sexpr(&items[1], width);
         }
         _ => {}
     }
@@ -531,6 +683,147 @@ fn fold_set_sexpr(op: &str, args: &[SExpr]) -> SExpr {
         acc = SExpr::List(vec![atom(op), acc, next.clone()]);
     }
     acc
+}
+
+/// If `items` is a direct cardinality comparison `(CMP (set.card S) k)` or
+/// `(CMP k (set.card S))` with `CMP` one of `>= <= = > <` and `k` a non-negative
+/// integer literal, returns the equivalent **pure-BV** comparison
+/// `(bv-cmp (popcount_bv S) (_ bv k CW))` at a popcount width `CW` wide enough to
+/// hold the universe size `width`. The set expression `S` is itself recursively
+/// set-rewritten. Returns `None` for any other shape (the caller then uses the
+/// generic bottom-up rewrite, which routes a non-comparison `set.card` to the
+/// sound `Int` popcount).
+///
+/// Soundness: popcount and `k` are both non-negative and fit in `CW` bits, so the
+/// unsigned BV comparison is exact and equals the `Int` comparison.
+fn try_card_compare_bv(
+    items: &[SExpr],
+    width: u32,
+    bit_index: &HashMap<String, u32>,
+) -> Option<SExpr> {
+    if items.len() != 3 {
+        return None;
+    }
+    let cmp = items[0].atom()?;
+    let bv_cmp = match cmp {
+        ">=" => "bvuge",
+        "<=" => "bvule",
+        ">" => "bvugt",
+        "<" => "bvult",
+        "=" => "=",
+        _ => return None,
+    };
+    // Identify which side is `(set.card S)` and which is the literal `k`.
+    let (card_arg, lit) = match (card_inner(&items[1]), card_inner(&items[2])) {
+        (Some(s), None) => (s, &items[2]),
+        (None, Some(s)) => (s, &items[1]),
+        // `(= (set.card a) (set.card b))` and the like are not the literal-compare
+        // shape; fall through to the generic `Int` popcount path.
+        _ => return None,
+    };
+    let k = lit
+        .atom()
+        .filter(|a| !a.is_empty() && a.bytes().all(|c| c.is_ascii_digit()))
+        .and_then(|a| a.parse::<u128>().ok())?;
+    // Popcount width: enough to hold `width` (the max popcount) and `k`. By
+    // construction `cw >= bits_for(k)`, so the `(_ bv k cw)` constant is exact (no
+    // truncation), and `cw >= bits_for(width)`, so the popcount adder cannot
+    // overflow.
+    let cw = popcount_bv_width(width).max(bits_for(k));
+    // Recursively set-rewrite the inner set expression `S` to its `BitVec(width)`.
+    let mut set_expr = card_arg.clone();
+    rewrite_set_sexpr(&mut set_expr, width, bit_index);
+    let pc = popcount_bv_sexpr(&set_expr, width, cw);
+    let kbv = SExpr::List(vec![
+        atom("_"),
+        atom(&format!("bv{k}")),
+        atom(&cw.to_string()),
+    ]);
+    Some(SExpr::List(vec![atom(bv_cmp), pc, kbv]))
+}
+
+/// `Some(S)` if `e` is `(set.card S)`, else `None`.
+fn card_inner(e: &SExpr) -> Option<&SExpr> {
+    match e {
+        SExpr::List(items) if items.len() == 2 && items[0].atom() == Some("set.card") => {
+            Some(&items[1])
+        }
+        _ => None,
+    }
+}
+
+/// Number of bits needed to represent the value `n` (at least 1).
+fn bits_for(n: u128) -> u32 {
+    (128 - n.leading_zeros()).max(1)
+}
+
+/// Popcount-result BV width for a `width`-bit universe: enough to hold the value
+/// `width` (the maximum possible popcount).
+fn popcount_bv_width(width: u32) -> u32 {
+    bits_for(u128::from(width))
+}
+
+/// `popcount_bv(S)` as a `BitVec(cw)` adder tree: zero-extend each of the `width`
+/// single-bit extracts of `S` to `cw` bits and sum them with `bvadd`. The result
+/// is the exact cardinality on the modeled universe (no overflow: `cw` holds
+/// `width`).
+fn popcount_bv_sexpr(set: &SExpr, width: u32, cw: u32) -> SExpr {
+    let bit_bv = |i: u32| -> SExpr {
+        // `((_ zero_extend cw-1) ((_ extract i i) S))` — a `0`/`1` `BitVec(cw)`.
+        let one_bit = SExpr::List(vec![
+            SExpr::List(vec![
+                atom("_"),
+                atom("extract"),
+                atom(&i.to_string()),
+                atom(&i.to_string()),
+            ]),
+            set.clone(),
+        ]);
+        SExpr::List(vec![
+            SExpr::List(vec![
+                atom("_"),
+                atom("zero_extend"),
+                atom(&(cw - 1).to_string()),
+            ]),
+            one_bit,
+        ])
+    };
+    let mut acc = bit_bv(0);
+    for i in 1..width {
+        acc = SExpr::List(vec![atom("bvadd"), acc, bit_bv(i)]);
+    }
+    acc
+}
+
+/// `(set.card S)` → the `Int` popcount over the `width`-bit slack universe:
+///   `(+ (bv2nat ((_ extract 0 0) S)) … (bv2nat ((_ extract w-1 w-1) S)))`.
+///
+/// `set` is the already-rewritten `BitVec(width)` set term. Each summand is the
+/// `Int` `0`/`1` of one bit, so the total is exactly the cardinality on the
+/// modeled universe. A single bit (`width == 1`) is the lone `bv2nat`-extract (no
+/// `+`), and `width >= 1` always holds (the universe is `.max(1)`).
+fn card_popcount_sexpr(set: &SExpr, width: u32) -> SExpr {
+    let bit_int = |i: u32| -> SExpr {
+        // `(bv2nat ((_ extract i i) S))` — a `0`/`1` `Int`.
+        SExpr::List(vec![
+            atom("bv2nat"),
+            SExpr::List(vec![
+                SExpr::List(vec![
+                    atom("_"),
+                    atom("extract"),
+                    atom(&i.to_string()),
+                    atom(&i.to_string()),
+                ]),
+                set.clone(),
+            ]),
+        ])
+    };
+    if width <= 1 {
+        return bit_int(0);
+    }
+    let mut sum = vec![atom("+")];
+    sum.extend((0..width).map(bit_int));
+    SExpr::List(sum)
 }
 
 /// A borrowed-free atom s-expr.
