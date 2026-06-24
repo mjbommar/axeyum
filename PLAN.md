@@ -53,6 +53,25 @@ metrics. Verified causes:
   already lead) — but it advances assurance, **not** the parity metric; budget it
   accordingly, behind measurement.
 
+**Progress (2026-06-24): the measurement gate now exists.**
+[`axeyum-bench/examples/measure_corpus.rs`](crates/axeyum-bench/examples/measure_corpus.rs)
+shells the system `z3` binary against any logic's corpus and times axeyum's
+`check_auto` on the same files → decided counts, agreement, DISAGREE, **PAR-2 for
+both**. First fair numbers (cvc5 slices, both-parse, 10 s, **DISAGREE=0**):
+QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9/9**
+(z3 ahead by one and far faster — the first honest measured gap). Artifacts under
+`bench-results/measured/`.
+- **Methodology lesson (load-bearing):** cvc5's own `test/regress` is
+  *solver-flavored* — files carry cvc5-specific `(set-option :bv_solver/:incremental)`
+  and non-BV-array logics that **z3 rejects at parse**. Scoring those as z3 misses
+  fakes an axeyum win (a permissive parser is not solving power); the harness
+  **excludes** them (`z3_rejected_unfair`). For a *fair* parity number, prefer a
+  **neutral SMT-LIB corpus** over a competitor's regress suite.
+- **These are easy instances** — "parity" here means both trivially solve. The
+  easy corpus *hides* the depth gaps; the next step is harder neutral per-division
+  corpora (where QF_LIA already hints z3 is ahead). Measurement is no longer the
+  blocker — corpus *difficulty/neutrality* is.
+
 ## What "done" means
 
 See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the full
