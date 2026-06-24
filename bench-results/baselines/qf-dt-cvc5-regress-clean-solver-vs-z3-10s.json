@@ -1,6 +1,6 @@
 {
   "config": {
-    "backend": "axeyum-solver check_auto",
+    "backend": "axeyum-solver solve",
     "backend_kind": "solver",
     "cnf_clause_budget": null,
     "cnf_inprocessing": false,
@@ -8,9 +8,9 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "40a0ef86723d8c0f",
+    "config_hash": "47e64d9bc2a8e4b4",
     "corpus": "corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean",
-    "corpus_hash": "a91a2b3a0db7fe6b",
+    "corpus_hash": "9b5d339144eba02d",
     "corpus_source": null,
     "hardware": {
       "arch": "x86_64",
@@ -46,7 +46,153 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 5.332675999999999
+        "solve_ms": 0.28119700000000003
+      },
+      "dag_nodes": 8,
+      "distinct_symbols": 1,
+      "expected": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__datatypes__pf-v2l60078.smt2",
+      "max_depth": 5,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 10,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 8,
+          "digest": "825a0329c7ecc13a",
+          "tree_nodes": 10
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 8,
+            "digest": "825a0329c7ecc13a",
+            "tree_nodes": 10
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 8,
+        "input_tree_nodes": 10,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 8,
+        "output_distinct_symbols": 1,
+        "output_max_depth": 5,
+        "output_tree_nodes": 10,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 10
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "solve_ms": 0.08104599999999999
+      },
+      "dag_nodes": 10,
+      "distinct_symbols": 2,
+      "expected": "unknown",
+      "file": "corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__proofs__dt-cons-eq-clash-qfdt.smt2",
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 7,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 10,
+          "digest": "9976bdbfce977aa7",
+          "tree_nodes": 12
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 10,
+            "digest": "9976bdbfce977aa7",
+            "tree_nodes": 12
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 10,
+        "input_tree_nodes": 12,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 10,
+        "output_distinct_symbols": 2,
+        "output_max_depth": 6,
+        "output_tree_nodes": 12,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 12
+    },
+    {
+      "assertions": 1,
+      "backend_stats": {
+        "solve_ms": 5.37431
       },
       "dag_nodes": 520,
       "detail": "`is`/`select` over a non-variable datatype term (constructors should fold first) (ADR-0022)",
@@ -113,25 +259,25 @@
     },
     "disagree": 0,
     "errors": 0,
-    "files": 1,
+    "files": 3,
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 0,
+      "agree": 2,
       "backend": "z3 4.13.3.0",
-      "compared": 0,
+      "compared": 2,
       "disagree": 0,
       "enabled": true,
       "skipped": 1
     },
-    "par2_mean_s": 20.0,
+    "par2_mean_s": 10.0001811215,
     "query_plan": {
-      "original_dag_nodes": 520,
-      "original_tree_nodes": 1562,
+      "original_dag_nodes": 538,
+      "original_tree_nodes": 1584,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 520,
+      "slice_dag_nodes": 538,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 1562
+      "slice_tree_nodes": 1584
     },
     "rewrite": {
       "applications": 0,
@@ -147,7 +293,7 @@
     },
     "sat": 0,
     "unknown": 0,
-    "unsat": 0,
+    "unsat": 2,
     "unsupported": 1
   },
   "triage": {

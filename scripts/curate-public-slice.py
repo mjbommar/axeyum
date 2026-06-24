@@ -16,6 +16,11 @@ Usage: curate-public-slice.py <LOGIC_PATTERN> <out_dir|-> [--prefix] [--root DIR
   --root DIR : scan DIR instead of the default cvc5 regress root. Used for the
              bitwuzla QF_ABV slice (`references/bitwuzla/test/regress`); the
              flattened vendored name is relative to DIR.
+  --expect-comment : also accept the cvc5 `; EXPECT: sat|unsat|unknown`
+             comment as ground truth (not just (set-info :status …)). Used for
+             the QF_DT slice, where cvc5's datatype regressions annotate the
+             expected verdict in an EXPECT comment; the binding soundness gate
+             on those files is the --compare-z3 head-to-head, not :status.
 
 Selects files under the scan root (default references/cvc5/test/regress/) that:
   - declare a matching (set-logic ...)
@@ -45,7 +50,23 @@ def logic_matches(text, pat, prefix):
         return re.search(r"\(\s*set-logic\s+" + re.escape(pat) + r"[A-Za-z0-9_]*\s*\)", text) is not None
     return re.search(r"\(\s*set-logic\s+" + re.escape(pat) + r"\s*\)", text) is not None
 
-def curate(pat, out_dir, prefix, root=REGRESS_ROOT):
+def has_ground_truth(text, expect_comment):
+    """A file carries machine-checkable ground truth if it has a
+    (set-info :status …), or — when expect_comment is set — the cvc5
+    regress convention `; EXPECT: sat|unsat|unknown` comment. The latter is
+    NOT a set-info, so the flat parser reports it as `expected=unknown`; the
+    binding soundness gate for those files is the --compare-z3 head-to-head,
+    exactly as the QF_AX slice relies on the Z3 oracle rather than :status."""
+    if re.search(r"\(\s*set-info\s+:status\b", text):
+        return True
+    if expect_comment and re.search(
+        r"(?im)^\s*;\s*EXPECT:\s*(sat|unsat|unknown)\b", text
+    ):
+        return True
+    return False
+
+
+def curate(pat, out_dir, prefix, root=REGRESS_ROOT, expect_comment=False):
     selected = []
     for dirpath, _dirs, files in os.walk(root):
         for fn in sorted(files):
@@ -58,7 +79,7 @@ def curate(pat, out_dir, prefix, root=REGRESS_ROOT):
                 continue
             if not logic_matches(text, pat, prefix):
                 continue
-            if not re.search(r"\(\s*set-info\s+:status\b", text):
+            if not has_ground_truth(text, expect_comment):
                 continue
             if any(has_cmd(text, c) for c in FORBIDDEN_CMDS):
                 continue
@@ -87,14 +108,15 @@ def curate(pat, out_dir, prefix, root=REGRESS_ROOT):
 if __name__ == "__main__":
     args = sys.argv[1:]
     prefix = "--prefix" in args
+    expect_comment = "--expect-comment" in args
     root = REGRESS_ROOT
     if "--root" in args:
         i = args.index("--root")
         root = args[i + 1]
         del args[i : i + 2]
-    args = [a for a in args if a != "--prefix"]
+    args = [a for a in args if a not in ("--prefix", "--expect-comment")]
     pat, out_dir = args[0], args[1]
-    names = curate(pat, out_dir, prefix, root)
-    print(f"{pat} (prefix={prefix}, root={root}): {len(names)} files")
+    names = curate(pat, out_dir, prefix, root, expect_comment)
+    print(f"{pat} (prefix={prefix}, expect_comment={expect_comment}, root={root}): {len(names)} files")
     for n in names:
         print("  " + n)
