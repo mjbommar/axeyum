@@ -36,7 +36,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | BV | `bv-bitwuzla-regress-clean-quantified` | 4 | 25% (1/4) | 0% (0/3) | Lean unsat 0/3, evidence certified 1/4 | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 169 | 100% (169/169) | 100% (85/85) | none | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 41 | 100% (41/41) | 100% (20/20) | none | `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` |
-| QF_BV | `qf-bv-curated-bvred` | 6 | 83% (5/6) | 50% (1/2) | Lean unsat 1/2 | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
+| QF_BV | `qf-bv-curated-bvred` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 10 | 70% (7/10) | 25% (1/4) | Lean unsat 1/4, evidence certified 7/10 | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 9 | 67% (6/9) | 0% (0/3) | Lean unsat 0/3, evidence certified 8/9 | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 50% (16/32) | 0% (0/16) | Lean unsat 0/16, evidence certified 16/32 | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` |
@@ -69,7 +69,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_AUFBV | `qf-aufbv-cvc5-regress-clean` | 9 | 5 | 56% | mid | 0 | not run | - | - | grow decide + classify certs | split direct ROW/congruence wins from general array elimination |
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 7 | 1 | 14% | weak | 0 | not run | - | - | decider first | finish decide frontier before spending cert budget beyond narrow refuters |
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 3 | 38% | weak | 0 | not run | - | - | decider first | replace finite index enumeration with witnessed extensionality, then certify |
-| QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | strong | 0 | complete | 83% (5/6) | 50% (1/2) | close Lean unsat gaps | add per-instance BV operator classifier; close mul/rem/shift Lean gap |
+| QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (2/2) | dominant on audited row | add per-instance BV operator classifier; close mul/rem/shift Lean gap |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | not run | - | - | build Lean route | separate pure-BV certs from FP-to-BV trust-hole cases |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 2 | 67% | mid | 0 | not run | - | - | grow decide + classify certs | witness the general DatatypeElim dispatch end to end |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 30 | 24 | 80% | strong | 0 | not run | - | - | build Lean route | audit finite-field unsats for direct Lean reconstruction feasibility |

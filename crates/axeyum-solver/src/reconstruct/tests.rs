@@ -9,7 +9,10 @@
 use axeyum_cnf::{AletheLit, AletheTerm};
 use axeyum_lean_kernel::ExprNode;
 
-use super::{ReconstructCtx, ReconstructError, reconstruct_eq_step};
+use super::{
+    ProofFragment, ReconstructCtx, ReconstructError, prove_unsat_to_lean_module,
+    reconstruct_eq_step, scan_proof_fragment,
+};
 
 /// A bare atom literal `a` (positive). Helper for building clauses.
 fn atom(s: &str) -> AletheTerm {
@@ -2091,6 +2094,36 @@ fn bitblast_shl_is_unsupported() {
 // ---------------------------------------------------------------------------
 
 use super::reconstruct_qf_bv_proof;
+
+/// A top-level self-disequality `not (= t t)` is unsat by reflexivity, even when
+/// `t` is a BV term the bit-blast emitter does not otherwise refute directly.
+/// The direct structural route closes it with only the input assumption and
+/// `Eq.refl`.
+#[test]
+fn end_to_end_reflexive_disequality_reconstructs_directly() {
+    use axeyum_ir::TermArena;
+    let mut arena = TermArena::new();
+    let x = {
+        let s = arena.declare("x", Sort::BitVec(6)).unwrap();
+        arena.var(s)
+    };
+    let all_ones = arena.bv_const(6, 0b11_1111).unwrap();
+    let comp = arena.bv_comp(x, all_ones).unwrap();
+    let eq = arena.eq(comp, comp).unwrap();
+    let diseq = arena.not(eq).unwrap();
+
+    assert_eq!(
+        scan_proof_fragment(&arena, &[diseq]),
+        ProofFragment::ReflexiveDisequality
+    );
+    let (fragment, source) =
+        prove_unsat_to_lean_module(&mut arena, &[diseq]).expect("self-disequality reconstructs");
+    assert_eq!(fragment, ProofFragment::ReflexiveDisequality);
+    assert!(
+        !source.contains("sorryAx"),
+        "self-disequality module must not use sorryAx:\n{source}"
+    );
+}
 
 /// **END-TO-END (the milestone)**: a 1-bit `(= (bvand a b) a) ∧ (not (= (bvand a
 /// b) a))` is unsat; the REAL `prove_qf_bv_unsat_alethe` emits the full bitwise

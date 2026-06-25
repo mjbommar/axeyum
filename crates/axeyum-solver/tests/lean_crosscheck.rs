@@ -1348,6 +1348,26 @@ fn qf_bv_comparison_refutation_checks_in_real_lean() {
     lean_accepts("qf_bv", &source);
 }
 
+/// The curated `bvredand` row is a parser-reduction identity contradiction.
+/// The current structural Lean route recognizes the checked equivalence and
+/// closes the row without falling back to the bit-blast emitter.
+#[test]
+fn qf_bv_bvredand_identity_contradiction_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/bvred/cvc5__redand-eliminate.smt2"
+    ))
+    .expect("bvredand row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("bvredand identity contradiction reconstructs");
+    assert_eq!(fragment, ProofFragment::ArrayAxiom);
+    assert!(
+        !source.contains("sorryAx"),
+        "identity contradiction module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_bv_bvredand_identity", &source);
+}
+
 /// **Disjunctive `QF_LRA`** (the Boolean-structured case split): the conjunctive
 /// system `x ≤ 0 ∧ y ≤ 0` plus the clause `(x ≥ 1 ∨ y ≥ 1)` is UNSAT — each leaf
 /// is a two-atom Farkas contradiction (`x ≤ 0 ∧ 1 ≤ x` ⇒ `1 ≤ 0`, and likewise

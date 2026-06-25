@@ -1265,6 +1265,8 @@ enum ClauseProof {
 pub enum ProofFragment {
     /// Bit-vectors and/or Booleans (the `QF_BV` core).
     QfBv,
+    /// A direct syntactic contradiction `¬(t = t)`.
+    ReflexiveDisequality,
     /// Uninterpreted functions over a single sort (no bit-vectors).
     QfUf,
     /// Uninterpreted functions combined with bit-vectors.
@@ -1572,6 +1574,34 @@ fn is_sos_rational_weight_gt(arena: &TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+/// Detect a top-level assertion `not (= t t)`. This is a proof-route shortcut,
+/// not a simplifier: the original query itself supplies the contradictory
+/// disequality, and Lean closes it with `Eq.refl`.
+fn reflexive_disequality_assertion(arena: &TermArena, assertions: &[TermId]) -> Option<TermId> {
+    for &assertion in assertions {
+        let IrTermNode::App {
+            op: IrOp::BoolNot,
+            args,
+        } = arena.node(assertion)
+        else {
+            continue;
+        };
+        let [inner] = &**args else {
+            continue;
+        };
+        let IrTermNode::App { op: IrOp::Eq, args } = arena.node(*inner) else {
+            continue;
+        };
+        let [lhs, rhs] = &**args else {
+            continue;
+        };
+        if lhs == rhs {
+            return Some(*lhs);
+        }
+    }
+    None
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
 /// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
@@ -1616,6 +1646,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::Forall
     } else if has_datatype {
         ProofFragment::Datatype
+    } else if reflexive_disequality_assertion(arena, assertions).is_some() {
+        ProofFragment::ReflexiveDisequality
     } else if crate::array_axiom::array_axiom_refutation(arena, assertions).is_some() {
         ProofFragment::ArrayAxiom
     } else if crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
@@ -1656,46 +1688,49 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
     } else if has_func {
         ProofFragment::QfUf
     } else if has_arith {
-        // The single-square SOS shape (`ℓ*ℓ < 0`, no ring normalizer), the
-        // two-variable AM-GM sum form (`x²+y²−2xy < 0`), and any query whose SOS
-        // certificate is a single perfect square of a ±1-coefficient linear form
-        // (e.g. `(x+y)² < 0`, all driven by the degree-2 ring normalizer) are owned
-        // by the dedicated SOS reconstructor; any other arithmetic query falls
-        // through to the linear Farkas (LRA) path.
-        if is_single_square_lt_zero(arena, assertions).is_some()
-            || is_am_gm_two_var(arena, assertions).is_some()
-            || is_sos_single_unit_square(arena, assertions)
-            || is_sos_multi_unit_square(arena, assertions)
-            || is_sos_rational_weight(arena, assertions)
-            || is_sos_rational_weight_gt(arena, assertions)
-        {
-            ProofFragment::Sos
-        } else if crate::prove_lia_unsat_by_diophantine(arena, assertions) {
-            // An integer-equality system that is integer-infeasible (`gcd ∤ const`).
-            // Owned by the integer-prelude Diophantine reconstructor (ADR-0042);
-            // anything else falls through to the linear Farkas (LRA) path.
-            ProofFragment::Diophantine
-        } else if crate::is_int_inequality_refutation(arena, assertions) {
-            // A single-variable integer-INEQUALITY interval `c ≤ k·x ≤ d` (k > 0) with
-            // no multiple of `k` in `[c, d]`: integer-infeasible while LP-feasible.
-            // Owned by the integer-prelude inequality reconstructor (ADR-0042);
-            // anything else falls through to the linear Farkas (LRA) path.
-            ProofFragment::IntInequality
-        } else if is_disjunctive_lra_refutation(arena, assertions) {
-            // A conjunctive linear-real system plus exactly one clause `(L₁ ∨ L₂)`
-            // of non-strict literals, with each leaf `conj ∧ Lᵢ` Farkas-refutable.
-            // Reconstructed by a kernel case-split (`Or.rec`) reusing the per-leaf
-            // conjunctive Farkas fold; the purely-conjunctive `Lra` path can never
-            // match (it declines a top-level positive `Or`), so this is uncovered
-            // by `reconstruct_lra_proof` today.
-            ProofFragment::DisjunctiveLra
-        } else {
-            ProofFragment::Lra
-        }
+        scan_arithmetic_proof_fragment(arena, assertions)
     } else if assertions.is_empty() {
         ProofFragment::Unsupported
     } else {
         ProofFragment::QfBv
+    }
+}
+
+fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
+    // The single-square SOS shape (`ℓ*ℓ < 0`, no ring normalizer), the
+    // two-variable AM-GM sum form (`x²+y²−2xy < 0`), and any query whose SOS
+    // certificate is a single perfect square of a ±1-coefficient linear form
+    // (e.g. `(x+y)² < 0`, all driven by the degree-2 ring normalizer) are owned
+    // by the dedicated SOS reconstructor; any other arithmetic query falls
+    // through to the linear Farkas (LRA) path.
+    if is_single_square_lt_zero(arena, assertions).is_some()
+        || is_am_gm_two_var(arena, assertions).is_some()
+        || is_sos_single_unit_square(arena, assertions)
+        || is_sos_multi_unit_square(arena, assertions)
+        || is_sos_rational_weight(arena, assertions)
+        || is_sos_rational_weight_gt(arena, assertions)
+    {
+        ProofFragment::Sos
+    } else if crate::prove_lia_unsat_by_diophantine(arena, assertions) {
+        // An integer-equality system that is integer-infeasible (`gcd ∤ const`).
+        // Owned by the integer-prelude Diophantine reconstructor (ADR-0042);
+        // anything else falls through to the linear Farkas (LRA) path.
+        ProofFragment::Diophantine
+    } else if crate::is_int_inequality_refutation(arena, assertions) {
+        // A single-variable integer-INEQUALITY interval `c ≤ k·x ≤ d` (k > 0)
+        // with no multiple of `k` in `[c, d]`: integer-infeasible while
+        // LP-feasible. Owned by the integer-prelude inequality reconstructor
+        // (ADR-0042); anything else falls through to the linear Farkas path.
+        ProofFragment::IntInequality
+    } else if is_disjunctive_lra_refutation(arena, assertions) {
+        // A conjunctive linear-real system plus exactly one clause `(L₁ ∨ L₂)`
+        // of non-strict literals, with each leaf `conj ∧ Lᵢ` Farkas-refutable.
+        // Reconstructed by a kernel case-split (`Or.rec`) reusing the per-leaf
+        // conjunctive Farkas fold; the purely-conjunctive `Lra` path can never
+        // match, so this is uncovered by `reconstruct_lra_proof` today.
+        ProofFragment::DisjunctiveLra
+    } else {
+        ProofFragment::Lra
     }
 }
 
@@ -2229,6 +2264,33 @@ fn build_bool_pigeonhole3(ctx: &mut ReconstructCtx, f: ExprId) -> ExprId {
     finite_domain_bool_rec(ctx, motive, true_case, false_case)
 }
 
+fn reconstruct_reflexive_disequality_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let term = reflexive_disequality_assertion(arena, assertions).ok_or_else(|| {
+        ReconstructError::MalformedStep {
+            rule: "reflexive_disequality".to_owned(),
+            detail: "expected a top-level assertion `not (= t t)`".to_owned(),
+        }
+    })?;
+
+    let mut ctx = ReconstructCtx::new();
+    let t = reflexive_disequality_term_expr(&mut ctx, term);
+    let eq_prop = ctx.mk_eq(t, t);
+    let diseq_prop = ctx.mk_not(eq_prop);
+    let diseq = fresh_axiom(&mut ctx, diseq_prop, "assume")?;
+    let refl = ctx.mk_eq_refl(t);
+    let proof = ctx.kernel.app(diseq, refl);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+fn reflexive_disequality_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
+    let name = ctx.atom_const(&format!("reflexive_diseq_term_{}", term.index()));
+    ctx.kernel.const_(name, vec![])
+}
+
 fn reconstruct_array_axiom_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2634,7 +2696,8 @@ fn reconstruct_proof_fragment_to_lean_module(
             require_infers_false(&mut ctx, t)?;
             render_ctx_module(&mut ctx, t)
         }
-        ProofFragment::FiniteDomainPigeonhole
+        ProofFragment::ReflexiveDisequality
+        | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
@@ -2705,6 +2768,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
     assertions: &[TermId],
 ) -> Result<Option<String>, ReconstructError> {
     let source = match fragment {
+        ProofFragment::ReflexiveDisequality => {
+            reconstruct_reflexive_disequality_to_lean_module(arena, assertions)?
+        }
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?
         }

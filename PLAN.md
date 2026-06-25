@@ -209,7 +209,7 @@ against competitor source, are now binding:
    not just runtime audit errors.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
-   BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **83% (5/6)**,
+   BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**,
    QF_LIA/cvc5 **70% (7/10)**, QF_LRA/cvc5 **67% (6/9)**, QF_UFLIA curated
    **0% (0/2)**, and QF_UFLIA bounded declared-sort regressions **80% (4/5)**.
    All exact audit rows have **DISAGREE = 0** and **audit_errors = 0**. The LRA
@@ -219,6 +219,15 @@ against competitor source, are now binding:
    replayable evidence fallback. `produce_evidence` now falls through on
    unsupported pure-real certificate declines while preserving stronger
    LRA/SOS/NRA certificates when available.
+   **EXACT QF_BV BVRED ROW CLOSED (2026-06-25):**
+   [`bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json`](bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json)
+   is now exact at **100% (6/6)** dominant with Lean unsat **100% (2/2)**,
+   zero mismatches, zero audit errors, and zero timeouts. The previous miss,
+   `cvc5__redand-eliminate.smt2`, is still evidence-certified as
+   `term-level-unsat` and now reconstructs through the checked structural Lean
+   route (`lean_fragment = ArrayAxiom`) with no trust holes. A direct
+   `ReflexiveDisequality` Lean fragment now also covers literal top-level
+   `not (= t t)` assertions by applying the input assumption to `Eq.refl`.
    **SYNTHETIC NIA/NRA EXACT AUDITS LANDED (2026-06-25):**
    the dominance audit harness now ingests graduated summary baselines by
    enumerating corpus files and using their `:status` annotations plus the
