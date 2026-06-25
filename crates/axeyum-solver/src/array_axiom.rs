@@ -1107,6 +1107,8 @@ fn terms_equivalent_inner(
         finite_array_known_read_equivalence(arena, facts, distinct, lhs, rhs, memo);
     let finite_array_read_facts_equal =
         finite_array_read_fact_equivalence(arena, facts, distinct, lhs, rhs, memo);
+    let finite_array_row_equal =
+        finite_array_row_equivalence(arena, facts, distinct, lhs, rhs, memo);
 
     let result = facts.same(lhs, rhs)
         || known_bv1_equal
@@ -1114,6 +1116,7 @@ fn terms_equivalent_inner(
         || finite_array_extensional_equal
         || finite_array_known_reads_equal
         || finite_array_read_facts_equal
+        || finite_array_row_equal
         || match (arena.node(lhs), arena.node(rhs)) {
             (
                 TermNode::BvConst {
@@ -1277,12 +1280,21 @@ fn terms_directly_distinct_in_context(
     rhs: TermId,
 ) -> bool {
     indices_definitely_distinct(arena, lhs, rhs)
+        || bv1_direct_negation_pair(arena, facts, lhs, rhs)
+        || bv1_direct_negation_pair(arena, facts, rhs, lhs)
         || distinct.iter().any(|&(a, b)| {
             (terms_directly_equal(arena, facts, lhs, a)
                 && terms_directly_equal(arena, facts, rhs, b))
                 || (terms_directly_equal(arena, facts, lhs, b)
                     && terms_directly_equal(arena, facts, rhs, a))
         })
+}
+
+fn bv1_direct_negation_pair(arena: &TermArena, facts: &EqFacts, lhs: TermId, rhs: TermId) -> bool {
+    let Some(inner) = match_bv_not(arena, lhs) else {
+        return false;
+    };
+    arena.sort_of(lhs) == Sort::BitVec(1) && terms_directly_equal(arena, facts, inner, rhs)
 }
 
 fn terms_directly_equal(arena: &TermArena, facts: &EqFacts, lhs: TermId, rhs: TermId) -> bool {
@@ -1617,6 +1629,212 @@ fn finite_array_read_fact_equivalence(
         }
     }
     extensional_reads_cover_domain(arena, facts, distinct, &covered_reads, domain_size, memo)
+}
+
+fn finite_array_row_equivalence(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs_array: TermId,
+    rhs_array: TermId,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> bool {
+    let Sort::Array {
+        index: ArraySortKey::BitVec(index_width),
+        ..
+    } = arena.sort_of(lhs_array)
+    else {
+        return false;
+    };
+    if arena.sort_of(rhs_array) != arena.sort_of(lhs_array) {
+        return false;
+    }
+    let Some(domain_size) = finite_bv_domain_size(index_width) else {
+        return false;
+    };
+
+    let mut candidate_indices = BTreeSet::new();
+    collect_store_write_indices(arena, lhs_array, &mut candidate_indices);
+    collect_store_write_indices(arena, rhs_array, &mut candidate_indices);
+    collect_fact_select_indices(arena, facts, &mut candidate_indices);
+
+    let mut covered_reads = Vec::new();
+    for index in candidate_indices {
+        let lhs_read =
+            normalize_select_over_writes_direct(arena, facts, distinct, lhs_array, index);
+        let rhs_read =
+            normalize_select_over_writes_direct(arena, facts, distinct, rhs_array, index);
+        if row_exprs_equal_by_facts_or_values(
+            arena,
+            facts,
+            distinct,
+            lhs_read.expr,
+            rhs_read.expr,
+            memo,
+        ) {
+            covered_reads.push(ExtensionalReadBit {
+                index,
+                const_index: const_bv_value(arena, index).map(|(_width, value)| value),
+            });
+        }
+    }
+    extensional_reads_cover_domain(arena, facts, distinct, &covered_reads, domain_size, memo)
+}
+
+fn collect_fact_select_indices(arena: &TermArena, facts: &EqFacts, out: &mut BTreeSet<TermId>) {
+    for &term in facts.parent.keys() {
+        if let Some((_array, index)) = match_select(arena, term) {
+            out.insert(index);
+        }
+    }
+    for &term in facts.bv1_values.keys() {
+        if let Some((_array, index)) = match_select(arena, term) {
+            out.insert(index);
+        }
+    }
+}
+
+fn row_exprs_equal_by_facts_or_values(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs: RowExpr,
+    rhs: RowExpr,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> bool {
+    if row_exprs_equal_by_facts(arena, facts, distinct, lhs, rhs, memo) {
+        return true;
+    }
+    match (
+        row_expr_bv1_value(arena, facts, distinct, lhs),
+        row_expr_bv1_value(arena, facts, distinct, rhs),
+    ) {
+        (Some(lhs_value), Some(rhs_value)) => lhs_value == rhs_value,
+        _ => false,
+    }
+}
+
+fn row_exprs_equal_by_facts(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs: RowExpr,
+    rhs: RowExpr,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> bool {
+    match (lhs, rhs) {
+        (RowExpr::Term(lhs), RowExpr::Term(rhs)) => {
+            terms_equivalent_inner(arena, facts, distinct, lhs, rhs, memo)
+        }
+        (
+            RowExpr::Select {
+                array: lhs_array,
+                index: lhs_index,
+            },
+            RowExpr::Select {
+                array: rhs_array,
+                index: rhs_index,
+            },
+        ) => {
+            if array_terms_match(facts, lhs_array, rhs_array)
+                && terms_equivalent_inner(arena, facts, distinct, lhs_index, rhs_index, memo)
+            {
+                return true;
+            }
+            select_terms_for_row(arena, facts, lhs_array, lhs_index)
+                .iter()
+                .any(|&lhs_term| {
+                    select_terms_for_row(arena, facts, rhs_array, rhs_index)
+                        .iter()
+                        .any(|&rhs_term| facts.same(lhs_term, rhs_term))
+                })
+        }
+        (RowExpr::Term(term), RowExpr::Select { array, index })
+        | (RowExpr::Select { array, index }, RowExpr::Term(term)) => {
+            select_terms_for_row(arena, facts, array, index)
+                .iter()
+                .any(|&select_term| {
+                    terms_equivalent_inner(arena, facts, distinct, term, select_term, memo)
+                })
+        }
+    }
+}
+
+fn select_terms_for_row(
+    arena: &TermArena,
+    facts: &EqFacts,
+    expected_array: TermId,
+    expected_index: TermId,
+) -> Vec<TermId> {
+    facts
+        .parent
+        .keys()
+        .copied()
+        .filter(|&term| {
+            match_select(arena, term).is_some_and(|(array, index)| {
+                array_terms_match(facts, array, expected_array)
+                    && terms_directly_equal(arena, facts, index, expected_index)
+            })
+        })
+        .collect()
+}
+
+fn row_expr_bv1_value(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    expr: RowExpr,
+) -> Option<bool> {
+    match expr {
+        RowExpr::Term(term) => known_bv1_value(arena, facts, term),
+        RowExpr::Select { array, index } => facts.bv1_values.iter().find_map(|(&term, &value)| {
+            let (known_array, known_index) = match_select(arena, term)?;
+            let known_row = normalize_select_over_writes_direct(
+                arena,
+                facts,
+                distinct,
+                known_array,
+                known_index,
+            );
+            row_exprs_directly_equal(
+                arena,
+                facts,
+                known_row.expr,
+                RowExpr::Select { array, index },
+            )
+            .then_some(value)
+        }),
+    }
+}
+
+fn row_exprs_directly_equal(
+    arena: &TermArena,
+    facts: &EqFacts,
+    lhs: RowExpr,
+    rhs: RowExpr,
+) -> bool {
+    match (lhs, rhs) {
+        (RowExpr::Term(lhs), RowExpr::Term(rhs)) => terms_directly_equal(arena, facts, lhs, rhs),
+        (
+            RowExpr::Select {
+                array: lhs_array,
+                index: lhs_index,
+            },
+            RowExpr::Select {
+                array: rhs_array,
+                index: rhs_index,
+            },
+        ) => {
+            array_terms_match(facts, lhs_array, rhs_array)
+                && terms_directly_equal(arena, facts, lhs_index, rhs_index)
+        }
+        (RowExpr::Term(term), RowExpr::Select { array, index })
+        | (RowExpr::Select { array, index }, RowExpr::Term(term)) => match_select(arena, term)
+            .is_some_and(|(term_array, term_index)| {
+                array_terms_match(facts, term_array, array)
+                    && terms_directly_equal(arena, facts, term_index, index)
+            }),
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2390,6 +2608,28 @@ mod tests {
             let script = parse_script(text).expect("ABV BV1-order extensionality case parses");
             let cert = array_axiom_refutation(&script.arena, &script.assertions)
                 .expect("BV1-order extensionality case refutes");
+            assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+        }
+    }
+
+    #[test]
+    fn recognizes_btor_finite_store_row_extensionality_regressions() {
+        let cases = [
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext19.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext24.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext25.btor.smt2"
+            ),
+        ];
+
+        for text in cases {
+            let script = parse_script(text).expect("ABV finite store-row case parses");
+            let cert = array_axiom_refutation(&script.arena, &script.assertions)
+                .expect("finite store-row extensionality case refutes");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
     }
