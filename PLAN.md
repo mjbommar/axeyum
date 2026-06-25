@@ -628,6 +628,19 @@ against competitor source, are now binding:
    remaining `bare-unsat` rows. Remaining ABV bare-unsat work is now mostly
    conditional array families (`arraycond*`), the residual `ext11` row, and
    cvc5-specific BV/array proof gaps.
+   **ABV ARRAY-ITE ALL-TRUE BRANCH-COVER COVERAGE WIDENED (2026-06-25):**
+   the checked `ArrayAxiom` read-congruence lane now recognizes BV1-indexed,
+   BV1-valued array-valued `ite` terms that are read as true at both concrete
+   BV1 indices while every possible leaf array is guarded by an asserted
+   `not (read0 && read1)` constraint. This closes `arraycond3`, `arraycond5`,
+   `arraycond6`, `arraycond7`, and `arraycond8` through the existing
+   `ReadCongruence` certificate path. Re-running the exact ABV audit moved
+   **151/169 → 156/169** dominant and **Lean unsat 67/83 → 72/83**, with
+   **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact now has
+   **68** `array-axiom-unsat` rows and **11** remaining `bare-unsat` rows.
+   Remaining ABV bare-unsat work is now the residual conditional array family
+   (`arraycond11`, `arraycond12`, `arraycond13`, `arraycond14`, `arraycond18`),
+   `ext11`, and cvc5-specific BV/array proof gaps.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:

@@ -181,6 +181,11 @@ impl ReadCongruenceProbe {
                 return witness;
             }
         }
+        if let Some(witness) =
+            bv1_array_ite_all_true_refutation(arena, &self.facts, &self.denied_and_terms)
+        {
+            return Some(witness);
+        }
         None
     }
 }
@@ -1965,6 +1970,106 @@ fn equal_positive_bv1_order_bits(
         })
 }
 
+fn bv1_array_ite_all_true_refutation(
+    arena: &TermArena,
+    facts: &EqFacts,
+    denied_and_terms: &[Vec<TermId>],
+) -> Option<(TermId, TermId)> {
+    for array in fact_array_terms(arena, facts) {
+        if !matches!(
+            arena.sort_of(array),
+            Sort::Array {
+                index: ArraySortKey::BitVec(1),
+                element: ArraySortKey::BitVec(1),
+            }
+        ) || match_ite(arena, array).is_none()
+        {
+            continue;
+        }
+
+        let Some((zero_read, one_read)) = known_true_bv1_domain_reads(arena, facts, array) else {
+            continue;
+        };
+
+        let mut leaves = BTreeSet::new();
+        collect_array_ite_leaves(arena, array, &mut leaves);
+        if leaves.len() < 2 {
+            continue;
+        }
+        if leaves.iter().all(|&leaf| {
+            array_denies_both_bv1_domain_reads_true(arena, facts, denied_and_terms, leaf)
+        }) {
+            return Some((zero_read, one_read));
+        }
+    }
+    None
+}
+
+fn known_true_bv1_domain_reads(
+    arena: &TermArena,
+    facts: &EqFacts,
+    array: TermId,
+) -> Option<(TermId, TermId)> {
+    let mut zero_read = None;
+    let mut one_read = None;
+    for (&term, &value) in &facts.bv1_values {
+        if !value {
+            continue;
+        }
+        let Some((read_array, index)) = match_select(arena, term) else {
+            continue;
+        };
+        if !array_terms_match(facts, read_array, array) {
+            continue;
+        }
+        match const_bv_value(arena, index) {
+            Some((1, 0)) => zero_read = Some(term),
+            Some((1, 1)) => one_read = Some(term),
+            _ => {}
+        }
+    }
+    Some((zero_read?, one_read?))
+}
+
+fn collect_array_ite_leaves(arena: &TermArena, array: TermId, leaves: &mut BTreeSet<TermId>) {
+    if let Some((_cond, then_array, else_array)) = match_ite(arena, array) {
+        collect_array_ite_leaves(arena, then_array, leaves);
+        collect_array_ite_leaves(arena, else_array, leaves);
+    } else {
+        leaves.insert(array);
+    }
+}
+
+fn array_denies_both_bv1_domain_reads_true(
+    arena: &TermArena,
+    facts: &EqFacts,
+    denied_and_terms: &[Vec<TermId>],
+    array: TermId,
+) -> bool {
+    denied_and_terms.iter().any(|terms| {
+        terms
+            .iter()
+            .any(|&term| is_select_of_bv1_index(arena, facts, term, array, 0))
+            && terms
+                .iter()
+                .any(|&term| is_select_of_bv1_index(arena, facts, term, array, 1))
+    })
+}
+
+fn is_select_of_bv1_index(
+    arena: &TermArena,
+    facts: &EqFacts,
+    term: TermId,
+    expected_array: TermId,
+    expected_index: u128,
+) -> bool {
+    let Some((array, index)) = match_select(arena, term) else {
+        return false;
+    };
+    array_terms_match(facts, array, expected_array)
+        && const_bv_value(arena, index) == Some((1, expected_index))
+}
+
 fn collect_fact_select_indices(arena: &TermArena, facts: &EqFacts, out: &mut BTreeSet<TermId>) {
     for &term in facts.parent.keys() {
         if let Some((_array, index)) = match_select(arena, term) {
@@ -2927,6 +3032,34 @@ mod tests {
             let script = parse_script(text).expect("ABV contextual-false BV1 case parses");
             let cert = array_axiom_refutation(&script.arena, &script.assertions)
                 .expect("contextual BV1 false refutes");
+            assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+        }
+    }
+
+    #[test]
+    fn recognizes_btor_bv1_array_ite_all_true_regressions() {
+        let cases = [
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond3.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond5.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond6.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond7.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond8.btor.smt2"
+            ),
+        ];
+
+        for text in cases {
+            let script = parse_script(text).expect("ABV BV1 array-ITE all-true case parses");
+            let cert = array_axiom_refutation(&script.arena, &script.assertions)
+                .expect("BV1 array-ITE all-true branch cover refutes");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
     }
