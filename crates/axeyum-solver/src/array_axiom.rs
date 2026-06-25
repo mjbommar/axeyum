@@ -438,6 +438,8 @@ fn collect_bit_assertion(
         } else {
             literal.deny(arena, &mut probe.facts, &mut probe.disequalities);
         }
+    } else if record_bv1_ult_assertion(arena, bit, polarity, &mut probe.facts) {
+        // The order assertion contributed forced BV1 endpoint values.
     } else if arena.sort_of(bit) == Sort::BitVec(1) {
         probe.facts.set_bv1(bit, polarity);
     }
@@ -485,6 +487,23 @@ fn collect_bool_assertion(
         }
         _ => None,
     }
+}
+
+fn record_bv1_ult_assertion(
+    arena: &TermArena,
+    bit: TermId,
+    polarity: bool,
+    facts: &mut EqFacts,
+) -> bool {
+    let Some((lhs, rhs, bit_true_means_ult)) = match_bv1_ult_bit(arena, bit) else {
+        return false;
+    };
+    if polarity != bit_true_means_ult {
+        return false;
+    }
+    facts.set_bv1(lhs, false);
+    facts.set_bv1(rhs, true);
+    true
 }
 
 fn collect_or_literals(arena: &TermArena, bit: TermId, out: &mut Vec<BitLiteral>) -> bool {
@@ -1016,11 +1035,14 @@ fn terms_equivalent_inner(
 
     let finite_array_extensional_equal =
         finite_array_extensional_bit_equivalence(arena, facts, distinct, lhs, rhs, memo);
+    let finite_array_known_reads_equal =
+        finite_array_known_read_equivalence(arena, facts, distinct, lhs, rhs, memo);
 
     let result = facts.same(lhs, rhs)
         || known_bv1_equal
         || known_const_bv_equal
         || finite_array_extensional_equal
+        || finite_array_known_reads_equal
         || match (arena.node(lhs), arena.node(rhs)) {
             (
                 TermNode::BvConst {
@@ -1440,6 +1462,70 @@ fn finite_array_extensional_bit_equivalence(
         || finite_array_extensional_bit_equivalence_direct(arena, facts, distinct, rhs, lhs, memo)
 }
 
+fn finite_array_known_read_equivalence(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs_array: TermId,
+    rhs_array: TermId,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> bool {
+    let Sort::Array {
+        index: ArraySortKey::BitVec(index_width),
+        element: ArraySortKey::BitVec(1),
+    } = arena.sort_of(lhs_array)
+    else {
+        return false;
+    };
+    if arena.sort_of(rhs_array) != arena.sort_of(lhs_array) {
+        return false;
+    }
+    let Some(domain_size) = finite_bv_domain_size(index_width) else {
+        return false;
+    };
+
+    let lhs_reads = known_bv1_select_values(arena, facts, lhs_array);
+    let rhs_reads = known_bv1_select_values(arena, facts, rhs_array);
+    if lhs_reads.is_empty() || rhs_reads.is_empty() {
+        return false;
+    }
+
+    let mut covered_reads = Vec::new();
+    for lhs in &lhs_reads {
+        if rhs_reads.iter().any(|rhs| {
+            lhs.value == rhs.value
+                && terms_equivalent_inner(arena, facts, distinct, lhs.index, rhs.index, memo)
+        }) {
+            covered_reads.push(ExtensionalReadBit {
+                index: lhs.index,
+                const_index: const_bv_value(arena, lhs.index).map(|(_width, value)| value),
+            });
+        }
+    }
+    extensional_reads_cover_domain(arena, facts, distinct, &covered_reads, domain_size, memo)
+}
+
+#[derive(Debug, Clone, Copy)]
+struct KnownBv1Read {
+    index: TermId,
+    value: bool,
+}
+
+fn known_bv1_select_values(
+    arena: &TermArena,
+    facts: &EqFacts,
+    expected_array: TermId,
+) -> Vec<KnownBv1Read> {
+    facts
+        .bv1_values
+        .iter()
+        .filter_map(|(&term, &value)| {
+            let (array, index) = match_select(arena, term)?;
+            array_terms_match(facts, array, expected_array).then_some(KnownBv1Read { index, value })
+        })
+        .collect()
+}
+
 fn finite_array_extensional_bit_equivalence_direct(
     arena: &TermArena,
     facts: &EqFacts,
@@ -1733,6 +1819,33 @@ fn match_bv1_literal_bit(arena: &TermArena, term: TermId) -> Option<(TermId, Ter
         !cond_true_means_equal
     };
     Some((lhs, rhs, equal_when_true))
+}
+
+fn match_bv1_ult_bit(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, bool)> {
+    let (cond, then_term, else_term) = match_ite(arena, term)?;
+    let bit_true_means_cond =
+        if is_bv_const(arena, then_term, 1, 1) && is_bv_const(arena, else_term, 1, 0) {
+            true
+        } else if is_bv_const(arena, then_term, 1, 0) && is_bv_const(arena, else_term, 1, 1) {
+            false
+        } else {
+            return None;
+        };
+    let TermNode::App {
+        op: Op::BvUlt,
+        args,
+    } = arena.node(cond)
+    else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    if arena.sort_of(*lhs) == Sort::BitVec(1) && arena.sort_of(*rhs) == Sort::BitVec(1) {
+        Some((*lhs, *rhs, bit_true_means_cond))
+    } else {
+        None
+    }
 }
 
 fn match_eq(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
@@ -2115,6 +2228,25 @@ mod tests {
             let script = parse_script(text).expect("ABV finite-extensionality bit case parses");
             let cert = array_axiom_refutation(&script.arena, &script.assertions)
                 .expect("finite-extensionality bit refutes");
+            assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+        }
+    }
+
+    #[test]
+    fn recognizes_btor_bv1_order_extensionality_regressions() {
+        let cases = [
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext16.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext26.btor.smt2"
+            ),
+        ];
+
+        for text in cases {
+            let script = parse_script(text).expect("ABV BV1-order extensionality case parses");
+            let cert = array_axiom_refutation(&script.arena, &script.assertions)
+                .expect("BV1-order extensionality case refutes");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
     }

@@ -575,6 +575,18 @@ against competitor source, are now binding:
    ABV bare-unsat work is conditional-array families, residual extensionality
    rows, residual write shapes (`write16`, `write17`), and cvc5-specific
    BV/array proof gaps.
+   **ABV BV1-ORDER EXTENSIONALITY COVERAGE WIDENED (2026-06-25):**
+   the `ArrayAxiom` read-congruence proof context now records the BV1 endpoint
+   consequence of asserted true `bvult` facts (`lhs = #b0`, `rhs = #b1`) and
+   finite array equality can use those known read values when they cover the
+   whole BV1 index domain. This closes the BTOR `ext16` and `ext26` rows through
+   the existing `ReadCongruence` certificate path. Re-running the exact ABV
+   audit moved **141/169 → 143/169** dominant and **Lean unsat 57/83 → 59/83**,
+   with **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact now
+   has **55** `array-axiom-unsat` rows and **24** remaining `bare-unsat` rows.
+   Remaining ABV bare-unsat work is conditional-array families, remaining
+   extensionality/order rows, residual write shapes (`write16`, `write17`), and
+   cvc5-specific BV/array proof gaps.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:

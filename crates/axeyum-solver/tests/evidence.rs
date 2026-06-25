@@ -910,6 +910,20 @@ fn produce_evidence_certifies_small_array_axiom_unsats() {
             ),
         ),
         (
+            "abv_btor_ext16",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext16.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_ext26",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext26.btor.smt2"
+            ),
+        ),
+        (
             "abv_btor_3vl1",
             ArrayAxiomKind::ReadOverWrite,
             include_str!(
