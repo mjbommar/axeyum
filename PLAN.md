@@ -133,6 +133,81 @@ being the only stack that decides it, proves it to a Lean kernel, and runs anywh
 — so grow the fragment set where all four hold, and stop spending on the decide-race
 where we structurally can't lead.*
 
+### Refined by source-grounded review (2026-06-24, two Opus critics vs real Z3/cvc5/lean-smt)
+
+The thesis **survives** adversarial review — but four corrections, each verified
+against competitor source, are now binding:
+
+1. **The cert moat is real AND unoccupied — confirmed from source.** cvc5's proofs
+   are complete *only in "safe mode"* (which disables CAD/strong engines); **CAD/NRA
+   has no checkable proof rule at all**; Alethe omits nonlinear/arrays/datatypes.
+   lean-smt is **beta**, needs the **cvc5 C++ binary in the loop**, and has a
+   structural **`sorry` fallback** (BV reconstruction is `add`/`eq`-only). So
+   axeyum's *integrated, pure-Rust, in-tree, `#print axioms`-clean, trust-hole-free*
+   self-checking is a position **no incumbent occupies.** Keep this as a *standing
+   guard*: re-verify these claims whenever `references/` is refreshed (a moat that
+   could silently rot if cvc5/lean-smt close their holes).
+2. **Scope "dominant *today*" honestly: kernel-cert ≠ DRAT-cert.** Only the QF_BV
+   **bitwise/comparison sub-fragment** reconstructs to the Lean *kernel*; mul/rem/shift
+   carry a **DRAT** proof (strong, but not the kernel artifact the thesis sells).
+   Every "Pareto-dominant today" claim must name the sub-fragment that is
+   *axiom-clean Lean-kernel-checked*, and distinguish it from the DRAT-certified
+   superset. Conflating the two is the ledger-over-substance slip the 06-23
+   correction forbade.
+3. **The headline metric must not be a fragment *count* (gameable by slicing).**
+   Use, per division, a **four-constraint coverage %** on a *neutral, non-trivial*
+   corpus: `dominant%(D) = |decided-within-budget ∧ emits a re-checked, trust-hole-free,
+   #print-axioms-clean Lean cert| / |non-trivial instances|`, reported with PAR-2 vs
+   Z3. An instance that decides but only DRAT-certifies does **not** count toward the
+   Lean-dominant fraction.
+4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
+   built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
+   the blocker is **one IR change**, and it is itself the highest-leverage move:
+   - Add **`Sort::Uninterpreted(SortId)`** (an interned `Copy` id, mirroring the
+     existing `Sort::Datatype(DatatypeId)`) and generalize **`Sort::Array`
+     index/element to `SortId`** — **one change** that unlocks **both** QF_UF-over-
+     uninterpreted-sorts (route to the *already-built* `solve_qf_uf_online` e-graph,
+     not the BV over-approximation the parser currently forces) **and** Int-indexed
+     arrays (QF_ALIA/QF_AUFLIA, currently ~0% purely on this). Both already have
+     Alethe/Lean cert routes (`euf_alethe`, congruence/ROW certs) → directly
+     Pareto-dominance-eligible. This is *one* keystone, not two, and it is near-term.
+   - Pair it with a **single-witness extensionality skolem** for arrays
+     (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
+     current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
+     *infinite* for Int indices and already walls QF_AX at 9-bit. axeyum already has
+     the lazy machinery (`ArrayElimination::abstraction()`).
+   - The QF_UF weak row is **mostly Tier-B front-end coverage** (unhandled
+     `(Set …)`/`(Seq …)` sorts, `sin`, `fmf.card` ≈ 25 files) — **not** a congruence
+     cap (only ≈5 files hit the BV-width wall). Fix the parser, not a decider.
+5. **Aim the cert budget at the *valuable* frontier, not just the easy one.** The
+   highest-value certification targets are the **hard rows where cvc5 has NO proof**:
+   narrow certifiable **NRA/NIA-unsat** and **array-unsat** sub-fragments. Certifying
+   even a narrow nonlinear-unsat fragment to a Lean kernel is a capability **no stack
+   on earth has.** Promote the existing degree-2 **SOS→Lean** chain (ADR-0040) as the
+   seed and define the next narrow nonlinear-unsat cert slice as a tracked keystone.
+6. **NRA path: correct the label and the overclaim.** The target is **NLSAT
+   (model-constructing, single-cell projection)** / **cylindrical algebraic coverings
+   (CDCAC)** — *local, model-guided* — **not** global upfront "CAD." axeyum's `nra.rs`
+   is already the cvc5-style **linearization front-end**; the measured QF_NRA-cvc5
+   misses are dominated by **Fourier–Motzkin LRA-backstop blowups (10/27)**, so the
+   cheapest real NRA gain is a **competent LRA core to replace Fourier–Motzkin**
+   ([P1.6]) + a larger cross-product budget — *before* any new nonlinear engine. The
+   gap-analysis doc's "strong CAD decision side" is **overstated** (no general
+   multivariate CAD module exists; `nra_degree` frontier = 2 — the scoreboard is the
+   truth); align that prose down.
+7. **The Lean *tactic backend* is unbuilt — demote from "pure win" to roadmap item.**
+   axeyum emits Lean *modules out-of-band*; there is no in-tree tactic that imports a
+   Lean goal, decides it, and discharges it in place ([P3.7] unshipped). Until it
+   exists, axeyum does not beat manual Lean *in Lean's own workflow*. Build it — and
+   make it **fail rather than `sorry`** (lean-smt's silent-hole fallback is the exact
+   UX trap to avoid).
+
+**Net:** certify where we're strong AND convert the one cheap IR keystone (uninterp
+sorts + Int-array sorts) that is *itself* dominance-eligible; spend cert budget on
+the valuable (nonlinear/array-unsat) frontier cvc5 can't touch; keep the moat claim
+scoped to the axiom-clean kernel sub-fragment; and stop the decide-race only where
+it's genuinely a 15-year catch-up (high-degree NRA), not where one IR change closes it.
+
 ## What "done" means
 
 See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the full
