@@ -91,16 +91,19 @@ fn read_congruence_refutation(
     arena: &TermArena,
     assertion: TermId,
 ) -> Option<ArrayAxiomRefutationCertificate> {
-    let bit = match_bv1_asserted_true(arena, assertion)?;
     let mut probe = ReadCongruenceProbe::default();
-    collect_bit_assertion(arena, bit, true, &mut probe);
-    if let Some((lhs, rhs)) = prove_bit_term(arena, &probe.facts, bit, false) {
-        return Some(ArrayAxiomRefutationCertificate {
-            assertion,
-            lhs,
-            rhs,
-            kind: ArrayAxiomKind::ReadCongruence,
-        });
+    if let Some(bit) = match_bv1_asserted_true(arena, assertion) {
+        collect_bit_assertion(arena, bit, true, &mut probe);
+        if let Some((lhs, rhs)) = prove_bit_term(arena, &probe.facts, bit, false) {
+            return Some(ArrayAxiomRefutationCertificate {
+                assertion,
+                lhs,
+                rhs,
+                kind: ArrayAxiomKind::ReadCongruence,
+            });
+        }
+    } else {
+        collect_bool_assertion(arena, assertion, true, &mut probe)?;
     }
     let (lhs, rhs) = probe.refuted_pair(arena)?;
     Some(ArrayAxiomRefutationCertificate {
@@ -437,6 +440,50 @@ fn collect_bit_assertion(
         }
     } else if arena.sort_of(bit) == Sort::BitVec(1) {
         probe.facts.set_bv1(bit, polarity);
+    }
+}
+
+fn collect_bool_assertion(
+    arena: &TermArena,
+    term: TermId,
+    polarity: bool,
+    probe: &mut ReadCongruenceProbe,
+) -> Option<()> {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } if polarity && args.len() == 2 => {
+            collect_bool_assertion(arena, args[0], true, probe)?;
+            collect_bool_assertion(arena, args[1], true, probe)?;
+            Some(())
+        }
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } if !polarity && args.len() == 2 => {
+            collect_bool_assertion(arena, args[0], false, probe)?;
+            collect_bool_assertion(arena, args[1], false, probe)?;
+            Some(())
+        }
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 => collect_bool_assertion(arena, args[0], !polarity, probe),
+        TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+            let literal = BitLiteral {
+                lhs: args[0],
+                rhs: args[1],
+                equal_when_true: true,
+            };
+            if polarity {
+                literal.assert(arena, &mut probe.facts, &mut probe.disequalities);
+            } else {
+                literal.deny(arena, &mut probe.facts, &mut probe.disequalities);
+            }
+            Some(())
+        }
+        _ => None,
     }
 }
 
@@ -947,6 +994,11 @@ fn terms_equivalent_inner(
         return true;
     }
 
+    if equal_array_readback_equivalent(arena, facts, distinct, lhs, rhs) {
+        memo.insert(key, true);
+        return true;
+    }
+
     let known_bv1_equal = match (
         known_bv1_value_in_context(arena, facts, distinct, lhs, memo),
         known_bv1_value_in_context(arena, facts, distinct, rhs, memo),
@@ -1005,6 +1057,154 @@ fn terms_equivalent_inner(
         };
     memo.insert(key, result);
     result
+}
+
+fn equal_array_readback_equivalent(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs: TermId,
+    rhs: TermId,
+) -> bool {
+    let target_sort = arena.sort_of(lhs);
+    if target_sort != arena.sort_of(rhs) {
+        return false;
+    }
+
+    let arrays: Vec<_> = facts
+        .parent
+        .keys()
+        .copied()
+        .filter(|&term| matches!(arena.sort_of(term), Sort::Array { .. }))
+        .collect();
+    for (idx, &lhs_array) in arrays.iter().enumerate() {
+        let Sort::Array { element, .. } = arena.sort_of(lhs_array) else {
+            continue;
+        };
+        if element.to_sort() != target_sort {
+            continue;
+        }
+        for &rhs_array in &arrays[idx + 1..] {
+            if lhs_array == rhs_array
+                || arena.sort_of(lhs_array) != arena.sort_of(rhs_array)
+                || !facts.same(lhs_array, rhs_array)
+            {
+                continue;
+            }
+
+            let mut candidate_indices = BTreeSet::new();
+            collect_store_write_indices(arena, lhs_array, &mut candidate_indices);
+            collect_store_write_indices(arena, rhs_array, &mut candidate_indices);
+            collect_target_select_index(arena, lhs, &mut candidate_indices);
+            collect_target_select_index(arena, rhs, &mut candidate_indices);
+
+            for index in candidate_indices {
+                let lhs_read =
+                    normalize_select_over_writes_direct(arena, facts, distinct, lhs_array, index);
+                let rhs_read =
+                    normalize_select_over_writes_direct(arena, facts, distinct, rhs_array, index);
+                if row_expr_directly_matches_term(arena, facts, lhs_read.expr, lhs)
+                    && row_expr_directly_matches_term(arena, facts, rhs_read.expr, rhs)
+                {
+                    return true;
+                }
+                if row_expr_directly_matches_term(arena, facts, lhs_read.expr, rhs)
+                    && row_expr_directly_matches_term(arena, facts, rhs_read.expr, lhs)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn collect_store_write_indices(arena: &TermArena, mut term: TermId, out: &mut BTreeSet<TermId>) {
+    while let Some((base, index, _value)) = match_store(arena, term) {
+        out.insert(index);
+        term = base;
+    }
+}
+
+fn collect_target_select_index(arena: &TermArena, term: TermId, out: &mut BTreeSet<TermId>) {
+    if let Some((_array, index)) = match_select(arena, term) {
+        out.insert(index);
+    }
+}
+
+fn normalize_select_over_writes_direct(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    mut array: TermId,
+    index: TermId,
+) -> RowNorm {
+    let mut changed = false;
+    while let Some((base, write_idx, value)) = match_store(arena, array) {
+        if terms_directly_equal(arena, facts, index, write_idx) {
+            return RowNorm {
+                expr: RowExpr::Term(value),
+                changed: true,
+            };
+        }
+        if !terms_directly_distinct_in_context(arena, facts, distinct, index, write_idx) {
+            break;
+        }
+        array = base;
+        changed = true;
+    }
+    RowNorm {
+        expr: RowExpr::Select { array, index },
+        changed,
+    }
+}
+
+fn row_expr_directly_matches_term(
+    arena: &TermArena,
+    facts: &EqFacts,
+    expr: RowExpr,
+    term: TermId,
+) -> bool {
+    match expr {
+        RowExpr::Term(expr_term) => terms_directly_equal(arena, facts, expr_term, term),
+        RowExpr::Select { array, index } => {
+            match_select(arena, term).is_some_and(|(term_array, term_index)| {
+                terms_directly_equal(arena, facts, array, term_array)
+                    && terms_directly_equal(arena, facts, index, term_index)
+            })
+        }
+    }
+}
+
+fn terms_directly_distinct_in_context(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs: TermId,
+    rhs: TermId,
+) -> bool {
+    indices_definitely_distinct(arena, lhs, rhs)
+        || distinct.iter().any(|&(a, b)| {
+            (terms_directly_equal(arena, facts, lhs, a)
+                && terms_directly_equal(arena, facts, rhs, b))
+                || (terms_directly_equal(arena, facts, lhs, b)
+                    && terms_directly_equal(arena, facts, rhs, a))
+        })
+}
+
+fn terms_directly_equal(arena: &TermArena, facts: &EqFacts, lhs: TermId, rhs: TermId) -> bool {
+    lhs == rhs
+        || facts.same(lhs, rhs)
+        || matches!(
+            (const_bv_value(arena, lhs), const_bv_value(arena, rhs)),
+            (Some((lhs_width, lhs_value)), Some((rhs_width, rhs_value)))
+                if lhs_width == rhs_width && lhs_value == rhs_value
+        )
+        || matches!(
+            (arena.node(lhs), arena.node(rhs)),
+            (TermNode::BoolConst(lhs_value), TermNode::BoolConst(rhs_value))
+                if lhs_value == rhs_value
+        )
 }
 
 fn store_self_update_read_equivalent(
@@ -2006,6 +2206,25 @@ mod tests {
         let cert = array_axiom_refutation(&script.arena, &script.assertions)
             .expect("store self-update read case refutes");
         assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+    }
+
+    #[test]
+    fn recognizes_btor_equal_store_chain_readback_regressions() {
+        let cases = [
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext27.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext28.btor.smt2"
+            ),
+        ];
+
+        for text in cases {
+            let script = parse_script(text).expect("ABV equal-store readback case parses");
+            let cert = array_axiom_refutation(&script.arena, &script.assertions)
+                .expect("equal-store readback case refutes");
+            assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+        }
     }
 
     #[test]

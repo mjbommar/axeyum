@@ -443,6 +443,18 @@ fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
             ),
         ),
         (
+            "qf_abv_btor_ext27",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext27.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_ext28",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext28.btor.smt2"
+            ),
+        ),
+        (
             "qf_abv_btor_read1",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2"
