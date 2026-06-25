@@ -1282,6 +1282,9 @@ pub enum ProofFragment {
     /// An exhaustive finite-domain Bool/BV refutation, including finite
     /// quantifiers, certified by the executable evaluator.
     FiniteDomainEnum,
+    /// An exhaustive ground Bool/BV refutation certified by the executable
+    /// evaluator.
+    TermLevelEnum,
     /// A universal BV equality whose left side is a checked non-constant
     /// expression of the quantified variable.
     BvForallNonconstant,
@@ -1638,11 +1641,28 @@ fn reflexive_disequality_assertion(arena: &TermArena, assertions: &[TermId]) -> 
 
 const FINITE_DOMAIN_ENUM_CERT_BITS: u32 = 20;
 
+fn term_level_enum_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    matches!(
+        crate::certify_qf_bv_by_enumeration(arena, assertions, FINITE_DOMAIN_ENUM_CERT_BITS),
+        Ok(crate::CertifyOutcome::CertifiedUnsat { .. })
+    )
+}
+
 fn finite_domain_enum_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
     matches!(
         crate::certify_finite_bv_by_enumeration(arena, assertions, FINITE_DOMAIN_ENUM_CERT_BITS),
         Ok(crate::CertifyOutcome::CertifiedUnsat { .. })
     )
+}
+
+fn scan_ground_bv_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
+    if assertions.is_empty() {
+        ProofFragment::Unsupported
+    } else if term_level_enum_certifies(arena, assertions) {
+        ProofFragment::TermLevelEnum
+    } else {
+        ProofFragment::QfBv
+    }
 }
 
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
@@ -1751,10 +1771,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::QfUf
     } else if has_arith {
         scan_arithmetic_proof_fragment(arena, assertions)
-    } else if assertions.is_empty() {
-        ProofFragment::Unsupported
     } else {
-        ProofFragment::QfBv
+        scan_ground_bv_proof_fragment(arena, assertions)
     }
 }
 
@@ -2522,6 +2540,45 @@ fn reconstruct_finite_domain_enum_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_term_level_enum_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    match crate::certify_qf_bv_by_enumeration(arena, assertions, FINITE_DOMAIN_ENUM_CERT_BITS) {
+        Ok(crate::CertifyOutcome::CertifiedUnsat { .. }) => {}
+        Ok(crate::CertifyOutcome::Satisfiable(_)) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "term_level_enum".to_owned(),
+                detail: "term-level enumeration found a satisfying assignment".to_owned(),
+            });
+        }
+        Ok(crate::CertifyOutcome::DomainTooLarge { total_bits }) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "term_level_enum".to_owned(),
+                detail: format!(
+                    "term-level enumeration needs {total_bits} bits, above the proof budget"
+                ),
+            });
+        }
+        Err(error) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "term_level_enum".to_owned(),
+                detail: format!("term-level enumeration certificate failed: {error}"),
+            });
+        }
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("term_level_enum_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "term_level_enum")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_bv_forall_nonconstant_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3176,6 +3233,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::FiniteDomainEnum
+        | ProofFragment::TermLevelEnum
         | ProofFragment::BvForallNonconstant
         | ProofFragment::BvUfLocal
         | ProofFragment::ArrayAxiom
@@ -3267,6 +3325,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::FiniteDomainEnum => {
             reconstruct_finite_domain_enum_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::TermLevelEnum => {
+            reconstruct_term_level_enum_to_lean_module(arena, assertions)?
         }
         ProofFragment::BvForallNonconstant => {
             reconstruct_bv_forall_nonconstant_to_lean_module(arena, assertions)?

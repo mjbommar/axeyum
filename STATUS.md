@@ -6,6 +6,29 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — QF_FF term-level Lean coverage widened.**
+  Added `ProofFragment::TermLevelEnum`, a checked Lean reconstruction wrapper
+  for ground Bool/BV formulas whose existing term-level enumeration certificate
+  proves UNSAT inside the configured 20-bit budget. This moves the small
+  finite-field cvc5 QF_FF rows that already had `term-level-unsat` evidence out
+  of the unsupported QF_BV/DRAT Lean fallback: reconstruction re-runs
+  `certify_qf_bv_by_enumeration` before rendering the wrapper module. A local
+  QF_FF/cvc5 dominance audit now reports **22/24** dominant candidates and
+  **8/10** Lean-checked UNSAT rows, with **mismatches=0**. This is deliberately
+  not recorded as an exact closed row yet: remaining gaps are
+  `ff_xor_sound.smt2` (certified `drat-unsat`, no Lean route) and
+  `issue10937.smt2` (`produce-evidence` timeout). **Next:** add a practical
+  algebraic/parity certificate for `ff_xor_sound` and a budget-safe evidence
+  route for the `issue10937` finite-field identity before committing a
+  `bench-results/dominance/` QF_FF artifact.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_ff_term_level_enum_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ff-cvc5-regress-clean-solver-vs-z3-10s.json 30000 24 bench-results/local/qf-ff-cvc5-regress-clean-dominance-audit.json`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `git diff --check`.
+
 - **Session 2026-06-25 — exact QF_UFFF dominance row closed.**
   Added checked `UnsatBvUfLocal` evidence and `ProofFragment::BvUfLocal`
   reconstruction for mixed finite-BV/UF formulas where tiny local BV

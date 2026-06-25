@@ -289,6 +289,39 @@ fn qf_ufff_bv_uf_local_rows_check_in_real_lean() {
     }
 }
 
+/// Ground QF_FF rows that fit the term-level Bool/BV enumeration budget already
+/// have checked evidence; reconstruction must route them through the same
+/// executable certificate instead of falling back to the unsupported DRAT Lean
+/// path.
+#[test]
+fn qf_ff_term_level_enum_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_ff_simple",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FF/cvc5-regress-clean/cli__regress0__ff__simple.smt2"
+            ),
+        ),
+        (
+            "qf_ff_univar_conjunction_unsat",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FF/cvc5-regress-clean/cli__regress0__ff__univar_conjunction_unsat.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_FF row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: term-level enum reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::TermLevelEnum, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: term-level enum module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {
