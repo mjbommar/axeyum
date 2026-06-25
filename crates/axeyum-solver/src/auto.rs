@@ -1102,6 +1102,7 @@ fn dispatch_int_linear_refuters(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    features: &Features,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     // `bv2nat(b)` finite-range refutation (G2): abstract each distinct `bv2nat(b)`
@@ -1145,7 +1146,14 @@ fn dispatch_int_linear_refuters(
     match check_with_lia_dpll(arena, &lin, config) {
         Ok(result) => {
             with_recorder(rec, |t| t.record_result("lia-dpll", &result));
-            Ok(Some(result))
+            match &result {
+                CheckResult::Unknown(reason)
+                    if features.has_function && !is_budget_unknown_kind(reason.kind) =>
+                {
+                    Ok(None)
+                }
+                _ => Ok(Some(result)),
+            }
         }
         Err(SolverError::Unsupported(_)) => {
             with_recorder(rec, |t| {
@@ -1596,7 +1604,9 @@ fn check_auto_dispatch(
         // non-`unsat` outcome is discarded — the original query (with `bv2nat`
         // intact, which the bit-blaster handles natively) decides sat below. This
         // is strictly additive: it only ever turns a prior `unknown` into `unsat`.
-        if let Some(result) = dispatch_int_linear_refuters(arena, assertions, config, rec)? {
+        if let Some(result) =
+            dispatch_int_linear_refuters(arena, assertions, config, &features, rec)?
+        {
             return Ok(result);
         }
     }

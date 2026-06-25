@@ -627,6 +627,48 @@ fn congruence_free_uflia_uses_opaque_arith_alethe_evidence() {
 }
 
 #[test]
+fn qf_uflia_use_name_rows_use_opaque_arith_dpll_evidence() {
+    for input in [
+        include_str!("../../../corpus/public-curated/named/cvc5__use-name-in-same-command.smt2"),
+        include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__parser__use-name-in-same-command.smt2"
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UFLIA use-name row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+        assert!(
+            matches!(report.evidence, Evidence::UnsatArithDpll(_)),
+            "expected opaque UFLIA arith-DPLL evidence, got {:?}",
+            report.evidence
+        );
+        assert!(report.evidence.is_certified());
+        assert!(report.trusted_steps.is_empty());
+        assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    }
+}
+
+#[test]
+fn satisfiable_uflia_opaque_arith_abstraction_still_replays_sat_model() {
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let f0 = arena.apply(f, &[zero]).unwrap();
+    let eq = arena.eq(f0, one).unwrap();
+
+    let report = produce_evidence(&mut arena, &[eq], &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::Sat(_)),
+        "expected replay-checkable UFLIA sat evidence, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(report.trusted_steps.is_empty());
+    assert!(report.evidence.check(&arena, &[eq]).unwrap());
+}
+
+#[test]
 fn tampered_lra_dpll_evidence_fails_its_own_check() {
     // Strip the lemmas from the refutation: the bare skeleton is satisfiable, so
     // the independent verifier rejects the doctored evidence.

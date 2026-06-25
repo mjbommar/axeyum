@@ -1710,6 +1710,11 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::BoolUfExhaustive
     } else if has_func && has_bv {
         ProofFragment::QfUfBv
+    } else if has_func && has_arith && arith_dpll_refutation_certifies(arena, assertions) {
+        // Boolean-structured UFLIA/UFLRA slices whose UF applications are only
+        // needed as opaque arithmetic terms. The ArithDPLL checker re-derives the
+        // abstraction refutation before the Lean wrapper is allowed.
+        ProofFragment::ArithDpll
     } else if has_func {
         ProofFragment::QfUf
     } else if has_arith {

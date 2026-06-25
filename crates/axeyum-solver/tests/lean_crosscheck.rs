@@ -236,6 +236,39 @@ fn qf_lia_arith_dpll_audit_rows_check_in_real_lean() {
     }
 }
 
+/// `QF_UFLIA`: the `use-name-in-same-command` rows are Boolean-structured
+/// arithmetic proof-step encodings. They reconstruct through the same checked
+/// ArithDPLL wrapper after treating integer-valued UF applications as opaque
+/// arithmetic variables.
+#[test]
+fn qf_uflia_use_name_arith_dpll_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_uflia_curated_use_name_arith_dpll",
+            include_str!(
+                "../../../corpus/public-curated/named/cvc5__use-name-in-same-command.smt2"
+            ),
+        ),
+        (
+            "qf_uflia_bounded_use_name_arith_dpll",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__parser__use-name-in-same-command.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UFLIA use-name row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("UFLIA arithmetic DPLL row reconstructs");
+        assert_eq!(fragment, ProofFragment::ArithDpll);
+        assert!(
+            !source.contains("sorryAx"),
+            "UFLIA arithmetic DPLL module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `QF_LIA`: the RF-11 ACI normalization stress row contains a large Boolean
 /// assertion that simplifies directly to `false`. The checked Boolean
 /// simplification route avoids spending the audit budget in arithmetic DPLL.

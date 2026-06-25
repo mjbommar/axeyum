@@ -30,7 +30,7 @@ use axeyum_cnf::{CnfClause, CnfLit, CnfVar, IncrementalSat, SatError, SatResult}
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::lra::{check_with_lia_simplex, check_with_lra};
+use crate::lra::{check_with_lia_opaque_apps, check_with_lia_simplex, check_with_lra};
 use crate::model::Model;
 
 const ATOM_PREFIX: &str = "!arith_atom_";
@@ -168,7 +168,12 @@ impl ArithDpllRefutation {
             }
             let theory = lemma[0].theory;
             let unsat = match theory {
-                Theory::Int => matches!(check_with_lia_simplex(arena, &lits)?, CheckResult::Unsat),
+                Theory::Int => {
+                    matches!(
+                        check_with_lia_opaque_apps(arena, &lits)?,
+                        CheckResult::Unsat
+                    )
+                }
                 Theory::Real => matches!(check_with_lra(arena, &lits)?, CheckResult::Unsat),
             };
             if !unsat {
@@ -433,7 +438,7 @@ fn run_arith_dpll(
 
         // Theory-check each theory's conjunction independently.
         if let Some(conflict) =
-            theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_simplex)?
+            theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?
         {
             lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
             let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
@@ -450,6 +455,18 @@ fn run_arith_dpll(
         }
 
         // Both theories consistent: build and replay the combined model.
+        if ctx.has_opaque_int_apps(arena) {
+            return Ok(ArithRun {
+                result: CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "linear-arithmetic abstraction with opaque integer UF applications is \
+                             satisfiable; use the UFLIA backend for model lifting"
+                        .to_owned(),
+                }),
+                skeleton,
+                lemmas,
+            });
+        }
         let result = finish_sat(arena, assertions, &ctx, &propositional, &lits)?;
         return Ok(ArithRun {
             result,
@@ -1791,6 +1808,13 @@ impl ArithAbstractor {
         self.atoms.push(ArithAtom { prop, term, theory });
         prop
     }
+
+    fn has_opaque_int_apps(&self, arena: &TermArena) -> bool {
+        self.atoms.iter().any(|atom| {
+            atom.theory == Theory::Int
+                && contains_int_uf_application(arena, atom.term, &mut HashSet::new())
+        })
+    }
 }
 
 fn bool_const_value(arena: &TermArena, term: TermId) -> Option<bool> {
@@ -1798,6 +1822,24 @@ fn bool_const_value(arena: &TermArena, term: TermId) -> Option<bool> {
         TermNode::BoolConst(value) => Some(*value),
         _ => None,
     }
+}
+
+fn contains_int_uf_application(
+    arena: &TermArena,
+    term: TermId,
+    seen: &mut HashSet<TermId>,
+) -> bool {
+    if !seen.insert(term) {
+        return false;
+    }
+    let TermNode::App { op, args } = arena.node(term) else {
+        return false;
+    };
+    if matches!(op, Op::Apply(_)) && arena.sort_of(term) == Sort::Int {
+        return true;
+    }
+    args.iter()
+        .any(|&arg| contains_int_uf_application(arena, arg, seen))
 }
 
 #[cfg(test)]

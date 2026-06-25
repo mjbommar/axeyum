@@ -228,6 +228,17 @@ against competitor source, are now binding:
    replayable evidence fallback. `produce_evidence` now falls through on
    unsupported pure-real certificate declines while preserving stronger
    LRA/SOS/NRA certificates when available.
+   **QF_UFLIA EXACT ROWS CLOSED (2026-06-25):**
+   the remaining `use-name-in-same-command` proof-step rows are now certified by
+   `arith-dpll-unsat`: integer-valued UF applications are treated as opaque
+   integer variables inside the lazy-SMT arithmetic checker, and satisfiable
+   opaque abstractions decline so the UFLIA backend still owns SAT model lifting.
+   The Lean classifier now routes mixed UF+arithmetic rows through
+   `ProofFragment::ArithDpll` only after the certificate re-verifies. Exact
+   QF_UFLIA curated named is now **100% (2/2)** dominant with Lean unsat
+   **100% (2/2)**; the bounded uninterpreted-sort row is **100% (5/5)** dominant
+   with Lean unsat **100% (1/1)**, zero mismatches, zero audit errors, and zero
+   timeouts.
    **EXACT QF_BV BVRED ROW CLOSED (2026-06-25):**
    [`bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json`](bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json)
    is now exact at **100% (6/6)** dominant with Lean unsat **100% (2/2)**,

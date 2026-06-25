@@ -1099,7 +1099,19 @@ pub fn check_with_lia_simplex_within(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
-    lia_simplex_within(arena, assertions, deadline)
+    lia_simplex_with_options(arena, assertions, deadline, false)
+}
+
+/// Conjunctive LIA oracle that treats integer-valued uninterpreted-function
+/// applications as opaque integer variables. This is sound for UNSAT transfer:
+/// the abstraction is a relaxation of the original UFLIA constraints. A
+/// satisfiable abstraction is not a full UFLIA model, so it deliberately returns
+/// `Unknown` instead of `Sat`.
+pub(crate) fn check_with_lia_opaque_apps(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<CheckResult, SolverError> {
+    lia_simplex_with_options(arena, assertions, None, true)
 }
 
 fn lia_simplex_within(
@@ -1107,7 +1119,16 @@ fn lia_simplex_within(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
-    let mut ctx = IntCollector::default();
+    lia_simplex_with_options(arena, assertions, deadline, false)
+}
+
+fn lia_simplex_with_options(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    allow_opaque_apps: bool,
+) -> Result<CheckResult, SolverError> {
+    let mut ctx = IntCollector::new(allow_opaque_apps);
     for &assertion in assertions {
         ctx.collect(arena, assertion, false)?;
     }
@@ -1124,7 +1145,8 @@ fn lia_simplex_within(
     if ctx.trivially_unsat {
         return Ok(CheckResult::Unsat);
     }
-    let nvars = ctx.vars.len();
+    let nvars = ctx.variable_count();
+    let has_opaque_vars = ctx.has_opaque_vars();
     let mut constraints = ctx.constraints;
     // Integer tightening (gcd-aware): a *strict* constraint `L + c0 < 0` whose variable
     // part `L = Σ aᵢ·xᵢ` has integral coefficients and integral constant is, over the
@@ -1197,6 +1219,14 @@ fn lia_simplex_within(
             detail: format!("QF_LIA branch-and-bound exceeded {MAX_LIA_BNB_NODES} nodes"),
         })),
         LiaBnb::Sat(values) => {
+            if has_opaque_vars {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "opaque integer UF abstraction is satisfiable; SAT model lifting is \
+                             owned by the UFLIA backend"
+                        .to_owned(),
+                }));
+            }
             let mut model = Model::new();
             let mut assignment = axeyum_ir::Assignment::new();
             for (&symbol, &index) in &ctx.var_index {
@@ -1274,7 +1304,7 @@ pub(crate) fn lp_relaxation_feasibility(arena: &TermArena, assertions: &[TermId]
     if ctx.trivially_unsat {
         return LpRelaxation::Infeasible;
     }
-    match simplex_feasible(&ctx.constraints, ctx.vars.len()) {
+    match simplex_feasible(&ctx.constraints, ctx.variable_count()) {
         Some(SimplexOutcome::Sat(_)) => LpRelaxation::Feasible,
         Some(SimplexOutcome::Unsat(_)) => LpRelaxation::Infeasible,
         // Iteration backstop without a verdict: stay conservative.
@@ -1815,7 +1845,10 @@ fn unsupported_lia(what: &str) -> SolverError {
 #[derive(Default)]
 struct IntCollector {
     var_index: BTreeMap<SymbolId, usize>,
+    opaque_var_index: BTreeMap<TermId, usize>,
     vars: Vec<SymbolId>,
+    next_var: usize,
+    allow_opaque_apps: bool,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
     /// Set on an `i128` overflow while linearizing; poisons the collection so the
@@ -1824,6 +1857,13 @@ struct IntCollector {
 }
 
 impl IntCollector {
+    fn new(allow_opaque_apps: bool) -> Self {
+        Self {
+            allow_opaque_apps,
+            ..Self::default()
+        }
+    }
+
     /// Unwraps an overflow-checked `LinExpr`; on overflow sets the poison flag and
     /// returns a harmless placeholder (never acted on — the caller bails first).
     fn guard(&mut self, expr: Option<LinExpr>) -> LinExpr {
@@ -1839,10 +1879,29 @@ impl IntCollector {
         if let Some(&index) = self.var_index.get(&symbol) {
             return index;
         }
-        let index = self.vars.len();
+        let index = self.next_var;
+        self.next_var += 1;
         self.vars.push(symbol);
         self.var_index.insert(symbol, index);
         index
+    }
+
+    fn index_of_opaque(&mut self, term: TermId) -> usize {
+        if let Some(&index) = self.opaque_var_index.get(&term) {
+            return index;
+        }
+        let index = self.next_var;
+        self.next_var += 1;
+        self.opaque_var_index.insert(term, index);
+        index
+    }
+
+    fn variable_count(&self) -> usize {
+        self.next_var
+    }
+
+    fn has_opaque_vars(&self) -> bool {
+        !self.opaque_var_index.is_empty()
     }
 
     fn collect(
@@ -1935,6 +1994,11 @@ impl IntCollector {
             TermNode::IntConst(value) => Ok(LinExpr::constant(Rational::integer(*value))),
             TermNode::Symbol(symbol) if is_int(arena, term) => {
                 Ok(LinExpr::var(self.index_of(*symbol)))
+            }
+            TermNode::App {
+                op: Op::Apply(_), ..
+            } if self.allow_opaque_apps && is_int(arena, term) => {
+                Ok(LinExpr::var(self.index_of_opaque(term)))
             }
             TermNode::App {
                 op: Op::IntNeg,

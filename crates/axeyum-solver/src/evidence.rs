@@ -1373,6 +1373,13 @@ pub fn produce_evidence(
     if let Some(report) = direct_pre_solve_structural_report(arena, assertions, &provenance) {
         return Ok(report);
     }
+    if let Some(proof) = uflia_alethe_certificate(arena, assertions) {
+        return Ok(EvidenceReport {
+            evidence: Evidence::UnsatArithAletheProof(proof),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
     if let Some(report) = produce_arith_dpll_evidence(arena, assertions, config)? {
         return Ok(report);
     }
