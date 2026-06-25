@@ -18,6 +18,11 @@ fn real_var(arena: &mut TermArena, name: &str) -> TermId {
     arena.var(sym)
 }
 
+fn bool_var(arena: &mut TermArena, name: &str) -> TermId {
+    let sym = arena.declare(name, Sort::Bool).unwrap();
+    arena.var(sym)
+}
+
 #[test]
 fn disjunction_is_satisfiable_and_replayed() {
     // (x < 0 OR x > 10) AND x == 15  ->  sat at x = 15.
@@ -59,6 +64,27 @@ fn disjunction_with_excluded_value_is_unsat() {
         check_with_lia_dpll(&mut arena, &[disj, pin], &SolverConfig::default()).unwrap(),
         CheckResult::Unsat
     ));
+}
+
+#[test]
+fn boolean_leaf_sat_replays_after_online_decline() {
+    // The online LIA probe can decide the arithmetic atoms but does not complete
+    // original Boolean leaves in its model. `check_with_lia_dpll` must therefore
+    // fall back to the legacy path and still return a replaying SAT model.
+    let mut arena = TermArena::new();
+    let p = bool_var(&mut arena, "p");
+    let x = int_var(&mut arena, "x");
+    let one = arena.int_const(1);
+    let pin = arena.eq(x, one).unwrap();
+
+    match check_with_lia_dpll(&mut arena, &[p, pin], &SolverConfig::default()).unwrap() {
+        CheckResult::Sat(model) => {
+            let assignment = model.to_assignment();
+            assert_eq!(eval(&arena, p, &assignment).unwrap(), Value::Bool(true));
+            assert_eq!(eval(&arena, pin, &assignment).unwrap(), Value::Bool(true));
+        }
+        other => panic!("expected sat, got {other:?}"),
+    }
 }
 
 #[test]

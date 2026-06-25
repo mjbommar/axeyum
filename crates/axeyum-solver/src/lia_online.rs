@@ -64,6 +64,7 @@
 //! conservative [`CheckResult::Unknown`].
 
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
@@ -650,7 +651,7 @@ fn is_lia_atom(arena: &TermArena, term: TermId) -> bool {
 pub fn check_qf_lia_online(
     arena: &TermArena,
     assertions: &[TermId],
-    _config: &SolverConfig,
+    config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     // Distinct integer atoms over the whole assertion set become the theory's atom
     // indices and the first `atom_count` skeleton variables.
@@ -683,16 +684,54 @@ pub fn check_qf_lia_online(
     let mut theory = LiaTheory::new(arena, &atom_terms);
 
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
-    if solver.solve(&mut theory) {
-        return Ok(CheckResult::Unsat);
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    match solver.solve_with_deadline(&mut theory, deadline) {
+        Some(true) => return Ok(CheckResult::Unsat),
+        Some(false) => {}
+        None => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "online LIA DPLL(T) exhausted the configured timeout".to_owned(),
+            }));
+        }
     }
     // Theory-consistent total assignment: reconstruct an integer model from the
-    // live atoms (via the trusted offline decider) and replay it.
+    // live atoms (via the trusted offline decider), add any Boolean leaves from
+    // the final DPLL assignment, and replay it.
     match theory_model(&theory) {
-        Some(model) if replays_integer(arena, assertions, &model) => Ok(CheckResult::Sat(model)),
+        Some(mut model) => {
+            add_boolean_leaf_values(arena, &enc, atom_count, &solver, &mut model);
+            if replays_integer(arena, assertions, &model) {
+                Ok(CheckResult::Sat(model))
+            } else {
+                Ok(CheckResult::Unknown(unknown(
+                    "online LIA model did not replay (arithmetic outside the incremental engine)",
+                )))
+            }
+        }
         _ => Ok(CheckResult::Unknown(unknown(
             "online LIA model did not replay (arithmetic outside the incremental engine)",
         ))),
+    }
+}
+
+fn add_boolean_leaf_values(
+    arena: &TermArena,
+    enc: &Encoder,
+    atom_count: usize,
+    solver: &Dpll,
+    model: &mut Model,
+) {
+    for (&term, &var) in &enc.term_var {
+        if var < atom_count {
+            continue;
+        }
+        if let TermNode::Symbol(symbol) = arena.node(term)
+            && arena.sort_of(term) == Sort::Bool
+            && let Some(value) = solver.value_of(var)
+        {
+            model.set(*symbol, Value::Bool(value));
+        }
     }
 }
 
@@ -717,13 +756,14 @@ fn theory_model(theory: &LiaTheory) -> Option<Model> {
     }
 }
 
-/// Whether `model` satisfies every assertion under the ground evaluator **with
-/// integer values**. Any non-`true`, non-integer, or evaluation error makes it not
-/// replay (→ `Unknown`, never a wrong `sat`).
+/// Whether `model` satisfies every assertion under the ground evaluator with
+/// integer theory values plus optional Boolean skeleton leaves. Any non-`true`,
+/// non-Int/non-Bool value, or evaluation error makes it not replay (→ `Unknown`,
+/// never a wrong `sat`).
 fn replays_integer(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
     let mut assignment = Assignment::new();
     for (symbol, value) in model.iter() {
-        if !matches!(value, Value::Int(_)) {
+        if !matches!(value, Value::Int(_) | Value::Bool(_)) {
             return false;
         }
         assignment.set(symbol, value);
@@ -959,6 +999,30 @@ mod tests {
                 for (_symbol, value) in model.iter() {
                     assert!(matches!(value, Value::Int(_)), "model must be integer");
                 }
+            }
+            other => panic!("expected sat, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn online_decider_sat_model_replays_with_boolean_leaf() {
+        // `p ∧ (x < y ∨ y < x)` needs the final Boolean skeleton assignment for
+        // `p`; the arithmetic theory model alone is not enough to replay.
+        let mut arena = TermArena::new();
+        let p = arena.declare("p", Sort::Bool).expect("declare p");
+        let pv = arena.var(p);
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let xy = arena.int_lt(x, y).expect("x<y");
+        let yx = arena.int_lt(y, x).expect("y<x");
+        let or = arena.or(xy, yx).expect("or");
+
+        let verdict =
+            check_qf_lia_online(&arena, &[pv, or], &SolverConfig::default()).expect("decidable");
+        match verdict {
+            CheckResult::Sat(model) => {
+                assert_eq!(model.get(p), Some(Value::Bool(true)));
+                assert!(replays_integer(&arena, &[pv, or], &model));
             }
             other => panic!("expected sat, got {other:?}"),
         }

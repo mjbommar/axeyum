@@ -4,7 +4,7 @@
 //! wire vectors are LSB-first. Element `i` is SMT-LIB bit index `i` and has
 //! numeric weight `2^i`.
 
-use crate::sort::MAX_BV_WIDTH;
+use crate::sort::{ArraySortKey, MAX_BV_WIDTH};
 use crate::{IrError, Sort, Value};
 
 /// Bit order used when lowering bit-vector values to Boolean wires.
@@ -35,8 +35,15 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
         Value::Array(array) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Array {
-                index: array.index_width(),
-                element: array.element_width(),
+                index: ArraySortKey::BitVec(array.index_width()),
+                element: ArraySortKey::BitVec(array.element_width()),
+            },
+        }),
+        Value::GenericArray(array) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Array {
+                index: array.index_sort(),
+                element: array.element_sort(),
             },
         }),
         Value::Int(_) => Err(IrError::SortMismatch {
@@ -50,6 +57,10 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
         Value::Datatype { datatype, .. } => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Datatype(datatype),
+        }),
+        Value::Uninterpreted { sort, .. } => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Uninterpreted(sort),
         }),
     }
 }
@@ -129,12 +140,14 @@ pub fn lsb_bits_to_value(sort: Sort, bits: &[bool]) -> Result<Value, IrError> {
                 lsb_bits_to_bv_value(bits)
             }
         }
-        Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_) => {
-            Err(IrError::SortMismatch {
-                expected: "Bool or BitVec",
-                found: sort,
-            })
-        }
+        Sort::Array { .. }
+        | Sort::Int
+        | Sort::Real
+        | Sort::Datatype(_)
+        | Sort::Uninterpreted(_) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: sort,
+        }),
     }
 }
 

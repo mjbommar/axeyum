@@ -1255,14 +1255,18 @@ fn cdclt_combined(
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     if deadline.is_some_and(|d| Instant::now() >= d) {
-        return decline("timeout in the online combination boolean layer");
+        return timeout_unknown("timeout in the online combination boolean layer");
     }
 
     // The generic Dpll drives the live combination: vars `0..combined_count` are forwarded
     // to `CombinedIncremental` (theory atoms + interface vars); the rest are Tseitin aux.
     let mut solver = crate::lra_online::Dpll::new(enc.var_count, combined_count, lit_clauses);
-    if solver.solve(&mut combined) {
-        return CheckResult::Unsat;
+    match solver.solve_with_deadline(&mut combined, deadline) {
+        Some(true) => return CheckResult::Unsat,
+        Some(false) => {}
+        None => {
+            return timeout_unknown("timeout in the online combination boolean layer");
+        }
     }
     // A Boolean- and theory-consistent total assignment. Read the original theory atoms'
     // truth values off the leaf and rebuild + replay the combined model through the
@@ -2036,6 +2040,13 @@ impl BoolEncoder {
 pub(crate) fn decline(detail: impl Into<String>) -> CheckResult {
     CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::Incomplete,
+        detail: detail.into(),
+    })
+}
+
+fn timeout_unknown(detail: impl Into<String>) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
         detail: detail.into(),
     })
 }

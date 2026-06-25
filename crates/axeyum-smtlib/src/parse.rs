@@ -12,7 +12,7 @@
 use std::collections::{HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
-use axeyum_ir::{Rational, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{ArraySortKey, Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
@@ -95,10 +95,10 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     // [`desugar_const_arrays`]).
     desugar_const_arrays(&mut exprs);
     // Bounded finite-sequence theory: build the packed-width → element-width
-    // registry for every `(Seq E)` over a fixed-width element sort, once, up front
-    // (mirroring [`uninterpreted_sort_width`]). The map is then immutable for the
-    // parse; an empty table is the fast path for sequence-free scripts. A `(Seq E)`
-    // over an unsupported element sort makes this a clean [`SmtError::Unsupported`].
+    // registry for every `(Seq E)` over a fixed-width element sort, once, up front.
+    // The map is then immutable for the parse; an empty table is the fast path for
+    // sequence-free scripts. A `(Seq E)` over an unsupported element sort makes
+    // this a clean [`SmtError::Unsupported`].
     let seq = build_seq_info(&exprs)?;
     // Finite fields (QF_FF): build the modeled-width → prime registry for every
     // `(_ FiniteField p)` sort (directly and via `define-sort`), once, up front
@@ -116,13 +116,6 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     // `parse_atom`), so a real declaration never gets shadowed by a `:named`.
     let mut named: HashMap<String, TermId> = HashMap::new();
 
-    // Width used to model every arity-0 `(declare-sort U 0)` uninterpreted sort
-    // as a `BitVec(W)` (see [`uninterpreted_sort_width`]). Computed once from a
-    // rigorous upper bound on the number of distinct `U`-typed terms the whole
-    // script can possibly contain — the soundness argument lives on that
-    // function.
-    let uninterpreted_width = uninterpreted_sort_width(&exprs);
-
     for command in &exprs {
         parse_command(
             &mut script,
@@ -130,7 +123,6 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             &mut macros,
             &mut sort_aliases,
             &mut named,
-            uninterpreted_width,
             &seq,
             &ff,
             command,
@@ -161,56 +153,6 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     Ok(script)
 }
 
-/// The bit-width `W` used to model **every** arity-0 uninterpreted sort
-/// `(declare-sort U 0)` as a `BitVec(W)`, turning `QF_UF`/`QF_UFLIA` over
-/// uninterpreted sorts into `QF_UFBV`/`QF_UFLIA`-over-BV (which axeyum already
-/// fully decides) without touching the IR `Sort` enum.
-///
-/// # Soundness — why no wrong `unsat` is possible
-///
-/// In a quantifier-free formula, an uninterpreted sort `U` only needs as many
-/// **distinct** values as there are **distinct `U`-typed terms** in the formula:
-/// any satisfying model can be collapsed so that every `U`-typed term takes a
-/// value drawn from a set of size at most `k`, where `k` is the number of
-/// distinct `U`-typed terms (a Herbrand-style bound — you cannot assert more
-/// pairwise-`distinct` `U`-elements than there are `U`-terms to name them).
-///
-/// Every `U`-typed term is itself an s-expression node somewhere in the script,
-/// so the **total s-expression node count** `n` of the entire script is a
-/// rigorous upper bound on `k`: `k ≤ n`. We pick
-/// `W = max(1, ceil(log2(n)) + MARGIN)` with `MARGIN = 2`, which guarantees
-/// `2^W ≥ 4·n ≥ n ≥ k`. Hence the `BitVec(W)` domain always has at least `k`
-/// distinct values available, so a satisfiable `distinct`/inequality constraint
-/// over `U` can never be forced `unsat` by running out of tokens. The `MARGIN`
-/// is pure slack (never required for soundness); it only keeps the encoding off
-/// the exact boundary. The width is intentionally uniform across all declared
-/// sorts in the script: the global node count is still a sound
-/// over-approximation of any single sort's own term count, and it keeps the
-/// single-pass parser simple.
-///
-/// `n` is computed once over the parsed s-expressions and is bounded by the
-/// input size; a parseable benchmark cannot hold `2^usize::BITS` nodes, so the
-/// `ceil(log2)` cannot saturate in practice.
-fn uninterpreted_sort_width(exprs: &[SExpr]) -> u32 {
-    const MARGIN: u32 = 2;
-    let n: usize = exprs.iter().map(count_sexpr_nodes).sum();
-    // ceil(log2(n)): the number of bits needed to index `n` distinct values.
-    // For n ≤ 1 a single bit already provides 2 ≥ n values, so 0 base bits.
-    let bits = if n <= 1 { 0 } else { (n - 1).ilog2() + 1 };
-    (bits + MARGIN).max(1)
-}
-
-/// Total number of s-expression nodes (every atom, and every list node plus its
-/// children) in `e`. An over-approximation of the number of distinct terms any
-/// declaration/assertion in the script can introduce; see
-/// [`uninterpreted_sort_width`] for how this bounds the modeling width.
-fn count_sexpr_nodes(e: &SExpr) -> usize {
-    match e {
-        SExpr::Atom(_) => 1,
-        SExpr::List(items) => 1 + items.iter().map(count_sexpr_nodes).sum::<usize>(),
-    }
-}
-
 // --- constant arrays: `(select ((as const A) v) i)` → `v` --------------------
 //
 // A *constant array* `((as const (Array I E)) v)` is the function that maps every
@@ -220,10 +162,9 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
 //
 // which is **sort-agnostic**: it holds for any index sort `I` and element sort `E`
 // (`Int`, `Bool`, `BitVec`, …). This lets us decide const-array formulas — e.g.
-// the cvc5 `QF_ALIA` `constarr` family, `(Array Int Int)` / `(Array Int Bool)`
-// that axeyum cannot otherwise represent — entirely by an s-expression rewrite,
-// with **no** IR `Sort::Array` generalization (just like uninterpreted sorts,
-// `79a0679`, and finite sets).
+// the cvc5 `QF_ALIA` `constarr` family, `(Array Int Int)` / `(Array Int Bool)` —
+// entirely by an s-expression rewrite even before the generic non-BV array
+// solver/model-projection route is complete.
 //
 // # The sound subset (everything else is declined)
 //
@@ -235,7 +176,7 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
 //   * substitute every *other* use of `s` by `ca` (so all reads/equalities see
 //     the concrete const array), and
 //   * drop both the defining assertion and `s`'s `declare-const`/`declare-fun`,
-//     so the (non-BV) `Array` sort never reaches `parse_sort`.
+//     so the residual query no longer needs a model for that array symbol.
 //
 // With the aliases inlined, the remaining const-array operators are reduced
 // bottom-up by [`reduce_const_array_sexpr`]:
@@ -251,15 +192,16 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
 //     is non-empty, so the universally-quantified pointwise equality collapses to
 //     the single value equality).
 //
-// Anything outside this subset is left **declined** (a sound `unknown`/`Unsupported`
-// from the existing sort machinery), never given a wrong verdict:
+// Anything outside this subset is left for the ordinary IR/solver route and may
+// still return a sound `unknown`, never a wrong verdict:
 //
 //   * A `select`/`store` over a *free* (non-const-derived) `Int`-array variable —
-//     the general `Int`-array decision procedure, an IR keystone, out of scope.
+//     the general `Int`-array decision procedure is represented in IR but not
+//     model-producing yet.
 //   * A `store`-chain equality connecting two *different* const arrays
 //     (`constarr3`) — `(= ca1 ca2)` where the sides are `store`-derived, not bare
 //     const arrays — is not reduced (cvc5 itself errors on this), so the residual
-//     non-BV `Array` equality declines at `parse_sort`.
+//     non-BV `Array` equality is left for the downstream array route.
 //   * A const array of a non-modelable element sort declines when its value `v`
 //     reaches term conversion.
 //
@@ -356,9 +298,9 @@ fn is_const_array_expr(e: &SExpr) -> bool {
 /// The bit-vector-array case (`(Array (_ BitVec i) (_ BitVec e))`) is deliberately
 /// *excluded*: those const arrays are already handled by the IR
 /// `arena.const_array` and `eliminate_arrays` path (ADR-0010, `QF_ABV`), and this
-/// pass must leave that working path untouched (no regression). Only the
-/// otherwise-unrepresentable non-BV-array const arrays (`(Array Int Int)`,
-/// `(Array Int Bool)`, …) are rewritten here.
+/// pass must leave that working path untouched (no regression). Non-BV-array
+/// const arrays (`(Array Int Int)`, `(Array Int Bool)`, …) are still simplified
+/// here because it avoids requiring a generic array model for those symbols.
 fn is_const_array_literal(e: &SExpr) -> bool {
     let Some(items) = e.list() else { return false };
     if items.len() != 2 {
@@ -1166,7 +1108,6 @@ fn parse_command<'a>(
     macros: &mut HashMap<String, MacroDef<'a>>,
     sort_aliases: &mut HashMap<String, Sort>,
     named: &mut HashMap<String, TermId>,
-    uninterpreted_width: u32,
     seq: &SeqInfo,
     ff: &FfInfo,
     command: &'a SExpr,
@@ -1291,10 +1232,9 @@ fn parse_command<'a>(
             parse_define_const(script, aliases, macros, sort_aliases, named, seq, ff, items)?;
         }
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
-        // `(declare-sort U 0)` — an arity-0 uninterpreted sort, modeled as a
-        // `BitVec(W)` (soundness on [`uninterpreted_sort_width`]). Arity ≥ 1
+        // `(declare-sort U 0)` — an arity-0 uninterpreted sort. Arity ≥ 1
         // (parametric, e.g. `(declare-sort List 1)`) is out of scope.
-        "declare-sort" => parse_declare_sort(script, sort_aliases, uninterpreted_width, items)?,
+        "declare-sort" => parse_declare_sort(script, sort_aliases, items)?,
         "assert" => {
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
@@ -1904,12 +1844,15 @@ fn parse_sort(
             if items.len() == 3 && items[0].atom() == Some("Array") {
                 let index = parse_sort(arena, sort_aliases, &items[1])?;
                 let element = parse_sort(arena, sort_aliases, &items[2])?;
-                if let (Sort::BitVec(index), Sort::BitVec(element)) = (index, element) {
-                    return Ok(Sort::Array { index, element });
-                }
-                return Err(SmtError::Unsupported(format!(
-                    "only bit-vector-indexed/valued arrays are supported: {e:?}"
-                )));
+                let index = ArraySortKey::from_sort(index).ok_or_else(|| {
+                    SmtError::Unsupported(format!("nested array index sort is unsupported: {e:?}"))
+                })?;
+                let element = ArraySortKey::from_sort(element).ok_or_else(|| {
+                    SmtError::Unsupported(format!(
+                        "nested array element sort is unsupported: {e:?}"
+                    ))
+                })?;
+                return Ok(Sort::Array { index, element });
             }
             Err(SmtError::Unsupported(format!("sort {e:?}")))
         }
@@ -1919,6 +1862,7 @@ fn parse_sort(
         SExpr::Atom(a) => arena
             .find_datatype(a)
             .map(Sort::Datatype)
+            .or_else(|| arena.find_uninterpreted_sort(a).map(Sort::Uninterpreted))
             .or_else(|| sort_aliases.get(a).copied())
             .ok_or_else(|| SmtError::Unsupported(format!("sort `{a}`"))),
     }
@@ -1966,14 +1910,10 @@ fn parse_define_sort(
 /// `(declare-sort U n)` — an uninterpreted sort.
 ///
 /// The arity-0 case `(declare-sort U 0)` is the common `QF_UF`/`QF_UFLIA` shape:
-/// `U` is registered (in the shared `sort_aliases` map, alongside `define-sort`
-/// aliases) as `BitVec(uninterpreted_width)`. Every later use of `U` as a sort —
-/// in `declare-fun` parameter/result positions, `=`, `distinct`, `ite`, array
-/// index/element, etc. — then resolves through [`parse_sort`] to that bit-vector
-/// width, so the whole script becomes `QF_UFBV`/`QF_UFLIA`-over-BV, which axeyum
-/// already decides. The modeling is sound for any width chosen by
-/// [`uninterpreted_sort_width`]; see its soundness argument for why no wrong
-/// `unsat` is possible.
+/// `U` is registered as a first-class [`Sort::Uninterpreted`] id in the arena and
+/// in the shared `sort_aliases` map. Later uses in `declare-fun` parameter/result
+/// positions, `=`, `distinct`, `ite`, and quantifier binders remain many-sorted
+/// EUF instead of being collapsed to a fixed-width bit-vector.
 ///
 /// Parametric declared sorts (`(declare-sort List 1)` and higher) would model a
 /// *family* of sorts, which the scalar BV encoding cannot express, so they are
@@ -1987,7 +1927,6 @@ fn parse_define_sort(
 fn parse_declare_sort(
     script: &mut Script,
     sort_aliases: &mut HashMap<String, Sort>,
-    uninterpreted_width: u32,
     items: &[SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-sort")?;
@@ -1998,10 +1937,13 @@ fn parse_declare_sort(
     if arity != 0 {
         return Err(SmtError::Unsupported(format!(
             "parametric/arity-{arity} declared sort `{name}` (only arity-0 \
-             uninterpreted sorts are modeled, as BitVec)"
+             uninterpreted sorts are supported)"
         )));
     }
-    if is_builtin_sort_name(name) || script.arena.find_datatype(name).is_some() {
+    if is_builtin_sort_name(name)
+        || script.arena.find_datatype(name).is_some()
+        || script.arena.find_uninterpreted_sort(name).is_some()
+    {
         return Err(SmtError::Syntax(format!(
             "declare-sort: `{name}` is a builtin or declared sort"
         )));
@@ -2011,7 +1953,8 @@ fn parse_declare_sort(
             "declare-sort: duplicate sort name `{name}`"
         )));
     }
-    sort_aliases.insert(name.to_owned(), Sort::BitVec(uninterpreted_width));
+    let id = script.arena.declare_uninterpreted_sort(name);
+    sort_aliases.insert(name.to_owned(), Sort::Uninterpreted(id));
     Ok(())
 }
 
@@ -4989,8 +4932,8 @@ fn mentions_seq(e: &SExpr) -> bool {
 
 /// Builds the packed-width → element-width registry for a script by scanning every
 /// `(Seq E)` sort s-expr (declaration, function signature, `(as seq.empty (Seq
-/// E))` ascription, …) once, up front — mirroring [`uninterpreted_sort_width`]'s
-/// pure pre-scan. The width→ew map is then immutable for the whole parse, so the
+/// E))` ascription, …) once, up front. The width→ew map is then immutable for the
+/// whole parse, so the
 /// `seq.*` operator dispatch (which only sees a packed operand's bit width) can
 /// recover its element width without threading mutable state through `parse_sort`.
 ///
@@ -7800,7 +7743,7 @@ fn apply_parameterized(
     head: &[SExpr],
     args: &[TermId],
 ) -> Result<TermId, SmtError> {
-    // Constant array `((as const (Array (_ BitVec i) (_ BitVec e))) v)`.
+    // Constant array `((as const (Array I E)) v)`.
     if head.first().and_then(SExpr::atom) == Some("as") {
         if head.get(1).and_then(SExpr::atom) == Some("const") && head.len() == 3 && args.len() == 1
         {
@@ -7808,12 +7751,19 @@ fn apply_parameterized(
             // resolved at declaration sites, not threaded into term conversion,
             // so an empty alias map is correct here.
             let no_aliases: HashMap<String, Sort> = HashMap::new();
-            let Sort::Array { index, .. } = parse_sort(arena, &no_aliases, &head[2])? else {
+            let Sort::Array { index, element } = parse_sort(arena, &no_aliases, &head[2])? else {
                 return Err(SmtError::Unsupported(format!(
                     "`as const` non-array sort {head:?}"
                 )));
             };
-            return Ok(arena.const_array(index, args[0])?);
+            let actual = arena.sort_of(args[0]);
+            let expected = element.to_sort();
+            if actual != expected {
+                return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
+                    actual, expected,
+                )));
+            }
+            return Ok(arena.const_array_with_index_sort(index.to_sort(), args[0])?);
         }
         return Err(SmtError::Unsupported(format!("`as` form {head:?}")));
     }

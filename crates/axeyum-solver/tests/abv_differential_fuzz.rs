@@ -59,7 +59,7 @@
 use std::sync::mpsc;
 use std::time::Duration;
 
-use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value, eval};
+use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, solve};
 use z3::ast::{Array, BV, Bool};
 use z3::{Params, SatResult, Solver, Sort as Z3Sort};
@@ -592,8 +592,8 @@ impl Instance {
         let anames = ["a", "b"];
         let enames = ["x", "y", "z"];
         let array_sort = Sort::Array {
-            index: self.width,
-            element: self.width,
+            index: ArraySortKey::BitVec(self.width),
+            element: ArraySortKey::BitVec(self.width),
         };
         let asyms: Vec<SymbolId> = (0..self.num_arrays)
             .map(|i| a.declare(anames[i], array_sort).unwrap())

@@ -8,11 +8,14 @@
 //! and every `sat` model must replay against the original assertions. A graceful
 //! `Unknown` on a hard case is fine; a wrong sat / unsat is unacceptable.
 
+use std::time::Duration;
+
 use axeyum_ir::{Assignment, Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
-    CheckResult, IncrementalDecision, SolverConfig, check_qf_uflra_boolean_prop_metrics,
-    check_qf_uflra_boolean_with_metrics, check_qf_uflra_online, check_with_uf_arithmetic,
-    combined_incremental_structure, combined_incremental_vs_check, combined_theory_propagations,
+    CheckResult, IncrementalDecision, SolverConfig, UnknownKind,
+    check_qf_uflra_boolean_prop_metrics, check_qf_uflra_boolean_with_metrics,
+    check_qf_uflra_online, check_with_uf_arithmetic, combined_incremental_structure,
+    combined_incremental_vs_check, combined_theory_propagations,
 };
 
 fn rconst(arena: &mut TermArena, n: i128) -> TermId {
@@ -51,6 +54,28 @@ fn model_replays(arena: &TermArena, assertions: &[TermId], result: &CheckResult)
             );
         }
     }
+}
+
+#[test]
+fn boolean_combination_zero_timeout_is_timeout_unknown() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Real], Sort::Real)
+        .expect("declare f");
+    let x = rvar(&mut arena, "x");
+    let y = rvar(&mut arena, "y");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let eq = arena.eq(fx, fy).unwrap();
+    let lt = arena.real_lt(x, y).unwrap();
+    let assertion = arena.or(eq, lt).unwrap();
+
+    let config = SolverConfig::default().with_timeout(Duration::ZERO);
+    let result = check_qf_uflra_online(&mut arena, &[assertion], &config).unwrap();
+    assert!(
+        matches!(&result, CheckResult::Unknown(reason) if reason.kind == UnknownKind::Timeout),
+        "expected timeout unknown, got {result:?}"
+    );
 }
 
 #[test]

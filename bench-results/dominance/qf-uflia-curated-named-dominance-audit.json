@@ -1,0 +1,60 @@
+{
+  "baseline": "bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json",
+  "complete_audit": true,
+  "instances": [
+    {
+      "audit_outcome": "unsat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 3.455156,
+      "evidence_certified": false,
+      "evidence_checked": true,
+      "evidence_kind": "bare-unsat",
+      "file": "corpus/public-curated/named/cvc5__named-expr-use.smt2",
+      "lean_checked": false,
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 4.869008999999999,
+      "evidence_certified": false,
+      "evidence_checked": true,
+      "evidence_kind": "bare-unsat",
+      "file": "corpus/public-curated/named/cvc5__use-name-in-same-command.smt2",
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    }
+  ],
+  "limit": 2,
+  "logic": "QF_UFLIA",
+  "slice": "qf-uflia-curated-named-solver-vs-z3-10s.json",
+  "summary": {
+    "audit_errors": 0,
+    "audited_decided": 2,
+    "audited_unsat": 2,
+    "baseline_decided": 2,
+    "baseline_mismatches": 0,
+    "dominant_candidates": 0,
+    "dominant_pct_audited": 0.0,
+    "evidence_certified": 0,
+    "evidence_checked": 2,
+    "instances": 2,
+    "lean_checked_unsat": 0,
+    "lean_unsat_pct": 0.0,
+    "timeouts": 0
+  },
+  "timeout_ms": 5000,
+  "version": 1
+}

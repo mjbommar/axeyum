@@ -4,9 +4,9 @@
 //! exhaustively at small widths, not just on sampled inputs.
 
 use axeyum_ir::{
-    ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue, IrError, Rational, Sort,
-    TermArena, Value, bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value,
-    value_to_lsb_bits,
+    ArraySortKey, ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue,
+    GenericArrayValue, IrError, Rational, Sort, TermArena, Value, bv_value_to_lsb_bits, eval,
+    lsb_bits_to_bv_value, lsb_bits_to_value, value_to_lsb_bits,
 };
 
 fn bv(width: u32, value: u128) -> Value {
@@ -625,8 +625,8 @@ fn array_select_over_store_is_read_over_write() {
         .declare(
             "a",
             Sort::Array {
-                index: 3,
-                element: 4,
+                index: ArraySortKey::BitVec(3),
+                element: ArraySortKey::BitVec(4),
             },
         )
         .unwrap();
@@ -669,8 +669,8 @@ fn array_store_is_last_write_wins_and_extensional() {
         .declare(
             "a",
             Sort::Array {
-                index: 4,
-                element: 8,
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(8),
             },
         )
         .unwrap();
@@ -686,6 +686,65 @@ fn array_store_is_last_write_wins_and_extensional() {
     let mut assignment = Assignment::new();
     assignment.set(a_sym, Value::Array(ArrayValue::constant(4, 8, 0)));
     assert_eq!(eval(&arena, equal, &assignment).unwrap(), Value::Bool(true));
+}
+
+#[test]
+fn generic_int_array_const_store_select_evaluates() {
+    let mut arena = TermArena::new();
+    let default = arena.int_const(5);
+    let array = arena
+        .const_array_with_index_sort(Sort::Int, default)
+        .unwrap();
+    assert_eq!(
+        arena.sort_of(array),
+        Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Int,
+        }
+    );
+
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let seven = arena.int_const(7);
+    let stored = arena.store(array, one, seven).unwrap();
+    let hit = arena.select(stored, one).unwrap();
+    let miss = arena.select(stored, two).unwrap();
+
+    let assignment = Assignment::new();
+    assert_eq!(eval(&arena, hit, &assignment).unwrap(), Value::Int(7));
+    assert_eq!(eval(&arena, miss, &assignment).unwrap(), Value::Int(5));
+    assert!(matches!(
+        eval(&arena, stored, &assignment).unwrap(),
+        Value::GenericArray(_)
+    ));
+}
+
+#[test]
+fn generic_int_array_equality_is_store_order_independent() {
+    let mut arena = TermArena::new();
+    let default = arena.int_const(0);
+    let base = arena
+        .const_array_with_index_sort(Sort::Int, default)
+        .unwrap();
+    let i1 = arena.int_const(1);
+    let i2 = arena.int_const(2);
+    let e1 = arena.int_const(10);
+    let e2 = arena.int_const(20);
+
+    let left = {
+        let first = arena.store(base, i1, e1).unwrap();
+        arena.store(first, i2, e2).unwrap()
+    };
+    let right = {
+        let first = arena.store(base, i2, e2).unwrap();
+        arena.store(first, i1, e1).unwrap()
+    };
+    let equal = arena.eq(left, right).unwrap();
+
+    assert_eq!(
+        eval(&arena, equal, &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
 }
 
 #[test]
@@ -756,17 +815,15 @@ fn apply_rejects_bad_signatures_and_arguments() {
         arena.apply(f, &[y]),
         Err(IrError::SortsDiffer(..))
     ));
-    // Array sort in a signature is rejected (Int/Real are now allowed, but arrays
-    // and datatypes are not — see uf_argument_sorts_admit_arithmetic_but_not_arrays).
+    // Array-valued parameters are supported for AUFLIA-style signatures, but an
+    // array-valued result is still outside the current solver/model route.
+    let array = Sort::Array {
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(8),
+    };
+    assert!(arena.declare_fun("g", &[array], Sort::Bool).is_ok());
     assert!(matches!(
-        arena.declare_fun(
-            "g",
-            &[Sort::Array {
-                index: 4,
-                element: 8
-            }],
-            Sort::Bool
-        ),
+        arena.declare_fun("h", &[Sort::Bool], array),
         Err(IrError::SortMismatch { .. })
     ));
     // Re-declaring a name with a different signature conflicts.
@@ -870,6 +927,40 @@ fn func_value_normalizes_to_default() {
     assert_eq!(interp.entries().count(), 1);
 }
 
+#[test]
+fn func_value_accepts_generic_array_arguments() {
+    let mut arena = TermArena::new();
+    let array_sort = Sort::Array {
+        index: ArraySortKey::Int,
+        element: ArraySortKey::Int,
+    };
+    let f = arena
+        .declare_fun("f", &[array_sort], Sort::Int)
+        .expect("array argument UF signature");
+    let a_sym = arena.declare("a", array_sort).unwrap();
+    let a = arena.var(a_sym);
+    let app = arena.apply(f, &[a]).unwrap();
+
+    let base = Value::GenericArray(GenericArrayValue::constant(
+        ArraySortKey::Int,
+        ArraySortKey::Int,
+        Value::Int(0),
+    ));
+    let stored = match base {
+        Value::GenericArray(ref array) => {
+            Value::GenericArray(array.store(Value::Int(3), Value::Int(9)))
+        }
+        _ => unreachable!(),
+    };
+    let interp = FuncValue::constant_value(vec![array_sort], Sort::Int, Value::Int(0))
+        .define_value(std::slice::from_ref(&stored), Value::Int(42));
+
+    let mut model = Assignment::new();
+    model.set(a_sym, stored);
+    model.set_function(f, interp);
+    assert_eq!(eval(&arena, app, &model).unwrap(), Value::Int(42));
+}
+
 // ----- linear integer arithmetic (ADR-0014) -----------------------------
 
 fn int(value: i128) -> Value {
@@ -948,10 +1039,10 @@ fn int_const_and_negative_evaluate() {
 }
 
 #[test]
-fn uf_argument_sorts_admit_arithmetic_but_not_arrays() {
+fn uf_argument_sorts_admit_arithmetic_and_array_params() {
     // Uninterpreted functions now admit Int/Real params/results (QF_UFLIA/UFLRA,
-    // decided by EUF+arithmetic combination, not bit-blasting); Array/Datatype stay
-    // rejected.
+    // decided by EUF+arithmetic combination, not bit-blasting). Array parameters
+    // are admitted for mixed AUFLIA; array results and datatypes stay rejected.
     let mut arena = TermArena::new();
     assert!(
         arena.declare_fun("f", &[Sort::Int], Sort::Int).is_ok(),
@@ -963,13 +1054,14 @@ fn uf_argument_sorts_admit_arithmetic_but_not_arrays() {
     );
     let elem = arena.declare_fun("h", &[Sort::BitVec(8)], Sort::BitVec(8));
     assert!(elem.is_ok(), "BitVec UF still valid");
-    // An array-sorted parameter remains unsupported.
+    // An array-sorted parameter is now representable.
     let array = Sort::Array {
-        index: 4,
-        element: 8,
+        index: ArraySortKey::BitVec(4),
+        element: ArraySortKey::BitVec(8),
     };
+    assert!(arena.declare_fun("arr", &[array], Sort::Bool).is_ok());
     assert!(matches!(
-        arena.declare_fun("arr", &[array], Sort::Bool),
+        arena.declare_fun("arr_result", &[Sort::Bool], array),
         Err(IrError::SortMismatch { .. })
     ));
 }
@@ -1210,8 +1302,8 @@ fn const_array_evaluates_to_constant_everywhere() {
     assert_eq!(
         a.sort_of(c),
         Sort::Array {
-            index: 4,
-            element: 8
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8)
         }
     );
     for i in [0u128, 5, 15] {

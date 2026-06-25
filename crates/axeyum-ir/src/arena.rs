@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use crate::error::IrError;
-use crate::sort::{MAX_BV_WIDTH, Sort, mask};
+use crate::sort::{ArraySortKey, MAX_BV_WIDTH, Sort, SortId, mask};
 use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 
 /// Append-only arena owning symbols and hash-consed terms.
@@ -27,6 +27,8 @@ pub struct TermArena {
     symbol_lookup: HashMap<String, SymbolId>,
     functions: Vec<FuncDecl>,
     function_lookup: HashMap<String, FuncId>,
+    uninterpreted_sorts: Vec<String>,
+    uninterpreted_sort_lookup: HashMap<String, SortId>,
     nodes: Vec<TermNode>,
     sorts: Vec<Sort>,
     intern: HashMap<TermNode, TermId>,
@@ -154,6 +156,53 @@ impl TermArena {
         })
     }
 
+    /// Declares an arity-0 uninterpreted sort by name, or returns the existing
+    /// id if it was already declared.
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (sort count exceeding `u32`).
+    pub fn declare_uninterpreted_sort(&mut self, name: &str) -> SortId {
+        if let Some(&existing) = self.uninterpreted_sort_lookup.get(name) {
+            return existing;
+        }
+        let id = SortId(
+            u32::try_from(self.uninterpreted_sorts.len())
+                .expect("uninterpreted sort count fits u32"),
+        );
+        self.uninterpreted_sorts.push(name.to_owned());
+        self.uninterpreted_sort_lookup.insert(name.to_owned(), id);
+        id
+    }
+
+    /// Looks up a declared uninterpreted sort by name.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if more than `u32::MAX` uninterpreted sorts have been declared.
+    pub fn find_uninterpreted_sort(&self, name: &str) -> Option<SortId> {
+        self.uninterpreted_sort_lookup.get(name).copied()
+    }
+
+    /// The declared name of an uninterpreted sort.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` does not belong to this arena.
+    pub fn uninterpreted_sort_name(&self, id: SortId) -> &str {
+        &self.uninterpreted_sorts[id.index()]
+    }
+
+    /// Iterates declared uninterpreted sorts in declaration order.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if more than `u32::MAX` uninterpreted sorts have been declared.
+    pub fn uninterpreted_sort_ids(&self) -> impl Iterator<Item = SortId> + '_ {
+        (0..self.uninterpreted_sorts.len())
+            .map(|i| SortId(u32::try_from(i).expect("uninterpreted sort index fits u32")))
+    }
+
     fn intern_node(&mut self, node: TermNode, sort: Sort) -> TermId {
         if let Some(&id) = self.intern.get(&node) {
             return id;
@@ -179,9 +228,7 @@ impl TermArena {
     ///
     /// Panics on arena corruption (symbol count exceeding `u32`).
     pub fn declare(&mut self, name: &str, sort: Sort) -> Result<SymbolId, IrError> {
-        if let Sort::BitVec(w) = sort {
-            check_width(w)?;
-        }
+        check_sort(sort)?;
         if let Some(&existing) = self.symbol_lookup.get(name) {
             let (_, existing_sort) = self.symbols[existing.index()];
             if existing_sort == sort {
@@ -274,6 +321,7 @@ impl TermArena {
             | Sort::Int
             | Sort::Real
             | Sort::Datatype(_)
+            | Sort::Uninterpreted(_)
             | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Bool",
                 found,
@@ -292,7 +340,8 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
-            | Sort::Datatype(_)) => Err(IrError::SortMismatch {
+            | Sort::Datatype(_)
+            | Sort::Uninterpreted(_)) => Err(IrError::SortMismatch {
                 expected: "BitVec",
                 found,
             }),
@@ -1115,8 +1164,8 @@ impl TermArena {
 
     // ----- arrays (ADR-0010) --------------------------------------------
 
-    /// Declares an array symbol `Array(index -> element)` and returns its
-    /// variable term.
+    /// Declares a bit-vector array symbol `Array(index -> element)` and returns
+    /// its variable term.
     ///
     /// # Errors
     ///
@@ -1126,6 +1175,38 @@ impl TermArena {
     pub fn array_var(&mut self, name: &str, index: u32, element: u32) -> Result<TermId, IrError> {
         check_width(index)?;
         check_width(element)?;
+        let symbol = self.declare(
+            name,
+            Sort::Array {
+                index: ArraySortKey::BitVec(index),
+                element: ArraySortKey::BitVec(element),
+            },
+        )?;
+        Ok(self.var(symbol))
+    }
+
+    /// Declares an array symbol with arbitrary non-array index and element
+    /// sorts, returning its variable term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::InvalidWidth`] for bad bit-vector widths,
+    /// [`IrError::SortMismatch`] if either component is itself an array sort, or
+    /// [`IrError::SymbolSortConflict`] on a name reuse with a different sort.
+    pub fn array_var_with_sorts(
+        &mut self,
+        name: &str,
+        index: Sort,
+        element: Sort,
+    ) -> Result<TermId, IrError> {
+        let index = ArraySortKey::from_sort(index).ok_or(IrError::SortMismatch {
+            expected: "non-array array index sort",
+            found: index,
+        })?;
+        let element = ArraySortKey::from_sort(element).ok_or(IrError::SortMismatch {
+            expected: "non-array array element sort",
+            found: element,
+        })?;
         let symbol = self.declare(name, Sort::Array { index, element })?;
         Ok(self.var(symbol))
     }
@@ -1138,15 +1219,12 @@ impl TermArena {
     /// is a bit-vector, or [`IrError::SortsDiffer`] if `idx`'s width does not
     /// match the array index width.
     pub fn select(&mut self, array: TermId, idx: TermId) -> Result<TermId, IrError> {
-        let (index_width, element_width) = self.expect_array(array)?;
-        let idx_width = self.expect_bv(idx)?;
-        if idx_width != index_width {
-            return Err(IrError::SortsDiffer(
-                Sort::BitVec(idx_width),
-                Sort::BitVec(index_width),
-            ));
+        let (index_sort, element_sort) = self.expect_array(array)?;
+        let idx_sort = self.sort_of(idx);
+        if idx_sort != index_sort {
+            return Err(IrError::SortsDiffer(idx_sort, index_sort));
         }
-        Ok(self.app(Op::Select, &[array, idx], Sort::BitVec(element_width)))
+        Ok(self.app(Op::Select, &[array, idx], element_sort))
     }
 
     /// Array write `store(array, idx, element)`; the result has the array sort.
@@ -1162,29 +1240,17 @@ impl TermArena {
         idx: TermId,
         element: TermId,
     ) -> Result<TermId, IrError> {
-        let (index_width, element_width) = self.expect_array(array)?;
-        let idx_width = self.expect_bv(idx)?;
-        if idx_width != index_width {
-            return Err(IrError::SortsDiffer(
-                Sort::BitVec(idx_width),
-                Sort::BitVec(index_width),
-            ));
+        let array_sort = self.sort_of(array);
+        let (index_sort, element_sort) = self.expect_array(array)?;
+        let idx_sort = self.sort_of(idx);
+        if idx_sort != index_sort {
+            return Err(IrError::SortsDiffer(idx_sort, index_sort));
         }
-        let elem_width = self.expect_bv(element)?;
-        if elem_width != element_width {
-            return Err(IrError::SortsDiffer(
-                Sort::BitVec(elem_width),
-                Sort::BitVec(element_width),
-            ));
+        let elem_sort = self.sort_of(element);
+        if elem_sort != element_sort {
+            return Err(IrError::SortsDiffer(elem_sort, element_sort));
         }
-        Ok(self.app(
-            Op::Store,
-            &[array, idx, element],
-            Sort::Array {
-                index: index_width,
-                element: element_width,
-            },
-        ))
+        Ok(self.app(Op::Store, &[array, idx, element], array_sort))
     }
 
     /// Constant array `((as const (Array (_ BitVec index) (_ BitVec e))) value)`:
@@ -1196,7 +1262,40 @@ impl TermArena {
     /// [`IrError::SortMismatch`] unless `value` is a bit-vector.
     pub fn const_array(&mut self, index: u32, value: TermId) -> Result<TermId, IrError> {
         check_width(index)?;
-        let element = self.expect_bv(value)?;
+        let element_width = self.expect_bv(value)?;
+        Ok(self.app(
+            Op::ConstArray {
+                index: ArraySortKey::BitVec(index),
+            },
+            &[value],
+            Sort::Array {
+                index: ArraySortKey::BitVec(index),
+                element: ArraySortKey::BitVec(element_width),
+            },
+        ))
+    }
+
+    /// Constant array `((as const (Array I E)) value)` for a non-array index
+    /// sort `I`; the element sort is taken from `value`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] if `index` or `value`'s sort is an
+    /// array sort, or [`IrError::InvalidWidth`] for bad bit-vector widths.
+    pub fn const_array_with_index_sort(
+        &mut self,
+        index: Sort,
+        value: TermId,
+    ) -> Result<TermId, IrError> {
+        let index = ArraySortKey::from_sort(index).ok_or(IrError::SortMismatch {
+            expected: "non-array array index sort",
+            found: index,
+        })?;
+        let element_sort = self.sort_of(value);
+        let element = ArraySortKey::from_sort(element_sort).ok_or(IrError::SortMismatch {
+            expected: "non-array array element sort",
+            found: element_sort,
+        })?;
         Ok(self.app(
             Op::ConstArray { index },
             &[value],
@@ -1253,14 +1352,15 @@ impl TermArena {
         Ok(self.app(Op::FpFromBits { exp, sig }, &[x], Sort::Float { exp, sig }))
     }
 
-    fn expect_array(&self, t: TermId) -> Result<(u32, u32), IrError> {
+    fn expect_array(&self, t: TermId) -> Result<(Sort, Sort), IrError> {
         match self.sort_of(t) {
-            Sort::Array { index, element } => Ok((index, element)),
+            Sort::Array { index, element } => Ok((index.to_sort(), element.to_sort())),
             found @ (Sort::Bool
             | Sort::BitVec(_)
             | Sort::Int
             | Sort::Real
             | Sort::Datatype(_)
+            | Sort::Uninterpreted(_)
             | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Array",
                 found,
@@ -1270,14 +1370,13 @@ impl TermArena {
 
     // ----- uninterpreted functions (ADR-0013) ---------------------------
 
-    /// Declares an uninterpreted function with the given scalar parameter sorts
-    /// and result sort, or returns the existing one if `name` was already
+    /// Declares an uninterpreted function with the given parameter sorts and
+    /// non-array result sort, or returns the existing one if `name` was already
     /// declared with the identical signature.
     ///
     /// # Errors
     ///
-    /// Returns [`IrError::SortMismatch`] if any parameter or the result is an
-    /// array sort (functions are scalar in the supported fragment),
+    /// Returns [`IrError::SortMismatch`] if the result is an array sort,
     /// [`IrError::InvalidWidth`] for a bad bit-vector width, or
     /// [`IrError::FunctionSignatureConflict`] if `name` exists with a different
     /// signature.
@@ -1292,9 +1391,9 @@ impl TermArena {
         result: Sort,
     ) -> Result<FuncId, IrError> {
         for &sort in params {
-            check_uf_sort(sort)?;
+            check_uf_param_sort(sort)?;
         }
-        check_uf_sort(result)?;
+        check_uf_result_sort(result)?;
         if let Some(&existing) = self.function_lookup.get(name) {
             let decl = &self.functions[existing.index()];
             if decl.params == params && decl.result == result {
@@ -1372,6 +1471,7 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Real
             | Sort::Datatype(_)
+            | Sort::Uninterpreted(_)
             | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Int",
                 found,
@@ -1543,6 +1643,7 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Datatype(_)
+            | Sort::Uninterpreted(_)
             | Sort::Float { .. }) => Err(IrError::SortMismatch {
                 expected: "Real",
                 found,
@@ -1717,6 +1818,30 @@ fn check_width(width: u32) -> Result<(), IrError> {
     Ok(())
 }
 
+fn check_array_key(sort: ArraySortKey) -> Result<(), IrError> {
+    match sort {
+        ArraySortKey::BitVec(w) => check_width(w),
+        ArraySortKey::Float { exp, sig } => check_width(exp + sig),
+        ArraySortKey::Bool
+        | ArraySortKey::Int
+        | ArraySortKey::Real
+        | ArraySortKey::Datatype(_)
+        | ArraySortKey::Uninterpreted(_) => Ok(()),
+    }
+}
+
+fn check_sort(sort: Sort) -> Result<(), IrError> {
+    match sort {
+        Sort::BitVec(w) => check_width(w),
+        Sort::Float { exp, sig } => check_width(exp + sig),
+        Sort::Array { index, element } => {
+            check_array_key(index)?;
+            check_array_key(element)
+        }
+        Sort::Bool | Sort::Int | Sort::Real | Sort::Datatype(_) | Sort::Uninterpreted(_) => Ok(()),
+    }
+}
+
 /// Validates a function-signature sort: only finite scalar sorts
 /// (`Bool`/`BitVec`) are allowed. Arrays and integers are rejected (functions
 /// over integers are not in the bit-blasted fragment yet, ADR-0014).
@@ -1726,27 +1851,43 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
         Sort::BitVec(w) => check_width(w),
         // A floating-point sort is a finite scalar of `exp + sig` bits.
         Sort::Float { exp, sig } => check_width(exp + sig),
-        found @ (Sort::Array { .. } | Sort::Int | Sort::Real | Sort::Datatype(_)) => {
-            Err(IrError::SortMismatch {
-                expected: "Bool or BitVec",
-                found,
-            })
-        }
+        found @ (Sort::Array { .. }
+        | Sort::Int
+        | Sort::Real
+        | Sort::Datatype(_)
+        | Sort::Uninterpreted(_)) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found,
+        }),
     }
 }
 
-/// Sort admissibility for an uninterpreted-function parameter or result. Wider than
+/// Sort admissibility for an uninterpreted-function parameter. Wider than
 /// [`check_scalar_width`]: in addition to the finite scalars (`Bool`/`BitVec`/
-/// `Float`) it admits the **arithmetic** sorts `Int`/`Real`, so `QF_UFLIA`/`QF_UFLRA`
-/// functions can be declared (decided by EUF+arithmetic combination, not bit-blasting
-/// — the lowering path never sees an arithmetic-sorted application). `Array`/
-/// `Datatype` arguments remain unsupported.
-fn check_uf_sort(sort: Sort) -> Result<(), IrError> {
+/// `Float`) it admits arithmetic sorts, declared carrier sorts, and first-class
+/// array sorts. Mixed AUFLIA uses array-valued *arguments* to scalar/arithmetic
+/// functions; array-valued results remain deferred by [`check_uf_result_sort`].
+fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
-        Sort::Int | Sort::Real => Ok(()),
+        Sort::Int | Sort::Real | Sort::Uninterpreted(_) | Sort::Array { .. } => Ok(()),
+        Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
+        found @ Sort::Datatype(_) => Err(IrError::SortMismatch {
+            expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",
+            found,
+        }),
+    }
+}
+
+/// Sort admissibility for an uninterpreted-function result. This intentionally
+/// still rejects array-valued results: the IR can represent array terms, but the
+/// current solver/model projection route only covers array-valued *arguments* to
+/// scalar/arithmetic functions.
+fn check_uf_result_sort(sort: Sort) -> Result<(), IrError> {
+    match sort {
+        Sort::Int | Sort::Real | Sort::Uninterpreted(_) => Ok(()),
         Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
         found @ (Sort::Array { .. } | Sort::Datatype(_)) => Err(IrError::SortMismatch {
-            expected: "Bool, BitVec, Float, Int, or Real",
+            expected: "Bool, BitVec, Float, Int, Real, or uninterpreted sort",
             found,
         }),
     }

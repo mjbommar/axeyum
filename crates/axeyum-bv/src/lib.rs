@@ -754,6 +754,9 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Datatype(_) => {
                 unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
             }
+            Sort::Uninterpreted(_) => {
+                unreachable!("uninterpreted-sort terms are rejected before bit lowering")
+            }
         }
     }
 
@@ -772,6 +775,9 @@ impl<'a> LoweringBuilder<'a> {
             }
             Sort::Datatype(_) => {
                 unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
+            }
+            Sort::Uninterpreted(_) => {
+                unreachable!("uninterpreted-sort terms are rejected before bit lowering")
             }
         };
         let literal = self.aig.input(label);
@@ -1710,6 +1716,9 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Datatype(_) => {
                 unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
             }
+            Sort::Uninterpreted(_) => {
+                unreachable!("uninterpreted-sort terms are rejected before bit lowering")
+            }
         }
     }
 }
@@ -1763,6 +1772,9 @@ fn sort_width(sort: Sort) -> usize {
         }
         Sort::Datatype(_) => {
             unreachable!("datatype terms are rejected before bit lowering (ADR-0022)")
+        }
+        Sort::Uninterpreted(_) => {
+            unreachable!("uninterpreted-sort terms are rejected before bit lowering")
         }
     }
 }

@@ -6,7 +6,9 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use axeyum_ir::{Assignment, IrError, Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    ArraySortKey, Assignment, IrError, Op, Sort, TermArena, TermId, TermNode, Value, eval,
+};
 
 use crate::{
     ModelProjection, Preservation, RewriteManifest, RewriteRule, RewriteRuleId, RewriteTestRoute,
@@ -602,6 +604,7 @@ fn rewrite_app(
             | Sort::Int
             | Sort::Real
             | Sort::Datatype(_)
+            | Sort::Uninterpreted(_)
             | Sort::Float { .. } => BV_CONST_FOLD,
         };
         if enabled.contains(rule_id) {
@@ -1565,7 +1568,7 @@ pub fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermI
         Op::RotateRight { by } => arena.rotate_right(by, args[0]),
         Op::Select => arena.select(args[0], args[1]),
         Op::Store => arena.store(args[0], args[1], args[2]),
-        Op::ConstArray { index } => arena.const_array(index, args[0]),
+        Op::ConstArray { index } => arena.const_array_with_index_sort(index.to_sort(), args[0]),
         Op::IntToReal => arena.int_to_real(args[0]),
         Op::RealToInt => arena.real_to_int(args[0]),
         Op::RealIsInt => arena.real_is_int(args[0]),
@@ -1678,8 +1681,15 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
         Value::Array(array) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: Sort::Array {
-                index: array.index_width(),
-                element: array.element_width(),
+                index: ArraySortKey::BitVec(array.index_width()),
+                element: ArraySortKey::BitVec(array.element_width()),
+            },
+        }),
+        Value::GenericArray(array) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Array {
+                index: array.index_sort(),
+                element: array.element_sort(),
             },
         }),
         Value::Int(value) => Ok(arena.int_const(value)),
@@ -1690,6 +1700,10 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
         Value::RealAlgebraic(_) => Err(IrError::Unsupported(
             "real-algebraic value has no constant term (ADR-0038)",
         )),
+        Value::Uninterpreted { sort, .. } => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Sort::Uninterpreted(sort),
+        }),
     }
 }
 

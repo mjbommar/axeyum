@@ -14,7 +14,9 @@
 //! [`SolverBackend`], whose `check` takes an immutable arena. It mirrors
 //! [`crate::check_with_array_elimination`].
 
-use axeyum_ir::{TermArena, TermId, Value, eval};
+use std::time::Duration;
+
+use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
 use axeyum_rewrite::{
     DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, canonicalize_terms, elim_unconstrained,
     propagate_values, solve_eqs_bounded,
@@ -40,6 +42,32 @@ pub fn check_with_preprocessing<B: SolverBackend>(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    check_with_preprocessing_impl(backend, arena, assertions, config, None)
+}
+
+pub(crate) fn check_with_preprocessing_and_local_search<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    local_search_timeout: Duration,
+) -> Result<CheckResult, SolverError> {
+    check_with_preprocessing_impl(
+        backend,
+        arena,
+        assertions,
+        config,
+        Some(local_search_timeout),
+    )
+}
+
+fn check_with_preprocessing_impl<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    local_search_timeout: Option<Duration>,
 ) -> Result<CheckResult, SolverError> {
     // Iterate the model-sound reductions to a FIXPOINT (Track 1 perf lever — deeper
     // reduction removes more variables before bit-blasting, which is what relieves
@@ -107,20 +135,58 @@ pub fn check_with_preprocessing<B: SolverBackend>(
         }
     }
 
+    let mut local_search_detail = None;
+    if let Some(timeout) = local_search_timeout {
+        let mut probe_config = config.clone();
+        probe_config.timeout = Some(match config.timeout {
+            Some(config_timeout) => config_timeout.min(timeout),
+            None => timeout,
+        });
+        match crate::pbls::solve_local_search(arena, &reduced, &probe_config)?.result {
+            CheckResult::Sat(model) => {
+                return replay_preprocessed_model(
+                    arena,
+                    assertions,
+                    &trail,
+                    &model.to_assignment(),
+                );
+            }
+            CheckResult::Unknown(reason) => {
+                local_search_detail = Some(reason.detail);
+            }
+            CheckResult::Unsat => {}
+        }
+    }
+
     let result = backend.check(arena, &reduced, config)?;
     let CheckResult::Sat(model) = result else {
-        return Ok(result);
+        return Ok(match (result, local_search_detail) {
+            (CheckResult::Unknown(mut reason), Some(detail)) => {
+                reason.detail = format!(
+                    "preprocessed local search declined ({detail}); {}",
+                    reason.detail
+                );
+                CheckResult::Unknown(reason)
+            }
+            (other, _) => other,
+        });
     };
+    replay_preprocessed_model(arena, assertions, &trail, &model.to_assignment())
+}
 
+fn replay_preprocessed_model(
+    arena: &TermArena,
+    assertions: &[TermId],
+    trail: &ModelReconstructionTrail,
+    assignment: &Assignment,
+) -> Result<CheckResult, SolverError> {
     // Reconstruct the eliminated variables, then replay against the ORIGINAL
     // assertions — the same checkable-`sat` discipline as the array path.
-    let reconstructed = trail
-        .reconstruct(arena, &model.to_assignment())
-        .map_err(|error| {
-            SolverError::Backend(format!(
-                "preprocessing model reconstruction failed: {error}"
-            ))
-        })?;
+    let reconstructed = trail.reconstruct(arena, assignment).map_err(|error| {
+        SolverError::Backend(format!(
+            "preprocessing model reconstruction failed: {error}"
+        ))
+    })?;
 
     for &assertion in assertions {
         match eval(arena, assertion, &reconstructed) {

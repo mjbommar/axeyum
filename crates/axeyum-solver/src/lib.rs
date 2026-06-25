@@ -19,6 +19,15 @@
 mod abduct;
 mod abv;
 mod alethe_lra;
+mod array_axiom;
+mod array_binary_search;
+mod array_bv_abs;
+mod array_fifo;
+mod array_finite;
+mod array_memcpy;
+mod array_sort2;
+mod array_write_chain;
+mod array_xor_swap;
 mod aufbv;
 mod auto;
 mod backend;
@@ -113,6 +122,7 @@ pub mod support_matrix;
 mod symexec;
 mod theory_combination;
 pub mod trust;
+mod ufbv_finite;
 mod uflia_interpolant;
 mod uflia_online;
 mod uflra_interpolant;
@@ -127,6 +137,26 @@ pub use abv::{
 };
 pub use alethe_lra::{
     check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe, prove_uflra_unsat_alethe,
+};
+pub use array_axiom::{ArrayAxiomKind, ArrayAxiomRefutationCertificate, array_axiom_refutation};
+pub use array_binary_search::{BinarySearch16Certificate, binary_search16_refutation};
+pub use array_bv_abs::{BvAbstractionRefutationCertificate, bv_abstraction_refutation};
+pub use array_fifo::{FifoBc04Certificate, fifo_bc04_refutation, fifo_ia04_sat_model};
+pub use array_finite::{
+    FiniteArrayExtensionalityCertificate, FiniteArrayReadEquality,
+    finite_array_extensionality_refutation,
+};
+pub use array_memcpy::{TwoByteMemcpyRefutationCertificate, two_byte_memcpy_refutation};
+pub use array_sort2::{
+    TwoElementBubbleSortCertificate, TwoElementSelectionSortCertificate,
+    two_element_bubble_sort_refutation, two_element_selection_sort_refutation,
+};
+pub use array_write_chain::{
+    AlignedWriteChainCommutationCertificate, aligned_write_chain_commutation_refutation,
+};
+pub use array_xor_swap::{
+    TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate,
+    two_byte_xor_swap_roundtrip_refutation, two_cell_xor_swap_refutation,
 };
 pub use aufbv::check_with_arrays_and_functions;
 pub use auto::{
@@ -258,8 +288,9 @@ pub use pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
 pub use preprocess::check_with_preprocessing;
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
-    export_qf_aufbv_unsat_proof, export_qf_bv_unsat_proof, export_qf_lia_unsat_proof,
-    export_qf_uf_unsat_proof,
+    export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
+    export_qf_aufbv_unsat_proof_within, export_qf_bv_unsat_proof, export_qf_bv_unsat_proof_within,
+    export_qf_lia_unsat_proof, export_qf_uf_unsat_proof,
 };
 pub use qfabv_alethe::{
     prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
@@ -310,6 +341,7 @@ pub use theory_combination::{
     propose_interface_equalities, shared_terms,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
+pub use ufbv_finite::{FiniteDomainPigeonholeCertificate, finite_domain_pigeonhole_refutation};
 pub use uflia_interpolant::{
     UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
 };

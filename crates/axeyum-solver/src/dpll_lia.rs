@@ -23,20 +23,24 @@
 //! plus learned lemmas is propositionally unsatisfiable. A round budget bounds
 //! the search (`unknown`, never wrong).
 
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::time::{Duration, Instant};
 
+use axeyum_cnf::{CnfClause, CnfLit, CnfVar, IncrementalSat, SatError, SatResult};
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
-use crate::backend::{
-    CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
-};
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::lra::{check_with_lia_simplex, check_with_lra};
 use crate::model::Model;
-use crate::sat_bv_backend::SatBvBackend;
 
 const ATOM_PREFIX: &str = "!arith_atom_";
 const MAX_DPLL_ROUNDS: usize = 10_000;
+const MAX_INITIAL_BOUND_MUTEX_LEMMAS: usize = 8_192;
+const MAX_INITIAL_BOUND_IMPLICATION_LEMMAS: usize = 4_096;
+const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 256;
+const MAX_MINIMIZED_THEORY_CORE_ATOMS: usize = 128;
+const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
+const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
 
 /// The arithmetic theory an atom belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -252,7 +256,74 @@ pub fn check_with_arith_dpll(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    Ok(run_arith_dpll(arena, assertions, config)?.result)
+    // Prefer the shared CDCL(T) spine for pure-integer arithmetic
+    // searches: it has 1-UIP learning, non-chronological backjumping, restarts,
+    // and theory propagation, whereas the legacy path below repeatedly launches
+    // a fresh SAT solve plus full simplex checks. With a configured wall-clock
+    // budget, the online route gets a bounded probe and the legacy fallback
+    // receives only the remaining time. Certification still uses
+    // `run_arith_dpll` directly, preserving its explicit refutation artifact.
+    let probe_started = Instant::now();
+    let probe_config = online_lia_probe_config(config);
+    match crate::lia_online::check_qf_lia_online(arena, assertions, &probe_config)? {
+        CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
+        CheckResult::Unsat => return Ok(CheckResult::Unsat),
+        CheckResult::Unknown(reason) if budget_unknown_kind(reason.kind) => {
+            let Some(fallback_config) = remaining_config(config, probe_started) else {
+                return Ok(CheckResult::Unknown(reason));
+            };
+            return Ok(run_arith_dpll(arena, assertions, &fallback_config)?.result);
+        }
+        CheckResult::Unknown(_) => {}
+    }
+    let fallback_config = remaining_config(config, probe_started).unwrap_or_else(|| config.clone());
+    Ok(run_arith_dpll(arena, assertions, &fallback_config)?.result)
+}
+
+fn online_lia_probe_config(config: &SolverConfig) -> SolverConfig {
+    let mut probe = config.clone();
+    if let Some(timeout) = probe.timeout {
+        let half = timeout.checked_div(2).unwrap_or(timeout);
+        let bounded = half.min(Duration::from_secs(1));
+        probe.timeout = Some(if bounded.is_zero() { timeout } else { bounded });
+    }
+    probe
+}
+
+fn remaining_config(config: &SolverConfig, started: Instant) -> Option<SolverConfig> {
+    let Some(timeout) = config.timeout else {
+        return Some(config.clone());
+    };
+    let remaining = timeout.checked_sub(started.elapsed())?;
+    let mut fallback = config.clone();
+    fallback.timeout = Some(remaining);
+    Some(fallback)
+}
+
+fn config_with_deadline(config: &SolverConfig, deadline: Option<Instant>) -> SolverConfig {
+    let Some(deadline) = deadline else {
+        return config.clone();
+    };
+    let remaining = deadline
+        .checked_duration_since(Instant::now())
+        .unwrap_or(Duration::ZERO);
+    let mut scoped = config.clone();
+    scoped.timeout = Some(match config.timeout {
+        Some(existing) => existing.min(remaining),
+        None => remaining,
+    });
+    scoped
+}
+
+fn budget_unknown_kind(kind: UnknownKind) -> bool {
+    matches!(
+        kind,
+        UnknownKind::Timeout
+            | UnknownKind::ResourceLimit
+            | UnknownKind::MemoryLimit
+            | UnknownKind::NodeBudget
+            | UnknownKind::EncodingBudget
+    )
 }
 
 /// The lazy-SMT loop plus the trace needed to certify an `unsat` (the Boolean
@@ -263,6 +334,7 @@ struct ArithRun {
     lemmas: Vec<Vec<ArithLemmaLiteral>>,
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_arith_dpll(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -274,9 +346,18 @@ fn run_arith_dpll(
         skeleton.push(ctx.abstract_term(arena, assertion)?);
     }
 
-    let mut backend = SatBvBackend::new();
+    let mut initial_lemmas = initial_int_bound_mutex_lemmas(arena, &ctx)?;
+    initial_lemmas.extend(initial_int_bound_implication_lemmas(arena, &ctx)?);
+    let mut prop_solver = BoolSkeletonSolver::new();
+    prop_solver.assert_all(arena, &skeleton)?;
+    for (clause, _) in &initial_lemmas {
+        prop_solver.assert(arena, *clause)?;
+    }
     let mut blocking: Vec<TermId> = Vec::new();
-    let mut lemmas: Vec<Vec<ArithLemmaLiteral>> = Vec::new();
+    let mut lemmas: Vec<Vec<ArithLemmaLiteral>> = initial_lemmas
+        .iter()
+        .map(|(_, lemma)| lemma.clone())
+        .collect();
 
     // Wall-clock deadline (graceful `Unknown`, never an unbounded hang — the
     // standing hard rule). The lazy-SMT loop can need up to `MAX_DPLL_ROUNDS`
@@ -287,20 +368,25 @@ fn run_arith_dpll(
     // a decided verdict is only ever reached *inside* a round, never by timeout.
     let deadline = config.timeout.map(|t| Instant::now() + t);
 
-    for _ in 0..MAX_DPLL_ROUNDS {
+    for round in 0..MAX_DPLL_ROUNDS {
         if deadline.is_some_and(|d| Instant::now() >= d) {
             return Ok(ArithRun {
                 result: CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::ResourceLimit,
-                    detail: "lazy linear arithmetic exhausted the configured timeout".to_string(),
+                    detail: format!(
+                        "lazy linear arithmetic exhausted the configured timeout after {round} \
+                         rounds (atoms={}, bound_lemmas={}, blocking_lemmas={})",
+                        ctx.atoms.len(),
+                        initial_lemmas.len(),
+                        blocking.len()
+                    ),
                 }),
                 skeleton,
                 lemmas,
             });
         }
-        let mut sat_assertions = skeleton.clone();
-        sat_assertions.extend(blocking.iter().copied());
-        let propositional = match backend.check(arena, &sat_assertions, config)? {
+        let round_config = config_with_deadline(config, deadline);
+        let propositional = match prop_solver.solve(&round_config)? {
             CheckResult::Sat(model) => model,
             CheckResult::Unsat => {
                 return Ok(ArithRun {
@@ -311,7 +397,17 @@ fn run_arith_dpll(
             }
             CheckResult::Unknown(reason) => {
                 return Ok(ArithRun {
-                    result: CheckResult::Unknown(reason),
+                    result: CheckResult::Unknown(UnknownReason {
+                        kind: reason.kind,
+                        detail: format!(
+                            "lazy linear arithmetic SAT skeleton declined after round {round} \
+                             (atoms={}, bound_lemmas={}, blocking_lemmas={}): {}",
+                            ctx.atoms.len(),
+                            initial_lemmas.len(),
+                            blocking.len(),
+                            reason.detail
+                        ),
+                    }),
                     skeleton,
                     lemmas,
                 });
@@ -340,12 +436,16 @@ fn run_arith_dpll(
             theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_simplex)?
         {
             lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
-            blocking.push(block_clause(arena, &ctx.atoms, &truths, &conflict)?);
+            let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
+            prop_solver.assert(arena, clause)?;
+            blocking.push(clause);
             continue;
         }
         if let Some(conflict) = theory_conflict(arena, &ctx, &lits, Theory::Real, check_with_lra)? {
             lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
-            blocking.push(block_clause(arena, &ctx.atoms, &truths, &conflict)?);
+            let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
+            prop_solver.assert(arena, clause)?;
+            blocking.push(clause);
             continue;
         }
 
@@ -405,7 +505,274 @@ fn theory_conflict(
     if !matches!(oracle(arena, &conj)?, CheckResult::Unsat) {
         return Ok(None);
     }
+    if theory == Theory::Int {
+        if let Some(core) = cheap_int_bound_conflict_core(arena, ctx, lits, &indices) {
+            return Ok(Some(core));
+        }
+        if let Some(core) = cheap_int_difference_conflict_core(arena, ctx, lits, &indices) {
+            return Ok(Some(core));
+        }
+    }
+    if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS {
+        return Ok(Some(indices));
+    }
     Ok(Some(minimize_core(arena, &indices, lits, oracle)?))
+}
+
+/// Extracts a small conflicting integer-bound core from the current SAT
+/// assignment. The oracle has already established that the full integer slice is
+/// unsatisfiable; this helper only replaces a large low-relevance core with an
+/// independently checkable two-literal bound conflict when one is obvious.
+fn cheap_int_bound_conflict_core(
+    arena: &TermArena,
+    ctx: &ArithAbstractor,
+    lits: &[TermId],
+    indices: &[usize],
+) -> Option<Vec<usize>> {
+    let mut bounds = Vec::new();
+    for &idx in indices {
+        let truth = assigned_atom_truth(arena, &ctx.atoms[idx], lits[idx])?;
+        bounds.extend(
+            simple_int_literal_bounds(arena, idx, &ctx.atoms[idx])
+                .into_iter()
+                .filter(|bound| bound.truth == truth),
+        );
+    }
+
+    for i in 0..bounds.len() {
+        for j in (i + 1)..bounds.len() {
+            let Some((lower, upper)) = conflicting_bounds(&bounds[i], &bounds[j]) else {
+                continue;
+            };
+            return Some(vec![lower.atom_idx, upper.atom_idx]);
+        }
+    }
+    None
+}
+
+fn assigned_atom_truth(arena: &TermArena, atom: &ArithAtom, lit: TermId) -> Option<bool> {
+    if lit == atom.term {
+        return Some(true);
+    }
+    let TermNode::App { op, args } = arena.node(lit) else {
+        return None;
+    };
+    (*op == Op::BoolNot && args[0] == atom.term).then_some(false)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum DiffVar {
+    Zero,
+    Sym(SymbolId),
+}
+
+#[derive(Clone, Copy)]
+struct AffineUnit {
+    var: DiffVar,
+    constant: i128,
+}
+
+#[derive(Clone, Copy)]
+struct DifferenceEdge {
+    from: DiffVar,
+    to: DiffVar,
+    weight: i128,
+    atom_idx: usize,
+}
+
+/// Extracts a small integer-difference-logic conflict core from the current SAT
+/// assignment. This recognizes only unit-coefficient affine terms (`x + c`) and
+/// strict/non-strict order atoms. It is deliberately a cheap pre-core heuristic:
+/// the full LIA oracle has already said the conjunction is unsat, and the normal
+/// arithmetic lemma verifier still checks any returned cycle.
+fn cheap_int_difference_conflict_core(
+    arena: &TermArena,
+    ctx: &ArithAbstractor,
+    lits: &[TermId],
+    indices: &[usize],
+) -> Option<Vec<usize>> {
+    let mut edges = Vec::new();
+    for &idx in indices {
+        let truth = assigned_atom_truth(arena, &ctx.atoms[idx], lits[idx])?;
+        if let Some(edge) = difference_edge_for_atom(arena, idx, &ctx.atoms[idx], truth) {
+            edges.push(edge);
+        }
+    }
+    negative_cycle_core(&edges)
+}
+
+fn difference_edge_for_atom(
+    arena: &TermArena,
+    atom_idx: usize,
+    atom: &ArithAtom,
+    truth: bool,
+) -> Option<DifferenceEdge> {
+    if atom.theory != Theory::Int {
+        return None;
+    }
+    let TermNode::App { op, args } = arena.node(atom.term) else {
+        return None;
+    };
+    let strict = match op {
+        Op::IntLt => true,
+        Op::IntLe => false,
+        _ => return None,
+    };
+    if truth {
+        difference_edge_for_order(arena, atom_idx, args[0], args[1], strict)
+    } else {
+        // not (a <= b)  ==  b < a
+        // not (a < b)   ==  b <= a
+        difference_edge_for_order(arena, atom_idx, args[1], args[0], !strict)
+    }
+}
+
+fn difference_edge_for_order(
+    arena: &TermArena,
+    atom_idx: usize,
+    lhs: TermId,
+    rhs: TermId,
+    strict: bool,
+) -> Option<DifferenceEdge> {
+    let lhs = affine_unit(arena, lhs)?;
+    let rhs = affine_unit(arena, rhs)?;
+    let mut weight = rhs.constant.checked_sub(lhs.constant)?;
+    if strict {
+        weight = weight.checked_sub(1)?;
+    }
+    Some(DifferenceEdge {
+        from: rhs.var,
+        to: lhs.var,
+        weight,
+        atom_idx,
+    })
+}
+
+fn affine_unit(arena: &TermArena, term: TermId) -> Option<AffineUnit> {
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(AffineUnit {
+            var: DiffVar::Zero,
+            constant: *value,
+        }),
+        TermNode::Symbol(symbol) if arena.sort_of(term) == Sort::Int => Some(AffineUnit {
+            var: DiffVar::Sym(*symbol),
+            constant: 0,
+        }),
+        TermNode::App {
+            op: Op::IntAdd,
+            args,
+        } => affine_unit_const_add(arena, args[0], args[1]),
+        TermNode::App {
+            op: Op::IntSub,
+            args,
+        } => {
+            let mut base = affine_unit(arena, args[0])?;
+            let c = int_const_value(arena, args[1])?;
+            base.constant = base.constant.checked_sub(c)?;
+            Some(base)
+        }
+        _ => None,
+    }
+}
+
+fn affine_unit_const_add(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<AffineUnit> {
+    if let Some(c) = int_const_value(arena, lhs) {
+        let mut base = affine_unit(arena, rhs)?;
+        base.constant = base.constant.checked_add(c)?;
+        return Some(base);
+    }
+    let c = int_const_value(arena, rhs)?;
+    let mut base = affine_unit(arena, lhs)?;
+    base.constant = base.constant.checked_add(c)?;
+    Some(base)
+}
+
+fn negative_cycle_core(edges: &[DifferenceEdge]) -> Option<Vec<usize>> {
+    if edges.is_empty() {
+        return None;
+    }
+    if edges.len() > MAX_TWO_EDGE_DIFF_EDGES {
+        return None;
+    }
+    if let Some(core) = two_edge_negative_cycle_core(edges) {
+        return Some(core);
+    }
+    if edges.len() > MAX_BELLMAN_FORD_DIFF_EDGES {
+        return None;
+    }
+    let mut vars = BTreeMap::new();
+    for edge in edges {
+        let next = vars.len();
+        vars.entry(edge.from).or_insert(next);
+        let next = vars.len();
+        vars.entry(edge.to).or_insert(next);
+    }
+
+    let n = vars.len();
+    let mut dist = vec![0_i128; n];
+    let mut pred_vertex: Vec<Option<usize>> = vec![None; n];
+    let mut pred_edge: Vec<Option<usize>> = vec![None; n];
+    let mut changed = None;
+
+    for _ in 0..n {
+        changed = None;
+        for (edge_idx, edge) in edges.iter().enumerate() {
+            let from = vars[&edge.from];
+            let to = vars[&edge.to];
+            let candidate = dist[from].checked_add(edge.weight)?;
+            if candidate < dist[to] {
+                dist[to] = candidate;
+                pred_vertex[to] = Some(from);
+                pred_edge[to] = Some(edge_idx);
+                changed = Some(to);
+            }
+        }
+    }
+
+    let mut v = changed?;
+    for _ in 0..n {
+        v = pred_vertex[v]?;
+    }
+    let start = v;
+    let mut core = Vec::new();
+    for _ in 0..=n {
+        let edge_idx = pred_edge[v]?;
+        core.push(edges[edge_idx].atom_idx);
+        v = pred_vertex[v]?;
+        if v == start {
+            core.sort_unstable();
+            core.dedup();
+            return Some(core);
+        }
+    }
+    None
+}
+
+fn two_edge_negative_cycle_core(edges: &[DifferenceEdge]) -> Option<Vec<usize>> {
+    let mut best: BTreeMap<(DiffVar, DiffVar), (i128, usize)> = BTreeMap::new();
+    for edge in edges {
+        let entry = best
+            .entry((edge.from, edge.to))
+            .or_insert((edge.weight, edge.atom_idx));
+        if edge.weight < entry.0 {
+            *entry = (edge.weight, edge.atom_idx);
+        }
+    }
+    for (&(from, to), &(weight, atom_idx)) in &best {
+        let Some(&(reverse_weight, reverse_atom_idx)) = best.get(&(to, from)) else {
+            continue;
+        };
+        if weight
+            .checked_add(reverse_weight)
+            .is_some_and(|sum| sum < 0)
+        {
+            let mut core = vec![atom_idx, reverse_atom_idx];
+            core.sort_unstable();
+            core.dedup();
+            return Some(core);
+        }
+    }
+    None
 }
 
 /// Deletion-based minimization: returns a minimal still-unsatisfiable subset of
@@ -512,6 +879,320 @@ fn theory_model(
     }
 }
 
+/// Warm propositional SAT solver for the arithmetic skeleton.
+///
+/// The legacy arithmetic loop repeatedly adds theory blocking clauses over the
+/// same Boolean skeleton. Re-lowering that pure-Boolean formula through the
+/// general BV backend every round spends most of the budget on Bool→AIG→CNF
+/// rebuilding once the learned clause set grows. This small encoder builds a
+/// Tseitin CNF for the skeleton once, keeps `BatSat` warm, and adds each learned
+/// theory clause incrementally. SAT candidates still flow through
+/// `finish_sat`, which reconstructs arithmetic models and replays the original
+/// assertions before returning `sat`.
+#[derive(Default)]
+struct BoolSkeletonSolver {
+    sat: IncrementalSat,
+    next_var: usize,
+    term_lit: HashMap<TermId, BoolCnfLit>,
+    symbol_var: HashMap<SymbolId, CnfVar>,
+}
+
+impl BoolSkeletonSolver {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn assert_all(&mut self, arena: &TermArena, assertions: &[TermId]) -> Result<(), SolverError> {
+        for &assertion in assertions {
+            self.assert(arena, assertion)?;
+        }
+        Ok(())
+    }
+
+    fn assert(&mut self, arena: &TermArena, assertion: TermId) -> Result<(), SolverError> {
+        let lit = self.encode(arena, assertion)?;
+        self.add_clause(&[lit])
+    }
+
+    fn solve(&mut self, config: &SolverConfig) -> Result<CheckResult, SolverError> {
+        match self
+            .sat
+            .solve(config.timeout)
+            .map_err(|error| map_incremental_sat_error(&error))?
+        {
+            SatResult::Sat(assignment) => Ok(CheckResult::Sat(self.model_from(&assignment))),
+            SatResult::Unsat(_) => Ok(CheckResult::Unsat),
+            SatResult::Unknown(reason) => Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: reason.detail,
+            })),
+        }
+    }
+
+    fn model_from(&self, assignment: &axeyum_cnf::CnfAssignment) -> Model {
+        let mut model = Model::new();
+        for (&symbol, &var) in &self.symbol_var {
+            if let Some(value) = assignment.value(var) {
+                model.set(symbol, Value::Bool(value));
+            }
+        }
+        model
+    }
+
+    fn encode(&mut self, arena: &TermArena, term: TermId) -> Result<BoolCnfLit, SolverError> {
+        if let Some(&lit) = self.term_lit.get(&term) {
+            return Ok(lit);
+        }
+        let lit = match arena.node(term).clone() {
+            TermNode::BoolConst(value) => BoolCnfLit::Const(value),
+            TermNode::Symbol(symbol) if arena.sort_of(term) == Sort::Bool => {
+                BoolCnfLit::Lit(CnfLit::positive(self.symbol_var(symbol)?))
+            }
+            TermNode::App { op, args } => self.encode_app(arena, term, op, &args)?,
+            _ => {
+                return Err(SolverError::Unsupported(
+                    "arithmetic skeleton SAT: non-Boolean term in Boolean skeleton".to_owned(),
+                ));
+            }
+        };
+        self.term_lit.insert(term, lit);
+        Ok(lit)
+    }
+
+    fn encode_app(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        op: Op,
+        args: &[TermId],
+    ) -> Result<BoolCnfLit, SolverError> {
+        if arena.sort_of(term) != Sort::Bool {
+            return Err(SolverError::Unsupported(
+                "arithmetic skeleton SAT: non-Boolean application in skeleton".to_owned(),
+            ));
+        }
+        match op {
+            Op::BoolNot => Ok(self.encode(arena, args[0])?.negated()),
+            Op::BoolAnd => self.encode_and(arena, args),
+            Op::BoolOr => self.encode_or(arena, args),
+            Op::BoolImplies => {
+                let lhs = self.encode(arena, args[0])?.negated();
+                let rhs = self.encode(arena, args[1])?;
+                self.encode_or_lits(&[lhs, rhs])
+            }
+            Op::BoolXor => {
+                let lhs = self.encode(arena, args[0])?;
+                let rhs = self.encode(arena, args[1])?;
+                self.encode_xor_lits(lhs, rhs)
+            }
+            Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
+                let lhs = self.encode(arena, args[0])?;
+                let rhs = self.encode(arena, args[1])?;
+                self.encode_iff_lits(lhs, rhs)
+            }
+            Op::Ite => {
+                let condition = self.encode(arena, args[0])?;
+                let then_lit = self.encode(arena, args[1])?;
+                let else_lit = self.encode(arena, args[2])?;
+                self.encode_ite_lits(condition, then_lit, else_lit)
+            }
+            _ => Err(SolverError::Unsupported(format!(
+                "arithmetic skeleton SAT: unsupported Boolean op {op:?}"
+            ))),
+        }
+    }
+
+    fn encode_and(
+        &mut self,
+        arena: &TermArena,
+        args: &[TermId],
+    ) -> Result<BoolCnfLit, SolverError> {
+        let mut lits = Vec::with_capacity(args.len());
+        for &arg in args {
+            lits.push(self.encode(arena, arg)?);
+        }
+        self.encode_and_lits(&lits)
+    }
+
+    fn encode_or(&mut self, arena: &TermArena, args: &[TermId]) -> Result<BoolCnfLit, SolverError> {
+        let mut lits = Vec::with_capacity(args.len());
+        for &arg in args {
+            lits.push(self.encode(arena, arg)?);
+        }
+        self.encode_or_lits(&lits)
+    }
+
+    fn encode_and_lits(&mut self, lits: &[BoolCnfLit]) -> Result<BoolCnfLit, SolverError> {
+        let mut active = Vec::new();
+        for &lit in lits {
+            match lit {
+                BoolCnfLit::Const(false) => return Ok(BoolCnfLit::Const(false)),
+                BoolCnfLit::Const(true) => {}
+                BoolCnfLit::Lit(_) => active.push(lit),
+            }
+        }
+        match active.as_slice() {
+            [] => Ok(BoolCnfLit::Const(true)),
+            [lit] => Ok(*lit),
+            _ => {
+                let out = self.fresh_lit()?;
+                for &lit in &active {
+                    self.add_clause(&[out.negated(), lit])?;
+                }
+                let mut down = Vec::with_capacity(active.len() + 1);
+                down.push(out);
+                down.extend(active.iter().map(|lit| lit.negated()));
+                self.add_clause(&down)?;
+                Ok(out)
+            }
+        }
+    }
+
+    fn encode_or_lits(&mut self, lits: &[BoolCnfLit]) -> Result<BoolCnfLit, SolverError> {
+        let mut active = Vec::new();
+        for &lit in lits {
+            match lit {
+                BoolCnfLit::Const(true) => return Ok(BoolCnfLit::Const(true)),
+                BoolCnfLit::Const(false) => {}
+                BoolCnfLit::Lit(_) => active.push(lit),
+            }
+        }
+        match active.as_slice() {
+            [] => Ok(BoolCnfLit::Const(false)),
+            [lit] => Ok(*lit),
+            _ => {
+                let out = self.fresh_lit()?;
+                for &lit in &active {
+                    self.add_clause(&[out, lit.negated()])?;
+                }
+                let mut down = Vec::with_capacity(active.len() + 1);
+                down.push(out.negated());
+                down.extend(active.iter().copied());
+                self.add_clause(&down)?;
+                Ok(out)
+            }
+        }
+    }
+
+    fn encode_xor_lits(
+        &mut self,
+        lhs: BoolCnfLit,
+        rhs: BoolCnfLit,
+    ) -> Result<BoolCnfLit, SolverError> {
+        match (lhs, rhs) {
+            (BoolCnfLit::Const(a), BoolCnfLit::Const(b)) => Ok(BoolCnfLit::Const(a ^ b)),
+            (BoolCnfLit::Const(false), lit) | (lit, BoolCnfLit::Const(false)) => Ok(lit),
+            (BoolCnfLit::Const(true), lit) | (lit, BoolCnfLit::Const(true)) => Ok(lit.negated()),
+            _ if lhs == rhs => Ok(BoolCnfLit::Const(false)),
+            _ => {
+                let out = self.fresh_lit()?;
+                self.add_clause(&[lhs, rhs, out.negated()])?;
+                self.add_clause(&[lhs.negated(), rhs.negated(), out.negated()])?;
+                self.add_clause(&[lhs, rhs.negated(), out])?;
+                self.add_clause(&[lhs.negated(), rhs, out])?;
+                Ok(out)
+            }
+        }
+    }
+
+    fn encode_iff_lits(
+        &mut self,
+        lhs: BoolCnfLit,
+        rhs: BoolCnfLit,
+    ) -> Result<BoolCnfLit, SolverError> {
+        match (lhs, rhs) {
+            (BoolCnfLit::Const(a), BoolCnfLit::Const(b)) => Ok(BoolCnfLit::Const(a == b)),
+            (BoolCnfLit::Const(true), lit) | (lit, BoolCnfLit::Const(true)) => Ok(lit),
+            (BoolCnfLit::Const(false), lit) | (lit, BoolCnfLit::Const(false)) => Ok(lit.negated()),
+            _ if lhs == rhs => Ok(BoolCnfLit::Const(true)),
+            _ => {
+                let out = self.fresh_lit()?;
+                self.add_clause(&[lhs, rhs, out])?;
+                self.add_clause(&[lhs.negated(), rhs.negated(), out])?;
+                self.add_clause(&[lhs, rhs.negated(), out.negated()])?;
+                self.add_clause(&[lhs.negated(), rhs, out.negated()])?;
+                Ok(out)
+            }
+        }
+    }
+
+    fn encode_ite_lits(
+        &mut self,
+        condition: BoolCnfLit,
+        then_lit: BoolCnfLit,
+        else_lit: BoolCnfLit,
+    ) -> Result<BoolCnfLit, SolverError> {
+        match condition {
+            BoolCnfLit::Const(true) => return Ok(then_lit),
+            BoolCnfLit::Const(false) => return Ok(else_lit),
+            BoolCnfLit::Lit(_) if then_lit == else_lit => return Ok(then_lit),
+            _ => {}
+        }
+        let out = self.fresh_lit()?;
+        self.add_clause(&[condition.negated(), then_lit.negated(), out])?;
+        self.add_clause(&[condition.negated(), then_lit, out.negated()])?;
+        self.add_clause(&[condition, else_lit.negated(), out])?;
+        self.add_clause(&[condition, else_lit, out.negated()])?;
+        Ok(out)
+    }
+
+    fn symbol_var(&mut self, symbol: SymbolId) -> Result<CnfVar, SolverError> {
+        if let Some(&var) = self.symbol_var.get(&symbol) {
+            return Ok(var);
+        }
+        let var = self.alloc_var()?;
+        self.symbol_var.insert(symbol, var);
+        Ok(var)
+    }
+
+    fn fresh_lit(&mut self) -> Result<BoolCnfLit, SolverError> {
+        Ok(BoolCnfLit::Lit(CnfLit::positive(self.alloc_var()?)))
+    }
+
+    fn alloc_var(&mut self) -> Result<CnfVar, SolverError> {
+        let var = CnfVar::new(self.next_var)
+            .map_err(|error| SolverError::Backend(format!("arithmetic skeleton SAT: {error}")))?;
+        self.next_var += 1;
+        self.sat
+            .reserve(self.next_var)
+            .map_err(|error| map_incremental_sat_error(&error))?;
+        Ok(var)
+    }
+
+    fn add_clause(&mut self, lits: &[BoolCnfLit]) -> Result<(), SolverError> {
+        let mut clause = Vec::with_capacity(lits.len());
+        for &lit in lits {
+            match lit {
+                BoolCnfLit::Const(true) => return Ok(()),
+                BoolCnfLit::Const(false) => {}
+                BoolCnfLit::Lit(lit) => clause.push(lit),
+            }
+        }
+        self.sat
+            .add_clause(CnfClause::new(clause))
+            .map_err(|error| map_incremental_sat_error(&error))
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum BoolCnfLit {
+    Const(bool),
+    Lit(CnfLit),
+}
+
+impl BoolCnfLit {
+    fn negated(self) -> Self {
+        match self {
+            Self::Const(value) => Self::Const(!value),
+            Self::Lit(lit) => Self::Lit(lit.negated()),
+        }
+    }
+}
+
+fn map_incremental_sat_error(error: &SatError) -> SolverError {
+    SolverError::Backend(format!("arithmetic skeleton SAT failed: {error}"))
+}
+
 /// A clause forcing at least one atom in `core` to flip from `truths`. `core`
 /// indexes `atoms`/`truths`.
 fn block_clause(
@@ -530,6 +1211,300 @@ fn block_clause(
         });
     }
     clause.ok_or_else(|| SolverError::Backend("arith dpll: empty conflict clause".to_string()))
+}
+
+/// Adds cheap theory lemmas for contradictory simple integer bounds before the
+/// first SAT solve.
+///
+/// Generated benchmark families often encode finite branch selectors as
+/// disjunctions over `x = 0`, `x = 1`, ... . Integer equality is represented as a
+/// pair of order atoms, so the Boolean skeleton alone does not know that
+/// `x >= 1` and `x <= 0` are mutually exclusive. Without these clauses the
+/// DPLL(T) loop rediscovers those contradictions one SAT model at a time. Each
+/// lemma recorded here is just the two-literal theory conflict
+/// `{lower-bound, upper-bound}` and is verified by the same certificate checker
+/// as dynamically learned conflicts. Only asserted bounds are pre-seeded here;
+/// negated/complement bounds are still handled by the dynamic theory loop. This
+/// keeps the Boolean skeleton small enough for large scalar abstractions while
+/// pruning the common branch-selector conflict pattern.
+fn initial_int_bound_mutex_lemmas(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    let mut bounds = Vec::new();
+    for (idx, atom) in ctx.atoms.iter().enumerate() {
+        bounds.extend(simple_int_literal_bounds(arena, idx, atom));
+    }
+
+    let mut conflicts = Vec::new();
+    let mut seen = HashSet::new();
+    for i in 0..bounds.len() {
+        for j in (i + 1)..bounds.len() {
+            let Some((lower, upper)) = conflicting_bounds(&bounds[i], &bounds[j]) else {
+                continue;
+            };
+            if !lower.truth || !upper.truth {
+                continue;
+            }
+            let key = (lower.atom_idx, lower.truth, upper.atom_idx, upper.truth);
+            if seen.insert(key) {
+                conflicts.push((*lower, *upper));
+                if conflicts.len() >= MAX_INITIAL_BOUND_MUTEX_LEMMAS {
+                    break;
+                }
+            }
+        }
+        if conflicts.len() >= MAX_INITIAL_BOUND_MUTEX_LEMMAS {
+            break;
+        }
+    }
+
+    let mut out = Vec::with_capacity(conflicts.len());
+    for (lower, upper) in conflicts {
+        let mut truths = vec![false; ctx.atoms.len()];
+        truths[lower.atom_idx] = lower.truth;
+        truths[upper.atom_idx] = upper.truth;
+        let core = [lower.atom_idx, upper.atom_idx];
+        let clause = block_clause(arena, &ctx.atoms, &truths, &core)?;
+        let lemma = vec![
+            static_lemma_literal(arena, &ctx.atoms[lower.atom_idx], lower.truth)?,
+            static_lemma_literal(arena, &ctx.atoms[upper.atom_idx], upper.truth)?,
+        ];
+        out.push((clause, lemma));
+    }
+    Ok(out)
+}
+
+/// Adds adjacent monotonicity lemmas for simple integer bounds before the first
+/// SAT solve.
+///
+/// For a fixed expression, a stronger lower bound implies the next weaker lower
+/// bound (`x >= 2 => x >= 1`), and a stronger upper bound implies the next
+/// weaker upper bound (`x <= 1 => x <= 2`). We seed only asserted bounds and
+/// only adjacent distinct thresholds, so the clause count is linear in the
+/// discovered bound ladder rather than quadratic. Each implication is recorded
+/// as the unsatisfiable core `{stronger_bound, not weaker_bound}`, so it is
+/// checked by the same LIA certificate route as dynamic theory lemmas.
+fn initial_int_bound_implication_lemmas(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    if ctx.atoms.len() > MAX_INITIAL_BOUND_IMPLICATION_ATOMS {
+        return Ok(Vec::new());
+    }
+
+    let mut groups: BTreeMap<(TermId, BoundSide), Vec<SimpleIntBound>> = BTreeMap::new();
+    for (idx, atom) in ctx.atoms.iter().enumerate() {
+        for bound in simple_int_literal_bounds(arena, idx, atom) {
+            if !bound.truth {
+                continue;
+            }
+            groups
+                .entry((bound.expr, bound.side))
+                .or_default()
+                .push(bound);
+        }
+    }
+
+    let mut implications = Vec::new();
+    let mut seen = HashSet::new();
+    for ((_expr, side), mut bounds) in groups {
+        bounds.sort_by_key(|bound| (bound.value, bound.atom_idx, bound.truth));
+        let mut distinct = Vec::new();
+        for bound in bounds {
+            if distinct
+                .last()
+                .is_none_or(|previous: &SimpleIntBound| previous.value != bound.value)
+            {
+                distinct.push(bound);
+            }
+        }
+
+        for pair in distinct.windows(2) {
+            let (stronger, weaker) = match side {
+                BoundSide::Lower => (pair[1], pair[0]),
+                BoundSide::Upper => (pair[0], pair[1]),
+            };
+            if stronger.atom_idx == weaker.atom_idx {
+                continue;
+            }
+            let key = (
+                stronger.atom_idx,
+                stronger.truth,
+                weaker.atom_idx,
+                weaker.truth,
+            );
+            if seen.insert(key) {
+                implications.push((stronger, weaker));
+                if implications.len() >= MAX_INITIAL_BOUND_IMPLICATION_LEMMAS {
+                    break;
+                }
+            }
+        }
+        if implications.len() >= MAX_INITIAL_BOUND_IMPLICATION_LEMMAS {
+            break;
+        }
+    }
+
+    let mut out = Vec::with_capacity(implications.len());
+    for (stronger, weaker) in implications {
+        let mut truths = vec![false; ctx.atoms.len()];
+        truths[stronger.atom_idx] = stronger.truth;
+        truths[weaker.atom_idx] = !weaker.truth;
+        let core = [stronger.atom_idx, weaker.atom_idx];
+        let clause = block_clause(arena, &ctx.atoms, &truths, &core)?;
+        let lemma = vec![
+            static_lemma_literal(arena, &ctx.atoms[stronger.atom_idx], stronger.truth)?,
+            static_lemma_literal(arena, &ctx.atoms[weaker.atom_idx], !weaker.truth)?,
+        ];
+        out.push((clause, lemma));
+    }
+    Ok(out)
+}
+
+fn static_lemma_literal(
+    arena: &mut TermArena,
+    atom: &ArithAtom,
+    truth: bool,
+) -> Result<ArithLemmaLiteral, SolverError> {
+    let literal = if truth {
+        atom.term
+    } else {
+        arena
+            .not(atom.term)
+            .map_err(|e| SolverError::Backend(format!("arith bound lemma build failed: {e}")))?
+    };
+    Ok(ArithLemmaLiteral {
+        prop: atom.prop,
+        truth,
+        literal,
+        theory: atom.theory,
+    })
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum BoundSide {
+    Lower,
+    Upper,
+}
+
+#[derive(Clone, Copy)]
+struct SimpleIntBound {
+    atom_idx: usize,
+    expr: TermId,
+    value: i128,
+    side: BoundSide,
+    truth: bool,
+}
+
+fn simple_int_literal_bounds(
+    arena: &TermArena,
+    atom_idx: usize,
+    atom: &ArithAtom,
+) -> Vec<SimpleIntBound> {
+    if atom.theory != Theory::Int {
+        return Vec::new();
+    }
+    let TermNode::App { op, args } = arena.node(atom.term) else {
+        return Vec::new();
+    };
+    let strict = match op {
+        Op::IntLt => true,
+        Op::IntLe => false,
+        _ => return Vec::new(),
+    };
+    let left_const = int_const_value(arena, args[0]);
+    let right_const = int_const_value(arena, args[1]);
+    match (left_const, right_const) {
+        (None, Some(c)) => bounds_for_expr_le_const(atom_idx, args[0], c, strict),
+        (Some(c), None) => bounds_for_const_le_expr(atom_idx, args[1], c, strict),
+        _ => Vec::new(),
+    }
+}
+
+fn bounds_for_expr_le_const(
+    atom_idx: usize,
+    expr: TermId,
+    c: i128,
+    strict: bool,
+) -> Vec<SimpleIntBound> {
+    let Some(true_upper) = (if strict { c.checked_sub(1) } else { Some(c) }) else {
+        return Vec::new();
+    };
+    let Some(false_lower) = (if strict { Some(c) } else { c.checked_add(1) }) else {
+        return Vec::new();
+    };
+    vec![
+        SimpleIntBound {
+            atom_idx,
+            expr,
+            value: true_upper,
+            side: BoundSide::Upper,
+            truth: true,
+        },
+        SimpleIntBound {
+            atom_idx,
+            expr,
+            value: false_lower,
+            side: BoundSide::Lower,
+            truth: false,
+        },
+    ]
+}
+
+fn bounds_for_const_le_expr(
+    atom_idx: usize,
+    expr: TermId,
+    c: i128,
+    strict: bool,
+) -> Vec<SimpleIntBound> {
+    let Some(true_lower) = (if strict { c.checked_add(1) } else { Some(c) }) else {
+        return Vec::new();
+    };
+    let Some(false_upper) = (if strict { Some(c) } else { c.checked_sub(1) }) else {
+        return Vec::new();
+    };
+    vec![
+        SimpleIntBound {
+            atom_idx,
+            expr,
+            value: true_lower,
+            side: BoundSide::Lower,
+            truth: true,
+        },
+        SimpleIntBound {
+            atom_idx,
+            expr,
+            value: false_upper,
+            side: BoundSide::Upper,
+            truth: false,
+        },
+    ]
+}
+
+fn int_const_value(arena: &TermArena, term: TermId) -> Option<i128> {
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        _ => None,
+    }
+}
+
+fn conflicting_bounds<'a>(
+    a: &'a SimpleIntBound,
+    b: &'a SimpleIntBound,
+) -> Option<(&'a SimpleIntBound, &'a SimpleIntBound)> {
+    if a.expr != b.expr || a.side == b.side {
+        return None;
+    }
+    if a.atom_idx == b.atom_idx && a.truth != b.truth {
+        return None;
+    }
+    let (lower, upper) = if a.side == BoundSide::Lower {
+        (a, b)
+    } else {
+        (b, a)
+    };
+    (lower.value > upper.value).then_some((lower, upper))
 }
 
 /// One abstracted arithmetic order atom: its fresh proposition, the atom term,
@@ -565,30 +1540,36 @@ impl ArithAbstractor {
             TermNode::BoolConst(_) => Ok(term),
             TermNode::Symbol(_) if arena.sort_of(term) == Sort::Bool => Ok(term),
             TermNode::App { op, args } => match op {
-                Op::BoolNot => {
-                    let a = self.abstract_term(arena, args[0])?;
-                    Ok(arena.not(a)?)
-                }
-                Op::BoolAnd => self.rebuild(arena, &args, TermArena::and),
-                Op::BoolOr => self.rebuild(arena, &args, TermArena::or),
-                Op::BoolXor => self.rebuild(arena, &args, TermArena::xor),
-                Op::BoolImplies => self.rebuild(arena, &args, TermArena::implies),
+                Op::BoolNot => self.abstract_negation(arena, args[0]),
+                Op::BoolAnd => self.abstract_and(arena, &args),
+                Op::BoolOr => self.abstract_or(arena, &args),
+                Op::BoolXor => self.abstract_xor(arena, &args),
+                Op::BoolImplies => self.abstract_implies(arena, &args),
+                Op::Eq if args[0] == args[1] => Ok(arena.bool_const(true)),
                 Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
-                    self.rebuild(arena, &args, TermArena::eq)
+                    self.abstract_bool_eq(arena, &args)
                 }
                 Op::Ite if arena.sort_of(term) == Sort::Bool => {
                     let c = self.abstract_term(arena, args[0])?;
+                    if let Some(value) = bool_const_value(arena, c) {
+                        return self.abstract_term(arena, args[if value { 1 } else { 2 }]);
+                    }
                     let t = self.abstract_term(arena, args[1])?;
                     let e = self.abstract_term(arena, args[2])?;
-                    Ok(arena.ite(c, t, e)?)
+                    if t == e {
+                        return Ok(t);
+                    }
+                    match (bool_const_value(arena, t), bool_const_value(arena, e)) {
+                        (Some(true), Some(false)) => Ok(c),
+                        (Some(false), Some(true)) => Self::negate_abstracted(arena, c),
+                        _ => Ok(arena.ite(c, t, e)?),
+                    }
                 }
                 Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe => {
-                    let prop = self.atom(arena, term, Theory::Int);
-                    Ok(arena.var(prop))
+                    self.order_atom(arena, term, op, &args, Theory::Int)
                 }
                 Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe => {
-                    let prop = self.atom(arena, term, Theory::Real);
-                    Ok(arena.var(prop))
+                    self.order_atom(arena, term, op, &args, Theory::Real)
                 }
                 Op::Eq if arena.sort_of(args[0]) == Sort::Int => {
                     let le = arena.int_le(args[0], args[1])?;
@@ -617,15 +1598,183 @@ impl ArithAbstractor {
         }
     }
 
-    fn rebuild(
+    fn abstract_and(
         &mut self,
         arena: &mut TermArena,
         args: &[TermId],
-        build: fn(&mut TermArena, TermId, TermId) -> Result<TermId, axeyum_ir::IrError>,
+    ) -> Result<TermId, SolverError> {
+        let a = self.abstract_term(arena, args[0])?;
+        if matches!(bool_const_value(arena, a), Some(false)) {
+            return Ok(a);
+        }
+        let b = self.abstract_term(arena, args[1])?;
+        match (bool_const_value(arena, a), bool_const_value(arena, b)) {
+            (_, Some(false)) | (Some(true), _) => Ok(b),
+            (_, Some(true)) => Ok(a),
+            _ if a == b => Ok(a),
+            _ => Ok(arena.and(a, b)?),
+        }
+    }
+
+    fn abstract_or(
+        &mut self,
+        arena: &mut TermArena,
+        args: &[TermId],
+    ) -> Result<TermId, SolverError> {
+        let a = self.abstract_term(arena, args[0])?;
+        if matches!(bool_const_value(arena, a), Some(true)) {
+            return Ok(a);
+        }
+        let b = self.abstract_term(arena, args[1])?;
+        match (bool_const_value(arena, a), bool_const_value(arena, b)) {
+            (_, Some(true)) | (Some(false), _) => Ok(b),
+            (_, Some(false)) => Ok(a),
+            _ if a == b => Ok(a),
+            _ => Ok(arena.or(a, b)?),
+        }
+    }
+
+    fn abstract_xor(
+        &mut self,
+        arena: &mut TermArena,
+        args: &[TermId],
     ) -> Result<TermId, SolverError> {
         let a = self.abstract_term(arena, args[0])?;
         let b = self.abstract_term(arena, args[1])?;
-        Ok(build(arena, a, b)?)
+        match (bool_const_value(arena, a), bool_const_value(arena, b)) {
+            (Some(x), Some(y)) => Ok(arena.bool_const(x ^ y)),
+            (Some(false), _) => Ok(b),
+            (_, Some(false)) => Ok(a),
+            (Some(true), _) => Self::negate_abstracted(arena, b),
+            (_, Some(true)) => Self::negate_abstracted(arena, a),
+            _ if a == b => Ok(arena.bool_const(false)),
+            _ => Ok(arena.xor(a, b)?),
+        }
+    }
+
+    fn abstract_implies(
+        &mut self,
+        arena: &mut TermArena,
+        args: &[TermId],
+    ) -> Result<TermId, SolverError> {
+        let a = self.abstract_term(arena, args[0])?;
+        match bool_const_value(arena, a) {
+            Some(false) => return Ok(arena.bool_const(true)),
+            Some(true) => return self.abstract_term(arena, args[1]),
+            None => {}
+        }
+        let b = self.abstract_term(arena, args[1])?;
+        match bool_const_value(arena, b) {
+            Some(true) => Ok(arena.bool_const(true)),
+            Some(false) => Self::negate_abstracted(arena, a),
+            None if a == b => Ok(arena.bool_const(true)),
+            None => Ok(arena.implies(a, b)?),
+        }
+    }
+
+    fn abstract_bool_eq(
+        &mut self,
+        arena: &mut TermArena,
+        args: &[TermId],
+    ) -> Result<TermId, SolverError> {
+        let a = self.abstract_term(arena, args[0])?;
+        let b = self.abstract_term(arena, args[1])?;
+        match (bool_const_value(arena, a), bool_const_value(arena, b)) {
+            (Some(x), Some(y)) => Ok(arena.bool_const(x == y)),
+            (Some(true), _) => Ok(b),
+            (_, Some(true)) => Ok(a),
+            (Some(false), _) => Self::negate_abstracted(arena, b),
+            (_, Some(false)) => Self::negate_abstracted(arena, a),
+            _ if a == b => Ok(arena.bool_const(true)),
+            _ => Ok(arena.eq(a, b)?),
+        }
+    }
+
+    fn negate_abstracted(arena: &mut TermArena, term: TermId) -> Result<TermId, SolverError> {
+        if let Some(value) = bool_const_value(arena, term) {
+            return Ok(arena.bool_const(!value));
+        }
+        Ok(arena.not(term)?)
+    }
+
+    fn abstract_negation(
+        &mut self,
+        arena: &mut TermArena,
+        inner: TermId,
+    ) -> Result<TermId, SolverError> {
+        let node = arena.node(inner).clone();
+        match node {
+            TermNode::BoolConst(value) => Ok(arena.bool_const(!value)),
+            TermNode::App { op, args } => match op {
+                Op::IntLt => {
+                    let ge = arena.int_ge(args[0], args[1])?;
+                    self.abstract_term(arena, ge)
+                }
+                Op::IntLe => {
+                    let gt = arena.int_gt(args[0], args[1])?;
+                    self.abstract_term(arena, gt)
+                }
+                Op::IntGt => {
+                    let le = arena.int_le(args[0], args[1])?;
+                    self.abstract_term(arena, le)
+                }
+                Op::IntGe => {
+                    let lt = arena.int_lt(args[0], args[1])?;
+                    self.abstract_term(arena, lt)
+                }
+                Op::RealLt => {
+                    let ge = arena.real_ge(args[0], args[1])?;
+                    self.abstract_term(arena, ge)
+                }
+                Op::RealLe => {
+                    let gt = arena.real_gt(args[0], args[1])?;
+                    self.abstract_term(arena, gt)
+                }
+                Op::RealGt => {
+                    let le = arena.real_le(args[0], args[1])?;
+                    self.abstract_term(arena, le)
+                }
+                Op::RealGe => {
+                    let lt = arena.real_lt(args[0], args[1])?;
+                    self.abstract_term(arena, lt)
+                }
+                Op::Eq if args[0] == args[1] => Ok(arena.bool_const(false)),
+                _ => {
+                    let a = self.abstract_term(arena, inner)?;
+                    Self::negate_abstracted(arena, a)
+                }
+            },
+            _ => {
+                let a = self.abstract_term(arena, inner)?;
+                Self::negate_abstracted(arena, a)
+            }
+        }
+    }
+
+    fn order_atom(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        op: Op,
+        args: &[TermId],
+        theory: Theory,
+    ) -> Result<TermId, SolverError> {
+        if args[0] == args[1] {
+            return Ok(arena.bool_const(matches!(
+                op,
+                Op::IntLe | Op::IntGe | Op::RealLe | Op::RealGe
+            )));
+        }
+        let canonical = match op {
+            Op::IntLt | Op::IntLe | Op::RealLt | Op::RealLe => term,
+            Op::IntGt => arena.int_lt(args[1], args[0])?,
+            Op::IntGe => arena.int_le(args[1], args[0])?,
+            Op::RealGt => arena.real_lt(args[1], args[0])?,
+            Op::RealGe => arena.real_le(args[1], args[0])?,
+            _ => unreachable!("order_atom called only for arithmetic order atoms"),
+        };
+        let prop = self.atom(arena, canonical, theory);
+        Ok(arena.var(prop))
     }
 
     fn atom(&mut self, arena: &mut TermArena, term: TermId, theory: Theory) -> SymbolId {
@@ -641,5 +1790,249 @@ impl ArithAbstractor {
         self.props.insert(prop);
         self.atoms.push(ArithAtom { prop, term, theory });
         prop
+    }
+}
+
+fn bool_const_value(arena: &TermArena, term: TermId) -> Option<bool> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(*value),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn abstractor_reuses_reversed_order_atoms() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let x_ge_y = arena.int_ge(xv, yv).unwrap();
+        let y_le_x = arena.int_le(yv, xv).unwrap();
+        let both = arena.and(x_ge_y, y_le_x).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both).unwrap();
+        assert_eq!(
+            ctx.atoms.len(),
+            1,
+            "x >= y and y <= x must share one canonical arithmetic atom"
+        );
+    }
+
+    #[test]
+    fn abstractor_folds_self_order_atoms_and_equalities() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let x_lt_x = arena.int_lt(xv, xv).unwrap();
+        let x_eq_x = arena.eq(xv, xv).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let lt = ctx.abstract_term(&mut arena, x_lt_x).unwrap();
+        let eq = ctx.abstract_term(&mut arena, x_eq_x).unwrap();
+        assert!(matches!(arena.node(lt), TermNode::BoolConst(false)));
+        assert!(matches!(arena.node(eq), TermNode::BoolConst(true)));
+        assert!(
+            ctx.atoms.is_empty(),
+            "trivial self-comparisons/equalities should not allocate arithmetic atoms"
+        );
+    }
+
+    #[test]
+    fn abstractor_reuses_negated_order_atoms() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let x_lt_y = arena.int_lt(xv, yv).unwrap();
+        let not_x_lt_y = arena.not(x_lt_y).unwrap();
+        let y_le_x = arena.int_le(yv, xv).unwrap();
+        let both = arena.and(not_x_lt_y, y_le_x).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both).unwrap();
+        assert_eq!(
+            ctx.atoms.len(),
+            1,
+            "not (x < y) and y <= x must share one canonical arithmetic atom"
+        );
+    }
+
+    #[test]
+    fn abstractor_short_circuits_boolean_constants() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let expensive = arena.int_lt(xv, yv).unwrap();
+        let false_term = arena.bool_const(false);
+        let dead_and = arena.and(false_term, expensive).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let folded = ctx.abstract_term(&mut arena, dead_and).unwrap();
+        assert!(matches!(arena.node(folded), TermNode::BoolConst(false)));
+        assert!(
+            ctx.atoms.is_empty(),
+            "a dead Boolean branch must not allocate arithmetic atoms"
+        );
+    }
+
+    #[test]
+    fn upfront_integer_bound_mutex_lemmas_are_certified() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_eq_zero = arena.eq(xv, zero).unwrap();
+        let x_eq_one = arena.eq(xv, one).unwrap();
+        let both = arena.and(x_eq_zero, x_eq_one).unwrap();
+
+        let run = run_arith_dpll(&mut arena, &[both], &SolverConfig::default()).unwrap();
+        assert!(matches!(run.result, CheckResult::Unsat));
+        assert!(
+            !run.lemmas.is_empty(),
+            "distinct integer equalities should produce an upfront bound-conflict lemma"
+        );
+        let refutation = ArithDpllRefutation {
+            skeleton: run.skeleton,
+            lemmas: run.lemmas,
+        };
+        assert!(
+            refutation.verify(&arena).unwrap(),
+            "upfront bound lemmas must be checkable by the normal verifier"
+        );
+    }
+
+    #[test]
+    fn upfront_integer_bound_implication_lemmas_are_certified() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let x_le_one = arena.int_le(xv, one).unwrap();
+        let either = arena.or(x_le_zero, x_le_one).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, either).unwrap();
+        let x_le_zero_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_zero)
+            .unwrap();
+        let x_le_one_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_one)
+            .unwrap();
+
+        let lemmas = initial_int_bound_implication_lemmas(&mut arena, &ctx).unwrap();
+        let expected_core = lemmas
+            .iter()
+            .map(|(_, lemma)| lemma)
+            .find(|lemma| {
+                lemma.iter().any(|lit| {
+                    lit.prop == ctx.atoms[x_le_zero_idx].prop
+                        && lit.truth
+                        && lit.literal == x_le_zero
+                }) && lemma.iter().any(|lit| {
+                    lit.prop == ctx.atoms[x_le_one_idx].prop
+                        && !lit.truth
+                        && matches!(
+                            arena.node(lit.literal),
+                            TermNode::App { op: Op::BoolNot, args }
+                                if args[0] == x_le_one
+                        )
+                })
+            })
+            .expect("x <= 0 should imply x <= 1");
+
+        let core_lits = expected_core
+            .iter()
+            .map(|literal| literal.literal)
+            .collect::<Vec<_>>();
+        assert!(matches!(
+            check_with_lia_simplex(&arena, &core_lits).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
+
+    #[test]
+    fn cheap_integer_bound_core_uses_current_literal_polarity() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let x_le_one = arena.int_le(xv, one).unwrap();
+        let both_atoms = arena.and(x_le_zero, x_le_one).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both_atoms).unwrap();
+        let upper_zero_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_zero)
+            .unwrap();
+        let upper_one_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_one)
+            .unwrap();
+        let upper_one_term = ctx.atoms[upper_one_idx].term;
+        let not_x_le_one = arena.not(upper_one_term).unwrap();
+        let mut lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        lits[upper_one_idx] = not_x_le_one;
+
+        let indices = vec![upper_zero_idx, upper_one_idx];
+        let mut core = cheap_int_bound_conflict_core(&arena, &ctx, &lits, &indices).unwrap();
+        core.sort_unstable();
+        let mut expected = indices;
+        expected.sort_unstable();
+        assert_eq!(core, expected);
+
+        let core_lits = core.iter().map(|&idx| lits[idx]).collect::<Vec<_>>();
+        assert!(matches!(
+            check_with_lia_simplex(&arena, &core_lits).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
+
+    #[test]
+    fn cheap_integer_difference_core_finds_negative_cycle() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let one = arena.int_const(1);
+        let y_plus_one = arena.int_add(yv, one).unwrap();
+        let x_le_y = arena.int_le(xv, yv).unwrap();
+        let y_plus_one_le_x = arena.int_le(y_plus_one, xv).unwrap();
+        let both = arena.and(x_le_y, y_plus_one_le_x).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, both).unwrap();
+        let lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        let indices: Vec<usize> = (0..ctx.atoms.len()).collect();
+        let mut core = cheap_int_difference_conflict_core(&arena, &ctx, &lits, &indices).unwrap();
+        core.sort_unstable();
+        assert_eq!(core, indices);
+
+        let core_lits = core.iter().map(|&idx| lits[idx]).collect::<Vec<_>>();
+        assert!(matches!(
+            check_with_lia_simplex(&arena, &core_lits).unwrap(),
+            CheckResult::Unsat
+        ));
     }
 }

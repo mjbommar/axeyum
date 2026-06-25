@@ -3,7 +3,56 @@
 Committed benchmark artifacts that serve as project evidence. Scratch runs stay
 under `bench-results/local/`, which is gitignored.
 
-## Current authoritative record (2026-06-20)
+## Current authoritative record (2026-06-25)
+
+- [`SCOREBOARD.md`](SCOREBOARD.md) is the regenerated division-level
+  decide-rate scoreboard across all committed `*solver-vs-z3*` baselines.
+  Regenerate with `python3 scripts/gen-scoreboard.py`.
+- [`DOMINANCE.md`](DOMINANCE.md) is the conservative Pareto-dominance readiness
+  report: measured decide/PAR-2 data, a proof-route audit queue, and exact
+  audited `dominant%(D)` for rows with complete committed artifacts under
+  `bench-results/dominance/`. Regenerate with
+  `python3 scripts/gen-dominance-scoreboard.py`.
+- Per-instance evidence/Lean coverage is measured by
+  `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json> [timeout_ms] [limit] [out.json]`.
+  Local smoke artifacts belong under `bench-results/local/`; committed dominance
+  audits live under `bench-results/dominance/` and are ingested by
+  `gen-dominance-scoreboard.py`. Current exact committed audits: BV/bitwuzla
+  quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `82% (139/169)`,
+  QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`, QF_LIA/cvc5
+  `70% (7/10)`, QF_LRA/cvc5 `67% (6/9)`, QF_NIA synthetic `50% (16/32)`,
+  QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`, QF_UFBV/bitwuzla
+  `50% (1/2)`, QF_UFLIA curated `0% (0/2)`, and QF_UFLIA bounded `80% (4/5)`.
+  All exact audits currently have zero mismatches and zero audit timeouts.
+  Remaining gaps are Lean unsat coverage, lower timed-budget
+  evidence-certification on array unsats, and true solve-speed/depth on the hard
+  array frontiers. Current audit artifacts include phase timings; the timed
+  evidence export guard cut ABV/AUFBV timeout rows from 11 to 3, the array
+  budget-propagation pass eliminated the remaining audit timeout rows, the direct
+  array-extensionality Lean route moved the first five array unsats into the
+  Lean-checked dominance set, and the finite-array extensionality certificate
+  moved four more AUFBV `smtextarrayaxiom` rows into checked evidence plus Lean.
+  The small array-axiom certificate then moved `smtaxiommccarthy`,
+  `smtarraycond1`, and `smtarraycond3` into the same checked evidence plus Lean
+  lane. The structural AUFBV program-array certificates now also cover `rw213`,
+  `wchains002ue`, `memcpy02`, `bubsort002un`, `selsort002un`, and
+  `dubreva002ue`, plus `swapmem002ue`, `binarysearch32s016`, and
+  `fifo32bc04k05`; the remaining generated FIFO induction SAT row
+  `fifo32ia04k05` is closed by a replay-checked concrete model. The ABV audit
+  now also includes BTOR-style read-over-write/store-chain array-axiom
+  certificates for `write1` and `write13`, read-congruence certificates for
+  representative `read*`/`ext*` rows such as `read1`, `read4`, and `read10`,
+  guarded write-case certificates for `write2`, `write4`, `write7`, `write8`,
+  `write9`, `write10`, and `verbose2`, nonzero-offset ROW certificates for
+  `rwpropindexplusconst{1..4}`, store-shadowing certificates for `write22`,
+  `write23`, and `write24`, conditional-select/read-congruence certificates for
+  `rw30`, `rw31`, `rw32`, and `rw33`, contextual BV1-false certificates for
+  `write14` and `arraycondconst`, nested BV1-complement coverage for
+  `arraycondconstaig`, finite extensionality-bit coverage for `ext5` and
+  `ext21`, BV-not-injectivity read-congruence coverage for `read22`, the
+  concat-suffix ROW certificate for `3vl1`, store same-cell injectivity coverage
+  for `extarraywrite1`, and store self-update read coverage for `ext22`, plus
+  the current ABV `BvAbstraction` rows reflected by the refreshed artifact.
 
 - [`baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json`](baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json):
   **the headline QF_BV head-to-head.** Pure-Rust `sat-bv` (rustsat-batsat,

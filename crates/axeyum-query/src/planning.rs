@@ -3,7 +3,8 @@
 use std::collections::{BTreeSet, HashMap};
 
 use axeyum_ir::{
-    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
+    ArraySortKey, Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats,
+    Value, eval,
 };
 
 use crate::{AssertionId, AssumptionId, Query};
@@ -533,8 +534,8 @@ fn update_sort(hash: &mut u64, sort: Sort) {
         }
         Sort::Array { index, element } => {
             update_u64(hash, 3);
-            update_u64(hash, u64::from(index));
-            update_u64(hash, u64::from(element));
+            update_array_sort_key(hash, index);
+            update_array_sort_key(hash, element);
         }
         Sort::Int => update_u64(hash, 4),
         Sort::Real => update_u64(hash, 5),
@@ -546,6 +547,10 @@ fn update_sort(hash: &mut u64, sort: Sort) {
             update_u64(hash, 7);
             update_u64(hash, u64::from(exp));
             update_u64(hash, u64::from(sig));
+        }
+        Sort::Uninterpreted(id) => {
+            update_u64(hash, 8);
+            update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
         }
     }
 }
@@ -614,7 +619,7 @@ fn update_op(hash: &mut u64, op: Op) {
         Op::Store => update_u64(hash, 43),
         Op::ConstArray { index } => {
             update_u64(hash, 69);
-            update_u64(hash, u64::from(index));
+            update_array_sort_key(hash, index);
         }
         Op::IntToReal => update_u64(hash, 73),
         Op::RealToInt => update_u64(hash, 74),
@@ -673,6 +678,31 @@ fn update_op(hash: &mut u64, op: Op) {
         Op::DtTest(constructor) => {
             update_u64(hash, 65);
             update_u64(hash, u64::try_from(constructor.index()).unwrap_or(u64::MAX));
+        }
+    }
+}
+
+fn update_array_sort_key(hash: &mut u64, sort: ArraySortKey) {
+    match sort {
+        ArraySortKey::Bool => update_u64(hash, 1),
+        ArraySortKey::BitVec(width) => {
+            update_u64(hash, 2);
+            update_u64(hash, u64::from(width));
+        }
+        ArraySortKey::Int => update_u64(hash, 3),
+        ArraySortKey::Real => update_u64(hash, 4),
+        ArraySortKey::Datatype(id) => {
+            update_u64(hash, 5);
+            update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
+        }
+        ArraySortKey::Uninterpreted(id) => {
+            update_u64(hash, 6);
+            update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
+        }
+        ArraySortKey::Float { exp, sig } => {
+            update_u64(hash, 7);
+            update_u64(hash, u64::from(exp));
+            update_u64(hash, u64::from(sig));
         }
     }
 }

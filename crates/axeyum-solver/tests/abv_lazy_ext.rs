@@ -12,8 +12,10 @@
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
 use axeyum_ir::{TermArena, TermId, Value, eval};
+use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, SatBvBackend, SolverConfig, check_qf_abv_lazy_row, check_with_array_elimination,
+    CheckResult, SatBvBackend, SolverConfig, check_auto, check_qf_abv_lazy_row,
+    check_with_array_elimination,
 };
 
 /// `Some(true)` for SAT, `Some(false)` for UNSAT, `None` for Unknown.
@@ -183,6 +185,34 @@ fn extensionality_eq_then_read_sat_replays() {
         panic!("expected SAT (i=j,v=w is a model), got {result:?}");
     };
     assert_replays(&model, &arena, &originals);
+}
+
+#[test]
+fn extensionality_nested_array_equalities_materialize_reads_after_completion() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_ABV)
+        (declare-const a0 (Array (_ BitVec 32) (_ BitVec 8)))
+        (declare-const a1 (Array (_ BitVec 32) (_ BitVec 8)))
+        (declare-const a2 (Array (_ BitVec 32) (_ BitVec 8)))
+        (assert
+          (= #b1
+             (bvnot
+               (ite (= (ite (= (ite (= a0 a1) #b1 #b0)
+                              (ite (= a0 a2) #b1 #b0))
+                         #b1 #b0)
+                       (ite (= a1 a2) #b1 #b0))
+                    #b1 #b0))))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+    let assertions = script.assertions.clone();
+    let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("expected SAT for the rw134 extensionality shape, got {result:?}");
+    };
+    assert_replays(&model, &script.arena, &assertions);
 }
 
 /// Advances a 64-bit LCG and returns a 32-bit draw (no `rand` crate).

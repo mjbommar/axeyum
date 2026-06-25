@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use crate::arena::TermArena;
 use crate::error::IrError;
 use crate::rational::Rational;
-use crate::sort::{Sort, mask};
+use crate::sort::{ArraySortKey, Sort, mask};
 use crate::term::{DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
-use crate::value::{ArrayValue, FuncValue, Value};
+use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value};
 
 /// A binding of symbols to concrete values (and uninterpreted functions to
 /// interpretations), used as evaluator input.
@@ -46,6 +46,11 @@ impl Assignment {
     /// The interpretation bound to `func`, if any.
     pub fn function(&self, func: FuncId) -> Option<&FuncValue> {
         self.functions.get(&func)
+    }
+
+    /// Iterates over bound uninterpreted-function interpretations.
+    pub fn functions(&self) -> impl Iterator<Item = (FuncId, &FuncValue)> + '_ {
+        self.functions.iter().map(|(func, value)| (*func, value))
     }
 
     /// Number of bound symbols.
@@ -95,8 +100,20 @@ fn well_founded_default_rec(
         }),
         Sort::Int => Some(Value::Int(0)),
         Sort::Real => Some(Value::Real(Rational::zero())),
+        Sort::Uninterpreted(sort) => Some(Value::Uninterpreted { sort, value: 0 }),
         Sort::Array { index, element } => {
-            Some(Value::Array(ArrayValue::constant(index, element, 0)))
+            if let Some((index_width, element_width)) = sort.array_widths() {
+                Some(Value::Array(ArrayValue::constant(
+                    index_width,
+                    element_width,
+                    0,
+                )))
+            } else {
+                let default = well_founded_default_rec(arena, element.to_sort(), visiting)?;
+                Some(Value::GenericArray(GenericArrayValue::constant(
+                    index, element, default,
+                )))
+            }
         }
         Sort::Datatype(dt) => {
             if visiting.contains(&dt) {
@@ -564,27 +581,38 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         Op::RotateLeft { by } => rotate(&vals[0], by, true),
         Op::RotateRight { by } => rotate(&vals[0], by, false),
         // --- arrays (ADR-0010) ---------------------------------------------------
-        Op::Select => {
-            let array = vals[0]
-                .as_array()
-                .expect("builder guaranteed Array operand");
-            let (_, index) = bv(&vals[1]);
-            Value::Bv {
-                width: array.element_width(),
-                value: array.select(index),
+        Op::Select => match &vals[0] {
+            Value::Array(array) => {
+                let (_, index) = bv(&vals[1]);
+                Value::Bv {
+                    width: array.element_width(),
+                    value: array.select(index),
+                }
             }
-        }
-        Op::Store => {
-            let array = vals[0]
-                .as_array()
-                .expect("builder guaranteed Array operand");
-            let (_, index) = bv(&vals[1]);
-            let (_, element) = bv(&vals[2]);
-            Value::Array(array.store(index, element))
-        }
+            Value::GenericArray(array) => array.select(&vals[1]),
+            _ => unreachable!("builder guaranteed Array operand"),
+        },
+        Op::Store => match &vals[0] {
+            Value::Array(array) => {
+                let (_, index) = bv(&vals[1]);
+                let (_, element) = bv(&vals[2]);
+                Value::Array(array.store(index, element))
+            }
+            Value::GenericArray(array) => {
+                Value::GenericArray(array.store(vals[1].clone(), vals[2].clone()))
+            }
+            _ => unreachable!("builder guaranteed Array operand"),
+        },
         Op::ConstArray { index } => {
-            let (element_width, value) = bv(&vals[0]);
-            Value::Array(ArrayValue::constant(index, element_width, value))
+            if let (Some(index_width), Some((element_width, value))) =
+                (index.bv_width(), vals[0].as_bv())
+            {
+                Value::Array(ArrayValue::constant(index_width, element_width, value))
+            } else {
+                let element = ArraySortKey::from_sort(vals[0].sort())
+                    .ok_or(IrError::Unsupported("evaluation of nested constant arrays"))?;
+                Value::GenericArray(GenericArrayValue::constant(index, element, vals[0].clone()))
+            }
         }
         Op::IntToReal => {
             let i = vals[0].as_int().expect("builder guaranteed Int operand");

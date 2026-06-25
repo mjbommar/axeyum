@@ -6,6 +6,7 @@
 //! before a `sat` result is accepted. Z3 is not used and unsupported lowering
 //! remains explicit rather than falling through to an oracle.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
 // Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
@@ -27,7 +28,8 @@ use axeyum_cnf::{
     write_drat, xor_gauss_drat_refutation, xor_propagate,
 };
 use axeyum_ir::{
-    Assignment, IrError, Sort, TermArena, TermId, TermStats, Value, eval, well_founded_default,
+    Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
+    well_founded_default,
 };
 use axeyum_query::{Query, QueryPlan, QueryReplayFailure};
 
@@ -59,6 +61,7 @@ impl SatBvBackend {
         Self::default()
     }
 
+    #[allow(clippy::too_many_lines)]
     fn check_with_replay(
         &mut self,
         arena: &TermArena,
@@ -165,6 +168,13 @@ impl SatBvBackend {
         // feed the same reconstruction + replay below (see `solve_with_native_cdcl`).
         let mut sat_result = primary_sat_search(config, solve_formula, deadline, sat_timeout)?;
         stats.solve = solve_start.elapsed();
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            self.stats = Some(stats);
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "pure-Rust BV backend timeout after SAT search".to_owned(),
+            }));
+        }
 
         // CDCL(XOR) search fallback (ADR-0035): only on an `unknown` batsat
         // verdict (timeout/budget), only when opted in, and only on a formula
@@ -780,6 +790,7 @@ pub(crate) fn pure_gauss_xor_unsat_certificate_for_query(
 
 fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
     let mut model = Model::new();
+    let mut used_uninterpreted_tokens = used_uninterpreted_tokens(arena, assignment);
     for (symbol, _name, sort) in arena.symbols() {
         // A symbol unconstrained by the query gets its sort's well-founded
         // default (false/0/empty-array/base-constructor). Datatype symbols left
@@ -787,12 +798,48 @@ fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
         // uninhabited datatype simply gets no model entry.
         let value = assignment
             .get(symbol)
-            .or_else(|| well_founded_default(arena, sort));
+            .or_else(|| completion_default_value(arena, sort, &mut used_uninterpreted_tokens));
         if let Some(value) = value {
             model.set(symbol, value);
         }
     }
     model
+}
+
+fn used_uninterpreted_tokens(
+    arena: &TermArena,
+    assignment: &Assignment,
+) -> BTreeMap<SortId, BTreeSet<u128>> {
+    let mut used: BTreeMap<SortId, BTreeSet<u128>> = BTreeMap::new();
+    for (symbol, _name, sort) in arena.symbols() {
+        let Sort::Uninterpreted(sort_id) = sort else {
+            continue;
+        };
+        if let Some(Value::Uninterpreted { value, .. }) = assignment.get(symbol) {
+            used.entry(sort_id).or_default().insert(value);
+        }
+    }
+    used
+}
+
+fn completion_default_value(
+    arena: &TermArena,
+    sort: Sort,
+    used_uninterpreted_tokens: &mut BTreeMap<SortId, BTreeSet<u128>>,
+) -> Option<Value> {
+    if let Sort::Uninterpreted(sort_id) = sort {
+        let used = used_uninterpreted_tokens.entry(sort_id).or_default();
+        let mut token = 0u128;
+        while used.contains(&token) {
+            token = token.checked_add(1)?;
+        }
+        used.insert(token);
+        return Some(Value::Uninterpreted {
+            sort: sort_id,
+            value: token,
+        });
+    }
+    well_founded_default(arena, sort)
 }
 
 fn handle_sat_result(

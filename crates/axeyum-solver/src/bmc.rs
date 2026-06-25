@@ -561,7 +561,7 @@ fn inductive_step_assertions(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_ir::{Sort, Value};
+    use axeyum_ir::{ArraySortKey, Sort, Value};
 
     /// An 8-bit counter: `x@0 = start`, `x@{k+1} = x@k + 1`, bad when `x = target`.
     struct Counter {
@@ -848,8 +848,8 @@ mod tests {
                 .declare(
                     &format!("mem@{step}"),
                     Sort::Array {
-                        index: 2,
-                        element: 8,
+                        index: ArraySortKey::BitVec(2),
+                        element: ArraySortKey::BitVec(8),
                     },
                 )
                 .unwrap()

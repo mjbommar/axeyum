@@ -17,7 +17,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use axeyum_ir::{Rational, Sort, TermArena};
-use axeyum_solver::prove_unsat_to_lean_module;
+use axeyum_smtlib::parse_script;
+use axeyum_solver::{ProofFragment, prove_unsat_to_lean_module};
 
 /// Resolve the `lean` binary: `AXEYUM_LEAN_BIN` if set, otherwise the first
 /// `lean` on `PATH`. Returns `None` (→ skip) if unavailable.
@@ -100,6 +101,40 @@ fn qf_ufbv_refutation_checks_in_real_lean() {
     let (_frag, source) =
         prove_unsat_to_lean_module(&mut arena, &[e1, e2, e3]).expect("QF_UFBV unsat reconstructs");
     lean_accepts("qf_ufbv", &source);
+}
+
+/// `QF_UFBV`: three pairwise-distinct `f(g ·)` outputs over a one-bit domain are
+/// impossible by pigeonhole. This is the cvc5 `bug593` dominance-audit miss that
+/// is not an Ackermann/BV proof: the Lean path proves it directly by `Bool.rec`
+/// over the three one-bit arguments.
+#[test]
+fn qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_UFBV)
+        (declare-sort A 0)
+        (declare-fun f ((_ BitVec 1)) A)
+        (declare-fun g (A) (_ BitVec 1))
+        (declare-fun x () A)
+        (declare-fun y () A)
+        (declare-fun z () A)
+        (assert (and
+          (not (= (f (g x)) (f (g y))))
+          (not (= (f (g x)) (f (g z))))
+          (not (= (f (g y)) (f (g z))))))
+        (check-sat)
+    ",
+    )
+    .expect("bug593 slice parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("finite-domain pigeonhole unsat reconstructs");
+    assert_eq!(fragment, ProofFragment::FiniteDomainPigeonhole);
+    assert!(
+        !source.contains("sorryAx"),
+        "finite-domain pigeonhole module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_ufbv_finite_pigeonhole", &source);
 }
 
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
@@ -196,6 +231,433 @@ fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
     let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2, e3])
         .expect("QF_ABV read-consistency unsat reconstructs");
     lean_accepts("qf_abv", &source);
+}
+
+/// `QF_ABV`: `a = b ∧ ¬(select a i = select b i)` is unsat by congruence over
+/// `select`. This is the corpus `smtextarrayaxiom*uf` shape: evidence already has
+/// a direct Alethe certificate, and the Lean route should reconstruct that direct
+/// EUF proof instead of requiring the array-elimination certificate.
+#[test]
+fn qf_abv_extensionality_refutation_checks_in_real_lean() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 2, 2).unwrap();
+    let b = arena.array_var("b", 2, 2).unwrap();
+    let i = {
+        let s = arena.declare("i", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let sa = arena.select(a, i).unwrap();
+    let sb = arena.select(b, i).unwrap();
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let reads_ne = {
+        let e = arena.eq(sa, sb).unwrap();
+        arena.not(e).unwrap()
+    };
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[a_eq_b, reads_ne])
+        .expect("QF_ABV extensionality unsat reconstructs");
+    lean_accepts("qf_abv_extensionality", &source);
+}
+
+/// `QF_AUFBV`: all concrete reads over a finite BV2 index domain are equal, but
+/// the arrays are asserted disequal. This mirrors the `smtextarrayaxiom*` corpus
+/// family and reconstructs through the finite-array extensionality certificate,
+/// not the generic ABV/Alethe route.
+#[test]
+fn qf_aufbv_finite_array_extensionality_checks_in_real_lean() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_AUFBV)
+        (declare-fun a () (Array (_ BitVec 2) (_ BitVec 2)))
+        (declare-fun b () (Array (_ BitVec 2) (_ BitVec 2)))
+        (assert (= (select a (_ bv0 2)) (select b (_ bv0 2))))
+        (assert (= (select a (_ bv1 2)) (select b (_ bv1 2))))
+        (assert (= (select a (_ bv2 2)) (select b (_ bv2 2))))
+        (assert (= (select a (_ bv3 2)) (select b (_ bv3 2))))
+        (assert (not (= a b)))
+        (check-sat)
+    ",
+    )
+    .expect("finite-array extensionality slice parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("finite-array extensionality unsat reconstructs");
+    assert_eq!(fragment, ProofFragment::FiniteArrayExtensionality);
+    assert!(
+        !source.contains("sorryAx"),
+        "finite-array extensionality module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_finite_array_extensionality", &source);
+}
+
+/// `QF_AUFBV`: single-assertion negations of small array axiom schemas from the
+/// bitwuzla array regression slice. The schema checker supplies the certified
+/// equality and the Lean route closes it against the asserted disequality.
+#[test]
+fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
+    let cases = [
+        (
+            "qf_aufbv_mccarthy",
+            r"
+            (set-logic QF_AUFBV)
+            (declare-fun i () (_ BitVec 32))
+            (declare-fun j () (_ BitVec 32))
+            (declare-fun v () (_ BitVec 8))
+            (declare-fun a () (Array (_ BitVec 32) (_ BitVec 8)))
+            (assert (not (= (select (store a i v) j) (ite (= i j) v (select a j)))))
+            (check-sat)
+        ",
+        ),
+        (
+            "qf_aufbv_select_ite",
+            r"
+            (set-logic QF_AUFBV)
+            (declare-fun a () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun b () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun i () (_ BitVec 32))
+            (declare-fun c () Bool)
+            (assert (not (= (ite c (select a i) (select b i)) (select (ite c a b) i))))
+            (check-sat)
+        ",
+        ),
+        (
+            "qf_aufbv_store_ite_select",
+            r"
+            (set-logic QF_AUFBV)
+            (declare-fun a () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun b () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun i () (_ BitVec 32))
+            (declare-fun j () (_ BitVec 32))
+            (declare-fun v () (_ BitVec 8))
+            (declare-fun c () Bool)
+            (assert (not (= (select (ite c (store a i v) (store b i v)) j)
+                            (select (store (ite c a b) i v) j))))
+            (check-sat)
+        ",
+        ),
+        (
+            "qf_abv_btor_write1",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write1.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write13",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write13.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write2",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write9",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write9.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_rwpropindexplusconst1",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst1.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_rwpropindexplusconst3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst3.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write22",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write22.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write24",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write24.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_rw30",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_rw32",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write14",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_arraycondconst",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconst.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_arraycondconstaig",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconstaig.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_ext5",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext5.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_ext21",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_3vl1",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_extarraywrite1",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_ext22",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext22.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_read1",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_read4",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_read10",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read10.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_read22",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read22.btor.smt2"
+            ),
+        ),
+    ];
+
+    for (tag, smt2) in cases {
+        let mut script = parse_script(smt2).unwrap_or_else(|err| panic!("{tag} parses: {err}"));
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|err| panic!("{tag} reconstructs: {err}"));
+        assert_eq!(fragment, ProofFragment::ArrayAxiom, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: array axiom module must not lean on sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
+/// `QF_AUFBV`: `rw213` is already contradictory after the two array reads are
+/// treated as arbitrary BV values. The Rust certificate re-checks that scalar
+/// abstraction through the QF_BV evidence route, and the Lean module records the
+/// resulting small contradiction witness.
+#[test]
+fn qf_aufbv_bv_abstraction_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/rewrite__array__rw213.smt2"
+    );
+    let mut script = parse_script(text).expect("rw213 parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("rw213 BV-abstraction proof reconstructs");
+    assert_eq!(fragment, ProofFragment::BvAbstraction);
+    assert!(
+        !source.contains("sorryAx"),
+        "BV-abstraction module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_bv_abstraction", &source);
+}
+
+/// `QF_AUFBV`: generated aligned byte write chains commute when both word
+/// addresses have their low two bits cleared. The `wchains002ue` regression
+/// asserts the opposite store orders differ under those guards.
+#[test]
+fn qf_aufbv_aligned_write_chain_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__wchains002ue.smt2"
+    );
+    let mut script = parse_script(text).expect("wchains002ue parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("wchains002ue aligned-write-chain proof reconstructs");
+    assert_eq!(fragment, ProofFragment::AlignedWriteChainCommutation);
+    assert!(
+        !source.contains("sorryAx"),
+        "aligned-write-chain module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_aligned_write_chain", &source);
+}
+
+/// `QF_AUFBV`: a two-byte `memcpy` obligation under no-overlap/no-wrap guards
+/// is refuted when the copied destination byte is asserted different from the
+/// matching original source byte for some `j < 2`.
+#[test]
+fn qf_aufbv_two_byte_memcpy_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__memcpy02.smt2"
+    );
+    let mut script = parse_script(text).expect("memcpy02 parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("memcpy02 two-byte memcpy proof reconstructs");
+    assert_eq!(fragment, ProofFragment::TwoByteMemcpy);
+    assert!(
+        !source.contains("sorryAx"),
+        "two-byte memcpy module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_two_byte_memcpy", &source);
+}
+
+/// `QF_AUFBV`: the two-element bubble-sort benchmark conditionally swaps the
+/// original cells into sorted order, then asserts an in-range original read is
+/// distinct from both sorted cells.
+#[test]
+fn qf_aufbv_two_element_bubble_sort_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__bubsort002un.smt2"
+    );
+    let mut script = parse_script(text).expect("bubsort002un parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("bubsort002un two-element bubble-sort proof reconstructs");
+    assert_eq!(fragment, ProofFragment::TwoElementBubbleSort);
+    assert!(
+        !source.contains("sorryAx"),
+        "two-element bubble-sort module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_two_element_bubble_sort", &source);
+}
+
+/// `QF_AUFBV`: the two-element selection-sort benchmark stores the selected
+/// minimum at `start`, then asserts an in-range original read is distinct from
+/// both sorted cells.
+#[test]
+fn qf_aufbv_two_element_selection_sort_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__selsort002un.smt2"
+    );
+    let mut script = parse_script(text).expect("selsort002un parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("selsort002un two-element selection-sort proof reconstructs");
+    assert_eq!(fragment, ProofFragment::TwoElementSelectionSort);
+    assert!(
+        !source.contains("sorryAx"),
+        "two-element selection-sort module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_two_element_selection_sort", &source);
+}
+
+/// `QF_AUFBV`: the two-cell XOR-swap benchmark compares two ordinary swaps
+/// with the corresponding two generated XOR swaps and asserts the arrays differ.
+#[test]
+fn qf_aufbv_two_cell_xor_swap_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__dubreva002ue.smt2"
+    );
+    let mut script = parse_script(text).expect("dubreva002ue parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("dubreva002ue two-cell XOR-swap proof reconstructs");
+    assert_eq!(fragment, ProofFragment::TwoCellXorSwap);
+    assert!(
+        !source.contains("sorryAx"),
+        "two-cell XOR-swap module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_two_cell_xor_swap", &source);
+}
+
+/// `QF_AUFBV`: the two-byte swapmem benchmark uses generated XOR swaps to swap
+/// two disjoint byte ranges twice, then asserts memory changed.
+#[test]
+fn qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__swapmem002ue.smt2"
+    );
+    let mut script = parse_script(text).expect("swapmem002ue parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("swapmem002ue two-byte XOR-swap round-trip proof reconstructs");
+    assert_eq!(fragment, ProofFragment::TwoByteXorSwapRoundtrip);
+    assert!(
+        !source.contains("sorryAx"),
+        "two-byte XOR-swap round-trip module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_two_byte_xor_swap_roundtrip", &source);
+}
+
+/// `QF_AUFBV`: after storing the searched value into a sorted 16-element
+/// array, the generated five-probe binary search cannot miss that value.
+#[test]
+fn qf_aufbv_binary_search16_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__binarysearch32s016.smt2"
+    );
+    let mut script = parse_script(text).expect("binarysearch32s016 parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("binarysearch32s016 binary-search proof reconstructs");
+    assert_eq!(fragment, ProofFragment::BinarySearch16);
+    assert!(
+        !source.contains("sorryAx"),
+        "binary-search16 module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_binary_search16", &source);
+}
+
+/// `QF_AUFBV`: the five-cycle FIFO benchmark compares a shift-register FIFO
+/// with a circular-queue FIFO and asserts a final output/flag mismatch under
+/// the generated transition constraints.
+#[test]
+fn qf_aufbv_fifo_bc04_checks_in_real_lean() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2"
+    );
+    let mut script = parse_script(text).expect("fifo32bc04k05 parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("fifo32bc04k05 FIFO proof reconstructs");
+    assert_eq!(fragment, ProofFragment::FifoBc04);
+    assert!(
+        !source.contains("sorryAx"),
+        "FIFO BC04 module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_aufbv_fifo_bc04", &source);
 }
 
 /// Datatypes: `select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00)` is unsat by

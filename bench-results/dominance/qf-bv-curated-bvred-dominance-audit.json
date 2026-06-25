@@ -1,0 +1,138 @@
+{
+  "baseline": "bench-results/baselines/qf-bv-curated-bvred-solver-vs-z3-10s.json",
+  "complete_audit": true,
+  "instances": [
+    {
+      "audit_outcome": "sat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "dominant_candidate": true,
+      "elapsed_ms": 0.7218739999999999,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/bvred/bitwuzla__redor3.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "sat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "dominant_candidate": true,
+      "elapsed_ms": 0.7275130000000001,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/bvred/bitwuzla__redxor-substitute5.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 3.9495729999999996,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "term-level-unsat",
+      "file": "corpus/public-curated/bvred/cvc5__redand-eliminate.smt2",
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "term-level-enum"
+        }
+      ]
+    },
+    {
+      "audit_outcome": "sat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "dominant_candidate": true,
+      "elapsed_ms": 0.44872599999999996,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/bvred/cvc5__redand.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": true,
+      "elapsed_ms": 69.276553,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "term-level-unsat",
+      "file": "corpus/public-curated/bvred/cvc5__redor-eliminate.smt2",
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "QfBv",
+      "lean_module_bytes": 87679,
+      "trust_holes": [],
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "term-level-enum"
+        }
+      ]
+    },
+    {
+      "audit_outcome": "sat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "dominant_candidate": true,
+      "elapsed_ms": 0.654838,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/bvred/cvc5__redor.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    }
+  ],
+  "limit": 6,
+  "logic": "QF_BV",
+  "slice": "qf-bv-curated-bvred-solver-vs-z3-10s.json",
+  "summary": {
+    "audit_errors": 0,
+    "audited_decided": 6,
+    "audited_unsat": 2,
+    "baseline_decided": 6,
+    "baseline_mismatches": 0,
+    "dominant_candidates": 5,
+    "dominant_pct_audited": 83.33333333333333,
+    "evidence_certified": 6,
+    "evidence_checked": 6,
+    "instances": 6,
+    "lean_checked_unsat": 1,
+    "lean_unsat_pct": 50.0,
+    "timeouts": 0
+  },
+  "timeout_ms": 5000,
+  "version": 1
+}

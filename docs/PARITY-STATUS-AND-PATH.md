@@ -22,7 +22,7 @@ the decidable fragments, honest `unknown` elsewhere; **Lean parity** = every
 ## 2. Where we actually stand (the honest top-down)
 
 **The single most important fact: across ~24 logic fragments measured head-to-head
-vs Z3 4.13.3 — 992 files, 572 oracle-compared — DISAGREE = 0. Zero wrong sat/unsat,
+vs Z3 4.13.3 — 992 files, 591 oracle-compared — DISAGREE = 0. Zero wrong sat/unsat,
 anywhere.** Soundness is the settled foundation. The gap to Z3/cvc5 is **decide-rate
 and depth, never correctness.**
 
@@ -31,13 +31,18 @@ and depth, never correctness.**
 The capability frontier (decide% per division) partitions cleanly:
 
 - **Strong / competitive (≥80%):** QF_ABV 88%, QF_AUFBV 93%, QF_FP 100%, QF_UFBV
-  100%, QF_UFFF 100%, QF_FF 80%, QF_LIA 91%, QF_NRA-synthetic 91%, quantified-BV
-  69–80%, QF_SEQ 79%, QF_BVFP 88%, QF_LRA 82%.
-- **Mid (40–70%):** QF_UF 43–56% (capped by the uninterpreted-sort modeling), QF_NIA
-  51%, QF_S 44%, QF_DT 67%, QF_AUFBV-cvc5 56%, QF_UFLIA 50–83%.
+  100%, QF_UFFF 100%, QF_FF 80%, QF_LIA 91%, QF_NIA-synthetic 100%,
+  QF_NRA-synthetic 91%, quantified-BV 69–80%, QF_SEQ 79%, QF_BVFP 88%,
+  QF_LRA 82%.
+- **Mid (40–70%):** QF_UF 43–56% (previously capped by the uninterpreted-sort
+  BitVec modeling; first-class carrier sort landed 2026-06-25, remeasurement
+  pending), QF_ALIA 50%, QF_NIA 54%, QF_S 44%, QF_DT 67%, QF_AUFBV-cvc5 56%,
+  QF_UFLIA 50–83%.
 - **Weak / open (<40%) — the real frontier:** QF_SLIA 30% (bounded-string length
   wall), QF_NRA-cvc5 24% (high-degree nonlinear), QF_AX 38%, QF_AUFLIA 14%,
-  **QF_ALIA/Int-indexed arrays ~0–3%**, **quantified-LIA/UF over infinite domains 0%**.
+  **quantified-LIA/UF over infinite domains 0%**. Int-indexed arrays are now
+  split: QF_ALIA has moved to the mid band after the generic Bool/linear-Int
+  array route, while broader AUFLIA remains weak.
 - **QF_BV:** measured at parity with Z3 on the hard public p4dfa slice (both
   hard-capped) — see PLAN's lazy-bitblasting findings.
 
@@ -70,13 +75,72 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   self-evident → needs an exhaustive/sampled miter vs an independent reference). See
   `~/.claude/.../memory/trust-hole-witness-pattern.md`.
 
-### 2c. Two progress instruments (both regenerable, both committed)
+### 2c. Three progress instruments (regenerable, committed or generated)
 
 - **`bench-results/SCOREBOARD.md`** (`python3 scripts/gen-scoreboard.py`) — the
   division-level measured view vs Z3. Aggregate "are we competitive."
+- **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
+  the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
+  results for committed per-instance audits. It currently reports **35 rows,
+  992 files, 640 decided, 591 oracle-compared, DISAGREE=0**, with **12 complete
+  exact audit rows** and no remaining first-queue audit rows. Exact committed
+  rows now include BV/bitwuzla quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla
+  `82% (139/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`,
+  QF_LIA/cvc5 `70% (7/10)`, QF_LRA/cvc5 `67% (6/9)`, QF_NIA synthetic
+  `50% (16/32)`, QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`,
+  QF_UFBV/bitwuzla `50% (1/2)`, QF_UFLIA curated `0% (0/2)`, and QF_UFLIA
+  bounded `80% (4/5)`. QF_ABV/QF_AUFBV no longer carry audit runtime failures:
+  phase timing first localized all 11 old ABV/AUFBV timeouts to
+  `produce-evidence`, the timed evidence export guard cut that to 3, and the
+  array budget-propagation pass eliminated the remaining timeout rows by
+  returning checked budget `unknown` instead of falling through to expensive
+  qf-bv fallbacks. The former timeout files (`rw34`, `arraycond9`,
+  `fifo32ia04k05`) are now solve/search frontiers that finish under audit, not
+  evidence checking or Lean reconstruction runtime failures. The former bitwuzla
+  AUFBV finite-array extensionality rows `smtextarrayaxiom{1..4}.smt2` are now
+  certified by `UnsatFiniteArrayExtensionality` and reconstruct through the
+  `FiniteArrayExtensionality` Lean fragment. The former AUFBV
+  `smtaxiommccarthy`, `smtarraycond1`, and `smtarraycond3` rows are now certified
+  by `UnsatArrayAxiom` and reconstruct through the `ArrayAxiom` Lean fragment.
+  The structural AUFBV program-array lane now also covers `rw213`, `wchains002ue`,
+  `memcpy02`, `bubsort002un`, `selsort002un`, `dubreva002ue`, `swapmem002ue`,
+  `binarysearch32s016`, and `fifo32bc04k05` with checked evidence plus Lean
+  fragments; the generated FIFO induction SAT row `fifo32ia04k05` is now closed
+  by a replay-checked concrete model.
+  The former cvc5
+  `bug593` error is now a certified and Lean-reconstructed finite-domain
+  pigeonhole result (`ProofFragment::FiniteDomainPigeonhole`); the bitwuzla
+  `declsort1` SAT error is now a replay-checked declared-sort UFBV model; the
+  LRA audit error class is gone because unsupported pure-real certificate
+  declines now fall through to replayable evidence. Direct array-extensionality
+  proofs now reconstruct to Lean through the EUF path, moving the ABV
+  `ackermann3` row plus the AUFBV `smtextarrayaxiom*uf` rows from
+  Alethe-certified-only to Lean-checked. ABV BTOR-style read-over-write rows
+  now include certified `array-axiom-unsat` coverage for `write1` and `write13`;
+  the read-congruence extension then added representative `read*`/`ext*` rows
+  such as `read1`, `read4`, and `read10`, and the refreshed audit also reflects
+  current `BvAbstraction` ABV rows. The guarded write-case extension then added
+  `write2`, `write4`, `write7`, `write8`, `write9`, `write10`, and `verbose2`,
+  the nonzero-offset ROW extension added `rwpropindexplusconst{1..4}`, the
+  store-shadowing extension added `write22`, `write23`, and `write24`, the
+  conditional-select extension added `rw30`, `rw31`, `rw32`, and `rw33`, the
+  contextual BV1-false extension added `write14` and `arraycondconst`, the
+  nested BV1-complement extension added `arraycondconstaig`, the finite
+  extensionality-bit extension added `ext5` and `ext21`, the BV-not
+  injectivity read-congruence extension added `read22`, the concat-suffix ROW
+  extension added `3vl1`, the store same-cell injectivity extension added
+  `extarraywrite1`, and the store self-update read extension added `ext22`,
+  lifting ABV Lean unsat coverage to **55/83**.
+  The exact bitwuzla AUFBV audit row is
+  now fully dominant at **41/41**; remaining array work is broader proof coverage
+  and cvc5/AUFLIA decide depth, not this exact row. The audit
+  entry point is:
+  `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
+  [timeout_ms] [limit] [out.json]`. Rows without a complete committed
+  `bench-results/dominance/*.json` artifact remain readiness entries.
 - **`crates/axeyum-solver/tests/progress_frontier.rs`** (oracle-free, CI-gated) — a
   per-roadmap-lever *frontier* (largest difficulty-knob N axeyum decides): bv_reduction
-  33, lia_cuts 26, nia_unsat **0→40** (closed this session), nra_degree 2,
+  33, lia_cuts 26, nia_unsat **40**, nra_degree 2,
   string_bound 8. Each is a single integer that *rises* when its lever improves — the
   "gradual progress" signal. Self-checking, so it's also a soundness gate.
 
@@ -88,20 +152,244 @@ a named mechanism.**
 ### Tier A — decide-rate keystones (the biggest capability gaps). Mostly the
 **deciders/IR**, actively advanced by the parallel agent's `axeyum-ir`/`axeyum-rewrite`/CAD work.
 
-1. **Int-indexed arrays** (QF_ALIA/QF_AUFLIA/QF_AX ~0–38%). The blocker is the IR:
-   `Sort::Array{index:u32, element:u32}` is **BV-width-only**. Needs a first-class
-   sort-valued array index/element + `eliminate_arrays` over Int (read-over-write +
-   Ackermann + const-array → LIA). **Keystone, ~111-file `Sort` blast radius.** Const-array
-   sub-case already closed at the parser (`c469cb1`).
+1. **Int-indexed arrays** (QF_ALIA/QF_AUFLIA/QF_AX ~0–38%). The first IR blocker is
+   **partially lifted (2026-06-25):** `Sort::Array` now carries sort-valued
+   index/element metadata (`ArraySortKey`) instead of BV widths only; SMT-LIB
+   parses/writes free `(Array Int Int)` terms, and congruence-UNSAT over
+   Int-indexed arrays is decided. **Second slice landed (2026-06-25):** generic
+   non-BV array model projection (`Value::GenericArray`) plus lazy
+   ROW/extensionality over the Bool/linear-Int scalar abstraction now returns
+   replay-checked `sat` for free `(Array Int Int)` reads and disequality
+   witnesses, and refines ROW conflicts to `unsat`. Local remeasurement on the
+   fair cvc5 clean slice moved QF_ALIA to **3/5 decided, DISAGREE=0**; QF_AUFLIA
+   remains **1/3 decided**. **Third prerequisite slice landed (2026-06-25):**
+   SMT-LIB/IR now admit array-valued UF parameters such as
+   `g : (Array Int Int) -> Int` (array-valued UF results remain rejected), and
+   function models use full-`Value` keys so concrete generic arrays can appear in
+   UF tables; the narrow AUFLIA congruence conflict `a=b ∧ g(a)≠g(b)` is now
+   decided `unsat`. The next blocker is the broader mixed UF/array route: lazy
+   ROW/extensionality needs a scalar backend that can solve UF+LIA applications
+   over array arguments, followed by a committed QF_AUFLIA/QF_ALIA baseline
+   refresh. **Mixed ROW+UF route landed later 2026-06-25:** lazy
+   ROW/extensionality now delegates Bool/linear-Int+UF scalar abstractions to
+   the existing UF+LIA combination, preserves/completes UF interpretations for
+   replay, and decides replayed SAT shapes with UF-produced Int indices. Local
+   QF_AUFLIA fair-slice remeasurement is **2/6 decided, DISAGREE=0**. Remaining
+   blockers are concrete from per-file traces: scalar Int-array timeout
+   (`bug337`), array term shapes outside the current ROW fragment (`bug330`,
+   `swap...`), and missing array-equality-to-UF congruence refinement (`bug336`).
+   **Store-disjunction refuter landed later 2026-06-25:** the array fast path now
+   uses `store(a,i,v)=b ∧ store(a,j,w)=b ⇒ i=j ∨ a=b` with checked congruence
+   refutations of both branches, closing `bug336` and moving the local QF_AUFLIA
+   fair slice to **3/6 decided, DISAGREE=0**. Remaining blockers are now scalar
+   Int-array timeout (`bug337`) and array-valued structural terms outside the
+   current ROW fragment (`bug330`, `swap...`).
+   **Structural ROW coverage widened later 2026-06-25:** array-valued UF
+   arguments are now preserved through scalar applications, `select` over
+   array-valued `ite` lowers to branch reads, store ROW misses can reference a
+   scalar read expression, and mixed array+UF `unknown` from the UF-arithmetic
+   overbound guard falls through to the array route. Local QF_AUFLIA measurement
+   remains **3/6 decided, DISAGREE=0**, but `bug330` and `swap...` are now past
+   structural ROW rejection. Remaining blockers are the scalar UFLIA Boolean atom
+   cap (`bug330`), swap-chain replay/refinement incompleteness, and the scalar
+   Int-array timeout (`bug337`).
+   **Projection-completion slice landed later 2026-06-25:** the AUFLIA ROW scalar
+   backend can fall back from non-budget online-UFLIA `unknown` to eager
+   UF+arithmetic, and function model projection now completes non-application
+   symbols before evaluating full-`Value` UF argument keys. This closes the
+   concrete array-valued-UF projection failure exposed by `swap...`; local
+   QF_AUFLIA measurement is still **3/6 decided, DISAGREE=0**. Remaining misses
+   are scalar-engine frontiers: `bug330` has a 339-atom Boolean UFLIA abstraction
+   against the current cap of 48, while `swap...` and `bug337` hit lazy-LIA
+   timeouts.
+   **Bounded LIA probe + clean swap-chain refuter landed later 2026-06-25:**
+   the scalar arithmetic path now gives the online LIA DPLL(T) spine a bounded
+   deadline-aware probe before falling back to the legacy certified route, and
+   the array fast path recognizes clean symmetric store-swap chains as
+   extensionally equal. Local QF_AUFLIA measurement remains **3/6 decided,
+   DISAGREE=0** (`qf-auflia-after-swap-chain-refuter.json`); this does **not**
+   close the current cvc5 `swap...` instance. The frontier is still scalar
+   search/relevance (`bug330`), a stronger array-permutation/ROW normalizer
+   (`swap...`), and the Int-array timeout (`bug337`).
+   **Permutation-chain refuter landed later 2026-06-25:** the swap-chain
+   recognizer is now a memoized array-permutation normalizer, and proven
+   array-unsat refuters run before the expensive scalar routes. This closes the
+   exact cvc5 `swap_t1_pp_nf_ai_00010_004` regression. Local QF_AUFLIA
+   measurement is now **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-permutation-refuter.json`); Z3 remains **6/6**. At that
+   point, the two remaining misses were scalar frontiers: `bug330` (339 Boolean
+   UFLIA atoms against cap 48, then lazy-LIA timeout) and `bug337` (pure Int-array
+   lazy-LIA timeout).
+   **UFLIA/UFLRA deadline + cap diagnostic landed later 2026-06-25:** the
+   integrated combined-theory DPLL drivers now honor their configured deadline,
+   and the UFLIA Boolean atom cap is raised to 384 under that guard. Local
+   QF_AUFLIA measurement remains **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-uflia-deadline-cap.json`). The `bug330` diagnosis is now
+   sharper: it is no longer blocked by the old 48-atom admission cap; it reaches
+   online UF+LIA, declines on an uncertified Boolean-layer theory model, and then
+   the lazy Int-array route exhausts the budget. `bug337` remains the pure
+   Int-array lazy-LIA timeout.
+   **Measurement timeout + scalar-abstraction diagnostics landed later
+   2026-06-25:** the corpus measurement harness now passes its timeout into
+   `SolverConfig::timeout`, and lazy ROW/extensionality plus arithmetic DPLL now
+   report remaining-budget-aware scalar failure details. Local QF_AUFLIA remains
+   **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-scalar-abstraction-diagnostics.json`). The residual misses
+   are no longer mysterious refinement loops: `bug330` fails before any ROW lemma
+   is added (62 select sites; scalar abstraction 832 atoms / 4 blocking lemmas),
+   and `bug337` fails before any extensionality lemma is added (152 select sites;
+   scalar abstraction 1374 atoms / 2 blocking lemmas).
+   **Arithmetic atom canonicalization landed later 2026-06-25:** reversed and
+   negated order atoms now share canonical propositions, self-comparisons fold,
+   and the online LIA probe is capped at 1s before fallback. Local QF_AUFLIA is
+   still **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-arith-atom-canonicalization.json`), but `bug330` improves
+   from 832 to 802 scalar atoms and from 4 to 7 fallback blocking lemmas before
+   timeout. `bug337` is unchanged.
+   **Scalar Boolean short-circuiting landed later 2026-06-25:** the arithmetic
+   abstractor now folds Boolean constants and identical branches for `and`/`or`/
+   `xor`/implication/Bool equality/Bool `ite`, and skips dead branches before
+   allocating arithmetic atoms. This is a useful local invariant but does **not**
+   move the measured frontier: local QF_AUFLIA remains **4/6 decided,
+   DISAGREE=0** (`qf-auflia-after-boolean-simplification.json`), `bug330`
+   remains 802 atoms / 7 blocking lemmas, and `bug337` remains 1374 atoms / 2
+   blocking lemmas. The next useful move is scalar relevance / Boolean-layer
+   model certification for `bug330`, or a smaller initial extensionality
+   abstraction / model-construction shortcut for `bug337`.
+   **Scalar snapshot preprocessing landed later 2026-06-25:** lazy
+   ROW/extensionality now flattens positive top-level conjunctions before sending
+   scalar snapshots through the existing replay-safe
+   `propagate_values`/`solve_eqs` preprocessing wrapper. This exposes generated
+   aliases and constants without weakening the normal SAT replay gate. The
+   measured frontier is still **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-scalar-preprocess-flatten.json`), but `bug337` moves
+   materially: 1374 atoms / 2 blocking lemmas becomes 946 atoms / 7 blocking
+   lemmas at 10 s, and a 30 s single-file run reaches 19 blocking lemmas before
+   timeout. `bug330` remains 802 atoms and times out after 6 lemmas.
+   **Online LIA/LRA Boolean-leaf model lift landed later 2026-06-25:** standalone
+   online arithmetic drivers now include declared Boolean-leaf values from the
+   final DPLL assignment in replayed `sat` models. This closes a scalar replay
+   gap but does not move the current AUFLIA count: **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-online-boolean-model-lift.json`), with `bug330` still 802
+   atoms / 6 lemmas and `bug337` still 946 atoms / 7 lemmas at 10 s. A 3s online
+   probe cap was tested and rejected because it did not decide either hard file.
+   **Scalar LIA bound-lemma + large-core cutoff landed later 2026-06-25:** the
+   legacy arithmetic DPLL fallback now records certifiable simple integer-bound
+   mutex lemmas up front and stops deletion-minimizing theory cores once a scalar
+   abstraction exceeds 128 atoms. This does not change the measured count:
+   **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-bound-lemmas-core-cutoff.json`). It does change the
+   bottleneck diagnosis: `bug330` now reaches 40 scalar blocking lemmas at 10 s
+   (27 upfront bound lemmas), `bug337` reaches 46 at 10 s (150 upfront bound
+   lemmas), and a 30 s `bug337` run reaches 84 before the pure Boolean skeleton
+   times out. The residual blocker is Boolean-skeleton scaling/relevance after
+   many learned clauses, or a replay-gated SAT/model-construction shortcut for
+   `bug337`, not simplex core-minimization cost.
+   **Warm scalar Boolean skeleton landed later 2026-06-25:** the legacy
+   arithmetic DPLL fallback now encodes the scalar Boolean skeleton once into a
+   warm `IncrementalSat` and adds learned theory clauses incrementally, rather
+   than rebuilding through the general SAT-BV path every round. The measured
+   AUFLIA count is still **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-warm-scalar-bool-skeleton.json`), but the residual
+   diagnosis moved again: `bug330` reaches 608 scalar blocking clauses at 10 s,
+   `bug337` reaches 788 at 10 s, and a 30 s `bug337` run reaches 1670 before
+   `rustsat-batsat` times out. The remaining blocker is SAT search quality /
+   relevance over a large learned-clause Boolean skeleton, or a replay-gated
+   `bug337` model-construction shortcut; Boolean rebuild overhead is no longer
+   the limiting factor.
+   **Current-polarity integer-bound cores landed later 2026-06-25:** dynamic
+   scalar LIA conflicts now scan the assigned literal polarities for a cheap
+   two-literal integer-bound contradiction before using the large full-theory
+   slice. This covers complement bounds from assignments such as `not (x <= 1)`
+   and keeps the lemma on the existing certificate path. The measured AUFLIA
+   count remains **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-cheap-bound-core.json`), with diagnostics moving to
+   `bug330` at 1143 scalar blocking lemmas at 10 s and `bug337` at 860. This
+   confirms the residual blocker is still learned-clause search quality /
+   relevance, or a replay-gated `bug337` model-construction shortcut.
+   **Integer local-search scalar probe landed later 2026-06-25:** the one-sided
+   local-search model finder now supports `Int` variables and is tried for 100 ms
+   after preprocessing in the lazy ROW/extensionality scalar snapshot. The
+   measured AUFLIA count remains **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-int-local-search-scalar-probe.json`; axeyum PAR-2 6.668 s),
+   but the diagnostic split is clearer: `bug330` still has UF applications
+   outside this probe's scope, while `bug337` is in scope but local search times
+   out before the exact scalar loop later times out after 857 rounds. Next:
+   finite UF-table model search for `bug330`, or SAT relevance / replay-gated
+   model construction for `bug337`.
+   **Capped structural PBLS scoring landed later 2026-06-25:** compact Boolean
+   assertions now get a structural local-search cost, but large generated
+   assertions stay on the cheap root score. The measured AUFLIA count remains
+   **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-structural-pbls-score.json`; axeyum PAR-2 6.668 s).
+   `bug330` remains out of this probe's scope because of UF applications; `bug337`
+   remains in scope but local search times out and exact scalar search reaches
+   865 blocking lemmas before SAT timeout. The useful next step is still SAT
+   relevance / replay-gated model construction for `bug337`, or finite UF-table
+   model search for `bug330`.
+   **Capped integer-difference cores landed later 2026-06-25:** scalar arithmetic
+   DPLL(T) now extracts compact IDL negative-cycle cores for small/medium
+   snapshots (`x + c <= y + d` / strict variants), with a direct two-edge path
+   for conflicts like `x <= y` and `y + 1 <= x`. Large generated AUFLIA snapshots
+   decline this extractor to avoid core-search overhead. The measured AUFLIA
+   count remains **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-capped-idl-core.json`; axeyum PAR-2 6.668 s); `bug330`
+   reaches 1140 blocking lemmas and `bug337` reaches 849 before SAT timeout. The
+   hard slice still wants SAT relevance / model construction or a different
+   array/branch abstraction shortcut.
+   **Compact bound-implication lemmas landed later 2026-06-25:** scalar
+   arithmetic DPLL(T) now seeds asserted simple-bound monotonicity lemmas for
+   compact skeletons, e.g. `x <= 0 => x <= 1`, as normal certifiable LIA cores
+   `{stronger_bound, not weaker_bound}`. A broader all-polarity version was
+   measured and rejected because it inflated the hard AUFLIA upfront clause set;
+   the landed pass is asserted-bound-only and gated at 256 arithmetic atoms. The
+   measured AUFLIA count remains **4/6 decided, DISAGREE=0**
+   (`qf-auflia-after-compact-bound-implications.json`; axeyum PAR-2 6.668 s),
+   with hard diagnostics back near baseline (`bug330` 27 upfront bound lemmas /
+   1137 blocking lemmas; `bug337` 150 / 854). This is a compact-query guardrail;
+   it does not change the conclusion that the remaining AUFLIA misses require
+   large-skeleton SAT relevance/model construction, finite UF-table model search,
+   or a higher-level array/branch abstraction shortcut.
+   **PBLs affine integer repair candidates landed later 2026-06-25:** the
+   one-sided local-search model finder now proposes assertion-local integer
+   repair moves for unit-affine equality/order atoms (`x`, `x + c`, `c + x`,
+   `x - c`) from the current value of the opposite side. The move set is capped
+   and remains replay-gated. The measured AUFLIA count remains **4/6 decided,
+   DISAGREE=0** (`qf-auflia-after-pbls-affine-repairs.json`; axeyum PAR-2
+   6.668 s, Z3 PAR-2 0.105 s). Diagnostics are unchanged: `bug330` is still
+   outside this probe because the scalar snapshot contains UF applications, and
+   `bug337` still times out in local search before the exact scalar loop reaches
+   855 blocking lemmas. Treat this as a small-query model-search primitive, not
+   an AUFLIA frontier close.
+   **Focused OR branch repair for PBLs landed later 2026-06-25:** wider
+   OR-shaped assertions now keep the cheap persistent root score, but when
+   selected by local search they get a bounded structural tie-break plus a
+   branch-repair planner that tries to satisfy one disjunct by applying simple
+   literal repairs as a unit. A broad structural-cap increase and a 1 s scalar
+   local-search probe were measured and rejected because they still did not
+   close the two hard files. The measured AUFLIA count remains **4/6 decided,
+   DISAGREE=0** (`qf-auflia-after-pbls-focused-or-repair.json`; axeyum PAR-2
+   6.668 s, Z3 PAR-2 0.104 s). Diagnostics remain baseline-shaped: `bug330` is
+   still UF-out-of-scope for local search and times out after 1144 scalar
+   blocking lemmas; `bug337` still local-searches to timeout, then scalar LIA
+   times out after 851 blocking lemmas. The next AUFLIA move should be a real
+   branch-schedule/model constructor, finite UF-table reasoning for `bug330`, or
+   SAT relevance in the large scalar skeleton.
+   Then extend from the current Bool/linear-Int array slice to broader non-BV
+   component sorts.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. Bounded integer-nonlinear UNSAT is **closed** via exact
    int-blast (`2b91542`, nia_unsat frontier 0→40); the residual is unbounded/symbolic
    div-mod + genuinely-nonlinear — the multiplier no-overflow guard (parallel agent,
    NIA Unknown 498→146) is the lever.
-4. **Uninterpreted-sort QF_UF** (43% modeled-as-BV vs 56% bounded). The "right" fix is a
-   first-class IR uninterpreted sort routed through pure congruence closure
-   (`check_qf_uf`), not the BitVec over-approximation. IR keystone.
+4. **Uninterpreted-sort QF_UF** (43% modeled-as-BV vs 56% bounded). **First-class
+   IR carrier sort landed 2026-06-25:** arity-0 SMT-LIB `declare-sort` now becomes
+   `Sort::Uninterpreted(SortId)`, not a BitVec over-approximation; `check_auto`
+   routes pure many-sorted EUF through the e-graph path and replay-checks `sat`
+   models with deterministic uninterpreted tokens. Remaining work: remeasure the
+   QF_UF bounded/uninterpreted-sort corpus, then address the residual front-end
+   coverage (`Set`/`Seq` sorts, `sin`, `fmf.card`) rather than congruence itself.
 5. **Infinite-domain quantifiers** (UF/LIA quantified 0%). MBQI/instantiation can only
    *refute* over infinite domains; sat-side needs a model-finding loop. Finite-domain BV
    quantifiers already decide (69–80%).
@@ -135,8 +423,17 @@ new theories (Strings/Seq/Sets/FF) need adversarial differential fuzzes vs Z3 �
 **The 2026-06-23 "MEASURE, don't seed" course-correction was right and is now
 discharged.** Its diagnosis — "ledger-over-corpus, only QF_BV measured" — has been
 answered: 24 fragments are measured vs Z3 with a committed, regenerable scoreboard +
-the oracle-free frontier dashboard. Measurement is **no longer the blocker**; the
-scoreboard's weak rows now *name* the blockers precisely (Tier A above).
+the oracle-free frontier dashboard. The dominance-readiness report now adds the
+proof-route audit queue for the Pareto-dominance strategy, and the
+`audit_dominance` harness supplies the per-instance evidence/Lean fields. Complete
+committed audit artifacts are now ingested for 12 rows across BV, QF_ABV,
+QF_AUFBV, QF_BV, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_UFBV, and QF_UFLIA, so exact
+dominance coverage has replaced readiness labels on the first queue. Measurement
+is **no longer the blocker** for decide-rate or first-queue dominance coverage;
+remaining dominance work is now Lean/proof fixes and evidence-performance fixes
+for the concrete gaps already exposed. The scoreboard's weak rows now *name* the blockers precisely (Tier A
+above), and exact audit rows now also name missing Lean coverage and trust holes
+rather than reporting only runtime audit failures.
 
 Updates the PLAN should absorb:
 - **The seed moratorium can relax for *build-and-measure* theory opens** (Sets/Strings/

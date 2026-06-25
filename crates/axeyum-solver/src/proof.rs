@@ -14,10 +14,12 @@
 //! proof step; for now the reduction provenance is recorded but the machine
 //! check covers the DIMACS/DRAT pair.
 
+use std::time::Instant;
+
 use axeyum_bv::{first_unsupported_op, first_unsupported_sort, lower_terms};
 use axeyum_cnf::{
     ProofSolveOutcome, check_drat, check_lrat, elaborate_drat_to_lrat, parse_dimacs, parse_drat,
-    parse_lrat, solve_with_drat_proof, tseitin_encode, write_drat, write_lrat,
+    parse_lrat, solve_with_drat_proof_within, tseitin_encode, write_drat, write_lrat,
 };
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_rewrite::{
@@ -131,6 +133,31 @@ pub fn export_qf_bv_unsat_proof(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<UnsatProofOutcome, SolverError> {
+    export_qf_bv_unsat_proof_impl(arena, assertions, None)
+}
+
+/// Like [`export_qf_bv_unsat_proof`], but the proof-producing SAT search returns
+/// [`UnsatProofOutcome::Inconclusive`] when `deadline` expires.
+///
+/// The deadline only bounds the optional proof search. If it expires, no
+/// satisfiability verdict is claimed from the exporter.
+///
+/// # Errors
+///
+/// Returns the same errors as [`export_qf_bv_unsat_proof`].
+pub fn export_qf_bv_unsat_proof_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
+    export_qf_bv_unsat_proof_impl(arena, assertions, deadline)
+}
+
+fn export_qf_bv_unsat_proof_impl(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
     for &term in assertions {
         if arena.sort_of(term) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(term));
@@ -160,7 +187,7 @@ pub fn export_qf_bv_unsat_proof(
         .map_err(|error| SolverError::Backend(format!("CNF encoding failed: {error}")))?;
     let formula = encoding.formula();
 
-    match solve_with_drat_proof(formula) {
+    match solve_with_drat_proof_within(formula, deadline) {
         ProofSolveOutcome::Sat(_) => Ok(UnsatProofOutcome::Satisfiable),
         ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
             Ok(UnsatProofOutcome::Inconclusive)
@@ -218,12 +245,26 @@ pub fn export_qf_abv_unsat_proof(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<UnsatProofOutcome, SolverError> {
+    export_qf_abv_unsat_proof_within(arena, assertions, None)
+}
+
+/// Like [`export_qf_abv_unsat_proof`], but the final BV proof search is bounded
+/// by `deadline`.
+///
+/// # Errors
+///
+/// Returns the same errors as [`export_qf_abv_unsat_proof`].
+pub fn export_qf_abv_unsat_proof_within(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
     let elimination = eliminate_arrays(arena, assertions).map_err(|error| match error {
         ArrayElimError::Unsupported(what) => SolverError::Unsupported(what),
         ArrayElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
     })?;
     let eliminated = elimination.assertions().to_vec();
-    export_qf_bv_unsat_proof(arena, &eliminated)
+    export_qf_bv_unsat_proof_within(arena, &eliminated, deadline)
 }
 
 /// Checkable `unsat` certificate for the combined **`QF_AUFBV`** fragment
@@ -242,6 +283,20 @@ pub fn export_qf_aufbv_unsat_proof(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<UnsatProofOutcome, SolverError> {
+    export_qf_aufbv_unsat_proof_within(arena, assertions, None)
+}
+
+/// Like [`export_qf_aufbv_unsat_proof`], but the final BV proof search is bounded
+/// by `deadline`.
+///
+/// # Errors
+///
+/// Returns the same errors as [`export_qf_aufbv_unsat_proof`].
+pub fn export_qf_aufbv_unsat_proof_within(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<UnsatProofOutcome, SolverError> {
     let array_elim = eliminate_arrays(arena, assertions).map_err(|error| match error {
         ArrayElimError::Unsupported(what) => SolverError::Unsupported(what),
         ArrayElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
@@ -252,7 +307,7 @@ pub fn export_qf_aufbv_unsat_proof(
         FuncElimError::Ir(inner) => SolverError::Backend(inner.to_string()),
     })?;
     let eliminated = func_elim.assertions().to_vec();
-    export_qf_bv_unsat_proof(arena, &eliminated)
+    export_qf_bv_unsat_proof_within(arena, &eliminated, deadline)
 }
 
 /// Like [`export_qf_bv_unsat_proof`] but for **`QF_UFBV`** (uninterpreted

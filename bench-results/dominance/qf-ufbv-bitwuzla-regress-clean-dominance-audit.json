@@ -1,0 +1,80 @@
+{
+  "baseline": "bench-results/baselines/qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+  "complete_audit": true,
+  "instances": [
+    {
+      "audit_outcome": "sat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "sat",
+      "dominant_candidate": true,
+      "elapsed_ms": 2.876052,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "sat-model",
+      "file": "corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__declsort1.smt2",
+      "lean_checked": false,
+      "lean_error": null,
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": false,
+      "elapsed_ms": 2.639772,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "drat-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2",
+      "lean_checked": false,
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "lean_fragment": null,
+      "lean_module_bytes": null,
+      "trust_holes": [
+        "bit-blast",
+        "ackermann"
+      ],
+      "trust_steps": [
+        {
+          "certified": false,
+          "id": "bit-blast"
+        },
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": false,
+          "id": "ackermann"
+        }
+      ]
+    }
+  ],
+  "limit": 2,
+  "logic": "QF_UFBV",
+  "slice": "qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+  "summary": {
+    "audit_errors": 0,
+    "audited_decided": 2,
+    "audited_unsat": 1,
+    "baseline_decided": 2,
+    "baseline_mismatches": 0,
+    "dominant_candidates": 1,
+    "dominant_pct_audited": 50.0,
+    "evidence_certified": 2,
+    "evidence_checked": 2,
+    "instances": 2,
+    "lean_checked_unsat": 0,
+    "lean_unsat_pct": 0.0,
+    "timeouts": 0
+  },
+  "timeout_ms": 5000,
+  "version": 1
+}

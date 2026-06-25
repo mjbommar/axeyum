@@ -25,8 +25,8 @@ fn memory_write_then_probe_load_finds_inputs_and_concretely_verifies() {
         .declare(
             "mem",
             axeyum_ir::Sort::Array {
-                index: ADDR_WIDTH,
-                element: ELEM_WIDTH,
+                index: axeyum_ir::ArraySortKey::BitVec(ADDR_WIDTH),
+                element: axeyum_ir::ArraySortKey::BitVec(ELEM_WIDTH),
             },
         )
         .unwrap();

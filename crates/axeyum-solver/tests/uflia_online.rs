@@ -9,12 +9,14 @@
 //! values. A graceful `Unknown` on a hard case is fine; a wrong sat / unsat is
 //! unacceptable.
 
+use std::time::Duration;
+
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
-    CheckResult, IncrementalDecisionLia, SolverConfig, check_qf_uflia_boolean_prop_metrics,
-    check_qf_uflia_boolean_with_metrics, check_qf_uflia_online, check_with_uf_arithmetic,
-    combined_incremental_lia_structure, combined_incremental_lia_vs_check,
-    combined_theory_lia_propagations,
+    CheckResult, IncrementalDecisionLia, SolverConfig, UnknownKind,
+    check_qf_uflia_boolean_prop_metrics, check_qf_uflia_boolean_with_metrics,
+    check_qf_uflia_online, check_with_uf_arithmetic, combined_incremental_lia_structure,
+    combined_incremental_lia_vs_check, combined_theory_lia_propagations,
 };
 
 fn iconst(arena: &mut TermArena, n: i128) -> TermId {
@@ -58,6 +60,28 @@ fn model_replays(arena: &TermArena, assertions: &[TermId], result: &CheckResult)
             );
         }
     }
+}
+
+#[test]
+fn boolean_combination_zero_timeout_is_timeout_unknown() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let y = ivar(&mut arena, "y");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let fy = arena.apply(f, &[y]).unwrap();
+    let eq = arena.eq(fx, fy).unwrap();
+    let lt = arena.int_lt(x, y).unwrap();
+    let assertion = arena.or(eq, lt).unwrap();
+
+    let config = SolverConfig::default().with_timeout(Duration::ZERO);
+    let result = check_qf_uflia_online(&mut arena, &[assertion], &config).unwrap();
+    assert!(
+        matches!(&result, CheckResult::Unknown(reason) if reason.kind == UnknownKind::Timeout),
+        "expected timeout unknown, got {result:?}"
+    );
 }
 
 #[test]

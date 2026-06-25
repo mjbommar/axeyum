@@ -19,25 +19,20 @@
 //! ([`crate::eliminate_arrays`]); the two passes compose to reduce `QF_AUFBV`
 //! to `QF_BV` (eliminate arrays first, then functions).
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{
-    Assignment, FuncId, FuncValue, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value,
-    eval,
+    Assignment, FuncId, FuncValue, IrError, Op, Sort, SortId, SymbolId, TermArena, TermId,
+    TermNode, Value, eval, well_founded_default,
 };
 
 use crate::canonical::build_app;
 
-/// A canonical default value for an arithmetic result sort (`Int 0` / `Real 0`),
-/// used as the unconstrained default of a projected arithmetic-sorted function
-/// interpretation. Panics for a non-arithmetic sort (the arithmetic projection
-/// path only calls it for `Int`/`Real`).
-fn default_value_of(sort: Sort) -> Value {
-    match sort {
-        Sort::Int => Value::Int(0),
-        Sort::Real => Value::Real(axeyum_ir::Rational::zero()),
-        other => panic!("default_value_of called on non-arithmetic sort {other:?}"),
-    }
+/// A canonical default value for a full-value-storage function result sort.
+fn default_value_of(arena: &TermArena, sort: Sort) -> Result<Value, IrError> {
+    well_founded_default(arena, sort).ok_or(IrError::Unsupported(
+        "uninterpreted-function model projection: uninhabited result sort",
+    ))
 }
 
 /// Error from uninterpreted-function elimination.
@@ -143,6 +138,17 @@ impl FunctionElimination {
         model: &Assignment,
     ) -> Result<Assignment, IrError> {
         let mut projected = model.clone();
+        let mut used_uninterpreted_tokens = used_uninterpreted_tokens(arena, &projected);
+        for (symbol, name, sort) in arena.symbols() {
+            if projected.get(symbol).is_some() || name.starts_with("!fn_app_") {
+                continue;
+            }
+            if let Some(default) =
+                projection_default_value(arena, sort, &mut used_uninterpreted_tokens)
+            {
+                projected.set(symbol, default);
+            }
+        }
         // Per function, the (argument-value tuple, result-value) entries, kept in
         // the application discovery order so the projection is deterministic.
         let mut tables: HashMap<FuncId, Vec<(Vec<Value>, Value)>> = HashMap::new();
@@ -152,7 +158,7 @@ impl FunctionElimination {
         for apply in &self.applies {
             let mut key = Vec::with_capacity(apply.args.len());
             for &arg in &apply.args {
-                key.push(eval(arena, arg, model)?);
+                key.push(eval(arena, arg, &projected)?);
             }
             // A fresh application symbol may be unassigned in the model — notably a
             // NESTED arithmetic-sorted application (e.g. `g(f(c), …)` where the inner
@@ -172,18 +178,17 @@ impl FunctionElimination {
         for func in func_order {
             let entries = tables.remove(&func).expect("func recorded in order");
             let (_, params, result) = arena.function(func);
-            let arith = matches!(result, Sort::Int | Sort::Real)
-                || params.iter().any(|s| matches!(s, Sort::Int | Sort::Real));
-            let mut value = if arith {
+            let value_storage = FuncValue::uses_value_storage_for(params, result);
+            let mut value = if value_storage {
                 // Default result is any value of the result sort; the original
                 // query only constrains the explicitly recorded applications.
-                let default = default_value_of(result);
+                let default = default_value_of(arena, result)?;
                 FuncValue::constant_value(params.to_vec(), result, default)
             } else {
                 FuncValue::constant(params.to_vec(), result, 0)
             };
             for (args, element) in entries {
-                value = if arith {
+                value = if value_storage {
                     value.define_value(&args, element)
                 } else {
                     let key: Vec<u128> = args.iter().map(Value::scalar_code).collect();
@@ -194,6 +199,42 @@ impl FunctionElimination {
         }
         Ok(projected)
     }
+}
+
+fn used_uninterpreted_tokens(
+    arena: &TermArena,
+    assignment: &Assignment,
+) -> BTreeMap<SortId, BTreeSet<u128>> {
+    let mut used: BTreeMap<SortId, BTreeSet<u128>> = BTreeMap::new();
+    for (symbol, _name, sort) in arena.symbols() {
+        let Sort::Uninterpreted(sort_id) = sort else {
+            continue;
+        };
+        if let Some(Value::Uninterpreted { value, .. }) = assignment.get(symbol) {
+            used.entry(sort_id).or_default().insert(value);
+        }
+    }
+    used
+}
+
+fn projection_default_value(
+    arena: &TermArena,
+    sort: Sort,
+    used_uninterpreted_tokens: &mut BTreeMap<SortId, BTreeSet<u128>>,
+) -> Option<Value> {
+    if let Sort::Uninterpreted(sort_id) = sort {
+        let used = used_uninterpreted_tokens.entry(sort_id).or_default();
+        let mut token = 0u128;
+        while used.contains(&token) {
+            token = token.checked_add(1)?;
+        }
+        used.insert(token);
+        return Some(Value::Uninterpreted {
+            sort: sort_id,
+            value: token,
+        });
+    }
+    well_founded_default(arena, sort)
 }
 
 /// Eliminates all uninterpreted-function applications from `assertions`,
@@ -549,6 +590,34 @@ mod tests {
         assert_eq!(eval(&arena, neq, &projected).unwrap(), Value::Bool(true));
         assert_eq!(eval(&arena, fa, &projected).unwrap(), bv(8, 0xaa));
         assert_eq!(eval(&arena, fb, &projected).unwrap(), bv(8, 0xbb));
+    }
+
+    #[test]
+    fn project_model_completes_symbols_needed_by_array_argument_keys() {
+        let mut arena = TermArena::new();
+        let a = arena
+            .array_var_with_sorts("a", Sort::Int, Sort::Int)
+            .unwrap();
+        let array_sort = arena.sort_of(a);
+        let i = arena.declare("i", Sort::Int).unwrap();
+        let f = arena.declare_fun("f", &[array_sort], Sort::Int).unwrap();
+        let zero = arena.int_const(0);
+        let i_term = arena.var(i);
+        let stored = arena.store(a, i_term, zero).unwrap();
+        let app = arena.apply(f, &[stored]).unwrap();
+        let one = arena.int_const(1);
+        let assertion = arena.eq(app, one).unwrap();
+
+        let elim = eliminate_functions(&mut arena, &[assertion]).unwrap();
+        let (_, _, fresh) = elim.applications()[0];
+        let mut model = Assignment::new();
+        model.set(fresh, Value::Int(1));
+
+        let projected = elim.project_model(&arena, &model).unwrap();
+        assert_eq!(
+            eval(&arena, assertion, &projected).unwrap(),
+            Value::Bool(true)
+        );
     }
 
     /// Extends `model` with each fresh application symbol set to the true value

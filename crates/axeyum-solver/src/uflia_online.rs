@@ -74,7 +74,9 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::time::Instant;
 
-use axeyum_ir::{Assignment, FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, eval, well_founded_default,
+};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{EufTheory, TheorySolver};
@@ -95,7 +97,11 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// Hard ceiling on the number of distinct theory atoms in the Boolean skeleton.
 /// Above it the layer declines (the propositional search space is too large to
 /// enumerate soundly within budget).
-const MAX_BOOLEAN_ATOMS: usize = 48;
+///
+/// This is deliberately above the current `QF_AUFLIA` fair-slice frontier
+/// (`bug330` has 339 atoms) so the deadline-aware CDCL(T) spine, not admission,
+/// decides whether that scalar abstraction is tractable.
+const MAX_BOOLEAN_ATOMS: usize = 384;
 
 /// Hard ceiling on Tseitin clauses produced for the Boolean skeleton; above it the
 /// layer declines rather than build an unbounded encoding.
@@ -494,6 +500,7 @@ impl Search<'_> {
     /// congruence). The replay check then validates the whole assembly.
     fn combined_model(&mut self, lia: &LiaTheory, augmented: &[TermId]) -> Option<Model> {
         let mut model = lia.integer_model()?;
+        complete_non_int_symbols(self.arena, &mut model);
         let assignment = model.to_assignment();
 
         // Scalar UF interpretations from the EUF e-graph model (Bool/BitVec results).
@@ -954,6 +961,24 @@ fn replays_literals(arena: &TermArena, literals: &[Literal], model: &Model) -> b
     })
 }
 
+/// Completes non-integer symbols in a combined `EUF+LIA` model.
+///
+/// `LiaTheory::integer_model` only assigns integer symbols. Mixed AUFLIA terms
+/// can use array symbols as arguments to integer-result UF applications, and the
+/// function-table projection must evaluate those arguments to concrete values.
+/// Any well-founded value of the right sort is enough for unconstrained
+/// non-integer symbols; replay remains the gate that rejects a bad assembly.
+fn complete_non_int_symbols(arena: &TermArena, model: &mut Model) {
+    for (symbol, _name, sort) in arena.symbols() {
+        if sort == Sort::Int || model.get(symbol).is_some() {
+            continue;
+        }
+        if let Some(value) = well_founded_default(arena, sort) {
+            model.set(symbol, value);
+        }
+    }
+}
+
 /// Collects every integer-result uninterpreted-function application under `term`
 /// (including nested ones), deterministically into `out`.
 fn collect_int_apps(arena: &TermArena, term: TermId, out: &mut BTreeSet<TermId>) {
@@ -1234,7 +1259,11 @@ fn check_qf_uflia_boolean(
         return decline("no UFLIA atoms for the online combination boolean layer");
     }
     if atom_terms.len() > MAX_BOOLEAN_ATOMS {
-        return decline("too many theory atoms for the online combination boolean layer");
+        return decline(format!(
+            "too many theory atoms for the online combination boolean layer: {} > {}",
+            atom_terms.len(),
+            MAX_BOOLEAN_ATOMS
+        ));
     }
 
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
@@ -1307,14 +1336,18 @@ fn cdclt_combined(
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     if deadline.is_some_and(|d| Instant::now() >= d) {
-        return decline("timeout in the online combination boolean layer");
+        return timeout_unknown("timeout in the online combination boolean layer");
     }
 
     // The generic Dpll drives the live combination: vars `0..combined_count` are forwarded
     // to `CombinedIncrementalLia` (theory atoms + interface vars); the rest are Tseitin aux.
     let mut solver = crate::lra_online::Dpll::new(enc.var_count, combined_count, lit_clauses);
-    if solver.solve(&mut combined) {
-        return CheckResult::Unsat;
+    match solver.solve_with_deadline(&mut combined, deadline) {
+        Some(true) => return CheckResult::Unsat,
+        Some(false) => {}
+        None => {
+            return timeout_unknown("timeout in the online combination boolean layer");
+        }
     }
     // A Boolean- and theory-consistent total assignment. Read the original theory atoms'
     // truth values off the leaf and rebuild + replay the combined integer model through the
@@ -1519,7 +1552,11 @@ fn check_qf_uflia_boolean_enumerative(
         return decline("no UFLIA atoms for the online combination boolean layer");
     }
     if atom_terms.len() > MAX_BOOLEAN_ATOMS {
-        return decline("too many theory atoms for the online combination boolean layer");
+        return decline(format!(
+            "too many theory atoms for the online combination boolean layer: {} > {}",
+            atom_terms.len(),
+            MAX_BOOLEAN_ATOMS
+        ));
     }
 
     // Tseitin-encode each assertion; assert each top variable.
@@ -2080,6 +2117,13 @@ impl BoolEncoder {
 pub(crate) fn decline(detail: impl Into<String>) -> CheckResult {
     CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::Incomplete,
+        detail: detail.into(),
+    })
+}
+
+fn timeout_unknown(detail: impl Into<String>) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
         detail: detail.into(),
     })
 }

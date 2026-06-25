@@ -63,7 +63,7 @@ fn qf_abv_unsat_exports_a_recheckable_certificate() {
     // it differ is unsat. The array-eliminated CNF's DRAT refutation is exported
     // and independently re-checked — a checkable certificate for the array
     // fragment (modulo the trusted, replay-validatable elimination).
-    use axeyum_ir::Sort;
+    use axeyum_ir::{ArraySortKey, Sort};
     use axeyum_solver::export_qf_abv_unsat_proof;
 
     let mut arena = TermArena::new();
@@ -71,8 +71,8 @@ fn qf_abv_unsat_exports_a_recheckable_certificate() {
         .declare(
             "mem",
             Sort::Array {
-                index: 4,
-                element: 4,
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(4),
             },
         )
         .unwrap();
@@ -140,7 +140,7 @@ fn qf_aufbv_unsat_exports_a_recheckable_certificate() {
     // Arrays + UF together: with a == b, select(store(mem,a,x),b) == x, so
     // f(select(...)) == f(x) by congruence — demanding they differ is unsat.
     // Exercises both array elimination and Ackermann reduction in one proof.
-    use axeyum_ir::Sort;
+    use axeyum_ir::{ArraySortKey, Sort};
     use axeyum_solver::export_qf_aufbv_unsat_proof;
 
     let mut arena = TermArena::new();
@@ -148,8 +148,8 @@ fn qf_aufbv_unsat_exports_a_recheckable_certificate() {
         .declare(
             "mem",
             Sort::Array {
-                index: 4,
-                element: 4,
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(4),
             },
         )
         .unwrap();

@@ -22,10 +22,12 @@ fn eval_eq(a: &mut TermArena, term: TermId) -> TermId {
         Value::Bv { width, value } => a.bv_const(width, value).unwrap(),
         Value::WideBv(_)
         | Value::Array(_)
+        | Value::GenericArray(_)
         | Value::Int(_)
         | Value::Real(_)
         | Value::RealAlgebraic(_)
-        | Value::Datatype { .. } => {
+        | Value::Datatype { .. }
+        | Value::Uninterpreted { .. } => {
             unreachable!("differential terms are bit-vector/Bool")
         }
     };

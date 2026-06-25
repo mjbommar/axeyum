@@ -87,11 +87,8 @@ fn run_axeyum(text: &str, cap: Duration) -> (Verdict, f64) {
         .stack_size(256 * 1024 * 1024)
         .spawn(move || {
             let start = Instant::now();
-            let verdict = match check_auto(
-                &mut script.arena,
-                &script.assertions,
-                &SolverConfig::default(),
-            ) {
+            let config = SolverConfig::default().with_timeout(cap);
+            let verdict = match check_auto(&mut script.arena, &script.assertions, &config) {
                 Ok(CheckResult::Sat(_)) => Verdict::Sat,
                 Ok(CheckResult::Unsat) => Verdict::Unsat,
                 Ok(CheckResult::Unknown(_)) | Err(_) => Verdict::Unknown,

@@ -41,9 +41,9 @@ use crate::sat_bv_backend::SatBvBackend;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
 #[cfg(not(target_arch = "wasm32"))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
-use web_time::Instant;
+use web_time::{Duration, Instant};
 
 /// The unified front door: decides any supported query — quantifier-free or
 /// quantified, over any combination of the supported theories.
@@ -408,7 +408,32 @@ fn check_auto_with_recorder(
 ) -> Result<CheckResult, SolverError> {
     // Probe: classify the quantifier-free fragment and record the planned route
     // ordering as the trace's first entry, so the trail explains the dispatch.
-    record_probe(arena, assertions, rec);
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let Some(has_quantifier) = contains_quantifier_within(arena, assertions, deadline) else {
+        return Ok(CheckResult::Unknown(timeout_reason(
+            "auto-dispatch timeout while scanning quantifiers",
+        )));
+    };
+    let Some(features) = Features::scan_within(arena, assertions, deadline) else {
+        return Ok(CheckResult::Unknown(timeout_reason(
+            "auto-dispatch timeout while scanning theory features",
+        )));
+    };
+    record_probe(&features, has_quantifier, rec);
+    if features.has_array
+        && let Some(model) = crate::array_fifo::fifo_ia04_sat_model(arena, assertions)
+    {
+        with_recorder(rec, |t| {
+            t.record_decided("fifo-ia04-sat-witness", Verdict::Sat);
+        });
+        return Ok(CheckResult::Sat(model));
+    }
+    if features.has_array
+        && let Some(result) = dispatch_array_unsat_refuters(arena, assertions, config)?
+    {
+        with_recorder(rec, |t| t.record_result("array-unsat-refuter", &result));
+        return Ok(result);
+    }
 
     // Word-level preprocessing (P1.2) is owned here, at the default-path entry, when
     // `config.preprocess` is set; otherwise dispatch directly. The full model-sound
@@ -420,15 +445,20 @@ fn check_auto_with_recorder(
     // query carrying a quantifier it is skipped (the quantifier path needs the
     // original structure for trigger/e-matching); only quantifier-free queries are
     // preprocessed.
-    if config.preprocess && !contains_quantifier(arena, assertions) {
+    if config.preprocess && !has_quantifier {
         // Best-effort: if *any* step of the preprocessed path fails — a reduction
         // pass (e.g. canonicalize cannot fold an uninterpreted-function application)
         // or the reduced solve / model reconstruction — fall back to solving the
         // ORIGINAL unreduced query. Preprocessing is only ever an optimization, never
         // a correctness dependency, so a failure must degrade, not propagate.
-        let preprocessed = match preprocess_reduce(arena, assertions) {
-            Ok((reduced, trail)) => {
-                dispatch_reduced(arena, assertions, &reduced, &trail, config, rec)
+        let preprocessed = match preprocess_reduce(arena, assertions, deadline) {
+            Ok(Some((reduced, trail))) => {
+                dispatch_reduced(arena, assertions, &reduced, &trail, config, deadline, rec)
+            }
+            Ok(None) => {
+                return Ok(CheckResult::Unknown(timeout_reason(
+                    "preprocessing timeout before reduced dispatch",
+                )));
             }
             Err(error) => Err(error),
         };
@@ -458,11 +488,10 @@ fn reduced_fallback() -> UnknownReason {
 /// planned route ordering — as the trace's first entry. Cheap and deterministic;
 /// reuses the existing [`Features`] scan and quantifier detection, adding no new
 /// fragment-detection engine.
-fn record_probe(arena: &TermArena, assertions: &[TermId], rec: &mut Recorder<'_>) {
+fn record_probe(features: &Features, has_quantifier: bool, rec: &mut Recorder<'_>) {
     with_recorder(rec, |trace| {
-        let features = Features::scan(arena, assertions);
         let mut tags: Vec<&str> = Vec::new();
-        if contains_quantifier(arena, assertions) {
+        if has_quantifier {
             tags.push("quant");
         }
         if features.has_datatype {
@@ -474,7 +503,7 @@ fn record_probe(arena: &TermArena, assertions: &[TermId], rec: &mut Recorder<'_>
         if features.has_int {
             tags.push("int");
         }
-        if features.has_function {
+        if features.has_function || features.has_uninterpreted_sort {
             tags.push("uf");
         }
         if features.has_array {
@@ -484,6 +513,7 @@ fn record_probe(arena: &TermArena, assertions: &[TermId], rec: &mut Recorder<'_>
             && !features.has_int
             && !features.has_array
             && !features.has_function
+            && !features.has_uninterpreted_sort
         {
             tags.push("bv");
         }
@@ -492,6 +522,25 @@ fn record_probe(arena: &TermArena, assertions: &[TermId], rec: &mut Recorder<'_>
         }
         trace.record_probe(format!("fragment {{{}}}", tags.join(",")));
     });
+}
+
+fn timeout_reason(detail: impl Into<String>) -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::Timeout,
+        detail: detail.into(),
+    }
+}
+
+fn config_with_remaining_deadline(
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> SolverConfig {
+    let Some(deadline) = deadline else {
+        return config.clone();
+    };
+    let mut out = config.clone();
+    out.timeout = Some(deadline.saturating_duration_since(Instant::now()));
+    out
 }
 
 /// Whether an [`UnknownKind`] is a **resource/budget** decline (wall-clock,
@@ -524,21 +573,33 @@ fn has_arithmetic_function(arena: &TermArena) -> bool {
 }
 
 /// Whether any assertion's term tree contains a `forall`/`exists` binder.
-fn contains_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
+fn contains_quantifier_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<bool> {
     let mut stack: Vec<TermId> = assertions.to_vec();
     let mut seen: BTreeSet<TermId> = BTreeSet::new();
     while let Some(t) = stack.pop() {
+        if past_deadline(deadline) {
+            return None;
+        }
         if !seen.insert(t) {
             continue;
         }
         if let TermNode::App { op, args } = arena.node(t) {
             if matches!(op, Op::Forall(_) | Op::Exists(_)) {
-                return true;
+                return Some(true);
             }
-            stack.extend(args.iter().copied());
+            for &arg in &**args {
+                if past_deadline(deadline) {
+                    return None;
+                }
+                stack.push(arg);
+            }
         }
     }
-    false
+    Some(false)
 }
 
 /// Run the model-sound word-level preprocessing pipeline (`canonicalize` →
@@ -551,25 +612,44 @@ fn contains_quantifier(arena: &TermArena, assertions: &[TermId]) -> bool {
 fn preprocess_reduce(
     arena: &mut TermArena,
     assertions: &[TermId],
-) -> Result<(Vec<TermId>, ModelReconstructionTrail), SolverError> {
+    deadline: Option<Instant>,
+) -> Result<Option<(Vec<TermId>, ModelReconstructionTrail)>, SolverError> {
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
     let canonical = canonicalize_terms(arena, assertions)
         .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
         .terms;
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
     let (after_values, mut trail) = propagate_values(arena, &canonical)
         .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?
         .into_parts();
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
     let (reduced, eq_trail) = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
         .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?
         .into_parts();
     trail.append(eq_trail);
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
     let (reduced, unconstrained_trail) = elim_unconstrained(arena, &reduced)
         .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?
         .into_parts();
     trail.append(unconstrained_trail);
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
     let reduced = canonicalize_terms(arena, &reduced)
         .map_err(|error| SolverError::Backend(format!("post-solve canonicalize failed: {error}")))?
         .terms;
-    Ok((reduced, trail))
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
+    Ok(Some((reduced, trail)))
 }
 
 /// Dispatch the `reduced` query through [`check_auto_inner`] (preprocessing
@@ -583,14 +663,20 @@ fn dispatch_reduced(
     reduced: &[TermId],
     trail: &ModelReconstructionTrail,
     config: &SolverConfig,
+    deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     let inner_config = {
-        let mut c = config.clone();
+        let mut c = config_with_remaining_deadline(config, deadline);
         c.preprocess = false;
         c
     };
     let result = check_auto_inner(arena, reduced, &inner_config, rec)?;
+    if past_deadline(deadline) {
+        return Ok(CheckResult::Unknown(timeout_reason(
+            "preprocessed dispatch timeout after reduced solve",
+        )));
+    }
     let CheckResult::Sat(model) = result else {
         return Ok(result);
     };
@@ -603,7 +689,17 @@ fn dispatch_reduced(
                 "preprocessing model reconstruction failed: {error}"
             ))
         })?;
+    if past_deadline(deadline) {
+        return Ok(CheckResult::Unknown(timeout_reason(
+            "preprocessed dispatch timeout after model reconstruction",
+        )));
+    }
     for &assertion in assertions {
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "preprocessed dispatch timeout during model replay",
+            )));
+        }
         if !matches!(
             eval(arena, assertion, &reconstructed),
             Ok(Value::Bool(true))
@@ -1106,6 +1202,7 @@ fn dispatch_uf_fast_paths(
         if let Some(result) =
             crate::euf::try_lazy_arith_for_overbound(arena, assertions, config, "UF+arithmetic")?
         {
+            let array_unknown = features.has_array && matches!(result, CheckResult::Unknown(_));
             with_recorder(rec, |t| match &result {
                 CheckResult::Sat(_) => t.record_decided("uf-arith-lazy-overbound", Verdict::Sat),
                 CheckResult::Unsat => {
@@ -1116,7 +1213,9 @@ fn dispatch_uf_fast_paths(
                     DeclineReason::from_unknown(reason),
                 ),
             });
-            return Ok(Some(result));
+            if !array_unknown {
+                return Ok(Some(result));
+            }
         }
     }
 
@@ -1198,18 +1297,14 @@ fn dispatch_uf_fast_paths(
             }
             // A *budget* `Unknown` (wall-clock / resource / memory / node / CNF cap)
             // means the eager EUF + arithmetic route ran out of its configured budget
-            // mid-decision — this very query decides under a fresh full budget (it is
-            // the eager Ackermann route that `check_with_uf_arithmetic` *standalone*
-            // settles). The int-blast + Ackermann fallback below is NOT a different,
-            // more-capable procedure here: it is bounded-width-incomplete (it reports
-            // `Incomplete` "no model within width 32") and, after the budget is already
-            // spent, only burns more wall-clock to return a *logical* `Unknown` that
-            // masks the true cause. So return the eager route's budget `Unknown`
-            // verbatim, preserving its budget character — never a wrong verdict, and the
-            // first-class budget result is the honest answer (a fresh-budget caller, or
-            // the `check_with_uf_arithmetic` baseline, still decides). Soundness: this
-            // only ever returns an `Unknown` the eager route already computed.
-            CheckResult::Unknown(reason) if is_budget_unknown_kind(reason.kind) => {
+            // mid-decision. For non-array integer-only UF+arith, the later int-blast +
+            // Ackermann fallback is not a different, more-capable procedure here: it is
+            // bounded-width-incomplete and only masks the true budget cause. For mixed
+            // array+UF queries, however, the downstream lazy ROW/extensionality CEGAR is
+            // a genuinely different route, so let those fall through.
+            CheckResult::Unknown(reason)
+                if is_budget_unknown_kind(reason.kind) && !features.has_array =>
+            {
                 with_recorder(rec, |t| {
                     t.record_declined("uf-arithmetic", DeclineReason::from_unknown(&reason));
                 });
@@ -1225,7 +1320,59 @@ fn dispatch_uf_fast_paths(
             }
         }
     }
+    if let Some(result) =
+        dispatch_declared_sort_ufbv_lazy(arena, assertions, config, features, rec)?
+    {
+        return Ok(Some(result));
+    }
     Ok(None)
+}
+
+fn dispatch_declared_sort_ufbv_lazy(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    if !features.has_function
+        || !features.has_uninterpreted_sort
+        || features.has_int
+        || features.has_real
+        || features.has_array
+        || features.has_datatype
+    {
+        return Ok(None);
+    }
+
+    let mut backend = SatBvBackend::new();
+    match crate::euf::check_qf_ufbv_lazy(&mut backend, arena, assertions, config) {
+        Ok(result) => {
+            with_recorder(rec, |t| match &result {
+                CheckResult::Sat(_) => t.record_decided("ufbv-declared-sort-lazy", Verdict::Sat),
+                CheckResult::Unsat => {
+                    t.record_decided("ufbv-declared-sort-lazy", Verdict::Unsat);
+                }
+                CheckResult::Unknown(reason) => t.record_declined(
+                    "ufbv-declared-sort-lazy",
+                    DeclineReason::from_unknown(reason),
+                ),
+            });
+            Ok(Some(result))
+        }
+        Err(SolverError::Unsupported(message)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("ufbv-declared-sort-lazy", DeclineReason::Unsupported);
+            });
+            Ok(Some(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!(
+                    "declared-sort QF_UFBV lazy route is outside the current abstraction: {message}"
+                ),
+            })))
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// The configuration for the online probe: a copy of `config` with any wall-clock
@@ -1313,6 +1460,7 @@ fn dispatch_uf_arith_online(
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 /// `rec` records each route attempt + outcome at the existing decide/decline
 /// sites; it is a side effect only, never a branch condition (verdict invariance).
+#[allow(clippy::too_many_lines)]
 fn check_auto_dispatch(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1326,7 +1474,12 @@ fn check_auto_dispatch(
     // bit-blaster, which handles it natively.)
     let lifted = lift_arith_ite(arena, assertions)?;
     let assertions = &lifted;
-    let features = Features::scan(arena, assertions);
+    let dispatch_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let Some(features) = Features::scan_within(arena, assertions, dispatch_deadline) else {
+        return Ok(CheckResult::Unknown(timeout_reason(
+            "auto-dispatch timeout while scanning lifted theory features",
+        )));
+    };
     if features.has_datatype {
         // Datatype structural axioms (acyclicity / distinctness / injectivity):
         // a forced containment cycle (`x = cons(h, x)`), two constructors on one
@@ -1449,17 +1602,11 @@ fn check_auto_dispatch(
     }
     // Uninterpreted functions: try the lazy EUF path on the e-graph first. It
     // decides the equality/UF structure with congruence (no Ackermann blow-up) and
-    // returns a replay-checked `sat` model or a congruence `unsat`; a result it
-    // cannot soundly settle (base-sort semantics outside congruence) comes back
-    // `unknown` and falls through to the complete bit-blasting Ackermann path. Both
-    // its `sat` (replay-checked) and `unsat` (congruence, independently re-checked)
-    // are sound for QF_UFBV, so this only ever fast-paths a correct answer.
-    if features.has_function {
-        if let Some(result) = dispatch_uf_fast_paths(arena, assertions, config, &features, rec)? {
-            return Ok(result);
-        }
+    // returns a replay-checked `sat`, a congruence `unsat`, or `unknown` for
+    // base-sort semantics outside congruence, which falls through to bit-blasting.
+    if let Some(result) = dispatch_uf_routes(arena, assertions, config, &features, rec)? {
+        return Ok(result);
     }
-
     if features.has_array {
         if let Some(result) = dispatch_array_fast_paths(arena, assertions, config, &features)? {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
@@ -1468,6 +1615,14 @@ fn check_auto_dispatch(
         with_recorder(rec, |t| {
             t.record_declined("array-fast-path", DeclineReason::NotApplicable);
         });
+        if features.has_non_bv_array {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "non-bit-vector array sorts are represented in IR, but this shape is \
+                         outside the current Bool/Int lazy array route"
+                    .to_owned(),
+            }));
+        }
     }
 
     if features.has_int {
@@ -1479,6 +1634,34 @@ fn check_auto_dispatch(
         check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)?;
     with_recorder(rec, |t| t.record_result("qf-bv", &result));
     Ok(result)
+}
+
+fn dispatch_uf_routes(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    if !features.has_function && !features.has_uninterpreted_sort {
+        return Ok(None);
+    }
+    if let Some(result) = dispatch_uf_pigeonhole(arena, assertions, rec) {
+        return Ok(Some(result));
+    }
+    dispatch_uf_fast_paths(arena, assertions, config, features, rec)
+}
+
+fn dispatch_uf_pigeonhole(
+    arena: &TermArena,
+    assertions: &[TermId],
+    rec: &mut Recorder<'_>,
+) -> Option<CheckResult> {
+    crate::ufbv_finite::finite_domain_pigeonhole_refutation(arena, assertions)?;
+    with_recorder(rec, |t| {
+        t.record_decided("uf-finite-domain-pigeonhole", Verdict::Unsat);
+    });
+    Some(CheckResult::Unsat)
 }
 
 /// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
@@ -1556,12 +1739,21 @@ fn dispatch_nonlinear_int_tail(
 
 /// Array fast paths, tried before the eager read-over-write + Ackermann
 /// composition. Returns `Some(verdict)` when one decides the query, else `None`.
-fn dispatch_array_fast_paths(
+fn dispatch_array_unsat_refuters(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
-    features: &Features,
 ) -> Result<Option<CheckResult>, SolverError> {
+    let deadline = array_refuter_deadline(config);
+    if crate::abv::prove_unsat_by_symmetric_swap_chain_within(arena, assertions, deadline) {
+        return Ok(Some(CheckResult::Unsat));
+    }
+    if crate::abv::prove_unsat_by_two_store_same_target_split_within(arena, assertions, deadline)? {
+        return Ok(Some(CheckResult::Unsat));
+    }
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
     // Array extensionality as congruence: `a = b ⇒ select(a, i) = select(b, i)`.
     // `prove_unsat_by_congruence` treats `select`/`store` as uninterpreted, so it
     // soundly refutes extensionality conflicts (e.g. `a = b ∧ select(a,i) ≠
@@ -1571,6 +1763,39 @@ fn dispatch_array_fast_paths(
     if crate::euf_egraph::prove_unsat_by_congruence(arena, assertions).is_some() {
         return Ok(Some(CheckResult::Unsat));
     }
+    Ok(None)
+}
+
+fn array_refuter_deadline(config: &SolverConfig) -> Option<Instant> {
+    const TIMED_ARRAY_REFUTER_SLICE: Duration = Duration::from_millis(250);
+    config.timeout.and_then(|timeout| {
+        let slice = timeout.min(TIMED_ARRAY_REFUTER_SLICE);
+        Instant::now().checked_add(slice)
+    })
+}
+
+fn dispatch_array_fast_paths(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+) -> Result<Option<CheckResult>, SolverError> {
+    // Scalar Int-array routes: non-BV arrays whose scalar abstraction is
+    // Bool/linear-Int (QF_ALIA) or Bool/linear-Int+UF (QF_AUFLIA) reuse the lazy
+    // ROW/extensionality CEGAR with the matching scalar backend. Other non-BV
+    // mixes still decline explicitly below.
+    if features.has_non_bv_array && scalar_alia_auflia_arrays_supported(features) {
+        let result = if features.has_function {
+            crate::abv::check_qf_auflia_lazy_row(arena, assertions, config)
+        } else {
+            crate::abv::check_qf_alia_lazy_row(arena, assertions, config)
+        };
+        return match result {
+            Ok(result) => Ok(Some(result)),
+            Err(SolverError::Unsupported(_)) => Ok(None),
+            Err(error) => Err(error),
+        };
+    }
     // Pure `QF_ABV` (no int/real/UF): the lazy read-over-write (ROW) path, which
     // delegates to the eager elimination for the cases it accepts and decides the
     // wide-index store shapes it refuses (`dispatch_pure_qf_abv`).
@@ -1578,6 +1803,13 @@ fn dispatch_array_fast_paths(
         return dispatch_pure_qf_abv(arena, assertions, config);
     }
     Ok(None)
+}
+
+fn scalar_alia_auflia_arrays_supported(features: &Features) -> bool {
+    !features.has_real
+        && !features.has_bv_or_float
+        && !features.has_uninterpreted_sort
+        && !features.has_datatype
 }
 
 /// Pure `QF_ABV` dispatch via the lazy read-over-write (ROW) path (P2.2). It
@@ -1599,6 +1831,9 @@ fn dispatch_pure_qf_abv(
     match crate::abv::check_qf_abv_lazy_row(&mut backend, arena, assertions, config)? {
         CheckResult::Sat(model) => Ok(Some(CheckResult::Sat(model))),
         CheckResult::Unsat => Ok(Some(CheckResult::Unsat)),
+        CheckResult::Unknown(reason) if is_budget_unknown_kind(reason.kind) => {
+            Ok(Some(CheckResult::Unknown(reason)))
+        }
         CheckResult::Unknown(_) => Ok(None),
     }
 }
@@ -3828,46 +4063,47 @@ struct Features {
     /// arrays, integers, uninterpreted functions) — i.e. not pure Bool/real.
     has_bitblast: bool,
     has_int: bool,
+    /// Any bit-vector or floating-point sort.
+    has_bv_or_float: bool,
     /// Any datatype sort or constructor/selector/tester op (ADR-0022).
     has_datatype: bool,
     /// Any uninterpreted-function application (`Op::Apply`).
     has_function: bool,
+    /// Any term whose sort is a declared uninterpreted carrier.
+    has_uninterpreted_sort: bool,
     /// Any array-sorted term (`select`/`store`/array equality).
     has_array: bool,
+    /// Any array whose index or element sort is not a bit-vector.
+    has_non_bv_array: bool,
 }
 
 impl Features {
-    fn scan(arena: &TermArena, assertions: &[TermId]) -> Self {
+    fn scan_within(
+        arena: &TermArena,
+        assertions: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Option<Self> {
         let mut features = Features {
             has_real: false,
             has_bitblast: false,
             has_int: false,
+            has_bv_or_float: false,
             has_datatype: false,
             has_function: false,
+            has_uninterpreted_sort: false,
             has_array: false,
+            has_non_bv_array: false,
         };
         let mut seen = BTreeSet::new();
         let mut stack = assertions.to_vec();
         while let Some(term) = stack.pop() {
+            if past_deadline(deadline) {
+                return None;
+            }
             if !seen.insert(term) {
                 continue;
             }
-            match arena.sort_of(term) {
-                Sort::Real => features.has_real = true,
-                Sort::Int => {
-                    features.has_bitblast = true;
-                    features.has_int = true;
-                }
-                Sort::BitVec(_) | Sort::Float { .. } => {
-                    features.has_bitblast = true;
-                }
-                Sort::Array { .. } => {
-                    features.has_bitblast = true;
-                    features.has_array = true;
-                }
-                Sort::Datatype(_) => features.has_datatype = true,
-                Sort::Bool => {}
-            }
+            features.note_sort(arena.sort_of(term));
             if let TermNode::App { op, args } = arena.node(term) {
                 if matches!(op, Op::Apply(_)) {
                     features.has_bitblast = true;
@@ -3879,10 +4115,41 @@ impl Features {
                 ) {
                     features.has_datatype = true;
                 }
-                stack.extend(args.iter().copied());
+                for &arg in &**args {
+                    if past_deadline(deadline) {
+                        return None;
+                    }
+                    stack.push(arg);
+                }
             }
         }
-        features
+        Some(features)
+    }
+
+    fn note_sort(&mut self, sort: Sort) {
+        match sort {
+            Sort::Real => self.has_real = true,
+            Sort::Int => {
+                self.has_bitblast = true;
+                self.has_int = true;
+            }
+            Sort::BitVec(_) | Sort::Float { .. } => {
+                self.has_bitblast = true;
+                self.has_bv_or_float = true;
+            }
+            Sort::Array { index, element } => {
+                self.has_bitblast = true;
+                self.has_array = true;
+                if sort.array_widths().is_none() {
+                    self.has_non_bv_array = true;
+                }
+                self.note_sort(index.to_sort());
+                self.note_sort(element.to_sort());
+            }
+            Sort::Datatype(_) => self.has_datatype = true,
+            Sort::Uninterpreted(_) => self.has_uninterpreted_sort = true,
+            Sort::Bool => {}
+        }
     }
 }
 

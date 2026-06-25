@@ -1,6 +1,6 @@
 //! Reader/writer tests: feature coverage, round trips, and corpus smoke.
 
-use axeyum_ir::{Assignment, Sort, SymbolId, TermStats, Value, eval};
+use axeyum_ir::{ArraySortKey, Assignment, Sort, SymbolId, TermStats, Value, eval};
 use axeyum_smtlib::{SmtError, parse_script, write_script};
 
 #[test]
@@ -335,18 +335,20 @@ fn unsupported_constructs_are_clear_errors() {
         parse_script("(some-unknown-command 0)"),
         Err(SmtError::Unsupported(_))
     ));
-    // Arity-0 `declare-sort` is now accepted (modeled as a BitVec); an arity-N
+    // Arity-0 `declare-sort` is accepted as a first-class uninterpreted sort; an arity-N
     // (parametric) declared sort is still a graceful unsupported error.
     assert!(parse_script("(declare-sort S 0)").is_ok());
     assert!(matches!(
         parse_script("(declare-sort List 1)"),
         Err(SmtError::Unsupported(_))
     ));
-    // n-ary functions over scalar sorts are supported (ADR-0013); a function
-    // with an array-sorted parameter is not (functions are scalar).
+    // n-ary functions over scalar sorts are supported (ADR-0013), and mixed
+    // AUFLIA signatures may use array-sorted parameters. Array-valued results
+    // remain outside the supported solver/model route and are rejected cleanly.
     assert!(parse_script("(declare-fun f ((_ BitVec 8)) (_ BitVec 8))").is_ok());
+    assert!(parse_script("(declare-fun f ((Array (_ BitVec 4) (_ BitVec 8))) Bool)").is_ok());
     assert!(matches!(
-        parse_script("(declare-fun f ((Array (_ BitVec 4) (_ BitVec 8))) Bool)"),
+        parse_script("(declare-fun f (Bool) (Array (_ BitVec 4) (_ BitVec 8)))"),
         Err(SmtError::Ir(_))
     ));
     assert!(matches!(
@@ -356,9 +358,9 @@ fn unsupported_constructs_are_clear_errors() {
 }
 
 #[test]
-fn uninterpreted_sort_is_modeled_as_bitvec() {
-    // `(declare-sort U 0)` constants resolve to the same `BitVec(W)` width, so an
-    // equality between two `U`-typed constants parses as a plain BV equality.
+fn uninterpreted_sort_is_first_class() {
+    // `(declare-sort U 0)` constants resolve to the same declared carrier sort;
+    // they are not collapsed to a fixed-width bit-vector.
     let text = r"
         (set-logic QF_UF)
         (declare-sort U 0)
@@ -373,18 +375,27 @@ fn uninterpreted_sort_is_modeled_as_bitvec() {
     let b = script.arena.find_symbol("b").unwrap();
     let (_, sort_a) = script.arena.symbol(a);
     let (_, sort_b) = script.arena.symbol(b);
-    let Sort::BitVec(w) = sort_a else {
-        panic!("U constant should resolve to a BitVec sort, got {sort_a:?}");
+    let Sort::Uninterpreted(u) = sort_a else {
+        panic!("U constant should resolve to an uninterpreted sort, got {sort_a:?}");
     };
-    assert!(w >= 1, "modeling width must be at least 1");
-    assert_eq!(sort_a, sort_b, "both U constants must share one width");
+    assert_eq!(script.arena.uninterpreted_sort_name(u), "U");
+    assert_eq!(
+        sort_a, sort_b,
+        "both U constants must share one declared sort"
+    );
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(set-logic QF_UF)"));
+    assert!(rendered.contains("(declare-sort U 0)"));
+    assert!(rendered.contains("(declare-const a U)"));
+    assert_eq!(parse_script(&rendered).unwrap().assertions.len(), 1);
 }
 
 #[test]
-fn uninterpreted_sort_distinct_has_room_for_all_tokens() {
-    // Three pairwise-distinct `U`-typed constants must fit in the modeling width
-    // (2^W ≥ 3). The width is sized from the whole-script node count + margin, so
-    // this can never be forced unsat by running out of distinct BV values.
+fn uninterpreted_sort_distinct_stays_many_sorted() {
+    // Three pairwise-distinct `U`-typed constants remain in the declared carrier
+    // sort. The EUF model builder, not a parser-chosen BV width, supplies distinct
+    // replay tokens when the solver returns `sat`.
     let text = r"
         (set-logic QF_UF)
         (declare-sort U 0)
@@ -397,21 +408,17 @@ fn uninterpreted_sort_distinct_has_room_for_all_tokens() {
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 1);
     let a = script.arena.find_symbol("a").unwrap();
-    let Sort::BitVec(w) = script.arena.symbol(a).1 else {
-        panic!("U constant should resolve to a BitVec sort");
+    let Sort::Uninterpreted(u) = script.arena.symbol(a).1 else {
+        panic!("U constant should resolve to an uninterpreted sort");
     };
-    // The encoding must be able to represent at least the 3 distinct tokens.
-    assert!(
-        u64::from(w) >= 2,
-        "width {w} cannot hold 3 distinct values (need 2^W ≥ 3)"
-    );
+    assert_eq!(script.arena.uninterpreted_sort_name(u), "U");
 }
 
 #[test]
 fn uninterpreted_function_over_sort_parses() {
-    // A function over the uninterpreted sort `(declare-fun f (U) U)` becomes a
-    // `BitVec(W) → BitVec(W)` uninterpreted function; a congruence formula
-    // (a = b ∧ f(a) ≠ f(b)) parses cleanly into two assertions.
+    // A function over the uninterpreted sort `(declare-fun f (U) U)` remains a
+    // many-sorted EUF function; a congruence formula (a = b ∧ f(a) ≠ f(b))
+    // parses cleanly into two assertions.
     let text = r"
         (set-logic QF_UF)
         (declare-sort U 0)
@@ -424,11 +431,12 @@ fn uninterpreted_function_over_sort_parses() {
     ";
     let script = parse_script(text).unwrap();
     assert_eq!(script.assertions.len(), 2);
-    // f's result is a BV of the modeling width.
-    let fa = script.assertions[1];
-    // The second assertion is `(not (= (f a) (f b)))`; just confirm it built and
-    // that f's applications are BV-sorted via the term's sort.
-    assert_eq!(script.arena.sort_of(fa), Sort::Bool);
+    let f = script.arena.find_function("f").unwrap();
+    let (_, params, result) = script.arena.function(f);
+    assert_eq!(params.len(), 1);
+    assert!(matches!(params[0], Sort::Uninterpreted(_)));
+    assert_eq!(params[0], result);
+    assert_eq!(script.arena.sort_of(script.assertions[1]), Sort::Bool);
 }
 
 #[test]
@@ -2756,10 +2764,37 @@ fn define_sort_alias_inside_array() {
     assert_eq!(
         script.arena.symbol(sym).1,
         axeyum_ir::Sort::Array {
-            index: 4,
-            element: 4
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(4)
         }
     );
+}
+
+#[test]
+fn int_indexed_array_sort_is_first_class_and_writes() {
+    let text = r"
+        (set-logic QF_ALIA)
+        (declare-const a (Array Int Int))
+        (declare-const i Int)
+        (assert (= (select a i) i))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    let a = script.arena.find_symbol("a").unwrap();
+    assert_eq!(
+        script.arena.symbol(a).1,
+        Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Int,
+        }
+    );
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(set-logic QF_ALIA)"));
+    assert!(rendered.contains("(declare-const a (Array Int Int))"));
+    assert!(rendered.contains("(select a i)"));
+    let reparsed = parse_script(&rendered).unwrap();
+    let a2 = reparsed.arena.find_symbol("a").unwrap();
+    assert_eq!(reparsed.arena.symbol(a2).1, script.arena.symbol(a).1);
 }
 
 /// An alias may reference an earlier alias (the body is parsed through
@@ -4610,11 +4645,11 @@ fn const_array_equality_is_value_equality() {
 }
 
 /// `select`/`store` over a **free** (non-const-derived) `Int`-array variable is
-/// outside the sound subset — the general `Int`-array decision procedure is an IR
-/// keystone, out of scope. It declines cleanly as `Unsupported` (never a wrong
-/// verdict), exactly as before this rewrite existed.
+/// now representable in the IR. Full model-producing solving is still outside
+/// this parser rewrite's const-array subset, but the front-end no longer blocks
+/// the downstream array route.
 #[test]
-fn const_array_free_array_var_declines() {
+fn free_int_array_var_is_representable() {
     let text = r"
         (set-logic QF_ALIA)
         (declare-const c (Array Int Int))
@@ -4623,12 +4658,20 @@ fn const_array_free_array_var_declines() {
         (assert (= r (select c i)))
         (check-sat)
     ";
-    assert!(matches!(parse_script(text), Err(SmtError::Unsupported(_))));
+    let script = parse_script(text).unwrap();
+    let c = script.arena.find_symbol("c").unwrap();
+    assert_eq!(
+        script.arena.symbol(c).1,
+        Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Int,
+        }
+    );
 
     // `constarr3`: a store-chain equality connecting two *different* const arrays.
     // Neither side of `(= aa bb)` is a bare const array (both are `store`-derived),
-    // so it is not reduced — the residual `Int`-array sort declines. (cvc5 itself
-    // errors on this shape.)
+    // so it is not reduced by the const-array pre-pass; it now remains as a real
+    // Int-array formula for the downstream array solver.
     let constarr3 = r"
         (set-logic QF_ALIA)
         (declare-const all1 (Array Int Int))
@@ -4643,14 +4686,11 @@ fn const_array_free_array_var_declines() {
         (assert (= aa bb))
         (check-sat)
     ";
-    assert!(matches!(
-        parse_script(constarr3),
-        Err(SmtError::Unsupported(_))
-    ));
+    assert!(parse_script(constarr3).is_ok());
 }
 
-/// The rewrite is **sort-agnostic**: an `(Array Int Bool)` const array — which
-/// axeyum also cannot represent — reduces its `select` to the `Bool` value.
+/// The rewrite is **sort-agnostic**: an `(Array Int Bool)` const array reduces
+/// its `select` to the `Bool` value without requiring an array model.
 #[test]
 fn const_array_int_bool_sort_agnostic() {
     let text = r"

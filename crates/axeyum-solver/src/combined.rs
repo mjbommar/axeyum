@@ -25,6 +25,12 @@
 //! `unknown` (the replay check is the soundness anchor — a wrong projection can
 //! only fail replay, never be emitted as a wrong `sat`).
 
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 use axeyum_ir::{TermArena, TermId, Value, eval};
 use axeyum_rewrite::{
     ArrayElimError, FuncElimError, IntBlastError, blast_integers, eliminate_arrays,
@@ -51,6 +57,7 @@ use crate::model::Model;
 /// incompleteness, out-of-range constants, a `sat` projection that cannot be
 /// reconstructed, and a `sat` model that fails to replay are all the sound,
 /// first-class [`CheckResult::Unknown`] (never an error).
+#[allow(clippy::too_many_lines)]
 pub fn check_with_all_theories<B: SolverBackend>(
     backend: &mut B,
     arena: &mut TermArena,
@@ -58,8 +65,15 @@ pub fn check_with_all_theories<B: SolverBackend>(
     int_width: u32,
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|timeout| Instant::now().checked_add(timeout));
+
     // Reduction 1: arrays -> QF_UFLIA.
     let array_elim = eliminate_arrays(arena, assertions).map_err(map_array_error)?;
+    if past_deadline(deadline) {
+        return Ok(timeout("combined-theory timeout after array elimination"));
+    }
     let after_arrays = array_elim.assertions().to_vec();
 
     // Reduction 2: functions -> QF_LIA.
@@ -74,6 +88,11 @@ pub fn check_with_all_theories<B: SolverBackend>(
         return Ok(refusal);
     }
     let func_elim = eliminate_functions(arena, &after_arrays).map_err(map_func_error)?;
+    if past_deadline(deadline) {
+        return Ok(timeout(
+            "combined-theory timeout after function elimination",
+        ));
+    }
     let after_funcs = func_elim.assertions().to_vec();
 
     // Reduction 3: integers -> QF_BV.
@@ -91,9 +110,16 @@ pub fn check_with_all_theories<B: SolverBackend>(
         }
         Err(IntBlastError::Ir(error)) => return Err(SolverError::Backend(error.to_string())),
     };
+    if past_deadline(deadline) {
+        return Ok(timeout("combined-theory timeout after integer bit-blast"));
+    }
     let has_integers = int_blast.had_integers();
 
-    let result = backend.check(arena, int_blast.assertions(), config)?;
+    let backend_config = config_with_remaining_deadline(config, deadline);
+    let result = backend.check(arena, int_blast.assertions(), &backend_config)?;
+    if past_deadline(deadline) {
+        return Ok(timeout("combined-theory timeout after scalar backend"));
+    }
     let model = match result {
         CheckResult::Sat(model) => model,
         CheckResult::Unsat => {
@@ -123,6 +149,11 @@ pub fn check_with_all_theories<B: SolverBackend>(
     // first-class, never an error"). A wrong projection can only make the replay fail
     // (→ decline), never accept a wrong `sat`.
     let with_integers = int_blast.integer_model(&model.to_assignment());
+    if past_deadline(deadline) {
+        return Ok(timeout(
+            "combined-theory timeout after integer model projection",
+        ));
+    }
     let with_functions = match func_elim.project_model(arena, &with_integers) {
         Ok(projected) => projected,
         Err(error) => {
@@ -131,6 +162,11 @@ pub fn check_with_all_theories<B: SolverBackend>(
             )));
         }
     };
+    if past_deadline(deadline) {
+        return Ok(timeout(
+            "combined-theory timeout after function model projection",
+        ));
+    }
     let projected = match array_elim.project_model(arena, &with_functions) {
         Ok(projected) => projected,
         Err(error) => {
@@ -139,6 +175,11 @@ pub fn check_with_all_theories<B: SolverBackend>(
             )));
         }
     };
+    if past_deadline(deadline) {
+        return Ok(timeout(
+            "combined-theory timeout after array model projection",
+        ));
+    }
 
     // REPLAY CHECK (the soundness anchor): every original assertion must evaluate to
     // `Bool(true)` under the projected model through the ground evaluator (which
@@ -148,6 +189,9 @@ pub fn check_with_all_theories<B: SolverBackend>(
     // wraparound. Either way the *sound* outcome is a decline to `Unknown` — never an
     // emitted (possibly wrong) `Sat`, and matching euf's strictness.
     for &assertion in assertions {
+        if past_deadline(deadline) {
+            return Ok(timeout("combined-theory timeout during model replay"));
+        }
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => {
@@ -193,6 +237,29 @@ pub fn check_with_all_theories<B: SolverBackend>(
         }
     }
     Ok(CheckResult::Sat(out))
+}
+
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|deadline| Instant::now() >= deadline)
+}
+
+fn config_with_remaining_deadline(
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> SolverConfig {
+    let Some(deadline) = deadline else {
+        return config.clone();
+    };
+    let mut out = config.clone();
+    out.timeout = Some(deadline.saturating_duration_since(Instant::now()));
+    out
+}
+
+fn timeout(detail: impl Into<String>) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
+        detail: detail.into(),
+    })
 }
 
 fn unknown(detail: String) -> CheckResult {

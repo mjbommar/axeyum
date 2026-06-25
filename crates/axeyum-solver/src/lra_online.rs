@@ -45,6 +45,7 @@
 //! a conservative [`CheckResult::Unknown`] verdict.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::time::Instant;
 
 use axeyum_ir::{
     Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
@@ -1782,12 +1783,26 @@ impl Dpll {
     /// Runs the search. Returns `true` iff the skeleton is UNSAT under the theory,
     /// `false` on a Boolean- and theory-consistent total assignment.
     pub(crate) fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> bool {
+        self.solve_with_deadline(theory, None)
+            .expect("unbounded DPLL(T) solve cannot time out")
+    }
+
+    /// Runs the search with an optional wall-clock deadline. Returns `None` when
+    /// the deadline is reached before a verdict is found.
+    pub(crate) fn solve_with_deadline<T: TheorySolver>(
+        &mut self,
+        theory: &mut T,
+        deadline: Option<Instant>,
+    ) -> Option<bool> {
         loop {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return None;
+            }
             match self.propagate(theory) {
                 Ok(()) => {}
                 Err(conflict) => {
                     if !self.learn_and_backjump(theory, &conflict) {
-                        return true;
+                        return Some(true);
                     }
                     continue;
                 }
@@ -1809,7 +1824,7 @@ impl Dpll {
                 continue;
             }
             match self.pick_unassigned() {
-                None => return false,
+                None => return Some(false),
                 Some(var) => {
                     self.decision_level += 1;
                     theory.push();
@@ -1828,7 +1843,7 @@ impl Dpll {
                             is_theory: true,
                         };
                         if !self.learn_and_backjump(theory, &conflict) {
-                            return true;
+                            return Some(true);
                         }
                     }
                 }
@@ -2263,12 +2278,42 @@ pub fn check_qf_lra_online(
     if solver.solve(&mut theory) {
         return Ok(CheckResult::Unsat);
     }
-    // Theory-consistent total assignment: build a model and replay it.
+    // Theory-consistent total assignment: build a model, add any Boolean leaves
+    // from the final DPLL assignment, and replay it.
     match theory.model(&builder_vars) {
-        Some(model) if replays(arena, assertions, &model) => Ok(CheckResult::Sat(model)),
+        Some(mut model) => {
+            add_boolean_leaf_values(arena, &enc, atom_count, &solver, &mut model);
+            if replays(arena, assertions, &model) {
+                Ok(CheckResult::Sat(model))
+            } else {
+                Ok(CheckResult::Unknown(unknown(
+                    "online LRA model did not replay (arithmetic outside the incremental engine)",
+                )))
+            }
+        }
         _ => Ok(CheckResult::Unknown(unknown(
             "online LRA model did not replay (arithmetic outside the incremental engine)",
         ))),
+    }
+}
+
+fn add_boolean_leaf_values(
+    arena: &TermArena,
+    enc: &Encoder,
+    atom_count: usize,
+    solver: &Dpll,
+    model: &mut Model,
+) {
+    for (&term, &var) in &enc.term_var {
+        if var < atom_count {
+            continue;
+        }
+        if let TermNode::Symbol(symbol) = arena.node(term)
+            && arena.sort_of(term) == Sort::Bool
+            && let Some(value) = solver.value_of(var)
+        {
+            model.set(*symbol, Value::Bool(value));
+        }
     }
 }
 
@@ -2493,6 +2538,30 @@ mod tests {
             check_qf_lra_online(&arena, &[or], &SolverConfig::default()).expect("decidable");
         match verdict {
             CheckResult::Sat(model) => assert!(replays(&arena, &[or], &model)),
+            other => panic!("expected sat, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn online_decider_sat_model_replays_with_boolean_leaf() {
+        // `p ∧ (x < y ∨ y < x)` needs the final Boolean skeleton assignment for
+        // `p`; the arithmetic theory model alone is not enough to replay.
+        let mut arena = TermArena::new();
+        let p = arena.declare("p", Sort::Bool).expect("declare p");
+        let pv = arena.var(p);
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let xy = arena.real_lt(x, y).expect("x<y");
+        let yx = arena.real_lt(y, x).expect("y<x");
+        let or = arena.or(xy, yx).expect("or");
+
+        let verdict =
+            check_qf_lra_online(&arena, &[pv, or], &SolverConfig::default()).expect("decidable");
+        match verdict {
+            CheckResult::Sat(model) => {
+                assert_eq!(model.get(p), Some(Value::Bool(true)));
+                assert!(replays(&arena, &[pv, or], &model));
+            }
             other => panic!("expected sat, got {other:?}"),
         }
     }

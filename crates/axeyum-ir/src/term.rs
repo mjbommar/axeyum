@@ -1,5 +1,7 @@
 //! Term and symbol identifiers, operators, and term nodes.
 
+use crate::sort::ArraySortKey;
+
 /// Handle to an interned term in a [`crate::TermArena`].
 ///
 /// Plain `Copy` ID with no lifetime parameter; validity is a contract with
@@ -186,12 +188,12 @@ pub enum Op {
     Select,
     /// Array write: `store(array, index, element)`; result is the array sort.
     Store,
-    /// Constant array `((as const (Array (_ BitVec index) (_ BitVec e))) v)`:
-    /// every index maps to the single element argument `v`. The index width is
-    /// carried here; the element width comes from `v`. Result is the array sort.
+    /// Constant array `((as const (Array I E)) v)`: every index maps to the
+    /// single element argument `v`. The index sort is carried here; the element
+    /// sort comes from `v`. Result is the array sort.
     ConstArray {
-        /// Bit-width of the array index.
-        index: u32,
+        /// Sort of the array index.
+        index: ArraySortKey,
     },
     // --- bit-vector / integer coercions ------------------------------------
     /// `to_real`: the real number equal to an integer (the exact numeric

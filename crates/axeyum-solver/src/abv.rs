@@ -7,16 +7,17 @@
 //! assertions with the ground evaluator. Pure `QF_BV` queries pass straight
 //! through unchanged.
 
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::time::{Duration, Instant};
 
 use axeyum_ir::{
-    ArrayValue, Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+    ArrayValue, Assignment, FuncValue, GenericArrayValue, Op, Sort, SymbolId, TermArena, TermId,
+    TermNode, Value, eval, well_founded_default,
 };
 use axeyum_rewrite::{ArrayElimError, ArrayElimination, eliminate_arrays};
 
 use crate::backend::{
-    CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
+    Capabilities, CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 use crate::model::Model;
 
@@ -45,7 +46,12 @@ pub fn check_with_array_elimination<B: SolverBackend>(
         return Ok(result);
     };
 
-    project_replay_build(arena, &elimination, assertions, &model.to_assignment())
+    project_replay_build(
+        arena,
+        &elimination,
+        assertions,
+        &complete_assignment(arena, &model.to_assignment()),
+    )
 }
 
 /// Lazy/on-demand select-congruence for `QF_ABV` (Track 2, P2.2): read-over-write
@@ -108,21 +114,44 @@ pub fn check_qf_abv_lazy<B: SolverBackend>(
     // Index pairs whose congruence lemma has already been asserted; bounds the
     // loop and prevents re-adding the same lemma.
     let mut added: HashSet<(usize, usize)> = HashSet::new();
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
 
     loop {
-        let assignment = match backend.check(arena, &working, config)? {
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "lazy select-congruence deadline exceeded before refinement converged"
+                    .to_owned(),
+            }));
+        }
+        let round_config = config_with_remaining_deadline(config, deadline);
+        let assignment = match backend.check(arena, &working, &round_config)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
-            CheckResult::Sat(model) => model.to_assignment(),
+            CheckResult::Sat(model) => complete_assignment(arena, &model.to_assignment()),
         };
 
         // Collect every newly-violated pair before mutating the arena, so the
         // `assignment` borrow does not collide with the IR builders.
         let mut new_lemmas: Vec<(usize, usize)> = Vec::new();
         for (_array, members) in &groups {
+            if past_deadline(deadline) {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: "lazy select-congruence deadline exceeded while checking pairs"
+                        .to_owned(),
+                }));
+            }
             for a in 0..members.len() {
                 for b in (a + 1)..members.len() {
+                    if past_deadline(deadline) {
+                        return Ok(CheckResult::Unknown(UnknownReason {
+                            kind: UnknownKind::Timeout,
+                            detail: "lazy select-congruence deadline exceeded while checking pairs"
+                                .to_owned(),
+                        }));
+                    }
                     let i = members[a];
                     let j = members[b];
                     if added.contains(&(i, j)) {
@@ -215,8 +244,7 @@ fn project_replay_build(
     Ok(CheckResult::Sat(out))
 }
 
-/// Whether two select index terms evaluate to the same scalar code under
-/// `assignment`.
+/// Whether two select index terms evaluate to the same value under `assignment`.
 ///
 /// # Errors
 ///
@@ -227,16 +255,15 @@ fn indices_equal(
     index_j: TermId,
     assignment: &Assignment,
 ) -> Result<bool, SolverError> {
-    let vi = eval(arena, index_i, assignment)
-        .map_err(|error| {
-            SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
-        })?
-        .scalar_code();
-    let vj = eval(arena, index_j, assignment)
-        .map_err(|error| {
-            SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
-        })?
-        .scalar_code();
+    if index_i == index_j {
+        return Ok(true);
+    }
+    let vi = eval(arena, index_i, assignment).map_err(|error| {
+        SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
+    })?;
+    let vj = eval(arena, index_j, assignment).map_err(|error| {
+        SolverError::Backend(format!("lazy select-congruence eval failed: {error}"))
+    })?;
     Ok(vi == vj)
 }
 
@@ -245,9 +272,23 @@ fn indices_equal(
 /// no violation).
 fn results_differ(assignment: &Assignment, fresh_i: SymbolId, fresh_j: SymbolId) -> bool {
     match (assignment.get(fresh_i), assignment.get(fresh_j)) {
-        (Some(vi), Some(vj)) => vi.scalar_code() != vj.scalar_code(),
+        (Some(vi), Some(vj)) => vi != vj,
         _ => false,
     }
+}
+
+/// Whether two abstracted scalar read expressions evaluate differently under
+/// `assignment`.
+fn read_terms_differ(
+    arena: &TermArena,
+    lhs: TermId,
+    rhs: TermId,
+    assignment: &Assignment,
+) -> Result<bool, SolverError> {
+    let ir = |error| SolverError::Backend(format!("lazy-ext read eval failed: {error}"));
+    let lhs = eval(arena, lhs, assignment).map_err(ir)?;
+    let rhs = eval(arena, rhs, assignment).map_err(ir)?;
+    Ok(lhs != rhs)
 }
 
 /// Builds the select-consistency lemma `(index_i = index_j) => (fresh_i =
@@ -295,6 +336,7 @@ const MAX_ROW_ROUNDS: usize = 64;
 /// this many sites (deeply nested stores fanned out over many reads) declines to
 /// `unknown` rather than risk an unbounded blow-up.
 const MAX_ROW_SITES: usize = 4096;
+const SCALAR_LOCAL_SEARCH_PROBE_MS: u64 = 100;
 
 /// Builds the `unknown` result with the lazy-ROW resource-limit classification.
 fn row_unknown(detail: String) -> CheckResult {
@@ -307,6 +349,42 @@ fn row_unknown(detail: String) -> CheckResult {
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+fn config_with_remaining_deadline(
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> SolverConfig {
+    let Some(deadline) = deadline else {
+        return config.clone();
+    };
+    let remaining = deadline
+        .checked_duration_since(Instant::now())
+        .unwrap_or(Duration::ZERO);
+    let mut scoped = config.clone();
+    scoped.timeout = Some(match config.timeout {
+        Some(existing) => existing.min(remaining),
+        None => remaining,
+    });
+    scoped
+}
+
+fn contextual_unknown(
+    context: &str,
+    round: usize,
+    sites: usize,
+    row_lemmas: usize,
+    cong_lemmas: usize,
+    reason: &UnknownReason,
+) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: reason.kind,
+        detail: format!(
+            "{context} after round {round} (sites={sites}, row_lemmas={row_lemmas}, \
+             cong_lemmas={cong_lemmas}): {}",
+            reason.detail
+        ),
+    })
 }
 
 /// Decides a `QF_ABV` query with `store` over a **wide index** by adding the
@@ -383,6 +461,483 @@ pub fn check_qf_abv_lazy_row<B: SolverBackend>(
         defs: &defs,
     };
     check_row_cegar(backend, arena, &substituted, &replay, config, deadline)
+}
+
+/// Decides the scalar linear-arithmetic array slice (currently `Array Int E`
+/// with scalar linear-arithmetic/Bool elements) through the same lazy
+/// ROW/extensionality CEGAR used for BV arrays, but with the arithmetic DPLL(T)
+/// backend as the scalar solver.
+///
+/// This is intentionally a narrow adapter, not a new array algorithm: every
+/// `sat` still projects arrays and replays the original assertions; `unsat` is
+/// from an abstraction/refinement formula solved by the scalar backend.
+pub fn check_qf_alia_lazy_row(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut backend = ArithDpllBackend;
+    check_qf_abv_lazy_row(&mut backend, arena, assertions, config)
+}
+
+/// Decides the scalar linear-integer + UF array slice through lazy
+/// ROW/extensionality CEGAR with the existing `QF_UFLIA` combination as the
+/// scalar backend.
+///
+/// This is deliberately an adapter: array reasoning remains in the CEGAR loop,
+/// while the scalar side handles integer arithmetic and UF congruence over the
+/// abstracted select/index terms. Every `sat` is still projected and replayed
+/// against the original array formula before it is returned.
+pub fn check_qf_auflia_lazy_row(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut backend = UfliaDpllBackend;
+    check_qf_abv_lazy_row(&mut backend, arena, assertions, config)
+}
+
+/// Sound UNSAT refuter for the Stump-Barrett-Dill-Levitt store disjunction:
+///
+/// ```text
+/// store(a, i, v) = b ∧ store(a, j, w) = b  ⇒  i = j ∨ a = b
+/// ```
+///
+/// If the existing congruence checker refutes both branches (`i = j` and
+/// `a = b`) under the original assertions, the original array query is UNSAT.
+/// This is intentionally a refuter only; if either branch is not refuted by
+/// congruence, it declines without changing the query.
+pub fn prove_unsat_by_two_store_same_target_split_within(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<bool, SolverError> {
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        if past_deadline(deadline) {
+            return Ok(false);
+        }
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+    }
+
+    let stores: Vec<StoreEquality> = conjuncts
+        .into_iter()
+        .filter_map(|term| store_equality(arena, term))
+        .collect();
+
+    for a in 0..stores.len() {
+        if past_deadline(deadline) {
+            return Ok(false);
+        }
+        for b in (a + 1)..stores.len() {
+            if past_deadline(deadline) {
+                return Ok(false);
+            }
+            let lhs = stores[a];
+            let rhs = stores[b];
+            if lhs.base != rhs.base || lhs.target != rhs.target {
+                continue;
+            }
+
+            let same_index = arena
+                .eq(lhs.index, rhs.index)
+                .map_err(|e| SolverError::Backend(format!("array split index eq failed: {e}")))?;
+            let same_array = arena
+                .eq(lhs.base, lhs.target)
+                .map_err(|e| SolverError::Backend(format!("array split base eq failed: {e}")))?;
+
+            if congruence_refutes_with(arena, assertions, same_index)
+                && congruence_refutes_with(arena, assertions, same_array)
+            {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+/// Sound UNSAT refuter for generated swap-chain equalities. A term of the form
+///
+/// ```text
+/// store(store(a, i, select(a, j)), j, select(a, i))
+/// ```
+///
+/// swaps the values at `i` and `j`, and is extensionally equal to the same swap
+/// written with `i`/`j` reversed. Therefore two array terms with the same base and
+/// the same ordered sequence of unordered swap pairs are equal; any assertion
+/// demanding different reads at the same index is UNSAT.
+#[cfg(test)]
+pub fn prove_unsat_by_symmetric_swap_chain(arena: &TermArena, assertions: &[TermId]) -> bool {
+    prove_unsat_by_symmetric_swap_chain_within(arena, assertions, None)
+}
+
+pub fn prove_unsat_by_symmetric_swap_chain_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> bool {
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        if past_deadline(deadline) {
+            return false;
+        }
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+    }
+
+    let mut normalizer = SwapNormalizer::new(arena, deadline);
+    for conjunct in conjuncts {
+        if past_deadline(deadline) {
+            return false;
+        }
+        let Some((lhs_array, rhs_array, lhs_index, rhs_index)) =
+            negated_select_equality(arena, conjunct)
+        else {
+            continue;
+        };
+        if lhs_index != rhs_index {
+            continue;
+        }
+        let lhs = normalizer.normalize(lhs_array);
+        if normalizer.timed_out {
+            return false;
+        }
+        let rhs = normalizer.normalize(rhs_array);
+        if normalizer.timed_out {
+            return false;
+        }
+        if lhs == rhs {
+            return true;
+        }
+    }
+
+    false
+}
+
+#[derive(Clone, Copy)]
+struct StoreEquality {
+    base: TermId,
+    index: TermId,
+    target: TermId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SwapChain {
+    base: TermId,
+    /// Mapping from an index in the final array to the index read from the base
+    /// array. Missing entries are identity. A swap exchanges the mapped values
+    /// at its two indices.
+    image: BTreeMap<TermId, TermId>,
+}
+
+impl SwapChain {
+    fn identity(base: TermId) -> Self {
+        Self {
+            base,
+            image: BTreeMap::new(),
+        }
+    }
+
+    fn apply_swap(&mut self, i: TermId, j: TermId) {
+        if i == j {
+            return;
+        }
+        let vi = self.image.get(&i).copied().unwrap_or(i);
+        let vj = self.image.get(&j).copied().unwrap_or(j);
+        set_permutation_image(&mut self.image, i, vj);
+        set_permutation_image(&mut self.image, j, vi);
+    }
+}
+
+fn set_permutation_image(image: &mut BTreeMap<TermId, TermId>, index: TermId, value: TermId) {
+    if index == value {
+        image.remove(&index);
+    } else {
+        image.insert(index, value);
+    }
+}
+
+struct SwapNormalizer<'a> {
+    arena: &'a TermArena,
+    memo: HashMap<TermId, SwapChain>,
+    deadline: Option<Instant>,
+    timed_out: bool,
+}
+
+impl<'a> SwapNormalizer<'a> {
+    fn new(arena: &'a TermArena, deadline: Option<Instant>) -> Self {
+        Self {
+            arena,
+            memo: HashMap::new(),
+            deadline,
+            timed_out: false,
+        }
+    }
+
+    fn normalize(&mut self, term: TermId) -> SwapChain {
+        if self.past_deadline() {
+            self.timed_out = true;
+            return SwapChain::identity(term);
+        }
+        if let Some(chain) = self.memo.get(&term) {
+            return chain.clone();
+        }
+
+        let chain = self
+            .normalize_swap(term)
+            .or_else(|| self.normalize_noop_store(term))
+            .unwrap_or_else(|| SwapChain::identity(term));
+        self.memo.insert(term, chain.clone());
+        chain
+    }
+
+    fn past_deadline(&self) -> bool {
+        past_deadline(self.deadline)
+    }
+
+    fn normalize_swap(&mut self, term: TermId) -> Option<SwapChain> {
+        if self.past_deadline() {
+            self.timed_out = true;
+            return None;
+        }
+        let (base, i, j, inner_elem_base, outer_elem_base) = swap_parts(self.arena, term)?;
+        let mut base_chain = self.normalize(base);
+        if self.timed_out {
+            return None;
+        }
+        let inner_chain = self.normalize(inner_elem_base);
+        if self.timed_out {
+            return None;
+        }
+        let outer_chain = self.normalize(outer_elem_base);
+        if self.timed_out {
+            return None;
+        }
+        if inner_chain == base_chain && outer_chain == base_chain {
+            base_chain.apply_swap(i, j);
+            Some(base_chain)
+        } else {
+            None
+        }
+    }
+
+    fn normalize_noop_store(&mut self, term: TermId) -> Option<SwapChain> {
+        if self.past_deadline() {
+            self.timed_out = true;
+            return None;
+        }
+        let (base, store_index, elem_base, elem_index) = noop_store_parts(self.arena, term)?;
+        if store_index != elem_index {
+            return None;
+        }
+        let base_chain = self.normalize(base);
+        if self.timed_out {
+            return None;
+        }
+        let elem_chain = self.normalize(elem_base);
+        if self.timed_out {
+            return None;
+        }
+        if elem_chain == base_chain {
+            Some(base_chain)
+        } else {
+            None
+        }
+    }
+}
+
+fn negated_select_equality(
+    arena: &TermArena,
+    term: TermId,
+) -> Option<(TermId, TermId, TermId, TermId)> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let eq = args[0];
+    let TermNode::App {
+        op: Op::Eq,
+        args: eq_args,
+    } = arena.node(eq)
+    else {
+        return None;
+    };
+    let (lhs_array, lhs_index) = select_parts(arena, eq_args[0])?;
+    let (rhs_array, rhs_index) = select_parts(arena, eq_args[1])?;
+    Some((lhs_array, rhs_array, lhs_index, rhs_index))
+}
+
+fn select_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Select,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    Some((args[0], args[1]))
+}
+
+fn swap_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, TermId, TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Store,
+        args: outer,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let inner_store = outer[0];
+    let outer_index = outer[1];
+    let outer_elem = outer[2];
+    let TermNode::App {
+        op: Op::Store,
+        args: inner,
+    } = arena.node(inner_store)
+    else {
+        return None;
+    };
+    let base = inner[0];
+    let inner_index = inner[1];
+    let inner_elem = inner[2];
+    let (inner_elem_base, inner_elem_index) = select_parts(arena, inner_elem)?;
+    let (outer_elem_base, outer_elem_index) = select_parts(arena, outer_elem)?;
+    if inner_elem_index == outer_index && outer_elem_index == inner_index {
+        Some((
+            base,
+            inner_index,
+            outer_index,
+            inner_elem_base,
+            outer_elem_base,
+        ))
+    } else {
+        None
+    }
+}
+
+fn noop_store_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Store,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let base = args[0];
+    let store_index = args[1];
+    let (elem_base, elem_index) = select_parts(arena, args[2])?;
+    Some((base, store_index, elem_base, elem_index))
+}
+
+fn collect_positive_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } => {
+            for &arg in args {
+                collect_positive_conjuncts(arena, arg, out);
+            }
+        }
+        _ => out.push(term),
+    }
+}
+
+fn store_equality(arena: &TermArena, term: TermId) -> Option<StoreEquality> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    let (lhs, rhs) = (args[0], args[1]);
+    store_side(arena, lhs, rhs).or_else(|| store_side(arena, rhs, lhs))
+}
+
+fn store_side(arena: &TermArena, store: TermId, target: TermId) -> Option<StoreEquality> {
+    let TermNode::App {
+        op: Op::Store,
+        args,
+    } = arena.node(store)
+    else {
+        return None;
+    };
+    if !matches!(arena.sort_of(store), Sort::Array { .. })
+        || arena.sort_of(target) != arena.sort_of(store)
+    {
+        return None;
+    }
+    Some(StoreEquality {
+        base: args[0],
+        index: args[1],
+        target,
+    })
+}
+
+fn congruence_refutes_with(arena: &TermArena, assertions: &[TermId], extra: TermId) -> bool {
+    let mut branch = Vec::with_capacity(assertions.len() + 1);
+    branch.extend_from_slice(assertions);
+    branch.push(extra);
+    crate::euf_egraph::prove_unsat_by_congruence(arena, &branch).is_some()
+}
+
+struct ArithDpllBackend;
+
+impl SolverBackend for ArithDpllBackend {
+    fn capabilities(&self) -> Capabilities {
+        Capabilities {
+            name: "arith-dpll".to_owned(),
+            produces_models: true,
+            complete: true,
+        }
+    }
+
+    fn check(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        let mut scratch = arena.clone();
+        crate::dpll_lia::check_with_arith_dpll(&mut scratch, assertions, config)
+    }
+}
+
+struct UfliaDpllBackend;
+
+impl SolverBackend for UfliaDpllBackend {
+    fn capabilities(&self) -> Capabilities {
+        Capabilities {
+            name: "uflia-dpll".to_owned(),
+            produces_models: true,
+            complete: true,
+        }
+    }
+
+    fn check(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        let mut scratch = arena.clone();
+        match crate::uflia_online::check_qf_uflia_online(&mut scratch, assertions, config)? {
+            CheckResult::Unknown(reason) if !is_budget_unknown_kind(reason.kind) => {
+                let mut eager = arena.clone();
+                crate::check_with_uf_arithmetic(&mut eager, assertions, config)
+            }
+            result => Ok(result),
+        }
+    }
+}
+
+fn is_budget_unknown_kind(kind: UnknownKind) -> bool {
+    matches!(
+        kind,
+        UnknownKind::Timeout
+            | UnknownKind::ResourceLimit
+            | UnknownKind::MemoryLimit
+            | UnknownKind::NodeBudget
+            | UnknownKind::EncodingBudget
+    )
 }
 
 /// A map from a defined array variable to its definition body term.
@@ -528,7 +1083,7 @@ fn rebuild_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId,
 /// One materialised `select(base, index)` abstraction site.
 #[derive(Clone)]
 struct RowSite {
-    /// The fresh `BitVec` variable that abstracts this read's result.
+    /// The fresh scalar variable that abstracts this read's result.
     fresh: SymbolId,
     /// The (already-rewritten) index term.
     index: TermId,
@@ -539,12 +1094,12 @@ struct RowSite {
 /// How an abstracted read resolves under the read-over-write axiom.
 #[derive(Clone)]
 enum RowKind {
-    /// `select(store(_, store_index, store_elem), index)`; `inner` is the site
-    /// index of `select(base', index)`.
+    /// `select(store(_, store_index, store_elem), index)`; `inner` is the
+    /// already-abstracted scalar expression for `select(base', index)`.
     Store {
         store_index: TermId,
         store_elem: TermId,
-        inner: usize,
+        inner: TermId,
     },
     /// `select(v, index)` for an array variable `v`.
     Var { array: SymbolId },
@@ -576,8 +1131,8 @@ struct ArrayEqAtom {
 #[derive(Default)]
 struct RowCtx {
     sites: Vec<RowSite>,
-    /// `(base term, index term) -> site index`.
-    memo: HashMap<(TermId, TermId), usize>,
+    /// `(base term, index term) -> abstracted scalar read expression`.
+    memo: HashMap<(TermId, TermId), TermId>,
     fresh_counter: usize,
     /// Abstracted array (dis)equality atoms, for the lazy-extensionality path.
     eq_atoms: Vec<ArrayEqAtom>,
@@ -611,15 +1166,32 @@ impl RowCtx {
                 {
                     return self.abstract_term(arena, const_args[0]);
                 }
-                let Some(site) = self.resolve_select(arena, args[0], index)? else {
+                let Some(read) = self.resolve_select(arena, args[0], index)? else {
                     return Ok(None);
                 };
-                Ok(Some(arena.var(self.sites[site].fresh)))
+                Ok(Some(read))
             }
             TermNode::App { op: Op::Store, .. } => {
                 // A bare store in a non-select position cannot be abstracted to a
                 // scalar; decline.
                 Ok(None)
+            }
+            TermNode::App {
+                op: op @ Op::Apply(_),
+                args,
+            } => {
+                let mut new_args = Vec::with_capacity(args.len());
+                for arg in args {
+                    if matches!(arena.sort_of(arg), Sort::Array { .. }) {
+                        new_args.push(arg);
+                    } else {
+                        let Some(t) = self.abstract_term(arena, arg)? else {
+                            return Ok(None);
+                        };
+                        new_args.push(t);
+                    }
+                }
+                Ok(Some(rebuild_app(arena, op, &new_args)?))
             }
             TermNode::App { op, args } => {
                 let mut new_args = Vec::with_capacity(args.len());
@@ -635,30 +1207,32 @@ impl RowCtx {
         }
     }
 
-    /// Materialises (or reuses) the site for `select(base, index)` with `index`
-    /// already abstracted, returning its site index. `None` declines an
-    /// unmodellable base shape.
+    /// Materialises (or reuses) the abstract scalar expression for
+    /// `select(base, index)` with `index` already abstracted. Store/variable/const
+    /// reads allocate fresh sites; array-valued `ite` reads lower to scalar `ite`
+    /// over the recursively resolved branch reads. `None` declines an unmodellable
+    /// base shape.
     fn resolve_select(
         &mut self,
         arena: &mut TermArena,
         base: TermId,
         index: TermId,
-    ) -> Result<Option<usize>, SolverError> {
-        if let Some(&site) = self.memo.get(&(base, index)) {
-            return Ok(Some(site));
+    ) -> Result<Option<TermId>, SolverError> {
+        if let Some(&read) = self.memo.get(&(base, index)) {
+            return Ok(Some(read));
         }
-        if self.sites.len() >= MAX_ROW_SITES {
-            return Ok(None);
-        }
-        let Some((_, element_width)) = arena.sort_of(base).array_widths() else {
+        let Some((_index_sort, element_sort)) = arena.sort_of(base).array_sorts() else {
             return Ok(None);
         };
         let node = arena.node(base).clone();
-        let kind = match node {
+        let read = match node {
             TermNode::App {
                 op: Op::Store,
                 args,
             } => {
+                if self.sites.len() >= MAX_ROW_SITES {
+                    return Ok(None);
+                }
                 let Some(store_index) = self.abstract_term(arena, args[1])? else {
                     return Ok(None);
                 };
@@ -668,40 +1242,65 @@ impl RowCtx {
                 let Some(inner) = self.resolve_select(arena, args[0], index)? else {
                     return Ok(None);
                 };
-                RowKind::Store {
+                let kind = RowKind::Store {
                     store_index,
                     store_elem,
                     inner,
-                }
+                };
+                let fresh = self.fresh_symbol(arena, element_sort)?;
+                self.sites.push(RowSite { fresh, index, kind });
+                arena.var(fresh)
+            }
+            TermNode::App { op: Op::Ite, args } => {
+                let Some(condition) = self.abstract_term(arena, args[0])? else {
+                    return Ok(None);
+                };
+                let Some(then_read) = self.resolve_select(arena, args[1], index)? else {
+                    return Ok(None);
+                };
+                let Some(else_read) = self.resolve_select(arena, args[2], index)? else {
+                    return Ok(None);
+                };
+                arena
+                    .ite(condition, then_read, else_read)
+                    .map_err(|e| SolverError::Backend(format!("lazy-ROW ite read failed: {e}")))?
             }
             TermNode::Symbol(sym) if matches!(arena.sort_of(base), Sort::Array { .. }) => {
-                RowKind::Var { array: sym }
+                if self.sites.len() >= MAX_ROW_SITES {
+                    return Ok(None);
+                }
+                let kind = RowKind::Var { array: sym };
+                let fresh = self.fresh_symbol(arena, element_sort)?;
+                self.sites.push(RowSite { fresh, index, kind });
+                arena.var(fresh)
             }
             TermNode::App {
                 op: Op::ConstArray { .. },
                 args,
             } => {
+                if self.sites.len() >= MAX_ROW_SITES {
+                    return Ok(None);
+                }
                 let Some(value) = self.abstract_term(arena, args[0])? else {
                     return Ok(None);
                 };
-                RowKind::Const { value }
+                let kind = RowKind::Const { value };
+                let fresh = self.fresh_symbol(arena, element_sort)?;
+                self.sites.push(RowSite { fresh, index, kind });
+                arena.var(fresh)
             }
-            // `select` over an `ite` of arrays, or any other base, is outside the
-            // modelled fragment — decline.
+            // Other array-valued structural bases remain outside this fragment.
             _ => return Ok(None),
         };
-        let fresh = self.fresh_symbol(arena, element_width)?;
-        let site = self.sites.len();
-        self.sites.push(RowSite { fresh, index, kind });
-        self.memo.insert((base, index), site);
-        Ok(Some(site))
+        self.memo.insert((base, index), read);
+        Ok(Some(read))
     }
 
-    fn fresh_symbol(&mut self, arena: &mut TermArena, width: u32) -> Result<SymbolId, SolverError> {
+    fn fresh_symbol(&mut self, arena: &mut TermArena, sort: Sort) -> Result<SymbolId, SolverError> {
         let name = format!("!row_sel_{}", self.fresh_counter);
         self.fresh_counter += 1;
         arena
-            .declare(&name, Sort::BitVec(width))
+            .declare(&name, sort)
             .map_err(|e| SolverError::Backend(format!("lazy-ROW fresh symbol failed: {e}")))
     }
 
@@ -728,6 +1327,23 @@ impl RowCtx {
             // recurse with this method through Boolean/structural apps.
             TermNode::App { op: Op::Select, .. } | TermNode::App { op: Op::Store, .. } => {
                 self.abstract_term(arena, term)
+            }
+            TermNode::App {
+                op: op @ Op::Apply(_),
+                args,
+            } => {
+                let mut new_args = Vec::with_capacity(args.len());
+                for arg in args {
+                    if matches!(arena.sort_of(arg), Sort::Array { .. }) {
+                        new_args.push(arg);
+                    } else {
+                        let Some(t) = self.abstract_with_array_eq(arena, arg)? else {
+                            return Ok(None);
+                        };
+                        new_args.push(t);
+                    }
+                }
+                Ok(Some(rebuild_app(arena, op, &new_args)?))
             }
             TermNode::App { op, args } => {
                 let mut new_args = Vec::with_capacity(args.len());
@@ -798,6 +1414,36 @@ struct ReplayTargets<'a> {
     defs: &'a ArrayDefs,
 }
 
+/// Solves one scalar abstraction snapshot after model-sound word-level
+/// preprocessing.
+///
+/// The ROW/extensionality abstractions generate many top-level definitions
+/// (`fresh_read = select(...)`, scalar aliases, branch guards). Running the
+/// existing preprocessing wrapper here removes those aliases before the scalar
+/// backend sees the Boolean/theory skeleton. This is still a relaxation-side
+/// optimization only: `unsat` of the preprocessed snapshot implies `unsat` of the
+/// snapshot, while `sat` is reconstructed by the wrapper and then subjected to
+/// the normal ROW/extensionality projection and original-formula replay.
+fn check_scalar_abstraction<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut flattened = Vec::new();
+    for &assertion in assertions {
+        collect_positive_conjuncts(arena, assertion, &mut flattened);
+    }
+    crate::preprocess::check_with_preprocessing_and_local_search(
+        backend,
+        arena,
+        &flattened,
+        config,
+        Duration::from_millis(SCALAR_LOCAL_SEARCH_PROBE_MS),
+    )
+}
+
+#[allow(clippy::too_many_lines)]
 fn check_row_cegar<B: SolverBackend>(
     backend: &mut B,
     arena: &mut TermArena,
@@ -844,17 +1490,27 @@ fn check_row_cegar<B: SolverBackend>(
     let mut added_row: HashSet<usize> = HashSet::new();
     let mut added_cong: HashSet<(usize, usize)> = HashSet::new();
 
-    for _round in 0..MAX_ROW_ROUNDS {
+    for round in 0..MAX_ROW_ROUNDS {
         if past_deadline(deadline) {
             return Ok(row_unknown(
                 "lazy-ROW deadline exceeded before refinement converged".to_owned(),
             ));
         }
-        let assignment = match backend.check(arena, &working, config)? {
+        let round_config = config_with_remaining_deadline(config, deadline);
+        let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
-            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
-            CheckResult::Sat(model) => model.to_assignment(),
+            CheckResult::Unknown(reason) => {
+                return Ok(contextual_unknown(
+                    "lazy-ROW scalar backend declined",
+                    round,
+                    ctx.sites.len(),
+                    added_row.len(),
+                    added_cong.len(),
+                    &reason,
+                ));
+            }
+            CheckResult::Sat(model) => complete_assignment(arena, &model.to_assignment()),
         };
 
         // Collect every violated ROW / congruence instance before mutating the
@@ -942,25 +1598,15 @@ fn row_violated(
         return Ok(false);
     };
     let ir = |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ROW eval failed: {e}"));
-    let j = eval(arena, site.index, assignment)
-        .map_err(ir)?
-        .scalar_code();
-    let i = eval(arena, *store_index, assignment)
-        .map_err(ir)?
-        .scalar_code();
-    let actual = match assignment.get(site.fresh) {
-        Some(v) => v.scalar_code(),
-        None => return Ok(false),
+    let j = eval(arena, site.index, assignment).map_err(ir)?;
+    let i = eval(arena, *store_index, assignment).map_err(ir)?;
+    let Some(actual) = assignment.get(site.fresh) else {
+        return Ok(false);
     };
     let expected = if i == j {
-        eval(arena, *store_elem, assignment)
-            .map_err(ir)?
-            .scalar_code()
+        eval(arena, *store_elem, assignment).map_err(ir)?
     } else {
-        match assignment.get(ctx.sites[*inner].fresh) {
-            Some(v) => v.scalar_code(),
-            None => return Ok(false),
-        }
+        eval(arena, *inner, assignment).map_err(ir)?
     };
     Ok(actual != expected)
 }
@@ -982,14 +1628,110 @@ fn row_axiom_lemma(arena: &mut TermArena, ctx: &RowCtx, idx: usize) -> Result<Te
     let ir =
         |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ROW lemma build failed: {e}"));
     let r = arena.var(site.fresh);
-    let r_inner = arena.var(ctx.sites[inner].fresh);
     let same_index = arena.eq(site.index, store_index).map_err(ir)?;
     let r_eq_elem = arena.eq(r, store_elem).map_err(ir)?;
-    let r_eq_inner = arena.eq(r, r_inner).map_err(ir)?;
+    let r_eq_inner = arena.eq(r, inner).map_err(ir)?;
     let hit = arena.implies(same_index, r_eq_elem).map_err(ir)?;
     let not_same = arena.not(same_index).map_err(ir)?;
     let miss = arena.implies(not_same, r_eq_inner).map_err(ir)?;
     arena.and(hit, miss).map_err(ir)
+}
+
+/// Model-completes every declared symbol with the IR's well-founded default.
+///
+/// Some scalar backends only bind symbols that appear in their abstraction. Array
+/// replay still needs values for original index symbols that may have disappeared
+/// from the scalar formula, so complete before evaluating projection metadata.
+fn complete_assignment(arena: &TermArena, assignment: &Assignment) -> Assignment {
+    let mut out = assignment.clone();
+    for (symbol, _name, sort) in arena.symbols() {
+        if out.get(symbol).is_none() {
+            if let Some(value) = well_founded_default(arena, sort) {
+                out.set(symbol, value);
+            }
+        }
+    }
+    for (func, _name, params, result) in arena.functions() {
+        if out.function(func).is_none()
+            && let Some(value) = default_func_value(arena, params, result)
+        {
+            out.set_function(func, value);
+        }
+    }
+    out
+}
+
+fn default_func_value(arena: &TermArena, params: &[Sort], result: Sort) -> Option<FuncValue> {
+    if FuncValue::uses_value_storage_for(params, result) {
+        let default = well_founded_default(arena, result)?;
+        Some(FuncValue::constant_value(params.to_vec(), result, default))
+    } else {
+        Some(FuncValue::constant(params.to_vec(), result, 0))
+    }
+}
+
+/// Collects base-array read-site entries `(index value, selected value)` in
+/// deterministic site discovery order, grouped by array symbol.
+fn collect_base_array_entries(
+    arena: &TermArena,
+    ctx: &RowCtx,
+    assignment: &Assignment,
+    context: &str,
+) -> Result<BTreeMap<SymbolId, Vec<(Value, Value)>>, SolverError> {
+    let ir = |e: axeyum_ir::IrError| SolverError::Backend(format!("{context}: {e}"));
+    let mut arrays: BTreeMap<SymbolId, Vec<(Value, Value)>> = BTreeMap::new();
+    for site in &ctx.sites {
+        if let RowKind::Var { array } = site.kind {
+            let index = eval(arena, site.index, assignment).map_err(ir)?;
+            let Some(value) = assignment.get(site.fresh) else {
+                continue;
+            };
+            arrays.entry(array).or_default().push((index, value));
+        }
+    }
+    Ok(arrays)
+}
+
+/// Builds a concrete array value for `array` from projected read entries.
+fn array_value_from_entries(
+    arena: &TermArena,
+    array: SymbolId,
+    entries: &[(Value, Value)],
+) -> Result<Value, SolverError> {
+    let sort = arena.symbol(array).1;
+    if let Some((index_width, element_width)) = sort.array_widths() {
+        let mut value = ArrayValue::constant(index_width, element_width, 0);
+        for (index, element) in entries {
+            let (_, index) = index.as_bv().ok_or_else(|| {
+                SolverError::Backend("array projection expected a bit-vector index".to_owned())
+            })?;
+            let (_, element) = element.as_bv().ok_or_else(|| {
+                SolverError::Backend("array projection expected a bit-vector element".to_owned())
+            })?;
+            value = value.store(index, element);
+        }
+        return Ok(Value::Array(value));
+    }
+
+    let Sort::Array { index, element } = sort else {
+        return Err(SolverError::Backend(
+            "array projection requested for a non-array symbol".to_owned(),
+        ));
+    };
+    let default = well_founded_default(arena, element.to_sort()).ok_or_else(|| {
+        SolverError::Backend(
+            "array projection could not construct a default element value".to_owned(),
+        )
+    })?;
+    let mut value = GenericArrayValue::constant(index, element, default);
+    for (entry_index, entry_element) in entries {
+        value = value.store(entry_index.clone(), entry_element.clone());
+    }
+    Ok(Value::GenericArray(value))
+}
+
+fn is_array_value(value: &Value) -> bool {
+    matches!(value, Value::Array(_) | Value::GenericArray(_))
 }
 
 /// Projects a consistent lazy-ROW candidate to a model over the original query
@@ -1002,34 +1744,12 @@ fn project_replay_row(
     replay: &ReplayTargets<'_>,
     assignment: &Assignment,
 ) -> Result<CheckResult, SolverError> {
-    let ir =
-        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ROW projection failed: {e}"));
     // Reconstruct array variables from the base-variable read sites only (store
     // reads resolve through the ROW axiom, not a stored array variable).
-    let mut arrays: HashMap<SymbolId, Vec<(u128, u128)>> = HashMap::new();
-    for site in &ctx.sites {
-        if let RowKind::Var { array } = site.kind {
-            let index = eval(arena, site.index, assignment)
-                .map_err(ir)?
-                .scalar_code();
-            let value = match assignment.get(site.fresh) {
-                Some(v) => v.scalar_code(),
-                None => continue,
-            };
-            arrays.entry(array).or_default().push((index, value));
-        }
-    }
-
-    let mut projected = assignment.clone();
+    let arrays = collect_base_array_entries(arena, ctx, assignment, "lazy-ROW projection failed")?;
+    let mut projected = complete_assignment(arena, assignment);
     for (&array, entries) in &arrays {
-        let Some((index_width, element_width)) = arena.symbol(array).1.array_widths() else {
-            continue;
-        };
-        let mut value = ArrayValue::constant(index_width, element_width, 0);
-        for &(index, element) in entries {
-            value = value.store(index, element);
-        }
-        projected.set(array, Value::Array(value));
+        projected.set(array, array_value_from_entries(arena, array, entries)?);
     }
 
     // Reconstruct the substituted-away defined variables (`v = E`) by evaluating
@@ -1042,8 +1762,8 @@ fn project_replay_row(
     for _ in 0..=replay.defs.len() {
         let mut changed = false;
         for (&sym, &body) in replay.defs {
-            if let Ok(value @ Value::Array(_)) = eval(arena, body, &projected) {
-                if projected.get(sym).as_ref() != Some(&value) {
+            if let Ok(value) = eval(arena, body, &projected) {
+                if is_array_value(&value) && projected.get(sym).as_ref() != Some(&value) {
                     projected.set(sym, value);
                     changed = true;
                 }
@@ -1088,6 +1808,9 @@ fn project_replay_row(
         if let Some(value) = projected.get(symbol) {
             out.set(symbol, value);
         }
+    }
+    for (func, value) in projected.functions() {
+        out.set_function(func, value.clone());
     }
     Ok(CheckResult::Sat(out))
 }
@@ -1218,16 +1941,26 @@ fn ext_cegar_loop<B: SolverBackend>(
     let mut added_cong: HashSet<(usize, usize)> = HashSet::new();
     let mut diff_skolems = 0usize;
 
-    for _round in 0..MAX_ROW_ROUNDS {
+    for round in 0..MAX_ROW_ROUNDS {
         if past_deadline(deadline) {
             return Ok(ext_unknown(
                 "lazy-extensionality deadline exceeded before refinement converged".to_owned(),
             ));
         }
-        let assignment = match backend.check(arena, &working, config)? {
+        let round_config = config_with_remaining_deadline(config, deadline);
+        let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
-            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
-            CheckResult::Sat(model) => model.to_assignment(),
+            CheckResult::Unknown(reason) => {
+                return Ok(contextual_unknown(
+                    "lazy-extensionality scalar backend declined",
+                    round,
+                    ctx.sites.len(),
+                    added_row.len(),
+                    added_cong.len(),
+                    &reason,
+                ));
+            }
+            CheckResult::Sat(model) => complete_assignment(arena, &model.to_assignment()),
         };
 
         let mut progressed = false;
@@ -1368,20 +2101,21 @@ fn refine_eq_congruence(
     let indices = read_indices_for(ctx, lhs, rhs);
     let mut progressed = false;
     for index in indices {
-        let Some(site_a) = ctx.resolve_select(arena, lhs, index)? else {
+        let Some(read_a) = ctx.resolve_select(arena, lhs, index)? else {
             continue;
         };
-        let Some(site_b) = ctx.resolve_select(arena, rhs, index)? else {
+        let Some(read_b) = ctx.resolve_select(arena, rhs, index)? else {
             continue;
         };
-        let fa = ctx.sites[site_a].fresh;
-        let fb = ctx.sites[site_b].fresh;
-        if results_differ(assignment, fa, fb) {
+        // `resolve_select` can materialize a fresh read symbol after the scalar
+        // assignment was completed. Complete again before evaluating the read
+        // terms so an unassigned fresh does not turn a candidate into a backend
+        // error; the eventual projected model is still replay-gated.
+        let completed = complete_assignment(arena, assignment);
+        if read_terms_differ(arena, read_a, read_b, &completed)? {
             let var_flag = arena.var(flag);
-            let va = arena.var(fa);
-            let vb = arena.var(fb);
             let eqr = arena
-                .eq(va, vb)
+                .eq(read_a, read_b)
                 .map_err(|e| SolverError::Backend(format!("lazy-ext cong build failed: {e}")))?;
             let lemma = arena
                 .implies(var_flag, eqr)
@@ -1419,32 +2153,28 @@ fn refine_diff_skolem(
         let atom = &ctx.eq_atoms[atom_idx];
         (atom.lhs, atom.rhs, atom.flag)
     };
-    let Some((index_width, _)) = arena.sort_of(lhs).array_widths() else {
+    let Some((index_sort, _)) = arena.sort_of(lhs).array_sorts() else {
         return Ok(());
     };
     let name = format!("!ext_diff_{}", ctx.fresh_counter);
     ctx.fresh_counter += 1;
     let k_sym = arena
-        .declare(&name, Sort::BitVec(index_width))
+        .declare(&name, index_sort)
         .map_err(|e| SolverError::Backend(format!("lazy-ext diff-skolem declare failed: {e}")))?;
     let k = arena.var(k_sym);
 
-    let Some(site_a) = ctx.resolve_select(arena, lhs, k)? else {
+    let Some(read_a) = ctx.resolve_select(arena, lhs, k)? else {
         return Ok(());
     };
-    let Some(site_b) = ctx.resolve_select(arena, rhs, k)? else {
+    let Some(read_b) = ctx.resolve_select(arena, rhs, k)? else {
         return Ok(());
     };
-    let fa = ctx.sites[site_a].fresh;
-    let fb = ctx.sites[site_b].fresh;
     let var_flag = arena.var(flag);
     let not_flag = arena
         .not(var_flag)
         .map_err(|e| SolverError::Backend(format!("lazy-ext diff build failed: {e}")))?;
-    let va = arena.var(fa);
-    let vb = arena.var(fb);
     let eqr = arena
-        .eq(va, vb)
+        .eq(read_a, read_b)
         .map_err(|e| SolverError::Backend(format!("lazy-ext diff build failed: {e}")))?;
     let ner = arena
         .not(eqr)
@@ -1468,33 +2198,11 @@ fn project_replay_ext(
     originals: &[TermId],
     assignment: &Assignment,
 ) -> Result<CheckResult, SolverError> {
-    let ir =
-        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext projection failed: {e}"));
     // Reconstruct array variables from the base-variable read sites only.
-    let mut arrays: HashMap<SymbolId, Vec<(u128, u128)>> = HashMap::new();
-    for site in &ctx.sites {
-        if let RowKind::Var { array } = site.kind {
-            let index = eval(arena, site.index, assignment)
-                .map_err(ir)?
-                .scalar_code();
-            let value = match assignment.get(site.fresh) {
-                Some(v) => v.scalar_code(),
-                None => continue,
-            };
-            arrays.entry(array).or_default().push((index, value));
-        }
-    }
-
-    let mut projected = assignment.clone();
+    let arrays = collect_base_array_entries(arena, ctx, assignment, "lazy-ext projection failed")?;
+    let mut projected = complete_assignment(arena, assignment);
     for (&array, entries) in &arrays {
-        let Some((index_width, element_width)) = arena.symbol(array).1.array_widths() else {
-            continue;
-        };
-        let mut value = ArrayValue::constant(index_width, element_width, 0);
-        for &(index, element) in entries {
-            value = value.store(index, element);
-        }
-        projected.set(array, Value::Array(value));
+        projected.set(array, array_value_from_entries(arena, array, entries)?);
     }
 
     // Replay against the ORIGINAL assertions, re-deriving every array (dis)equality
@@ -1536,6 +2244,9 @@ fn project_replay_ext(
         if let Some(value) = projected.get(symbol) {
             out.set(symbol, value);
         }
+    }
+    for (func, value) in projected.functions() {
+        out.set_function(func, value.clone());
     }
     Ok(CheckResult::Sat(out))
 }
@@ -1877,10 +2588,13 @@ pub fn certify_array_elim_unsat(
 #[cfg(test)]
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {
-    use super::{check_qf_abv_lazy, check_with_array_elimination};
+    use super::{
+        check_qf_abv_lazy, check_with_array_elimination, prove_unsat_by_symmetric_swap_chain,
+    };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
     use axeyum_ir::{TermArena, Value, eval};
+    use axeyum_smtlib::parse_script;
 
     #[test]
     fn lazy_abv_refutes_select_congruence() {
@@ -1980,6 +2694,19 @@ mod tests {
         assert!(
             unsat_count > 0,
             "expected at least one UNSAT case, got none"
+        );
+    }
+
+    #[test]
+    fn symmetric_swap_chain_refuter_closes_cvc5_regression() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2"
+        ))
+        .unwrap();
+
+        assert!(
+            prove_unsat_by_symmetric_swap_chain(&script.arena, &script.assertions),
+            "expected the structural swap-chain refuter to close the real cvc5 regression"
         );
     }
 

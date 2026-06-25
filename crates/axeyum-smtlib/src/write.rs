@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
-use axeyum_ir::{FuncId, Op, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{ArraySortKey, FuncId, Op, Sort, SortId, TermArena, TermId, TermNode};
 
 /// Renders `assertions` as a complete SMT-LIB script
 /// (`set-logic` … `check-sat`).
@@ -23,6 +23,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     let mut seen: HashSet<TermId> = HashSet::new();
     let mut symbols: Vec<(String, Sort)> = Vec::new();
     let mut functions: Vec<FuncId> = Vec::new();
+    let mut uninterpreted_sorts: HashSet<SortId> = HashSet::new();
     let mut seen_functions: HashSet<FuncId> = HashSet::new();
     while let Some(t) = stack.pop() {
         if seen.contains(&t) {
@@ -32,12 +33,18 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
         match arena.node(t) {
             TermNode::Symbol(s) => {
                 let (name, sort) = arena.symbol(*s);
+                collect_uninterpreted_sort(sort, &mut uninterpreted_sorts);
                 symbols.push((name.to_owned(), sort));
             }
             TermNode::App { op, args } => {
                 if let Op::Apply(func) = op
                     && seen_functions.insert(*func)
                 {
+                    let (_, params, result) = arena.function(*func);
+                    for &sort in params {
+                        collect_uninterpreted_sort(sort, &mut uninterpreted_sorts);
+                    }
+                    collect_uninterpreted_sort(result, &mut uninterpreted_sorts);
                     functions.push(*func);
                 }
                 for &a in &**args {
@@ -56,49 +63,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     functions.sort_by_key(|f| arena.function(*f).0.to_owned());
     let mut used_names: HashSet<String> = symbols.iter().map(|(name, _)| name.clone()).collect();
 
-    // Assemble the quantifier-free logic name from the features present:
-    // `QF_` + `A` (arrays) + `UF` (functions) + arithmetic core (`LIA` for
-    // integers, else `BV`). Yields e.g. QF_BV, QF_ABV, QF_UFBV, QF_LIA, QF_UFLIA.
-    let has_arrays = symbols
-        .iter()
-        .any(|(_, sort)| matches!(sort, Sort::Array { .. }));
-    let has_integers = symbols.iter().any(|(_, sort)| *sort == Sort::Int);
-    let has_reals = symbols.iter().any(|(_, sort)| *sort == Sort::Real);
-    let arithmetic = if has_reals {
-        "LRA"
-    } else if has_integers {
-        "LIA"
-    } else {
-        "BV"
-    };
-    let logic = format!(
-        "QF_{}{}{arithmetic}",
-        if has_arrays { "A" } else { "" },
-        if functions.is_empty() { "" } else { "UF" },
-    );
-    let mut out = format!("(set-logic {logic})\n");
-    for (name, sort) in &symbols {
-        let _ = writeln!(
-            out,
-            "(declare-const {} {})",
-            symbol_syntax(name),
-            sort_str(*sort)
-        );
-    }
-    for &func in &functions {
-        let (name, params, result) = arena.function(func);
-        let params_str = params
-            .iter()
-            .map(|&s| sort_str(s))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let _ = writeln!(
-            out,
-            "(declare-fun {} ({params_str}) {})",
-            symbol_syntax(name),
-            sort_str(result)
-        );
-    }
+    let mut out = write_preamble(arena, &symbols, &functions, uninterpreted_sorts);
 
     // Emit shared App nodes as defs in ascending id order (children first).
     let mut names: HashMap<TermId, String> = HashMap::new();
@@ -114,7 +79,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
             let _ = writeln!(
                 out,
                 "(define-fun {escaped_name} () {} {body})",
-                sort_str(arena.sort_of(t))
+                sort_str(arena, arena.sort_of(t))
             );
             names.insert(t, escaped_name);
         }
@@ -124,6 +89,127 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
     }
     out.push_str("(check-sat)\n");
     out
+}
+
+fn write_preamble(
+    arena: &TermArena,
+    symbols: &[(String, Sort)],
+    functions: &[FuncId],
+    uninterpreted_sorts: HashSet<SortId>,
+) -> String {
+    // Assemble the quantifier-free logic name from the features present:
+    // `QF_` + `A` (arrays) + `UF` (functions/sorts) + arithmetic core.
+    let mut has_arrays = false;
+    let mut has_integers = false;
+    let mut has_reals = false;
+    let mut has_bitvec = false;
+    for &sort in symbols.iter().map(|(_, sort)| sort) {
+        update_logic_sort_features(
+            sort,
+            &mut has_arrays,
+            &mut has_integers,
+            &mut has_reals,
+            &mut has_bitvec,
+        );
+    }
+    for &func in functions {
+        let (_, params, result) = arena.function(func);
+        for &sort in params {
+            update_logic_sort_features(
+                sort,
+                &mut has_arrays,
+                &mut has_integers,
+                &mut has_reals,
+                &mut has_bitvec,
+            );
+        }
+        update_logic_sort_features(
+            result,
+            &mut has_arrays,
+            &mut has_integers,
+            &mut has_reals,
+            &mut has_bitvec,
+        );
+    }
+    let has_uninterpreted_sorts = !uninterpreted_sorts.is_empty();
+    let has_uf = !functions.is_empty() || has_uninterpreted_sorts;
+    let logic = if has_uf && !has_arrays && !has_integers && !has_reals && !has_bitvec {
+        "QF_UF".to_owned()
+    } else {
+        let arithmetic = if has_reals {
+            "LRA"
+        } else if has_integers {
+            "LIA"
+        } else {
+            "BV"
+        };
+        format!(
+            "QF_{}{}{arithmetic}",
+            if has_arrays { "A" } else { "" },
+            if has_uf { "UF" } else { "" },
+        )
+    };
+    let mut out = format!("(set-logic {logic})\n");
+    let mut sort_ids: Vec<SortId> = uninterpreted_sorts.into_iter().collect();
+    sort_ids.sort();
+    for id in sort_ids {
+        let _ = writeln!(
+            out,
+            "(declare-sort {} 0)",
+            symbol_syntax(arena.uninterpreted_sort_name(id))
+        );
+    }
+    for (name, sort) in symbols {
+        let _ = writeln!(
+            out,
+            "(declare-const {} {})",
+            symbol_syntax(name),
+            sort_str(arena, *sort)
+        );
+    }
+    for &func in functions {
+        let (name, params, result) = arena.function(func);
+        let params_str = params
+            .iter()
+            .map(|&s| sort_str(arena, s))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let _ = writeln!(
+            out,
+            "(declare-fun {} ({params_str}) {})",
+            symbol_syntax(name),
+            sort_str(arena, result)
+        );
+    }
+    out
+}
+
+fn update_logic_sort_features(
+    sort: Sort,
+    has_arrays: &mut bool,
+    has_integers: &mut bool,
+    has_reals: &mut bool,
+    has_bitvec: &mut bool,
+) {
+    match sort {
+        Sort::Array { .. } => {
+            *has_arrays = true;
+            if let Some((index, element)) = sort.array_sorts() {
+                update_logic_sort_features(index, has_arrays, has_integers, has_reals, has_bitvec);
+                update_logic_sort_features(
+                    element,
+                    has_arrays,
+                    has_integers,
+                    has_reals,
+                    has_bitvec,
+                );
+            }
+        }
+        Sort::BitVec(_) | Sort::Float { .. } => *has_bitvec = true,
+        Sort::Int => *has_integers = true,
+        Sort::Real => *has_reals = true,
+        Sort::Bool | Sort::Datatype(_) | Sort::Uninterpreted(_) => {}
+    }
 }
 
 fn fresh_def_name(t: TermId, used_names: &mut HashSet<String>) -> String {
@@ -173,17 +259,52 @@ fn is_simple_symbol(name: &str) -> bool {
         && !RESERVED.contains(&name)
 }
 
-fn sort_str(sort: Sort) -> String {
+fn collect_uninterpreted_sort(sort: Sort, out: &mut HashSet<SortId>) {
+    match sort {
+        Sort::Uninterpreted(id) => {
+            out.insert(id);
+        }
+        Sort::Array { index, element } => {
+            collect_uninterpreted_sort(index.to_sort(), out);
+            collect_uninterpreted_sort(element.to_sort(), out);
+        }
+        Sort::Bool
+        | Sort::BitVec(_)
+        | Sort::Int
+        | Sort::Real
+        | Sort::Datatype(_)
+        | Sort::Float { .. } => {}
+    }
+}
+
+fn sort_str(arena: &TermArena, sort: Sort) -> String {
     match sort {
         Sort::Bool => "Bool".to_owned(),
         Sort::BitVec(w) => format!("(_ BitVec {w})"),
         Sort::Array { index, element } => {
-            format!("(Array (_ BitVec {index}) (_ BitVec {element}))")
+            format!(
+                "(Array {} {})",
+                array_sort_key_str(arena, index),
+                array_sort_key_str(arena, element)
+            )
         }
         Sort::Int => "Int".to_owned(),
         Sort::Real => "Real".to_owned(),
         Sort::Datatype(id) => format!("(Datatype {})", id.index()),
+        Sort::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         Sort::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
+    }
+}
+
+fn array_sort_key_str(arena: &TermArena, sort: ArraySortKey) -> String {
+    match sort {
+        ArraySortKey::Bool => "Bool".to_owned(),
+        ArraySortKey::BitVec(w) => format!("(_ BitVec {w})"),
+        ArraySortKey::Int => "Int".to_owned(),
+        ArraySortKey::Real => "Real".to_owned(),
+        ArraySortKey::Datatype(id) => format!("(Datatype {})", id.index()),
+        ArraySortKey::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
+        ArraySortKey::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
     }
 }
 
@@ -267,7 +388,7 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                             format!(
                                 "({keyword} (({} {})) {body})",
                                 symbol_syntax(name),
-                                sort_str(sort)
+                                sort_str(arena, sort)
                             ),
                         );
                         continue;
@@ -285,7 +406,9 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                         memo.insert(
                             t,
                             format!(
-                                "((as const (Array (_ BitVec {index}) (_ BitVec {element}))) {value})"
+                                "((as const (Array {} {})) {value})",
+                                array_sort_key_str(arena, *index),
+                                array_sort_key_str(arena, element)
                             ),
                         );
                         continue;

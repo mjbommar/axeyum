@@ -7,7 +7,7 @@
 //! through the evaluator — exactly like the bit-vector families, now over
 //! arrays.
 
-use axeyum_ir::{ArrayValue, Assignment, Sort, TermArena, Value, eval};
+use axeyum_ir::{ArraySortKey, ArrayValue, Assignment, Sort, TermArena, Value, eval};
 use axeyum_query::Query;
 
 use crate::{Expectation, Family, Scenario, SplitMix64, mask};
@@ -32,8 +32,8 @@ pub fn memory_trace(addr_width: u32, elem_width: u32, stores: usize, seed: u64) 
         .declare(
             "mem",
             Sort::Array {
-                index: addr_width,
-                element: elem_width,
+                index: ArraySortKey::BitVec(addr_width),
+                element: ArraySortKey::BitVec(elem_width),
             },
         )
         .unwrap();

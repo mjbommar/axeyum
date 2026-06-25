@@ -3,10 +3,11 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{Sort, TermArena};
+use axeyum_ir::{ArraySortKey, Sort, TermArena};
+use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    Evidence, EvidenceReport, SolverConfig, TrustId, produce_evidence, produce_lra_dpll_evidence,
-    produce_lra_evidence, produce_qf_bv_evidence,
+    ArrayAxiomKind, Evidence, EvidenceReport, SolverConfig, TrustId, produce_evidence,
+    produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
 };
 
 /// The trust-step ids a report depends on (P3.0).
@@ -16,6 +17,10 @@ fn step_ids(report: &EvidenceReport) -> Vec<TrustId> {
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
+}
+
+fn unbounded_config() -> SolverConfig {
+    SolverConfig::new()
 }
 
 #[test]
@@ -158,6 +163,44 @@ fn qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate() {
         report.trusted_steps.is_empty(),
         "expected zero trust holes (Ackermann proven via eq_congruent), got {:?}",
         step_ids(&report)
+    );
+}
+
+#[test]
+fn qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_UFBV)
+        (declare-sort A 0)
+        (declare-fun f ((_ BitVec 1)) A)
+        (declare-fun g (A) (_ BitVec 1))
+        (declare-fun x () A)
+        (declare-fun y () A)
+        (declare-fun z () A)
+        (assert (and
+          (not (= (f (g x)) (f (g y))))
+          (not (= (f (g x)) (f (g z))))
+          (not (= (f (g y)) (f (g z))))))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatFiniteDomainPigeonhole(cert) = &report.evidence else {
+        panic!(
+            "expected finite-domain pigeonhole evidence, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.domain_size, 2);
+    assert_eq!(cert.applications.len(), 3);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "the pigeonhole certificate is checked directly from the original query"
     );
 }
 
@@ -414,6 +457,37 @@ fn lra_dpll_sat_evidence_replays() {
 }
 
 #[test]
+fn pure_real_front_door_falls_back_when_lra_certificate_declines() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_LRA)
+        (declare-fun x () Real)
+        (declare-fun P () Bool)
+        (assert
+         (let ((y (ite P 1.0 x)))
+           (and (not (= y 1))
+                (> y 0)
+                (<= y 1))))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+
+    let report = produce_evidence(&mut script.arena, &script.assertions, &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::Sat(_)),
+        "expected a replayed SAT model after LRA cert decline, got {:?}",
+        report.evidence
+    );
+    assert!(
+        report
+            .evidence
+            .check(&script.arena, &script.assertions)
+            .unwrap()
+    );
+}
+
+#[test]
 fn tampered_lra_dpll_evidence_fails_its_own_check() {
     // Strip the lemmas from the refutation: the bare skeleton is satisfiable, so
     // the independent verifier rejects the doctored evidence.
@@ -536,8 +610,47 @@ fn produce_evidence_certifies_qf_abv_unsat() {
         .declare(
             "mem",
             Sort::Array {
-                index: 4,
-                element: 4,
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(4),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(4)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(4)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(4)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let load_ne_v = {
+        let eq = arena.eq(loaded, v).unwrap();
+        arena.not(eq).unwrap()
+    };
+
+    let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &unbounded_config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::Unsat(Some(_))),
+        "QF_ABV unsat must now carry a certificate, got {:?}",
+        report.evidence
+    );
+    // The attached certificate re-validates independently.
+    assert!(report.evidence.check(&arena, &[i_eq_j, load_ne_v]).unwrap());
+}
+
+#[test]
+fn timed_produce_evidence_can_skip_optional_array_reduction_export() {
+    // With an explicit wall-clock evidence budget, the unified front door remains
+    // timely after solve has already decided `unsat`: if no stronger certificate
+    // applies, it may skip the optional reduced-CNF DRAT export and return a bare
+    // checked unsat instead of overrunning the audit budget.
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(4),
             },
         )
         .unwrap();
@@ -555,13 +668,564 @@ fn produce_evidence_certifies_qf_abv_unsat() {
     };
 
     let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &config()).unwrap();
-    assert!(
-        matches!(report.evidence, Evidence::Unsat(Some(_))),
-        "QF_ABV unsat must now carry a certificate, got {:?}",
-        report.evidence
-    );
-    // The attached certificate re-validates independently.
+    assert!(matches!(report.evidence, Evidence::Unsat(None)));
+    assert!(!report.evidence.is_certified());
     assert!(report.evidence.check(&arena, &[i_eq_j, load_ne_v]).unwrap());
+}
+
+#[test]
+fn produce_evidence_certifies_finite_array_extensionality_unsat() {
+    // Explicit finite extensionality over all four BV2 indices:
+    // every concrete read of `a` and `b` is equal, yet `a != b`.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 2, 2).unwrap();
+    let b = arena.array_var("b", 2, 2).unwrap();
+    let mut assertions = Vec::new();
+    for value in 0..4 {
+        let idx = arena.bv_const(2, value).unwrap();
+        let lhs = arena.select(a, idx).unwrap();
+        let rhs = arena.select(b, idx).unwrap();
+        assertions.push(arena.eq(lhs, rhs).unwrap());
+    }
+    let diseq = {
+        let eq = arena.eq(a, b).unwrap();
+        arena.not(eq).unwrap()
+    };
+    assertions.push(diseq);
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatFiniteArrayExtensionality(cert) = &report.evidence else {
+        panic!(
+            "finite-array extensionality unsat must carry direct evidence, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 2);
+    assert_eq!(cert.read_equalities.len(), 4);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "finite-array evidence carries no reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_small_array_axiom_unsats() {
+    let cases = [
+        (
+            "mccarthy",
+            ArrayAxiomKind::ReadOverWrite,
+            r"
+            (set-logic QF_AUFBV)
+            (declare-fun i () (_ BitVec 32))
+            (declare-fun j () (_ BitVec 32))
+            (declare-fun v () (_ BitVec 8))
+            (declare-fun a () (Array (_ BitVec 32) (_ BitVec 8)))
+            (assert (not (= (select (store a i v) j) (ite (= i j) v (select a j)))))
+            (check-sat)
+        ",
+        ),
+        (
+            "select_ite",
+            ArrayAxiomKind::SelectIte,
+            r"
+            (set-logic QF_AUFBV)
+            (declare-fun a () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun b () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun i () (_ BitVec 32))
+            (declare-fun c () Bool)
+            (assert (not (= (ite c (select a i) (select b i)) (select (ite c a b) i))))
+            (check-sat)
+        ",
+        ),
+        (
+            "store_ite_select",
+            ArrayAxiomKind::StoreIteSelect,
+            r"
+            (set-logic QF_AUFBV)
+            (declare-fun a () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun b () (Array (_ BitVec 32) (_ BitVec 8)))
+            (declare-fun i () (_ BitVec 32))
+            (declare-fun j () (_ BitVec 32))
+            (declare-fun v () (_ BitVec 8))
+            (declare-fun c () Bool)
+            (assert (not (= (select (ite c (store a i v) (store b i v)) j)
+                            (select (store (ite c a b) i v) j))))
+            (check-sat)
+        ",
+        ),
+        (
+            "abv_btor_write1",
+            ArrayAxiomKind::ReadOverWrite,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write1.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write13",
+            ArrayAxiomKind::ReadOverWrite,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write13.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write2",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write4",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write4.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write7",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write7.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write8",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write8.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write9",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write9.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write10",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write10.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_rwpropindexplusconst1",
+            ArrayAxiomKind::ReadOverWrite,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst1.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_rwpropindexplusconst3",
+            ArrayAxiomKind::ReadOverWrite,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst3.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write22",
+            ArrayAxiomKind::StoreShadowing,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write22.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write23",
+            ArrayAxiomKind::StoreShadowing,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write23.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write24",
+            ArrayAxiomKind::StoreShadowing,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write24.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_rw30",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_rw31",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw31.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_rw32",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_rw33",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw33.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_write14",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycondconst",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconst.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycondconstaig",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconstaig.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_ext5",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext5.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_ext21",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_3vl1",
+            ArrayAxiomKind::ReadOverWrite,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_extarraywrite1",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_ext22",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext22.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_read1",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_read4",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_read10",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read10.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_read22",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read22.btor.smt2"
+            ),
+        ),
+    ];
+
+    for (name, kind, smt2) in cases {
+        let mut script = parse_script(smt2).unwrap_or_else(|err| panic!("{name} parses: {err}"));
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|err| panic!("{name} decides: {err}"));
+        let Evidence::UnsatArrayAxiom(cert) = &report.evidence else {
+            panic!(
+                "{name}: expected array-axiom evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert_eq!(cert.kind, kind, "{name}");
+        assert!(report.evidence.is_certified(), "{name}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{name}"
+        );
+        assert!(report.trusted_steps.is_empty(), "{name}");
+    }
+}
+
+#[test]
+fn produce_evidence_certifies_array_bv_abstraction_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/rewrite__array__rw213.smt2"
+    );
+    let mut script = parse_script(text).expect("rw213 parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("rw213 produces evidence");
+    let Evidence::UnsatBvAbstraction(cert) = &report.evidence else {
+        panic!(
+            "expected BV-abstraction evidence for rw213, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.abstracted_terms.len(), 2);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "BV-abstraction evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_aligned_write_chain_commutation_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__wchains002ue.smt2"
+    );
+    let mut script = parse_script(text).expect("wchains002ue parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("wchains002ue produces evidence");
+    let Evidence::UnsatAlignedWriteChainCommutation(cert) = &report.evidence else {
+        panic!(
+            "expected aligned-write-chain evidence for wchains002ue, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.lanes, 4);
+    assert_eq!(cert.element_width, 8);
+    assert_eq!(cert.index_width, 32);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "aligned-write-chain evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_two_byte_memcpy_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__memcpy02.smt2"
+    );
+    let mut script = parse_script(text).expect("memcpy02 parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("memcpy02 produces evidence");
+    let Evidence::UnsatTwoByteMemcpy(cert) = &report.evidence else {
+        panic!(
+            "expected two-byte memcpy evidence for memcpy02, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 32);
+    assert_eq!(cert.element_width, 8);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "two-byte memcpy evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_two_element_bubble_sort_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__bubsort002un.smt2"
+    );
+    let mut script = parse_script(text).expect("bubsort002un parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("bubsort002un produces evidence");
+    let Evidence::UnsatTwoElementBubbleSort(cert) = &report.evidence else {
+        panic!(
+            "expected two-element bubble-sort evidence for bubsort002un, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 32);
+    assert_eq!(cert.element_width, 8);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "two-element bubble-sort evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_two_element_selection_sort_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__selsort002un.smt2"
+    );
+    let mut script = parse_script(text).expect("selsort002un parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("selsort002un produces evidence");
+    let Evidence::UnsatTwoElementSelectionSort(cert) = &report.evidence else {
+        panic!(
+            "expected two-element selection-sort evidence for selsort002un, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 32);
+    assert_eq!(cert.element_width, 8);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "two-element selection-sort evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_two_cell_xor_swap_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__dubreva002ue.smt2"
+    );
+    let mut script = parse_script(text).expect("dubreva002ue parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("dubreva002ue produces evidence");
+    let Evidence::UnsatTwoCellXorSwap(cert) = &report.evidence else {
+        panic!(
+            "expected two-cell XOR-swap evidence for dubreva002ue, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 32);
+    assert_eq!(cert.element_width, 8);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "two-cell XOR-swap evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_two_byte_xor_swap_roundtrip_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__swapmem002ue.smt2"
+    );
+    let mut script = parse_script(text).expect("swapmem002ue parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("swapmem002ue produces evidence");
+    let Evidence::UnsatTwoByteXorSwapRoundtrip(cert) = &report.evidence else {
+        panic!(
+            "expected two-byte XOR-swap round-trip evidence for swapmem002ue, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 32);
+    assert_eq!(cert.element_width, 8);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "two-byte XOR-swap round-trip evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_binary_search16_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__binarysearch32s016.smt2"
+    );
+    let mut script = parse_script(text).expect("binarysearch32s016 parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("binarysearch32s016 produces evidence");
+    let Evidence::UnsatBinarySearch16(cert) = &report.evidence else {
+        panic!(
+            "expected binary-search16 evidence for binarysearch32s016, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.index_width, 4);
+    assert_eq!(cert.element_width, 32);
+    assert_eq!(cert.probes.len(), 5);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "binary-search16 evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_certifies_fifo_bc04_unsat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2"
+    );
+    let mut script = parse_script(text).expect("fifo32bc04k05 parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("fifo32bc04k05 produces evidence");
+    let Evidence::UnsatFifoBc04(cert) = &report.evidence else {
+        panic!(
+            "expected FIFO BC04 evidence for fifo32bc04k05, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.bound, 5);
+    assert_eq!(cert.index_width, 4);
+    assert_eq!(cert.element_width, 32);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "FIFO BC04 evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
+fn produce_evidence_replays_fifo_ia04_sat() {
+    let text = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32ia04k05.smt2"
+    );
+    let mut script = parse_script(text).expect("fifo32ia04k05 parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("fifo32ia04k05 produces evidence");
+    let Evidence::Sat(model) = &report.evidence else {
+        panic!(
+            "expected SAT model for fifo32ia04k05, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(!model.is_empty());
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
 }
 
 // ----- P3.0 trust-ledger: per-result trust steps ----------------------------
@@ -629,8 +1293,8 @@ fn qf_abv_unsat_reports_array_elim_trust_hole() {
         .declare(
             "mem",
             Sort::Array {
-                index: 4,
-                element: 4,
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(4),
             },
         )
         .unwrap();
@@ -647,7 +1311,7 @@ fn qf_abv_unsat_reports_array_elim_trust_hole() {
         arena.not(eq).unwrap()
     };
 
-    let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &config()).unwrap();
+    let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &unbounded_config()).unwrap();
     let ids = step_ids(&report);
     assert!(ids.contains(&TrustId::ArrayElim), "got {ids:?}");
     assert!(ids.contains(&TrustId::BitBlast), "got {ids:?}");
@@ -690,8 +1354,8 @@ fn produce_evidence_array_row_same_carries_alethe_proof() {
         .declare(
             "a",
             Sort::Array {
-                index: 4,
-                element: 8,
+                index: ArraySortKey::BitVec(4),
+                element: ArraySortKey::BitVec(8),
             },
         )
         .unwrap();

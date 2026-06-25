@@ -6,6 +6,1683 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — ABV store self-update read coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure so
+  `a = store(a, i, v)` records the read fact `select(a, i) = v`. This proves
+  the BTOR `ext22` contradiction, where an array is asserted equal to its own
+  update while the stored value is asserted different from the read at that
+  index. The row is now certified as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 138/169 → 139/169 dominant** with **Lean unsat 54/83 → 55/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **51** `array-axiom-unsat` rows and **28** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on larger
+  extensionality rows, conditional-array families, residual write shapes
+  (`write16`, `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext22.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV store same-cell injectivity coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure so
+  `store(a, i, v) = store(a, i, w)` records the value equality `v = w`. This
+  proves the BTOR `extarraywrite1` contradiction, where equal same-cell stores
+  are combined with `v != w`. The row is now certified as `array-axiom-unsat`
+  through `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction
+  through `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit
+  moved **QF_ABV 137/169 → 138/169 dominant** with **Lean unsat 53/83 → 54/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **50** `array-axiom-unsat` rows and **29** remaining
+  `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean unsat
+  20/20**. **Next:** continue the ABV `bare-unsat` reduction on larger
+  extensionality rows, conditional-array families, residual write shapes
+  (`write16`, `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV concat-suffix ROW coverage widened.**
+  Extended `ArrayAxiom` index reasoning so two BV terms are definitely distinct
+  when their known concrete low-bit suffixes disagree, even if their concat
+  boundaries differ. This proves `(concat v0 #x00)` distinct from
+  `(concat v1 #b1)` by the low bit and lets read-over-write normalization fire.
+  This certifies `3vl1` as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadOverWrite`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 136/169 → 137/169 dominant** with **Lean unsat 52/83 → 53/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **49** `array-axiom-unsat` rows and **30** remaining `bare-unsat`
+  rows. QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  continue the ABV `bare-unsat` reduction on larger extensionality rows,
+  conditional-array families, residual write shapes (`write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV BV-not injectivity read-congruence coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure with the
+  inverse fact for bit-vector complement literals: `bvnot x = bvnot y` records
+  `x = y`, and the disequality direction records `x != y`. This certifies the
+  BTOR row `read22` as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 135/169 → 136/169 dominant** with **Lean unsat 51/83 → 52/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **48** `array-axiom-unsat` rows and **31** remaining `bare-unsat`
+  rows. QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  continue the ABV `bare-unsat` reduction on larger extensionality rows,
+  conditional-array families, residual write shapes (`write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read22.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV finite-extensionality bit coverage widened.**
+  Extended contextual term equivalence in the checked `ArrayAxiom`
+  read-congruence lane so BTOR BV1 finite-extensionality encodings are
+  recognized: a conjunction of read-equality bits over a complete small BV-index
+  domain is equivalent to the array-equality bit. The checker accepts only full
+  covers: all concrete indices for small domains, or the two definitely-distinct
+  indices of a BV1 domain. This certifies `ext5` and `ext21` as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 133/169 → 135/169 dominant** with **Lean unsat
+  49/83 → 51/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **47** `array-axiom-unsat` rows and **32**
+  remaining `bare-unsat` rows. QF_AUFBV remains **41/41** dominant with **Lean
+  unsat 20/20**. **Next:** continue the ABV `bare-unsat` reduction on larger
+  extensionality rows, conditional-array families, residual write shapes
+  (`write16`, `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext5.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV nested BV1-complement coverage widened.**
+  Extended contextual BV1 evaluation in the checked `ArrayAxiom`
+  read-congruence lane so nested BV1 `bvand`/`bvor` chains recognize
+  complementary leaves (`x` with `bvnot x`). This proves BTOR/AIG-encoded
+  impossible conditions such as `(bvand (bvnot v0) (bvand v0 v1))` false before
+  array-valued `ite` simplification and read-congruence checking. This certifies
+  `arraycondconstaig` as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 132/169 → 133/169 dominant** with **Lean unsat 48/83 → 49/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **45** `array-axiom-unsat` rows and **34** remaining `bare-unsat`
+  rows. QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  continue the ABV `bare-unsat` reduction on larger extensionality rows,
+  conditional-array families, residual write shapes (`write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconstaig.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV contextual BV1-false coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane so asserted-true BV1
+  terms can be refuted when contextual read-over-write normalization, ground-BV
+  evaluation, and known array-valued `ite` branches reduce the bit to `#b0`.
+  This certifies the BTOR rows `write14` and `arraycondconst` as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 130/169 → 132/169 dominant** with **Lean unsat
+  46/83 → 48/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **44** `array-axiom-unsat` rows. QF_AUFBV remains
+  **41/41** dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality rows, conditional-array
+  families, residual write shapes (`write16`, `write17`), and cvc5-specific
+  BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconst.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV conditional-select coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane so raw BV1 branch facts
+  are tracked, `distinct`-encoded BV1 literals are matched, array-valued `ite`
+  terms simplify under those facts, and OR-of-conjunctions can be refuted when
+  every branch locally proves an impossible guarded read disequality. This
+  certifies the BTOR rewrite rows `rw30`, `rw31`, `rw32`, and `rw33` as
+  `array-axiom-unsat` through `ArrayAxiomKind::ReadCongruence`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 126/169 → 130/169 dominant** with **Lean unsat
+  42/83 → 46/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **42** `array-axiom-unsat` rows. QF_AUFBV remains
+  **41/41** dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality rows, conditional-array
+  families, residual write shapes (`write14`, `write16`, `write17`), and
+  cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw31.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw33.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV store-shadowing coverage widened.**
+  Extended the checked `ArrayAxiom` evidence lane with
+  `ArrayAxiomKind::StoreShadowing`. Store chains are normalized by removing
+  earlier writes shadowed by later writes to the same syntactic index, preserving
+  the base array and surviving write order. This certifies the BTOR write rows
+  `write22`, `write23`, and `write24` as `array-axiom-unsat`, with real-Lean
+  reconstruction through `ProofFragment::ArrayAxiom`. Re-running the complete
+  exact ABV audit moved **QF_ABV 123/169 → 126/169 dominant** with **Lean unsat
+  39/83 → 42/83**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The refreshed artifact has **38** `array-axiom-unsat` rows. QF_AUFBV remains
+  **41/41** dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality/store-shadowing rows,
+  conditional-array rows, residual write shapes (`write14`, `write16`,
+  `write17`), and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV nonzero-offset ROW coverage widened.**
+  Extended the checked `ArrayAxiom` read-over-write normalizer with a narrow
+  BV index fact: `i` and `i + c` are definitely distinct when `c` is a nonzero
+  constant modulo the index width. The zero-offset rows remain replay-checked
+  SAT controls. This certifies the four
+  `rwpropindexplusconst{1..4}` rows as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadOverWrite`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 119/169 → 123/169 dominant** with **Lean unsat 35/83 → 39/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **35** `array-axiom-unsat` rows. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality/store-shadowing rows,
+  conditional-array rows, residual write shapes, and cvc5-specific BV/array
+  proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst2.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst3.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexpluszero1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV guarded write-case coverage widened.**
+  Extended the checked `ArrayAxiom` evidence lane so read-over-write
+  normalization can use branch-local equality and disequality guards, and so
+  negated guarded case splits are accepted only when every violation branch is
+  independently refuted. This certifies the remaining small BTOR write rows
+  `write2`, `write4`, `write7`, `write8`, `write9`, and `write10`, plus the
+  related `verbose2` row, as `array-axiom-unsat` with real-Lean reconstruction
+  through `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit
+  moved **QF_ABV 112/169 → 119/169 dominant** with **Lean unsat 28/83 → 35/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **31** `array-axiom-unsat` rows. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on larger extensionality/store-shadowing rows,
+  conditional-array rows, and cvc5-specific BV/array proof gaps.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write7.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write8.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write9.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write10.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — ABV read-congruence coverage widened.**
+  Extended the checked `ArrayAxiom` evidence lane with
+  `ArrayAxiomKind::ReadCongruence`. The recognizer now builds a small equality
+  closure from BTOR-style BV1 formulas, handles asserted/denied `and`/`or`
+  shapes, and proves read disequalities impossible by congruence over arrays,
+  indices, `select`, `bvnot`, `concat`, plus idempotent `bvand`/`bvor`. This
+  certifies representative ABV rows such as `read1`, `read4`, and `read10` as
+  `array-axiom-unsat`, with real-Lean reconstruction through the existing
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 90/169 → 112/169 dominant** with **Lean unsat 6/83 → 28/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **24** `array-axiom-unsat` rows. QF_AUFBV remains **41/41**
+  dominant with **Lean unsat 20/20**. **Next:** continue the ABV
+  `bare-unsat` reduction on the remaining store-shadowing, extensionality, and
+  conditional-array rows.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read10.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — ABV BTOR-style array-axiom coverage widened.**
+  Extended the checked `ArrayAxiom` recognizer to see BTOR-style BV1 Boolean
+  encodings: a proposition asserted as `#b1 = bit`, with BV1 `bvand`
+  conjuncts, can now expose an implied disequality. The read-over-write checker
+  also normalizes `select` through store chains when the read index is either
+  syntactically the store index or both indices are ground BV constants that are
+  definitely distinct. This certifies ABV rows such as
+  `solver__array__write1.btor.smt2` and `solver__array__write13.btor.smt2`
+  as `array-axiom-unsat`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 85/169 → 90/169 dominant** with **Lean unsat 1/83 → 6/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The same refreshed
+  artifact also reflects three current `BvAbstraction` ABV rows. QF_AUFBV
+  remains **41/41** dominant with **Lean unsat 20/20**. **Next:** keep reducing
+  the ABV bare-unsat population, especially guarded read-congruence/store-shadow
+  BTOR patterns (`read*`, `write*`, `ext*`, `arraycond*`) that still audit as
+  `bare-unsat`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write13.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — exact AUFBV dominance row closed.**
+  Added `fifo_ia04_sat_model`, a replay-checked SAT witness for the generated
+  AUFBV five-cycle FIFO induction benchmark
+  `solver__array__fifo32ia04k05.smt2`. The route assigns the scalar FIFO state,
+  reset/input symbols, and all 16 concrete cells for each memory array, then
+  evaluates the original assertion under that model before returning `sat`;
+  malformed or over-broad matches decline. `check_auto` now tries this
+  `fifo-ia04-sat-witness` route before the expensive array paths, and
+  `produce_evidence` reports the ordinary certified `Sat(model)` evidence.
+  Re-running the complete exact AUFBV audit moved **QF_AUFBV 40/41 → 41/41
+  dominant** while preserving **Lean unsat 20/20**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. QF_ABV remains **85/169** dominant
+  with **Lean unsat 1/83**. **Next:** use the same exact-audit loop on the
+  broader array frontier, starting with ABV Lean/evidence coverage and the
+  mid/weak cvc5 AUFBV/AUFLIA decide rows.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_fifo -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_replays_fifo_ia04_sat -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_fifo_bc04_unsat -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32ia04k05.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — FIFO BC04 evidence + Lean route landed.**
+  Added `array_fifo` with `FifoBc04Certificate` for the AUFBV generated
+  five-cycle FIFO equivalence benchmark: a shift-register FIFO and a circular
+  queue FIFO are reset once at the beginning, unrolled for five cycles, and the
+  assertion demands a final output/flag mismatch. The checker re-generates the
+  exact transition equality bits and final mismatch guard from the declared
+  symbols, then independently checks the finite FIFO equivalence theorem for
+  the benchmark bound before accepting. `produce_evidence` now emits
+  `UnsatFifoBc04`, and `prove_unsat_to_lean` routes the same certificate
+  through `ProofFragment::FifoBc04`. This moved
+  `solver__array__fifo32bc04k05.smt2` from bare unsat to checked evidence plus
+  a real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 39/41 → 40/41 dominant** with **Lean unsat 19/20 → 20/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  QF_ABV remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack
+  the remaining exact AUFBV solve/search gap `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_fifo -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_fifo_bc04_unsat -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_fifo_bc04_checks_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — binary-search16 evidence + Lean route landed.**
+  Added `array_binary_search` with `BinarySearch16Certificate` for the AUFBV
+  generated binary-search benchmark: after storing `search_val` at an arbitrary
+  BV4 index, the assertion says the 16-cell array is sorted at every adjacent
+  concrete index while the generated five-probe binary search misses
+  `search_val`. The checker re-matches the complete sortedness chain, the
+  stored-array dataflow, and the generated probe terms, and also runs a finite
+  equal-block check for the 16-element binary-search recurrence before
+  accepting. `produce_evidence` now emits `UnsatBinarySearch16`, and
+  `prove_unsat_to_lean` routes the same certificate through
+  `ProofFragment::BinarySearch16`. This moved
+  `solver__array__binarysearch32s016.smt2` from bare unsat to checked evidence
+  plus a real-Lean-checked proof. Re-running the complete exact AUFBV audit
+  moved **QF_AUFBV 38/41 → 39/41 dominant** with **Lean unsat 18/20 → 19/20**;
+  the row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  QF_ABV remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack
+  the last AUFBV proof gap `fifo32bc04k05`, then the solve/search gap
+  `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_binary_search -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_binary_search16_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_binary_search16_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__binarysearch32s016.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — two-byte XOR-swap round-trip evidence + Lean route landed.**
+  Extended `array_xor_swap` with `TwoByteXorSwapRoundtripCertificate` for the
+  AUFBV generated swapmem pattern: two disjoint byte ranges are swapped with
+  generated XOR swaps, then swapped back, and the final memory disequality is
+  re-matched under the exact two-byte no-overlap/no-wrap guard before accepting.
+  `produce_evidence` now emits `UnsatTwoByteXorSwapRoundtrip`, and
+  `prove_unsat_to_lean` routes the same certificate through
+  `ProofFragment::TwoByteXorSwapRoundtrip`. This moved
+  `solver__array__swapmem002ue.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 37/41 → 38/41 dominant** with **Lean unsat 17/20 → 18/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining AUFBV frontier: bare-unsat proof gaps `binarysearch32s016` and
+  `fifo32bc04k05`, plus the solve/search gap `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_xor_swap -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_byte_xor_swap_roundtrip_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__swapmem002ue.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+
+- **Session 2026-06-25 — two-cell XOR-swap evidence + Lean route landed.**
+  Added a checked `TwoCellXorSwapCertificate` for the AUFBV generated
+  XOR-swap memory pattern: two nested ordinary two-cell swaps are compared with
+  the corresponding generated three-assignment XOR swaps, and the final
+  disequality is re-matched before accepting. `produce_evidence` now emits
+  `UnsatTwoCellXorSwap`, and `prove_unsat_to_lean` routes the same certificate
+  through `ProofFragment::TwoCellXorSwap`. This moved
+  `solver__array__dubreva002ue.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 36/41 → 37/41 dominant** with **Lean unsat 16/20 → 17/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining AUFBV frontier: bare-unsat proof gaps `binarysearch32s016`,
+  `fifo32bc04k05`, and `swapmem002ue`, plus the solve/search gap
+  `fifo32ia04k05`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_xor_swap -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_cell_xor_swap_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_cell_xor_swap_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__dubreva002ue.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — two-element selection-sort evidence + Lean route landed.**
+  Added a checked `TwoElementSelectionSortCertificate` for the AUFBV length-2
+  selection-sort memory pattern: the generated min-index `ite`, the two-store
+  selected-minimum update, the sortedness bit, and the in-range membership
+  contradiction are all re-matched before accepting. `produce_evidence` now
+  emits `UnsatTwoElementSelectionSort`, and `prove_unsat_to_lean` routes the
+  same certificate through `ProofFragment::TwoElementSelectionSort`. This moved
+  `solver__array__selsort002un.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 35/41 → 36/41 dominant** with **Lean unsat 15/20 → 16/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining four AUFBV bare unsats: `binarysearch32s016`, `dubreva002ue`,
+  `fifo32bc04k05`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_sort2 -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_element_selection_sort_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_element_selection_sort_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — two-element bubble-sort evidence + Lean route landed.**
+  Added a checked `TwoElementBubbleSortCertificate` for the AUFBV length-2
+  bubble-sort memory pattern: the output cells are the conditional swap/min-max
+  of the two original cells, the arbitrary read index is guarded into
+  `[start,start+2)`, and the query asserts that original read differs from both
+  output cells while the output is sorted. `produce_evidence` now emits
+  `UnsatTwoElementBubbleSort`, and `prove_unsat_to_lean` routes the same
+  certificate through `ProofFragment::TwoElementBubbleSort`. This moved
+  `solver__array__bubsort002un.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 34/41 → 35/41 dominant** with **Lean unsat 14/20 → 15/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**. QF_ABV
+  remains **85/169** dominant with **Lean unsat 1/83**. **Next:** attack the
+  remaining five AUFBV bare unsats: `binarysearch32s016`, `dubreva002ue`,
+  `fifo32bc04k05`, `selsort002un`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_sort2 -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_element_bubble_sort_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_element_bubble_sort_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — two-byte memcpy evidence + Lean route landed.**
+  Added a checked `TwoByteMemcpyRefutationCertificate` for the AUFBV
+  symbolic-memory pattern `memcpy` length 2: no-wrap/no-overlap guards for
+  `[src,src+2)` and `[dst,dst+2)`, a `j < 2` guard, and a two-store copy whose
+  destination read is asserted different from the matching original source
+  read. `produce_evidence` now emits `UnsatTwoByteMemcpy`, and
+  `prove_unsat_to_lean` routes the same certificate through
+  `ProofFragment::TwoByteMemcpy`. This moved `solver__array__memcpy02.smt2`
+  from bare unsat to checked evidence plus a real-Lean-checked proof. Re-running
+  the complete exact AUFBV audit moved **QF_AUFBV 33/41 → 34/41 dominant** with
+  **Lean unsat 13/20 → 14/20**; the row still has **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. QF_ABV remains **85/169** dominant
+  with **Lean unsat 1/83**. **Next:** attack the remaining six AUFBV bare
+  unsats: `binarysearch32s016`, `bubsort002un`, `dubreva002ue`,
+  `fifo32bc04k05`, `selsort002un`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_memcpy -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_byte_memcpy_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_byte_memcpy_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — aligned write-chain evidence + Lean route landed.**
+  Added a checked `AlignedWriteChainCommutationCertificate` for generated
+  AUFBV byte-store chains that write two 4-byte aligned words in opposite
+  orders under low-address zero guards. `produce_evidence` now emits
+  `UnsatAlignedWriteChainCommutation`, and `prove_unsat_to_lean` routes the
+  same certificate through `ProofFragment::AlignedWriteChainCommutation`.
+  This moved `solver__array__wchains002ue.smt2` from bare unsat to checked
+  evidence plus a real-Lean-checked proof. Re-running the complete exact AUFBV
+  audit moved **QF_AUFBV 32/41 → 33/41 dominant** with **Lean unsat
+  12/20 → 13/20**; the row still has **mismatches=0**, **audit_errors=0**,
+  and **timeouts=0**. QF_ABV remains **85/169** dominant with **Lean unsat
+  1/83**. **Next:** attack the remaining seven AUFBV bare unsats:
+  `binarysearch32s016`, `bubsort002un`, `dubreva002ue`, `fifo32bc04k05`,
+  `memcpy02`, `selsort002un`, and `swapmem002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_write_chain -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_aligned_write_chain_commutation_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_aligned_write_chain_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — BV-abstraction array evidence + Lean route landed.**
+  Added a checked `BvAbstractionRefutationCertificate` for small array queries
+  that are already contradictory after replacing array-dependent scalar leaves
+  with fresh unconstrained Bool/BV symbols and re-checking the resulting pure
+  `QF_BV` query through certified evidence. `produce_evidence` now emits
+  `UnsatBvAbstraction`, and `prove_unsat_to_lean` routes the same certificate
+  through `ProofFragment::BvAbstraction`. This moved
+  `rewrite__array__rw213.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-running the complete exact AUFBV audit moved
+  **QF_AUFBV 31/41 → 32/41 dominant** with **Lean unsat 11/20 → 12/20**; the
+  row still has **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  QF_ABV remains **85/169** dominant with **Lean unsat 1/83**. **Next:**
+  attack the remaining eight AUFBV bare unsats as structural array-program
+  certificates: `binarysearch32s016`, `bubsort002un`, `dubreva002ue`,
+  `fifo32bc04k05`, `memcpy02`, `selsort002un`, `swapmem002ue`, and
+  `wchains002ue`.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_bv_abs -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_array_bv_abstraction_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_bv_abstraction_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — small array-axiom evidence + Lean route landed.**
+  Added a checked `ArrayAxiomRefutationCertificate` for three direct AUFBV array
+  axiom schemas: McCarthy read-over-write, select-over-array-`ite`, and
+  store-over-`ite` under a common select. `produce_evidence` now emits
+  `UnsatArrayAxiom` before timed bare-unsat fallback, and `prove_unsat_to_lean`
+  routes the same schema through `ProofFragment::ArrayAxiom`. This moved
+  `smtaxiommccarthy.smt2`, `smtarraycond1.smt2`, and `smtarraycond3.smt2` from
+  bare unsat to checked evidence plus real-Lean-checked proofs. Re-running the
+  complete exact AUFBV audit moved **QF_AUFBV 28/41 → 31/41 dominant** with
+  **Lean unsat 8/20 → 11/20**; the row still has **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. QF_ABV remains **85/169** dominant with
+  **Lean unsat 1/83**. **Next:** classify the remaining ten AUFBV bare unsats
+  (mostly larger program-array benchmarks plus `rw213`) into bit-vector rewrite
+  contradictions versus genuinely array-elim-heavy shapes, and decide whether the
+  next measured movement should come from BV/ite simplification evidence or a
+  broader read-over-write certificate.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **Session 2026-06-25 — array dominance audit timeouts eliminated.**
+  Closed the remaining ABV/AUFBV dominance-audit timeout class by making timed
+  array solving propagate budget results instead of falling through to more
+  expensive fallbacks. The older lazy select-congruence path now shares the
+  configured deadline across refinement rounds, passes only the remaining budget
+  to the scalar backend, checks deadlines while scanning select pairs, and avoids
+  evaluator work when two select indices are syntactically identical. Timed
+  `check_auto`/preprocessing/all-theory composition now carries a single remaining
+  wall budget across probe, preprocessing, reduced dispatch, eager reductions,
+  scalar backend, projection, and replay; late SAT results are downgraded to
+  `unknown` under an explicit timeout. Pure ABV dispatch now propagates budget
+  `unknown` from the array fast path instead of treating it as `not-applicable`
+  and entering the qf-bv fallback. Focused diagnostics for the former timeout
+  files (`rw34`, `arraycond9`, `fifo32ia04k05`) now return checked `unknown`
+  evidence in about the configured 5 s budget. Re-ran complete ABV/AUFBV dominance
+  audits: dominance counts stayed fixed (**QF_ABV 84/169**, **QF_AUFBV 20/41**),
+  while **audit_errors=0** and **timeouts=0** for both rows. **Next:** convert the
+  now-timely ABV/AUFBV unsat evidence from bare/DRAT/array-elim trust holes into
+  Lean-reconstructable certificates, and separately improve the hard array solve
+  frontiers so these files decide instead of returning budget `unknown`.
+  Verification passed:
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw34.btor.smt2 5000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond9.btor.smt2 5000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32ia04k05.smt2 5000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo test -p axeyum-solver --test evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — timed evidence export guard cuts array audit timeouts 11→3.**
+  Diagnosed a representative ABV timeout (`extarraywrite1`): `solve` finished in
+  about 1.7 s via `array-fast-path`, direct ABV Alethe and elimination Alethe
+  declined quickly, and the optional AUFBV reduced-CNF proof exporter kept
+  running. Added bounded exporter entry points, but the expensive path can still
+  overrun outside the cooperative CDCL deadline (lowering/checking/elaboration),
+  so `produce_evidence` now skips this optional reduction-proof fallback whenever
+  a wall-clock timeout is configured and the stronger certificate routes have
+  already declined. Unbudgeted callers still get the old reduction-certificate
+  path. Added `diagnose_evidence` for single-file stage timing. Re-ran complete
+  ABV/AUFBV dominance audits: dominant counts stayed fixed (**QF_ABV 84/169**,
+  **QF_AUFBV 20/41**), while audit timeouts/errors dropped from **6→2** for ABV
+  and **5→1** for AUFBV. Remaining timeout files are now solver/search frontiers:
+  ABV `rewrite__array__rw34.btor.smt2`, ABV `solver__array__arraycond9.btor.smt2`,
+  and AUFBV `solver__array__fifo32ia04k05.smt2`. **Next:** attack those three
+  solve-path frontiers, then return to Lean reconstruction / trust-hole closure
+  for the now-timely bare unsats. Verification passed:
+  `cargo run -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2 5000`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo test -p axeyum-solver --test evidence -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo clippy -p axeyum-bench --example diagnose_evidence -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — dominance audit phase diagnostics landed.**
+  Added phase-level diagnostics to `audit_dominance`: each instance now records
+  `audit_phase`, `phase_timings_ms`, and timeout records include
+  `timeout_phase` / `timeout_phase_elapsed_ms`. Regenerated the complete
+  QF_ABV and QF_AUFBV dominance artifacts; headline scoring is unchanged
+  (**QF_ABV 84/169 dominant, 6 timeouts; QF_AUFBV 20/41 dominant, 5
+  timeouts**), but all **11** array timeout rows now localize to
+  `produce-evidence`. `bench-results/DOMINANCE.md` summarizes timeout phases in
+  the exact-audit gaps column and now states that the first audit queue is clear,
+  so the next movement comes from reducing the reported proof/evidence gaps.
+  **Next:** instrument or attack ABV/AUFBV `produce_evidence` itself for the
+  timeout files (`rw34`, `arraycond9`, `ext7`, `ext9`, `extarraywrite1/2`,
+  `binarysearch32s016`, `fifo32bc04k05`, `fifo32ia04k05`, `memcpy02`,
+  `selsort002un`) before spending time on Lean runtime. Verification passed:
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — first dominance audit queue cleared; QF_ABV projection fix landed.**
+  Ran complete dominance audits for the two remaining first-queue rows. The queue
+  in `bench-results/DOMINANCE.md` is now empty, with **12 complete exact audit
+  rows**. QF_ABV/cvc5+bitwuzla is exact at **50% (84/169)** dominant,
+  **Lean unsat 0% (0/85)**, with **mismatches=0**, **audit_errors=6**, and
+  **timeouts=6**; QF_AUFBV/bitwuzla is exact at **49% (20/41)** dominant,
+  **Lean unsat 0% (0/20)**, with **mismatches=0**, **audit_errors=5**, and
+  **timeouts=5**. The audits exposed a concrete QF_ABV SAT model-lift error on
+  `rewrite__array__rw134.btor.smt2`: lazy extensionality materialized fresh read
+  symbols after assignment completion, then evaluated them under the stale
+  assignment. `refine_eq_congruence` now re-completes the assignment after
+  `resolve_select`, preserving replay gating and closing that audit error; a
+  regression pins the exact nested array-equality SAT shape. Remaining array
+  dominance gaps are now explicit: proof/evidence timeouts on hard array
+  instances, `array-elim`/`bit-blast` trust holes, and no Lean reconstruction for
+  the audited ABV/AUFBV unsats. **Next:** attack the timeout-producing evidence
+  path for ABV/AUFBV or start converting the named array-elim proof holes into
+  Lean-reconstructable certificates. Verification passed:
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo fmt --all --check`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `git diff --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — synthetic NIA/NRA dominance audits landed.**
+  Extended `audit_dominance` to ingest the summary-style graduated baselines
+  (`dir` + aggregate counts, no `instances` array) by enumerating the corpus,
+  reading each file's `:status`, and using the committed aggregate
+  `axeyum_decided` count as the exact denominator. The audit worker now gives
+  the solver thread a small outer grace window while keeping the solver's
+  internal timeout fixed at the requested budget, avoiding false timeout records
+  when a solver returns exactly at the cap. Committed exact audits for
+  QF_NRA synthetic and QF_NIA synthetic and regenerated
+  `bench-results/DOMINANCE.md`: exact audit rows now total **10**. QF_NRA
+  synthetic is **50% (15/30)** dominant with **Lean unsat 6% (1/16)**; QF_NIA
+  synthetic is **50% (16/32)** dominant with **Lean unsat 0% (0/16)**. Both have
+  **DISAGREE=0**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+  The remaining first audit queue is now just QF_ABV and QF_AUFBV. **Next:**
+  audit those array/BV rows, then decide whether to attack their proof gaps or
+  improve the nonlinear Lean lanes exposed here. Verification passed:
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 5000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nia-synthetic-graduated-vs-z3.json 30000 32 bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo clippy -p axeyum-bench --example audit_dominance -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — dominance audit batch plus LRA evidence fallback landed.**
+  Ran and committed complete dominance audits for six more rows:
+  BV/bitwuzla quantified, QF_BV/bvred, QF_LIA/cvc5, QF_LRA/cvc5,
+  QF_UFLIA curated named, and QF_UFLIA bounded uninterpreted-sort regressions.
+  Together with the two QF_UFBV artifacts, `bench-results/DOMINANCE.md` now has
+  **8 complete exact audit rows**. The exact frontier is now concrete:
+  BV quantified **25% (1/4)**, QF_BV/bvred **83% (5/6)**, QF_LIA **70%
+  (7/10)**, QF_LRA **67% (6/9)**, QF_UFBV/cvc5 **100% (4/4)**,
+  QF_UFBV/bitwuzla **50% (1/2)**, QF_UFLIA curated **0% (0/2)**, and
+  QF_UFLIA bounded **80% (4/5)**, all with **DISAGREE=0** and **audit_errors=0**.
+  The LRA row initially exposed five evidence-front-door audit errors: the pure-real
+  route produced an unsupported LRA certificate shape and stopped before the
+  unified replayable evidence fallback. `produce_evidence` now falls through on
+  unsupported pure-real certificate declines, while still preserving stronger
+  LRA/SOS/NRA certificates when available; the QF_LRA audit now completes with
+  zero errors. The audit harness also infers a missing baseline logic from the
+  corpus path, fixing the bounded-UFLIA artifact metadata. **Next:** audit the
+  remaining first-queue rows (QF_ABV, QF_AUFBV, QF_NIA synthetic, QF_NRA
+  synthetic) or close the proof gaps now named by exact rows: LRA disjunctive
+  Lean reconstruction, LIA unsat coverage, BV operator holes, and UFLIA integer/UF
+  reconstruction. Verification passed:
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-bv-curated-bvred-solver-vs-z3-10s.json 5000 6 bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json 5000 9 bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json 5000 10 bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json 5000 2 bench-results/dominance/qf-uflia-curated-named-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 5000 5 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json 5000 4 bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo test -p axeyum-solver --test evidence pure_real_front_door_falls_back_when_lra_certificate_declines -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — QF_UFBV/bitwuzla dominance audit artifact landed.**
+  Closed the `solver__declsort1.smt2` audit error by routing mixed declared-sort
+  QF_UFBV through lazy Ackermann abstraction before raw BV fallback. Unconstrained
+  declared-sort symbols now receive deterministic distinct model tokens during
+  BV/model projection, so the lazy UF consistency loop does not invent false
+  carrier equalities; the returned SAT model is still accepted only after replay
+  against the original assertions. Added regression coverage for the exact
+  declared-sort UFBV SAT shape. Committed
+  `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json`
+  and regenerated `bench-results/DOMINANCE.md`: the row now has
+  **audit_errors = 0**, **dominant%(D) = 50% (1/2)**, and
+  **Lean unsat = 0% (0/1)**. The remaining gap is the Boolean-UF `fun1` unsat,
+  which still carries `bit-blast`/`ackermann` trust holes and no Lean route.
+  The QF_UFBV/cvc5 artifact was re-run and remains **100% (4/4)** dominant.
+  **Next:** continue exact audits for the remaining `audit now` rows, or add a
+  Lean/proof route for the `fun1` Boolean functional-graph refutation.
+  Verification passed:
+  `cargo test -p axeyum-solver --test uninterpreted_sort_euf -j1`;
+  `cargo test -p axeyum-rewrite functions -j1`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate -j1`;
+  `cargo run -p axeyum-bench --example explain_corpus -- corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean 5000`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 5000 2 bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `git diff --check`.
+
+- **Session 2026-06-25 — QF_UFBV finite-domain pigeonhole Lean route landed.**
+  Added a direct Lean-kernel reconstruction path for the one-bit finite-domain
+  pigeonhole certificate. `prove_unsat_to_lean_module` now classifies the
+  cvc5 `bug593` shape as `ProofFragment::FiniteDomainPigeonhole`, re-checks the
+  certificate from the original assertions, models the finite argument domain as
+  computational `Bool`, and proves `False` by `Bool.rec` over the three arguments
+  plus `Eq.refl` at the repeated value. The only proof assumptions are the three
+  input disequalities; no pigeonhole theorem or cardinality axiom is trusted.
+  The committed QF_UFBV/cvc5 dominance artifact now reports
+  **dominant%(D) = 100% (4/4)**, **Lean unsat = 100% (2/2)**,
+  **audit_errors = 0**, and `bug593` has
+  `lean_fragment = FiniteDomainPigeonhole`. Regenerated
+  `bench-results/DOMINANCE.md`. **Next:** run and commit exact dominance audits
+  for the remaining decide-strong `audit now` rows.
+  Verification passed:
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean -j1`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate -j1`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — QF_UFBV finite-domain pigeonhole evidence landed.**
+  Added a narrow certified QF_UFBV refuter for finite argument-domain pigeonhole
+  conflicts: if a top-level conjunction requires more pairwise-distinct
+  applications of one function than its Bool/BV argument tuple domain can supply,
+  `check_auto` now returns `unsat` before falling through to the pure BV backend.
+  `produce_evidence` carries this as `Evidence::UnsatFiniteDomainPigeonhole`,
+  whose checker re-scans the original query and validates the cardinality/clique
+  condition. This closes the QF_UFBV/cvc5 `bug593` audit error
+  (`f : BV1 -> A`, three pairwise-distinct `f(g ·)` outputs): the committed
+  dominance artifact now has **audit_errors = 0**, **evidence_checked = 4/4**,
+  and subsequent Lean-reconstruction work raised the row to
+  **dominant%(D) = 100% (4/4)**. Updated
+  `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` and
+  regenerated `bench-results/DOMINANCE.md`. **Next:** audit the remaining
+  decide-strong rows.
+  Verification passed: `cargo test -p axeyum-solver --lib ufbv_finite -j1`;
+  `cargo test -p axeyum-solver --test evidence qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate -j1`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo run -p axeyum-bench --example explain_corpus -- corpus/public-curated/non-incremental/QF_UFBV/cvc5-regress-clean 5000`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — first exact dominance audit artifact ingested.**
+  Added the first committed per-instance dominance artifact,
+  `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`,
+  and taught `scripts/gen-dominance-scoreboard.py` to ingest committed
+  `bench-results/dominance/*.json` files. `bench-results/DOMINANCE.md` now
+  distinguishes readiness rows from exact audited rows: QF_UFBV/cvc5 reports
+  exact audited `dominant%(D) = 100% (4/4)`, Lean-checked unsat coverage
+  `100% (2/2)`, and no audit errors after the subsequent finite-domain
+  pigeonhole evidence and Lean-reconstruction work.
+  Updated `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md` so the live strategy reflects that artifacts are now
+  ingested, not merely planned. The remaining dominance work is to commit
+  complete audits for the other `audit now` rows.
+  Verification passed: `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **Session 2026-06-25 — per-instance dominance audit harness landed.**
+  Added `crates/axeyum-bench/examples/audit_dominance.rs`, the first concrete
+  harness for turning the Pareto-dominance readiness queue into exact
+  per-instance evidence fields. It reads an existing `*solver-vs-z3*` baseline
+  JSON, re-runs baseline-decided instances through `produce_evidence`, re-checks
+  the evidence, attempts `prove_unsat_to_lean_module` for `unsat`, and emits
+  `evidence_kind`, `evidence_certified`, `evidence_checked`, `lean_fragment`,
+  `lean_checked`, `trust_holes`, and `dominant_candidate` per instance. Local
+  smoke audits exposed both sides of the frontier: QF_UFBV has a positive
+  `QfUfBv` Lean-certified unsat (`ackermann2`) and also a baseline-decided
+  first-class-uninterpreted-sort case where `produce_evidence` still falls into
+  an unsupported BV path; QF_LRA has certified lazy-LRA evidence for
+  `arith/ite-lift` but no Lean reconstruction for that Boolean/ITE shape yet.
+  Updated `bench-results/DOMINANCE.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md` to reflect
+  that the harness now exists. **Next:** create committed
+  `bench-results/dominance/*.json` audit artifacts for the `audit now` rows and
+  teach `scripts/gen-dominance-scoreboard.py` to ingest them into exact
+  `dominant%(D)` instead of readiness labels.
+  Verification passed: `cargo check -p axeyum-bench --examples -j1`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json 5000 3 bench-results/local/dominance-qf-lra-smoke.json`;
+  `cargo run -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json 5000 4 bench-results/local/dominance-qf-ufbv-smoke.json`.
+
+- **Session 2026-06-25 — Pareto-dominance readiness report landed; scoreboard refreshed.**
+  Added a deterministic companion generator,
+  `scripts/gen-dominance-scoreboard.py`, and generated
+  `bench-results/DOMINANCE.md`. The report is intentionally conservative: it
+  combines the measured decide/PAR-2 rows from the existing scoreboard baselines
+  with a hand-audited proof-route map, and it labels rows as an audit queue
+  rather than claiming exact `dominant%(D)` before per-instance Lean certificate
+  coverage exists. Current readiness headline: **35 rows**, **992 files**,
+  **640 decided**, **591 oracle-compared**, **DISAGREE=0**, with **12**
+  decide-strong rows marked `audit now` for evidence/Lean reconstruction
+  measurement. Regenerated `bench-results/SCOREBOARD.md` from the committed
+  JSONs at the same time, correcting stale totals and reflecting the current
+  QF_ALIA / QF_NIA baseline movements. Updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md` to point at
+  the dominance report and to state that the next measurement step is a real
+  per-instance evidence/Lean audit harness. **Next:** build that harness so the
+  report can replace readiness labels with exact `lean_fragment`,
+  `lean_checked`, `trust_holes`, and `dominant%(D)` fields.
+  Verification passed: `python3 -m py_compile scripts/gen-dominance-scoreboard.py scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-scoreboard.py && python3 scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`; `./scripts/check-links.sh`.
+
+- **Session 2026-06-25 — focused OR branch repair for PBLs landed; AUFLIA remains 4/6.**
+  Added a bounded selected-assertion repair path to the one-sided `pbls` model
+  finder: wider OR-shaped assertions keep the cheap root-truth persistent score,
+  but when selected they get a local structural tie-break and a capped branch
+  repair planner that tries to make one disjunct true by applying simple literal
+  repairs as a unit. This targets generated branch-selector formulas without
+  raising the global structural-scoring cap; a broad cap increase and a 1 s
+  scalar local-search probe were measured and rejected because they did not close
+  the hard files. Local QF_AUFLIA fair-slice measurement remains **4/6 decided,
+  DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-pbls-focused-or-repair.json`; Z3 remains
+  **6/6**, PAR-2 **0.104 s** vs axeyum **6.668 s**). Route diagnostics remain
+  baseline-shaped: `bug330` is still UF-out-of-scope for local search and times
+  out in the scalar path after **1144** blocking lemmas; `bug337` still times out
+  in local search and then in scalar LIA after **851** blocking lemmas. **Next:**
+  switch away from small PBLs move families; the remaining AUFLIA gap needs a
+  real branch-schedule/model-construction shortcut, finite UF-table reasoning
+  for `bug330`, or SAT relevance in the large scalar skeleton.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — PBLs affine integer repair candidates landed; AUFLIA remains 4/6.**
+  Extended the one-sided `pbls` local-search model finder with assertion-local
+  integer repair candidates for narrow unit-affine shapes: `x`, `x + c`,
+  `c + x`, and `x - c` inside equality and order atoms now suggest boundary
+  moves using the current values of the opposite side. The candidate set is
+  capped and still combined with the existing finite constant-guided moves;
+  any `sat` remains replay-gated by the existing local-search and array
+  projection path. Local QF_AUFLIA fair-slice measurement remains **4/6 decided,
+  DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-pbls-affine-repairs.json`; Z3 remains
+  **6/6**, PAR-2 **0.105 s** vs axeyum **6.668 s**). Route diagnostics are flat:
+  `bug330` is still outside local-search scope because UF applications remain in
+  the scalar snapshot, and `bug337` still times out in local search before the
+  exact scalar loop times out after **855** blocking lemmas. **Next:** stop
+  expecting small PBLs move families to close this AUFLIA slice; the remaining
+  gap still wants finite UF-table model search for `bug330`, SAT
+  relevance/model construction for `bug337`, or a higher-level array/branch
+  abstraction shortcut.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — compact integer-bound implication lemmas landed; AUFLIA remains 4/6.**
+  Added a compact-formula upfront pruning pass to scalar arithmetic DPLL(T):
+  asserted simple integer bounds on the same expression now seed adjacent
+  monotonicity lemmas such as `x <= 0 => x <= 1` and `x >= 2 => x >= 1`.
+  Each lemma is recorded as the certifiable LIA core `{stronger_bound, not
+  weaker_bound}` and verified by the existing simplex certificate route. A
+  broader all-polarity version was measured and rejected for the current hard
+  AUFLIA slice because it inflated upfront clauses (`bug330` 131, `bug337` 600)
+  and reduced scalar rounds; the landed pass is asserted-bound-only and gated to
+  compact skeletons (`<=256` arithmetic atoms). Local QF_AUFLIA fair-slice
+  measurement remains **4/6 decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-compact-bound-implications.json`; Z3
+  remains **6/6**, PAR-2 **0.107 s** vs axeyum **6.668 s**). Hard-file
+  diagnostics are baseline-preserving: `bug330` stays at **27** upfront bound
+  lemmas and **1137** blocking lemmas before SAT timeout; `bug337` stays at
+  **150** upfront bound lemmas and **854** blocking lemmas before timeout.
+  **Next:** this reinforces that the remaining AUFLIA gap is not another small
+  static LIA lemma family; it is SAT relevance/model construction on the large
+  scalar skeleton, finite UF-table model search for `bug330`, or a higher-level
+  array/branch abstraction shortcut.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — capped integer-difference cores landed; AUFLIA remains 4/6.**
+  Added a second cheap dynamic core extractor to scalar arithmetic DPLL(T):
+  current integer literals of the form `x + c <= y + d` / `<` are recognized as
+  difference constraints, and small negative cycles are returned as compact theory
+  lemmas before the full-slice fallback. The common two-edge cycle
+  `x <= y` with `y + 1 <= x` is handled directly; full Bellman-Ford extraction is
+  capped to small/medium snapshots, and large generated AUFLIA slices decline this
+  extractor to avoid spending the SAT budget on core search. The returned lemmas
+  still go through the existing LIA simplex certificate verifier. Local QF_AUFLIA
+  fair-slice measurement remains **4/6 decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-capped-idl-core.json`; Z3 remains **6/6**,
+  PAR-2 **0.105 s** vs axeyum **6.668 s**). Hard-file diagnostics are essentially
+  baseline-preserving: `bug330` reaches **1140** blocking lemmas before SAT
+  timeout; `bug337` reaches **849** before SAT timeout. **Next:** this confirms
+  the hard AUFLIA files need either SAT relevance/model construction work at the
+  large scalar skeleton, or a different array/branch abstraction shortcut; compact
+  IDL cores help smaller formulas but do not close this slice.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — capped structural PBLs scoring landed; AUFLIA remains 4/6.**
+  The one-sided `pbls` model finder now scores compact Boolean assertions with a
+  structural cost instead of a single root-satisfied bit: nested `and`/`or`/`not`,
+  implication, Bool equality/xor, and Bool `ite` expose local gradients while
+  theory atoms remain evaluator-checked black boxes. The scorer is capped by DAG
+  size and variable incidence so large generated formulas keep the previous cheap
+  root-truth score; this avoids spending the whole portfolio budget inside one
+  move. Added a nested Bool/Int regression that requires the structural score to
+  find a replaying model. Local QF_AUFLIA fair-slice measurement remains **4/6
+  decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-structural-pbls-score.json`; Z3 remains
+  **6/6**, PAR-2 **0.112 s** vs axeyum **6.668 s**). Hard-file diagnostics remain:
+  `bug330` is still outside this probe because UF applications remain in the
+  scalar snapshot; `bug337` is in scope but local search times out, then the exact
+  scalar loop reaches **865** blocking lemmas before `rustsat-batsat` timeout.
+  **Next:** the AUFLIA frontier still needs SAT relevance / replay-gated model
+  construction for `bug337`, or finite UF-table model search for `bug330`; compact
+  structural scoring is not enough to close the slice.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — integer local-search scalar probe landed; AUFLIA remains 4/6.**
+  Extended the deterministic one-sided `pbls` local-search engine from Bool/BV
+  to Bool/BV/Int with finite, formula-constant-guided integer moves, then wired a
+  100 ms replay-gated probe behind scalar snapshot preprocessing in the lazy
+  ROW/extensionality array path. A probe `sat` reconstructs through the
+  preprocessing trail and then still goes through the normal array projection and
+  original-assertion replay; misses remain `unknown` and fall through to the
+  exact scalar backend. Local QF_AUFLIA fair-slice measurement remains **4/6
+  decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-int-local-search-scalar-probe.json`; Z3
+  remains **6/6**, PAR-2 **0.106 s** vs axeyum **6.668 s**). The useful movement
+  is diagnostic: `bug330`'s scalar snapshot still contains unsupported UF
+  applications for this local search (`query has a construct the evaluator cannot
+  reduce`), while `bug337` is in scope but the probe times out and the exact
+  scalar loop still expires after **857** rounds. **Next:** either teach the
+  model-search probe finite UF interpretations for `bug330`, or move to real SAT
+  relevance / model-construction work for in-scope `bug337`.
+  Verification passed: `cargo test -p axeyum-solver --lib pbls::tests -j1`;
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — current-polarity integer-bound cores landed; AUFLIA remains 4/6.**
+  Dynamic scalar LIA conflicts now try a cheap certified core before falling
+  back to the large full-theory slice: after the simplex oracle reports the
+  current integer assignment unsat, the DPLL(T) path scans the assigned literal
+  polarities for an obvious two-literal bound contradiction such as `x <= 0`
+  with `not (x <= 1)` (i.e. `x >= 2`). The returned core is still recorded as an
+  ordinary `ArithLemmaLiteral` and verified by the existing refutation checker.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-cheap-bound-core.json`; Z3
+  remains **6/6**, PAR-2 **0.106 s** vs axeyum **6.670 s**). Route diagnostics:
+  at 10 s, `bug330` now reaches **1143** scalar blocking lemmas (was **608**
+  after the warm skeleton) before `rustsat-batsat` times out; `bug337` reaches
+  **860** blocking lemmas (was **788**) before the scalar loop exhausts the
+  timeout. **Next:** the remaining blocker is learned-clause search quality /
+  relevance on the large scalar Boolean skeleton, or a replay-gated
+  model-construction shortcut for `bug337`; cheap bound cores alone do not close
+  either hard file.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — warm incremental Boolean skeleton for scalar arithmetic landed; AUFLIA remains 4/6.**
+  Replaced the legacy arithmetic DPLL fallback's per-round pure-Boolean solve
+  path with a small internal `BoolSkeletonSolver`: the scalar Boolean skeleton is
+  encoded to CNF once, kept in a warm `IncrementalSat`, and each learned theory
+  blocking clause is added incrementally. This removes the repeated
+  Bool→AIG→CNF rebuild through `SatBvBackend` on every scalar refinement round;
+  `sat` still flows through `finish_sat`, theory-model reconstruction, and
+  original-assertion replay before being accepted.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-warm-scalar-bool-skeleton.json`;
+  Z3 remains **6/6**, PAR-2 **0.105 s** vs axeyum **6.670 s**). The diagnostic
+  frontier moved materially: at 10 s, `bug330` now reaches **608** scalar
+  blocking lemmas (was **40** after the large-core cutoff) before `rustsat-batsat`
+  times out; `bug337` now reaches **788** blocking lemmas (was **46**). A 30 s
+  single-file `bug337` run reaches **1670** blocking lemmas before BatSat times
+  out. **Next:** the remaining blocker is SAT search quality / relevance after a
+  large learned-clause Boolean skeleton, or a replay-gated model-construction
+  shortcut for `bug337`; rebuild overhead is no longer the limiting cost.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — scalar LIA bound lemmas + large-core cutoff landed; AUFLIA remains 4/6.**
+  Added a certified upfront pruning pass to the legacy arithmetic DPLL fallback:
+  simple asserted integer bounds on the same term now generate two-literal
+  theory lemmas for impossible lower/upper pairs, e.g. the branch-selector
+  pattern `x >= 1` with `x <= 0`. These clauses are recorded as ordinary
+  `ArithLemmaLiteral` cores and pass the existing independent refutation
+  verifier. Also made conflict-core minimization size-aware: scalar abstractions
+  with more than 128 atoms use the full unsat theory slice instead of spending
+  many simplex calls on deletion minimization. Small/certification-friendly
+  formulas still get minimized cores.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-bound-lemmas-core-cutoff.json`;
+  Z3 remains **6/6**, PAR-2 **0.105 s** vs axeyum **6.673 s**). The useful
+  movement is diagnostic/throughput: at 10 s, `bug330` now reaches **40**
+  scalar blocking lemmas with **27** upfront bound lemmas before the Boolean
+  skeleton times out; `bug337` reaches **46** blocking lemmas with **150**
+  upfront bound lemmas. A 30 s single-file `bug337` run reaches **84** blocking
+  lemmas before the pure Boolean skeleton times out, compared with the previous
+  **19**-lemma diagnostic under core minimization. **Next:** the remaining
+  blocker is no longer expensive simplex core minimization; it is Boolean
+  skeleton scaling / relevance / incremental SAT after many learned clauses, or
+  a replay-gated SAT/model-construction shortcut for `bug337`.
+  Verification passed: `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`.
+
+- **Session 2026-06-25 — online LIA/LRA Boolean-leaf model lift landed; AUFLIA remains 4/6.**
+  Closed a replay gap in the standalone online arithmetic drivers. The online
+  LIA/LRA encoders already admit declared Boolean leaves in the Boolean skeleton,
+  but a `sat` leaf reconstructed only the arithmetic theory model before replay.
+  They now lift final DPLL assignments for declared Boolean leaves into the
+  returned model, then replay with the combined arithmetic+Boolean assignment.
+  Added focused in-source regressions for `p ∧ (x < y ∨ y < x)` in both LIA and
+  LRA, which require the Boolean leaf value to replay.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-online-boolean-model-lift.json`;
+  Z3 remains **6/6**, PAR-2 **0.102 s** vs axeyum **6.673 s**). Final route trace
+  is unchanged on the two hard files: `bug330` is still **802** atoms / **6**
+  blocking lemmas before timeout, and `bug337` is still **946** atoms / **7**
+  blocking lemmas before timeout. A tested 3s online LIA probe cap did not solve
+  either file and reduced `bug330` fallback progress, so it was reverted to the
+  previous 1s cap. Verification passed:
+  `cargo test -p axeyum-solver --lib lia_online::tests -j1`;
+  `cargo test -p axeyum-solver --lib lra_online::tests -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo fmt --all --check`. **Next:** the remaining AUFLIA work is still a real
+  `bug337` SAT/model-construction shortcut on the smaller scalar abstraction, or
+  `bug330` Boolean-layer model certification/relevance.
+
+- **Session 2026-06-25 — scalar abstraction preprocessing/flattening landed; AUFLIA remains 4/6.**
+  Wired the existing replay-safe word-level preprocessing wrapper into the
+  lazy ROW/extensionality scalar CEGAR boundary, after first flattening positive
+  top-level conjunctions. This exposes generated scalar definitions (`x = t`,
+  constants, fresh read aliases) to `propagate_values`/`solve_eqs` before the
+  arithmetic or UFLIA backend builds its Boolean/theory skeleton. The change is
+  relaxation-local: `unsat` of the preprocessed scalar snapshot still implies
+  `unsat` of the snapshot, and every `sat` candidate is reconstructed by the
+  preprocessing trail before the normal ROW/extensionality projection and
+  original-formula replay.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-scalar-preprocess-flatten.json`;
+  Z3 remains **6/6**, PAR-2 **0.104 s** vs axeyum **6.674 s**). The useful
+  movement is diagnostic and scalar-frontier specific: `bug337` drops from
+  **1374** arithmetic atoms / **2** blocking lemmas to **946** atoms / **7**
+  lemmas at 10 s; a 30 s single-file run reaches **19** blocking lemmas but
+  still returns `unknown`, so the blocker is not just the harness cap. `bug330`
+  remains at **802** atoms and times out after **6** blocking lemmas. Verification
+  passed: `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_row -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`. **Next:** use the smaller
+  `bug337` abstraction to add a real SAT/model-construction shortcut, or attack
+  `bug330` through Boolean-layer model certification/relevance rather than more
+  scalar cleanup.
+
+- **Session 2026-06-25 — scalar Boolean short-circuiting landed; AUFLIA remains 4/6.**
+  Added constant-aware Boolean simplification inside the legacy arithmetic
+  abstraction used by the scalar LIA/LRA fallback: dead `and`/`or` branches are
+  skipped before their arithmetic atoms are allocated; Boolean `xor`, implication,
+  equality, negation, and Bool-valued `ite` now fold constants and identical
+  branches during abstraction. This is a sound local cleanup and prevents future
+  dead Boolean scaffolding from inflating scalar theory atoms, but it is neutral
+  on the current cvc5 QF_AUFLIA hard slice. Route trace remains: `bug330` times
+  out at ROW round 0 with **62 select sites**, then **802** arithmetic atoms and
+  **7** blocking lemmas; `bug337` times out at extensionality round 0 with
+  **152 select sites**, then **1374** atoms and **2** blocking lemmas. Local
+  QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-boolean-simplification.json`; Z3 remains
+  **6/6**, PAR-2 **0.104 s** vs axeyum **6.672 s**). Verification passed:
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`. **Next:** stop
+  looking for shallow Boolean cleanup to move this slice; `bug330` needs real
+  scalar relevance / Boolean-layer model certification, and `bug337` needs a
+  smaller initial extensionality abstraction or SAT/model-construction shortcut.
+
+- **Session 2026-06-25 — arithmetic atom canonicalization and bounded LIA probe cap landed; AUFLIA remains 4/6.**
+  Reduced scalar arithmetic abstraction duplication in the legacy DPLL(LIA/LRA)
+  path. Reversed order atoms now share one canonical proposition
+  (`x >= y` becomes `y <= x`, `x > y` becomes `y < x`), negated order atoms are
+  pushed to their order-complement (`not (x < y)` becomes `y <= x`), and trivial
+  self-comparisons/equalities fold to Boolean constants instead of allocating
+  theory atoms. A trial expansion of `not (= a b)` to strict-order disjunctions
+  was rejected because it increased `bug330`'s scalar atom count; only the
+  beneficial order canonicalization was kept. Added unit tests for reversed-order
+  sharing, negated-order sharing, and self-comparison/equality folding.
+  Also capped the online LIA probe inside `check_with_arith_dpll` to at most
+  1 second of a configured wall-clock timeout. The probe still gets a bounded
+  chance to use the stronger CDCL(T) spine, but large scalar abstractions no
+  longer lose half of the measured budget before the legacy arithmetic fallback.
+  Local QF_AUFLIA fair-slice measurement remains **4/6 decided, DISAGREE=0**
+  (artifact `bench-results/local/qf-auflia-after-arith-atom-canonicalization.json`).
+  The route trace shows modest but real scalar-frontier movement: `bug330` drops
+  from **832** to **802** arithmetic atoms and the fallback advances from **4**
+  to **7** blocking lemmas before timing out; `bug337` remains **1374** atoms and
+  **2** blocking lemmas before timeout. Verification passed:
+  `cargo test -p axeyum-solver --lib dpll_lia::tests -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo fmt --all --check`. **Next:** `bug330` still needs stronger scalar
+  relevance/atom reduction or a better SAT/theory loop; `bug337` needs a
+  SAT/model-construction shortcut or a much smaller initial extensionality
+  scalar abstraction.
+
+- **Session 2026-06-25 — measurement harness timeout is now passed into the solver; AUFLIA misses localized to initial scalar abstractions.**
+  Fixed the corpus measurement examples so the Axeyum worker-thread cap is also
+  passed into `SolverConfig::timeout` for `check_auto`. Before this, `measure_corpus`
+  and `measure_graduated` could kill the worker at the harness boundary while
+  deadline-aware solver routes saw `timeout = None`, making PAR-2 less
+  representative of the solver API. The worker cap remains as an outer safety net.
+  Also tightened lazy ROW/extensionality CEGAR budget handling: each scalar backend
+  call now receives only the remaining outer deadline, and unknowns from the scalar
+  backend are annotated with the ROW/extensionality round, materialized select-site
+  count, and lemma counts. The legacy arithmetic DPLL loop now similarly passes
+  remaining time to the SAT skeleton backend and reports atom/blocking-lemma counts
+  on timeout.
+  Local QF_AUFLIA fair-slice measurement with the corrected harness remains **4/6
+  decided, DISAGREE=0** (artifact
+  `bench-results/local/qf-auflia-after-scalar-abstraction-diagnostics.json`;
+  PAR-2 **6.672 s** vs Z3 **0.104 s**). The route trace now proves both remaining
+  misses fail before array refinement does any useful work: `bug330` times out in
+  the initial ROW scalar abstraction at round 0 with **62 select sites**, then
+  arithmetic times out after **4 scalar rounds / 832 atoms / 4 blocking lemmas**;
+  `bug337` times out in the initial extensionality scalar abstraction at round 0
+  with **152 select sites**, then arithmetic times out after **2 scalar rounds /
+  1374 atoms / 2 blocking lemmas**.
+  Verification passed: `cargo check -p axeyum-bench --examples -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_row -j1`;
+  `cargo test -p axeyum-solver --test abv_lazy_ext -j1`;
+  `cargo fmt --all --check`. **Next:** attack scalar abstraction size/relevance
+  for `bug330`/`bug337` before adding more ROW/extensionality lemmas; the current
+  bottleneck is the first scalar solve, not refinement convergence.
+
+- **Session 2026-06-25 — UFLIA/UFLRA combined CDCL(T) now honors deadlines; AUFLIA frontier sharpened, 4/6 unchanged.**
+  Closed a resource-bound gap in the combined online UF+arithmetic drivers:
+  both `QF_UFLIA` and `QF_UFLRA` computed a wall-clock deadline for the
+  integrated `Dpll<CombinedIncremental*>` path but then called the unbounded
+  `solve` entry. They now call `solve_with_deadline` and return a
+  timeout-classified `Unknown` when the budget expires. Added zero-budget
+  Boolean-combination regressions in both online suites so timeout declines are
+  reported as `UnknownKind::Timeout`, not a generic incomplete search.
+  Raised the UFLIA Boolean atom admission cap from 48 to 384 under that deadline
+  guard, enough to exercise the current `bug330` scalar abstraction (339 atoms)
+  instead of rejecting it at the front door. The new route trace confirms
+  `bug330` is no longer an admission-cap miss: it reaches the online
+  UF+LIA combination and declines on an uncertified Boolean-layer theory model,
+  then still times out in the lazy Int-array route. `bug337` remains the pure
+  Int-array lazy-LIA timeout.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-uflia-deadline-cap.json`) remains **4/6
+  decided, DISAGREE=0**; Z3 remains **6/6** (PAR-2 **0.106 s** vs axeyum
+  **6.672 s**). Verification passed:
+  `cargo test -p axeyum-solver --test uflia_online -j1`;
+  `cargo test -p axeyum-solver --test uflra_online -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** treat `bug330`
+  as an interface/replay/relevance problem, not a 48-atom admission problem;
+  separately attack `bug337` with Int-array SAT/model construction or a better
+  lazy-LIA search path.
+
+- **Session 2026-06-25 — AUFLIA permutation-chain refuter closes cvc5 `swap...`; fair slice now 4/6.**
+  Generalized the prior clean swap-chain recognizer into a terminating,
+  memoized array-permutation normalizer. A recognized store pair
+  `store(store(a,i,select(a,j)),j,select(a,i))` is treated as a swap over the
+  normalized base, and the normal form records the induced deterministic
+  permutation map rather than an ordered syntactic list. Same-index swaps collapse
+  to identity, repeated/canceling swaps normalize naturally, and the recognizer
+  accepts select bases that are already extensionally equal under the same
+  normalizer. This remains a refuter only: it proves `unsat` for same-index read
+  disequalities between extensionally equal permutation chains and otherwise
+  declines.
+  Moved the proven array-unsat refuters to the `check_auto` front door, before
+  global coercion/ITE normalization and before UF+arithmetic. That matters for
+  generated AUFLIA formulas: the exact cvc5
+  `cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2` file now decides
+  immediately via `array-unsat-refuter` instead of burning the scalar lazy-LIA
+  timeout. The existing two-store split and array congruence refuters also run
+  from this early hook, but only return proven `unsat`.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-permutation-refuter.json`) is now **4/6
+  decided, DISAGREE=0**, improving the prior 3/6; Z3 remains **6/6** and much
+  faster (PAR-2 **0.104 s** vs axeyum **6.672 s**). Route trace: `bug336` and
+  `swap...` decide via `array-unsat-refuter`; `prop__cadical_bug8` and
+  `uf__issue4446` decide `sat`; remaining misses are `bug330` (339 UFLIA atoms
+  against the current 48-atom online cap, then lazy-LIA timeout) and `bug337`
+  (pure Int-array lazy-LIA timeout).
+  Verification passed: direct lib regression
+  `abv::tests::symmetric_swap_chain_refuter_closes_cvc5_regression` before the
+  final front-door move; full
+  `cargo test -p axeyum-solver --test int_array_sort -j1` after the front-door
+  move; exact end-to-end cvc5 swap regression after the front-door move;
+  `cargo fmt --all --check`; `git diff --check`; route explanation and
+  fair-slice measurement above with `CARGO_INCREMENTAL=0`. A final rerun of the
+  direct lib test was skipped because the host hit `No space left on device`
+  while writing incremental cache; the normalizer itself was unchanged after
+  that direct pass. **Next:** attack the two remaining AUFLIA misses through
+  scalar search: relevance/atom-budget work for `bug330`, or an Int-array
+  SAT/model-construction improvement for `bug337`.
+
+- **Session 2026-06-25 — AUFLIA bounded LIA probe + clean swap-chain refuter landed; measured count unchanged.**
+  Tightened the scalar-engine boundary exposed by the prior AUFLIA projection
+  slice. `check_with_arith_dpll` now tries the shared online LIA DPLL(T) spine
+  first and, when a timeout is configured, gives it a bounded probe before
+  falling back to the legacy certified arithmetic-DPLL route with only the
+  remaining budget. `check_qf_lia_online` now honors that wall-clock deadline
+  instead of running unbounded inside array/UF scalar abstractions. Added a
+  replay regression ensuring Boolean leaves that the online probe cannot model
+  still fall back to a replaying SAT result.
+  Also added a narrow, sound array refuter for clean symmetric store-swap
+  chains of the form `store(store(a,i,select(a,j)),j,select(a,i))`: two arrays
+  with the same base and the same ordered sequence of unordered swap pairs are
+  extensionally equal, so a same-index read disequality refutes. This is useful
+  coverage for generated swap-chain shapes, but it is not yet strong enough for
+  the current cvc5 `swap...` corpus instance, which still falls through to the
+  scalar lazy-LIA timeout.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-swap-chain-refuter.json`) remains **3/6
+  decided, DISAGREE=0**; Z3 decides **6/6** on the same fair slice. Remaining
+  misses are unchanged: `bug330` is a large Boolean UFLIA abstraction
+  (**339 > 48** atom cap, then lazy-LIA timeout if forced), `swap...` needs a
+  stronger array-permutation/ROW normalizer or scalar-LIA improvement, and
+  `bug337` remains a scalar Int-array timeout. Verification passed:
+  `cargo fmt --all --check`; `git diff --check`;
+  `cargo check -p axeyum-solver -j1`;
+  `cargo test -p axeyum-solver --test int_array_sort -j1`;
+  `cargo test -p axeyum-solver --test lia_dpll -j1`;
+  `cargo test -p axeyum-solver --test lia_online -j1`. All-features workspace
+  verification was intentionally not rerun on this slice because the host disk
+  is nearly full.
+  **Next:** treat QF_AUFLIA as a scalar-search frontier now: either raise/reduce
+  the `bug330` Boolean UFLIA abstraction cost with learned relevance, build a
+  real array-permutation invariant for the swap chain, or address the
+  `bug337` Int-array SAT/model-construction timeout.
+
+- **Session 2026-06-25 — AUFLIA projection completion + scalar fallback diagnostics landed.**
+  Narrowed the next QF_AUFLIA frontier after the structural ROW slice. The
+  `QF_UFLIA` scalar backend used under lazy ROW now mirrors the normal mixed-UF
+  dispatcher more closely: online UFLIA is still tried first, and non-budget
+  `unknown` can fall back to the eager UF+arithmetic route. `FunctionElimination`
+  model projection now completes non-application symbols with well-founded default
+  values before evaluating full-`Value` UF argument keys, while still requiring
+  each fresh `!fn_app_*` result to be assigned. This closes the concrete
+  array-valued-UF-argument projection failure exposed by the `swap...` corpus
+  shape (`no value bound for symbol #6`). Added a rewrite-layer regression for
+  projection of `f(store(a,i,0))` when `a`/`i` are unconstrained by the backend
+  model. The UFLIA Boolean atom-cap decline now reports `actual > cap`, making
+  `bug330`'s scalar abstraction size explicit (**339 > 48**).
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-projection-completion.json`) remains **3/6
+  decided, DISAGREE=0**. Remaining misses are now clearer: `bug330` is a large
+  Boolean UFLIA abstraction (339 atoms; array route then hits the lazy-LIA budget
+  if forced through eager fallback), `swap...` is past structural/projection
+  failures and now reaches a lazy-LIA timeout, and `bug337` remains a scalar
+  Int-array timeout. Verification passed: focused rewrite projection regression;
+  focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** stop treating these
+  as structural/modeling bugs; the next real movement needs a stronger scalar
+  Boolean/LIA engine for large array abstractions (or a corpus-specific valid
+  array invariant for the swap-chain), plus the `bug337` SAT-side timeout.
+
+- **Session 2026-06-25 — AUFLIA structural ROW coverage widened; measured count unchanged.**
+  Extended the mixed Int-array/AUFLIA lazy ROW route past two structural blockers
+  without claiming a decide-rate gain. Scalar UF applications now preserve
+  array-valued arguments through ROW abstraction instead of recursively rejecting
+  store-chain array operands; `select(ite c a b, i)` now lowers inside the lazy
+  resolver to `ite c (select a i) (select b i)`; and store ROW "miss" branches can
+  point at an arbitrary abstracted scalar read expression rather than only another
+  materialized site. The UF-arithmetic overbound guard also no longer short-circuits
+  mixed array+UF queries on `unknown`; it records the decline and lets the downstream
+  array route try. Added focused regressions for the swap-store-chain skolem-index
+  shape and array-`ite` reads.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-array-ite-routing.json`) remains **3/6
+  decided, DISAGREE=0**. The route trace is more precise: `bug330` now reaches
+  `array-fast-path` and declines on the scalar UFLIA Boolean atom cap ("too many
+  theory atoms") instead of the earlier structural ROW rejection; `swap...` is also
+  past structural rejection and now fails by replay/timeout; `bug337` remains a
+  scalar Int-array timeout. Verification passed: focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** attack the remaining
+  QF_AUFLIA misses by reducing/raising the scalar UFLIA Boolean atom cap for
+  `bug330`, improving replay/refinement for the swap-chain corpus instance, and
+  addressing the scalar Int-array timeout in `bug337`.
+
+- **Session 2026-06-25 — AUFLIA store-disjunction refuter landed.**
+  Closed the next named QF_AUFLIA blocker (`bug336`) with a sound array-specific
+  refuter for the Stump-Barrett-Dill-Levitt store consequence:
+  `store(a,i,v)=b ∧ store(a,j,w)=b ⇒ i=j ∨ a=b`. The implementation detects
+  two positive store equalities with the same base and target, then asks the
+  existing checked EUF congruence refuter to prove both branches impossible under
+  the original assertions. This turns the corpus shape
+  `f(x) != f(y) ∧ g(a) != g(b)` into a real `unsat` result without trusting the
+  new search logic for proof: each branch refutation is delegated to the existing
+  congruence checker. Added focused coverage for the exact AUFLIA pattern and a
+  satisfiable guard where one branch remains possible.
+  Local QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-store-split.json`) is now **3/6 decided,
+  DISAGREE=0**, improving the previous mixed ROW+UF result of 2/6. Per-file
+  trace confirms `cli__regress0__auflia__bug336.smt2` now decides `unsat` via
+  `array-fast-path`; remaining QF_AUFLIA misses are `bug337` (scalar Int-array
+  timeout) and `bug330` / `swap...` (array term shapes outside the current ROW
+  fragment). Verification passed: focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** extend the ROW
+  abstraction to the array-valued structural terms in `bug330`/`swap...`
+  (superseded by the later structural ROW coverage slice), then address the scalar
+  Int-array timeout in `bug337`.
+
+- **Session 2026-06-25 — Mixed AUFLIA lazy ROW+UF route landed.**
+  Advanced the next QF_AUFLIA blocker past parser/model admission into an actual
+  mixed array+UF solving path. Lazy ROW/extensionality now has a
+  `QF_UFLIA` scalar backend (`check_qf_auflia_lazy_row`) that delegates the
+  scalar abstraction to the existing online UF+LIA combination while keeping the
+  array CEGAR layer responsible for ROW/extensionality. SAT remains replay-gated
+  against the original array formula. Model plumbing was tightened so projected
+  array models preserve UF interpretations, missing UF interpretations are
+  completed with deterministic well-founded defaults, and the UF+LIA model
+  builder completes non-Int symbols before evaluating array arguments in
+  integer-result function tables. `check_auto` now routes non-BV
+  Bool/linear-Int+UF array slices through this path, and budget `unknown` from
+  eager UF+arith no longer prevents mixed array+UF queries from falling through
+  to the array CEGAR route. Added `axeyum-bench/examples/explain_corpus.rs` for
+  bounded per-file route traces.
+  Regression coverage in `crates/axeyum-solver/tests/int_array_sort.rs` now
+  includes replayed SAT for `g : (Array Int Int) -> Int`, replayed SAT for
+  `select a (idx a)`, and a ROW contradiction at a UF-produced index. Local
+  QF_AUFLIA fair-slice measurement (debug harness, 10 s, artifact
+  `bench-results/local/qf-auflia-after-mixed-row-uf.json`) is now **2/6
+  decided, DISAGREE=0**; this is a real movement from the previous 1/3, but
+  parser admission also expanded the fair set to six files. Per-file trace:
+  `prop__cadical_bug8` and pure Boolean UF decide; `bug337` is a scalar
+  Int-array timeout; `bug330` and `swap...` use array term shapes outside the
+  current ROW fragment; `bug336` needs stronger array/UF extensional reasoning
+  after lazy refinement. Verification passed: focused Int-array/AUFLIA tests;
+  `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-features -j4`;
+  `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-solver -p axeyum-bench --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** extend the ROW
+  fragment to array-valued `ite`/structural store-chain operands and add the
+  missing array-equality-to-UF congruence refinement needed by `bug336`, then
+  remeasure QF_AUFLIA/QF_ALIA.
+
+- **Session 2026-06-25 — AUFLIA array-argument UF prerequisite landed.**
+  Continued from the post-QF_ALIA scalar-array slice and narrowed the remaining
+  QF_AUFLIA gap to mixed array+UF handling. The IR now admits array-valued
+  *parameters* for uninterpreted functions while still rejecting array-valued
+  results; this matches the cvc5 AUFLIA shapes such as
+  `g : (Array Int Int) -> Int` without opening array-returning UF terms before
+  solver/model projection is ready. `FuncValue` storage is generalized from
+  "arithmetic only" to full-`Value` tables whenever a signature mentions
+  `Int`/`Real`/arrays/datatypes, so model replay can key function entries by
+  concrete generic array values. UF model projection now uses the same predicate
+  instead of scalar-coding array arguments. SMT-LIB parsing accepts array-argument
+  `declare-fun` signatures and keeps array-valued results as clear IR errors.
+  Added regression coverage in `crates/axeyum-ir/tests/ir.rs`,
+  `crates/axeyum-smtlib/tests/smtlib.rs`, and
+  `crates/axeyum-solver/tests/int_array_sort.rs`; the solver now proves the
+  narrow AUFLIA congruence case
+  `a = b ∧ g(a) != g(b)` for `g : (Array Int Int) -> Int` as `unsat`, and
+  pins a satisfiable array-argument UF shape so it may return `sat` or
+  `unknown` but never a false `unsat`.
+  Verification passed: `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-smtlib -p axeyum-solver --all-features -j4`;
+  focused IR/SMT-LIB/Int-array solver tests; `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-smtlib -p axeyum-solver --all-targets --all-features -j4 -- -D warnings`;
+  `cargo fmt --all --check`; `git diff --check`. **Next:** wire a
+  replay-checked scalar backend for lazy ROW/extensionality whose scalar side can
+  solve UF+LIA with array-argument applications, then remeasure QF_AUFLIA; current
+  UF+LIA online docs still explicitly decline arrays, so the broader mixed route
+  is not done.
+
+- **Session 2026-06-25 — Int-array SAT projection + scalar lazy ROW route landed.**
+  Advanced the next Tier-A array keystone slice: the IR now has
+  `Value::GenericArray` for non-BV array models, the evaluator executes
+  `const-array`/`select`/`store` over arbitrary non-array component sorts, and
+  well-founded defaults now include generic array values. The lazy
+  ROW/extensionality CEGAR path no longer assumes `u128`-coded BV indices/results:
+  it compares full `Value`s, completes missing scalar symbols before projection,
+  reconstructs either compact `ArrayValue` or `GenericArrayValue`, and uses
+  single diff-skolem witnesses at the real index sort. `check_auto` now routes the
+  Bool/linear-Int scalar array slice through the existing lazy array machinery
+  with the arithmetic DPLL backend, so model-producing `(Array Int Int)` SAT
+  shapes now return replay-checked `sat` instead of the previous explicit
+  `unknown`. The eager BV array eliminator still remains BV-only but now declines
+  non-BV arrays cleanly instead of assuming widths.
+  Regression coverage added/updated:
+  `crates/axeyum-ir/tests/ir.rs` pins generic Int-array
+  `const-array`/`store`/`select` evaluation;
+  `crates/axeyum-solver/tests/int_array_sort.rs` now covers congruence UNSAT,
+  free-read SAT replay, ROW-conflict UNSAT, and array-disequality SAT replay.
+  Verification passed: `cargo fmt --all --check`;
+  `cargo check -p axeyum-ir -p axeyum-rewrite -p axeyum-solver --all-features -j4`;
+  `cargo clippy -p axeyum-ir -p axeyum-rewrite -p axeyum-solver --all-targets --all-features -j4 -- -D warnings`;
+  focused IR, Int-array solver, SMT-LIB array, and uninterpreted-sort solver
+  tests. Local post-slice measurement (debug harness, 10 s, artifacts under
+  `bench-results/local/`): QF_ALIA cvc5 clean fair slice now **3/5 decided,
+  DISAGREE=0** (`z3_rejected_unfair=1`), improving the committed 0-decided
+  baseline; QF_AUFLIA fair slice remains **1/3 decided, DISAGREE=0**, confirming
+  mixed UF/array breadth is still open; QF_UF overbound remains **4/6 decided,
+  DISAGREE=0**. **Next:** promote/refresh committed baselines if desired, then
+  extend the scalar array route across mixed AUFLIA/UF and broader non-BV
+  component sorts instead of only Bool/linear-Int arrays.
+
+- **Session 2026-06-25 — IR keystone slice: sort-valued arrays landed.**
+  Advanced the remaining half of the Tier-A array IR blocker without claiming the
+  full Int-array decision procedure yet: `Sort::Array` now carries sort-valued
+  component metadata (`ArraySortKey`) instead of BV widths only, while
+  `array_widths()` remains a BV-only compatibility helper for the existing finite
+  array model/projection path. `TermArena::select`/`store` now check the actual
+  index/element sorts; `const-array` carries its index sort; SMT-LIB parses and
+  writes free `(Array Int Int)` formulas; writer logic detection reports
+  `QF_ALIA` for Int arrays instead of fake BV logic. `check_auto` now scans array
+  component sorts, proves the congruence-UNSAT slice for Int-indexed arrays
+  (`a=b ∧ select(a,i)≠select(b,i)`), and at that point returned an explicit
+  `unknown` for model-producing non-BV array SAT shapes until generic array
+  models existed (superseded by the later 2026-06-25 entry above).
+  Regression coverage: `crates/axeyum-smtlib/tests/smtlib.rs` checks first-class
+  `(Array Int Int)` parse/write/round-trip and free Int-array representability;
+  `crates/axeyum-solver/tests/int_array_sort.rs` checks Int-array congruence
+  `unsat` plus the explicit non-BV-array `unknown` boundary. Verification passed:
+  `cargo fmt --all --check`;
+  `scripts/mem-run.sh cargo check --workspace --all-features -j4`;
+  `scripts/mem-run.sh cargo clippy --workspace --all-targets --all-features -j4 -- -D warnings`;
+  `scripts/mem-run.sh cargo test -p axeyum-ir -p axeyum-smtlib -p axeyum-rewrite -p axeyum-query -p axeyum-solver --all-features --no-run -j4`;
+  focused SMT-LIB, Int-array solver, and uninterpreted-sort solver tests. Host
+  disk remains tight after rebuilding test artifacts (`df -h .` ≈ 6.8G free,
+  99% used). **Superseded next:** generic non-BV array model projection and the
+  Bool/linear-Int lazy scalar route landed later on 2026-06-25; current next is
+  remeasurement plus mixed AUFLIA/UF breadth.
+
+- **Session 2026-06-25 — IR keystone slice: first-class uninterpreted sorts landed.**
+  Advanced the [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)
+  Tier-A QF_UF blocker without touching the array-sort half yet:
+  `Sort::Uninterpreted(SortId)` is now an arena-declared `Copy` carrier, SMT-LIB
+  arity-0 `(declare-sort U 0)` no longer collapses to a parser-chosen `BitVec(W)`,
+  `Value::Uninterpreted` provides deterministic replay tokens, and the EUF
+  e-graph model builder returns replay-checked `sat` models over declared carrier
+  sorts. `check_auto` feature scanning now routes pure declared-sort equality/UF
+  queries through the EUF path even when no `Op::Apply` occurs; evidence routing
+  keeps those queries out of the raw QF_BV evidence label. SMT-LIB export emits
+  `(declare-sort … 0)` and round-trips declared-sort constants/functions.
+  Regression coverage:
+  `crates/axeyum-smtlib/tests/smtlib.rs` checks first-class parsing/writing and
+  collision/arity errors; `crates/axeyum-solver/tests/uninterpreted_sort_euf.rs`
+  checks replayed `sat` for `a≠b : U` and congruence `unsat` for
+  `a=b ∧ f(a)≠f(b)`. Verification passed:
+  `cargo fmt --all --check`; `scripts/mem-run.sh cargo check --workspace --all-features -j4`;
+  `scripts/mem-run.sh cargo clippy --workspace --all-targets --all-features -j4 -- -D warnings`;
+  focused parser/solver tests. A broader
+  `cargo test -p axeyum-ir -p axeyum-smtlib -p axeyum-solver --all-features -j4`
+  hit the known host disk-pressure failure while linking solver tests
+  (`No space left on device`); generated `target/debug/incremental` was removed,
+  restoring limited space. **Next:** finish the same keystone by introducing
+  sort-valued array index/element metadata and the single-witness extensionality
+  route for Int-indexed arrays; then remeasure QF_UF/QF_ALIA/QF_AUFLIA rows.
+
 - **Session 2026-06-23 — Z3/cvc5 gap analysis amended after online-combination push.**
   Updated [`docs/plan/gap-analysis-z3-cvc5-2026-06-22.md`](docs/plan/gap-analysis-z3-cvc5-2026-06-22.md)
   and sharpened `PLAN.md` to reflect the latest ledger: online LRA/LIA and
@@ -935,9 +2612,699 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed slice + baseline (32/43 decided, agree=32, DISAGREE=0) |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV exact audits have zero audit errors/timeouts, and the array proof/evidence work has moved exact coverage to QF_ABV **139/169** and QF_AUFBV **41/41** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-25** — **ABV store self-update read coverage widened.**
+  Extended `ArrayAxiom` read-congruence equality closure so a self-update
+  equality implies the read at the update index: `a = store(a, i, v) =>
+  select(a, i) = v`. This certifies `ext22` as `UnsatArrayAxiom` evidence with
+  `ArrayAxiom` Lean reconstruction through the `ReadCongruence` path. Re-ran
+  the complete ABV dominance audit: **QF_ABV 138/169 → 139/169** dominant with
+  Lean unsat **54/83 → 55/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**; the artifact now has **51** `array-axiom-unsat` rows and
+  **28** remaining `bare-unsat` rows. Regenerated `bench-results/DOMINANCE.md`
+  and updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext22.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV store same-cell injectivity coverage widened.**
+  Extended `ArrayAxiom` read-congruence equality closure so equal same-cell
+  stores imply equal stored values: `store(a, i, v) = store(a, i, w) => v = w`.
+  This certifies `extarraywrite1` as `UnsatArrayAxiom` evidence with
+  `ArrayAxiom` Lean reconstruction through the `ReadCongruence` path. Re-ran
+  the complete ABV dominance audit: **QF_ABV 137/169 → 138/169** dominant with
+  Lean unsat **53/83 → 54/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**; the artifact now has **50** `array-axiom-unsat` rows and
+  **29** remaining `bare-unsat` rows. Regenerated `bench-results/DOMINANCE.md`
+  and updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__extarraywrite1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV concat-suffix ROW coverage widened.**
+  Extended `ArrayAxiom` index reasoning so BV terms with known concrete low-bit
+  suffixes are definitely distinct when those suffixes disagree, even if concat
+  boundaries differ. This certifies `3vl1` as `UnsatArrayAxiom` evidence with
+  `ArrayAxiom` Lean reconstruction through the `ReadOverWrite` path. Re-ran the
+  complete ABV dominance audit: **QF_ABV 136/169 → 137/169** dominant with Lean
+  unsat **52/83 → 53/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**; the artifact now has **49** `array-axiom-unsat` rows and
+  **30** remaining `bare-unsat` rows. Regenerated `bench-results/DOMINANCE.md`
+  and updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV BV-not injectivity read-congruence coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence equality closure with the
+  inverse fact for bit-vector complement literals: `bvnot x = bvnot y` records
+  `x = y`, and the disequality direction records `x != y`. This certifies
+  `read22` as `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean reconstruction.
+  Re-ran the complete ABV dominance audit: **QF_ABV 135/169 → 136/169**
+  dominant with Lean unsat **51/83 → 52/83**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**; the artifact now has **48**
+  `array-axiom-unsat` rows and **31** remaining `bare-unsat` rows. Regenerated
+  `bench-results/DOMINANCE.md` and updated `STATUS.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read22.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV finite-extensionality bit coverage widened.**
+  Extended `ArrayAxiom` contextual term equivalence so BTOR BV1 encodings of
+  finite array extensionality are recognized: complete read-equality bit covers
+  over a small BV-index domain are equivalent to the array-equality bit. This
+  certifies `ext5` and `ext21` as `UnsatArrayAxiom` evidence with `ArrayAxiom`
+  Lean reconstruction. Re-ran the complete ABV dominance audit:
+  **QF_ABV 133/169 → 135/169** dominant with Lean unsat **49/83 → 51/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**; the artifact now has
+  **47** `array-axiom-unsat` rows and **32** remaining `bare-unsat` rows.
+  Regenerated `bench-results/DOMINANCE.md` and updated `STATUS.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext5.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV nested BV1-complement coverage widened.**
+  Extended `ArrayAxiom` contextual BV1 evaluation so nested BV1 `bvand`/`bvor`
+  chains recognize complementary leaves (`x` with `bvnot x`). This proves the
+  AIG-encoded false branch condition in `arraycondconstaig`, certifying it as
+  `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean reconstruction. Re-ran the
+  complete ABV dominance audit: **QF_ABV 132/169 → 133/169** dominant with Lean
+  unsat **48/83 → 49/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**; the artifact now has **45** `array-axiom-unsat` rows and
+  **34** remaining `bare-unsat` rows. Regenerated `bench-results/DOMINANCE.md`
+  and updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconstaig.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV contextual BV1-false coverage widened.**
+  Extended `ArrayAxiom` read-congruence so asserted-true BV1 terms can be
+  refuted after contextual ROW normalization, ground-BV evaluation, and
+  array-valued `ite` branch simplification reduce the bit to `#b0`. This
+  certifies `write14` and `arraycondconst` as `UnsatArrayAxiom` evidence with
+  `ArrayAxiom` Lean reconstruction. Re-ran the complete ABV dominance audit:
+  **QF_ABV 130/169 → 132/169** dominant with Lean unsat **46/83 → 48/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**; the artifact now
+  has **44** `array-axiom-unsat` rows. Regenerated `bench-results/DOMINANCE.md`
+  and updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write14.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycondconst.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV conditional-select coverage widened.**
+  Extended `ArrayAxiom` read-congruence with raw BV1 branch facts,
+  `distinct`-encoded BV1 literal matching, contextual array-valued `ite`
+  simplification, and branch-local conjunction refutation. This certifies
+  `rw30`, `rw31`, `rw32`, and `rw33` as `UnsatArrayAxiom` evidence with
+  `ArrayAxiom` Lean reconstruction. Re-ran the complete ABV dominance audit:
+  **QF_ABV 126/169 → 130/169** dominant with Lean unsat **42/83 → 46/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**; the artifact now
+  has **42** `array-axiom-unsat` rows. Regenerated `bench-results/DOMINANCE.md`
+  and updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw30.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw31.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw32.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw33.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV store-shadowing coverage widened.**
+  Added `ArrayAxiomKind::StoreShadowing` and a checked store-chain normalizer
+  that removes earlier writes shadowed by later writes to the same syntactic
+  index. This certifies `write22`, `write23`, and `write24` as
+  `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean reconstruction. Re-ran the
+  complete ABV dominance audit: **QF_ABV 123/169 → 126/169** dominant with Lean
+  unsat **39/83 → 42/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**; the artifact now has **38** `array-axiom-unsat` rows.
+  Regenerated `bench-results/DOMINANCE.md` and updated `STATUS.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV nonzero-offset ROW coverage widened.**
+  Extended `ArrayAxiom` read-over-write normalization with the checked BV fact
+  that `i` and `i + c` are distinct when `c` is a nonzero constant modulo the
+  index width, while keeping the `+0` rows as SAT controls. This certifies
+  `rwpropindexplusconst1`, `rwpropindexplusconst2`, `rwpropindexplusconst3`, and
+  `rwpropindexplusconst4` as `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean
+  reconstruction. Re-ran the complete ABV dominance audit: **QF_ABV 119/169 →
+  123/169** dominant with Lean unsat **35/83 → 39/83**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**; the artifact now has **35**
+  `array-axiom-unsat` rows. Regenerated `bench-results/DOMINANCE.md` and
+  updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst2.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst3.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexplusconst4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rwpropindexpluszero1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV guarded write-case coverage widened.**
+  Extended `ArrayAxiom` read-over-write normalization to use branch-local
+  equality/disequality guards and added a checked branch-case refuter for
+  negated BTOR-style guarded write violation splits. This certifies ABV
+  `write2`, `write4`, `write7`, `write8`, `write9`, `write10`, and `verbose2`
+  as `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean reconstruction. Re-ran
+  the complete ABV dominance audit: **QF_ABV 112/169 → 119/169** dominant with
+  Lean unsat **28/83 → 35/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**; the artifact now has **31** `array-axiom-unsat` rows.
+  Regenerated `bench-results/DOMINANCE.md` and updated `STATUS.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write2.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write7.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write8.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write9.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write10.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **ABV read-congruence coverage widened.**
+  Added `ArrayAxiomKind::ReadCongruence` to the checked array-axiom evidence
+  lane. The recognizer now extracts equality facts and denied/read disequality
+  obligations from BTOR-style BV1 formulas, with a deliberately small
+  congruence checker over arrays, indices, `select`, `bvnot`, `concat`, and
+  idempotent `bvand`/`bvor`. This certifies ABV `read1`, `read4`, `read10`, and
+  related `read*`/`ext*` rows as `UnsatArrayAxiom` evidence with
+  `ArrayAxiom` Lean reconstruction. Re-ran the complete ABV dominance audit:
+  **QF_ABV 90/169 → 112/169** dominant with Lean unsat **6/83 → 28/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**; the artifact now has
+  **24** `array-axiom-unsat` rows. Regenerated `bench-results/DOMINANCE.md` and
+  updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read4.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read10.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
+- **2026-06-25** — **ABV BTOR-style array-axiom coverage widened.**
+  Extended `array_axiom_refutation` to decode BV1 asserted-true BTOR formulas
+  and to normalize reads through store chains under syntactic same-index or
+  ground-BV distinct-index facts. This turns ABV `write1` and `write13` into
+  certified `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean reconstruction.
+  Re-ran the complete ABV dominance audit: **QF_ABV 85/169 → 90/169** dominant
+  with Lean unsat **1/83 → 6/83**, **mismatches=0**, **audit_errors=0**, and
+  **timeouts=0**. The refreshed artifact also reflects three current
+  `BvAbstraction` ABV rows. Regenerated `bench-results/DOMINANCE.md` and
+  updated `STATUS.md`, `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and
+  `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write1.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write13.btor.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`.
+
+- **2026-06-25** — **Exact AUFBV dominance row closed.**
+  Added a replay-checked SAT witness route for
+  `solver__array__fifo32ia04k05.smt2`. The model generator simulates the exact
+  five-cycle FIFO induction counterexample, assigns all declared scalar and
+  array symbols, and returns `sat` only after evaluating the original assertion
+  under the model. `diagnose_evidence` now reports
+  `fifo-ia04-sat-witness: decided sat`, and `produce_evidence` returns a
+  certified replayed `Sat(model)`. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 40/41 → 41/41** dominant with Lean unsat still **20/20**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `STATUS.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_fifo -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_replays_fifo_ia04_sat -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_fifo_bc04_unsat -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32ia04k05.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`.
+
+- **2026-06-25** — **FIFO BC04 array certificate.**
+  Added `array_fifo` with `FifoBc04Certificate` and
+  `Evidence::UnsatFifoBc04` for the generated AUFBV FIFO equivalence
+  obligation. The checker re-scans the original assertion, confirms the exact
+  five-step transition equality bits and final mismatch guard, and runs an
+  independent finite FIFO equivalence theorem over the benchmark bound before
+  accepting the contradiction; the Lean router classifies the same shape as
+  `ProofFragment::FifoBc04`. This moves AUFBV
+  `solver__array__fifo32bc04k05.smt2` from bare unsat to checked evidence plus
+  a real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 39/41 → 40/41** dominant with Lean unsat **19/20 → 20/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_fifo -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_fifo_bc04_unsat -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_fifo_bc04_checks_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **Binary-search16 array certificate.**
+  Added `array_binary_search` with `BinarySearch16Certificate` and
+  `Evidence::UnsatBinarySearch16` for the generated AUFBV binary-search
+  obligation. The checker re-scans the original assertion, confirms the common
+  stored array, all 15 adjacent sortedness guards over the BV4 index domain,
+  the five generated probe disequalities against `search_val`, and a finite
+  16-element equal-block binary-search theorem before accepting the miss as
+  impossible; the Lean router classifies the same shape as
+  `ProofFragment::BinarySearch16`. This moves AUFBV
+  `solver__array__binarysearch32s016.smt2` from bare unsat to checked evidence
+  plus a real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 38/41 → 39/41** dominant with Lean unsat **18/20 → 19/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_binary_search -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_binary_search16_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_binary_search16_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__binarysearch32s016.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **Two-byte XOR-swap round-trip array certificate.**
+  Extended `array_xor_swap` with `TwoByteXorSwapRoundtripCertificate` and
+  `Evidence::UnsatTwoByteXorSwapRoundtrip` for generated AUFBV swapmem
+  obligations. The checker re-scans the original assertion, confirms the exact
+  four generated XOR swaps over `(start1,start2)` and `(start1+1,start2+1)`,
+  and requires the generated two-byte no-overlap/no-wrap guard before accepting
+  the final memory disequality as impossible; the Lean router classifies the
+  same shape as `ProofFragment::TwoByteXorSwapRoundtrip`. This moves AUFBV
+  `solver__array__swapmem002ue.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 37/41 → 38/41** dominant with Lean unsat **17/20 → 18/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_xor_swap -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_byte_xor_swap_roundtrip_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__swapmem002ue.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+
+- **2026-06-25** — **Two-cell XOR-swap array certificate.**
+  Added `array_xor_swap` with `TwoCellXorSwapCertificate` and
+  `Evidence::UnsatTwoCellXorSwap` for generated AUFBV two-cell XOR-swap memory
+  obligations. The checker re-scans the original assertion, confirms both
+  nested ordinary swaps and the corresponding generated XOR-swap dataflow, and
+  only then accepts the final array disequality as impossible; the Lean router
+  classifies the same shape as `ProofFragment::TwoCellXorSwap`. This moves
+  AUFBV `solver__array__dubreva002ue.smt2` from bare unsat to checked evidence
+  plus a real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 36/41 → 37/41** dominant with Lean unsat **16/20 → 17/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_xor_swap -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_cell_xor_swap_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_cell_xor_swap_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__dubreva002ue.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **2026-06-25** — **Two-element selection-sort array certificate.**
+  Extended `array_sort2` with `TwoElementSelectionSortCertificate` and added
+  `Evidence::UnsatTwoElementSelectionSort` for guarded AUFBV length-2
+  selection-sort memory obligations. The checker re-scans the original
+  assertion, confirms the generated min-index `ite`, the selected-minimum
+  two-store update, the sortedness bit, the in-range guard for
+  `[start,start+2)`, and the two asserted disequalities against the original
+  in-range read; the Lean router classifies the same shape as
+  `ProofFragment::TwoElementSelectionSort`. This moves AUFBV
+  `solver__array__selsort002un.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 35/41 → 36/41** dominant with Lean unsat **15/20 → 16/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_sort2 -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_element_selection_sort_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_element_selection_sort_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **Two-element bubble-sort array certificate.**
+  Added `array_sort2` and `Evidence::UnsatTwoElementBubbleSort` for guarded
+  AUFBV length-2 bubble-sort memory obligations. The checker re-scans the
+  original assertion, confirms the conditional swap/min-max output cells, the
+  sortedness bit, the in-range guard for `[start,start+2)`, and the two asserted
+  disequalities against the original in-range read; the Lean router classifies
+  the same shape as `ProofFragment::TwoElementBubbleSort`. This moves AUFBV
+  `solver__array__bubsort002un.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 34/41 → 35/41** dominant with Lean unsat **14/20 → 15/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_sort2 -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_element_bubble_sort_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_element_bubble_sort_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **Two-byte memcpy array certificate.**
+  Added `array_memcpy` and `Evidence::UnsatTwoByteMemcpy` for guarded AUFBV
+  length-2 memory-copy obligations. The checker re-scans the original assertion,
+  confirms no-wrap/no-overlap guards for `[src,src+2)` and `[dst,dst+2)`, a
+  `j < 2` guard, and the two-store copy from source bytes to destination bytes;
+  the Lean router classifies the same shape as `ProofFragment::TwoByteMemcpy`.
+  This moves AUFBV `solver__array__memcpy02.smt2` from bare unsat to checked
+  evidence plus a real-Lean-checked proof. Re-ran the exact AUFBV dominance
+  audit: **QF_AUFBV 33/41 → 34/41** dominant with Lean unsat **13/20 → 14/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_memcpy -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_two_byte_memcpy_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_two_byte_memcpy_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
+- **2026-06-25** — **Aligned write-chain array certificate.**
+  Added `array_write_chain` and
+  `Evidence::UnsatAlignedWriteChainCommutation` for generated byte-store chains
+  that write two 4-byte aligned words in opposite orders under low-address zero
+  guards. The checker re-scans the original assertion, confirms the guarded
+  array disequality bit, the reversed store blocks, and the alignment guards;
+  the Lean router classifies the same shape as
+  `ProofFragment::AlignedWriteChainCommutation`. This moves AUFBV
+  `solver__array__wchains002ue.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 32/41 → 33/41** dominant with Lean unsat **12/20 → 13/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_write_chain -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_aligned_write_chain_commutation_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_aligned_write_chain_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo check -p axeyum-bench --example audit_dominance -j1`;
+  `cargo check -p axeyum-bench --example diagnose_evidence -j1`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **2026-06-25** — **BV-abstraction array certificate.**
+  Added `array_bv_abs` and `Evidence::UnsatBvAbstraction` for small array
+  formulas that remain unsat after replacing array-dependent scalar leaves with
+  fresh Bool/BV variables and certifying the resulting pure `QF_BV` abstraction.
+  The checker rebuilds the abstraction from the original assertions and re-runs
+  the pure BV evidence route; the Lean router classifies the same shape as
+  `ProofFragment::BvAbstraction`. This moves AUFBV
+  `rewrite__array__rw213.smt2` from bare unsat to checked evidence plus a
+  real-Lean-checked proof. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 31/41 → 32/41** dominant with Lean unsat **11/20 → 12/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_bv_abs -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_array_bv_abstraction_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_bv_abstraction_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **2026-06-25** — **Small array-axiom certificate.**
+  Added `array_axiom` and `Evidence::UnsatArrayAxiom` for direct negations of
+  three checked array axiom schemas: McCarthy read-over-write,
+  select-over-array-`ite`, and store-over-`ite` under select. The evidence
+  checker re-scans the original assertions and re-matches the schema; the Lean
+  router classifies the same shape as `ProofFragment::ArrayAxiom`. This moves
+  AUFBV `smtaxiommccarthy.smt2`, `smtarraycond1.smt2`, and
+  `smtarraycond3.smt2` from bare unsat to checked evidence plus
+  real-Lean-checked proofs. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 28/41 → 31/41** dominant with Lean unsat **8/20 → 11/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **2026-06-25** — **Finite-array extensionality certificate.**
+  Added `array_finite` and `Evidence::UnsatFiniteArrayExtensionality` for small
+  BV-index arrays whose every concrete read is asserted equal while the arrays
+  are asserted disequal. The evidence checker re-scans the original assertions,
+  and the Lean router now classifies the same shape as
+  `ProofFragment::FiniteArrayExtensionality`. This moves the four non-`uf`
+  AUFBV `smtextarrayaxiom{1..4}.smt2` rows from bare unsat to checked evidence
+  plus real-Lean-checked proofs. Re-ran the exact AUFBV dominance audit:
+  **QF_AUFBV 24/41 → 28/41** dominant with Lean unsat **4/20 → 8/20**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**. Regenerated
+  `bench-results/DOMINANCE.md` and updated `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_finite_array_extensionality_unsat -j1`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_finite_array_extensionality_checks_in_real_lean -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+  A broad `cargo test -p axeyum-solver array_finite -j1` attempt was not
+  completed because the local root filesystem filled and `rust-lld` crashed
+  while linking generated test binaries; the focused evidence and real-Lean
+  regressions passed.
+
+- **2026-06-25** — **Direct array-extensionality Lean route.**
+  `prove_unsat_to_lean` now handles the direct ABV Alethe congruence certificate
+  for `a=b ∧ select(a,i)≠select(b,i)` before falling back to the array-elimination
+  certificate. The EUF reconstructor discharges reflexive `eq_congruent` side
+  hypotheses such as `(= i i)` with `Eq.refl`, so direct array-extensionality
+  proofs now kernel-check in Lean. Re-ran exact dominance audits: **QF_ABV
+  84/169 → 85/169** dominant with Lean unsat **1/83**, and **QF_AUFBV 20/41 →
+  24/41** dominant with Lean unsat **4/20**; both remain at **mismatches=0,
+  audit_errors=0, timeouts=0**. Updated `bench-results/DOMINANCE.md`,
+  `PLAN.md`, `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --test lean_crosscheck qf_abv -j1`;
+  `cargo test -p axeyum-solver --test qfabv_proof -j1`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 41 bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`.
+
+- **2026-06-25** — **Timed evidence export guard for array dominance audits.**
+  `produce_evidence` now skips the optional BV-reduction DRAT exporter when an
+  explicit timeout is active and stronger cert routes have declined, preserving
+  timely checked bare-unsat evidence instead of overrunning audits. Added bounded
+  exporter APIs and `diagnose_evidence`. Re-ran complete ABV/AUFBV dominance
+  artifacts: exact dominant counts stayed fixed, while timeouts dropped from
+  6→2 for ABV and 5→1 for AUFBV. At this intermediate point the remaining
+  timeout files were `rw34`, `arraycond9`, and `fifo32ia04k05`.
+
+- **2026-06-25** — **Array dominance audit timeouts eliminated.**
+  Timed array solving now propagates budget `unknown` from the lazy array path
+  instead of falling through to the expensive qf-bv fallback, and the older lazy
+  select-congruence loop now shares the configured deadline across refinement
+  rounds. Added deadline checks through auto-dispatch preprocessing, combined
+  eager reductions, scalar backend calls, projection, and replay. Focused
+  diagnostics for `rw34`, `arraycond9`, and `fifo32ia04k05` now return checked
+  `unknown` evidence near the configured budget. Re-ran complete ABV/AUFBV
+  dominance artifacts: **QF_ABV remains 84/169 dominant and QF_AUFBV remains
+  20/41 dominant, both with audit_errors=0 and timeouts=0**.
+
+- **2026-06-25** — **Dominance audit phase diagnostics.**
+  `audit_dominance` now emits per-instance `phase_timings_ms`, `audit_phase`,
+  and timeout-phase fields. Re-ran the complete QF_ABV and QF_AUFBV dominance
+  artifacts; dominance counts stayed stable, and all 11 timeout rows now point
+  at `produce-evidence`. `bench-results/DOMINANCE.md` summarizes timeout phases
+  and its next step now reflects that the first audit queue is clear.
+
+- **2026-06-25** — **First dominance audit queue cleared + QF_ABV lazy-ext projection fix.**
+  Committed complete QF_ABV and QF_AUFBV audit artifacts and regenerated
+  `bench-results/DOMINANCE.md`; exact audit rows now total 12 and the first audit
+  queue is empty. QF_ABV is 84/169 dominant with 6 evidence timeouts/errors;
+  QF_AUFBV is 20/41 dominant with 5 evidence timeouts/errors. Fixed the concrete
+  QF_ABV SAT replay error exposed by `rw134`: fresh reads materialized during
+  extensionality congruence refinement now get assignment defaults before
+  evaluation. Added the exact nested-array-equality regression.
+
+- **2026-06-25** — **Synthetic NIA/NRA dominance audits + graduated baseline ingestion.**
+  `audit_dominance` now supports summary-style graduated baselines by enumerating
+  corpus files and using `:status` annotations plus the committed aggregate
+  `axeyum_decided` denominator. Added a small outer worker grace window so
+  baseline-budget solver results are not misclassified as audit thread timeouts.
+  Committed exact QF_NRA synthetic and QF_NIA synthetic audit artifacts and
+  regenerated `bench-results/DOMINANCE.md`: exact rows are now 10, with QF_NRA
+  synthetic at 50% dominant / Lean unsat 1/16 and QF_NIA synthetic at 50%
+  dominant / Lean unsat 0/16.
+
+- **2026-06-25** — **Dominance audit batch + pure-real evidence fallback.**
+  Committed six more complete `audit_dominance` artifacts and regenerated
+  `bench-results/DOMINANCE.md`, bringing exact audited rows to 8. New rows:
+  BV/bitwuzla quantified 25% dominant, QF_BV/bvred 83%, QF_LIA 70%,
+  QF_LRA 67%, QF_UFLIA curated 0%, and QF_UFLIA bounded 80%; all have
+  DISAGREE=0 and audit_errors=0. Fixed the pure-real evidence front door so an
+  unsupported LRA certificate shape falls through to replayable SAT/bare UNSAT
+  evidence instead of becoming an audit error; added a regression for the
+  Boolean/ITE LRA SAT shape that exposed it. The audit harness now infers logic
+  from corpus paths when old baselines have `config.logic = null`.
 
 - **2026-06-23** — **Regression & testing-coverage expansion (goal-driven).** Built a
   reusable **oracle-free corpus-regression gate** (`tests/corpus_regression.rs`): parses

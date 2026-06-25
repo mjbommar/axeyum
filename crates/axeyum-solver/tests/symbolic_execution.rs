@@ -9,7 +9,7 @@
 //! solver. It demonstrates, with checked evidence, that the incremental engine
 //! supports realistic path exploration.
 
-use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
+use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{AssumptionOutcome, CheckResult, IncrementalBvSolver};
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -528,8 +528,8 @@ fn symbolic_memory_read_over_write_is_unsat_when_violated() {
         .declare(
             "mem",
             Sort::Array {
-                index: 8,
-                element: 8,
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
             },
         )
         .unwrap();
@@ -575,8 +575,8 @@ fn symbolic_memory_reachability_is_sat_and_scoped() {
         .declare(
             "m",
             Sort::Array {
-                index: 8,
-                element: 8,
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
             },
         )
         .unwrap();

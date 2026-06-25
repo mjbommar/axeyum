@@ -570,40 +570,46 @@ pub fn check_qf_uf_with_config(
 /// Constructs a candidate model from a theory-consistent e-graph: each class gets
 /// a distinct value (a literal constant's value if it has one), symbols take their
 /// class value, and each function gets an interpretation from its applications.
-/// Returns `None` for sorts outside `Bool`/`BitVec(≤128)` (the caller treats that
-/// as `Unknown`).
+/// Returns `None` for sorts outside `Bool`/`BitVec(≤128)`/uninterpreted carriers
+/// (the caller treats that as `Unknown`).
 fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
-    let mut class_width: HashMap<ENodeId, u32> = HashMap::new();
+    let mut class_sort: HashMap<ENodeId, Sort> = HashMap::new();
     for (&term, &node) in &bridge.term_to_node {
         let root = bridge.egraph.root(node);
-        let width = match arena.sort_of(term) {
-            Sort::Bool => 1,
-            Sort::BitVec(w) if w <= 128 => w,
+        let sort = match arena.sort_of(term) {
+            sort @ (Sort::Bool | Sort::Uninterpreted(_)) => sort,
+            sort @ Sort::BitVec(w) if w <= 128 => sort,
             _ => return None,
         };
-        class_width.insert(root, width);
+        if let Some(existing) = class_sort.insert(root, sort)
+            && existing != sort
+        {
+            return None;
+        }
     }
 
     // Class codes: constants pin their class, the rest get fresh distinct codes.
     let mut class_code: HashMap<ENodeId, u128> = HashMap::new();
-    let mut used: HashMap<u32, HashSet<u128>> = HashMap::new();
+    let mut used: HashMap<Sort, HashSet<u128>> = HashMap::new();
     for (&term, &node) in &bridge.term_to_node {
         if is_constant(arena.node(term)) {
             let root = bridge.egraph.root(node);
             let code = eval(arena, term, &Assignment::new()).ok()?.scalar_code();
             class_code.insert(root, code);
-            used.entry(class_width[&root]).or_default().insert(code);
+            used.entry(class_sort[&root]).or_default().insert(code);
         }
     }
-    for (&root, &width) in &class_width {
+    for (&root, &sort) in &class_sort {
         if class_code.contains_key(&root) {
             continue;
         }
-        let set = used.entry(width).or_default();
-        let max = if width >= 128 {
-            u128::MAX
-        } else {
-            (1u128 << width) - 1
+        let set = used.entry(sort).or_default();
+        let max = match sort {
+            Sort::Bool => 1,
+            Sort::BitVec(width) if width >= 128 => u128::MAX,
+            Sort::BitVec(width) => (1u128 << width) - 1,
+            Sort::Uninterpreted(_) => u128::MAX,
+            _ => return None,
         };
         let mut v = 0u128;
         while set.contains(&v) {
@@ -675,6 +681,7 @@ fn value_from_code(sort: Sort, code: u128) -> Value {
                 value: code & mask,
             }
         }
+        Sort::Uninterpreted(sort) => Value::Uninterpreted { sort, value: code },
         _ => unreachable!("build_model filtered to Bool/BitVec"),
     }
 }

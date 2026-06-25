@@ -296,12 +296,15 @@ impl Eliminator {
                 self.rewrite(arena, args[0])?
             }
             TermNode::Symbol(array_symbol) => {
-                let element_width = arena
-                    .symbol(array_symbol)
-                    .1
-                    .array_widths()
-                    .expect("array operand is array sorted")
-                    .1;
+                let Some((_index_width, element_width)) =
+                    arena.symbol(array_symbol).1.array_widths()
+                else {
+                    return Err(ArrayElimError::Unsupported(
+                        "eager array elimination supports only bit-vector-indexed, \
+                         bit-vector-valued arrays"
+                            .to_owned(),
+                    ));
+                };
                 let fresh = self.fresh_select_symbol(arena, element_width)?;
                 self.record_select(array_symbol, index, fresh);
                 arena.var(fresh)
@@ -329,11 +332,12 @@ impl Eliminator {
         a: TermId,
         b: TermId,
     ) -> Result<TermId, ArrayElimError> {
-        let iw = arena
-            .sort_of(a)
-            .array_widths()
-            .expect("array equality operand is array sorted")
-            .0;
+        let Some((iw, _)) = arena.sort_of(a).array_widths() else {
+            return Err(ArrayElimError::Unsupported(
+                "bounded extensionality currently supports only bit-vector-indexed arrays"
+                    .to_owned(),
+            ));
+        };
         if iw > MAX_ARRAY_EQ_INDEX_BITS {
             return Err(ArrayElimError::Unsupported(format!(
                 "array equality over a {iw}-bit index (bounded extensionality supports \
@@ -436,7 +440,7 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{ArrayElimError, contains_array, eliminate_arrays};
-    use axeyum_ir::{ArrayValue, Assignment, Sort, TermArena, Value, eval};
+    use axeyum_ir::{ArraySortKey, ArrayValue, Assignment, Sort, TermArena, Value, eval};
 
     fn bv(width: u32, value: u128) -> Value {
         Value::Bv { width, value }
@@ -492,8 +496,8 @@ mod tests {
             .declare(
                 "a",
                 Sort::Array {
-                    index: 3,
-                    element: 4,
+                    index: ArraySortKey::BitVec(3),
+                    element: ArraySortKey::BitVec(4),
                 },
             )
             .unwrap();
@@ -564,8 +568,8 @@ mod tests {
             .declare(
                 "a",
                 Sort::Array {
-                    index: 3,
-                    element: 4,
+                    index: ArraySortKey::BitVec(3),
+                    element: ArraySortKey::BitVec(4),
                 },
             )
             .unwrap();
