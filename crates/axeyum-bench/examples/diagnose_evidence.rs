@@ -57,6 +57,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatSos { .. } => "sos-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
+        Evidence::UnsatBoolUfExhaustive(_) => "bool-uf-exhaustive-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",
         Evidence::UnsatArrayAxiom(_) => "array-axiom-unsat",
         Evidence::UnsatTermIdentity(_) => "term-identity-unsat",

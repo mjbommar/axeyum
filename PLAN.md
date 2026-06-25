@@ -201,12 +201,20 @@ against competitor source, are now binding:
    replay-gated lazy-Ackermann route for mixed declared-sort QF_UFBV SAT models:
    unconstrained carrier symbols get deterministic distinct tokens, so the lazy
    UF loop does not add false congruence lemmas over arbitrary defaults before
-   raw BV fallback. This row now has **audit_errors = 0** and exact
-   `dominant%(D) = 50% (1/2)`. The remaining row gap is explicitly proof-side:
-   `solver__fun__fun1.smt2` is decided `unsat` but still has no Lean
-   reconstruction and carries `bit-blast`/`ackermann` trust holes. The generator
+   raw BV fallback. That audit then exposed a proof-side gap in
+   `solver__fun__fun1.smt2`: a decided Boolean-UF `unsat` that needed a direct
+   Lean/evidence route rather than the trusted reduction fallback. The generator
    now reports missing Lean unsat coverage and trust holes in exact audit rows,
    not just runtime audit errors.
+   **BOOLEAN-UF QF_UFBV EXACT ROW CLOSED (2026-06-25):**
+   `solver__fun__fun1.smt2` now uses a checked `bool-uf-exhaustive-unsat`
+   certificate: the checker enumerates the two Boolean symbols and four unary
+   Boolean function interpretations, accepting only when every case falsifies an
+   original assertion. The matching `ProofFragment::BoolUfExhaustive` Lean route
+   re-runs that checker before rendering a certificate-wrapper module. The exact
+   QF_UFBV/bitwuzla audit is now **100% (2/2)** dominant with Lean unsat
+   **100% (1/1)**, zero mismatches, zero audit errors, zero timeouts, and no
+   trust holes.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**,

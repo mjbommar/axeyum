@@ -71,7 +71,7 @@ use crate::quant_finite_cert::{
 use crate::sat_bv_backend::SatBvBackend;
 use crate::term_identity::TermIdentityRefutationCertificate;
 use crate::trust::{TrustId, TrustStep};
-use crate::ufbv_finite::FiniteDomainPigeonholeCertificate;
+use crate::ufbv_finite::{BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate};
 
 /// Version of the executable semantics (the `axeyum-ir` ground evaluator) the
 /// evidence was produced and is checkable against. Bump when evaluator
@@ -314,6 +314,12 @@ pub enum Evidence {
     /// requires more pairwise-distinct applications of one function than that
     /// function's finite Bool/BV argument tuple domain can provide.
     UnsatFiniteDomainPigeonhole(FiniteDomainPigeonholeCertificate),
+    /// Unsatisfiable (`QF_UFBV`/`QF_UF` over Booleans): a tiny exhaustive
+    /// finite-Boolean-UF refutation. The checker re-enumerates every assignment
+    /// to the reachable Boolean symbols and every truth table for reachable
+    /// `Bool^n -> Bool` functions, accepting only when every case falsifies an
+    /// original assertion.
+    UnsatBoolUfExhaustive(BoolUfExhaustiveCertificate),
     /// Unsatisfiable (`QF_ABV`/`QF_AUFBV`): a finite-array extensionality
     /// refutation. The checker re-scans the original top-level conjunction and
     /// confirms it asserts two arrays over a small finite BV index domain are
@@ -501,6 +507,7 @@ impl Evidence {
                 lean_module.as_ref(),
             )),
             Evidence::UnsatFiniteDomainPigeonhole(_)
+            | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatTermIdentity(_)
@@ -538,6 +545,7 @@ impl Evidence {
                 | Evidence::UnsatSos { .. }
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
+                | Evidence::UnsatBoolUfExhaustive(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
                 | Evidence::UnsatArrayAxiom(_)
                 | Evidence::UnsatTermIdentity(_)
@@ -563,6 +571,9 @@ fn check_direct_structural_evidence(
     match evidence {
         Evidence::UnsatFiniteDomainPigeonhole(cert) => {
             check_uf_pigeonhole_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatBoolUfExhaustive(cert) => {
+            check_bool_uf_exhaustive_evidence(arena, assertions, cert)
         }
         Evidence::UnsatFiniteArrayExtensionality(cert) => {
             check_finite_array_extensionality_evidence(arena, assertions, cert)
@@ -607,6 +618,15 @@ fn check_uf_pigeonhole_evidence(
     cert: &FiniteDomainPigeonholeCertificate,
 ) -> bool {
     crate::ufbv_finite::finite_domain_pigeonhole_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bool_uf_exhaustive_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &BoolUfExhaustiveCertificate,
+) -> bool {
+    crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1092,6 +1112,13 @@ fn direct_pre_solve_structural_report(
             trusted_steps: Vec::new(),
         });
     }
+    if let Some(cert) = crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatBoolUfExhaustive(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
     small_pre_solve_array_axiom_refutation(arena, assertions).map(|cert| EvidenceReport {
         evidence: Evidence::UnsatArrayAxiom(cert),
         provenance: provenance.clone(),
@@ -1477,6 +1504,9 @@ fn direct_structural_unsat_evidence(
 ) -> Option<(Evidence, Vec<TrustStep>)> {
     if let Some(cert) = crate::ufbv_finite::finite_domain_pigeonhole_refutation(arena, assertions) {
         return Some((Evidence::UnsatFiniteDomainPigeonhole(cert), Vec::new()));
+    }
+    if let Some(cert) = crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions) {
+        return Some((Evidence::UnsatBoolUfExhaustive(cert), Vec::new()));
     }
     if let Some(cert) =
         crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
@@ -1877,6 +1907,7 @@ pub fn prove(
         | Evidence::UnsatSos { .. }
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatFiniteDomainPigeonhole(_)
+        | Evidence::UnsatBoolUfExhaustive(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)
         | Evidence::UnsatArrayAxiom(_)
         | Evidence::UnsatTermIdentity(_)

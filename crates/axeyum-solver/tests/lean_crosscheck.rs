@@ -256,6 +256,27 @@ fn qf_lia_bool_simplification_audit_row_checks_in_real_lean() {
     lean_accepts("qf_lia_bool_simplification_rf11", &source);
 }
 
+/// `QF_UFBV`: bitwuzla `fun1` is a tiny Boolean functional-graph
+/// contradiction. Exhaustively checking the two Boolean variables and the
+/// four unary-Boolean function interpretations gives a direct certificate,
+/// avoiding the old Ackermann + bit-blast trust-hole route.
+#[test]
+fn qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2"
+    ))
+    .expect("bitwuzla fun1 row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("Boolean-UF exhaustive row reconstructs");
+    assert_eq!(fragment, ProofFragment::BoolUfExhaustive);
+    assert!(
+        !source.contains("sorryAx"),
+        "Boolean-UF exhaustive module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_ufbv_fun1_bool_uf_exhaustive", &source);
+}
+
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
 #[test]
 fn forall_refutation_checks_in_real_lean() {

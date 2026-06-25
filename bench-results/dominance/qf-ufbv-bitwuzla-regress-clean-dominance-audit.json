@@ -4,10 +4,11 @@
   "instances": [
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 2.876052,
+      "elapsed_ms": 2.712597,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -16,45 +17,42 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.051963999999999996,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.349744,
+        "parse_lean": null,
+        "produce_evidence": 2.265793,
+        "read": 0.022809000000000003
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 2.639772,
+      "dominant_candidate": true,
+      "elapsed_ms": 3.602151,
       "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "drat-unsat",
+      "evidence_kind": "bool-uf-exhaustive-unsat",
       "file": "corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
-      "trust_holes": [
-        "bit-blast",
-        "ackermann"
-      ],
-      "trust_steps": [
-        {
-          "certified": false,
-          "id": "bit-blast"
-        },
-        {
-          "certified": true,
-          "id": "tseitin"
-        },
-        {
-          "certified": true,
-          "id": "sat-refutation"
-        },
-        {
-          "certified": false,
-          "id": "ackermann"
-        }
-      ]
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoolUfExhaustive",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 0.064597,
+        "lean_reconstruction": 3.1542749999999997,
+        "parse_evidence": 0.15098299999999998,
+        "parse_lean": 0.08495000000000001,
+        "produce_evidence": 0.11240599999999999,
+        "read": 0.013474
+      },
+      "trust_holes": [],
+      "trust_steps": []
     }
   ],
   "limit": 2,
@@ -66,15 +64,15 @@
     "audited_unsat": 1,
     "baseline_decided": 2,
     "baseline_mismatches": 0,
-    "dominant_candidates": 1,
-    "dominant_pct_audited": 50.0,
+    "dominant_candidates": 2,
+    "dominant_pct_audited": 100.0,
     "evidence_certified": 2,
     "evidence_checked": 2,
     "instances": 2,
-    "lean_checked_unsat": 0,
-    "lean_unsat_pct": 0.0,
+    "lean_checked_unsat": 1,
+    "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 5000,
+  "timeout_ms": 30000,
   "version": 1
 }

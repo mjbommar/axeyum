@@ -205,6 +205,32 @@ fn qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate() {
 }
 
 #[test]
+fn qf_ufbv_fun1_bool_uf_exhaustive_unsat_carries_certificate() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2"
+    ))
+    .expect("bitwuzla fun1 row parses");
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatBoolUfExhaustive(cert) = &report.evidence else {
+        panic!(
+            "expected finite Boolean-UF exhaustive evidence, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.bool_symbols.len(), 2);
+    assert_eq!(cert.functions.len(), 1);
+    assert_eq!(cert.cases, 16);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "the Boolean-UF certificate is checked directly from the original query"
+    );
+}
+
+#[test]
 #[allow(clippy::many_single_char_names)]
 fn qf_abv_read_consistency_unsat_carries_a_zero_trust_alethe_certificate() {
     // select(a, i) = #b0…0 ∧ i = j ∧ ¬(select(a, j) = #b0…0): unsat by read

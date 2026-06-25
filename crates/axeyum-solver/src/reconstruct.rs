@@ -1277,6 +1277,8 @@ pub enum ProofFragment {
     QfUfBv,
     /// A finite-domain pigeonhole refutation over a one-bit UF argument domain.
     FiniteDomainPigeonhole,
+    /// An exhaustive refutation over tiny Boolean-UF interpretations.
+    BoolUfExhaustive,
     /// A direct negation of a checked array axiom schema.
     ArrayAxiom,
     /// A finite BV-index array extensionality refutation.
@@ -1699,6 +1701,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::QfAbv
     } else if finite_domain_pigeonhole_lean_instance(arena, assertions).is_some() {
         ProofFragment::FiniteDomainPigeonhole
+    } else if crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions).is_some() {
+        ProofFragment::BoolUfExhaustive
     } else if has_func && has_bv {
         ProofFragment::QfUfBv
     } else if has_func {
@@ -2391,6 +2395,35 @@ fn reconstruct_bool_simplification_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_bool_uf_exhaustive_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert =
+        crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions).ok_or_else(|| {
+            ReconstructError::MalformedStep {
+                rule: "bool_uf_exhaustive".to_owned(),
+                detail: "expected a tiny unsatisfiable Boolean-UF formula".to_owned(),
+            }
+        })?;
+    if cert.functions.is_empty() || cert.cases == 0 {
+        return Err(ReconstructError::MalformedStep {
+            rule: "bool_uf_exhaustive".to_owned(),
+            detail: "Boolean-UF certificate carried no function interpretation space".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("bool_uf_exhaustive_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_uf_exhaustive")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_lra_dpll_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2913,6 +2946,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::LraDpll
         | ProofFragment::ArithDpll
         | ProofFragment::FiniteDomainPigeonhole
+        | ProofFragment::BoolUfExhaustive
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
@@ -2994,6 +3028,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         ProofFragment::ArithDpll => reconstruct_arith_dpll_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::BoolUfExhaustive => {
+            reconstruct_bool_uf_exhaustive_to_lean_module(arena, assertions)?
         }
         ProofFragment::ArrayAxiom => reconstruct_array_axiom_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteArrayExtensionality => {

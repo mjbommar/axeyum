@@ -7,7 +7,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use axeyum_ir::{FuncId, Op, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode};
+
+const BOOL_UF_EXHAUSTIVE_MAX_BITS: usize = 12;
 
 /// A self-checking finite-domain pigeonhole refutation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,6 +20,24 @@ pub struct FiniteDomainPigeonholeCertificate {
     pub domain_size: u128,
     /// Pairwise-disequal applications of `function`; `len() > domain_size`.
     pub applications: Vec<TermId>,
+}
+
+/// A self-checking exhaustive refutation for small Boolean-UF formulas.
+///
+/// The checker enumerates every assignment to the reachable Boolean symbols and
+/// every truth table for the reachable uninterpreted functions whose signature is
+/// `Bool^n -> Bool`. It accepts only when no assignment/interpretation satisfies
+/// all original assertions. This is intentionally narrow: it is a zero-reduction
+/// certificate for tiny Boolean functional-graph rows, not a replacement for the
+/// general UF/BV solver.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoolUfExhaustiveCertificate {
+    /// Reachable Boolean free symbols, in deterministic declaration order.
+    pub bool_symbols: Vec<SymbolId>,
+    /// Reachable `Bool^n -> Bool` uninterpreted functions, in declaration order.
+    pub functions: Vec<FuncId>,
+    /// Number of assignments/interpretations exhaustively evaluated.
+    pub cases: u64,
 }
 
 /// Returns a finite-domain pigeonhole certificate when the top-level conjunction
@@ -70,6 +90,209 @@ pub fn finite_domain_pigeonhole_refutation(
         }
     }
     None
+}
+
+/// Returns an exhaustive finite-Boolean-UF certificate for tiny formulas.
+#[must_use]
+pub fn bool_uf_exhaustive_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<BoolUfExhaustiveCertificate> {
+    let mut signature = BoolUfSignature::default();
+    for &assertion in assertions {
+        collect_bool_uf_signature(arena, assertion, &mut signature)?;
+    }
+    if signature.functions.is_empty() {
+        return None;
+    }
+
+    let mut bits = signature.symbols.len();
+    let mut table_bits = BTreeMap::new();
+    for &func in &signature.functions {
+        let (_, params, _) = arena.function(func);
+        let arity = params.len();
+        if arity >= usize::BITS as usize {
+            return None;
+        }
+        let entries = 1_usize.checked_shl(u32::try_from(arity).ok()?)?;
+        bits = bits.checked_add(entries)?;
+        table_bits.insert(func, entries);
+    }
+    if bits > BOOL_UF_EXHAUSTIVE_MAX_BITS {
+        return None;
+    }
+
+    let cases = 1_u64.checked_shl(u32::try_from(bits).ok()?)?;
+    for case in 0..cases {
+        let interpretation = BoolUfInterpretation::from_case(&signature, &table_bits, case)?;
+        let mut all_true = true;
+        for &assertion in assertions {
+            if !eval_bool_uf_term(arena, assertion, &interpretation)? {
+                all_true = false;
+                break;
+            }
+        }
+        if all_true {
+            return None;
+        }
+    }
+
+    Some(BoolUfExhaustiveCertificate {
+        bool_symbols: signature.symbols.into_iter().collect(),
+        functions: signature.functions.into_iter().collect(),
+        cases,
+    })
+}
+
+#[derive(Default)]
+struct BoolUfSignature {
+    symbols: BTreeSet<SymbolId>,
+    functions: BTreeSet<FuncId>,
+}
+
+fn collect_bool_uf_signature(
+    arena: &TermArena,
+    term: TermId,
+    signature: &mut BoolUfSignature,
+) -> Option<()> {
+    match arena.node(term) {
+        TermNode::BoolConst(_) => Some(()),
+        TermNode::Symbol(symbol) => {
+            if arena.symbol(*symbol).1 == Sort::Bool {
+                signature.symbols.insert(*symbol);
+                Some(())
+            } else {
+                None
+            }
+        }
+        TermNode::App { op, args } => match op {
+            Op::BoolNot if args.len() == 1 => collect_bool_uf_signature(arena, args[0], signature),
+            Op::BoolAnd | Op::BoolOr | Op::BoolXor | Op::BoolImplies | Op::Eq
+                if args.len() == 2 =>
+            {
+                collect_bool_uf_signature(arena, args[0], signature)?;
+                collect_bool_uf_signature(arena, args[1], signature)
+            }
+            Op::Ite if args.len() == 3 && arena.sort_of(args[1]) == Sort::Bool => {
+                collect_bool_uf_signature(arena, args[0], signature)?;
+                collect_bool_uf_signature(arena, args[1], signature)?;
+                collect_bool_uf_signature(arena, args[2], signature)
+            }
+            Op::Apply(func) => {
+                let (_, params, result) = arena.function(*func);
+                if result != Sort::Bool || params.iter().any(|&sort| sort != Sort::Bool) {
+                    return None;
+                }
+                if params.len() != args.len() {
+                    return None;
+                }
+                signature.functions.insert(*func);
+                for &arg in &**args {
+                    collect_bool_uf_signature(arena, arg, signature)?;
+                }
+                Some(())
+            }
+            _ => None,
+        },
+        TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
+        | TermNode::IntConst(_)
+        | TermNode::RealConst(_) => None,
+    }
+}
+
+struct BoolUfInterpretation {
+    symbol_values: BTreeMap<SymbolId, bool>,
+    function_tables: BTreeMap<FuncId, u64>,
+}
+
+impl BoolUfInterpretation {
+    fn from_case(
+        signature: &BoolUfSignature,
+        table_bits: &BTreeMap<FuncId, usize>,
+        mut case: u64,
+    ) -> Option<Self> {
+        let mut symbol_values = BTreeMap::new();
+        for &symbol in &signature.symbols {
+            symbol_values.insert(symbol, (case & 1) != 0);
+            case >>= 1;
+        }
+
+        let mut function_tables = BTreeMap::new();
+        for &func in &signature.functions {
+            let bits = *table_bits.get(&func)?;
+            let mask = if bits == u64::BITS as usize {
+                u64::MAX
+            } else {
+                (1_u64 << bits) - 1
+            };
+            function_tables.insert(func, case & mask);
+            case >>= bits;
+        }
+        Some(Self {
+            symbol_values,
+            function_tables,
+        })
+    }
+}
+
+fn eval_bool_uf_term(
+    arena: &TermArena,
+    term: TermId,
+    interpretation: &BoolUfInterpretation,
+) -> Option<bool> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(*value),
+        TermNode::Symbol(symbol) => interpretation.symbol_values.get(symbol).copied(),
+        TermNode::App { op, args } => match op {
+            Op::BoolNot if args.len() == 1 => {
+                Some(!eval_bool_uf_term(arena, args[0], interpretation)?)
+            }
+            Op::BoolAnd if args.len() == 2 => Some(
+                eval_bool_uf_term(arena, args[0], interpretation)?
+                    && eval_bool_uf_term(arena, args[1], interpretation)?,
+            ),
+            Op::BoolOr if args.len() == 2 => Some(
+                eval_bool_uf_term(arena, args[0], interpretation)?
+                    || eval_bool_uf_term(arena, args[1], interpretation)?,
+            ),
+            Op::BoolXor if args.len() == 2 => Some(
+                eval_bool_uf_term(arena, args[0], interpretation)?
+                    ^ eval_bool_uf_term(arena, args[1], interpretation)?,
+            ),
+            Op::BoolImplies if args.len() == 2 => Some(
+                !eval_bool_uf_term(arena, args[0], interpretation)?
+                    || eval_bool_uf_term(arena, args[1], interpretation)?,
+            ),
+            Op::Eq if args.len() == 2 => Some(
+                eval_bool_uf_term(arena, args[0], interpretation)?
+                    == eval_bool_uf_term(arena, args[1], interpretation)?,
+            ),
+            Op::Ite if args.len() == 3 && arena.sort_of(args[1]) == Sort::Bool => {
+                let branch = if eval_bool_uf_term(arena, args[0], interpretation)? {
+                    args[1]
+                } else {
+                    args[2]
+                };
+                eval_bool_uf_term(arena, branch, interpretation)
+            }
+            Op::Apply(func) => {
+                let table = *interpretation.function_tables.get(func)?;
+                let mut index = 0_usize;
+                for (bit, &arg) in args.iter().enumerate() {
+                    if eval_bool_uf_term(arena, arg, interpretation)? {
+                        index |= 1_usize << bit;
+                    }
+                }
+                Some(((table >> index) & 1) != 0)
+            }
+            _ => None,
+        },
+        TermNode::BvConst { .. }
+        | TermNode::WideBvConst(_)
+        | TermNode::IntConst(_)
+        | TermNode::RealConst(_) => None,
+    }
 }
 
 #[derive(Default)]
@@ -215,5 +438,41 @@ mod tests {
         let ac = arena.not(eq_ac).unwrap();
 
         assert!(finite_domain_pigeonhole_refutation(&arena, &[ab, ac]).is_none());
+    }
+
+    #[test]
+    fn exhaustively_refutes_boolean_functional_graph() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Bool], Sort::Bool).unwrap();
+        let a = arena.bool_var("a").unwrap();
+        let b = arena.bool_var("b").unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let ffb = arena.apply(f, &[fb]).unwrap();
+        let fffb = arena.apply(f, &[ffb]).unwrap();
+        let a_ne_b = {
+            let eq = arena.eq(a, b).unwrap();
+            arena.not(eq).unwrap()
+        };
+        let fa_ne_fb = {
+            let eq = arena.eq(fa, fb).unwrap();
+            arena.not(eq).unwrap()
+        };
+
+        let cert = bool_uf_exhaustive_refutation(&arena, &[a_ne_b, fa_ne_fb, fa, fffb])
+            .expect("fun1 Boolean-UF graph is finite-domain unsat");
+        assert_eq!(cert.bool_symbols.len(), 2);
+        assert_eq!(cert.functions, vec![f]);
+        assert_eq!(cert.cases, 16);
+    }
+
+    #[test]
+    fn exhaustive_bool_uf_declines_satisfiable_functional_graph() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Bool], Sort::Bool).unwrap();
+        let a = arena.bool_var("a").unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+
+        assert!(bool_uf_exhaustive_refutation(&arena, &[fa]).is_none());
     }
 }

@@ -347,7 +347,10 @@ pub use theory_combination::{
     propose_interface_equalities, shared_terms,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
-pub use ufbv_finite::{FiniteDomainPigeonholeCertificate, finite_domain_pigeonhole_refutation};
+pub use ufbv_finite::{
+    BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate, bool_uf_exhaustive_refutation,
+    finite_domain_pigeonhole_refutation,
+};
 pub use uflia_interpolant::{
     UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
 };
