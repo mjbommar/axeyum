@@ -1629,6 +1629,16 @@ fn uflia_alethe_certificate(
     {
         return Some(proof);
     }
+    if let Some(proof) = crate::prove_uflia_opaque_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    if let Some(proof) = crate::prove_uflra_unsat_alethe(arena, assertions)
+        && matches!(crate::check_alethe_lra(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
     None
 }
 

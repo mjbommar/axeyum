@@ -138,7 +138,8 @@ pub use abv::{
     check_with_array_elimination,
 };
 pub use alethe_lra::{
-    check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe, prove_uflra_unsat_alethe,
+    check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe,
+    prove_uflia_opaque_unsat_alethe, prove_uflra_unsat_alethe,
 };
 pub use array_axiom::{ArrayAxiomKind, ArrayAxiomRefutationCertificate, array_axiom_refutation};
 pub use array_binary_search::{BinarySearch16Certificate, binary_search16_refutation};

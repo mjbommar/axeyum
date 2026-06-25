@@ -6,6 +6,33 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — opaque UFLIA integer Alethe coverage added.**
+  Extended `lia_generic` checking to treat non-arithmetic integer applications as
+  opaque integer terms, and added a congruence-free QF_UFLIA certificate route
+  that eliminates UF applications, proves the integer abstraction with
+  `lia_generic`, substitutes the opaque applications back into the Alethe proof,
+  and re-checks it before returning evidence. This certifies repeated
+  integer-valued UF applications such as `f(0) <= 0 ∧ f(0) >= 1` without
+  Ackermann lemmas. Re-running the small QF_UFLIA exact audits moved curated
+  named **0/2 -> 1/2 dominant** with **Lean unsat 0/2 -> 1/2**; the bounded
+  uninterpreted-sort row remains **4/5 dominant** with **Lean unsat 0/1**.
+  The remaining `use-name-in-same-command` gap is not congruence-free: it needs
+  a Boolean-structured UF-abstraction/ArithDPLL certificate, not just opaque
+  `lia_generic`.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib emits_checkable_congruence_free_uflia_refutation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib lia_generic_accepts_opaque_integer_app_tautology -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence congruence_free_uflia_uses_opaque_arith_alethe_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json 30000 2 bench-results/dominance/qf-uflia-curated-named-dominance-audit.json`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 5 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — QF_NRA SOS dominance coverage widened.**
   Added a certificate-gated Lean fallback for sum-of-squares nonlinear-real
   refutations: reconstruction first tries the detailed SOS path, then re-runs
@@ -3176,9 +3203,34 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV/QF_BV-bvred/QF_LRA/QF_LIA/QF_UFBV exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_LRA **9/9**, QF_LIA **10/10**, and QF_UFBV/bitwuzla **2/2** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV/QF_BV-bvred/QF_LRA/QF_LIA/QF_UFBV exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_LRA **9/9**, QF_LIA **10/10**, QF_UFBV/bitwuzla **2/2**, and QF_UFLIA curated **1/2** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-25** — **Opaque UFLIA integer Alethe coverage.**
+  Added a checked congruence-free QF_UFLIA Alethe route: UF applications with
+  integer result sort are eliminated to opaque integer variables, the integer
+  abstraction is certified with `lia_generic`, and the proof is substituted
+  back to opaque applications and re-checked. The evidence front door now tries
+  this route for UFLIA after the direct QF_UFLIA Alethe path. Re-ran the exact
+  QF_UFLIA audits and regenerated `bench-results/DOMINANCE.md`: curated named
+  moves **0/2 -> 1/2 dominant** with Lean unsat **0/2 -> 1/2**; bounded
+  uninterpreted-sort regressions remain **4/5 dominant** with Lean unsat
+  **0/1**. The remaining `use-name-in-same-command` row needs a
+  Boolean-structured UF-abstraction/ArithDPLL certificate.
+  Verification:
+  `cargo test -p axeyum-solver --lib emits_checkable_congruence_free_uflia_refutation -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --lib lia_generic_accepts_opaque_integer_app_tautology -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test evidence congruence_free_uflia_uses_opaque_arith_alethe_evidence -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-curated-named-solver-vs-z3-10s.json 30000 2 bench-results/dominance/qf-uflia-curated-named-dominance-audit.json`;
+  `cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 5 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
 
 - **2026-06-25** — **QF_NRA SOS Lean coverage widened.**
   Added a verified SOS certificate fallback in Lean reconstruction: detailed SOS

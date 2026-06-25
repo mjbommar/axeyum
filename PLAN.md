@@ -219,7 +219,8 @@ against competitor source, are now binding:
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**,
    QF_LIA/cvc5 **100% (10/10)**, QF_LRA/cvc5 **100% (9/9)**, QF_UFLIA curated
-   **0% (0/2)**, and QF_UFLIA bounded declared-sort regressions **80% (4/5)**.
+   **50% (1/2)** after the checked integer route picked up `named-expr-use`,
+   and QF_UFLIA bounded declared-sort regressions **80% (4/5)**.
    All exact audit rows have **DISAGREE = 0** and **audit_errors = 0**. The LRA
    row initially exposed a practical evidence gap: the pure-real certificate
    front door could decline a Boolean/ITE LRA SAT shape with an unsupported

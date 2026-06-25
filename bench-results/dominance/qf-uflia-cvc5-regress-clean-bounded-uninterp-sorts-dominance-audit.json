@@ -4,10 +4,11 @@
   "instances": [
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
       "dominant_candidate": false,
-      "elapsed_ms": 4.26686,
+      "elapsed_ms": 7.767129000000001,
       "evidence_certified": false,
       "evidence_checked": true,
       "evidence_kind": "bare-unsat",
@@ -16,15 +17,24 @@
       "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.000335,
+        "lean_reconstruction": 0.377147,
+        "parse_evidence": 0.548786,
+        "parse_lean": 0.380459,
+        "produce_evidence": 6.402535,
+        "read": 0.016354999999999998
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 1.0696480000000002,
+      "elapsed_ms": 0.774245,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -33,15 +43,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.01077,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.103855,
+        "parse_lean": null,
+        "produce_evidence": 0.6429959999999999,
+        "read": 0.007723999999999999
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.5318999999999999,
+      "elapsed_ms": 0.263525,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -50,15 +69,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.007038,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.084845,
+        "parse_lean": null,
+        "produce_evidence": 0.14136100000000001,
+        "read": 0.023354
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 1.477785,
+      "elapsed_ms": 1.7342,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -67,15 +95,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.012171,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.120184,
+        "parse_lean": null,
+        "produce_evidence": 1.580552,
+        "read": 0.012490999999999999
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 1.301719,
+      "elapsed_ms": 1.529059,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -84,6 +121,14 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.020217,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.11605399999999999,
+        "parse_lean": null,
+        "produce_evidence": 1.371061,
+        "read": 0.013249
+      },
       "trust_holes": [],
       "trust_steps": []
     }
@@ -106,6 +151,6 @@
     "lean_unsat_pct": 0.0,
     "timeouts": 0
   },
-  "timeout_ms": 5000,
+  "timeout_ms": 30000,
   "version": 1
 }

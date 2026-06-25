@@ -602,6 +602,31 @@ fn qf_lia_boolean_stress_row_uses_bool_simplification_evidence() {
 }
 
 #[test]
+fn congruence_free_uflia_uses_opaque_arith_alethe_evidence() {
+    // f(0) <= 0 ∧ f(0) >= 1 is unsat after treating the repeated UF application
+    // as one opaque integer term; no Ackermann/congruence lemmas are needed.
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let f0 = arena.apply(f, &[zero]).unwrap();
+    let le = arena.int_le(f0, zero).unwrap();
+    let ge = arena.int_ge(f0, one).unwrap();
+    let assertions = [le, ge];
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatArithAletheProof(_) = &report.evidence else {
+        panic!(
+            "expected opaque UFLIA arith-Alethe evidence, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(report.evidence.is_certified());
+    assert!(report.trusted_steps.is_empty());
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+}
+
+#[test]
 fn tampered_lra_dpll_evidence_fails_its_own_check() {
     // Strip the lemmas from the refutation: the bare skeleton is satisfiable, so
     // the independent verifier rejects the doctored evidence.

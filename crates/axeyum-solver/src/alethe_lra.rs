@@ -390,7 +390,9 @@ fn int_comparison_term(
 /// integer-sorted term. A `Const` is a plain integer numeral (if it parses as
 /// `i128`) or a fresh integer variable (memoized by name). An `App` over `{+, -,
 /// *}` builds the corresponding linear arithmetic; `*` requires at least one
-/// constant factor (nonlinear ⇒ `None`). Anything else ⇒ `None`.
+/// constant factor (nonlinear ⇒ `None`). Any other application head is treated as
+/// an opaque integer variable keyed by its canonical term, matching the real
+/// `la_generic` checker's congruence-free UF abstraction.
 fn int_term(
     arena: &mut TermArena,
     vars: &mut BTreeMap<String, TermId>,
@@ -417,11 +419,11 @@ fn int_term(
                 n if n >= 2 => fold_int(arena, vars, args, TermArena::int_sub),
                 _ => None,
             },
-            _ => None,
+            _ => Some(int_var(arena, vars, &term.key())),
         },
-        // An indexed-operator application (e.g. a bit-blast `(_ @bit_of i)`) has no
-        // LIA integer meaning.
-        AletheTerm::Indexed { .. } => None,
+        // As with ordinary uninterpreted applications, indexed operators are
+        // opaque integer terms for `lia_generic` validity.
+        AletheTerm::Indexed { .. } => Some(int_var(arena, vars, &term.key())),
     }
 }
 
@@ -657,6 +659,63 @@ pub fn prove_uflra_unsat_alethe(
     }
 }
 
+/// Integer analogue of [`prove_uflra_unsat_alethe`]: emits a checkable
+/// `lia_generic` refutation for a congruence-free `QF_UFLIA` conjunction whose
+/// contradiction is already present after replacing each arithmetic-sorted UF
+/// application with one opaque integer variable.
+#[must_use]
+pub fn prove_uflia_opaque_unsat_alethe(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<AletheCommand>> {
+    use axeyum_ir::{FuncId, SymbolId};
+
+    let elim = axeyum_rewrite::eliminate_functions(arena, assertions).ok()?;
+    let abstraction = elim.abstraction().to_vec();
+    if abstraction.len() != assertions.len() {
+        return None;
+    }
+    let applications: Vec<(SymbolId, FuncId, Vec<TermId>)> = elim
+        .applications()
+        .into_iter()
+        .map(|(func, args, fresh)| (fresh, func, args.to_vec()))
+        .collect();
+    if applications.is_empty() {
+        return None;
+    }
+
+    let reduced_proof = prove_lia_unsat_alethe(arena, &abstraction)?;
+
+    let fresh_to_app: BTreeMap<SymbolId, (FuncId, Vec<TermId>)> = applications
+        .iter()
+        .map(|(fresh, func, args)| (*fresh, (*func, args.clone())))
+        .collect();
+    let mut name_to_app: BTreeMap<String, AletheTerm> = BTreeMap::new();
+    for &(fresh, _, _) in &applications {
+        let (name, _sort) = arena.symbol(fresh);
+        let name = name.to_owned();
+        let app = fresh_symbol_to_int_alethe(arena, fresh, &fresh_to_app)?;
+        name_to_app.insert(name, app);
+    }
+
+    let mut commands = reduced_proof;
+    for command in &mut commands {
+        match command {
+            AletheCommand::Assume { clause, .. } | AletheCommand::Step { clause, .. } => {
+                for lit in clause.iter_mut() {
+                    substitute_apps(&mut lit.atom, &name_to_app);
+                }
+            }
+        }
+    }
+
+    if matches!(check_alethe_lra(&commands), Ok(true)) {
+        Some(commands)
+    } else {
+        None
+    }
+}
+
 /// Renders a fresh Ackermann symbol as its opaque application `AletheTerm`
 /// `(funcname arg0 …)`, recursively expanding any argument that is itself a fresh
 /// application symbol. `None` if a fresh symbol has no application entry.
@@ -675,6 +734,22 @@ fn fresh_symbol_to_alethe(
     Some(AletheTerm::App(name, converted))
 }
 
+/// Integer counterpart of [`fresh_symbol_to_alethe`].
+fn fresh_symbol_to_int_alethe(
+    arena: &TermArena,
+    fresh: axeyum_ir::SymbolId,
+    fresh_to_app: &BTreeMap<axeyum_ir::SymbolId, (axeyum_ir::FuncId, Vec<TermId>)>,
+) -> Option<AletheTerm> {
+    let (func, args) = fresh_to_app.get(&fresh)?;
+    let (name, _params, _result) = arena.function(*func);
+    let name = name.to_owned();
+    let mut converted = Vec::with_capacity(args.len());
+    for &arg in args {
+        converted.push(app_arg_to_int_alethe(arena, arg, fresh_to_app)?);
+    }
+    Some(AletheTerm::App(name, converted))
+}
+
 /// Renders an application **argument** (a rewritten/abstracted term) as an
 /// `AletheTerm`: a fresh application symbol expands to its `(f …)` form, any other
 /// linear-real term goes through [`real_subterm_to_alethe`]. `None` outside that.
@@ -689,6 +764,20 @@ fn app_arg_to_alethe(
         }
     }
     real_subterm_to_alethe(arena, arg)
+}
+
+/// Integer counterpart of [`app_arg_to_alethe`].
+fn app_arg_to_int_alethe(
+    arena: &TermArena,
+    arg: TermId,
+    fresh_to_app: &BTreeMap<axeyum_ir::SymbolId, (axeyum_ir::FuncId, Vec<TermId>)>,
+) -> Option<AletheTerm> {
+    if let TermNode::Symbol(symbol) = arena.node(arg) {
+        if fresh_to_app.contains_key(symbol) {
+            return fresh_symbol_to_int_alethe(arena, *symbol, fresh_to_app);
+        }
+    }
+    int_subterm_to_alethe(arena, arg)
 }
 
 /// Substitutes each fresh-variable `Const(name)` whose `name` is a known abstraction
@@ -1067,9 +1156,12 @@ fn int_subterm_to_alethe(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
 
 #[cfg(test)]
 mod tests {
-    use super::{check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe};
+    use super::{
+        check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe,
+        prove_uflia_opaque_unsat_alethe,
+    };
     use axeyum_cnf::{AletheCommand, AletheError, AletheLit, AletheTerm};
-    use axeyum_ir::{Rational, TermArena};
+    use axeyum_ir::{Rational, Sort, TermArena};
 
     #[test]
     fn emits_checkable_lra_refutation() {
@@ -1109,6 +1201,23 @@ mod tests {
         let five = arena.real_const(Rational::integer(5));
         let a = arena.real_le(x, five).unwrap();
         assert!(prove_lra_unsat_alethe(&arena, &[a]).is_none());
+    }
+
+    #[test]
+    fn emits_checkable_congruence_free_uflia_refutation() {
+        // f(0) <= 0 ∧ f(0) >= 1 is unsat over integer-valued f, and the proof
+        // needs no functional-consistency lemma: the same application is one
+        // opaque integer variable in the `lia_generic` check.
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let f0 = arena.apply(f, &[zero]).unwrap();
+        let a1 = arena.int_le(f0, zero).unwrap();
+        let a2 = arena.int_ge(f0, one).unwrap();
+        let proof = prove_uflia_opaque_unsat_alethe(&mut arena, &[a1, a2])
+            .expect("emits congruence-free UFLIA proof");
+        assert_eq!(check_alethe_lra(&proof), Ok(true));
     }
 
     fn num(value: &str) -> AletheTerm {
@@ -1276,6 +1385,16 @@ mod tests {
             }),
             "the same clause is NOT real-valid (x = 0.5) ⇒ la_generic must reject it"
         );
+    }
+
+    #[test]
+    fn lia_generic_accepts_opaque_integer_app_tautology() {
+        // The opaque term `(f 0)` is treated as one arbitrary integer variable.
+        // Thus `f(0) <= 0 ∨ f(0) >= 1` is an integer-valid gap tautology.
+        let f0 = AletheTerm::App("f".to_owned(), vec![num("0")]);
+        let clause = vec![cmp("<=", f0.clone(), num("0")), cmp(">=", f0, num("1"))];
+        let proof = vec![step("t1", clause, "lia_generic", &[])];
+        assert_eq!(check_alethe_lra(&proof), Ok(false));
     }
 
     #[test]

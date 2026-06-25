@@ -4,27 +4,37 @@
   "instances": [
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 3.455156,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 9.333767,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "arith-dpll-unsat",
       "file": "corpus/public-curated/named/cvc5__named-expr-use.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "ArithDpll",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 1.4138650000000001,
+        "lean_reconstruction": 5.375344,
+        "parse_evidence": 0.216976,
+        "parse_lean": 0.09384400000000001,
+        "produce_evidence": 2.198923,
+        "read": 0.013392
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
       "dominant_candidate": false,
-      "elapsed_ms": 4.869008999999999,
+      "elapsed_ms": 7.201822,
       "evidence_certified": false,
       "evidence_checked": true,
       "evidence_kind": "bare-unsat",
@@ -33,6 +43,14 @@
       "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.000402,
+        "lean_reconstruction": 0.417033,
+        "parse_evidence": 0.421964,
+        "parse_lean": 0.41122400000000003,
+        "produce_evidence": 5.904282,
+        "read": 0.012473999999999999
+      },
       "trust_holes": [],
       "trust_steps": []
     }
@@ -46,15 +64,15 @@
     "audited_unsat": 2,
     "baseline_decided": 2,
     "baseline_mismatches": 0,
-    "dominant_candidates": 0,
-    "dominant_pct_audited": 0.0,
-    "evidence_certified": 0,
+    "dominant_candidates": 1,
+    "dominant_pct_audited": 50.0,
+    "evidence_certified": 1,
     "evidence_checked": 2,
     "instances": 2,
-    "lean_checked_unsat": 0,
-    "lean_unsat_pct": 0.0,
+    "lean_checked_unsat": 1,
+    "lean_unsat_pct": 50.0,
     "timeouts": 0
   },
-  "timeout_ms": 5000,
+  "timeout_ms": 30000,
   "version": 1
 }

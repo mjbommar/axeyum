@@ -43,7 +43,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_NRA | `qf-nra-synthetic-graduated` | 30 | 80% (24/30) | 62% (10/16) | Lean unsat 10/16, evidence certified 24/30 | `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 100% (2/2) | 100% (1/1) | none | `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 100% (4/4) | 100% (2/2) | none | `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` |
-| QF_UFLIA | `qf-uflia-curated-named` | 2 | 0% (0/2) | 0% (0/2) | Lean unsat 0/2, evidence certified 0/2 | `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` |
+| QF_UFLIA | `qf-uflia-curated-named` | 2 | 50% (1/2) | 50% (1/2) | Lean unsat 1/2, evidence certified 1/2 | `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 5 | 80% (4/5) | 0% (0/1) | Lean unsat 0/1, evidence certified 4/5 | `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` |
 
 ## First Audit Queue
@@ -90,7 +90,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 2 | 100% | strong | 0 | complete | 100% (2/2) | 100% (1/1) | dominant on audited row | audit whether measured unsats avoid BV mul/rem/shift holes |
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 4 | 100% | strong | 0 | complete | 100% (4/4) | 100% (2/2) | dominant on audited row | audit whether measured unsats avoid BV mul/rem/shift holes |
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 8 | 100% | strong | 0 | not run | - | - | build Lean route | audit finite-field proof path before claiming dominance |
-| QF_UFLIA | `qf-uflia-curated-named` | 2 | 2 | 100% | strong | 0 | complete | 0% (0/2) | 0% (0/2) | close Lean unsat gaps | audit UFLIA unsats by integer-fragment route and UF congruence shape |
+| QF_UFLIA | `qf-uflia-curated-named` | 2 | 2 | 100% | strong | 0 | complete | 50% (1/2) | 50% (1/2) | close Lean unsat gaps | audit UFLIA unsats by integer-fragment route and UF congruence shape |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 6 | 5 | 83% | strong | 0 | complete | 80% (4/5) | 0% (0/1) | close Lean unsat gaps | audit UFLIA unsats by integer-fragment route and UF congruence shape |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean` | 8 | 4 | 50% | mid | 0 | not run | - | - | grow decide + classify certs | audit UFLIA unsats by integer-fragment route and UF congruence shape |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | weak | 0 | not run | - | - | decider first | audit UFLIA unsats by integer-fragment route and UF congruence shape |
