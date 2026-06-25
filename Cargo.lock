@@ -170,6 +170,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-verify"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+ "axeyum-property",
+ "axeyum-solver",
+ "axeyum-verify-macros",
+]
+
+[[package]]
+name = "axeyum-verify-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
