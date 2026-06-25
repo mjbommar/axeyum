@@ -110,6 +110,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatGuardedQuantAletheProof { .. } => "guarded-quant-alethe-unsat",
         Evidence::UnsatTermLevel { .. } => "term-level-unsat",
         Evidence::UnsatFiniteDomainEnum { .. } => "finite-domain-enum-unsat",
+        Evidence::UnsatBvDefinedEnum(_) => "bv-defined-enum-unsat",
         Evidence::UnsatBvForallNonconstant(_) => "bv-forall-nonconstant-unsat",
         Evidence::UnsatBvUfLocal(_) => "bv-uf-local-unsat",
         Evidence::UnsatFarkas(_) => "farkas-unsat",

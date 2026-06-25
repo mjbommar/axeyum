@@ -322,6 +322,38 @@ fn qf_ff_term_level_enum_rows_check_in_real_lean() {
     }
 }
 
+/// The two remaining QF_FF audit gaps are certified by bounded enumeration after
+/// checked top-level definitions and finite-domain restrictions. This keeps
+/// finite-field algebra/parity rows off the unsupported DRAT Lean path.
+#[test]
+fn qf_ff_bv_defined_enum_gap_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_ff_xor_sound",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FF/cvc5-regress-clean/cli__regress0__ff__ff_xor_sound.smt2"
+            ),
+        ),
+        (
+            "qf_ff_issue10937",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FF/cvc5-regress-clean/cli__regress0__ff__issue10937.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_FF row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: BV defined enum reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::BvDefinedEnum, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: BV defined enum module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {

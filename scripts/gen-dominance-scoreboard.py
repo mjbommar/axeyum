@@ -134,9 +134,9 @@ PROOF_ROUTES: dict[str, ProofRoute] = {
         "witness the general DatatypeElim dispatch end to end",
     ),
     "QF_FF": ProofRoute(
-        "finite-field lowering certifies through finite/BV routes, not full Lean",
+        "finite-field lowering certifies through checked finite/BV routes",
         "partial",
-        "audit finite-field unsats for direct Lean reconstruction feasibility",
+        "broaden finite-field audits beyond the cvc5 slice and grow algebraic certificates",
         False,
     ),
     "QF_FP": ProofRoute(
@@ -194,9 +194,9 @@ PROOF_ROUTES: dict[str, ProofRoute] = {
         "audit whether measured unsats avoid BV mul/rem/shift holes",
     ),
     "QF_UFFF": ProofRoute(
-        "UF+finite-field lowering is not broad Lean-kernel certified",
+        "UF+finite-field lowering certifies through checked local BV+UF routes",
         "partial",
-        "audit finite-field proof path before claiming dominance",
+        "broaden UFFF audits beyond the cvc5 finite-field+UF slice",
         False,
     ),
     "QF_UFLIA": ProofRoute(

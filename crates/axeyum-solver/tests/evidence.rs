@@ -1015,6 +1015,48 @@ fn qf_ufff_rows_use_checked_bv_uf_local_evidence() {
 }
 
 #[test]
+fn qf_ff_gap_rows_use_checked_bv_defined_enum_evidence() {
+    for (tag, input) in [
+        (
+            "qf_ff_xor_sound",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FF/cvc5-regress-clean/cli__regress0__ff__ff_xor_sound.smt2"
+            ),
+        ),
+        (
+            "qf_ff_issue10937",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FF/cvc5-regress-clean/cli__regress0__ff__issue10937.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_FF row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
+        let Evidence::UnsatBvDefinedEnum(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected definition-aware BV enum evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(cert.cases > 0, "{tag}: certificate should count cases");
+        assert!(
+            report.evidence.is_certified(),
+            "{tag}: evidence should be certified"
+        );
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}: evidence should re-check"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: direct structural certificate should carry no trust holes"
+        );
+    }
+}
+
+#[test]
 fn unified_front_door_routes_pure_real_to_a_refutation() {
     // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
     let mut arena = TermArena::new();

@@ -36,6 +36,7 @@ mod bitblast_miter;
 mod bmc;
 mod bool_simplify;
 mod bv2nat_bound;
+mod bv_defined_enum;
 mod bv_forall_nonconstant;
 mod bv_interpolant;
 mod bv_uf_local;

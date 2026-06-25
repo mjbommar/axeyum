@@ -1285,6 +1285,9 @@ pub enum ProofFragment {
     /// An exhaustive ground Bool/BV refutation certified by the executable
     /// evaluator.
     TermLevelEnum,
+    /// A ground Bool/BV refutation by exhaustive enumeration after checked
+    /// top-level definitions and finite-domain restrictions.
+    BvDefinedEnum,
     /// A universal BV equality whose left side is a checked non-constant
     /// expression of the quantified variable.
     BvForallNonconstant,
@@ -1660,6 +1663,8 @@ fn scan_ground_bv_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> Pr
         ProofFragment::Unsupported
     } else if term_level_enum_certifies(arena, assertions) {
         ProofFragment::TermLevelEnum
+    } else if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_some() {
+        ProofFragment::BvDefinedEnum
     } else {
         ProofFragment::QfBv
     }
@@ -2579,6 +2584,28 @@ fn reconstruct_term_level_enum_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_bv_defined_enum_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_none() {
+        return Err(ReconstructError::MalformedStep {
+            rule: "bv_defined_enum".to_owned(),
+            detail: "definition-aware BV enumeration certificate failed".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("bv_defined_enum_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bv_defined_enum")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_bv_forall_nonconstant_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3234,6 +3261,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::FiniteDomainEnum
         | ProofFragment::TermLevelEnum
+        | ProofFragment::BvDefinedEnum
         | ProofFragment::BvForallNonconstant
         | ProofFragment::BvUfLocal
         | ProofFragment::ArrayAxiom
@@ -3328,6 +3356,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::TermLevelEnum => {
             reconstruct_term_level_enum_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::BvDefinedEnum => {
+            reconstruct_bv_defined_enum_to_lean_module(arena, assertions)?
         }
         ProofFragment::BvForallNonconstant => {
             reconstruct_bv_forall_nonconstant_to_lean_module(arena, assertions)?

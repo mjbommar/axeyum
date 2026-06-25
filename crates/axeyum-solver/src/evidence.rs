@@ -52,6 +52,7 @@ use crate::array_xor_swap::{TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCe
 use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast, solve};
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::bool_simplify::BoolSimplificationRefutationCertificate;
+use crate::bv_defined_enum::BvDefinedEnumRefutationCertificate;
 use crate::bv_forall_nonconstant::BvForallNonconstantRefutationCertificate;
 use crate::bv_uf_local::BvUfLocalRefutationCertificate;
 use crate::certify::{
@@ -281,6 +282,13 @@ pub enum Evidence {
         /// The combined free-symbol plus bound-quantifier bit budget used.
         max_total_bits: u32,
     },
+    /// Unsatisfiable (`BV`/Bool): exhaustive enumeration after applying checked
+    /// top-level symbol definitions and finite-domain restrictions. This covers
+    /// finite-field rows where raw symbol enumeration is too wide, but required
+    /// equalities define helper symbols and bit/range constraints shrink the
+    /// remaining independent domains. The checker re-scans the original query,
+    /// recomputes the definitions/domains, and replays every covered assignment.
+    UnsatBvDefinedEnum(BvDefinedEnumRefutationCertificate),
     /// Unsatisfiable (quantified `BV`): a universal equality forces a visibly
     /// non-constant BV expression to be one fixed result for every quantified
     /// value. The checker re-scans the original query and re-matches the exact
@@ -558,6 +566,7 @@ impl Evidence {
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatNraEvenPower(_)
+            | Evidence::UnsatBvDefinedEnum(_)
             | Evidence::UnsatBvForallNonconstant(_)
             | Evidence::UnsatBvUfLocal(_)
             | Evidence::UnsatArrayAxiom(_)
@@ -591,6 +600,7 @@ impl Evidence {
                 | Evidence::UnsatGuardedQuantAletheProof { .. }
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFiniteDomainEnum { .. }
+                | Evidence::UnsatBvDefinedEnum(_)
                 | Evidence::UnsatBvForallNonconstant(_)
                 | Evidence::UnsatBvUfLocal(_)
                 | Evidence::UnsatFarkas(_)
@@ -635,6 +645,9 @@ fn check_direct_structural_evidence(
             check_finite_array_extensionality_evidence(arena, assertions, cert)
         }
         Evidence::UnsatNraEvenPower(cert) => check_nra_even_power_evidence(arena, assertions, cert),
+        Evidence::UnsatBvDefinedEnum(cert) => {
+            check_bv_defined_enum_evidence(arena, assertions, cert)
+        }
         Evidence::UnsatBvForallNonconstant(cert) => {
             check_bv_forall_nonconstant_evidence(arena, assertions, cert)
         }
@@ -706,6 +719,15 @@ fn check_nra_even_power_evidence(
     cert: &NraEvenPowerRefutationCertificate,
 ) -> bool {
     crate::nra_even_power::nra_even_power_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bv_defined_enum_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &BvDefinedEnumRefutationCertificate,
+) -> bool {
+    crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -890,6 +912,13 @@ pub fn produce_qf_bv_evidence(
 ) -> Result<EvidenceReport, SolverError> {
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
+    if let Some(cert) = crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions) {
+        return Ok(EvidenceReport {
+            evidence: Evidence::UnsatBvDefinedEnum(cert),
+            provenance,
+            trusted_steps: Vec::new(),
+        });
+    }
     let check = backend.check(arena, assertions, config)?;
     // Did the CDCL(XOR) fallback supply this `unsat` (ADR-0035)? That refutation
     // is the trusted `XorGaussian` hole and is NOT RUP, so it must NOT be routed
@@ -1219,6 +1248,13 @@ fn direct_pre_solve_structural_report(
     if let Some(cert) = crate::bv_uf_local::bv_uf_local_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatBvUfLocal(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) = crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatBvDefinedEnum(cert),
             provenance: provenance.clone(),
             trusted_steps: Vec::new(),
         });
@@ -1718,6 +1754,9 @@ fn direct_structural_unsat_evidence(
     if let Some(cert) = crate::bv_uf_local::bv_uf_local_refutation(arena, assertions) {
         return Some((Evidence::UnsatBvUfLocal(cert), Vec::new()));
     }
+    if let Some(cert) = crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions) {
+        return Some((Evidence::UnsatBvDefinedEnum(cert), Vec::new()));
+    }
     if let Some(cert) =
         crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
     {
@@ -2122,6 +2161,7 @@ pub fn prove(
         | Evidence::UnsatGuardedQuantAletheProof { .. }
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFiniteDomainEnum { .. }
+        | Evidence::UnsatBvDefinedEnum(_)
         | Evidence::UnsatBvForallNonconstant(_)
         | Evidence::UnsatBvUfLocal(_)
         | Evidence::UnsatFarkas(_)
