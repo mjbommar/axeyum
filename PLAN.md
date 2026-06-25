@@ -72,6 +72,67 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
   corpora (where QF_LIA already hints z3 is ahead). Measurement is no longer the
   blocker — corpus *difficulty/neutrality* is.
 
+**Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
+into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
+— **24 logic fragments, 992 files, 620 decided, 572 oracle-compared, DISAGREE = 0**
+— plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
+correction is answered: the weak rows now *name* the blockers (see
+[`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
+question is no longer "are we measured" — it is the next section.
+
+## Strategy: work backwards from Pareto dominance (2026-06-24)
+
+**The decide-rate race is the wrong target.** Z3/cvc5 have ~20 years of tuning;
+the scoreboard confirms axeyum trails on the hard rows (QF_NRA-cvc5 24%, Int-indexed
+arrays ~0%, infinite-domain quantifiers 0%). Chasing "match Z3's decide% everywhere"
+is a catch-up race axeyum loses on most rows, indefinitely. **Stop optimizing for
+global decide-parity.**
+
+**Instead: define and grow the set of fragments where axeyum *Pareto-dominates* the
+alternatives.** A fragment is **Pareto-dominant** when axeyum is, on it,
+simultaneously: **(1) decide-competitive** with Z3 (parity on that fragment),
+**(2) sound** (DISAGREE = 0 — already true everywhere), **(3) Lean-certified**
+(every `unsat` carries a kernel-checkable proof), and **(4) pure-Rust / `unsafe`-free /
+WASM / deterministic**. On such a fragment axeyum **strictly beats every alternative**:
+- vs **Z3 alone** — Z3 ties on decide but has no Lean-checkable proof and is C++ (no
+  WASM, memory-unsafe);
+- vs **cvc5 alone** — ties on decide, has Alethe/LFSC but not an *integrated in-tree
+  Lean-kernel-checked* artifact in a pure-Rust stack;
+- vs **Lean alone** — Lean cannot *auto-decide* the fragment; axeyum does, and hands
+  back a proof its kernel accepts.
+
+That is a real, defensible "we win here" — unlike "we almost match Z3's decide-rate."
+
+**The new headline metric: the count of Pareto-dominant fragments.** Drive it up.
+Each fragment converted to all-four is a beachhead the incumbents structurally cannot
+take (they are C++, or non-auto, or non-Lean-reconstructed).
+
+**Working backwards — what that implies for priorities:**
+1. **The binding axis is certification, not decide-rate.** Soundness (2) and
+   pure-Rust (4) are already universal; decide-competitiveness (1) already holds on
+   the strong rows (QF_FP/QF_UFBV/QF_UFFF 100%, QF_AUFBV 93%, QF_LIA 91%, QF_ABV 88%,
+   QF_BVFP/QF_FF/QF_LRA/QF_SEQ ~80%). The **missing leg is (3) Lean certification** on
+   those already-strong fragments. **That is where the structural win is, and it is
+   the axis Z3 cannot match at all.** → invest the cert lane (Track 3 / PARITY Tier C)
+   on the **strong-decide** fragments first, not the weak ones.
+2. **Name the beachhead already won.** QF_BV (DRAT), datatypes (complete axiom-free
+   Lean chain), QF_LRA (Farkas), QF_UF (congruence) are at/near all-four **today** —
+   the first Pareto-dominant fragments. Make this an explicit, tracked list.
+3. **The hard rows (NRA high-degree, Int-arrays, infinite quantifiers) are NOT a
+   dominance opportunity near-term** — axeyum can't be decide-competitive there for a
+   long time. Treat them as "match Z3's *practical* heuristics where cheap, honest
+   `unknown` otherwise" — do **not** sink the dominance budget into a decide-rate
+   catch-up race there.
+4. **vs Lean is a pure-win axis: ship the tactic backend.** axeyum auto-discharging
+   SMT-decidable Lean goals with kernel-checked proofs (the lean-smt-style bridge,
+   [P3.7](docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md)) Pareto-dominates
+   manual Lean on the decidable fragment — automation Lean lacks, trust Lean demands.
+
+**The inversion in one line:** *we do not win by deciding as much as Z3; we win by
+being the only stack that decides it, proves it to a Lean kernel, and runs anywhere
+— so grow the fragment set where all four hold, and stop spending on the decide-race
+where we structurally can't lead.*
+
 ## What "done" means
 
 See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the full
