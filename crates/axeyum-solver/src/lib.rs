@@ -36,6 +36,7 @@ mod bitblast_miter;
 mod bmc;
 mod bool_simplify;
 mod bv2nat_bound;
+mod bv_forall_nonconstant;
 mod bv_interpolant;
 pub mod capabilities;
 mod cardinality;
@@ -183,6 +184,10 @@ pub use bmc::{
     prove_safety_k_induction,
 };
 pub use bool_simplify::{BoolSimplificationRefutationCertificate, bool_simplification_refutation};
+pub use bv_forall_nonconstant::{
+    BvForallNonconstantKind, BvForallNonconstantRefutationCertificate,
+    bv_forall_nonconstant_refutation,
+};
 pub use bv_interpolant::{
     QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
 };

@@ -176,6 +176,62 @@ fn quantified_bv_finite_domain_enum_rows_check_in_real_lean() {
     }
 }
 
+/// The remaining cvc5 quantified-BV inversion audit rows are closed by a checked
+/// non-constant universal-BV certificate. Reconstruction reruns that checker
+/// before rendering the certificate-wrapper module.
+#[test]
+fn cvc5_quantified_bv_inversion_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "quant_bv_invert_bvadd",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvadd-neq.smt2"
+            ),
+        ),
+        (
+            "quant_bv_invert_bvashr",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvashr-0-neq.smt2"
+            ),
+        ),
+        (
+            "quant_bv_invert_concat_0",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-0-neq.smt2"
+            ),
+        ),
+        (
+            "quant_bv_invert_concat_1",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-1-neq.smt2"
+            ),
+        ),
+        (
+            "quant_bv_invert_bvudiv_0",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-0-neq.smt2"
+            ),
+        ),
+        (
+            "quant_bv_invert_bvudiv_1",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-1-neq.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("cvc5 quantified BV inversion row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: BV universal inversion reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::BvForallNonconstant, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: BV universal non-constant module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {

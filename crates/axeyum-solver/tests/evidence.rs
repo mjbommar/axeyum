@@ -880,6 +880,72 @@ fn quantified_bv_audit_unsats_use_finite_domain_enum_evidence() {
 }
 
 #[test]
+fn cvc5_quantified_bv_inversion_rows_use_checked_nonconstant_evidence() {
+    for (tag, input) in [
+        (
+            "invert_bvadd",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvadd-neq.smt2"
+            ),
+        ),
+        (
+            "invert_bvashr",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-bvashr-0-neq.smt2"
+            ),
+        ),
+        (
+            "invert_concat_0",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-0-neq.smt2"
+            ),
+        ),
+        (
+            "invert_concat_1",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-test-invert-concat-1-neq.smt2"
+            ),
+        ),
+        (
+            "invert_bvudiv_0",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-0-neq.smt2"
+            ),
+        ),
+        (
+            "invert_bvudiv_1",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__qbv-test-invert-bvudiv-1-neq.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("cvc5 quantified BV inversion row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
+        let Evidence::UnsatBvForallNonconstant(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected BV forall non-constant evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert_eq!(cert.variable_width, 8, "{tag}");
+        assert!(
+            report.evidence.is_certified(),
+            "{tag}: evidence should be certified"
+        );
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}: evidence should re-check"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: direct structural certificate should carry no trust holes"
+        );
+    }
+}
+
+#[test]
 fn unified_front_door_routes_pure_real_to_a_refutation() {
     // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
     let mut arena = TermArena::new();

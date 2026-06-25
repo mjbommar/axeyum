@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **640 decided**,
-   **591 oracle-compared**, **DISAGREE = 0**, with **12 complete exact audit rows**
+   **591 oracle-compared**, **DISAGREE = 0**, with **13 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **AUDIT HARNESS LANDED (2026-06-25):**
@@ -215,6 +215,15 @@ against competitor source, are now binding:
    QF_UFBV/bitwuzla audit is now **100% (2/2)** dominant with Lean unsat
    **100% (1/1)**, zero mismatches, zero audit errors, zero timeouts, and no
    trust holes.
+   **QUANTIFIED BV CVC5 EXACT ROW CLOSED (2026-06-25):**
+   the cvc5 quantified-BV audit now has a checked `bv-forall-nonconstant-unsat`
+   route for universal inversion rows such as `forall x. bvadd x a = b`,
+   `bvashr`, `concat`, and guarded `bvudiv` variants. The certificate re-scans
+   the original IR and verifies the concrete witness schema before Lean
+   reconstruction renders a checked wrapper. Together with finite-domain enum
+   rows, the exact BV/cvc5 quantified audit is now **100% (37/37)** dominant
+   with Lean unsat **100% (8/8)**, zero mismatches, zero audit errors, and zero
+   timeouts.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **100% (4/4)**, QF_BV/bvred **100% (6/6)**,

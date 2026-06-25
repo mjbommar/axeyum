@@ -197,9 +197,8 @@ mod tests {
         let ym2_2 = arena.real_mul(ym2, ym2).unwrap();
         let xm1_4 = arena.real_mul(xm1_2, xm1_2).unwrap();
         let ym2_4 = arena.real_mul(ym2_2, ym2_2).unwrap();
-        let lhs = arena
-            .real_add(arena.real_add(xm1_4, ym2_4).unwrap(), one)
-            .unwrap();
+        let sum = arena.real_add(xm1_4, ym2_4).unwrap();
+        let lhs = arena.real_add(sum, one).unwrap();
         let assertion = arena.real_lt(lhs, zero).unwrap();
 
         let cert = nra_even_power_refutation(&arena, &[assertion]).unwrap();

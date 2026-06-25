@@ -52,6 +52,7 @@ use crate::array_xor_swap::{TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCe
 use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast, solve};
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::bool_simplify::BoolSimplificationRefutationCertificate;
+use crate::bv_forall_nonconstant::BvForallNonconstantRefutationCertificate;
 use crate::certify::{
     CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
 };
@@ -279,6 +280,11 @@ pub enum Evidence {
         /// The combined free-symbol plus bound-quantifier bit budget used.
         max_total_bits: u32,
     },
+    /// Unsatisfiable (quantified `BV`): a universal equality forces a visibly
+    /// non-constant BV expression to be one fixed result for every quantified
+    /// value. The checker re-scans the original query and re-matches the exact
+    /// witness schema before accepting.
+    UnsatBvForallNonconstant(BvForallNonconstantRefutationCertificate),
     /// Unsatisfiable (`QF_LRA`): a Farkas refutation over the exact-rational
     /// constraints, whose [`FarkasCertificate::verify`] is the evidence.
     UnsatFarkas(FarkasCertificate),
@@ -546,6 +552,7 @@ impl Evidence {
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatNraEvenPower(_)
+            | Evidence::UnsatBvForallNonconstant(_)
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatTermIdentity(_)
             | Evidence::UnsatBoolSimplification(_)
@@ -577,6 +584,7 @@ impl Evidence {
                 | Evidence::UnsatGuardedQuantAletheProof { .. }
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFiniteDomainEnum { .. }
+                | Evidence::UnsatBvForallNonconstant(_)
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
                 | Evidence::UnsatArithDpll(_)
@@ -619,6 +627,9 @@ fn check_direct_structural_evidence(
             check_finite_array_extensionality_evidence(arena, assertions, cert)
         }
         Evidence::UnsatNraEvenPower(cert) => check_nra_even_power_evidence(arena, assertions, cert),
+        Evidence::UnsatBvForallNonconstant(cert) => {
+            check_bv_forall_nonconstant_evidence(arena, assertions, cert)
+        }
         Evidence::UnsatArrayAxiom(cert) => check_array_axiom_evidence(arena, assertions, cert),
         Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
         Evidence::UnsatBoolSimplification(cert) => {
@@ -686,6 +697,15 @@ fn check_nra_even_power_evidence(
     cert: &NraEvenPowerRefutationCertificate,
 ) -> bool {
     crate::nra_even_power::nra_even_power_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bv_forall_nonconstant_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &BvForallNonconstantRefutationCertificate,
+) -> bool {
+    crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1165,6 +1185,15 @@ fn direct_pre_solve_structural_report(
     if let Some(cert) = crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatBoolUfExhaustive(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) =
+        crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+    {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatBvForallNonconstant(cert),
             provenance: provenance.clone(),
             trusted_steps: Vec::new(),
         });
@@ -1657,6 +1686,11 @@ fn direct_structural_unsat_evidence(
         return Some((Evidence::UnsatBoolUfExhaustive(cert), Vec::new()));
     }
     if let Some(cert) =
+        crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+    {
+        return Some((Evidence::UnsatBvForallNonconstant(cert), Vec::new()));
+    }
+    if let Some(cert) =
         crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
     {
         return Some((Evidence::UnsatFiniteArrayExtensionality(cert), Vec::new()));
@@ -2060,6 +2094,7 @@ pub fn prove(
         | Evidence::UnsatGuardedQuantAletheProof { .. }
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFiniteDomainEnum { .. }
+        | Evidence::UnsatBvForallNonconstant(_)
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
         | Evidence::UnsatArithDpll(_)

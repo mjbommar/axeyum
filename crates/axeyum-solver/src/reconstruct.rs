@@ -1282,6 +1282,9 @@ pub enum ProofFragment {
     /// An exhaustive finite-domain Bool/BV refutation, including finite
     /// quantifiers, certified by the executable evaluator.
     FiniteDomainEnum,
+    /// A universal BV equality whose left side is a checked non-constant
+    /// expression of the quantified variable.
+    BvForallNonconstant,
     /// A direct negation of a checked array axiom schema.
     ArrayAxiom,
     /// A finite BV-index array extensionality refutation.
@@ -1680,7 +1683,9 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             stack.extend(args.iter().copied());
         }
     }
-    if (has_exists || has_forall) && finite_domain_enum_certifies(arena, assertions) {
+    if crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions).is_some() {
+        ProofFragment::BvForallNonconstant
+    } else if (has_exists || has_forall) && finite_domain_enum_certifies(arena, assertions) {
         ProofFragment::FiniteDomainEnum
     } else if has_exists {
         ProofFragment::Exists
@@ -2513,6 +2518,35 @@ fn reconstruct_finite_domain_enum_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_bv_forall_nonconstant_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+        .ok_or_else(|| ReconstructError::MalformedStep {
+            rule: "bv_forall_nonconstant".to_owned(),
+            detail: "expected a checked quantified-BV non-constant refutation".to_owned(),
+        })?;
+    if !crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == cert)
+    {
+        return Err(ReconstructError::MalformedStep {
+            rule: "bv_forall_nonconstant".to_owned(),
+            detail: "quantified-BV non-constant certificate did not recheck".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("bv_forall_nonconstant_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bv_forall_nonconstant")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_lra_dpll_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3108,6 +3142,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::FiniteDomainEnum
+        | ProofFragment::BvForallNonconstant
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
@@ -3197,6 +3232,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::FiniteDomainEnum => {
             reconstruct_finite_domain_enum_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::BvForallNonconstant => {
+            reconstruct_bv_forall_nonconstant_to_lean_module(arena, assertions)?
         }
         ProofFragment::ArrayAxiom => reconstruct_array_axiom_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteArrayExtensionality => {

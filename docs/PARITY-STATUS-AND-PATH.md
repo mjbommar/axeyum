@@ -82,9 +82,10 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 640 decided, 591 oracle-compared, DISAGREE=0**, with **12 complete
+  992 files, 640 decided, 591 oracle-compared, DISAGREE=0**, with **13 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
-  rows now include BV/bitwuzla quantified `100% (4/4)`, QF_ABV/cvc5+bitwuzla
+  rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
+  `100% (37/37)`, QF_ABV/cvc5+bitwuzla
   `100% (169/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
   `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UFBV/cvc5 `100% (4/4)`,
