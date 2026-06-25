@@ -20,7 +20,7 @@ under `bench-results/local/`, which is gitignored.
   `gen-dominance-scoreboard.py`. Current exact committed audits: BV/bitwuzla
   quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `100% (169/169)`,
   QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`, QF_LIA/cvc5
-  `70% (7/10)`, QF_LRA/cvc5 `78% (7/9)`, QF_NIA synthetic `50% (16/32)`,
+  `70% (7/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic `50% (16/32)`,
   QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`, QF_UFBV/bitwuzla
   `50% (1/2)`, QF_UFLIA curated `0% (0/2)`, and QF_UFLIA bounded `80% (4/5)`.
   All exact audits currently have zero mismatches and zero audit timeouts.

@@ -1310,6 +1310,10 @@ pub enum ProofFragment {
     /// each branch reuses the conjunctive general-`Farkas` fold to derive `False`,
     /// and the eliminator combines the two `False` branches into `False`.
     DisjunctiveLra,
+    /// Boolean-structured `QF_LRA` certified by the lazy-SMT DPLL(T)
+    /// refutation checker: the Boolean skeleton plus learned Farkas-valid
+    /// theory lemmas is propositionally unsatisfiable.
+    LraDpll,
     /// Integer-infeasibility (**Diophantine**) `QF_LIA`: an integer-equality system
     /// that is rational-feasible yet integer-infeasible (`gcd ∤ const`), refuted by
     /// the [`DiophantineCertificate`](crate::DiophantineCertificate) and
@@ -1733,9 +1737,25 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // conjunctive Farkas fold; the purely-conjunctive `Lra` path can never
         // match, so this is uncovered by `reconstruct_lra_proof` today.
         ProofFragment::DisjunctiveLra
+    } else if lra_dpll_refutation_certifies(arena, assertions) {
+        // General Boolean-structured pure-real LRA. The lazy-SMT certificate is
+        // re-derived and self-checked here before Lean reconstruction is allowed.
+        ProofFragment::LraDpll
     } else {
         ProofFragment::Lra
     }
+}
+
+fn lra_dpll_refutation_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut scratch = arena.clone();
+    matches!(
+        crate::dpll_t::certify_lra_dpll_unsat(
+            &mut scratch,
+            assertions,
+            &crate::backend::SolverConfig::default(),
+        ),
+        Ok(crate::dpll_t::LraDpllOutcome::Unsat(_))
+    )
 }
 
 /// Confirm `term` kernel-infers to `False` under `ctx` — the soundness gate shared
@@ -2324,6 +2344,60 @@ fn term_identity_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
     ctx.kernel.const_(name, vec![])
 }
 
+fn reconstruct_lra_dpll_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let mut scratch = arena.clone();
+    let refutation = match crate::dpll_t::certify_lra_dpll_unsat(
+        &mut scratch,
+        assertions,
+        &crate::backend::SolverConfig::default(),
+    ) {
+        Ok(crate::dpll_t::LraDpllOutcome::Unsat(refutation)) => refutation,
+        Ok(crate::dpll_t::LraDpllOutcome::Sat(_)) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "lra_dpll".to_owned(),
+                detail: "lazy-SMT certificate returned sat, not unsat".to_owned(),
+            });
+        }
+        Ok(crate::dpll_t::LraDpllOutcome::Unknown(reason)) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "lra_dpll".to_owned(),
+                detail: format!("lazy-SMT certificate returned unknown: {}", reason.detail),
+            });
+        }
+        Err(error) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "lra_dpll".to_owned(),
+                detail: format!("lazy-SMT certificate failed: {error}"),
+            });
+        }
+    };
+    if !refutation
+        .verify(&scratch)
+        .map_err(|error| ReconstructError::MalformedStep {
+            rule: "lra_dpll".to_owned(),
+            detail: format!("lazy-SMT refutation self-check failed: {error}"),
+        })?
+    {
+        return Err(ReconstructError::MalformedStep {
+            rule: "lra_dpll".to_owned(),
+            detail: "lazy-SMT refutation did not verify".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("lra_dpll_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "lra_dpll")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_array_axiom_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2731,6 +2805,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         }
         ProofFragment::ReflexiveDisequality
         | ProofFragment::TermIdentity
+        | ProofFragment::LraDpll
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
@@ -2806,6 +2881,7 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
             reconstruct_reflexive_disequality_to_lean_module(arena, assertions)?
         }
         ProofFragment::TermIdentity => reconstruct_term_identity_to_lean_module(arena, assertions)?,
+        ProofFragment::LraDpll => reconstruct_lra_dpll_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?
         }

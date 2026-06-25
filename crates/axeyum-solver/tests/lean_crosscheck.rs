@@ -171,6 +171,39 @@ fn qf_lra_ite_true_identity_checks_in_real_lean() {
     lean_accepts("qf_lra_ite_true_identity", &source);
 }
 
+/// `QF_LRA`: the remaining cvc5 Boolean-LRA audit rows are certified by the
+/// lazy-SMT DPLL(T) refutation checker. The Lean route is a checked-certificate
+/// wrapper: reconstruction reruns the Rust certificate before rendering a kernel
+/// proof term, matching the existing structural certificate routes.
+#[test]
+fn qf_lra_dpll_audit_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_lra_dpll_ite_lift",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__arith__ite-lift.smt2"
+            ),
+        ),
+        (
+            "qf_lra_dpll_simple_lra",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__simple-lra.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_LRA audit row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("LRA DPLL row reconstructs");
+        assert_eq!(fragment, ProofFragment::LraDpll);
+        assert!(
+            !source.contains("sorryAx"),
+            "LRA DPLL module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
 #[test]
 fn forall_refutation_checks_in_real_lean() {
