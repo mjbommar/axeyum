@@ -32,6 +32,19 @@
 //! lowering defect, not a finding. BV division is SMT-LIB-total (`÷0` =
 //! all-ones), *not* Rust's panic, so `/` and `%` emit an explicit `divisor == 0`
 //! bad state.
+//!
+//! ## Out-of-fragment constructs are rejected at compile time
+//!
+//! A parameter type (or body construct) outside the whitelisted subset — here a
+//! float — is a **clean compile error** from the macro, never a silent
+//! mis-model:
+//!
+//! ```compile_fail
+//! #[axeyum_verify::verify]
+//! fn uses_a_float(x: f64) -> f64 {
+//!     x + 1.0
+//! }
+//! ```
 #![forbid(unsafe_code)]
 
 pub mod ast;
@@ -42,5 +55,21 @@ pub mod verify;
 /// Re-export of the `#[verify]` attribute macro.
 pub use axeyum_verify_macros::verify;
 
+/// Re-export of the `#[unwind(K)]` attribute macro: place it on a `#[verify]`
+/// function to set the loop-unwind bound `K` for the bounded check.
+pub use axeyum_verify_macros::unwind;
+
 pub use ast::{ArrayParam, BinOp, Expr, Param, Program, Stmt, Ty, UnOp};
 pub use verify::{Verdict, Witness, default_config, signed_value, verify_program};
+
+/// The modeled `Option` constructor recognized by `#[axeyum::verify]`:
+/// `opt(is_some, value).unwrap()` is `Some(value)` when `is_some`, else `None`.
+///
+/// The verifier treats `is_some` as a symbolic discriminant and flags the
+/// `None`-then-`unwrap` path as a panic class. At *runtime* (in the original
+/// function and the reproduction) it behaves exactly as the obvious `Option`,
+/// so the soundness-floor re-execution is faithful.
+#[must_use]
+pub fn opt<T>(is_some: bool, value: T) -> Option<T> {
+    if is_some { Some(value) } else { None }
+}

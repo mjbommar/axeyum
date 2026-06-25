@@ -111,7 +111,7 @@ pub enum Verdict {
 ///
 /// # Errors
 ///
-/// Returns a [`SolverError`] only if the underlying engine raises a hard error
+/// Returns a [`axeyum_solver::SolverError`] only if the underlying engine raises a hard error
 /// (a failed self-check is a soundness alarm); ordinary lowering or
 /// undecidability is reported as a [`Verdict::Unknown`], not an error.
 pub fn verify_program(
