@@ -210,7 +210,7 @@ against competitor source, are now binding:
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**,
-   QF_LIA/cvc5 **70% (7/10)**, QF_LRA/cvc5 **100% (9/9)**, QF_UFLIA curated
+   QF_LIA/cvc5 **100% (10/10)**, QF_LRA/cvc5 **100% (9/9)**, QF_UFLIA curated
    **0% (0/2)**, and QF_UFLIA bounded declared-sort regressions **80% (4/5)**.
    All exact audit rows have **DISAGREE = 0** and **audit_errors = 0**. The LRA
    row initially exposed a practical evidence gap: the pure-real certificate
@@ -242,6 +242,14 @@ against competitor source, are now binding:
    certificate-wrapper Lean module. The exact QF_LRA/cvc5 audit is now
    **100% (9/9)** dominant with Lean unsat **100% (3/3)**, zero mismatches, zero
    audit errors, and zero timeouts.
+   **QF_LIA EXACT ROW CLOSED (2026-06-25):**
+   the three remaining exact QF_LIA misses are now certified: `dump-unsat-core-full`
+   and `named-expr-use` use `arith-dpll-unsat` evidence with
+   `ProofFragment::ArithDpll`, while the large Boolean RF-11 ACI normalization
+   stress row uses a cheap checked `bool-simplification-unsat` certificate and
+   `ProofFragment::BoolSimplification`. The exact QF_LIA/cvc5 audit is now
+   **100% (10/10)** dominant with Lean unsat **100% (4/4)**, zero mismatches,
+   zero audit errors, and zero timeouts.
    **SYNTHETIC NIA/NRA EXACT AUDITS LANDED (2026-06-25):**
    the dominance audit harness now ingests graduated summary baselines by
    enumerating corpus files and using their `:status` annotations plus the

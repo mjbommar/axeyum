@@ -204,6 +204,58 @@ fn qf_lra_dpll_audit_rows_check_in_real_lean() {
     }
 }
 
+/// `QF_LIA`: two exact-audit unsats are certified by the arithmetic lazy-SMT
+/// DPLL(T) refutation checker. As with `LraDpll`, the Lean route reruns the
+/// Rust certificate and renders only a checked certificate wrapper.
+#[test]
+fn qf_lia_arith_dpll_audit_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_lia_arith_dpll_dump_unsat_core_full",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2"
+            ),
+        ),
+        (
+            "qf_lia_arith_dpll_named_expr_use",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__named-expr-use.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_LIA audit row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("arithmetic DPLL row reconstructs");
+        assert_eq!(fragment, ProofFragment::ArithDpll);
+        assert!(
+            !source.contains("sorryAx"),
+            "arithmetic DPLL module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
+/// `QF_LIA`: the RF-11 ACI normalization stress row contains a large Boolean
+/// assertion that simplifies directly to `false`. The checked Boolean
+/// simplification route avoids spending the audit budget in arithmetic DPLL.
+#[test]
+fn qf_lia_bool_simplification_audit_row_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__proofs__RF-11-aci-norm-ndet.smt2"
+    ))
+    .expect("QF_LIA RF row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("Boolean simplification row reconstructs");
+    assert_eq!(fragment, ProofFragment::BoolSimplification);
+    assert!(
+        !source.contains("sorryAx"),
+        "Boolean simplification module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_lia_bool_simplification_rf11", &source);
+}
+
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
 #[test]
 fn forall_refutation_checks_in_real_lean() {

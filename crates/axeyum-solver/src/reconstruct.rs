@@ -1269,6 +1269,8 @@ pub enum ProofFragment {
     ReflexiveDisequality,
     /// A direct negation of a checked term identity such as `ite true t e = t`.
     TermIdentity,
+    /// A direct assertion that checked Boolean simplification reduces to `false`.
+    BoolSimplification,
     /// Uninterpreted functions over a single sort (no bit-vectors).
     QfUf,
     /// Uninterpreted functions combined with bit-vectors.
@@ -1314,6 +1316,10 @@ pub enum ProofFragment {
     /// refutation checker: the Boolean skeleton plus learned Farkas-valid
     /// theory lemmas is propositionally unsatisfiable.
     LraDpll,
+    /// Boolean-structured linear arithmetic certified by the arithmetic
+    /// lazy-SMT DPLL(T) refutation checker over exact integer/real theory
+    /// lemmas.
+    ArithDpll,
     /// Integer-infeasibility (**Diophantine**) `QF_LIA`: an integer-equality system
     /// that is rational-feasible yet integer-infeasible (`gcd ∤ const`), refuted by
     /// the [`DiophantineCertificate`](crate::DiophantineCertificate) and
@@ -1656,6 +1662,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::ReflexiveDisequality
     } else if crate::term_identity::term_identity_refutation(arena, assertions).is_some() {
         ProofFragment::TermIdentity
+    } else if crate::bool_simplify::bool_simplification_refutation(arena, assertions).is_some() {
+        ProofFragment::BoolSimplification
     } else if crate::array_axiom::array_axiom_refutation(arena, assertions).is_some() {
         ProofFragment::ArrayAxiom
     } else if crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
@@ -1741,6 +1749,10 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // General Boolean-structured pure-real LRA. The lazy-SMT certificate is
         // re-derived and self-checked here before Lean reconstruction is allowed.
         ProofFragment::LraDpll
+    } else if arith_dpll_refutation_certifies(arena, assertions) {
+        // General Boolean-structured linear arithmetic. The arithmetic lazy-SMT
+        // certificate is re-derived and self-checked before reconstruction.
+        ProofFragment::ArithDpll
     } else {
         ProofFragment::Lra
     }
@@ -1755,6 +1767,18 @@ fn lra_dpll_refutation_certifies(arena: &TermArena, assertions: &[TermId]) -> bo
             &crate::backend::SolverConfig::default(),
         ),
         Ok(crate::dpll_t::LraDpllOutcome::Unsat(_))
+    )
+}
+
+fn arith_dpll_refutation_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut scratch = arena.clone();
+    matches!(
+        crate::dpll_lia::certify_arith_dpll_unsat(
+            &mut scratch,
+            assertions,
+            &crate::backend::SolverConfig::default(),
+        ),
+        Ok(crate::dpll_lia::ArithDpllOutcome::Unsat(_))
     )
 }
 
@@ -2344,6 +2368,29 @@ fn term_identity_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
     ctx.kernel.const_(name, vec![])
 }
 
+fn reconstruct_bool_simplification_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::bool_simplify::bool_simplification_refutation(arena, assertions).ok_or_else(
+        || ReconstructError::MalformedStep {
+            rule: "bool_simplification".to_owned(),
+            detail: "expected an assertion that checked Boolean simplification reduces to false"
+                .to_owned(),
+        },
+    )?;
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const(&format!("bool_simplification_{}", cert.assertion.index()));
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_simplification")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_lra_dpll_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2393,6 +2440,63 @@ fn reconstruct_lra_dpll_to_lean_module(
     let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
     let refuter_prop = ctx.mk_not(prop);
     let refuter = fresh_axiom(&mut ctx, refuter_prop, "lra_dpll")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+fn reconstruct_arith_dpll_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let mut scratch = arena.clone();
+    let refutation = match crate::dpll_lia::certify_arith_dpll_unsat(
+        &mut scratch,
+        assertions,
+        &crate::backend::SolverConfig::default(),
+    ) {
+        Ok(crate::dpll_lia::ArithDpllOutcome::Unsat(refutation)) => refutation,
+        Ok(crate::dpll_lia::ArithDpllOutcome::Sat(_)) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "arith_dpll".to_owned(),
+                detail: "arithmetic lazy-SMT certificate returned sat, not unsat".to_owned(),
+            });
+        }
+        Ok(crate::dpll_lia::ArithDpllOutcome::Unknown(reason)) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "arith_dpll".to_owned(),
+                detail: format!(
+                    "arithmetic lazy-SMT certificate returned unknown: {}",
+                    reason.detail
+                ),
+            });
+        }
+        Err(error) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "arith_dpll".to_owned(),
+                detail: format!("arithmetic lazy-SMT certificate failed: {error}"),
+            });
+        }
+    };
+    if !refutation
+        .verify(&scratch)
+        .map_err(|error| ReconstructError::MalformedStep {
+            rule: "arith_dpll".to_owned(),
+            detail: format!("arithmetic lazy-SMT refutation self-check failed: {error}"),
+        })?
+    {
+        return Err(ReconstructError::MalformedStep {
+            rule: "arith_dpll".to_owned(),
+            detail: "arithmetic lazy-SMT refutation did not verify".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("arith_dpll_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "arith_dpll")?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
     Ok(render_ctx_module(&mut ctx, proof))
@@ -2805,7 +2909,9 @@ fn reconstruct_proof_fragment_to_lean_module(
         }
         ProofFragment::ReflexiveDisequality
         | ProofFragment::TermIdentity
+        | ProofFragment::BoolSimplification
         | ProofFragment::LraDpll
+        | ProofFragment::ArithDpll
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
@@ -2881,7 +2987,11 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
             reconstruct_reflexive_disequality_to_lean_module(arena, assertions)?
         }
         ProofFragment::TermIdentity => reconstruct_term_identity_to_lean_module(arena, assertions)?,
+        ProofFragment::BoolSimplification => {
+            reconstruct_bool_simplification_to_lean_module(arena, assertions)?
+        }
         ProofFragment::LraDpll => reconstruct_lra_dpll_to_lean_module(arena, assertions)?,
+        ProofFragment::ArithDpll => reconstruct_arith_dpll_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?
         }

@@ -507,6 +507,48 @@ fn pure_real_identity_contradiction_uses_term_identity_evidence() {
 }
 
 #[test]
+fn qf_lia_audit_misses_use_arith_dpll_evidence() {
+    for input in [
+        include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2"
+        ),
+        include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__named-expr-use.smt2"
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_LIA audit row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+        assert!(
+            matches!(report.evidence, Evidence::UnsatArithDpll(_)),
+            "expected arith-DPLL evidence, got {:?}",
+            report.evidence
+        );
+        assert!(report.evidence.is_certified());
+        assert!(report.trusted_steps.is_empty());
+        assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    }
+}
+
+#[test]
+fn qf_lia_boolean_stress_row_uses_bool_simplification_evidence() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__proofs__RF-11-aci-norm-ndet.smt2"
+    ))
+    .expect("RF row parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::UnsatBoolSimplification(_)),
+        "expected bool-simplification evidence, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(report.trusted_steps.is_empty());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+}
+
+#[test]
 fn tampered_lra_dpll_evidence_fails_its_own_check() {
     // Strip the lemmas from the refutation: the bare skeleton is satisfiable, so
     // the independent verifier rejects the doctored evidence.

@@ -34,6 +34,7 @@ mod backend;
 mod bitblast_alethe;
 mod bitblast_miter;
 mod bmc;
+mod bool_simplify;
 mod bv2nat_bound;
 mod bv_interpolant;
 pub mod capabilities;
@@ -179,6 +180,7 @@ pub use bmc::{
     bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
     prove_safety_k_induction,
 };
+pub use bool_simplify::{BoolSimplificationRefutationCertificate, bool_simplification_refutation};
 pub use bv_interpolant::{
     QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
 };

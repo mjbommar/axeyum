@@ -24,6 +24,8 @@
 //!   DRAT route).
 //! - Boolean-structured pure-real `unsat` carries an [`LraDpllRefutation`];
 //!   `check` re-runs [`LraDpllRefutation::verify`].
+//! - Boolean-structured linear-arithmetic `unsat` carries an
+//!   [`ArithDpllRefutation`]; `check` re-runs [`ArithDpllRefutation::verify`].
 //! - `unknown` carries the reason and checks vacuously.
 //!
 //! [`produce_qf_bv_evidence`], [`produce_lra_evidence`], and
@@ -49,7 +51,9 @@ use crate::array_write_chain::AlignedWriteChainCommutationCertificate;
 use crate::array_xor_swap::{TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate};
 use crate::auto::solve;
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
+use crate::bool_simplify::BoolSimplificationRefutationCertificate;
 use crate::certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
+use crate::dpll_lia::{ArithDpllOutcome, ArithDpllRefutation, certify_arith_dpll_unsat};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lia_gcd::{
     DiophantineCertificate, Equality, check_diophantine_certificate,
@@ -269,6 +273,10 @@ pub enum Evidence {
     /// refutation (skeleton + Farkas-certified theory lemmas) whose
     /// [`LraDpllRefutation::verify`] is the evidence.
     UnsatLraDpll(LraDpllRefutation),
+    /// Unsatisfiable (Boolean-structured `QF_LIA`/`QF_LRA`): a lazy-SMT
+    /// refutation (Boolean skeleton plus exact-theory checked lemmas) whose
+    /// [`ArithDpllRefutation::verify`] is the evidence.
+    UnsatArithDpll(ArithDpllRefutation),
     /// Unsatisfiable (`NRA`): a self-checking degree-2 sum-of-squares / PSD
     /// refutation of a STRICT quadratic inequality atom. The `certificate`'s
     /// [`SosCertificate::verify`] (an exact-rational `LDLᵀ` reconstruction, fully
@@ -320,6 +328,10 @@ pub enum Evidence {
     /// identity such as `ite true t e = t`. The checker re-scans the original
     /// assertions and re-matches the exact identity before accepting.
     UnsatTermIdentity(TermIdentityRefutationCertificate),
+    /// Unsatisfiable: one original assertion normalizes to Boolean `false` under
+    /// a small checked propositional simplifier. The checker re-scans the
+    /// original assertions and re-runs the same normalizer before accepting.
+    UnsatBoolSimplification(BoolSimplificationRefutationCertificate),
     /// Unsatisfiable (`QF_ABV`/`QF_AUFBV`): replacing array-dependent scalar
     /// leaves by fresh unconstrained Bool/BV variables yields a certified-unsat
     /// pure `QF_BV` abstraction. The checker rebuilds the abstraction from the
@@ -461,6 +473,7 @@ impl Evidence {
             }
             Evidence::UnsatFarkas(certificate) => Ok(certificate.verify()),
             Evidence::UnsatLraDpll(refutation) => refutation.verify(arena),
+            Evidence::UnsatArithDpll(refutation) => refutation.verify(arena),
             // Degree-2 SOS/PSD refutation: re-validate the self-contained
             // certificate (rebuilds the Gram matrix from its own terms and confirms
             // the carried LDLᵀ factors reconstruct it with D ≥ 0). When a Lean module
@@ -491,6 +504,7 @@ impl Evidence {
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatTermIdentity(_)
+            | Evidence::UnsatBoolSimplification(_)
             | Evidence::UnsatBvAbstraction(_)
             | Evidence::UnsatAlignedWriteChainCommutation(_)
             | Evidence::UnsatTwoByteMemcpy(_)
@@ -520,12 +534,14 @@ impl Evidence {
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
+                | Evidence::UnsatArithDpll(_)
                 | Evidence::UnsatSos { .. }
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
                 | Evidence::UnsatArrayAxiom(_)
                 | Evidence::UnsatTermIdentity(_)
+                | Evidence::UnsatBoolSimplification(_)
                 | Evidence::UnsatBvAbstraction(_)
                 | Evidence::UnsatAlignedWriteChainCommutation(_)
                 | Evidence::UnsatTwoByteMemcpy(_)
@@ -553,6 +569,9 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatArrayAxiom(cert) => check_array_axiom_evidence(arena, assertions, cert),
         Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
+        Evidence::UnsatBoolSimplification(cert) => {
+            check_bool_simplification_evidence(arena, assertions, *cert)
+        }
         Evidence::UnsatBvAbstraction(cert) => {
             check_bv_abstraction_evidence(arena, assertions, cert)
         }
@@ -616,6 +635,15 @@ fn check_term_identity_evidence(
 ) -> bool {
     crate::term_identity::term_identity_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bool_simplification_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: BoolSimplificationRefutationCertificate,
+) -> bool {
+    crate::bool_simplify::bool_simplification_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == cert)
 }
 
 fn check_bv_abstraction_evidence(
@@ -1012,6 +1040,65 @@ pub fn produce_lra_dpll_evidence(
     })
 }
 
+fn produce_arith_dpll_evidence(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
+        backend: "arith-dpll-exact-theory-enumeration".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: config.timeout,
+        resource_limit: config.resource_limit,
+        node_budget: config.node_budget,
+        cnf_variable_budget: config.cnf_variable_budget,
+        cnf_clause_budget: config.cnf_clause_budget,
+        prove_unsat: true,
+    };
+    match certify_arith_dpll_unsat(arena, assertions, config) {
+        Ok(ArithDpllOutcome::Sat(model)) => Ok(Some(EvidenceReport {
+            evidence: Evidence::Sat(model),
+            provenance,
+            trusted_steps: Vec::new(),
+        })),
+        Ok(ArithDpllOutcome::Unsat(refutation)) => Ok(Some(EvidenceReport {
+            evidence: Evidence::UnsatArithDpll(refutation),
+            provenance,
+            trusted_steps: Vec::new(),
+        })),
+        Ok(ArithDpllOutcome::Unknown(_)) | Err(SolverError::Unsupported(_)) => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+fn direct_pre_solve_structural_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    if let Some(cert) = crate::term_identity::term_identity_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatTermIdentity(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) = crate::bool_simplify::bool_simplification_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatBoolSimplification(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    small_pre_solve_array_axiom_refutation(arena, assertions).map(|cert| EvidenceReport {
+        evidence: Evidence::UnsatArrayAxiom(cert),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    })
+}
+
 /// Runs the **nonlinear** real-arithmetic engine ([`crate::check_with_nra`]) on
 /// `assertions` and packages an [`EvidenceReport`]. NRA is sound but incomplete
 /// (ADR-0024): a `sat` model is replay-checkable; an `unsat` is recorded as a
@@ -1256,19 +1343,11 @@ pub fn produce_evidence(
     if let Some(report) = produce_diophantine_evidence(arena, assertions)? {
         return Ok(report);
     }
-    if let Some(cert) = crate::term_identity::term_identity_refutation(arena, assertions) {
-        return Ok(EvidenceReport {
-            evidence: Evidence::UnsatTermIdentity(cert),
-            provenance,
-            trusted_steps: Vec::new(),
-        });
+    if let Some(report) = direct_pre_solve_structural_report(arena, assertions, &provenance) {
+        return Ok(report);
     }
-    if let Some(cert) = small_pre_solve_array_axiom_refutation(arena, assertions) {
-        return Ok(EvidenceReport {
-            evidence: Evidence::UnsatArrayAxiom(cert),
-            provenance,
-            trusted_steps: Vec::new(),
-        });
+    if let Some(report) = produce_arith_dpll_evidence(arena, assertions, config)? {
+        return Ok(report);
     }
     let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
@@ -1406,6 +1485,9 @@ fn direct_structural_unsat_evidence(
     }
     if let Some(cert) = crate::term_identity::term_identity_refutation(arena, assertions) {
         return Some((Evidence::UnsatTermIdentity(cert), Vec::new()));
+    }
+    if let Some(cert) = crate::bool_simplify::bool_simplification_refutation(arena, assertions) {
+        return Some((Evidence::UnsatBoolSimplification(cert), Vec::new()));
     }
     if let Some(cert) = crate::array_axiom::array_axiom_refutation(arena, assertions) {
         return Some((Evidence::UnsatArrayAxiom(cert), Vec::new()));
@@ -1791,12 +1873,14 @@ pub fn prove(
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
+        | Evidence::UnsatArithDpll(_)
         | Evidence::UnsatSos { .. }
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatFiniteDomainPigeonhole(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)
         | Evidence::UnsatArrayAxiom(_)
         | Evidence::UnsatTermIdentity(_)
+        | Evidence::UnsatBoolSimplification(_)
         | Evidence::UnsatBvAbstraction(_)
         | Evidence::UnsatAlignedWriteChainCommutation(_)
         | Evidence::UnsatTwoByteMemcpy(_)
