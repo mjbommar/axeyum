@@ -150,6 +150,27 @@ fn lra_refutation_checks_in_real_lean() {
     lean_accepts("lra", &source);
 }
 
+/// `QF_LRA`: the cvc5 `ite_arith` row is `not (= x (ite true x y))`.
+/// The checked term-identity route recognizes `ite true x y = x` and exports a
+/// Lean proof of the contradiction without invoking the bit-blast or DPLL proof
+/// routes.
+#[test]
+fn qf_lra_ite_true_identity_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2"
+    ))
+    .expect("ite_arith parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("ite true identity contradiction reconstructs");
+    assert_eq!(fragment, ProofFragment::TermIdentity);
+    assert!(
+        !source.contains("sorryAx"),
+        "term-identity module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_lra_ite_true_identity", &source);
+}
+
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
 #[test]
 fn forall_refutation_checks_in_real_lean() {

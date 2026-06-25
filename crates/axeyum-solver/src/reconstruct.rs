@@ -1267,6 +1267,8 @@ pub enum ProofFragment {
     QfBv,
     /// A direct syntactic contradiction `¬(t = t)`.
     ReflexiveDisequality,
+    /// A direct negation of a checked term identity such as `ite true t e = t`.
+    TermIdentity,
     /// Uninterpreted functions over a single sort (no bit-vectors).
     QfUf,
     /// Uninterpreted functions combined with bit-vectors.
@@ -1648,6 +1650,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::Datatype
     } else if reflexive_disequality_assertion(arena, assertions).is_some() {
         ProofFragment::ReflexiveDisequality
+    } else if crate::term_identity::term_identity_refutation(arena, assertions).is_some() {
+        ProofFragment::TermIdentity
     } else if crate::array_axiom::array_axiom_refutation(arena, assertions).is_some() {
         ProofFragment::ArrayAxiom
     } else if crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
@@ -2291,6 +2295,35 @@ fn reflexive_disequality_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> Ex
     ctx.kernel.const_(name, vec![])
 }
 
+fn reconstruct_term_identity_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert =
+        crate::term_identity::term_identity_refutation(arena, assertions).ok_or_else(|| {
+            ReconstructError::MalformedStep {
+                rule: "term_identity".to_owned(),
+                detail: "expected negation of a checked term identity".to_owned(),
+            }
+        })?;
+
+    let mut ctx = ReconstructCtx::new();
+    let lhs = term_identity_term_expr(&mut ctx, cert.lhs);
+    let rhs = term_identity_term_expr(&mut ctx, cert.rhs);
+    let eq_prop = ctx.mk_eq(lhs, rhs);
+    let eq_proof = fresh_axiom(&mut ctx, eq_prop, "term_identity")?;
+    let diseq_prop = ctx.mk_not(eq_prop);
+    let diseq = fresh_axiom(&mut ctx, diseq_prop, "assume")?;
+    let proof = ctx.kernel.app(diseq, eq_proof);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+fn term_identity_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
+    let name = ctx.atom_const(&format!("term_identity_term_{}", term.index()));
+    ctx.kernel.const_(name, vec![])
+}
+
 fn reconstruct_array_axiom_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2697,6 +2730,7 @@ fn reconstruct_proof_fragment_to_lean_module(
             render_ctx_module(&mut ctx, t)
         }
         ProofFragment::ReflexiveDisequality
+        | ProofFragment::TermIdentity
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
@@ -2771,6 +2805,7 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         ProofFragment::ReflexiveDisequality => {
             reconstruct_reflexive_disequality_to_lean_module(arena, assertions)?
         }
+        ProofFragment::TermIdentity => reconstruct_term_identity_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?
         }

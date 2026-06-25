@@ -210,7 +210,7 @@ against competitor source, are now binding:
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**,
-   QF_LIA/cvc5 **70% (7/10)**, QF_LRA/cvc5 **67% (6/9)**, QF_UFLIA curated
+   QF_LIA/cvc5 **70% (7/10)**, QF_LRA/cvc5 **78% (7/9)**, QF_UFLIA curated
    **0% (0/2)**, and QF_UFLIA bounded declared-sort regressions **80% (4/5)**.
    All exact audit rows have **DISAGREE = 0** and **audit_errors = 0**. The LRA
    row initially exposed a practical evidence gap: the pure-real certificate
@@ -228,6 +228,13 @@ against competitor source, are now binding:
    route (`lean_fragment = ArrayAxiom`) with no trust holes. A direct
    `ReflexiveDisequality` Lean fragment now also covers literal top-level
    `not (= t t)` assertions by applying the input assumption to `Eq.refl`.
+   **QF_LRA TERM-IDENTITY ROW CLOSED (2026-06-25):**
+   [`bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json`](bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json)
+   moved to **78% (7/9)** dominant with Lean unsat **33% (1/3)** and evidence
+   certified **9/9**. The former `ite_arith` miss is now
+   `term-identity-unsat`: the checked certificate re-matches `not (= x (ite
+   true x y))`, the Lean route reconstructs it as `ProofFragment::TermIdentity`,
+   and the row has no trust holes.
    **SYNTHETIC NIA/NRA EXACT AUDITS LANDED (2026-06-25):**
    the dominance audit harness now ingests graduated summary baselines by
    enumerating corpus files and using their `:status` annotations plus the

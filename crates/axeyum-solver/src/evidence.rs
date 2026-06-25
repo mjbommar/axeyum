@@ -65,6 +65,7 @@ use crate::quant_finite_cert::{
     prove_finite_int_quant_unsat_uf_alethe,
 };
 use crate::sat_bv_backend::SatBvBackend;
+use crate::term_identity::TermIdentityRefutationCertificate;
 use crate::trust::{TrustId, TrustStep};
 use crate::ufbv_finite::FiniteDomainPigeonholeCertificate;
 
@@ -315,6 +316,10 @@ pub enum Evidence {
     /// select-over-ite, or store-over-ite under select). The checker re-scans the
     /// original assertions and re-matches the exact schema before accepting.
     UnsatArrayAxiom(ArrayAxiomRefutationCertificate),
+    /// Unsatisfiable: the query asserts the negation of a small checked term
+    /// identity such as `ite true t e = t`. The checker re-scans the original
+    /// assertions and re-matches the exact identity before accepting.
+    UnsatTermIdentity(TermIdentityRefutationCertificate),
     /// Unsatisfiable (`QF_ABV`/`QF_AUFBV`): replacing array-dependent scalar
     /// leaves by fresh unconstrained Bool/BV variables yields a certified-unsat
     /// pure `QF_BV` abstraction. The checker rebuilds the abstraction from the
@@ -485,6 +490,7 @@ impl Evidence {
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatArrayAxiom(_)
+            | Evidence::UnsatTermIdentity(_)
             | Evidence::UnsatBvAbstraction(_)
             | Evidence::UnsatAlignedWriteChainCommutation(_)
             | Evidence::UnsatTwoByteMemcpy(_)
@@ -519,6 +525,7 @@ impl Evidence {
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
                 | Evidence::UnsatArrayAxiom(_)
+                | Evidence::UnsatTermIdentity(_)
                 | Evidence::UnsatBvAbstraction(_)
                 | Evidence::UnsatAlignedWriteChainCommutation(_)
                 | Evidence::UnsatTwoByteMemcpy(_)
@@ -545,6 +552,7 @@ fn check_direct_structural_evidence(
             check_finite_array_extensionality_evidence(arena, assertions, cert)
         }
         Evidence::UnsatArrayAxiom(cert) => check_array_axiom_evidence(arena, assertions, cert),
+        Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
         Evidence::UnsatBvAbstraction(cert) => {
             check_bv_abstraction_evidence(arena, assertions, cert)
         }
@@ -598,6 +606,15 @@ fn check_array_axiom_evidence(
     cert: &ArrayAxiomRefutationCertificate,
 ) -> bool {
     crate::array_axiom::array_axiom_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_term_identity_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &TermIdentityRefutationCertificate,
+) -> bool {
+    crate::term_identity::term_identity_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1239,6 +1256,13 @@ pub fn produce_evidence(
     if let Some(report) = produce_diophantine_evidence(arena, assertions)? {
         return Ok(report);
     }
+    if let Some(cert) = crate::term_identity::term_identity_refutation(arena, assertions) {
+        return Ok(EvidenceReport {
+            evidence: Evidence::UnsatTermIdentity(cert),
+            provenance,
+            trusted_steps: Vec::new(),
+        });
+    }
     if let Some(cert) = small_pre_solve_array_axiom_refutation(arena, assertions) {
         return Ok(EvidenceReport {
             evidence: Evidence::UnsatArrayAxiom(cert),
@@ -1379,6 +1403,9 @@ fn direct_structural_unsat_evidence(
         crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
     {
         return Some((Evidence::UnsatFiniteArrayExtensionality(cert), Vec::new()));
+    }
+    if let Some(cert) = crate::term_identity::term_identity_refutation(arena, assertions) {
+        return Some((Evidence::UnsatTermIdentity(cert), Vec::new()));
     }
     if let Some(cert) = crate::array_axiom::array_axiom_refutation(arena, assertions) {
         return Some((Evidence::UnsatArrayAxiom(cert), Vec::new()));
@@ -1769,6 +1796,7 @@ pub fn prove(
         | Evidence::UnsatFiniteDomainPigeonhole(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)
         | Evidence::UnsatArrayAxiom(_)
+        | Evidence::UnsatTermIdentity(_)
         | Evidence::UnsatBvAbstraction(_)
         | Evidence::UnsatAlignedWriteChainCommutation(_)
         | Evidence::UnsatTwoByteMemcpy(_)

@@ -120,6 +120,7 @@ mod strategy;
 pub mod strings;
 pub mod support_matrix;
 mod symexec;
+mod term_identity;
 mod theory_combination;
 pub mod trust;
 mod ufbv_finite;
@@ -336,6 +337,9 @@ pub use smtlib::{
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
 pub use symexec::{Branch, PathStatus, SymbolicExecutor};
+pub use term_identity::{
+    TermIdentityKind, TermIdentityRefutationCertificate, term_identity_refutation,
+};
 pub use theory_combination::{
     InterfaceStatus, classify_interface_equalities, combination_conflict, interface_th_eqs,
     propose_interface_equalities, shared_terms,

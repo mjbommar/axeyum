@@ -488,6 +488,25 @@ fn pure_real_front_door_falls_back_when_lra_certificate_declines() {
 }
 
 #[test]
+fn pure_real_identity_contradiction_uses_term_identity_evidence() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2"
+    ))
+    .expect("ite_arith parses");
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::UnsatTermIdentity(_)),
+        "expected term-identity evidence, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(report.trusted_steps.is_empty());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+}
+
+#[test]
 fn tampered_lra_dpll_evidence_fails_its_own_check() {
     // Strip the lemmas from the refutation: the bare skeleton is satisfiable, so
     // the independent verifier rejects the doctored evidence.

@@ -116,6 +116,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",
         Evidence::UnsatArrayAxiom(_) => "array-axiom-unsat",
+        Evidence::UnsatTermIdentity(_) => "term-identity-unsat",
         Evidence::UnsatBvAbstraction(_) => "bv-abstraction-unsat",
         Evidence::UnsatAlignedWriteChainCommutation(_) => "aligned-write-chain-unsat",
         Evidence::UnsatTwoByteMemcpy(_) => "two-byte-memcpy-unsat",
