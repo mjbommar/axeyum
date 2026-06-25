@@ -471,13 +471,29 @@ impl Kernel {
 
     /// A hierarchical [`NameId`] as a dotted Lean name (`a.b.1`); the anonymous root
     /// renders empty.
+    ///
+    /// The kernel's **computational `Nat`** (root segment `Nat`, with children
+    /// `Nat.zero`/`Nat.succ`/`Nat.rec`/…) is rendered under the non-shadowing root
+    /// **`AxNat`** instead. Lean's builtin `Nat` has special kernel support (literal
+    /// `OfNat`/`HAdd` elaboration, `Nat.casesOn`/`T.ctorIdx` codegen); emitting our
+    /// own `inductive Nat` *shadows* that builtin and a real `lean` binary rejects it
+    /// (`failed to construct T.ctorIdx for Nat`, `Unknown constant HAdd.hAdd`). A
+    /// user datatype never carries the bare root name `Nat` (datatype families render
+    /// as `axeyum.reconstruct.dtrec._N`), so remapping the root `Nat` segment is
+    /// unambiguous and affects only the prelude's computational naturals — the
+    /// in-tree kernel and its stored names are untouched (this is pure rendering).
     fn render_name(&self, id: NameId) -> String {
         match self.name_node(id) {
             NameNode::Anonymous => String::new(),
             NameNode::Str(parent, s) => {
                 let p = self.render_name(*parent);
                 if p.is_empty() {
-                    s.clone()
+                    if s == "Nat" {
+                        // Non-shadowing root for the kernel's computational naturals.
+                        "AxNat".to_owned()
+                    } else {
+                        s.clone()
+                    }
                 } else {
                     format!("{p}.{s}")
                 }
