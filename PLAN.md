@@ -688,6 +688,19 @@ against competitor source, are now binding:
    with **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact
    now has **78** `array-axiom-unsat` rows and **1** remaining `bare-unsat`
    row: `issue9041`.
+   **ABV CVC5 SIGNED-BV1 READ-CONGRUENCE GAP CLOSED (2026-06-25):**
+   the checked `ArrayAxiom` read-congruence lane now uses conservative static
+   BV range facts for `bvult` guards, fixed-sign `sign_extend`, full-width
+   `extract`, singleton-range equivalence, and disjoint-range index
+   distinctness. It also recognizes Boolean contradictions of the form
+   `P = not Q` once the certificate lane independently proves `P = Q`. This
+   closes the cvc5 `issue9041` row through the existing `ReadCongruence`
+   certificate path without invoking bit-blast trust. Re-running the exact ABV
+   audit moved **166/169 → 167/169** dominant and **Lean unsat 82/83 → 83/83**,
+   with **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact
+   now has **79** `array-axiom-unsat` rows and **0** remaining `bare-unsat`
+   rows; the residual ABV non-dominant audit entries are checked `unknown`
+   search-frontier rows (`rw34`, `arraycond9`).
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:

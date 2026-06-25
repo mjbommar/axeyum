@@ -497,6 +497,12 @@ fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
             ),
         ),
         (
+            "qf_abv_cvc5_issue9041",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue9041.smt2"
+            ),
+        ),
+        (
             "qf_abv_cvc5_bvproof2",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__bvproof2.smt2"

@@ -187,6 +187,9 @@ impl ReadCongruenceProbe {
         if let Some(witness) = conflicting_bv1_values(arena, &self.facts) {
             return Some(witness);
         }
+        if let Some(witness) = conflicting_bool_negation_equalities(arena, &self.facts) {
+            return Some(witness);
+        }
         if let Some(witness) =
             forced_select_store_ite_bv1_value_conflict(arena, &self.facts, &self.disequalities)
         {
@@ -487,6 +490,20 @@ fn match_bv_not(arena: &TermArena, term: TermId) -> Option<TermId> {
         return None;
     };
     matches!(arena.sort_of(term), Sort::BitVec(_)).then_some(*inner)
+}
+
+fn match_bool_not(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [inner] = &**args else {
+        return None;
+    };
+    (arena.sort_of(term) == Sort::Bool).then_some(*inner)
 }
 
 fn match_bv_xor(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
@@ -1335,6 +1352,7 @@ fn terms_equivalent_inner(
         }
         _ => false,
     };
+    let known_singleton_bv_range_equal = bv_unsigned_ranges_same_singleton(arena, lhs, rhs);
 
     let finite_array_extensional_equal =
         finite_array_extensional_bit_equivalence(arena, facts, distinct, lhs, rhs, memo);
@@ -1352,6 +1370,7 @@ fn terms_equivalent_inner(
     let result = facts.same(lhs, rhs)
         || known_bv1_equal
         || known_const_bv_equal
+        || known_singleton_bv_range_equal
         || finite_array_extensional_equal
         || finite_array_known_reads_equal
         || finite_array_read_facts_equal
@@ -1630,6 +1649,9 @@ fn simplify_contextual_term(
     term: TermId,
     memo: &mut BTreeMap<(TermId, TermId), bool>,
 ) -> TermId {
+    if let Some(inner) = match_identity_extract(arena, term) {
+        return facts.find(inner);
+    }
     if let TermNode::App { op: Op::Ite, args } = arena.node(term) {
         if let [cond, then_term, else_term] = &**args {
             if let Some(branch) =
@@ -1689,6 +1711,10 @@ fn bool_condition_value(
                 None
             }
         }
+        TermNode::App {
+            op: Op::BvUlt,
+            args,
+        } if args.len() == 2 => bv_ult_condition_value(arena, args[0], args[1]),
         _ => None,
     }
 }
@@ -1803,6 +1829,9 @@ fn terms_definitely_distinct_in_context(
     memo: &mut BTreeMap<(TermId, TermId), bool>,
 ) -> bool {
     if indices_definitely_distinct(arena, lhs, rhs) {
+        return true;
+    }
+    if bv_unsigned_ranges_disjoint(arena, lhs, rhs) {
         return true;
     }
     if bv1_negation_pair_in_context(arena, facts, distinct, lhs, rhs, memo)
@@ -2272,6 +2301,58 @@ fn bv_unsigned_ranges_disjoint(arena: &TermArena, lhs: TermId, rhs: TermId) -> b
         && (lhs_range.max < rhs_range.min || rhs_range.max < lhs_range.min)
 }
 
+fn bv_unsigned_ranges_same_singleton(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    let Some(lhs_range) = bv_unsigned_range(arena, lhs) else {
+        return false;
+    };
+    let Some(rhs_range) = bv_unsigned_range(arena, rhs) else {
+        return false;
+    };
+    lhs_range.width == rhs_range.width
+        && lhs_range.min == lhs_range.max
+        && rhs_range.min == rhs_range.max
+        && lhs_range.min == rhs_range.min
+}
+
+fn bv_ult_condition_value(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<bool> {
+    let lhs_range = bv_unsigned_range(arena, lhs)?;
+    let rhs_range = bv_unsigned_range(arena, rhs)?;
+    if lhs_range.width != rhs_range.width {
+        return None;
+    }
+    if lhs_range.max < rhs_range.min {
+        Some(true)
+    } else if lhs_range.min >= rhs_range.max {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+fn static_bool_condition_value(arena: &TermArena, term: TermId) -> Option<bool> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(*value),
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 => static_bool_condition_value(arena, args[0]).map(|value| !value),
+        TermNode::App {
+            op: Op::BvUlt,
+            args,
+        } if args.len() == 2 => bv_ult_condition_value(arena, args[0], args[1]),
+        TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+            if bv_unsigned_ranges_same_singleton(arena, args[0], args[1]) {
+                Some(true)
+            } else if bv_unsigned_ranges_disjoint(arena, args[0], args[1]) {
+                Some(false)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
 fn bv_unsigned_range(arena: &TermArena, term: TermId) -> Option<BvUnsignedRange> {
     let Sort::BitVec(width) = arena.sort_of(term) else {
         return None;
@@ -2300,6 +2381,10 @@ fn bv_unsigned_range(arena: &TermArena, term: TermId) -> Option<BvUnsignedRange>
                     max: inner.max,
                 })
             }
+            Op::SignExt { .. } if args.len() == 1 => sign_ext_unsigned_range(arena, width, args[0]),
+            Op::Extract { hi, lo } if args.len() == 1 => {
+                extract_unsigned_range(arena, width, term, args[0], *hi, *lo)
+            }
             Op::Concat if args.len() == 2 => {
                 let high = bv_unsigned_range(arena, args[0])?;
                 let low = bv_unsigned_range(arena, args[1])?;
@@ -2325,21 +2410,92 @@ fn bv_unsigned_range(arena: &TermArena, term: TermId) -> Option<BvUnsignedRange>
                 (max <= bv_mask(width)).then_some(BvUnsignedRange { width, min, max })
             }
             Op::Ite if args.len() == 3 => {
-                let then_range = bv_unsigned_range(arena, args[1])?;
-                let else_range = bv_unsigned_range(arena, args[2])?;
-                if then_range.width != width || else_range.width != width {
-                    return None;
-                }
-                Some(BvUnsignedRange {
-                    width,
-                    min: then_range.min.min(else_range.min),
-                    max: then_range.max.max(else_range.max),
-                })
+                ite_unsigned_range(arena, width, args[0], args[1], args[2])
             }
             _ => None,
         },
         _ => None,
     }
+}
+
+fn sign_ext_unsigned_range(
+    arena: &TermArena,
+    width: u32,
+    inner_term: TermId,
+) -> Option<BvUnsignedRange> {
+    let inner = bv_unsigned_range(arena, inner_term)?;
+    if inner.width == 0 || inner.width > width {
+        return None;
+    }
+    let sign_bit = 1_u128.checked_shl(inner.width - 1)?;
+    let inner_mask = bv_mask(inner.width);
+    if inner.max < sign_bit {
+        Some(BvUnsignedRange {
+            width,
+            min: inner.min,
+            max: inner.max,
+        })
+    } else if inner.min >= sign_bit {
+        let high_bits = bv_mask(width) ^ inner_mask;
+        Some(BvUnsignedRange {
+            width,
+            min: inner.min | high_bits,
+            max: inner.max | high_bits,
+        })
+    } else {
+        None
+    }
+}
+
+fn extract_unsigned_range(
+    arena: &TermArena,
+    width: u32,
+    term: TermId,
+    inner_term: TermId,
+    hi: u32,
+    lo: u32,
+) -> Option<BvUnsignedRange> {
+    if let Some(inner) = match_identity_extract(arena, term) {
+        return bv_unsigned_range(arena, inner);
+    }
+    let inner = bv_unsigned_range(arena, inner_term)?;
+    if inner.min != inner.max || hi < lo {
+        return None;
+    }
+    let extracted_width = hi.checked_sub(lo)?.checked_add(1)?;
+    if extracted_width != width {
+        return None;
+    }
+    let value = (inner.min >> lo) & bv_mask(width);
+    Some(BvUnsignedRange {
+        width,
+        min: value,
+        max: value,
+    })
+}
+
+fn ite_unsigned_range(
+    arena: &TermArena,
+    width: u32,
+    cond: TermId,
+    then_term: TermId,
+    else_term: TermId,
+) -> Option<BvUnsignedRange> {
+    if let Some(cond_value) = static_bool_condition_value(arena, cond) {
+        let branch = if cond_value { then_term } else { else_term };
+        let branch_range = bv_unsigned_range(arena, branch)?;
+        return (branch_range.width == width).then_some(branch_range);
+    }
+    let then_range = bv_unsigned_range(arena, then_term)?;
+    let else_range = bv_unsigned_range(arena, else_term)?;
+    if then_range.width != width || else_range.width != width {
+        return None;
+    }
+    Some(BvUnsignedRange {
+        width,
+        min: then_range.min.min(else_range.min),
+        max: then_range.max.max(else_range.max),
+    })
 }
 
 fn conflicting_bv1_values(arena: &TermArena, facts: &EqFacts) -> Option<(TermId, TermId)> {
@@ -2352,6 +2508,27 @@ fn conflicting_bv1_values(arena: &TermArena, facts: &EqFacts) -> Option<(TermId,
         for &(rhs, rhs_value) in &entries[idx + 1..] {
             if lhs_value != rhs_value && terms_equivalent(arena, facts, lhs, rhs) {
                 return Some((lhs, rhs));
+            }
+        }
+    }
+    None
+}
+
+fn conflicting_bool_negation_equalities(
+    arena: &TermArena,
+    facts: &EqFacts,
+) -> Option<(TermId, TermId)> {
+    let terms: Vec<_> = facts.parent.keys().copied().collect();
+    for &negated in &terms {
+        let Some(inner) = match_bool_not(arena, negated) else {
+            continue;
+        };
+        for &term in &terms {
+            if !facts.same(term, negated) {
+                continue;
+            }
+            if terms_equivalent(arena, facts, term, inner) {
+                return Some((term, inner));
             }
         }
     }
@@ -3002,6 +3179,27 @@ fn match_ite(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, TermId)
     Some((*cond, *then_term, *else_term))
 }
 
+fn match_identity_extract(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::Extract { hi, lo },
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [inner] = &**args else {
+        return None;
+    };
+    let Sort::BitVec(inner_width) = arena.sort_of(*inner) else {
+        return None;
+    };
+    let Sort::BitVec(term_width) = arena.sort_of(term) else {
+        return None;
+    };
+    (*lo == 0 && hi.checked_add(1) == Some(inner_width) && term_width == inner_width)
+        .then_some(*inner)
+}
+
 fn is_eq_over(arena: &TermArena, term: TermId, lhs: TermId, rhs: TermId) -> bool {
     let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
         return false;
@@ -3544,6 +3742,17 @@ mod tests {
         let cert = array_axiom_refutation(&script.arena, &script.assertions)
             .expect("same-value store-chain coverage refutes");
         assert_eq!(cert.kind, ArrayAxiomKind::StoreShadowing);
+    }
+
+    #[test]
+    fn recognizes_cvc5_signed_bv1_read_congruence_regression() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue9041.smt2"
+        ))
+        .expect("cvc5 signed BV1 read-congruence case parses");
+        let cert = array_axiom_refutation(&script.arena, &script.assertions)
+            .expect("signed BV1 read congruence refutes");
+        assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
     }
 
     #[test]

@@ -994,6 +994,13 @@ fn produce_evidence_certifies_small_array_axiom_unsats() {
             ),
         ),
         (
+            "abv_cvc5_issue9041",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__issue9041.smt2"
+            ),
+        ),
+        (
             "abv_cvc5_bvproof2",
             ArrayAxiomKind::StoreShadowing,
             include_str!(
