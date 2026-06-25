@@ -16,6 +16,8 @@ members = [
     "crates/axeyum-solver",
     "crates/axeyum-property",
     "crates/axeyum-evm",
+    "crates/axeyum-verify",
+    "crates/axeyum-verify-macros",
 ]
 
 [workspace.package]
@@ -42,6 +44,10 @@ rustsat-batsat = { version = "0.7.5" }
 z3 = { version = "0.20", default-features = false }
 # Browser-compatible monotonic clock; only used on wasm32 targets (ADR-0017).
 web-time = { version = "1" }
+# Proc-macro front-end deps for axeyum-verify (App C).
+syn = { version = "2", default-features = false, features = ["parsing", "printing", "proc-macro"] }
+quote = { version = "1" }
+proc-macro2 = { version = "1" }
 
 [workspace.lints.rust]
 missing_docs = "warn"

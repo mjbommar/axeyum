@@ -1,0 +1,23 @@
+[package]
+name = "axeyum-verify-macros"
+description = "Proc-macro front-end for axeyum-verify: parses a #[axeyum::verify] function over a restricted Rust surface and emits a bounded symbolic-checking test"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { workspace = true, features = ["full"] }
+quote.workspace = true
+proc-macro2.workspace = true
+
+[lints]
+workspace = true
