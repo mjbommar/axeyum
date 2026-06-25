@@ -217,7 +217,7 @@ against competitor source, are now binding:
    trust holes.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
-   BV/bitwuzla quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**,
+   BV/bitwuzla quantified **100% (4/4)**, QF_BV/bvred **100% (6/6)**,
    QF_LIA/cvc5 **100% (10/10)**, QF_LRA/cvc5 **100% (9/9)**, QF_UFLIA curated
    **50% (1/2)** after the checked integer route picked up `named-expr-use`,
    and QF_UFLIA bounded declared-sort regressions **80% (4/5)**.

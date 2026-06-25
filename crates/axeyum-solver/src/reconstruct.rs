@@ -1279,6 +1279,9 @@ pub enum ProofFragment {
     FiniteDomainPigeonhole,
     /// An exhaustive refutation over tiny Boolean-UF interpretations.
     BoolUfExhaustive,
+    /// An exhaustive finite-domain Bool/BV refutation, including finite
+    /// quantifiers, certified by the executable evaluator.
+    FiniteDomainEnum,
     /// A direct negation of a checked array axiom schema.
     ArrayAxiom,
     /// A finite BV-index array extensionality refutation.
@@ -1628,10 +1631,21 @@ fn reflexive_disequality_assertion(arena: &TermArena, assertions: &[TermId]) -> 
     None
 }
 
+const FINITE_DOMAIN_ENUM_CERT_BITS: u32 = 20;
+
+fn finite_domain_enum_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    matches!(
+        crate::certify_finite_bv_by_enumeration(arena, assertions, FINITE_DOMAIN_ENUM_CERT_BITS),
+        Ok(crate::CertifyOutcome::CertifiedUnsat { .. })
+    )
+}
+
 /// Classify `assertions` into the [`ProofFragment`] whose emitter+reconstructor
 /// pair handles it, by scanning the operators and sorts that appear. Precedence:
-/// a top-level quantifier wraps any ground theory (`∃` skolemized before `∀`),
-/// then the reduction theories (datatype/array), then the mixed/ground cores.
+/// a checked finite-domain refutation can own finite Bool/BV quantifier cases,
+/// then a generic top-level quantifier wraps any ground theory (`∃` skolemized
+/// before `∀`), then the reduction theories (datatype/array), then the
+/// mixed/ground cores.
 #[must_use]
 pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
     let mut has_bv = false;
@@ -1666,7 +1680,9 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
             stack.extend(args.iter().copied());
         }
     }
-    if has_exists {
+    if (has_exists || has_forall) && finite_domain_enum_certifies(arena, assertions) {
+        ProofFragment::FiniteDomainEnum
+    } else if has_exists {
         ProofFragment::Exists
     } else if has_forall {
         ProofFragment::Forall
@@ -2458,6 +2474,45 @@ fn reconstruct_bool_uf_exhaustive_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_finite_domain_enum_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    match crate::certify_finite_bv_by_enumeration(arena, assertions, FINITE_DOMAIN_ENUM_CERT_BITS) {
+        Ok(crate::CertifyOutcome::CertifiedUnsat { .. }) => {}
+        Ok(crate::CertifyOutcome::Satisfiable(_)) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "finite_domain_enum".to_owned(),
+                detail: "finite-domain enumeration found a satisfying assignment".to_owned(),
+            });
+        }
+        Ok(crate::CertifyOutcome::DomainTooLarge { total_bits }) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "finite_domain_enum".to_owned(),
+                detail: format!(
+                    "finite-domain enumeration needs {total_bits} bits, above the proof budget"
+                ),
+            });
+        }
+        Err(error) => {
+            return Err(ReconstructError::MalformedStep {
+                rule: "finite_domain_enum".to_owned(),
+                detail: format!("finite-domain enumeration certificate failed: {error}"),
+            });
+        }
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("finite_domain_enum_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "finite_domain_enum")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_lra_dpll_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3052,6 +3107,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::NraEvenPower
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
+        | ProofFragment::FiniteDomainEnum
         | ProofFragment::ArrayAxiom
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
@@ -3138,6 +3194,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::BoolUfExhaustive => {
             reconstruct_bool_uf_exhaustive_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::FiniteDomainEnum => {
+            reconstruct_finite_domain_enum_to_lean_module(arena, assertions)?
         }
         ProofFragment::ArrayAxiom => reconstruct_array_axiom_to_lean_module(arena, assertions)?,
         ProofFragment::FiniteArrayExtensionality => {

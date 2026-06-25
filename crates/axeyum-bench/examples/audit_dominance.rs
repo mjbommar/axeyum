@@ -109,6 +109,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatArithAletheProof(_) => "arith-alethe-unsat",
         Evidence::UnsatGuardedQuantAletheProof { .. } => "guarded-quant-alethe-unsat",
         Evidence::UnsatTermLevel { .. } => "term-level-unsat",
+        Evidence::UnsatFiniteDomainEnum { .. } => "finite-domain-enum-unsat",
         Evidence::UnsatFarkas(_) => "farkas-unsat",
         Evidence::UnsatLraDpll(_) => "lra-dpll-unsat",
         Evidence::UnsatArithDpll(_) => "arith-dpll-unsat",

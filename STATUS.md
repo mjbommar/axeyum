@@ -6,6 +6,32 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — exact quantified-BV dominance row closed.**
+  Added checked `UnsatFiniteDomainEnum` evidence and
+  `ProofFragment::FiniteDomainEnum` reconstruction for small finite Bool/BV
+  formulas with quantifiers. The certifier enumerates free Bool/BV symbols,
+  counts bound Bool/BV quantifier domains in the same budget, and reuses the
+  executable IR evaluator for the original assertions. `Evidence::check` and
+  Lean reconstruction both re-run the finite-domain certificate before accepting
+  it. Re-running the exact BV/bitwuzla quantified audit moved **dominant 1/4
+  -> 4/4**, **Lean unsat 0/3 -> 3/3**, and **evidence certified 1/4 -> 4/4**,
+  with **mismatches=0**, **audit_errors=0**, and **timeouts=0**. **Next:**
+  audit the larger cvc5 quantified-BV row, build proof routes for strong
+  unaudited rows (QF_UFFF/QF_FF/QF_FP), or move back to broader cvc5
+  NRA/high-degree decide gaps.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence quantified_bv_audit_unsats_use_finite_domain_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck quantified_bv_finite_domain_enum_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json 30000 4 bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — exact QF_NRA synthetic dominance row closed.**
   Added checked `UnsatNraEvenPower` evidence and `ProofFragment::NraEvenPower`
   reconstruction for the remaining higher-degree synthetic NRA UNSAT rows. The
@@ -1515,8 +1541,9 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   BV/bitwuzla quantified, QF_BV/bvred, QF_LIA/cvc5, QF_LRA/cvc5,
   QF_UFLIA curated named, and QF_UFLIA bounded uninterpreted-sort regressions.
   Together with the two QF_UFBV artifacts, `bench-results/DOMINANCE.md` now has
-  **8 complete exact audit rows**. The exact frontier is now concrete:
-  BV quantified **25% (1/4)**, QF_BV/bvred **100% (6/6)**, QF_LIA **100%
+  **8 complete exact audit rows**. The exact frontier from that batch was:
+  BV quantified **25% (1/4)**, now later closed to **100% (4/4)**;
+  QF_BV/bvred **100% (6/6)**, QF_LIA **100%
   (10/10)**, QF_LRA **100% (9/9)**, QF_UFBV/cvc5 **100% (4/4)**,
   QF_UFBV/bitwuzla **100% (2/2)**, QF_UFLIA curated **0% (0/2)**, and
   QF_UFLIA bounded **80% (4/5)**, all with **DISAGREE=0** and **audit_errors=0**.
@@ -4561,7 +4588,8 @@ plan is built and committed on the current branch:
 - **2026-06-25** — **Dominance audit batch + pure-real evidence fallback.**
   Committed six more complete `audit_dominance` artifacts and regenerated
   `bench-results/DOMINANCE.md`, bringing exact audited rows to 8. New rows:
-  BV/bitwuzla quantified 25% dominant, QF_BV/bvred 100%, QF_LIA 70%,
+  BV/bitwuzla quantified initially 25% dominant, now later closed to 100%;
+  QF_BV/bvred 100%, QF_LIA 70%,
   QF_LRA 78%, QF_UFLIA curated 0%, and QF_UFLIA bounded 80%; all have
   DISAGREE=0 and audit_errors=0. Fixed the pure-real evidence front door so an
   unsupported LRA certificate shape falls through to replayable SAT/bare UNSAT

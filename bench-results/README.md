@@ -18,7 +18,7 @@ under `bench-results/local/`, which is gitignored.
   Local smoke artifacts belong under `bench-results/local/`; committed dominance
   audits live under `bench-results/dominance/` and are ingested by
   `gen-dominance-scoreboard.py`. Current exact committed audits: BV/bitwuzla
-  quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `100% (169/169)`,
+  quantified `100% (4/4)`, QF_ABV/cvc5+bitwuzla `100% (169/169)`,
   QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`, QF_LIA/cvc5
   `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic `100% (32/32)`,
   QF_NRA synthetic `100% (30/30)`, QF_UFBV/cvc5 `100% (4/4)`, QF_UFBV/bitwuzla

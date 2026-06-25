@@ -137,6 +137,45 @@ fn qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean() {
     lean_accepts("qf_ufbv_finite_pigeonhole", &source);
 }
 
+/// Quantified Bool/BV audit rows with small finite domains are certified by the
+/// evaluator-level finite-domain enumeration route. The Lean export is a
+/// checked-certificate wrapper: reconstruction reruns the Rust certifier before
+/// rendering the kernel-checked module.
+#[test]
+fn quantified_bv_finite_domain_enum_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "quant_bv_abstract_unsatcore1",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__abstract__unsatcore1.smt2"
+            ),
+        ),
+        (
+            "quant_bv_issue97",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__issue97.smt2"
+            ),
+        ),
+        (
+            "quant_bv_regrnormquant",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regrnormquant.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("quantified BV audit row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: finite-domain enum row reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::FiniteDomainEnum, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: finite-domain enum module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {

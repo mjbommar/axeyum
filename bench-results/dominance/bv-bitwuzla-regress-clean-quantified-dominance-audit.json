@@ -4,27 +4,42 @@
   "instances": [
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 1.3022699999999998,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 4.607108,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "finite-domain-enum-unsat",
       "file": "corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__abstract__unsatcore1.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "FiniteDomainEnum",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 0.030971,
+        "lean_reconstruction": 3.0434669999999997,
+        "parse_evidence": 0.232333,
+        "parse_lean": 0.074627,
+        "produce_evidence": 1.187508,
+        "read": 0.013477
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "term-level-enum"
+        }
+      ]
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 3.042856,
+      "elapsed_ms": 2.438344,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -33,42 +48,78 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.169131,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.168197,
+        "parse_lean": null,
+        "produce_evidence": 2.080194,
+        "read": 0.01336
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 2.419366,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 10.002063999999999,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "finite-domain-enum-unsat",
       "file": "corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__issue97.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "FiniteDomainEnum",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 1.462985,
+        "lean_reconstruction": 3.882635,
+        "parse_evidence": 0.129648,
+        "parse_lean": 0.08299100000000001,
+        "produce_evidence": 4.414425,
+        "read": 0.011590999999999999
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "term-level-enum"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 0.9084829999999999,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 2.280033,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "finite-domain-enum-unsat",
       "file": "corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regrnormquant.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "FiniteDomainEnum",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 0.022072,
+        "lean_reconstruction": 1.503341,
+        "parse_evidence": 0.113904,
+        "parse_lean": 0.06717,
+        "produce_evidence": 0.548487,
+        "read": 0.01154
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "term-level-enum"
+        }
+      ]
     }
   ],
   "limit": 4,
@@ -80,15 +131,15 @@
     "audited_unsat": 3,
     "baseline_decided": 4,
     "baseline_mismatches": 0,
-    "dominant_candidates": 1,
-    "dominant_pct_audited": 25.0,
-    "evidence_certified": 1,
+    "dominant_candidates": 4,
+    "dominant_pct_audited": 100.0,
+    "evidence_certified": 4,
     "evidence_checked": 4,
     "instances": 5,
-    "lean_checked_unsat": 0,
-    "lean_unsat_pct": 0.0,
+    "lean_checked_unsat": 3,
+    "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
-  "timeout_ms": 5000,
+  "timeout_ms": 30000,
   "version": 1
 }

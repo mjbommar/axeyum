@@ -7,10 +7,10 @@
 //!
 //! - `sat` carries a [`Model`]; `check` replays it through the ground evaluator
 //!   against the original assertions.
-//! - small `QF_BV` `unsat` carries a **term-level** certificate (the strongest:
-//!   exhaustive evaluation over the finite symbol domain, trusting only the
-//!   evaluator — not the bit-blaster, CNF encoder, or SAT solver); `check`
-//!   re-enumerates.
+//! - small `QF_BV`/finite Bool/BV `unsat` carries a **term-level** certificate
+//!   (the strongest: exhaustive evaluation over the finite symbol/quantifier
+//!   domain, trusting only the evaluator — not the bit-blaster, CNF encoder, or
+//!   SAT solver); `check` re-enumerates.
 //! - larger `QF_BV` `unsat` in the Alethe driver's fragment carries a complete
 //!   Alethe bitblast→CNF→resolution proof; `check` re-runs the independent
 //!   [`axeyum_cnf::check_alethe`] kernel, which re-derives the bit-blast itself
@@ -52,7 +52,9 @@ use crate::array_xor_swap::{TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCe
 use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast, solve};
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::bool_simplify::BoolSimplificationRefutationCertificate;
-use crate::certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
+use crate::certify::{
+    CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
+};
 use crate::dpll_lia::{ArithDpllOutcome, ArithDpllRefutation, certify_arith_dpll_unsat};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lia_gcd::{
@@ -267,6 +269,16 @@ pub enum Evidence {
         /// The combined-symbol-width budget the certification used.
         max_total_bits: u32,
     },
+    /// Unsatisfiable (finite Bool/BV, including finite quantifiers), certified by
+    /// exhaustive evaluation over all free Bool/BV symbol assignments while the
+    /// evaluator itself enumerates bound Bool/BV quantifier domains. This is the
+    /// quantified counterpart of [`Evidence::UnsatTermLevel`].
+    UnsatFiniteDomainEnum {
+        /// Number of finite cases covered by the certificate budget.
+        cases: u64,
+        /// The combined free-symbol plus bound-quantifier bit budget used.
+        max_total_bits: u32,
+    },
     /// Unsatisfiable (`QF_LRA`): a Farkas refutation over the exact-rational
     /// constraints, whose [`FarkasCertificate::verify`] is the evidence.
     UnsatFarkas(FarkasCertificate),
@@ -456,6 +468,18 @@ impl Evidence {
                     }
                 }
             }
+            Evidence::UnsatFiniteDomainEnum { max_total_bits, .. } => {
+                match certify_finite_bv_by_enumeration(arena, assertions, *max_total_bits)? {
+                    CertifyOutcome::CertifiedUnsat { .. } => Ok(true),
+                    CertifyOutcome::Satisfiable(_) => Ok(false),
+                    CertifyOutcome::DomainTooLarge { total_bits } => {
+                        Err(SolverError::Backend(format!(
+                            "finite-domain unsat evidence: domain {total_bits} bits exceeds the \
+                             recorded budget {max_total_bits}"
+                        )))
+                    }
+                }
+            }
             Evidence::UnsatAletheProof(proof) => check_alethe(proof).map_err(|e| {
                 SolverError::Backend(format!("unsat Alethe evidence re-check failed: {e}"))
             }),
@@ -552,6 +576,7 @@ impl Evidence {
                 | Evidence::UnsatArithAletheProof(_)
                 | Evidence::UnsatGuardedQuantAletheProof { .. }
                 | Evidence::UnsatTermLevel { .. }
+                | Evidence::UnsatFiniteDomainEnum { .. }
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
                 | Evidence::UnsatArithDpll(_)
@@ -1363,6 +1388,7 @@ pub fn produce_diophantine_evidence(
 /// Returns [`SolverError::Unsupported`] for queries outside the supported
 /// fragment, or [`SolverError`] from the chosen engine (a failed self-check is a
 /// [`SolverError::Backend`] soundness alarm).
+#[allow(clippy::too_many_lines)]
 pub fn produce_evidence(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1526,6 +1552,8 @@ pub fn produce_evidence(
                 // raw `bv2nat` subterm) and BEFORE the bare fallback, so it never
                 // shadows the zero-trust certs and a `bv2nat`-free query is untouched.
                 (Evidence::UnsatArithAletheProof(proof), steps)
+            } else if let Some(finite) = finite_domain_enum_evidence(arena, assertions)? {
+                finite
             } else if let Some(direct) = direct_structural_unsat_evidence(arena, assertions) {
                 direct
             } else if let Some(bounded) = bounded_int_blast_evidence(arena, assertions)? {
@@ -1582,6 +1610,27 @@ fn bounded_int_blast_evidence(
             (TrustId::SatRefutation, true),
         ]),
     )))
+}
+
+fn finite_domain_enum_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<(Evidence, Vec<TrustStep>)>, SolverError> {
+    match certify_finite_bv_by_enumeration(arena, assertions, TERM_LEVEL_CERT_BITS) {
+        Ok(CertifyOutcome::CertifiedUnsat { cases }) => Ok(Some((
+            Evidence::UnsatFiniteDomainEnum {
+                cases,
+                max_total_bits: TERM_LEVEL_CERT_BITS,
+            },
+            trust_steps(&[(TrustId::TermLevelEnum, true)]),
+        ))),
+        Ok(CertifyOutcome::Satisfiable(_)) => Err(SolverError::Backend(
+            "soundness alarm: backend reported unsat but finite-domain enumeration found a model"
+                .to_owned(),
+        )),
+        Ok(CertifyOutcome::DomainTooLarge { .. }) | Err(SolverError::Unsupported(_)) => Ok(None),
+        Err(error) => Err(error),
+    }
 }
 
 fn small_pre_solve_array_axiom_refutation(
@@ -2010,6 +2059,7 @@ pub fn prove(
         | Evidence::UnsatArithAletheProof(_)
         | Evidence::UnsatGuardedQuantAletheProof { .. }
         | Evidence::UnsatTermLevel { .. }
+        | Evidence::UnsatFiniteDomainEnum { .. }
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
         | Evidence::UnsatArithDpll(_)

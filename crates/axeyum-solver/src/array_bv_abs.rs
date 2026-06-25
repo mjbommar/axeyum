@@ -63,7 +63,10 @@ pub fn bv_abstraction_refutation(
 fn abstract_unsat_evidence(evidence: &Evidence) -> bool {
     matches!(
         evidence,
-        Evidence::Unsat(Some(_)) | Evidence::UnsatAletheProof(_) | Evidence::UnsatTermLevel { .. }
+        Evidence::Unsat(Some(_))
+            | Evidence::UnsatAletheProof(_)
+            | Evidence::UnsatTermLevel { .. }
+            | Evidence::UnsatFiniteDomainEnum { .. }
     )
 }
 

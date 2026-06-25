@@ -822,6 +822,64 @@ fn small_qf_bv_unsat_is_term_level_certified_and_rechecks() {
 }
 
 #[test]
+fn quantified_bv_audit_unsats_use_finite_domain_enum_evidence() {
+    for (tag, input) in [
+        (
+            "abstract_unsatcore1",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__abstract__unsatcore1.smt2"
+            ),
+        ),
+        (
+            "quant_issue97",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__issue97.smt2"
+            ),
+        ),
+        (
+            "quant_regrnormquant",
+            include_str!(
+                "../../../corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regrnormquant.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("quantified BV audit row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
+        let Evidence::UnsatFiniteDomainEnum {
+            cases,
+            max_total_bits,
+        } = &report.evidence
+        else {
+            panic!(
+                "{tag}: expected finite-domain enum evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(*cases > 0, "{tag}: certificate should count finite cases");
+        assert_eq!(*max_total_bits, 20);
+        assert!(
+            report.evidence.is_certified(),
+            "{tag}: evidence should be certified"
+        );
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}: evidence should re-check"
+        );
+        let step = report
+            .trusted_steps
+            .iter()
+            .find(|s| s.id == TrustId::TermLevelEnum)
+            .unwrap_or_else(|| panic!("{tag}: missing TermLevelEnum trust step"));
+        assert!(
+            step.certified,
+            "{tag}: finite-domain enumeration should be certified"
+        );
+    }
+}
+
+#[test]
 fn unified_front_door_routes_pure_real_to_a_refutation() {
     // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
     let mut arena = TermArena::new();
