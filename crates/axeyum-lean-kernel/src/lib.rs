@@ -66,7 +66,10 @@ pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
-pub use prelude::{DatatypeFamily, DatatypeInductive, LogicPrelude, build_logic_prelude};
+pub use prelude::{
+    DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
+    build_logic_prelude,
+};
 pub use tc::{KernelError, LocalContext, LocalDecl};
 
 use expr::ExprMeta;

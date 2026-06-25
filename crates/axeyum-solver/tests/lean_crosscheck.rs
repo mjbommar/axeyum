@@ -438,6 +438,126 @@ fn same_constructor_without_field_conflict_is_not_an_injectivity_refutation() {
     );
 }
 
+/// Datatype **ACYCLICITY** (the occurs-check axiom — the LAST `QF_DT` field axiom,
+/// completing the Lean chain). A single-level containment cycle `x = cons(h, x)`
+/// over a recursive datatype `IntList = nil | cons(head, tail : IntList)` is UNSAT
+/// — discharged BY the SIZE argument (no `noConfusion`, no assumed acyclicity
+/// axiom, no well-founded recursion):
+///
+///   - `size : IntList → Nat` (a recursor measure) gives `size (cons h x)` ι→
+///     `Nat.succ (size x)`;
+///   - `congrArg size (hx : x = cons h x)` transports to `Eq Nat (size x)
+///     (Nat.succ (size x))`;
+///   - `n ≠ Nat.succ n` (proven by induction on `Nat` — a `zero ≠ succ`
+///     discriminator + `succ` injectivity via a predecessor selector) closes it to
+///     `False`.
+///
+/// The exported module must type-check in real Lean and `#print axioms` must
+/// report no `sorryAx` and no acyclicity axiom — acyclicity is kernel-computed.
+#[test]
+fn acyclicity_cycle_check_in_real_lean() {
+    let mut arena = TermArena::new();
+    // IntList = nil | cons(head : BitVec(2), tail : IntList) — RECURSIVE datatype.
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(2)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let h = {
+        let s = arena.declare("h", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let x = {
+        let s = arena.declare("x", Sort::Datatype(list)).unwrap();
+        arena.var(s)
+    };
+    // x = cons(h, x) — a containment cycle, UNSAT by acyclicity.
+    let cons_h_x = arena.construct(cons, &[h, x]).unwrap();
+    let eq = arena.eq(x, cons_h_x).unwrap();
+    let (_frag, source) =
+        prove_unsat_to_lean_module(&mut arena, &[eq]).expect("acyclicity cycle unsat reconstructs");
+    // The audit must not carry an acyclicity axiom (any `axiom …acyclic…`/occurs
+    // declaration would be a smuggle); the size argument is fully kernel-computed.
+    assert!(
+        !source.to_lowercase().contains("acyclic"),
+        "the acyclicity module must not declare an acyclicity axiom:\n{source}"
+    );
+    lean_accepts("acyclicity_cycle", &source);
+}
+
+/// Datatype acyclicity, **reversed orientation** `cons(h, x) = x` — the same cycle
+/// asserted the other way; the size congruence is re-oriented by an inline
+/// `Eq.symm`, and the module must still reconstruct to a kernel-checked `False`
+/// that checks in real Lean with a clean `#print axioms`.
+#[test]
+fn acyclicity_cycle_reversed_check_in_real_lean() {
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(2)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let h = {
+        let s = arena.declare("h", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let x = {
+        let s = arena.declare("x", Sort::Datatype(list)).unwrap();
+        arena.var(s)
+    };
+    // cons(h, x) = x — reversed cycle, UNSAT by acyclicity.
+    let cons_h_x = arena.construct(cons, &[h, x]).unwrap();
+    let eq = arena.eq(cons_h_x, x).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[eq])
+        .expect("reversed acyclicity cycle unsat reconstructs");
+    lean_accepts("acyclicity_cycle_reversed", &source);
+}
+
+/// Soundness-negative: a FINITE list `x = cons(h, nil)` is **satisfiable** (no
+/// cycle — the tail `nil` does not contain `x`), so the acyclicity route must NOT
+/// claim it UNSAT. The reconstructor declines (the tail is not `x`), so no wrong
+/// `False` is emitted.
+#[test]
+fn finite_list_is_not_an_acyclicity_refutation() {
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(2)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let h = {
+        let s = arena.declare("h", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let x = {
+        let s = arena.declare("x", Sort::Datatype(list)).unwrap();
+        arena.var(s)
+    };
+    // x = cons(h, nil) — finite, satisfiable; the tail is `nil`, not `x`.
+    let nil_v = arena.construct(nil, &[]).unwrap();
+    let cons_h_nil = arena.construct(cons, &[h, nil_v]).unwrap();
+    let eq = arena.eq(x, cons_h_nil).unwrap();
+    assert!(
+        prove_unsat_to_lean_module(&mut arena, &[eq]).is_err(),
+        "a finite (non-cyclic) list equality must not reconstruct to `False`"
+    );
+}
+
 /// Soundness/routing-negative: a DISTINCT-constructor equality `Red a = Green b`
 /// is distinctness's job, NOT injectivity's. It must still reconstruct to a
 /// kernel-checked `False` (via the slice-2 distinctness route), and the rendered

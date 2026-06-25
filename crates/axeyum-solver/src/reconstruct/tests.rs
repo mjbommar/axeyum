@@ -4087,3 +4087,39 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
         assert_eq!(frag, ProofFragment::Exists);
     }
 }
+
+/// Debug: build `nat_ne_succ` and infer its type; expect
+/// `Π (n : Nat), Eq Nat n (Nat.succ n) → False`.
+/// The `n ≠ Nat.succ n` lemma built by [`super::build_nat_ne_succ`] `infer`s to
+/// `Π (n : Nat), Eq Nat n (Nat.succ n) → False` — the trusted kernel genuinely
+/// accepts the by-induction proof (base-case discriminator + step `succ`
+/// injectivity), so acyclicity's `n = succ n` contradiction is kernel-checked, not
+/// assumed.
+#[test]
+fn nat_ne_succ_infers_to_pi_eq_false() {
+    let mut ctx = ReconstructCtx::new();
+    // The sub-pieces all type-check on their own.
+    let discr = super::build_nat_discriminator(&mut ctx);
+    assert!(
+        ctx.kernel_mut().infer(discr).is_ok(),
+        "discriminator infers"
+    );
+    let pred = super::build_nat_pred(&mut ctx);
+    assert!(ctx.kernel_mut().infer(pred).is_ok(), "pred selector infers");
+    let mz = super::build_nat_ne_succ_m_zero(&mut ctx);
+    assert!(ctx.kernel_mut().infer(mz).is_ok(), "base minor infers");
+    let ms = super::build_nat_ne_succ_m_succ(&mut ctx);
+    assert!(ctx.kernel_mut().infer(ms).is_ok(), "step minor infers");
+
+    // The assembled lemma infers to `Π (n : Nat), Eq Nat n (Nat.succ n) → False`.
+    let lemma = super::build_nat_ne_succ(&mut ctx);
+    let ty = ctx
+        .kernel_mut()
+        .infer(lemma)
+        .expect("nat_ne_succ infers to a Pi type");
+    let rendered = ctx.kernel().render_lean(ty);
+    assert!(
+        rendered.contains("Nat") && rendered.contains("Eq") && rendered.contains("False"),
+        "nat_ne_succ : Π (n : Nat), Eq Nat n (Nat.succ n) → False, got: {rendered}"
+    );
+}

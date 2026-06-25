@@ -124,6 +124,23 @@ pub struct LogicPrelude {
     pub bool_false: NameId,
     /// `Bool.rec` — the `Bool` eliminator (used to build is-testers).
     pub bool_rec: NameId,
+
+    /// `Nat : Type` (`Sort 1`) — the **computational** unary naturals, a
+    /// recursive enum `Nat.zero | Nat.succ (n : Nat)`. This is the codomain of
+    /// the datatype **size** measure (`size : D → Nat`): a containment cycle
+    /// `x = C(… x …)` forces `size x = Nat.succ (size x)`, i.e. `n = Nat.succ n`,
+    /// which is `False` by induction on `Nat` (the **acyclicity** route). Like
+    /// `Bool`, `Nat` is rendered as a real Lean `inductive` so an external Lean
+    /// regenerates `Nat.rec` *with* ι.
+    pub nat: NameId,
+    /// `Nat.zero : Nat`.
+    pub nat_zero: NameId,
+    /// `Nat.succ : Nat → Nat` (a direct recursive field).
+    pub nat_succ: NameId,
+    /// `Nat.rec` — the `Nat` eliminator (used to build the size measure, the
+    /// `Nat.zero ≠ Nat.succ _` discriminator, the predecessor selector, and the
+    /// `n ≠ Nat.succ n` induction).
+    pub nat_rec: NameId,
 }
 
 impl Kernel {
@@ -436,6 +453,38 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
     }
     let bool_rec = kernel.name_str(bool_, "rec");
 
+    // --- Nat : Type, Nat.zero | Nat.succ (n : Nat) -----------------------
+    // The computational unary naturals at `Sort 1` (= Type), a RECURSIVE enum:
+    // `Nat.succ : Nat → Nat` is a direct recursive field (admitted by the
+    // slice-5 inductive gate). `Nat.rec` ι-computes
+    //   Nat.rec C z s Nat.zero      ι→ z,
+    //   Nat.rec C z s (Nat.succ k)  ι→ s k (Nat.rec C z s k),
+    // and eliminates into an arbitrary `Sort v` (incl. `Prop`) — this kernel
+    // imposes no large-elimination restriction. The size measure, the
+    // `zero ≠ succ` discriminator, the predecessor selector, and the
+    // `n ≠ succ n` induction (acyclicity) all ride on it.
+    let nat = kernel.name_str(anon, "Nat");
+    let nat_zero = kernel.name_str(nat, "zero");
+    let nat_succ = kernel.name_str(nat, "succ");
+    {
+        let z = kernel.level_zero();
+        let one = kernel.level_succ(z);
+        let nat_ty = kernel.sort(one);
+        let nat_const = kernel.const_(nat, vec![]);
+        // Nat.zero : Nat ;  Nat.succ : Nat → Nat (direct recursive field).
+        let succ_ty = kernel.pi(anon, nat_const, nat_const, BinderInfo::Default);
+        kernel
+            .add_inductive(
+                nat,
+                &[],
+                0,
+                nat_ty,
+                &[(nat_zero, nat_const), (nat_succ, succ_ty)],
+            )
+            .expect("Nat should admit");
+    }
+    let nat_rec = kernel.name_str(nat, "rec");
+
     // A Definition (not an inductive). Type: Prop → Prop. Value: λ a, a → False.
     let not = kernel.name_str(anon, "Not");
     {
@@ -489,6 +538,10 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> LogicPrelude {
         bool_true,
         bool_false,
         bool_rec,
+        nat,
+        nat_zero,
+        nat_succ,
+        nat_rec,
     }
 }
 
@@ -821,6 +874,207 @@ impl Kernel {
             applied = self.app(applied, minor);
         }
         // λ (t : D), D.rec.{u} motive min₀ … min_{k-1} t.
+        let t = self.bvar(0);
+        let body = self.app(applied, t);
+        self.lam(anon, ind_const, body, BinderInfo::Default)
+    }
+}
+
+/// Whether a recursive-datatype constructor field is an opaque carrier value
+/// (`α`) or a recursive self-reference to the datatype `D` itself. Used by
+/// [`Kernel::add_recursive_datatype_family`] so a field like `tail : D` is
+/// modeled as the kernel inductive's own sort — making the constructor a genuine
+/// **recursive** kernel constructor whose recursor carries an induction
+/// hypothesis (the size measure recurses through it).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecField {
+    /// A non-recursive field of the opaque carrier sort `α` (e.g. a `head : α`).
+    Carrier,
+    /// A recursive field whose type is the datatype `D` itself (a direct
+    /// recursive field, e.g. a list `tail : D`) — the source of acyclicity's
+    /// structural descent.
+    Recursive,
+}
+
+/// The interned names of a **recursive multi-constructor datatype family**
+/// declared by [`Kernel::add_recursive_datatype_family`]: a non-parametric,
+/// non-indexed *recursive* inductive `D : Sort u` carrying every constructor,
+/// where each constructor field is either the opaque carrier `α`
+/// ([`RecField::Carrier`]) or the datatype `D` itself ([`RecField::Recursive`], a
+/// direct recursive field), plus the generated recursor `D.rec`.
+///
+/// This is the **recursive twin** of [`DatatypeFamily`] (whose every field is
+/// `α`): it is needed for **acyclicity**, where the cycle `x = C(… x …)` is over
+/// a recursive datatype (`cons(head : α, tail : D)`), so the `tail : D` field
+/// must be the inductive's own sort for the recursor to recurse and the size
+/// measure to add `1` per recursive field.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecursiveDatatypeFamily {
+    /// `D : Sort u` (the recursive datatype sort).
+    pub ind: NameId,
+    /// The constructors `D.c₀ … D.c_{k-1}`, in declaration order.
+    pub ctors: Vec<NameId>,
+    /// The per-field shapes (carrier vs recursive) of each constructor, by the
+    /// same index as `ctors`.
+    pub fields: Vec<Vec<RecField>>,
+    /// `D.rec` — the eliminator, used to define the size measure.
+    pub rec: NameId,
+}
+
+impl Kernel {
+    /// Declare a **recursive multi-constructor datatype family** `D : Sort u`
+    /// whose constructors are `(name, field-shapes)` pairs — each `D.cⱼ` takes a
+    /// field per shape, [`RecField::Carrier`] fields typed `carrier` and
+    /// [`RecField::Recursive`] fields typed `D` (a direct recursive field) — and
+    /// return the interned [`RecursiveDatatypeFamily`].
+    ///
+    /// The constructor result `D` is closed (no field reference), and recursive
+    /// fields are exactly `D` (direct recursion), so the slice-5 inductive gate
+    /// admits it and generates `D.rec` with an induction hypothesis per recursive
+    /// field — the backbone the size measure ([`Kernel::recursive_datatype_size`])
+    /// recurses through.
+    ///
+    /// `carrier` is the carrier-sort expression (an already-declared `Sort u`,
+    /// e.g. the EUF carrier `α : Type`); `carrier_sort` is its level `u`, so
+    /// `D : Sort u` lives at the same level and can carry both `α`-typed and
+    /// `D`-typed fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns the [`KernelError`](crate::tc::KernelError) from
+    /// [`Kernel::add_inductive`] if the declaration fails to admit (a name clash,
+    /// a malformed carrier, or — defensively — a recursive field the gate
+    /// rejects).
+    pub fn add_recursive_datatype_family(
+        &mut self,
+        name: NameId,
+        carrier: ExprId,
+        carrier_sort: LevelId,
+        ctors: &[(NameId, Vec<RecField>)],
+    ) -> Result<RecursiveDatatypeFamily, crate::tc::KernelError> {
+        let anon = self.anon();
+        let ind_ty = self.sort(carrier_sort);
+        let ind_const = self.const_(name, vec![]);
+        // Each constructor type := Π (fields…), D, with each field typed `carrier`
+        // (Carrier) or `D` (Recursive). The result `D` is closed. Build the field
+        // Pis right-to-left so the first shape becomes the outermost binder.
+        let ctor_decls: Vec<(NameId, ExprId)> = ctors
+            .iter()
+            .map(|(cn, shapes)| {
+                let mut ctor_ty = ind_const;
+                for shape in shapes.iter().rev() {
+                    let dom = match shape {
+                        RecField::Carrier => carrier,
+                        RecField::Recursive => ind_const,
+                    };
+                    ctor_ty = self.pi(anon, dom, ctor_ty, BinderInfo::Default);
+                }
+                (*cn, ctor_ty)
+            })
+            .collect();
+        self.add_inductive(name, &[], 0, ind_ty, &ctor_decls)?;
+        let rec = self.name_str(name, "rec");
+        Ok(RecursiveDatatypeFamily {
+            ind: name,
+            ctors: ctors.iter().map(|&(cn, _)| cn).collect(),
+            fields: ctors.iter().map(|(_, s)| s.clone()).collect(),
+            rec,
+        })
+    }
+
+    /// Build the **size measure** `size : D → Nat` for a
+    /// [`RecursiveDatatypeFamily`] as a closed recursor application
+    /// `λ (t : D), D.rec.{1} (motive := λ _ => Nat) min₀ … min_{k-1} t`, where each
+    /// minor returns `Nat.succ` applied to the recursive field's induction
+    /// hypothesis (its sub-value size):
+    ///
+    /// - a **non-recursive** constructor (all [`RecField::Carrier`]) maps to
+    ///   `Nat.zero` (its minor ignores all carrier fields);
+    /// - a constructor with one recursive field wraps one `Nat.succ` around the
+    ///   recursive field's induction-hypothesis size, so e.g.
+    ///   `cons(head : α, tail : D)` maps to
+    ///   `λ (head : α) (tail : D) (ih_tail : Nat), Nat.succ ih_tail`.
+    ///
+    /// Applying it to a constructor application ι-reduces: `size nil` ι→
+    /// `Nat.zero`, and `size (cons h t)` ι→ `Nat.succ (size t)` (one ι step exposes
+    /// `m_cons h t (size t)`, which β-reduces to `Nat.succ (size t)`). So a cycle
+    /// `x = cons(h, x)` gives, by congruence on `size`, `size x = Nat.succ
+    /// (size x)` — the `n = Nat.succ n` contradiction.
+    ///
+    /// `nat`/`nat_zero`/`nat_succ` are the computational `Nat` names (from
+    /// [`LogicPrelude`]); `carrier` is the family's carrier sort `α` expression.
+    /// Constructors are restricted to **at most one** [`RecField::Recursive`]
+    /// field here (the SMT datatypes that arise in acyclicity cycles — lists,
+    /// trees written as nested pairs — have a single recursive tail per cell;
+    /// multi-recursive constructors would chain the `succ`s but are not needed for
+    /// this slice). The recursor's elimination universe for a `Nat : Sort 1`
+    /// motive is the fixed `1`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any constructor has more than one [`RecField::Recursive`] field
+    /// (the single-recursive-tail restriction above) — a caller bug for the
+    /// datatypes this slice targets.
+    #[must_use]
+    pub fn recursive_datatype_size(
+        &mut self,
+        family: &RecursiveDatatypeFamily,
+        carrier: ExprId,
+        nat: NameId,
+        nat_zero: NameId,
+        nat_succ: NameId,
+    ) -> ExprId {
+        let anon = self.anon();
+        let ind_const = self.const_(family.ind, vec![]);
+        let nat_const = self.const_(nat, vec![]);
+        // motive := λ (_ : D), Nat.
+        let motive = self.lam(anon, ind_const, nat_const, BinderInfo::Default);
+        // The recursor's elimination universe for a `Nat : Sort 1` motive is `1`.
+        let z = self.level_zero();
+        let one = self.level_succ(z);
+        let rec_const = self.const_(family.rec, vec![one]);
+        let mut applied = self.app(rec_const, motive);
+        let zero_const = self.const_(nat_zero, vec![]);
+        let succ_const = self.const_(nat_succ, vec![]);
+        for shapes in &family.fields {
+            let rec_count = shapes
+                .iter()
+                .filter(|s| matches!(s, RecField::Recursive))
+                .count();
+            assert!(
+                rec_count <= 1,
+                "recursive_datatype_size supports at most one recursive field per constructor"
+            );
+            // The minor binds, in order, each field (carrier or D) and then — for
+            // each recursive field, appended after the field binders by the
+            // recursor — one induction-hypothesis `ih : Nat` (the size of that
+            // recursive subterm). De Bruijn layout, outer→inner:
+            //   f₀ … f_{a-1}  ih_rec₀ … ih_rec_{r-1}
+            // For `rec_count == 1` the lone IH is the innermost binder (BVar 0)
+            // inside the minor body; the body is `Nat.succ ih`. With no recursive
+            // field the body is `Nat.zero`.
+            let body = if rec_count == 0 {
+                zero_const
+            } else {
+                let ih = self.bvar(0); // the single recursive-field IH
+                self.app(succ_const, ih)
+            };
+            // Wrap the IH binders (one `Nat` per recursive field), innermost first.
+            let mut minor = body;
+            for _ in 0..rec_count {
+                minor = self.lam(anon, nat_const, minor, BinderInfo::Default);
+            }
+            // Wrap the field binders (carrier or D), innermost-to-outermost.
+            for shape in shapes.iter().rev() {
+                let dom = match shape {
+                    RecField::Carrier => carrier,
+                    RecField::Recursive => ind_const,
+                };
+                minor = self.lam(anon, dom, minor, BinderInfo::Default);
+            }
+            applied = self.app(applied, minor);
+        }
+        // λ (t : D), D.rec.{1} motive min₀ … min_{k-1} t.
         let t = self.bvar(0);
         let body = self.app(applied, t);
         self.lam(anon, ind_const, body, BinderInfo::Default)

@@ -18,6 +18,7 @@
 
 use crate::env::Declaration;
 use crate::expr::ExprNode;
+use crate::prelude::{RecField, RecursiveDatatypeFamily};
 use crate::{BinderInfo, Kernel, LogicPrelude, build_logic_prelude};
 
 /// A test fixture: a kernel with the prelude plus abstract `A, B, C : Prop` and
@@ -1315,4 +1316,178 @@ fn datatype_family_selector_iota_reduces_to_field() {
             "Eq.refl proves the sel_{index} family projection (ι-reduction)"
         );
     }
+}
+
+/// The prelude's **computational `Nat`** is a genuine recursive inductive: both
+/// constructors infer to `Nat` and are distinct, and `Nat.rec` ι-computes —
+/// `Nat.rec C z s (Nat.succ (Nat.succ Nat.zero))` whnf's (through an
+/// identity-by-recursion `s := fun _ ih => succ ih`) back to
+/// `Nat.succ (Nat.succ Nat.zero)`. This is the engine the size measure rides on.
+#[test]
+fn prelude_nat_recursor_computes() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let anon = k.anon();
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+
+    let nat_const = k.const_(p.nat, vec![]);
+    let zero_c = k.const_(p.nat_zero, vec![]);
+    let succ_c = k.const_(p.nat_succ, vec![]);
+
+    // Both constructors infer to `Nat` and are distinct.
+    let zero_ty = k.infer(zero_c).expect("Nat.zero infers");
+    assert!(k.def_eq(zero_ty, nat_const), "Nat.zero : Nat");
+    let one_val = k.app(succ_c, zero_c);
+    let one_ty = k.infer(one_val).expect("Nat.succ Nat.zero infers");
+    assert!(k.def_eq(one_ty, nat_const), "Nat.succ Nat.zero : Nat");
+    assert!(!k.def_eq(zero_c, one_val), "Nat.zero != Nat.succ Nat.zero");
+
+    // C := fun (_ : Nat) => Nat ; z := zero ; s := fun (_ : Nat)(ih : Nat) => succ ih.
+    let big_c = k.lam(anon, nat_const, nat_const, BinderInfo::Default);
+    let s_min = {
+        let v0 = k.bvar(0);
+        let succ_ih = k.app(succ_c, v0);
+        let inner = k.lam(anon, nat_const, succ_ih, BinderInfo::Default);
+        k.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    // two := succ (succ zero).
+    let two = {
+        let s1 = k.app(succ_c, zero_c);
+        k.app(succ_c, s1)
+    };
+    // Nat.rec.{1} C z s two  whnf's (identity-by-recursion) back to `two`.
+    let rec_const = k.const_(p.nat_rec, vec![one]);
+    let app = {
+        let e = k.app(rec_const, big_c);
+        let e = k.app(e, zero_c);
+        let e = k.app(e, s_min);
+        k.app(e, two)
+    };
+    let computed = whnf_deep(&mut k, app);
+    assert_eq!(computed, two, "Nat.rec identity on 2 computes to 2");
+}
+
+/// Fully normalize `e` by WHNF-ing the head and then recursively each spine
+/// argument (a test-only deep normalizer for closed first-order terms).
+fn whnf_deep(k: &mut Kernel, e: crate::ExprId) -> crate::ExprId {
+    let e = k.whnf(e);
+    let mut spine = Vec::new();
+    let mut h = e;
+    while let ExprNode::App(f, a) = k.expr_node(h).clone() {
+        spine.push(a);
+        h = f;
+    }
+    let mut rebuilt = h;
+    for a in spine.into_iter().rev() {
+        let a = whnf_deep(k, a);
+        rebuilt = k.app(rebuilt, a);
+    }
+    rebuilt
+}
+
+/// Declare a fresh carrier atom `name : ty` and return its `Const`.
+fn declare_carrier_atom(k: &mut Kernel, name: &str, ty: crate::ExprId) -> crate::ExprId {
+    let anon = k.anon();
+    let n = k.name_str(anon, name);
+    k.add_declaration(Declaration::Axiom {
+        name: n,
+        uparams: vec![],
+        ty,
+    })
+    .unwrap();
+    k.const_(n, vec![])
+}
+
+/// Build `IntList = nil | cons (head : α) (tail : IntList)` — a **recursive**
+/// datatype family with a carrier head and a `D`-typed (recursive) tail. Returns
+/// the family plus its `nil`/`cons` constructor names.
+fn int_list_family(
+    k: &mut Kernel,
+    alpha: crate::ExprId,
+    carrier_sort: crate::LevelId,
+) -> (RecursiveDatatypeFamily, crate::NameId, crate::NameId) {
+    let anon = k.anon();
+    let list_name = k.name_str(anon, "IntList");
+    let nil_name = k.name_str(list_name, "nil");
+    let cons_name = k.name_str(list_name, "cons");
+    let family = k
+        .add_recursive_datatype_family(
+            list_name,
+            alpha,
+            carrier_sort,
+            &[
+                (nil_name, vec![]),
+                (cons_name, vec![RecField::Carrier, RecField::Recursive]),
+            ],
+        )
+        .expect("recursive IntList family should admit");
+    (family, nil_name, cons_name)
+}
+
+/// The **recursive datatype family** admits (a genuine inductive with a `D`-typed
+/// tail field), and its structural **size** measure ι-reduces:
+/// `size nil = Nat.zero`, `size (cons h nil) = Nat.succ Nat.zero`,
+/// `size (cons h (cons g nil)) = Nat.succ (Nat.succ Nat.zero)`, and — the crux of
+/// acyclicity — `size (cons h x) = Nat.succ (size x)` for an OPAQUE list atom
+/// `x : IntList` (a stuck recursor whose `Nat.succ` shell is exposed by one ι
+/// step). This is the occurs-check descent the acyclicity refutation rides on.
+#[test]
+fn recursive_family_size_iota_reduces() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k);
+    let z = k.level_zero();
+    let one = k.level_succ(z);
+    let alpha = declare_carrier(&mut k, "α", one);
+
+    let (family, nil_name, cons_name) = int_list_family(&mut k, alpha, one);
+
+    // Carrier atoms h, g : α and an OPAQUE list atom x : IntList.
+    let h = declare_carrier_atom(&mut k, "h", alpha);
+    let g = declare_carrier_atom(&mut k, "g", alpha);
+    let list_const = k.const_(family.ind, vec![]);
+    let x = declare_carrier_atom(&mut k, "x", list_const);
+
+    let nil = k.const_(nil_name, vec![]);
+    let cons = |k: &mut Kernel, head: crate::ExprId, tail: crate::ExprId| {
+        let c = k.const_(cons_name, vec![]);
+        let e = k.app(c, head);
+        k.app(e, tail)
+    };
+    let cons_h_nil = cons(&mut k, h, nil);
+    let cons_g_nil = cons(&mut k, g, nil);
+    let cons_h_cons_g_nil = cons(&mut k, h, cons_g_nil);
+    let cons_h_x = cons(&mut k, h, x);
+
+    let size = k.recursive_datatype_size(&family, alpha, p.nat, p.nat_zero, p.nat_succ);
+
+    let zero = k.const_(p.nat_zero, vec![]);
+    let succ = |k: &mut Kernel, n: crate::ExprId| {
+        let s = k.const_(p.nat_succ, vec![]);
+        k.app(s, n)
+    };
+    let one_nat = succ(&mut k, zero);
+    let two_nat = succ(&mut k, one_nat);
+
+    // size nil ι→ zero.
+    let s_nil = k.app(size, nil);
+    assert!(k.def_eq(s_nil, zero), "size nil = zero");
+    // size (cons h nil) ι→ succ zero.
+    let s_chn = k.app(size, cons_h_nil);
+    assert!(k.def_eq(s_chn, one_nat), "size (cons h nil) = succ zero");
+    // size (cons h (cons g nil)) ι→ succ (succ zero).
+    let s_chcgn = k.app(size, cons_h_cons_g_nil);
+    assert!(
+        k.def_eq(s_chcgn, two_nat),
+        "size (cons h (cons g nil)) = succ (succ zero)"
+    );
+    // size (cons h x) def_eq succ (size x) for the OPAQUE x — the size of a
+    // `cons` is one more than the size of its tail, even when the tail is abstract.
+    let s_chx = k.app(size, cons_h_x);
+    let s_x = k.app(size, x);
+    let succ_s_x = succ(&mut k, s_x);
+    assert!(
+        k.def_eq(s_chx, succ_s_x),
+        "size (cons h x) = succ (size x) for opaque x"
+    );
 }

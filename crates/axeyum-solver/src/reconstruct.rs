@@ -51,7 +51,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_cnf::{AletheCommand, AletheLit, AletheTerm};
 use axeyum_lean_kernel::{
     BinderInfo, DatatypeFamily, DatatypeInductive, Declaration, ExprId, ExprNode, Kernel, LevelId,
-    LogicPrelude, NameId, build_logic_prelude,
+    LogicPrelude, NameId, RecField, RecursiveDatatypeFamily, build_logic_prelude,
 };
 
 /// An error from Alethe → Lean reconstruction. Every out-of-scope shape, unknown
@@ -453,6 +453,38 @@ impl ReconstructCtx {
         self.datatype_families
             .insert(dt_name.to_owned(), fam.clone());
         Ok(fam)
+    }
+
+    /// Get (declaring) the **route-A RECURSIVE datatype FAMILY** for the SMT
+    /// datatype named `dt_name`, whose constructors are `(leaf_name, field-shapes)`
+    /// in declaration order — each field shaped [`RecField::Carrier`] (`α`) or
+    /// [`RecField::Recursive`] (the datatype `D` itself). The recursive twin of
+    /// [`ReconstructCtx::datatype_family`], used by the **acyclicity** route so the
+    /// `tail : D` field is the inductive's own sort and the size measure recurses.
+    /// Not memoized (acyclicity declares one family per refutation module), so it
+    /// takes the constructor shapes directly rather than a datatype-name key.
+    fn recursive_datatype_family(
+        &mut self,
+        ctors: &[(String, Vec<RecField>)],
+    ) -> Result<RecursiveDatatypeFamily, ReconstructError> {
+        let decl_name = self.fresh_name("dtrec");
+        let ctor_decls: Vec<(NameId, Vec<RecField>)> = ctors
+            .iter()
+            .map(|(leaf, shapes)| {
+                (
+                    self.kernel.name_str(decl_name, leaf.as_str()),
+                    shapes.clone(),
+                )
+            })
+            .collect();
+        let alpha = self.alpha;
+        let one = self.one;
+        self.kernel
+            .add_recursive_datatype_family(decl_name, alpha, one, &ctor_decls)
+            .map_err(|e| ReconstructError::KernelRejected {
+                rule: "datatype_acyclic".to_owned(),
+                detail: format!("recursive datatype family did not admit: {e:?}"),
+            })
     }
 
     /// Build the Lean proposition `Eq.{1} Bool l r` over the computational `Bool`.
@@ -1696,6 +1728,60 @@ fn gate_and_render_lra_module(
         .render_lean_module(LEAN_MODULE_THEOREM, false_, proof))
 }
 
+/// Dispatch a `QF_DT` (datatype-fragment) refutation to a self-contained Lean
+/// module, trying the four **axiom-free field-axiom** routes in order — is-tester
+/// fold, constructor distinctness, constructor injectivity, and **acyclicity**
+/// (the occurs-check, the last axiom) — before falling back to the general
+/// datatype-simplification → `QF_UFBV` reconstructor. Split out of
+/// [`prove_unsat_to_lean_module`] so each arm stays bounded.
+///
+/// # Errors
+///
+/// [`ReconstructError`] when no datatype route covers the assertions or a route's
+/// reconstruction fails to kernel-check to `False`.
+fn dispatch_datatype_to_lean_module(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    // Route-A is-tester fold: a pure `is_C(cⱼ x…)` contradiction is discharged
+    // **by ι** (axiom-free over the fold) through the dedicated tester
+    // reconstructor; distinctness, injectivity, and acyclicity are the other three
+    // datatype field axioms, each discharged axiom-free. Any other datatype proof
+    // (select-over-construct, mixed BV residual) falls back to the general QF_UFBV
+    // reconstructor, where the read-over-construct projection is itself
+    // ι-discharged.
+    if let Some(module) = reconstruct_qf_dt_tester_to_lean_module(arena, assertions) {
+        module
+    } else if let Some(module) = reconstruct_qf_dt_distinct_to_lean_module(arena, assertions) {
+        // Constructor DISTINCTNESS `C x = D y` (C ≠ D): ι + congruence + the
+        // true≠false discriminator — axiom-free, no `noConfusion`.
+        module
+    } else if let Some(module) = reconstruct_qf_dt_injective_to_lean_module(arena, assertions) {
+        // Constructor INJECTIVITY `C x = C y ∧ ¬(x_i = y_i)` (SAME ctor C): ι
+        // (selector-over-construct) + congruence + the field disequality —
+        // axiom-free, no `noConfusion`.
+        module
+    } else if let Some(module) = reconstruct_qf_dt_acyclic_to_lean_module(arena, assertions) {
+        // ACYCLICITY (occurs-check) `x = C(… x …)`: the SIZE argument — a
+        // `size : D → Nat` recursor gives `size x = Nat.succ (size x)` by
+        // congruence + ι, refuted by `n ≠ Nat.succ n` (Nat induction). Axiom-free,
+        // no well-founded recursion, no acyclicity axiom. Completes the QF_DT
+        // field-axiom Lean chain.
+        module
+    } else {
+        let declined = || ReconstructError::MalformedStep {
+            rule: "prove_unsat_to_lean".to_owned(),
+            detail: "emitter declined: not unsat through this fragment".to_owned(),
+        };
+        let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
+            .ok_or_else(declined)?;
+        let mut ctx = ReconstructCtx::new();
+        let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
+        require_infers_false(&mut ctx, t)?;
+        Ok(render_ctx_module(&mut ctx, t))
+    }
+}
+
 /// **Like [`prove_unsat_to_lean`], but also returns a self-contained Lean 4
 /// module** (`prelude`-mode source) that re-proves the refutation and can be
 /// checked by an independent `lean` binary.
@@ -1753,38 +1839,7 @@ pub fn prove_unsat_to_lean_module(
             require_infers_false(&mut ctx, t)?;
             render_ctx_module(&mut ctx, t)
         }
-        ProofFragment::Datatype => {
-            // Route-A is-tester fold: a pure `is_C(cⱼ x…)` contradiction is
-            // discharged **by ι** (axiom-free over the fold) through the dedicated
-            // tester reconstructor. Any other datatype proof (select-over-construct,
-            // mixed BV residual) falls back to the general QF_UFBV reconstructor,
-            // where the read-over-construct projection is itself ι-discharged.
-            if let Some(module) = reconstruct_qf_dt_tester_to_lean_module(arena, assertions) {
-                module?
-            } else if let Some(module) =
-                reconstruct_qf_dt_distinct_to_lean_module(arena, assertions)
-            {
-                // Constructor DISTINCTNESS `C x = D y` (C ≠ D): discharged by ι +
-                // congruence + the true≠false discriminator — axiom-free, no
-                // `noConfusion`. The Lean mirror of the Carcara distinctness route.
-                module?
-            } else if let Some(module) =
-                reconstruct_qf_dt_injective_to_lean_module(arena, assertions)
-            {
-                // Constructor INJECTIVITY `C x = C y ∧ ¬(x_i = y_i)` (SAME ctor C):
-                // discharged by ι (selector-over-construct) + congruence + the field
-                // disequality — axiom-free, no `noConfusion`. The Lean mirror of the
-                // Carcara injectivity route.
-                module?
-            } else {
-                let p = crate::prove_qf_dt_unsat_alethe_via_simplification(arena, assertions)
-                    .ok_or_else(declined)?;
-                let mut ctx = ReconstructCtx::new();
-                let t = reconstruct_qf_ufbv_proof(&mut ctx, &p)?;
-                require_infers_false(&mut ctx, t)?;
-                render_ctx_module(&mut ctx, t)
-            }
-        }
+        ProofFragment::Datatype => dispatch_datatype_to_lean_module(arena, assertions)?,
         ProofFragment::Forall => {
             let p = crate::prove_quant_unsat_alethe(arena, assertions).ok_or_else(declined)?;
             let mut ctx = ReconstructCtx::new();
@@ -3118,6 +3173,614 @@ fn build_eq_symm(
     let e = ctx.kernel.app(e, refl_case);
     let e = ctx.kernel.app(e, b);
     ctx.kernel.app(e, h)
+}
+
+// ===========================================================================
+// Datatype ACYCLICITY (occurs-check) — the LAST QF_DT field axiom, discharged
+// axiom-free by a SIZE argument (the Lean mirror of the structural occurs-check;
+// completes the datatype field-axiom Lean chain alongside is-tester /
+// distinctness / injectivity).
+//
+// A single-level containment cycle `x = C(… x …)` over a recursive datatype `D`
+// (e.g. `IntList = nil | cons(head : α, tail : D)`, cycle `x = cons(h, x)`) is
+// UNSAT: inductive values are well-founded, so no value strictly contains
+// itself. We discharge it WITHOUT well-founded recursion, by a SIZE measure:
+//
+//   1. model `D` as a *recursive* kernel inductive
+//      ([`Kernel::add_recursive_datatype_family`]) — the `tail : D` field is the
+//      inductive's own sort, so `cons` is a genuine recursive constructor and the
+//      recursor carries an induction hypothesis;
+//   2. define `size : D → Nat` ([`Kernel::recursive_datatype_size`]) by the
+//      recursor into the computational `Nat`: `size nil` ι→ `Nat.zero`,
+//      `size (cons h t)` ι→ `Nat.succ (size t)` (one `Nat.succ` per recursive
+//      field);
+//   3. from the cycle hypothesis `hx : Eq D x (cons h x)`, transport by
+//      congruence ([`build_congr_size`], an `Eq.rec`) to
+//      `Eq Nat (size x) (size (cons h x))`, which is `def_eq` to
+//      `Eq Nat (size x) (Nat.succ (size x))` after ι on the right;
+//   4. apply `nat_ne_succ (size x)` ([`build_nat_ne_succ`]) — the proof, BY
+//      INDUCTION on `Nat`, that `n ≠ Nat.succ n` — to that equality ⇒ `False`.
+//
+// Every step is ι-reduction + `Eq.rec` + `Nat.rec` (eliminating into `Prop` for
+// the induction, into `Prop`/`Nat` for the base-case discriminator / predecessor
+// selector). NO assumed acyclicity axiom, NO `noConfusion`, NO well-founded
+// fixpoint — only the recursors of `D` and `Nat`, which the kernel generates and
+// type-checks. The only added axioms are the carrier atoms and the single input
+// cycle equality `hx` (the honest encoding of the input constraint). The final
+// term `infer`s to `False` (gated by [`require_infers_false`]); a non-cycle
+// assertion is DECLINED (no wrong `False`).
+// ===========================================================================
+
+/// A single-level datatype **containment cycle** `x = C(… x …)` located in
+/// `assertions`: an asserted equality (in either orientation) between a
+/// datatype-sorted term `x` and a constructor application `C(args…)` whose
+/// immediate arguments include `x` itself.
+struct AcyclicCycle {
+    /// The datatype `D` of the cycle.
+    datatype: DatatypeId,
+    /// The constructor `C` of the self-containing side. The kernel refutation
+    /// models the cyclic value `x` as a single opaque atom of `D` and rebuilds
+    /// `C(… x …)` from the constructor's field shapes, so the concrete `x`/arg
+    /// `TermId`s are needed only during detection, not in the refutation.
+    ctor: ConstructorId,
+    /// `true` when the equality is asserted as `x = C(…)`, `false` when reversed
+    /// (`C(…) = x`). Drives whether the size congruence is fed directly or
+    /// re-oriented by `Eq.symm`.
+    forward: bool,
+}
+
+/// Find the first asserted single-level cycle `x = C(… x …)` (in either
+/// orientation) over a recursive datatype, or [`None`] when no such equality is
+/// present. Declines if the self-containing constructor has **more than one**
+/// field of *this* datatype (the size measure's single-recursive-field shape) or
+/// any field of a *different* datatype (out of scope, kept sound by declining).
+fn find_acyclicity_cycle(arena: &TermArena, assertions: &[TermId]) -> Option<AcyclicCycle> {
+    for &assertion in assertions {
+        let IrTermNode::App { op: IrOp::Eq, args } = arena.node(assertion) else {
+            continue;
+        };
+        let &[lhs, rhs] = &args[..] else {
+            continue;
+        };
+        // Try both orientations: `x = C(… x …)` (forward) and `C(… x …) = x`.
+        for (forward, var, con) in [(true, lhs, rhs), (false, rhs, lhs)] {
+            let IrTermNode::App {
+                op: IrOp::DtConstruct { constructor, .. },
+                args: con_args,
+            } = arena.node(con)
+            else {
+                continue;
+            };
+            // `var` must be a NON-constructor datatype term that occurs as an
+            // immediate argument of the constructor (a single-level cycle).
+            if matches!(
+                arena.node(var),
+                IrTermNode::App {
+                    op: IrOp::DtConstruct { .. },
+                    ..
+                }
+            ) {
+                continue;
+            }
+            if !matches!(arena.sort_of(var), IrSort::Datatype(_)) {
+                continue;
+            }
+            let con_args = con_args.to_vec();
+            if !con_args.contains(&var) {
+                continue;
+            }
+            let ctor = *constructor;
+            let datatype = arena.constructor_datatype(ctor);
+            // The self-containing constructor must fit the size measure's shape:
+            // every datatype-typed field must be exactly THIS datatype, and at
+            // most one such recursive field (decline otherwise — keeps it sound).
+            let mut recursive_fields = 0usize;
+            let mut declined = false;
+            for (_, field_sort) in arena.constructor_fields(ctor) {
+                if let IrSort::Datatype(fdt) = field_sort {
+                    if *fdt == datatype {
+                        recursive_fields += 1;
+                    } else {
+                        declined = true; // a field of a different datatype: out of scope
+                    }
+                }
+            }
+            if declined || recursive_fields != 1 {
+                continue;
+            }
+            return Some(AcyclicCycle {
+                datatype,
+                ctor,
+                forward,
+            });
+        }
+    }
+    None
+}
+
+/// **Reconstruct a pure `QF_DT` acyclicity cycle to a Lean module** whose
+/// `axeyum_refutation : False` is kernel-checked and **axiom-free over the
+/// occurs-check** — acyclicity is discharged by the SIZE argument (a `Nat`-valued
+/// recursor measure + the `n ≠ Nat.succ n` induction), not assumed (no acyclicity
+/// axiom, no well-founded recursion). The only added axioms are the carrier atoms
+/// and the input cycle equality itself.
+///
+/// Returns [`None`] when `assertions` carry no single-level cycle (the caller then
+/// falls back to the general datatype reconstructor).
+///
+/// # Errors
+///
+/// [`ReconstructError::KernelRejected`] if the recursive datatype family fails to
+/// admit or the assembled `False` term does not `infer`/`def_eq` to `False` (a
+/// defensive gate; a sound acyclicity refutation always discharges).
+fn reconstruct_qf_dt_acyclic_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Result<String, ReconstructError>> {
+    let c = find_acyclicity_cycle(arena, assertions)?;
+    Some(build_acyclic_refutation_module(arena, &c))
+}
+
+/// Assemble the kernel `False` term for an [`AcyclicCycle`] and render the Lean
+/// module: build the recursive family `D`, the size measure `size : D → Nat`, the
+/// cycle hypothesis `hx : Eq D x (C … x …)`, the size congruence
+/// `Eq Nat (size x) (Nat.succ (size x))`, and the `n ≠ Nat.succ n` refutation.
+fn build_acyclic_refutation_module(
+    arena: &TermArena,
+    c: &AcyclicCycle,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+
+    // 1. Declare the kernel RECURSIVE family `D` carrying every constructor, each
+    //    field shaped Carrier (non-datatype) or Recursive (this datatype).
+    let ctor_ids = arena.datatype_constructors(c.datatype).to_vec();
+    let ctor_shapes: Vec<(String, Vec<RecField>)> = ctor_ids
+        .iter()
+        .enumerate()
+        .map(|(j, &cid)| {
+            let shapes = arena
+                .constructor_fields(cid)
+                .iter()
+                .map(|(_, sort)| match sort {
+                    IrSort::Datatype(fdt) if *fdt == c.datatype => RecField::Recursive,
+                    _ => RecField::Carrier,
+                })
+                .collect();
+            (format!("c{j}"), shapes)
+        })
+        .collect();
+    let family = ctx.recursive_datatype_family(&ctor_shapes)?;
+    let ctor_pos = recursive_constructor_position(&ctor_ids, c.ctor)?;
+
+    // 2. The cyclic value `x` is a single opaque atom of the datatype sort `D`;
+    //    the constructor application `C(… x …)` reuses that same atom for the
+    //    recursive argument and fresh carrier atoms for the non-recursive fields.
+    let dty = ctx.kernel.const_(family.ind, vec![]);
+    let x_atom = build_datatype_atom(&mut ctx, dty)?;
+    let shapes = &family.fields[ctor_pos];
+    let con = build_cycle_construct(&mut ctx, family.ctors[ctor_pos], shapes, x_atom)?;
+
+    // 3. The size measure `size : D → Nat` and the two size applications
+    //    `size x` and `size (C … x …)`; the latter ι→ `Nat.succ (size x)`.
+    let alpha = ctx.alpha;
+    let (nat, nat_zero, nat_succ) = (ctx.prelude.nat, ctx.prelude.nat_zero, ctx.prelude.nat_succ);
+    let size = ctx
+        .kernel
+        .recursive_datatype_size(&family, alpha, nat, nat_zero, nat_succ);
+    let size_x = ctx.kernel.app(size, x_atom);
+
+    // 4. Input cycle hypothesis `hx : Eq D x (C … x …)` (the ONLY non-atom axiom),
+    //    asserted in the input orientation.
+    let one = ctx.one;
+    let (eq_lhs, eq_rhs) = if c.forward {
+        (x_atom, con)
+    } else {
+        (con, x_atom)
+    };
+    let eq_prop = mk_eq_at(&mut ctx, dty, one, eq_lhs, eq_rhs);
+    let hx = fresh_axiom(&mut ctx, eq_prop, "assume")?;
+
+    // 5. Size congruence `congrArg size hx`. With the hypothesis in the `x = C…`
+    //    orientation this is `Eq Nat (size x) (size (C … x …))`, def_eq to
+    //    `Eq Nat (size x) (Nat.succ (size x))`. When reversed, symmetrize first so
+    //    the congruence's left side is `size x`.
+    let nat_const = ctx.kernel.const_(nat, vec![]);
+    let size_cong = if c.forward {
+        build_congr_size(&mut ctx, dty, size, x_atom, con, hx)
+    } else {
+        // hx : Eq D (C…) x; flip to Eq D x (C…), then congruence on size.
+        let hx_flipped = build_eq_symm(&mut ctx, dty, one, con, x_atom, hx);
+        build_congr_size(&mut ctx, dty, size, x_atom, con, hx_flipped)
+    };
+
+    // 6. `nat_ne_succ (size x) size_cong : False` — the `n ≠ Nat.succ n` induction
+    //    applied to `n := size x` and the size congruence `Eq Nat (size x)
+    //    (Nat.succ (size x))` (def_eq to the induction's hypothesis type).
+    let nat_ne_succ = build_nat_ne_succ(&mut ctx);
+    let applied_n = ctx.kernel.app(nat_ne_succ, size_x);
+    let false_term = ctx.kernel.app(applied_n, size_cong);
+
+    require_infers_false(&mut ctx, false_term)?;
+    let _ = nat_const;
+    // Render the datatype family, the computational `Bool`, AND `Nat` as real Lean
+    // `inductive`s so an external Lean regenerates their recursors *with* ι — the
+    // size congruence and the `n ≠ succ n` induction only collapse if Lean can
+    // compute `size (C … x …)` ι→ `Nat.succ (size x)`, `pred (succ k)` ι→ `k`, and
+    // the discriminator `d zero`/`d (succ _)`. (`Bool` is listed for parity with
+    // the other datatype routes; acyclicity itself never folds into `Bool`.)
+    let bool_ind = ctx.prelude.bool_;
+    let nat_ind = ctx.prelude.nat;
+    let false_const = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    Ok(ctx.kernel().render_lean_module_with_inductives(
+        LEAN_MODULE_THEOREM,
+        false_const,
+        false_term,
+        &[family.ind, bool_ind, nat_ind],
+    ))
+}
+
+/// Position of constructor `cid` in `ctor_ids` (declaration order), or a
+/// [`ReconstructError::KernelRejected`] if it is not a constructor of the
+/// datatype.
+fn recursive_constructor_position(
+    ctor_ids: &[ConstructorId],
+    cid: ConstructorId,
+) -> Result<usize, ReconstructError> {
+    ctor_ids
+        .iter()
+        .position(|&c| c == cid)
+        .ok_or_else(|| ReconstructError::KernelRejected {
+            rule: "datatype_acyclic".to_owned(),
+            detail: "constructor not in datatype".to_owned(),
+        })
+}
+
+/// Declare a fresh opaque atom of the datatype sort `dty` (the cyclic value `x`).
+fn build_datatype_atom(ctx: &mut ReconstructCtx, dty: ExprId) -> Result<ExprId, ReconstructError> {
+    let atom_name = ctx.fresh_name("dtatom");
+    ctx.kernel
+        .add_declaration(Declaration::Axiom {
+            name: atom_name,
+            uparams: vec![],
+            ty: dty,
+        })
+        .map_err(|e| ReconstructError::KernelRejected {
+            rule: "datatype_acyclic".to_owned(),
+            detail: format!("datatype atom did not admit: {e:?}"),
+        })?;
+    Ok(ctx.kernel.const_(atom_name, vec![]))
+}
+
+/// Build the self-containing constructor application `C(… x …)`: the single
+/// recursive field is the cyclic atom `x_atom`, every carrier field a fresh
+/// opaque `α` atom.
+fn build_cycle_construct(
+    ctx: &mut ReconstructCtx,
+    ctor: NameId,
+    shapes: &[RecField],
+    x_atom: ExprId,
+) -> Result<ExprId, ReconstructError> {
+    let mut con = ctx.kernel.const_(ctor, vec![]);
+    for (i, shape) in shapes.iter().enumerate() {
+        let arg = match shape {
+            RecField::Recursive => x_atom,
+            RecField::Carrier => {
+                let atom_name = ctx.fresh_name(&format!("fld_{i}"));
+                let alpha = ctx.alpha;
+                ctx.kernel
+                    .add_declaration(Declaration::Axiom {
+                        name: atom_name,
+                        uparams: vec![],
+                        ty: alpha,
+                    })
+                    .map_err(|e| ReconstructError::KernelRejected {
+                        rule: "datatype_acyclic".to_owned(),
+                        detail: format!("field carrier atom did not admit: {e:?}"),
+                    })?;
+                ctx.kernel.const_(atom_name, vec![])
+            }
+        };
+        con = ctx.kernel.app(con, arg);
+    }
+    Ok(con)
+}
+
+/// Build the size congruence transport `congrArg size h` as an `Eq.rec`: given
+/// `h : Eq dty x con` and the size measure `size : dty → Nat`, produce a proof of
+/// `Eq Nat (size x) (size con)`. The `Nat` twin of [`build_congr_sel`] (the
+/// carrier codomain `α` replaced by `Nat`). Pure `Eq.rec` — axiom-free.
+fn build_congr_size(
+    ctx: &mut ReconstructCtx,
+    dty: ExprId,
+    size: ExprId,
+    x: ExprId,
+    con: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let size_x = ctx.kernel.app(size, x);
+
+    // motive := fun (z : dty) (_ : Eq dty x z) => Eq Nat (size x) (size z).
+    let transport_motive = {
+        let z_var = ctx.kernel.bvar(1);
+        let size_z = ctx.kernel.app(size, z_var);
+        let body = mk_eq_at(ctx, nat_const, one, size_x, size_z);
+        let z0 = ctx.kernel.bvar(0);
+        let eq_x_z = mk_eq_at(ctx, dty, one, x, z0);
+        let inner = ctx.kernel.lam(anon, eq_x_z, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, dty, inner, BinderInfo::Default)
+    };
+    // refl_case : Eq Nat (size x) (size x) — `Eq.refl Nat (size x)`.
+    let refl = ctx.kernel.const_(ctx.prelude.eq_refl, vec![one]);
+    let refl_case = {
+        let e = ctx.kernel.app(refl, nat_const);
+        ctx.kernel.app(e, size_x)
+    };
+    // Eq.rec.{0,1} dty x transport_motive refl_case con h
+    //   : Eq Nat (size x) (size con). The motive eliminates into `Prop` ⇒ v = 0;
+    // the equands of `h` are `dty : Sort 1` ⇒ u = 1.
+    let v = ctx.kernel.level_zero();
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, one]);
+    let e = ctx.kernel.app(rec_eq, dty);
+    let e = ctx.kernel.app(e, x);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, con);
+    ctx.kernel.app(e, h)
+}
+
+/// Build the proof `nat_ne_succ : Π (n : Nat), Eq Nat n (Nat.succ n) → False` — the
+/// fact that `n ≠ Nat.succ n` — **by induction on `Nat`** (`Nat.rec` into `Prop`,
+/// elimination universe `v = 0`), axiom-free:
+///
+/// - **motive** `P := λ (n : Nat) => Eq Nat n (Nat.succ n) → False` (`Nat → Prop`);
+/// - **base** `m_zero : P Nat.zero`, i.e. `Eq Nat zero (succ zero) → False`: an
+///   `Eq.rec` transport of `True.intro` along the hypothesis through the
+///   discriminator `d := Nat.rec (λ _ => Prop) True (λ _ _ => False)` (so
+///   `d zero ι→ True`, `d (succ _) ι→ False`) lands `False`;
+/// - **step** `m_succ : Π (k : Nat) (ih : P k), P (succ k)`: from
+///   `h : Eq Nat (succ k) (succ (succ k))`, the predecessor selector
+///   `pred := Nat.rec (λ _ => Nat) zero (λ m _ => m)` and `congrArg pred h` give
+///   `Eq Nat k (succ k)` (ι on both `pred (succ _)`), which `ih` turns into
+///   `False`.
+fn build_nat_ne_succ(ctx: &mut ReconstructCtx) -> ExprId {
+    // motive `P := λ (n : Nat) => Eq Nat n (Nat.succ n) → False` (`Nat → Prop`).
+    let motive = build_nat_ne_succ_motive(ctx);
+    let m_zero = build_nat_ne_succ_m_zero(ctx);
+    let m_succ = build_nat_ne_succ_m_succ(ctx);
+    // `Nat.rec.{0} P m_zero m_succ` : Π (n : Nat), P n.
+    let z = ctx.kernel.level_zero();
+    let rec0 = ctx.kernel.const_(ctx.prelude.nat_rec, vec![z]);
+    let e = ctx.kernel.app(rec0, motive);
+    let e = ctx.kernel.app(e, m_zero);
+    ctx.kernel.app(e, m_succ)
+}
+
+/// The induction motive `P := λ (n : Nat) => Eq Nat n (Nat.succ n) → False`
+/// (`Nat → Prop`) of the `n ≠ Nat.succ n` proof.
+fn build_nat_ne_succ_motive(ctx: &mut ReconstructCtx) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let succ_const = ctx.kernel.const_(ctx.prelude.nat_succ, vec![]);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    // Under the binder `n` (BVar 0): `Eq Nat n (Nat.succ n) → False`.
+    let n0 = ctx.kernel.bvar(0);
+    let succ_n = ctx.kernel.app(succ_const, n0);
+    let n0b = ctx.kernel.bvar(0);
+    let eq_n = mk_eq_at(ctx, nat_const, one, n0b, succ_n);
+    let arrow = ctx.kernel.pi(anon, eq_n, false_const, BinderInfo::Default);
+    ctx.kernel.lam(anon, nat_const, arrow, BinderInfo::Default)
+}
+
+/// The `zero`-base discriminator `d := Nat.rec.{1} (λ _ => Prop) True
+/// (λ _ _ => False)` : `d Nat.zero` ι→ `True`, `d (Nat.succ _)` ι→ `False`.
+fn build_nat_discriminator(ctx: &mut ReconstructCtx) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let prop = ctx.kernel.sort_zero();
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let true_const = ctx.kernel.const_(ctx.prelude.true_, vec![]);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let rec1 = ctx.kernel.const_(ctx.prelude.nat_rec, vec![one]);
+    let d_motive = ctx.kernel.lam(anon, nat_const, prop, BinderInfo::Default);
+    // m_zero := True ;  m_succ := λ (k : Nat) (ih : Prop), False.
+    let m_succ = {
+        let inner = ctx.kernel.lam(anon, prop, false_const, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    let e = ctx.kernel.app(rec1, d_motive);
+    let e = ctx.kernel.app(e, true_const);
+    ctx.kernel.app(e, m_succ)
+}
+
+/// The predecessor selector `pred := Nat.rec.{1} (λ _ => Nat) Nat.zero
+/// (λ (m : Nat) (ih : Nat) => m)` : `pred (Nat.succ m)` ι→ `m`.
+fn build_nat_pred(ctx: &mut ReconstructCtx) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let zero_const = ctx.kernel.const_(ctx.prelude.nat_zero, vec![]);
+    let rec1 = ctx.kernel.const_(ctx.prelude.nat_rec, vec![one]);
+    let p_motive = ctx
+        .kernel
+        .lam(anon, nat_const, nat_const, BinderInfo::Default);
+    // m_succ := λ (m : Nat) (ih : Nat), m   (m is BVar 1 under the ih binder).
+    let m_succ_p = {
+        let m1 = ctx.kernel.bvar(1);
+        let inner = ctx.kernel.lam(anon, nat_const, m1, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    let e = ctx.kernel.app(rec1, p_motive);
+    let e = ctx.kernel.app(e, zero_const);
+    ctx.kernel.app(e, m_succ_p)
+}
+
+/// The base-case minor `m_zero : P Nat.zero` = `Eq Nat zero (succ zero) → False`:
+/// `λ (h : Eq Nat zero (succ zero)), Eq.rec.{0,1} Nat zero
+///  (λ (m : Nat)(_ : Eq Nat zero m) => d m) (True.intro : d zero) (succ zero) h`,
+/// where `d zero` `def_eq` `True` and `d (succ zero)` `def_eq` `False` (the
+/// discriminator ι), so the transport lands `False`.
+fn build_nat_ne_succ_m_zero(ctx: &mut ReconstructCtx) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let z = ctx.kernel.level_zero();
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let zero_const = ctx.kernel.const_(ctx.prelude.nat_zero, vec![]);
+    let succ_const = ctx.kernel.const_(ctx.prelude.nat_succ, vec![]);
+    let succ_zero = ctx.kernel.app(succ_const, zero_const);
+    let discr = build_nat_discriminator(ctx);
+
+    let hyp_ty = mk_eq_at(ctx, nat_const, one, zero_const, succ_zero);
+    // transport motive: λ (m : Nat) (_ : Eq Nat zero m) => d m.
+    let t_motive = {
+        let m1 = ctx.kernel.bvar(1);
+        let d_m = ctx.kernel.app(discr, m1);
+        let m0 = ctx.kernel.bvar(0);
+        let eq_zero_m = mk_eq_at(ctx, nat_const, one, zero_const, m0);
+        let inner = ctx.kernel.lam(anon, eq_zero_m, d_m, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    // refl case `True.intro : d zero` (d zero def_eq True).
+    let refl_case = ctx.kernel.const_(ctx.prelude.true_intro, vec![]);
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![z, one]);
+    let body = {
+        let e = ctx.kernel.app(rec_eq, nat_const);
+        let e = ctx.kernel.app(e, zero_const);
+        let e = ctx.kernel.app(e, t_motive);
+        let e = ctx.kernel.app(e, refl_case);
+        let e = ctx.kernel.app(e, succ_zero);
+        let h = ctx.kernel.bvar(0);
+        ctx.kernel.app(e, h)
+    };
+    ctx.kernel.lam(anon, hyp_ty, body, BinderInfo::Default)
+}
+
+/// The step minor `m_succ : Π (k : Nat) (ih : P k), P (succ k)`:
+/// `λ (k : Nat) (ih : Eq Nat k (succ k) → False)
+///  (h : Eq Nat (succ k) (succ (succ k))), ih (congrArg pred h)`,
+/// where `congrArg pred h : Eq Nat (pred (succ k)) (pred (succ (succ k)))` is
+/// `def_eq` `Eq Nat k (succ k)` (ι on both `pred (succ _)`), which `ih` turns into
+/// `False`.
+fn build_nat_ne_succ_m_succ(ctx: &mut ReconstructCtx) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let succ_const = ctx.kernel.const_(ctx.prelude.nat_succ, vec![]);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let pred = build_nat_pred(ctx);
+    // The CLOSED predecessor-congruence lemma, applied (below) to the open `succ k`
+    // terms — closed, so no de-Bruijn capture.
+    let congr_pred = build_congr_pred_lemma(ctx, pred);
+
+    // Build inside three binders: k(BVar 2), ih(BVar 1), h(BVar 0).
+    // hyp type of `h`: Eq Nat (succ k) (succ (succ k)) (under k, ih ⇒ k = BVar 1).
+    let k_for_h = ctx.kernel.bvar(1);
+    let succ_k_h = ctx.kernel.app(succ_const, k_for_h);
+    let succ_succ_k_h = ctx.kernel.app(succ_const, succ_k_h);
+    let h_ty = mk_eq_at(ctx, nat_const, one, succ_k_h, succ_succ_k_h);
+
+    // congr_pred (succ k) (succ (succ k)) h
+    //   : Eq Nat (pred (succ k)) (pred (succ (succ k))), def_eq Eq Nat k (succ k).
+    // Under k(BVar 2), ih(BVar 1), h(BVar 0): k = BVar 2, h = BVar 0.
+    let k_under_h = ctx.kernel.bvar(2);
+    let succ_k = ctx.kernel.app(succ_const, k_under_h);
+    let succ_succ_k = ctx.kernel.app(succ_const, succ_k);
+    let h_var = ctx.kernel.bvar(0);
+    let congr = {
+        let e = ctx.kernel.app(congr_pred, succ_k);
+        let e = ctx.kernel.app(e, succ_succ_k);
+        ctx.kernel.app(e, h_var)
+    };
+    // ih (congr) : False   (ih is BVar 1, congr def_eq Eq Nat k (succ k)).
+    let ih_var = ctx.kernel.bvar(1);
+    let applied = ctx.kernel.app(ih_var, congr);
+
+    // Bind h, then ih, then k.
+    let lam_h = ctx.kernel.lam(anon, h_ty, applied, BinderInfo::Default);
+    // ih type: Eq Nat k (succ k) → False  (under k ⇒ k = BVar 0).
+    let k_for_ih = ctx.kernel.bvar(0);
+    let succ_k_ih = ctx.kernel.app(succ_const, k_for_ih);
+    let k_for_ih2 = ctx.kernel.bvar(0);
+    let eq_k = mk_eq_at(ctx, nat_const, one, k_for_ih2, succ_k_ih);
+    let ih_ty = ctx.kernel.pi(anon, eq_k, false_const, BinderInfo::Default);
+    let lam_ih = ctx.kernel.lam(anon, ih_ty, lam_h, BinderInfo::Default);
+    ctx.kernel.lam(anon, nat_const, lam_ih, BinderInfo::Default)
+}
+
+/// Build the **closed** predecessor-congruence lemma
+/// `congr_pred : Π (a b : Nat) (h : Eq Nat a b), Eq Nat (pred a) (pred b)` as a
+/// lambda whose body is an `Eq.rec` transport over the supplied `pred : Nat → Nat`.
+/// Because the lemma is closed (all `Nat`/`Eq` references are bound by its own
+/// `a`/`b`/`h` binders), it can be *applied* to open terms — e.g. `succ k` for the
+/// outer-bound `k` in the `n ≠ succ n` step — without manual de-Bruijn lifting (a
+/// `congrArg` over open terms would otherwise capture). Pure `Eq.rec` — axiom-free.
+///
+/// De Bruijn layout (outer→inner): `a` (`BVar 2`), `b` (`BVar 1`), `h` (`BVar 0`).
+/// The transport motive adds two further binders `z` (`BVar 1` there) and `_`
+/// (`BVar 0`).
+fn build_congr_pred_lemma(ctx: &mut ReconstructCtx, pred: ExprId) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let v = ctx.kernel.level_zero();
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+
+    // Inside the three binders a(BVar 2), b(BVar 1), h(BVar 0):
+    //   pred_a := pred a  (a = BVar 2).
+    let a_outer = ctx.kernel.bvar(2);
+    let pred_a = ctx.kernel.app(pred, a_outer);
+    // motive := fun (z : Nat) (_ : Eq Nat a z) => Eq Nat (pred a) (pred z).
+    //   Under z(BVar 1 here), _(BVar 0 here): the outer `a` is now BVar (2 + 2) = 4
+    //   inside the inner-most binder; `pred a`/`pred z` are rebuilt at that depth.
+    let transport_motive = {
+        // body under z, _: Eq Nat (pred a) (pred z). a = BVar 4 (2 outer + 2 motive),
+        // z = BVar 1.
+        let a_in_body = ctx.kernel.bvar(4);
+        let pred_a_body = ctx.kernel.app(pred, a_in_body);
+        let z_in_body = ctx.kernel.bvar(1);
+        let pred_z = ctx.kernel.app(pred, z_in_body);
+        let body = mk_eq_at(ctx, nat_const, one, pred_a_body, pred_z);
+        // inner binder type Eq Nat a z, under z (one motive binder): a = BVar 3, z = BVar 0.
+        let a_in_dom = ctx.kernel.bvar(3);
+        let z0 = ctx.kernel.bvar(0);
+        let eq_a_z = mk_eq_at(ctx, nat_const, one, a_in_dom, z0);
+        let inner = ctx.kernel.lam(anon, eq_a_z, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    // refl_case : Eq Nat (pred a) (pred a) — `Eq.refl Nat (pred a)`.
+    let refl = ctx.kernel.const_(ctx.prelude.eq_refl, vec![one]);
+    let refl_case = {
+        let e = ctx.kernel.app(refl, nat_const);
+        ctx.kernel.app(e, pred_a)
+    };
+    // Eq.rec.{0,1} Nat a motive refl_case b h : Eq Nat (pred a) (pred b).
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, one]);
+    let body = {
+        let a_arg = ctx.kernel.bvar(2);
+        let b_arg = ctx.kernel.bvar(1);
+        let h_arg = ctx.kernel.bvar(0);
+        let e = ctx.kernel.app(rec_eq, nat_const);
+        let e = ctx.kernel.app(e, a_arg);
+        let e = ctx.kernel.app(e, transport_motive);
+        let e = ctx.kernel.app(e, refl_case);
+        let e = ctx.kernel.app(e, b_arg);
+        ctx.kernel.app(e, h_arg)
+    };
+    // Wrap binders h, b, a (innermost-to-outermost).
+    let h_ty = {
+        // h : Eq Nat a b, under a(BVar 1), b(BVar 0).
+        let a1 = ctx.kernel.bvar(1);
+        let b0 = ctx.kernel.bvar(0);
+        mk_eq_at(ctx, nat_const, one, a1, b0)
+    };
+    let lam_h = ctx.kernel.lam(anon, h_ty, body, BinderInfo::Default);
+    let lam_b = ctx.kernel.lam(anon, nat_const, lam_h, BinderInfo::Default);
+    ctx.kernel.lam(anon, nat_const, lam_b, BinderInfo::Default)
 }
 
 /// Assemble the kernel `False` term for a [`TesterContradiction`] and render the

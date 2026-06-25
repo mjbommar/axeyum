@@ -729,10 +729,35 @@ pub const CAPABILITIES: &[Capability] = &[
                    recursor with ι (lean_crosscheck injective_field_mismatch_check_in_real_lean). A \
                    DISTINCT-constructor equality C(x)=D(y) is left to distinctness, and a \
                    same-constructor equality with NO conflicting field is DECLINED (no wrong \
-                   False). Honest boundary: injectivity COMPLETES the field-axiom Lean chain \
-                   (is-tester + distinctness + injectivity all axiom-free Lean); only acyclicity \
-                   remains deferred (needs well-founded induction); the Carcara premise-based \
-                   injectivity route is unchanged",
+                   False). Honest boundary: injectivity is one of the four axiom-free Lean \
+                   field-axiom routes (is-tester + distinctness + injectivity + acyclicity, the \
+                   row below); the Carcara premise-based injectivity route is unchanged",
+        reference: "ADR-0022",
+    },
+    Capability {
+        area: "datatypes",
+        feature: "axiom-free Lean-kernel datatype ACYCLICITY reconstruction \
+                  (reconstruct_qf_dt_acyclic_to_lean_module): a single-level containment cycle \
+                  x = C(.. x ..) over a recursive datatype is reconstructed to a kernel-checked \
+                  False by a SIZE argument — NO well-founded recursion, NO assumed acyclicity \
+                  axiom. The datatype is modeled as a recursive kernel inductive \
+                  (add_recursive_datatype_family, the tail field is the inductive's own sort); a \
+                  size measure size:D->Nat (recursive_datatype_size) gives size(C .. x ..) ι-reduces \
+                  to Nat.succ(size x); congrArg size hx (an Eq.rec) lands Eq Nat (size x) \
+                  (Nat.succ (size x)); and n != Nat.succ n — proven BY INDUCTION on Nat (a \
+                  Nat.zero != Nat.succ discriminator + Nat.succ injectivity via a predecessor \
+                  selector, all Nat.rec into Prop) — closes it to False",
+        assurance: Assurance::Checked,
+        evidence: "the in-tree axeyum-lean-kernel infers the term to False (require_infers_false), \
+                   and — when a real lean binary is present — the rendered module type-checks and \
+                   `#print axioms` reports NO sorryAx and NO acyclicity axiom (only the input cycle \
+                   equality + carrier atoms), the recursive datatype family, Nat and Bool rendered \
+                   as real Lean `inductive`s so Lean regenerates the recursors with ι \
+                   (lean_crosscheck acyclicity_cycle_check_in_real_lean, both orientations). A \
+                   finite (non-cyclic) list x = C(h, nil) is DECLINED (no wrong False). Honest \
+                   boundary: acyclicity COMPLETES the QF_DT field-axiom Lean chain (is-tester + \
+                   distinctness + injectivity + acyclicity all axiom-free Lean); single-level \
+                   cycles this slice (multi-step cycles x=C(..y..), y=C(..x..) deferred)",
         reference: "ADR-0022",
     },
     Capability {
