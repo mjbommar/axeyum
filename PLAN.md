@@ -654,6 +654,19 @@ against competitor source, are now binding:
    timeouts=0**. The refreshed artifact now has **74** `array-axiom-unsat`
    rows and **5** remaining `bare-unsat` rows, all cvc5-specific:
    `bug637.delta`, `issue9041`, `bvproof2`, `issue9519`, and `proj-issue321`.
+   **ABV CVC5 SAME-CELL STORE/RANGE COVERAGE WIDENED (2026-06-25):**
+   the checked `ArrayAxiom` read-congruence lane now detects contradictory
+   derived equalities when same-cell store injectivity forces two same-width BV
+   values whose conservative unsigned ranges are disjoint. The range recognizer
+   is intentionally small (constants, symbols, zero-extension, concat,
+   equal-branch `ite` union, and non-wrapping add) and only refutes equalities
+   already derived by the certificate lane. This closes the cvc5
+   `issue9519` and `proj-issue321` rows through the existing
+   `ReadCongruence` certificate path. Re-running the exact ABV audit moved
+   **162/169 → 164/169** dominant and **Lean unsat 78/83 → 80/83**, with
+   **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact now has
+   **76** `array-axiom-unsat` rows and **3** remaining `bare-unsat` rows:
+   `bug637.delta`, `issue9041`, and `bvproof2`.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:

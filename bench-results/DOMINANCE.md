@@ -34,7 +34,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | Division | Slice | Decided | Dominant% | Lean unsat | Gaps | Artifact |
 | --- | --- | ---: | ---: | ---: | --- | --- |
 | BV | `bv-bitwuzla-regress-clean-quantified` | 4 | 25% (1/4) | 0% (0/3) | Lean unsat 0/3, evidence certified 1/4 | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` |
-| QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 169 | 96% (162/169) | 94% (78/83) | Lean unsat 78/83, evidence certified 162/169 | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 169 | 97% (164/169) | 96% (80/83) | Lean unsat 80/83, evidence certified 164/169 | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 41 | 100% (41/41) | 100% (20/20) | none | `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 83% (5/6) | 50% (1/2) | Lean unsat 1/2 | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 10 | 70% (7/10) | 25% (1/4) | Lean unsat 1/4, evidence certified 7/10 | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` |
@@ -63,7 +63,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 4 | 80% | strong | 0 | complete | 25% (1/4) | 0% (0/3) | close Lean unsat gaps | audit quantified-BV rows with per-instance Lean reconstruction |
 | BV | `bv-cvc5-regress-clean-quantified` | 54 | 37 | 69% | mid | 0 | not run | - | - | grow decide + classify certs | audit quantified-BV rows with per-instance Lean reconstruction |
 | LIA | `lia-cvc5-regress-clean-quantified` | 12 | 0 | 0% | weak | 0 | not run | - | - | decider first | separate guarded finite-Int unsats from unsupported infinite-domain cases |
-| QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | strong | 0 | complete | 96% (162/169) | 94% (78/83) | close Lean unsat gaps | classify array unsats by ROW/congruence vs general ArrayElim |
+| QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | strong | 0 | complete | 97% (164/169) | 96% (80/83) | close Lean unsat gaps | classify array unsats by ROW/congruence vs general ArrayElim |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 3 | 50% | mid | 0 | not run | - | - | grow decide + classify certs | refresh baselines after generic arrays, then add per-instance evidence audit |
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 44 | 41 | 93% | strong | 0 | complete | 100% (41/41) | 100% (20/20) | dominant on audited row | split direct ROW/congruence wins from general array elimination |
 | QF_AUFBV | `qf-aufbv-cvc5-regress-clean` | 9 | 5 | 56% | mid | 0 | not run | - | - | grow decide + classify certs | split direct ROW/congruence wins from general array elimination |

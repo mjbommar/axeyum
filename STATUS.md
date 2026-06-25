@@ -6,6 +6,39 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — ABV cvc5 same-cell store/range coverage widened.**
+  Extended the checked `ArrayAxiom` read-congruence lane with a conservative
+  BV unsigned-range conflict check over equalities already derived by the
+  certificate lane. Same-cell store injectivity can now force value equalities
+  such as `0 = 1 + zext(v)` or `zext(y) = zext(y) + concat(#x1, zext(z))`;
+  constants, symbols, zero-extension, concat, equal-branch `ite` unions, and
+  non-wrapping add ranges are enough to prove those ranges disjoint without
+  invoking bit-blast trust. This certifies the cvc5 `issue9519` and
+  `proj-issue321` contradictions as `array-axiom-unsat` through
+  `ArrayAxiomKind::ReadCongruence`, with real-Lean reconstruction through
+  `ProofFragment::ArrayAxiom`. Re-running the complete exact ABV audit moved
+  **QF_ABV 162/169 → 164/169 dominant** with **Lean unsat 78/83 → 80/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The refreshed
+  artifact has **76** `array-axiom-unsat` rows and **3** remaining
+  `bare-unsat` rows: `bug637.delta`, `issue9041`, and `bvproof2`.
+  QF_AUFBV remains **41/41** dominant with **Lean unsat 20/20**. **Next:**
+  classify the remaining three cvc5-specific ABV proof gaps by no-op store-chain,
+  signed-BV simplification, and finite store-chain equality.
+  Verification passed:
+  `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — ABV contextual ITE-branch/self-update coverage widened.**
   Extended the checked `ArrayAxiom` read-congruence lane so equality facts
   saturate through `ite` terms once their conditions are known, equal-branch
@@ -2858,9 +2891,35 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV exact audits have zero audit errors/timeouts, and the array proof/evidence work has moved exact coverage to QF_ABV **162/169** and QF_AUFBV **41/41** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array solve frontier, not standing up the gate. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV exact audits have zero audit errors/timeouts, and the array proof/evidence work has moved exact coverage to QF_ABV **164/169** and QF_AUFBV **41/41** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-25** — **ABV cvc5 same-cell store/range coverage widened.**
+  Extended `ArrayAxiom` read-congruence evidence with a conservative unsigned
+  BV range conflict check over equalities derived by the certificate lane. This
+  closes cvc5 `issue9519` and `proj-issue321`, where same-cell store
+  injectivity forces impossible value equalities with disjoint ranges, as
+  `UnsatArrayAxiom` evidence with `ArrayAxiom` Lean reconstruction through the
+  `ReadCongruence` path. Re-ran the complete ABV dominance audit:
+  **QF_ABV 162/169 → 164/169** dominant with Lean unsat **78/83 → 80/83**,
+  **mismatches=0**, **audit_errors=0**, and **timeouts=0**; the artifact now
+  has **76** `array-axiom-unsat` rows and **3** remaining `bare-unsat` rows.
+  Regenerated `bench-results/DOMINANCE.md` and updated `STATUS.md`, `PLAN.md`,
+  `docs/PARITY-STATUS-AND-PATH.md`, and `bench-results/README.md`.
+  Verification passed: `cargo test -p axeyum-solver --lib array_axiom -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2 30000`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2 30000`;
+  `cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_aufbv_array_axiom_refutations_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 169 bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
 
 - **2026-06-25** — **ABV contextual ITE-branch/self-update coverage widened.**
   Extended `ArrayAxiom` read-congruence evidence with contextual `ite`

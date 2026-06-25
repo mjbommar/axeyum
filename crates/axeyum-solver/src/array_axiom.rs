@@ -181,6 +181,9 @@ impl ReadCongruenceProbe {
                 return witness;
             }
         }
+        if let Some(witness) = conflicting_equalities(arena, &self.facts) {
+            return Some(witness);
+        }
         if let Some(witness) = conflicting_bv1_values(arena, &self.facts) {
             return Some(witness);
         }
@@ -2137,6 +2140,106 @@ fn known_true_bv1_domain_reads(
     Some((zero_read?, one_read?))
 }
 
+fn conflicting_equalities(arena: &TermArena, facts: &EqFacts) -> Option<(TermId, TermId)> {
+    let terms: Vec<_> = facts.parent.keys().copied().collect();
+    for (idx, &lhs) in terms.iter().enumerate() {
+        for &rhs in &terms[idx + 1..] {
+            if facts.same(lhs, rhs) && bv_unsigned_ranges_disjoint(arena, lhs, rhs) {
+                return Some((lhs, rhs));
+            }
+        }
+    }
+    None
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BvUnsignedRange {
+    width: u32,
+    min: u128,
+    max: u128,
+}
+
+fn bv_unsigned_ranges_disjoint(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    let Some(lhs_range) = bv_unsigned_range(arena, lhs) else {
+        return false;
+    };
+    let Some(rhs_range) = bv_unsigned_range(arena, rhs) else {
+        return false;
+    };
+    lhs_range.width == rhs_range.width
+        && (lhs_range.max < rhs_range.min || rhs_range.max < lhs_range.min)
+}
+
+fn bv_unsigned_range(arena: &TermArena, term: TermId) -> Option<BvUnsignedRange> {
+    let Sort::BitVec(width) = arena.sort_of(term) else {
+        return None;
+    };
+    if width > 128 {
+        return None;
+    }
+
+    match arena.node(term) {
+        TermNode::BvConst { width, value } => Some(BvUnsignedRange {
+            width: *width,
+            min: *value,
+            max: *value,
+        }),
+        TermNode::Symbol(_) => Some(BvUnsignedRange {
+            width,
+            min: 0,
+            max: bv_mask(width),
+        }),
+        TermNode::App { op, args } => match op {
+            Op::ZeroExt { .. } if args.len() == 1 => {
+                let inner = bv_unsigned_range(arena, args[0])?;
+                (inner.width <= width).then_some(BvUnsignedRange {
+                    width,
+                    min: inner.min,
+                    max: inner.max,
+                })
+            }
+            Op::Concat if args.len() == 2 => {
+                let high = bv_unsigned_range(arena, args[0])?;
+                let low = bv_unsigned_range(arena, args[1])?;
+                if high.width + low.width != width || low.width >= 128 {
+                    return None;
+                }
+                let high_min = high.min.checked_shl(low.width)?;
+                let high_max = high.max.checked_shl(low.width)?;
+                Some(BvUnsignedRange {
+                    width,
+                    min: high_min.checked_add(low.min)?,
+                    max: high_max.checked_add(low.max)?,
+                })
+            }
+            Op::BvAdd if args.len() == 2 => {
+                let lhs = bv_unsigned_range(arena, args[0])?;
+                let rhs = bv_unsigned_range(arena, args[1])?;
+                if lhs.width != width || rhs.width != width {
+                    return None;
+                }
+                let min = lhs.min.checked_add(rhs.min)?;
+                let max = lhs.max.checked_add(rhs.max)?;
+                (max <= bv_mask(width)).then_some(BvUnsignedRange { width, min, max })
+            }
+            Op::Ite if args.len() == 3 => {
+                let then_range = bv_unsigned_range(arena, args[1])?;
+                let else_range = bv_unsigned_range(arena, args[2])?;
+                if then_range.width != width || else_range.width != width {
+                    return None;
+                }
+                Some(BvUnsignedRange {
+                    width,
+                    min: then_range.min.min(else_range.min),
+                    max: then_range.max.max(else_range.max),
+                })
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 fn conflicting_bv1_values(arena: &TermArena, facts: &EqFacts) -> Option<(TermId, TermId)> {
     let entries: Vec<_> = facts
         .bv1_values
@@ -3296,6 +3399,25 @@ mod tests {
             let script = parse_script(text).expect("ABV contextual ITE branch case parses");
             let cert = array_axiom_refutation(&script.arena, &script.assertions)
                 .expect("contextual ITE branch read congruence refutes");
+            assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+        }
+    }
+
+    #[test]
+    fn recognizes_cvc5_same_cell_store_bv_range_regressions() {
+        let cases = [
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__issue9519.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__proj-issue321.smt2"
+            ),
+        ];
+
+        for text in cases {
+            let script = parse_script(text).expect("cvc5 same-cell store BV range case parses");
+            let cert = array_axiom_refutation(&script.arena, &script.assertions)
+                .expect("same-cell store value equality has disjoint BV ranges");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
     }
