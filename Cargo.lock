@@ -78,6 +78,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-consumer-bench"
+version = "0.1.0"
+dependencies = [
+ "axeyum-property",
+ "axeyum-solver",
+]
+
+[[package]]
 name = "axeyum-egraph"
 version = "0.1.0"
 

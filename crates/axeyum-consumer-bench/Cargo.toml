@@ -1,0 +1,19 @@
+[package]
+name = "axeyum-consumer-bench"
+description = "Consumer-track measurement/QA backbone (App D): a self-contained, construction-known bounded-property scoreboard over the axeyum-property SDK, plus a parameterized vs-SOTA harness shape"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-property = { path = "../axeyum-property" }
+axeyum-solver = { path = "../axeyum-solver" }
+
+[lints]
+workspace = true
