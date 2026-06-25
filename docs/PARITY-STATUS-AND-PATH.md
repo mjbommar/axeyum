@@ -85,7 +85,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   992 files, 640 decided, 591 oracle-compared, DISAGREE=0**, with **12 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla
-  `92% (156/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`,
+  `96% (162/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`,
   QF_LIA/cvc5 `70% (7/10)`, QF_LRA/cvc5 `67% (6/9)`, QF_NIA synthetic
   `50% (16/32)`, QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `50% (1/2)`, QF_UFLIA curated `0% (0/2)`, and QF_UFLIA
@@ -136,8 +136,10 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   row-wise extensionality extension added `ext19`, `ext24`, and `ext25`, the
   symbolic-cover/implication extension added `ext13`, `read9`, `write16`, and
   `write17`, and the array-ite all-true branch-cover extension added
-  `arraycond3`, `arraycond5`, `arraycond6`, `arraycond7`, and `arraycond8`,
-  lifting ABV Lean unsat coverage to **72/83**.
+  `arraycond3`, `arraycond5`, `arraycond6`, `arraycond7`, and `arraycond8`.
+  The contextual ITE-branch/self-update extension then added `arraycond11`,
+  `arraycond12`, `arraycond13`, `arraycond14`, `arraycond18`, and `ext11`,
+  lifting ABV Lean unsat coverage to **78/83**.
   The exact bitwuzla AUFBV audit row is
   now fully dominant at **41/41**; remaining array work is broader proof coverage
   and cvc5/AUFLIA decide depth, not this exact row. The audit

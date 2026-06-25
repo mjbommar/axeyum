@@ -181,6 +181,14 @@ impl ReadCongruenceProbe {
                 return witness;
             }
         }
+        if let Some(witness) = conflicting_bv1_values(arena, &self.facts) {
+            return Some(witness);
+        }
+        if let Some(witness) =
+            forced_select_store_ite_bv1_value_conflict(arena, &self.facts, &self.disequalities)
+        {
+            return Some(witness);
+        }
         if let Some(witness) =
             bv1_array_ite_all_true_refutation(arena, &self.facts, &self.denied_and_terms)
         {
@@ -261,6 +269,7 @@ impl BitLiteral {
             disequalities.push((self.lhs, self.rhs));
             add_bvnot_injectivity_disequality(arena, disequalities, self.lhs, self.rhs);
         }
+        saturate_contextual_ite_equality_facts(arena, facts, disequalities);
     }
 
     fn deny(
@@ -276,6 +285,7 @@ impl BitLiteral {
             facts.add(self.lhs, self.rhs);
             add_derived_equality_facts(arena, facts, self.lhs, self.rhs);
         }
+        saturate_contextual_ite_equality_facts(arena, facts, disequalities);
     }
 
     fn is_true(&self, arena: &TermArena, facts: &EqFacts) -> bool {
@@ -411,6 +421,57 @@ fn add_store_self_update_read_fact_one(
     }
 }
 
+fn saturate_contextual_ite_equality_facts(
+    arena: &TermArena,
+    facts: &mut EqFacts,
+    disequalities: &[(TermId, TermId)],
+) {
+    loop {
+        let mut known_terms = BTreeSet::new();
+        known_terms.extend(facts.parent.keys().copied());
+        known_terms.extend(facts.bv1_values.keys().copied());
+
+        let mut additions = Vec::new();
+        for term in known_terms {
+            let Some((cond, then_term, else_term)) = match_ite(arena, term) else {
+                continue;
+            };
+            let mut memo = BTreeMap::new();
+            let Some(branch) = contextual_ite_branch(
+                arena,
+                facts,
+                disequalities,
+                cond,
+                then_term,
+                else_term,
+                &mut memo,
+            ) else {
+                continue;
+            };
+            if !facts.same(term, branch) {
+                additions.push((term, branch));
+            }
+        }
+
+        if additions.is_empty() {
+            break;
+        }
+
+        let mut changed = false;
+        for (lhs, rhs) in additions {
+            if facts.same(lhs, rhs) {
+                continue;
+            }
+            facts.add(lhs, rhs);
+            add_derived_equality_facts(arena, facts, lhs, rhs);
+            changed = true;
+        }
+        if !changed {
+            break;
+        }
+    }
+}
+
 fn match_bv_not(arena: &TermArena, term: TermId) -> Option<TermId> {
     let TermNode::App {
         op: Op::BvNot,
@@ -462,16 +523,34 @@ fn collect_bit_assertion(
     if let TermNode::App { op, args } = arena.node(bit) {
         match (op, polarity) {
             (Op::BvAnd, true) if args.len() == 2 && arena.sort_of(bit) == Sort::BitVec(1) => {
+                probe.facts.set_bv1(bit, true);
+                saturate_contextual_ite_equality_facts(
+                    arena,
+                    &mut probe.facts,
+                    &probe.disequalities,
+                );
                 collect_bit_assertion(arena, args[0], true, probe);
                 collect_bit_assertion(arena, args[1], true, probe);
                 return;
             }
             (Op::BvOr, false) if args.len() == 2 && arena.sort_of(bit) == Sort::BitVec(1) => {
+                probe.facts.set_bv1(bit, false);
+                saturate_contextual_ite_equality_facts(
+                    arena,
+                    &mut probe.facts,
+                    &probe.disequalities,
+                );
                 collect_bit_assertion(arena, args[0], false, probe);
                 collect_bit_assertion(arena, args[1], false, probe);
                 return;
             }
             (Op::BvOr, true) if args.len() == 2 && arena.sort_of(bit) == Sort::BitVec(1) => {
+                probe.facts.set_bv1(bit, true);
+                saturate_contextual_ite_equality_facts(
+                    arena,
+                    &mut probe.facts,
+                    &probe.disequalities,
+                );
                 let mut literals = Vec::new();
                 if collect_or_literals(arena, bit, &mut literals) && !literals.is_empty() {
                     probe.asserted_or.push(literals);
@@ -485,6 +564,12 @@ fn collect_bit_assertion(
                 return;
             }
             (Op::BvAnd, false) if args.len() == 2 && arena.sort_of(bit) == Sort::BitVec(1) => {
+                probe.facts.set_bv1(bit, false);
+                saturate_contextual_ite_equality_facts(
+                    arena,
+                    &mut probe.facts,
+                    &probe.disequalities,
+                );
                 let mut literals = Vec::new();
                 if collect_and_literals(arena, bit, &mut literals) && !literals.is_empty() {
                     probe.denied_and.push(literals);
@@ -513,8 +598,10 @@ fn collect_bit_assertion(
         }
     } else if record_bv1_ult_assertion(arena, bit, polarity, &mut probe.facts) {
         // The order assertion contributed forced BV1 endpoint values.
+        saturate_contextual_ite_equality_facts(arena, &mut probe.facts, &probe.disequalities);
     } else if arena.sort_of(bit) == Sort::BitVec(1) {
         probe.facts.set_bv1(bit, polarity);
+        saturate_contextual_ite_equality_facts(arena, &mut probe.facts, &probe.disequalities);
     }
 }
 
@@ -1440,12 +1527,29 @@ fn simplify_contextual_term(
 ) -> TermId {
     if let TermNode::App { op: Op::Ite, args } = arena.node(term) {
         if let [cond, then_term, else_term] = &**args {
-            if let Some(value) = bool_condition_value(arena, facts, distinct, *cond, memo) {
-                return facts.find(if value { *then_term } else { *else_term });
+            if let Some(branch) =
+                contextual_ite_branch(arena, facts, distinct, *cond, *then_term, *else_term, memo)
+            {
+                return facts.find(branch);
             }
         }
     }
     simplify_idempotent_bitop(arena, facts, distinct, term, memo)
+}
+
+fn contextual_ite_branch(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    cond: TermId,
+    then_term: TermId,
+    else_term: TermId,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> Option<TermId> {
+    if let Some(value) = bool_condition_value(arena, facts, distinct, cond, memo) {
+        return Some(if value { then_term } else { else_term });
+    }
+    terms_equivalent_inner(arena, facts, distinct, then_term, else_term, memo).then_some(then_term)
 }
 
 fn bool_condition_value(
@@ -1520,8 +1624,10 @@ fn normalize_read_over_writes_in_context(
     let mut changed = false;
     loop {
         if let Some((cond, then_array, else_array)) = match_ite(arena, array) {
-            if let Some(cond_value) = bool_condition_value(arena, facts, distinct, cond, memo) {
-                array = if cond_value { then_array } else { else_array };
+            if let Some(branch) =
+                contextual_ite_branch(arena, facts, distinct, cond, then_array, else_array, memo)
+            {
+                array = branch;
                 changed = true;
                 continue;
             }
@@ -2031,6 +2137,85 @@ fn known_true_bv1_domain_reads(
     Some((zero_read?, one_read?))
 }
 
+fn conflicting_bv1_values(arena: &TermArena, facts: &EqFacts) -> Option<(TermId, TermId)> {
+    let entries: Vec<_> = facts
+        .bv1_values
+        .iter()
+        .map(|(&term, &value)| (term, value))
+        .collect();
+    for (idx, &(lhs, lhs_value)) in entries.iter().enumerate() {
+        for &(rhs, rhs_value) in &entries[idx + 1..] {
+            if lhs_value != rhs_value && terms_equivalent(arena, facts, lhs, rhs) {
+                return Some((lhs, rhs));
+            }
+        }
+    }
+    None
+}
+
+fn forced_select_store_ite_bv1_value_conflict(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+) -> Option<(TermId, TermId)> {
+    for (&term, &asserted_value) in &facts.bv1_values {
+        let mut memo = BTreeMap::new();
+        let Some((forced_value, forced_term)) =
+            select_store_ite_index_forced_bv1_value(arena, facts, distinct, term, &mut memo)
+        else {
+            continue;
+        };
+        if forced_value != asserted_value {
+            return Some((term, forced_term));
+        }
+    }
+    None
+}
+
+fn select_store_ite_index_forced_bv1_value(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    term: TermId,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> Option<(bool, TermId)> {
+    if arena.sort_of(term) != Sort::BitVec(1) {
+        return None;
+    }
+    let (stored, _read_index) = match_select(arena, term)?;
+    let (_base, write_index, stored_value) = match_store(arena, stored)?;
+    let (cond, _then_index, _else_index) = match_ite(arena, write_index)?;
+    let forced_value = known_bv1_value_in_context(arena, facts, distinct, stored_value, memo)?;
+
+    for polarity in [true, false] {
+        let mut branch_probe = ReadCongruenceProbe {
+            facts: facts.clone(),
+            ..ReadCongruenceProbe::default()
+        };
+        collect_bool_assertion(arena, cond, polarity, &mut branch_probe)?;
+        branch_probe.disequalities.extend_from_slice(distinct);
+        let mut branch_memo = BTreeMap::new();
+        let row = normalize_read_over_writes_in_context(
+            arena,
+            &branch_probe.facts,
+            &branch_probe.disequalities,
+            term,
+            &mut branch_memo,
+        );
+        if !row_exprs_equal_by_facts_or_values(
+            arena,
+            &branch_probe.facts,
+            &branch_probe.disequalities,
+            row.expr,
+            RowExpr::Term(stored_value),
+            &mut branch_memo,
+        ) {
+            return None;
+        }
+    }
+    Some((forced_value, stored_value))
+}
+
 fn collect_array_ite_leaves(arena: &TermArena, array: TermId, leaves: &mut BTreeSet<TermId>) {
     if let Some((_cond, then_array, else_array)) = match_ite(arena, array) {
         collect_array_ite_leaves(arena, then_array, leaves);
@@ -2140,6 +2325,9 @@ fn row_exprs_equal_by_facts(
         }
         (RowExpr::Term(term), RowExpr::Select { array, index })
         | (RowExpr::Select { array, index }, RowExpr::Term(term)) => {
+            if store_self_update_row_equivalent(arena, facts, array, index, term) {
+                return true;
+            }
             select_terms_for_row(arena, facts, array, index)
                 .iter()
                 .any(|&select_term| {
@@ -2147,6 +2335,23 @@ fn row_exprs_equal_by_facts(
                 })
         }
     }
+}
+
+fn store_self_update_row_equivalent(
+    arena: &TermArena,
+    facts: &EqFacts,
+    array: TermId,
+    index: TermId,
+    value_term: TermId,
+) -> bool {
+    facts
+        .store_self_reads
+        .iter()
+        .any(|&(base, write_index, value)| {
+            facts.same(array, base)
+                && terms_directly_equal(arena, facts, index, write_index)
+                && terms_directly_equal(arena, facts, value_term, value)
+        })
 }
 
 fn select_terms_for_row(
@@ -3060,6 +3265,37 @@ mod tests {
             let script = parse_script(text).expect("ABV BV1 array-ITE all-true case parses");
             let cert = array_axiom_refutation(&script.arena, &script.assertions)
                 .expect("BV1 array-ITE all-true branch cover refutes");
+            assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+        }
+    }
+
+    #[test]
+    fn recognizes_btor_contextual_ite_branch_regressions() {
+        let cases = [
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond11.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond12.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond13.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond14.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond18.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext11.btor.smt2"
+            ),
+        ];
+
+        for text in cases {
+            let script = parse_script(text).expect("ABV contextual ITE branch case parses");
+            let cert = array_axiom_refutation(&script.arena, &script.assertions)
+                .expect("contextual ITE branch read congruence refutes");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
     }

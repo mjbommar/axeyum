@@ -931,6 +931,48 @@ fn produce_evidence_certifies_small_array_axiom_unsats() {
             ),
         ),
         (
+            "abv_btor_arraycond11",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond11.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycond12",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond12.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycond13",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond13.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycond14",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond14.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycond18",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond18.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_ext11",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext11.btor.smt2"
+            ),
+        ),
+        (
             "abv_btor_ext5",
             ArrayAxiomKind::ReadCongruence,
             include_str!(
