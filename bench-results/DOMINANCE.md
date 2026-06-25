@@ -39,7 +39,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_BV | `qf-bv-curated-bvred` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 10 | 100% (10/10) | 100% (4/4) | none | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 9 | 100% (9/9) | 100% (3/3) | none | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` |
-| QF_NIA | `qf-nia-synthetic-graduated` | 32 | 50% (16/32) | 0% (0/16) | Lean unsat 0/16, evidence certified 16/32 | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` |
+| QF_NIA | `qf-nia-synthetic-graduated` | 32 | 100% (32/32) | 100% (16/16) | none | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` |
 | QF_NRA | `qf-nra-synthetic-graduated` | 30 | 80% (24/30) | 62% (10/16) | Lean unsat 10/16, evidence certified 24/30 | `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 100% (2/2) | 100% (1/1) | none | `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 100% (4/4) | 100% (2/2) | none | `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` |
@@ -76,7 +76,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | not run | - | - | build Lean route | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 11 | 10 | 91% | strong | 0 | complete | 100% (10/10) | 100% (4/4) | dominant on audited row | audit unsats by Diophantine/IntInequality/general LIA route |
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 11 | 9 | 82% | strong | 0 | complete | 100% (9/9) | 100% (3/3) | dominant on audited row | run per-instance Lean reconstruction over the committed LRA slice |
-| QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | strong | 0 | complete | 50% (16/32) | 0% (0/16) | close Lean unsat gaps | separate Diophantine/interval unsats from bit-blasted bounded boxes |
+| QF_NIA | `qf-nia-synthetic-graduated` | 32 | 32 | 100% | strong | 0 | complete | 100% (32/32) | 100% (16/16) | dominant on audited row | separate Diophantine/interval unsats from bit-blasted bounded boxes |
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 21 | 54% | mid | 0 | not run | - | - | grow decide + classify certs | separate Diophantine/interval unsats from bit-blasted bounded boxes |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | weak | 0 | not run | - | - | decider first | separate Diophantine/interval unsats from bit-blasted bounded boxes |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | strong | 0 | complete | 80% (24/30) | 62% (10/16) | close Lean unsat gaps | measure SOS-covered unsats separately from general nonlinear search |

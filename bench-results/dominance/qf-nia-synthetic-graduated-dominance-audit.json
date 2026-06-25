@@ -4,146 +4,323 @@
   "instances": [
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 9.872910000000001,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 16.038092,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b01.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 2.140614,
+        "lean_reconstruction": 10.657394,
+        "parse_evidence": 0.073166,
+        "parse_lean": 0.056802000000000005,
+        "produce_evidence": 3.079687,
+        "read": 0.004628
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 11.409180999999998,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 28.504857,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b02.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 4.431654,
+        "lean_reconstruction": 18.749411000000002,
+        "parse_evidence": 0.069674,
+        "parse_lean": 0.057323,
+        "produce_evidence": 5.17256,
+        "read": 0.007762
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 15.024607000000001,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 37.026981,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b03.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 5.726814999999999,
+        "lean_reconstruction": 22.945573,
+        "parse_evidence": 0.161468,
+        "parse_lean": 0.056582,
+        "produce_evidence": 8.108378,
+        "read": 0.012085
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 25.256776000000002,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 2290.7734259999997,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b04.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 261.368434,
+        "lean_reconstruction": 1528.6359169999998,
+        "parse_evidence": 0.140273,
+        "parse_lean": 0.100689,
+        "produce_evidence": 500.47635,
+        "read": 0.012619
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 30.135004,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 3099.612125,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b05.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 347.36046500000003,
+        "lean_reconstruction": 2059.239122,
+        "parse_evidence": 0.142268,
+        "parse_lean": 0.095066,
+        "produce_evidence": 692.718933,
+        "read": 0.015216
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 38.130077,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 6472.0096140000005,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b06.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 701.56891,
+        "lean_reconstruction": 4282.34973,
+        "parse_evidence": 0.138198,
+        "parse_lean": 0.101508,
+        "produce_evidence": 1487.7912509999999,
+        "read": 0.016141
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 28.249158,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 230.041167,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b07.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 15.749161,
+        "lean_reconstruction": 62.396477,
+        "parse_evidence": 0.143728,
+        "parse_lean": 0.070712,
+        "produce_evidence": 151.648281,
+        "read": 0.011776
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 29.004656999999998,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 345.956216,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b08.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 21.421226,
+        "lean_reconstruction": 95.32462199999999,
+        "parse_evidence": 0.172061,
+        "parse_lean": 0.068711,
+        "produce_evidence": 228.931592,
+        "read": 0.012168
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 4.234576000000001,
+      "elapsed_ms": 0.703963,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -152,15 +329,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.028946,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.143466,
+        "parse_lean": null,
+        "produce_evidence": 0.504172,
+        "read": 0.019133
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 12.245134,
+      "elapsed_ms": 1.070047,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -169,15 +355,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.031477,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.13185200000000002,
+        "parse_lean": null,
+        "produce_evidence": 0.8701559999999999,
+        "read": 0.019143999999999998
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 9.012659,
+      "elapsed_ms": 2.15163,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -186,15 +381,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.029360999999999998,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.13846,
+        "parse_lean": null,
+        "produce_evidence": 1.960676,
+        "read": 0.012272
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 12.634279999999999,
+      "elapsed_ms": 3.6692780000000003,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -203,15 +407,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.028527999999999998,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.12594,
+        "parse_lean": null,
+        "produce_evidence": 3.493994,
+        "read": 0.012714000000000001
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 13.864557,
+      "elapsed_ms": 7.139708,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -220,15 +433,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.029606999999999998,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.12354099999999998,
+        "parse_lean": null,
+        "produce_evidence": 6.966573,
+        "read": 0.011871999999999999
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 17.100908,
+      "elapsed_ms": 5.366263,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -237,15 +459,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.014301999999999999,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.07673,
+        "parse_lean": null,
+        "produce_evidence": 5.263495,
+        "read": 0.0041860000000000005
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 15.194033,
+      "elapsed_ms": 7.367718,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -254,15 +485,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.013295000000000001,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.13897900000000002,
+        "parse_lean": null,
+        "produce_evidence": 7.199968,
+        "read": 0.009491
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 15.60343,
+      "elapsed_ms": 11.296216,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -271,15 +511,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.01363,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.143021,
+        "parse_lean": null,
+        "produce_evidence": 11.123278,
+        "read": 0.009792
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 30146.275416999997,
+      "elapsed_ms": 1.88466,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -288,15 +537,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.04714,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.180068,
+        "parse_lean": null,
+        "produce_evidence": 1.640579,
+        "read": 0.008613
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 30065.655196000003,
+      "elapsed_ms": 3.798201,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -305,15 +563,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.022217,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.17093499999999998,
+        "parse_lean": null,
+        "produce_evidence": 3.58859,
+        "read": 0.009636
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 30189.888226,
+      "elapsed_ms": 6.245995,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -322,15 +589,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.022106,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.178047,
+        "parse_lean": null,
+        "produce_evidence": 6.028366999999999,
+        "read": 0.010763
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 33832.159471,
+      "elapsed_ms": 11.433658,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -339,15 +615,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.021752,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.18212,
+        "parse_lean": null,
+        "produce_evidence": 11.189684999999999,
+        "read": 0.011753999999999999
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 30338.877272,
+      "elapsed_ms": 11.160267,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -356,15 +641,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.021664000000000003,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.18460100000000002,
+        "parse_lean": null,
+        "produce_evidence": 10.935588,
+        "read": 0.011926
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 31821.881294,
+      "elapsed_ms": 15.034478,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -373,15 +667,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.021481,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.18426900000000002,
+        "parse_lean": null,
+        "produce_evidence": 14.810634,
+        "read": 0.011512999999999999
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 30377.686287,
+      "elapsed_ms": 21.098277,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -390,15 +693,24 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.022578,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.17510099999999998,
+        "parse_lean": null,
+        "produce_evidence": 20.876866,
+        "read": 0.016966
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "sat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 30376.960934,
+      "elapsed_ms": 26.846755,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -407,144 +719,328 @@
       "lean_error": null,
       "lean_fragment": null,
       "lean_module_bytes": null,
+      "phase_timings_ms": {
+        "check_evidence": 0.021862,
+        "lean_reconstruction": null,
+        "parse_evidence": 0.18179399999999998,
+        "parse_lean": null,
+        "produce_evidence": 26.625188,
+        "read": 0.011521
+      },
       "trust_holes": [],
       "trust_steps": []
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 22.776450999999998,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 100.49709800000001,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n01.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 13.997888,
+        "lean_reconstruction": 66.492887,
+        "parse_evidence": 0.15448,
+        "parse_lean": 0.063222,
+        "produce_evidence": 19.757901,
+        "read": 0.01153
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 28.890211,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 315.972606,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n02.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 40.001558,
+        "lean_reconstruction": 210.967517,
+        "parse_evidence": 0.158719,
+        "parse_lean": 0.10289,
+        "produce_evidence": 64.69342999999999,
+        "read": 0.012204
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 36.28766,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 376.870973,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n03.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 45.296147000000005,
+        "lean_reconstruction": 251.53878600000002,
+        "parse_evidence": 0.16016000000000002,
+        "parse_lean": 0.083253,
+        "produce_evidence": 79.752438,
+        "read": 0.013056
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 41.519622999999996,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 738.126403,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n04.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 82.317011,
+        "lean_reconstruction": 494.035548,
+        "parse_evidence": 0.168878,
+        "parse_lean": 0.079439,
+        "produce_evidence": 161.48472,
+        "read": 0.01193
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 41.598541000000004,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 740.2926669999999,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n05.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 81.897326,
+        "lean_reconstruction": 493.8649,
+        "parse_evidence": 0.164606,
+        "parse_lean": 0.084408,
+        "produce_evidence": 164.225247,
+        "read": 0.013116
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 49.346534999999996,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 896.859241,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n06.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 101.078357,
+        "lean_reconstruction": 596.0948430000001,
+        "parse_evidence": 0.177405,
+        "parse_lean": 0.09043,
+        "produce_evidence": 199.36601100000001,
+        "read": 0.012997
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 49.205009000000004,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 891.727046,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n07.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 99.01545300000001,
+        "lean_reconstruction": 589.555486,
+        "parse_evidence": 0.170897,
+        "parse_lean": 0.088727,
+        "produce_evidence": 202.849924,
+        "read": 0.013505
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     },
     {
       "audit_outcome": "unsat",
+      "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
-      "dominant_candidate": false,
-      "elapsed_ms": 57.672646,
-      "evidence_certified": false,
+      "dominant_candidate": true,
+      "elapsed_ms": 1542.656244,
+      "evidence_certified": true,
       "evidence_checked": true,
-      "evidence_kind": "bare-unsat",
+      "evidence_kind": "bounded-int-blast-unsat",
       "file": "corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n08.smt2",
-      "lean_checked": false,
-      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
-      "lean_fragment": null,
-      "lean_module_bytes": null,
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "BoundedIntBlast",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 165.222857,
+        "lean_reconstruction": 1022.8348560000001,
+        "parse_evidence": 0.161634,
+        "parse_lean": 0.09850500000000001,
+        "produce_evidence": 354.28606099999996,
+        "read": 0.013068
+      },
       "trust_holes": [],
-      "trust_steps": []
+      "trust_steps": [
+        {
+          "certified": true,
+          "id": "tseitin"
+        },
+        {
+          "certified": true,
+          "id": "sat-refutation"
+        },
+        {
+          "certified": true,
+          "id": "int-blast"
+        }
+      ]
     }
   ],
   "limit": 32,
@@ -556,13 +1052,13 @@
     "audited_unsat": 16,
     "baseline_decided": 32,
     "baseline_mismatches": 0,
-    "dominant_candidates": 16,
-    "dominant_pct_audited": 50.0,
-    "evidence_certified": 16,
+    "dominant_candidates": 32,
+    "dominant_pct_audited": 100.0,
+    "evidence_certified": 32,
     "evidence_checked": 32,
     "instances": 32,
-    "lean_checked_unsat": 0,
-    "lean_unsat_pct": 0.0,
+    "lean_checked_unsat": 16,
+    "lean_unsat_pct": 100.0,
     "timeouts": 0
   },
   "timeout_ms": 30000,

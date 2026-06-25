@@ -56,6 +56,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatArithDpll(_) => "arith-dpll-unsat",
         Evidence::UnsatSos { .. } => "sos-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
+        Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
         Evidence::UnsatBoolUfExhaustive(_) => "bool-uf-exhaustive-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",
@@ -94,80 +95,84 @@ fn main() {
     println!("file: {}", file.display());
     println!("timeout_ms: {timeout_ms}");
 
-    let mut script = parse_script(&text).expect("parse SMT-LIB file");
-    let assertions = script.assertions.clone();
-    let start = Instant::now();
-    match check_auto_explained(&mut script.arena, &assertions, &config) {
-        Ok((result, trace)) => {
-            println!(
-                "check_auto_explained: {} {:.3}ms",
-                verdict(&result),
-                elapsed_ms(start)
-            );
-            for attempt in trace.attempts() {
-                println!("  {attempt}");
-            }
-        }
-        Err(error) => println!(
-            "check_auto_explained: error {error} {:.3}ms",
-            elapsed_ms(start)
-        ),
-    }
-
-    let mut script = parse_script(&text).expect("parse SMT-LIB file");
-    let assertions = script.assertions.clone();
-    let start = Instant::now();
-    match solve(&mut script.arena, &assertions, &config) {
-        Ok(result) => println!("solve: {} {:.3}ms", verdict(&result), elapsed_ms(start)),
-        Err(error) => println!("solve: error {error} {:.3}ms", elapsed_ms(start)),
-    }
-
-    let script = parse_script(&text).expect("parse SMT-LIB file");
-    let assertions = script.assertions.clone();
-    let start = Instant::now();
-    match prove_qf_abv_unsat_alethe(&script.arena, &assertions) {
-        Some(proof) => println!(
-            "abv-direct-alethe: some steps={} checked={} {:.3}ms",
-            proof.len(),
-            matches!(check_alethe(&proof), Ok(true)),
-            elapsed_ms(start)
-        ),
-        None => println!("abv-direct-alethe: none {:.3}ms", elapsed_ms(start)),
-    }
-
-    let mut script = parse_script(&text).expect("parse SMT-LIB file");
-    let assertions = script.assertions.clone();
-    let start = Instant::now();
-    match prove_qf_abv_unsat_alethe_via_elimination(&mut script.arena, &assertions) {
-        Some(proof) => println!(
-            "abv-elim-alethe: some steps={} checked={} {:.3}ms",
-            proof.len(),
-            matches!(check_alethe(&proof), Ok(true)),
-            elapsed_ms(start)
-        ),
-        None => println!("abv-elim-alethe: none {:.3}ms", elapsed_ms(start)),
-    }
-
-    if std::env::var_os("AXEYUM_DIAGNOSE_EXPENSIVE_EXPORT").is_some() {
+    if std::env::var_os("AXEYUM_DIAGNOSE_ONLY_EVIDENCE").is_none() {
         let mut script = parse_script(&text).expect("parse SMT-LIB file");
         let assertions = script.assertions.clone();
         let start = Instant::now();
-        let deadline = Instant::now().checked_add(Duration::from_millis(timeout_ms));
-        match export_qf_aufbv_unsat_proof_within(&mut script.arena, &assertions, deadline) {
-            Ok(outcome) => println!(
-                "aufbv-reduction-proof: {} {:.3}ms",
-                proof_outcome_label(&outcome),
-                elapsed_ms(start)
-            ),
-            Err(error) => {
+        match check_auto_explained(&mut script.arena, &assertions, &config) {
+            Ok((result, trace)) => {
                 println!(
-                    "aufbv-reduction-proof: error {error} {:.3}ms",
+                    "check_auto_explained: {} {:.3}ms",
+                    verdict(&result),
                     elapsed_ms(start)
                 );
+                for attempt in trace.attempts() {
+                    println!("  {attempt}");
+                }
             }
+            Err(error) => println!(
+                "check_auto_explained: error {error} {:.3}ms",
+                elapsed_ms(start)
+            ),
+        }
+
+        let mut script = parse_script(&text).expect("parse SMT-LIB file");
+        let assertions = script.assertions.clone();
+        let start = Instant::now();
+        match solve(&mut script.arena, &assertions, &config) {
+            Ok(result) => println!("solve: {} {:.3}ms", verdict(&result), elapsed_ms(start)),
+            Err(error) => println!("solve: error {error} {:.3}ms", elapsed_ms(start)),
+        }
+
+        let script = parse_script(&text).expect("parse SMT-LIB file");
+        let assertions = script.assertions.clone();
+        let start = Instant::now();
+        match prove_qf_abv_unsat_alethe(&script.arena, &assertions) {
+            Some(proof) => println!(
+                "abv-direct-alethe: some steps={} checked={} {:.3}ms",
+                proof.len(),
+                matches!(check_alethe(&proof), Ok(true)),
+                elapsed_ms(start)
+            ),
+            None => println!("abv-direct-alethe: none {:.3}ms", elapsed_ms(start)),
+        }
+
+        let mut script = parse_script(&text).expect("parse SMT-LIB file");
+        let assertions = script.assertions.clone();
+        let start = Instant::now();
+        match prove_qf_abv_unsat_alethe_via_elimination(&mut script.arena, &assertions) {
+            Some(proof) => println!(
+                "abv-elim-alethe: some steps={} checked={} {:.3}ms",
+                proof.len(),
+                matches!(check_alethe(&proof), Ok(true)),
+                elapsed_ms(start)
+            ),
+            None => println!("abv-elim-alethe: none {:.3}ms", elapsed_ms(start)),
+        }
+
+        if std::env::var_os("AXEYUM_DIAGNOSE_EXPENSIVE_EXPORT").is_some() {
+            let mut script = parse_script(&text).expect("parse SMT-LIB file");
+            let assertions = script.assertions.clone();
+            let start = Instant::now();
+            let deadline = Instant::now().checked_add(Duration::from_millis(timeout_ms));
+            match export_qf_aufbv_unsat_proof_within(&mut script.arena, &assertions, deadline) {
+                Ok(outcome) => println!(
+                    "aufbv-reduction-proof: {} {:.3}ms",
+                    proof_outcome_label(&outcome),
+                    elapsed_ms(start)
+                ),
+                Err(error) => {
+                    println!(
+                        "aufbv-reduction-proof: error {error} {:.3}ms",
+                        elapsed_ms(start)
+                    );
+                }
+            }
+        } else {
+            println!("aufbv-reduction-proof: skipped (set AXEYUM_DIAGNOSE_EXPENSIVE_EXPORT=1)");
         }
     } else {
-        println!("aufbv-reduction-proof: skipped (set AXEYUM_DIAGNOSE_EXPENSIVE_EXPORT=1)");
+        println!("diagnostic prepasses: skipped (AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1)");
     }
 
     let mut script = parse_script(&text).expect("parse SMT-LIB file");

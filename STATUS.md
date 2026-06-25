@@ -6,6 +6,37 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — exact QF_NIA synthetic dominance row closed.**
+  Promoted the existing proven-box bounded-int-blast certificate into first-class
+  evidence and Lean reconstruction for bounded nonlinear-integer UNSAT rows.
+  `BoundedIntBlastCertificate::recheck` now also regenerates the clamped DIMACS
+  from the original assertions before accepting the DRAT, binding the clausal
+  proof back to the query. `produce_evidence` emits
+  `bounded-int-blast-unsat` with certified `IntBlast`/`Tseitin`/
+  `SatRefutation` steps, and `prove_unsat_to_lean_module` routes the same rows
+  through `ProofFragment::BoundedIntBlast` only after the certificate rechecks.
+  The bounded-box evaluator now also runs before preprocessing, so bounded NIA
+  SAT rows such as the synthetic Pythagorean family return replayable models in
+  milliseconds instead of timing out in preprocessing/model reconstruction.
+  Re-running the exact QF_NIA audit moved **QF_NIA synthetic 16/32 -> 32/32
+  dominant** with **Lean unsat 0/16 -> 16/16**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. **Next:** attack the remaining exact
+  QF_NRA higher-degree proof gaps, quantified BV Lean gaps, or build proof
+  routes for strong unaudited rows (QF_UFFF/QF_FF/QF_FP).
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_nia_bounded_unsat_rows_use_bounded_int_blast_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_nia_bounded_int_blast_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/synthetic/QF_NIA/graduated/nia-pythagorean-m08.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nia-synthetic-graduated-vs-z3.json 30000 32 bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — exact QF_UFLIA dominance rows closed.**
   Widened the arithmetic lazy-SMT certificate path to cover Boolean-structured
   UFLIA proof-step rows: the integer simplex now has an unsat-oriented opaque
@@ -3236,9 +3267,35 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV/QF_BV-bvred/QF_LRA/QF_LIA/QF_UFBV/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_LRA **9/9**, QF_LIA **10/10**, QF_UFBV/bitwuzla **2/2**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **5/5** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV/QF_BV-bvred/QF_LRA/QF_LIA/QF_NIA/QF_UFBV/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_UFBV/bitwuzla **2/2**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **5/5** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-25** — **Exact QF_NIA synthetic dominance row closed.**
+  Added first-class `UnsatBoundedIntBlast` evidence and
+  `ProofFragment::BoundedIntBlast` reconstruction for bounded nonlinear-integer
+  UNSAT rows. The bounded-int-blast certificate recheck now re-derives the
+  finite box, verifies the covering width, regenerates the clamped DIMACS from
+  the original query, and rechecks DRAT before the evidence or Lean wrapper is
+  accepted. Also added a pre-preprocessing bounded-box evaluator, which keeps
+  bounded NIA SAT rows such as the synthetic Pythagorean family on the fast,
+  replay-checkable model path. Re-ran the exact QF_NIA synthetic audit and
+  regenerated `bench-results/DOMINANCE.md`: QF_NIA synthetic is now **32/32
+  dominant** with Lean unsat **16/16**, with zero mismatches, audit errors, and
+  timeouts.
+  Verification:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_nia_bounded_unsat_rows_use_bounded_int_blast_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_nia_bounded_int_blast_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/synthetic/QF_NIA/graduated/nia-pythagorean-m08.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nia-synthetic-graduated-vs-z3.json 30000 32 bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
 
 - **2026-06-25** — **Exact QF_UFLIA dominance rows closed.**
   Added an unsat-oriented opaque-UF mode for the integer simplex and wired

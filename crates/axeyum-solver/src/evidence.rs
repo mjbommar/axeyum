@@ -49,7 +49,7 @@ use crate::array_memcpy::TwoByteMemcpyRefutationCertificate;
 use crate::array_sort2::{TwoElementBubbleSortCertificate, TwoElementSelectionSortCertificate};
 use crate::array_write_chain::AlignedWriteChainCommutationCertificate;
 use crate::array_xor_swap::{TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate};
-use crate::auto::solve;
+use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast, solve};
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::bool_simplify::BoolSimplificationRefutationCertificate;
 use crate::certify::{CertifyOutcome, certify_qf_bv_by_enumeration};
@@ -309,6 +309,11 @@ pub enum Evidence {
         /// it); the stored string is for output, not trusted on its own.
         lean_module: Option<String>,
     },
+    /// Unsatisfiable (`QF_NIA`/bounded integer arithmetic): a proven finite integer
+    /// box plus an exactly-encoded bounded-int blast whose regenerated DIMACS is
+    /// DRAT-refuted. The checker re-derives the box and covering width from the
+    /// original assertions, regenerates the clamped DIMACS, and rechecks DRAT.
+    UnsatBoundedIntBlast(BoundedIntBlastCertificate),
     /// Unsatisfiable (`QF_UFBV`): a finite-domain pigeonhole refutation. The
     /// checker re-scans the original top-level conjunction and confirms it
     /// requires more pairwise-distinct applications of one function than that
@@ -506,6 +511,7 @@ impl Evidence {
                 certificate,
                 lean_module.as_ref(),
             )),
+            Evidence::UnsatBoundedIntBlast(certificate) => certificate.recheck(arena, assertions),
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
@@ -544,6 +550,7 @@ impl Evidence {
                 | Evidence::UnsatArithDpll(_)
                 | Evidence::UnsatSos { .. }
                 | Evidence::UnsatDiophantine { .. }
+                | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
                 | Evidence::UnsatBoolUfExhaustive(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
@@ -1373,12 +1380,8 @@ pub fn produce_evidence(
     if let Some(report) = direct_pre_solve_structural_report(arena, assertions, &provenance) {
         return Ok(report);
     }
-    if let Some(proof) = uflia_alethe_certificate(arena, assertions) {
-        return Ok(EvidenceReport {
-            evidence: Evidence::UnsatArithAletheProof(proof),
-            provenance: provenance.clone(),
-            trusted_steps: Vec::new(),
-        });
+    if let Some(report) = uflia_alethe_evidence_report(arena, assertions, &provenance) {
+        return Ok(report);
     }
     if let Some(report) = produce_arith_dpll_evidence(arena, assertions, config)? {
         return Ok(report);
@@ -1467,6 +1470,8 @@ pub fn produce_evidence(
                 (Evidence::UnsatArithAletheProof(proof), steps)
             } else if let Some(direct) = direct_structural_unsat_evidence(arena, assertions) {
                 direct
+            } else if let Some(bounded) = bounded_int_blast_evidence(arena, assertions)? {
+                bounded
             } else if config.timeout.is_some() {
                 // The remaining fallback is an optional reduced-CNF DRAT export
                 // for BV-reducible theories. It can spend substantial time outside
@@ -1490,6 +1495,35 @@ pub fn produce_evidence(
         provenance,
         trusted_steps,
     })
+}
+
+fn uflia_alethe_evidence_report(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatArithAletheProof(uflia_alethe_certificate(arena, assertions)?),
+        provenance: provenance.clone(),
+        trusted_steps: Vec::new(),
+    })
+}
+
+fn bounded_int_blast_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<(Evidence, Vec<TrustStep>)>, SolverError> {
+    let Some(cert) = certify_bounded_int_blast(arena, assertions)? else {
+        return Ok(None);
+    };
+    Ok(Some((
+        Evidence::UnsatBoundedIntBlast(cert),
+        trust_steps(&[
+            (TrustId::IntBlast, true),
+            (TrustId::Tseitin, true),
+            (TrustId::SatRefutation, true),
+        ]),
+    )))
 }
 
 fn small_pre_solve_array_axiom_refutation(
@@ -1923,6 +1957,7 @@ pub fn prove(
         | Evidence::UnsatArithDpll(_)
         | Evidence::UnsatSos { .. }
         | Evidence::UnsatDiophantine { .. }
+        | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)
         | Evidence::UnsatBoolUfExhaustive(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)

@@ -1322,6 +1322,10 @@ pub enum ProofFragment {
     /// lazy-SMT DPLL(T) refutation checker over exact integer/real theory
     /// lemmas.
     ArithDpll,
+    /// Bounded nonlinear/integer arithmetic certified by the proven-box
+    /// bounded-int-blast certificate: a finite integer box, exact covering width,
+    /// regenerated DIMACS, and DRAT refutation.
+    BoundedIntBlast,
     /// Integer-infeasibility (**Diophantine**) `QF_LIA`: an integer-equality system
     /// that is rational-feasible yet integer-infeasible (`gcd ∤ const`), refuted by
     /// the [`DiophantineCertificate`](crate::DiophantineCertificate) and
@@ -1768,6 +1772,10 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         // General Boolean-structured linear arithmetic. The arithmetic lazy-SMT
         // certificate is re-derived and self-checked before reconstruction.
         ProofFragment::ArithDpll
+    } else if bounded_int_blast_certifies(arena, assertions) {
+        // Bounded nonlinear/integer arithmetic whose exact finite-box bit-blast
+        // has a re-checkable certificate (box + regenerated DIMACS + DRAT).
+        ProofFragment::BoundedIntBlast
     } else {
         ProofFragment::Lra
     }
@@ -1795,6 +1803,13 @@ fn arith_dpll_refutation_certifies(arena: &TermArena, assertions: &[TermId]) -> 
         ),
         Ok(crate::dpll_lia::ArithDpllOutcome::Unsat(_))
     )
+}
+
+fn bounded_int_blast_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    match crate::auto::certify_bounded_int_blast(arena, assertions) {
+        Ok(Some(cert)) => matches!(cert.recheck(arena, assertions), Ok(true)),
+        Ok(None) | Err(_) => false,
+    }
 }
 
 /// Confirm `term` kernel-infers to `False` under `ctx` — the soundness gate shared
@@ -2546,6 +2561,44 @@ fn reconstruct_arith_dpll_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_bounded_int_blast_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::auto::certify_bounded_int_blast(arena, assertions).map_err(|error| {
+        ReconstructError::MalformedStep {
+            rule: "bounded_int_blast".to_owned(),
+            detail: format!("bounded-int-blast certificate failed: {error}"),
+        }
+    })?;
+    let cert = cert.ok_or_else(|| ReconstructError::MalformedStep {
+        rule: "bounded_int_blast".to_owned(),
+        detail: "expected a proven-box bounded integer blast refutation".to_owned(),
+    })?;
+    if !cert
+        .recheck(arena, assertions)
+        .map_err(|error| ReconstructError::MalformedStep {
+            rule: "bounded_int_blast".to_owned(),
+            detail: format!("bounded-int-blast certificate recheck failed: {error}"),
+        })?
+    {
+        return Err(ReconstructError::MalformedStep {
+            rule: "bounded_int_blast".to_owned(),
+            detail: "bounded-int-blast certificate did not recheck".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("bounded_int_blast_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bounded_int_blast")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_array_axiom_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -2956,6 +3009,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::BoolSimplification
         | ProofFragment::LraDpll
         | ProofFragment::ArithDpll
+        | ProofFragment::BoundedIntBlast
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::ArrayAxiom
@@ -3033,6 +3087,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::LraDpll => reconstruct_lra_dpll_to_lean_module(arena, assertions)?,
         ProofFragment::ArithDpll => reconstruct_arith_dpll_to_lean_module(arena, assertions)?,
+        ProofFragment::BoundedIntBlast => {
+            reconstruct_bounded_int_blast_to_lean_module(arena, assertions)?
+        }
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?
         }

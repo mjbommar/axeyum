@@ -114,6 +114,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatArithDpll(_) => "arith-dpll-unsat",
         Evidence::UnsatSos { .. } => "sos-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
+        Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
         Evidence::UnsatBoolUfExhaustive(_) => "bool-uf-exhaustive-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",

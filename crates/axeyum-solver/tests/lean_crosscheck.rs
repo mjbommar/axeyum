@@ -342,6 +342,38 @@ fn qf_nra_sos_certificate_audit_rows_check_in_real_lean() {
     }
 }
 
+/// `QF_NIA`: bounded nonlinear integer UNSAT rows are certified by the
+/// proven-box bounded-int-blast certificate (box + regenerated DIMACS + DRAT)
+/// and reconstruct through a certificate-gated Lean wrapper.
+#[test]
+fn qf_nia_bounded_int_blast_audit_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_nia_no_square_mod_bounded_int_blast",
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b08.smt2"
+            ),
+        ),
+        (
+            "qf_nia_sum_sq_2_bounded_int_blast",
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n08.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("synthetic QF_NIA row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("bounded-int-blast certificate row reconstructs");
+        assert_eq!(fragment, ProofFragment::BoundedIntBlast);
+        assert!(
+            !source.contains("sorryAx"),
+            "bounded-int-blast module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
 #[test]
 fn forall_refutation_checks_in_real_lean() {

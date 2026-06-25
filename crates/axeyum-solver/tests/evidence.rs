@@ -258,6 +258,43 @@ fn qf_nra_sos_certificate_wrapper_carries_lean_module() {
 }
 
 #[test]
+fn qf_nia_bounded_unsat_rows_use_bounded_int_blast_evidence() {
+    for input in [
+        include_str!(
+            "../../../corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b01.smt2"
+        ),
+        include_str!(
+            "../../../corpus/public-curated/synthetic/QF_NIA/graduated/nia-no-square-mod-b08.smt2"
+        ),
+        include_str!(
+            "../../../corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n01.smt2"
+        ),
+        include_str!(
+            "../../../corpus/public-curated/synthetic/QF_NIA/graduated/nia-sum-sq-2-n08.smt2"
+        ),
+    ] {
+        let mut script = parse_script(input).expect("synthetic QF_NIA row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+        let Evidence::UnsatBoundedIntBlast(cert) = &report.evidence else {
+            panic!(
+                "expected bounded-int-blast evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(!cert.per_var_bounds().is_empty());
+        assert!(cert.recheck(&script.arena, &assertions).unwrap());
+        assert!(report.evidence.is_certified());
+        assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+        assert!(
+            report.trusted_steps.iter().all(|step| step.certified),
+            "bounded-int-blast evidence should not carry uncertified trust holes: {:?}",
+            step_ids(&report)
+        );
+    }
+}
+
+#[test]
 #[allow(clippy::many_single_char_names)]
 fn qf_abv_read_consistency_unsat_carries_a_zero_trust_alethe_certificate() {
     // select(a, i) = #b0…0 ∧ i = j ∧ ¬(select(a, j) = #b0…0): unsat by read

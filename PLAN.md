@@ -281,6 +281,16 @@ against competitor source, are now binding:
    Both have zero mismatches, audit errors, and timeouts. The remaining QF_NRA
    misses are the higher-degree `bare-unsat` rows (`nra-neg-square-d02..d06`
    and `nra-sos-strict-unsat-d02`), not the already certified SOS rows.
+   **QF_NIA EXACT ROW CLOSED (2026-06-25):**
+   bounded nonlinear-integer UNSAT rows now carry
+   `bounded-int-blast-unsat` evidence: the checker re-derives the finite integer
+   box, verifies the exact covering width, regenerates the clamped DIMACS, and
+   rechecks the DRAT refutation before Lean reconstruction can use
+   `ProofFragment::BoundedIntBlast`. The bounded-box evaluator also runs before
+   preprocessing, so the synthetic Pythagorean SAT rows return replayable models
+   quickly instead of timing out in preprocessing/model reconstruction. Exact
+   QF_NIA synthetic is now **100% (32/32)** dominant with Lean unsat
+   **100% (16/16)**, zero mismatches, zero audit errors, and zero timeouts.
    **FIRST DOMINANCE AUDIT QUEUE CLEARED (2026-06-25):**
    QF_ABV/cvc5+bitwuzla is now exact at **50% (84/169)** dominant, Lean unsat
    **0% (0/85)**, with **6 audit errors/timeouts**; QF_AUFBV/bitwuzla is exact

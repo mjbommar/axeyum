@@ -21,7 +21,9 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 use axeyum_rewrite::{
     DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, QuantExpandError, build_app,
     canonicalize_terms, elim_unconstrained, expand_quantifiers, instantiate_universals,
@@ -432,6 +434,13 @@ fn check_auto_with_recorder(
         && let Some(result) = dispatch_array_unsat_refuters(arena, assertions, config)?
     {
         with_recorder(rec, |t| t.record_result("array-unsat-refuter", &result));
+        return Ok(result);
+    }
+    if features.has_int
+        && !has_quantifier
+        && let Some(result) = decide_bounded_int_box_by_evaluation(arena, assertions)
+    {
+        with_recorder(rec, |t| t.record_result("int-box-eval", &result));
         return Ok(result);
     }
 
@@ -2196,6 +2205,8 @@ fn collect_int_vars(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId
     }
 }
 
+const MAX_INT_BOX_ENUM_CASES: u128 = 1_000_000;
+
 /// Proves a finite integer box for every free `Int` variable of `assertions`,
 /// then bit-blasts at a width that encodes the box (and every intermediate
 /// value) EXACTLY, returning a TRUSTED `Sat`/`Unsat` — or `None` (decline) when
@@ -2232,6 +2243,10 @@ fn decide_bounded_int_blast(
         IntBoxProof::Decline => return Ok(None),
     };
 
+    if let Some(result) = decide_int_box_by_evaluation(arena, assertions, &proven) {
+        return Ok(Some(result));
+    }
+
     // 7. Conjoin the explicit clamp `lo ≤ v ≤ hi` for every variable so the
     //    bit-vector search is forced to stay inside the proven box (the encoding
     //    is exact there). Build on the real arena (clones inside the blast).
@@ -2239,6 +2254,113 @@ fn decide_bounded_int_blast(
 
     // 8. Solve the clamped, exactly-encoded box at the covering width.
     solve_exact_bounded_box(arena, &clamped, proven.width, config)
+}
+
+fn decide_bounded_int_box_by_evaluation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<CheckResult> {
+    match prove_int_box(arena, assertions) {
+        IntBoxProof::Box(proven) => decide_int_box_by_evaluation(arena, assertions, &proven),
+        IntBoxProof::TriviallyUnsat => Some(CheckResult::Unsat),
+        IntBoxProof::Decline => None,
+    }
+}
+
+fn decide_int_box_by_evaluation(
+    arena: &TermArena,
+    assertions: &[TermId],
+    proven: &BoundedBox,
+) -> Option<CheckResult> {
+    if int_box_case_count(proven)? > MAX_INT_BOX_ENUM_CASES {
+        return None;
+    }
+    let vars = proven
+        .bounds
+        .iter()
+        .map(|(&symbol, &interval)| (symbol, interval))
+        .collect::<Vec<_>>();
+    let mut assignment = Assignment::new();
+    let mut values = Vec::with_capacity(vars.len());
+    let mut declined = false;
+    if let Some(model) = enumerate_int_box_model(
+        arena,
+        assertions,
+        &vars,
+        0,
+        &mut assignment,
+        &mut values,
+        &mut declined,
+    ) {
+        return Some(CheckResult::Sat(model));
+    }
+    if declined {
+        None
+    } else {
+        Some(CheckResult::Unsat)
+    }
+}
+
+fn int_box_case_count(proven: &BoundedBox) -> Option<u128> {
+    let mut cases = 1u128;
+    for interval in proven.bounds.values() {
+        let width = interval.hi.checked_sub(interval.lo)?.checked_add(1)?;
+        let width = u128::try_from(width).ok()?;
+        cases = cases.checked_mul(width)?;
+    }
+    Some(cases)
+}
+
+fn enumerate_int_box_model(
+    arena: &TermArena,
+    assertions: &[TermId],
+    vars: &[(SymbolId, IntInterval)],
+    index: usize,
+    assignment: &mut Assignment,
+    values: &mut Vec<i128>,
+    declined: &mut bool,
+) -> Option<Model> {
+    if index == vars.len() {
+        for &assertion in assertions {
+            match eval(arena, assertion, assignment) {
+                Ok(Value::Bool(true)) => {}
+                Ok(Value::Bool(false)) => return None,
+                Ok(_) | Err(_) => {
+                    *declined = true;
+                    return None;
+                }
+            }
+        }
+        let mut model = Model::new();
+        for ((symbol, _), value) in vars.iter().zip(values.iter().copied()) {
+            model.set(*symbol, Value::Int(value));
+        }
+        return Some(model);
+    }
+
+    let (symbol, interval) = vars[index];
+    let mut value = interval.lo;
+    loop {
+        assignment.set(symbol, Value::Int(value));
+        values.push(value);
+        if let Some(model) = enumerate_int_box_model(
+            arena,
+            assertions,
+            vars,
+            index + 1,
+            assignment,
+            values,
+            declined,
+        ) {
+            return Some(model);
+        }
+        values.pop();
+        if *declined || value == interval.hi {
+            break;
+        }
+        value = value.checked_add(1)?;
+    }
+    None
 }
 
 /// A proven finite integer box: a closed interval per free `Int` variable
@@ -2486,11 +2608,14 @@ impl BoundedIntBlastCertificate {
     /// refutation, from the ORIGINAL `assertions` and this certificate's stored
     /// data, trusting nothing the emitter computed:
     ///
-    ///  1. re-runs the bound proof (`prove_int_box`) on `assertions` and requires it to prove the
-    ///     SAME box (same per-variable bounds), same width, same `max_abs`;
+    ///  1. re-runs the bound proof (`prove_int_box`) on `assertions` and requires
+    ///     it to prove the SAME box (same per-variable bounds), same width, same
+    ///     `max_abs`;
     ///  2. re-verifies the covering invariant `max_abs < 2^(width-1)` (exactness:
     ///     no two's-complement wraparound on any subterm);
-    ///  3. re-checks the DRAT over the stored DIMACS via `check_drat` (RUP/RAT).
+    ///  3. regenerates the clamped bounded-int blast and requires its DIMACS to
+    ///     match the stored proof's DIMACS;
+    ///  4. re-checks the DRAT over the stored DIMACS via `check_drat` (RUP/RAT).
     ///
     /// Returns `Ok(true)` only when all three hold. A `false`/`Err` means the
     /// certificate does not establish the `Unsat` and must not be trusted.
@@ -2535,9 +2660,40 @@ impl BoundedIntBlastCertificate {
             return Ok(false);
         }
 
-        // (3) Independently re-check the BV refutation.
+        // (3) Bind the stored DRAT/DIMACS back to this exact original query:
+        //     regenerate the clamped, exactly-encoded bounded-int blast and require
+        //     the DIMACS text to match before checking the refutation. Without this
+        //     step, a malicious certificate could carry an unrelated UNSAT DIMACS.
+        let regenerated_dimacs = bounded_int_blast_dimacs(arena, assertions, &reproven)?;
+        if regenerated_dimacs != self.bv_proof.dimacs {
+            return Ok(false);
+        }
+
+        // (4) Independently re-check the BV refutation.
         self.bv_proof.recheck()
     }
+}
+
+fn bounded_int_blast_dimacs(
+    arena: &TermArena,
+    assertions: &[TermId],
+    proven: &BoundedBox,
+) -> Result<String, SolverError> {
+    let mut scratch = arena.clone();
+    let clamped = clamp_to_box(&mut scratch, assertions, proven)?;
+    let blast = axeyum_rewrite::blast_integers(&mut scratch, &clamped, proven.width)
+        .map_err(|e| SolverError::Backend(format!("int-blast failed: {e}")))?;
+    let bv_assertions = blast.assertions().to_vec();
+    let lowering = axeyum_bv::lower_terms(&scratch, &bv_assertions)
+        .map_err(|error| SolverError::Backend(format!("bit-blasting failed: {error}")))?;
+    let roots = lowering
+        .roots()
+        .iter()
+        .map(|root| root.bits()[0])
+        .collect::<Vec<_>>();
+    let encoding = axeyum_cnf::tseitin_encode(lowering.aig(), &roots)
+        .map_err(|error| SolverError::Backend(format!("CNF encoding failed: {error}")))?;
+    Ok(encoding.formula().to_dimacs())
 }
 
 /// Attempts to produce a fully re-checkable [`BoundedIntBlastCertificate`] for

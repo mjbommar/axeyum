@@ -87,7 +87,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   rows now include BV/bitwuzla quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla
   `100% (169/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
-  `50% (16/32)`, QF_NRA synthetic `80% (24/30)`, QF_UFBV/cvc5 `100% (4/4)`,
+  `100% (32/32)`, QF_NRA synthetic `80% (24/30)`, QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `100% (2/2)`, QF_UFLIA curated `100% (2/2)`, and QF_UFLIA
   bounded `100% (5/5)`. QF_ABV/QF_AUFBV no longer carry audit runtime failures:
   phase timing first localized all 11 old ABV/AUFBV timeouts to
@@ -403,10 +403,13 @@ a named mechanism.**
    component sorts.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
-3. **QF_NIA** beyond bounded-box. Bounded integer-nonlinear UNSAT is **closed** via exact
-   int-blast (`2b91542`, nia_unsat frontier 0→40); the residual is unbounded/symbolic
-   div-mod + genuinely-nonlinear — the multiplier no-overflow guard (parallel agent,
-   NIA Unknown 498→146) is the lever.
+3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
+   Pareto-dominant: finite-box SAT uses replayed models, bounded nonlinear
+   UNSAT carries `bounded-int-blast-unsat` evidence plus
+   `ProofFragment::BoundedIntBlast` Lean reconstruction. The residual frontier
+   is unbounded/symbolic div-mod and genuinely nonlinear integer arithmetic —
+   the multiplier no-overflow guard (parallel agent, NIA Unknown 498→146) is the
+   decide-rate lever.
 4. **Uninterpreted-sort QF_UF** (43% modeled-as-BV vs 56% bounded). **First-class
    IR carrier sort landed 2026-06-25:** arity-0 SMT-LIB `declare-sort` now becomes
    `Sort::Uninterpreted(SortId)`, not a BitVec over-approximation; `check_auto`
