@@ -4123,3 +4123,43 @@ fn nat_ne_succ_infers_to_pi_eq_false() {
         "nat_ne_succ : Π (n : Nat), Eq Nat n (Nat.succ n) → False, got: {rendered}"
     );
 }
+
+/// The generalized `n ≠ Nat.succ^k n` lemma built by
+/// [`super::build_nat_ne_succ_pow`] `infer`s to
+/// `Π (n : Nat), Eq Nat n (Nat.succ^k n) → False` for several `k ≥ 1` — the
+/// trusted kernel accepts the chained-induction proof, so the MULTI-step
+/// acyclicity `size x = Nat.succ^k (size x)` contradiction is kernel-checked, not
+/// assumed. (`k = 1` reproduces `nat_ne_succ`'s type.)
+#[test]
+fn nat_ne_succ_pow_infers_to_pi_eq_succ_pow_false() {
+    for k in 1usize..=4 {
+        let mut ctx = ReconstructCtx::new();
+        let mz = super::build_nat_ne_succ_pow_m_zero(&mut ctx, k);
+        assert!(
+            ctx.kernel_mut().infer(mz).is_ok(),
+            "pow base minor infers (k={k})"
+        );
+        let ms = super::build_nat_ne_succ_pow_m_succ(&mut ctx, k);
+        assert!(
+            ctx.kernel_mut().infer(ms).is_ok(),
+            "pow step minor infers (k={k})"
+        );
+        let lemma = super::build_nat_ne_succ_pow(&mut ctx, k);
+        let ty = ctx
+            .kernel_mut()
+            .infer(lemma)
+            .unwrap_or_else(|e| panic!("nat_ne_succ_pow (k={k}) infers: {e:?}"));
+        let rendered = ctx.kernel().render_lean(ty);
+        assert!(
+            rendered.contains("Nat") && rendered.contains("Eq") && rendered.contains("False"),
+            "nat_ne_succ_pow (k={k}) : Π (n : Nat), Eq Nat n (Nat.succ^k n) → False, got: {rendered}"
+        );
+        // The RHS must carry exactly `k` `Nat.succ` applications (the chained
+        // contradiction's depth).
+        let succ_count = rendered.matches("Nat.succ").count();
+        assert_eq!(
+            succ_count, k,
+            "nat_ne_succ_pow (k={k}) RHS must have k `Nat.succ`s, got {succ_count}: {rendered}"
+        );
+    }
+}

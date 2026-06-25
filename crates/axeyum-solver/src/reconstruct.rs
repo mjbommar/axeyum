@@ -3317,6 +3317,13 @@ fn reconstruct_qf_dt_acyclic_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Option<Result<String, ReconstructError>> {
+    // A multi-step containment cycle `x₀ ⊐ x₁ ⊐ … ⊐ x_{k-1} ⊐ x₀` (k ≥ 2) is
+    // discharged by the CHAINED size argument (`size x₀ = Nat.succ^k (size x₀)`,
+    // refuted by `n ≠ Nat.succ^k n`); a single-level cycle (k = 1) keeps the
+    // dedicated one-step path. Try the multi-step chain first, then fall back.
+    if let Some(chain) = find_acyclicity_chain(arena, assertions) {
+        return Some(build_acyclic_chain_refutation_module(arena, &chain));
+    }
     let c = find_acyclicity_cycle(arena, assertions)?;
     Some(build_acyclic_refutation_module(arena, &c))
 }
@@ -3420,6 +3427,525 @@ fn build_acyclic_refutation_module(
         false_term,
         &[family.ind, bool_ind, nat_ind],
     ))
+}
+
+// ===========================================================================
+// Datatype ACYCLICITY — MULTI-STEP containment cycles (k ≥ 2), the chained size
+// argument generalizing the single-level cycle above to full generality.
+//
+// A length-`k` containment cycle
+//   x₀ = C₁(… x₁ …) ∧ x₁ = C₂(… x₂ …) ∧ … ∧ x_{k-1} = C_k(… x₀ …)
+// (the structural cycle detector gives this path) is UNSAT for the same reason:
+// the value `x₀` would strictly contain itself after `k` constructor descents.
+// We discharge it WITHOUT any acyclicity axiom by CHAINING the size argument:
+//
+//   1. the recursive family `D` + `size : D → Nat` are as in the single-step
+//      case, with `size (Cᵢ(… xⱼ …))` ι→ `Nat.succ (size xⱼ)` at the cycle's
+//      recursive field;
+//   2. each cycle equality `hᵢ : Eq D xᵢ Cᵢ₊₁(… x_{i+1} …)` gives, by
+//      `congrArg size`, `cᵢ : Eq Nat (size xᵢ) (Nat.succ (size x_{i+1}))`
+//      (def_eq after ι on the constructor side);
+//   3. chain the `cᵢ` by `Eq.trans`, wrapping `congrArg Nat.succ^j` so the
+//      middle terms line up, to reach
+//        Eq Nat (size x₀) (Nat.succ^k (size x₀));
+//   4. apply `nat_ne_succ_pow k (size x₀)` — the proof, BY INDUCTION on `Nat`,
+//      that `n ≠ Nat.succ^k n` for `k ≥ 1` (the SAME discriminator / predecessor
+//      machinery as `n ≠ Nat.succ n`, with `Nat.succ^k` for `Nat.succ`) — to
+//      close it to `False`.
+//
+// Every step is ι-reduction + `Eq.rec` (`congrArg`/`Eq.trans`) + `Nat.rec`; the
+// only added axioms are the carrier atoms (one opaque `D` atom per cycle
+// variable `xᵢ`, fresh `α` atoms for the non-recursive fields) and the `k` input
+// cycle equalities. The k = 1 special case stays on the dedicated single-step
+// path; this handles k ≥ 2 (mutual recursion and longer chains).
+// ===========================================================================
+
+/// One link of a [`AcyclicChain`]: an asserted equality `xᵢ = Cᵢ₊₁(… x_{i+1} …)`
+/// (in either orientation) whose constructor `Cᵢ₊₁` strictly contains the next
+/// cycle variable `x_{i+1}` at its single recursive field.
+struct AcyclicChainLink {
+    /// The constructor `Cᵢ₊₁` of this link's containing side.
+    ctor: ConstructorId,
+    /// `true` when the equality is asserted as `xᵢ = Cᵢ₊₁(…)`, `false` when
+    /// reversed (`Cᵢ₊₁(…) = xᵢ`). Drives whether the size congruence is fed
+    /// directly or re-oriented by `Eq.symm`.
+    forward: bool,
+}
+
+/// A length-`k` (k ≥ 2) containment cycle `x₀ ⊐ x₁ ⊐ … ⊐ x_{k-1} ⊐ x₀` located in
+/// `assertions`. The cyclic values are modeled as `k` distinct opaque `D` atoms
+/// in the kernel refutation, so only the datatype, the per-link constructor, and
+/// the orientation are needed (the concrete `TermId`s drive detection only).
+struct AcyclicChain {
+    /// The datatype `D` shared by every cycle variable.
+    datatype: DatatypeId,
+    /// The `k` links, in cycle order: link `i` is `xᵢ = Cᵢ₊₁(… x_{i+1} …)`.
+    links: Vec<AcyclicChainLink>,
+}
+
+/// A directed strict-containment edge `var → next` derived from one asserted
+/// equality `var = C(… next …)`: `var` is a non-constructor datatype term, `C`
+/// has exactly one recursive field of this datatype holding the non-constructor
+/// datatype term `next`.
+struct ContainmentEdge {
+    var: TermId,
+    next: TermId,
+    ctor: ConstructorId,
+    datatype: DatatypeId,
+    forward: bool,
+}
+
+/// Whether `term` is a constructor application.
+fn is_constructor_app(arena: &TermArena, term: TermId) -> bool {
+    matches!(
+        arena.node(term),
+        IrTermNode::App {
+            op: IrOp::DtConstruct { .. },
+            ..
+        }
+    )
+}
+
+/// Extract a single strict-containment edge from one asserted equality, in the
+/// given orientation: `var = con` where `var` is a non-constructor datatype term
+/// and `con = C(… next …)` has exactly one recursive (this-datatype) field whose
+/// argument `next` is itself a non-constructor datatype term. Declines (returns
+/// [`None`]) otherwise — keeping the route sound by only emitting genuine edges.
+fn containment_edge(
+    arena: &TermArena,
+    var: TermId,
+    con: TermId,
+    forward: bool,
+) -> Option<ContainmentEdge> {
+    let IrTermNode::App {
+        op: IrOp::DtConstruct { constructor, .. },
+        args: con_args,
+    } = arena.node(con)
+    else {
+        return None;
+    };
+    // `var` must be a non-constructor datatype term (a cycle node, not a value).
+    if is_constructor_app(arena, var) || !matches!(arena.sort_of(var), IrSort::Datatype(_)) {
+        return None;
+    }
+    let ctor = *constructor;
+    let con_args = con_args.to_vec();
+    let datatype = arena.constructor_datatype(ctor);
+    // Identify the single recursive field of THIS datatype and the term it holds;
+    // decline on any other-datatype field or a recursive-field count ≠ 1.
+    let mut next: Option<TermId> = None;
+    for ((_, field_sort), &arg) in arena.constructor_fields(ctor).iter().zip(&con_args) {
+        if let IrSort::Datatype(fdt) = field_sort {
+            if *fdt == datatype {
+                if next.is_some() {
+                    return None; // more than one recursive field — out of shape
+                }
+                next = Some(arg);
+            } else {
+                return None; // a field of a different datatype — out of scope
+            }
+        }
+    }
+    let next = next?;
+    // The recursive field must hold a non-constructor datatype term (the next
+    // cycle node); a constructor there would be a different (nested) shape.
+    if is_constructor_app(arena, next) {
+        return None;
+    }
+    Some(ContainmentEdge {
+        var,
+        next,
+        ctor,
+        datatype,
+        forward,
+    })
+}
+
+/// Find a MULTI-step (k ≥ 2) containment cycle among `assertions`, or [`None`].
+///
+/// Builds the strict-containment graph (edge `var → next` per asserted
+/// `var = C(… next …)`, [`containment_edge`]) and runs a DFS for a directed
+/// cycle of length ≥ 2. The returned [`AcyclicChain`] lists the cycle's links in
+/// order. Single-level self-cycles (`var → var`, k = 1) are intentionally NOT
+/// returned here — they keep the dedicated [`find_acyclicity_cycle`] path.
+fn find_acyclicity_chain(arena: &TermArena, assertions: &[TermId]) -> Option<AcyclicChain> {
+    // Collect every containment edge (both orientations of each equality).
+    let mut edges: Vec<ContainmentEdge> = Vec::new();
+    for &assertion in assertions {
+        let IrTermNode::App { op: IrOp::Eq, args } = arena.node(assertion) else {
+            continue;
+        };
+        let &[lhs, rhs] = &args[..] else {
+            continue;
+        };
+        for (forward, var, con) in [(true, lhs, rhs), (false, rhs, lhs)] {
+            if let Some(edge) = containment_edge(arena, var, con, forward) {
+                edges.push(edge);
+            }
+        }
+    }
+    if edges.is_empty() {
+        return None;
+    }
+    // Adjacency by source `var`: for each node, the edges leaving it. Iterate in
+    // a deterministic (insertion) order so the cycle found is stable.
+    let mut nodes: Vec<TermId> = Vec::new();
+    let mut node_index: BTreeMap<TermId, usize> = BTreeMap::new();
+    let intern = |t: TermId, nodes: &mut Vec<TermId>, idx: &mut BTreeMap<TermId, usize>| {
+        *idx.entry(t).or_insert_with(|| {
+            nodes.push(t);
+            nodes.len() - 1
+        })
+    };
+    let mut adj: Vec<Vec<usize>> = Vec::new();
+    for (e_idx, e) in edges.iter().enumerate() {
+        let vi = intern(e.var, &mut nodes, &mut node_index);
+        let ni = intern(e.next, &mut nodes, &mut node_index);
+        while adj.len() <= vi.max(ni) {
+            adj.push(Vec::new());
+        }
+        adj[vi].push(e_idx);
+        let _ = ni;
+    }
+
+    // Iterative three-colour DFS that records the edge path, so on a back-edge we
+    // can reconstruct the cycle's links.
+    let n = nodes.len();
+    let mut color = vec![0u8; n]; // 0 white, 1 grey/on-path, 2 black
+    // For each grey node, the edge index by which we entered it (parent edge).
+    let mut parent_edge = vec![usize::MAX; n];
+    for start in 0..n {
+        if color[start] != 0 {
+            continue;
+        }
+        // Stack of (node, edge_index_into_adj[node]) for explicit DFS.
+        let mut stack: Vec<(usize, usize)> = vec![(start, 0)];
+        color[start] = 1;
+        while let Some(&(node, ei)) = stack.last() {
+            if ei >= adj[node].len() {
+                color[node] = 2;
+                stack.pop();
+                continue;
+            }
+            stack.last_mut().unwrap().1 += 1;
+            let edge_idx = adj[node][ei];
+            let to = node_index[&edges[edge_idx].next];
+            match color[to] {
+                1 => {
+                    // Back-edge `node → to`: a cycle. Walk parent edges from `node`
+                    // back to `to` to collect the cycle's edge indices in order.
+                    if let Some(chain) =
+                        collect_cycle(&edges, &parent_edge, &nodes, node, to, edge_idx)
+                    {
+                        return Some(chain);
+                    }
+                }
+                0 => {
+                    color[to] = 1;
+                    parent_edge[to] = edge_idx;
+                    stack.push((to, 0));
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+/// Reconstruct the cycle's ordered links from a discovered back-edge
+/// `from → back` (edge `closing_edge`). Walks `parent_edge` from `from` up to
+/// `back`, collecting edge indices, then orders them `back → … → from → back`.
+/// Returns [`None`] for a degenerate length-1 cycle (handled by the single-step
+/// path) or any datatype mismatch among the links (kept sound by declining).
+fn collect_cycle(
+    edges: &[ContainmentEdge],
+    parent_edge: &[usize],
+    nodes: &[TermId],
+    from: usize,
+    back: usize,
+    closing_edge: usize,
+) -> Option<AcyclicChain> {
+    // Collect the back-path edges from `from` up to (but not including) `back`.
+    let mut path_edges: Vec<usize> = vec![closing_edge];
+    let mut cur = from;
+    while cur != back {
+        let pe = parent_edge[cur];
+        if pe == usize::MAX {
+            return None; // no parent — not a closed cycle through `back`
+        }
+        path_edges.push(pe);
+        // Step to the source node of the parent edge.
+        cur = nodes
+            .iter()
+            .position(|&t| t == edges[pe].var)
+            .expect("edge source is an interned node");
+    }
+    // `path_edges` is closing_edge (from→back) then parents back→…→from; the cycle
+    // in order x₀ ⊐ x₁ ⊐ … is the reverse, starting at `back`.
+    path_edges.reverse();
+    if path_edges.len() < 2 {
+        return None; // length-1 self-cycle: the single-step path covers it.
+    }
+    let datatype = edges[path_edges[0]].datatype;
+    let mut links = Vec::with_capacity(path_edges.len());
+    for &ei in &path_edges {
+        if edges[ei].datatype != datatype {
+            return None; // mixed datatypes in one cycle — out of scope, decline.
+        }
+        links.push(AcyclicChainLink {
+            ctor: edges[ei].ctor,
+            forward: edges[ei].forward,
+        });
+    }
+    Some(AcyclicChain { datatype, links })
+}
+
+/// Assemble the kernel `False` term for an [`AcyclicChain`] (k ≥ 2) and render the
+/// Lean module: build the recursive family `D`, the size measure, `k` opaque `D`
+/// atoms `x₀ … x_{k-1}`, the `k` cycle hypotheses, chain their size congruences by
+/// `Eq.trans` to `Eq Nat (size x₀) (Nat.succ^k (size x₀))`, and refute with
+/// `nat_ne_succ_pow k`.
+fn build_acyclic_chain_refutation_module(
+    arena: &TermArena,
+    chain: &AcyclicChain,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+    let k = chain.links.len();
+
+    // 1. Declare the recursive family `D` (every constructor, fields Carrier/Rec).
+    let ctor_ids = arena.datatype_constructors(chain.datatype).to_vec();
+    let ctor_shapes: Vec<(String, Vec<RecField>)> = ctor_ids
+        .iter()
+        .enumerate()
+        .map(|(j, &cid)| {
+            let shapes = arena
+                .constructor_fields(cid)
+                .iter()
+                .map(|(_, sort)| match sort {
+                    IrSort::Datatype(fdt) if *fdt == chain.datatype => RecField::Recursive,
+                    _ => RecField::Carrier,
+                })
+                .collect();
+            (format!("c{j}"), shapes)
+        })
+        .collect();
+    let family = ctx.recursive_datatype_family(&ctor_shapes)?;
+
+    // 2. The size measure `size : D → Nat`.
+    let dty = ctx.kernel.const_(family.ind, vec![]);
+    let alpha = ctx.alpha;
+    let (nat, nat_zero, nat_succ) = (ctx.prelude.nat, ctx.prelude.nat_zero, ctx.prelude.nat_succ);
+    let size = ctx
+        .kernel
+        .recursive_datatype_size(&family, alpha, nat, nat_zero, nat_succ);
+
+    // 3. One opaque `D` atom per cycle variable x₀ … x_{k-1}.
+    let mut x_atoms = Vec::with_capacity(k);
+    for _ in 0..k {
+        x_atoms.push(build_datatype_atom(&mut ctx, dty)?);
+    }
+    let size_x: Vec<ExprId> = x_atoms.iter().map(|&x| ctx.kernel.app(size, x)).collect();
+
+    // 4./5. For each link i: hypothesis hᵢ : xᵢ = Cᵢ₊₁(… x_{i+1} …), then
+    //   cᵢ := congrArg size hᵢ : Eq Nat (size xᵢ) (size con_i)
+    //       def_eq Eq Nat (size xᵢ) (Nat.succ (size x_{i+1})).
+    let one = ctx.one;
+    let mut link_congrs = Vec::with_capacity(k);
+    for (i, link) in chain.links.iter().enumerate() {
+        let next = (i + 1) % k;
+        let pos = recursive_constructor_position(&ctor_ids, link.ctor)?;
+        let shapes = family.fields[pos].clone();
+        let con = build_cycle_construct(&mut ctx, family.ctors[pos], &shapes, x_atoms[next])?;
+        let (eq_lhs, eq_rhs) = if link.forward {
+            (x_atoms[i], con)
+        } else {
+            (con, x_atoms[i])
+        };
+        let eq_prop = mk_eq_at(&mut ctx, dty, one, eq_lhs, eq_rhs);
+        let hx = fresh_axiom(&mut ctx, eq_prop, "assume")?;
+        let congr = if link.forward {
+            build_congr_size(&mut ctx, dty, size, x_atoms[i], con, hx)
+        } else {
+            let hx_flipped = build_eq_symm(&mut ctx, dty, one, con, x_atoms[i], hx);
+            build_congr_size(&mut ctx, dty, size, x_atoms[i], con, hx_flipped)
+        };
+        // congr : Eq Nat (size xᵢ) (size con) def_eq Eq Nat (size xᵢ)
+        //         (Nat.succ (size x_{next})).
+        link_congrs.push(congr);
+    }
+
+    // 6. Chain by Eq.trans, wrapping `congrArg Nat.succ^j` so the middle terms line
+    //    up. `acc : Eq Nat (size x₀) (Nat.succ^{rhs_pow} (size x_{cur_idx}))`.
+    let nat_const = ctx.kernel.const_(nat, vec![]);
+    let succ_const = ctx.kernel.const_(nat_succ, vec![]);
+
+    // acc starts as link 0: Eq Nat (size x₀) (Nat.succ (size x₁)).
+    let mut acc = link_congrs[0];
+    // rhs_pow tracks the number of `succ`s currently wrapping `size x_{cur_idx}`.
+    let mut cur_idx = 1 % k;
+    let mut rhs_pow = 1usize;
+    for &link_congr in link_congrs.iter().skip(1) {
+        // link_congr : Eq Nat (size x_{cur_idx}) (Nat.succ (size x_{next_idx})).
+        let next_idx = (cur_idx + 1) % k;
+        // congrArg (Nat.succ^{rhs_pow}) link_congr :
+        //   Eq Nat (Nat.succ^{rhs_pow} (size x_{cur_idx}))
+        //          (Nat.succ^{rhs_pow} (Nat.succ (size x_{next_idx}))).
+        let link_rhs = succ_pow_apply(&mut ctx, nat_succ, 1, size_x[next_idx]);
+        let wrapped = build_congr_succ_pow(
+            &mut ctx,
+            succ_const,
+            nat_const,
+            rhs_pow,
+            size_x[cur_idx],
+            link_rhs,
+            link_congr,
+        );
+        // Eq.trans acc wrapped : Eq Nat (size x₀)
+        //   (Nat.succ^{rhs_pow} (Nat.succ (size x_{next_idx})))
+        //   = Eq Nat (size x₀) (Nat.succ^{rhs_pow+1} (size x_{next_idx})).
+        let mid = succ_pow_apply(&mut ctx, nat_succ, rhs_pow, size_x[cur_idx]);
+        let new_pow = rhs_pow + 1;
+        let rhs = succ_pow_apply(&mut ctx, nat_succ, new_pow, size_x[next_idx]);
+        acc = build_eq_trans_nat(&mut ctx, nat_const, size_x[0], mid, rhs, acc, wrapped);
+        cur_idx = next_idx;
+        rhs_pow = new_pow;
+    }
+    // After the loop cur_idx == 0 and rhs_pow == k:
+    //   acc : Eq Nat (size x₀) (Nat.succ^k (size x₀)).
+    debug_assert_eq!(cur_idx, 0);
+    debug_assert_eq!(rhs_pow, k);
+
+    // 7. nat_ne_succ_pow k applied to (size x₀) and acc : False.
+    let nat_ne_succ_pow = build_nat_ne_succ_pow(&mut ctx, k);
+    let applied_n = ctx.kernel.app(nat_ne_succ_pow, size_x[0]);
+    let false_term = ctx.kernel.app(applied_n, acc);
+
+    require_infers_false(&mut ctx, false_term)?;
+    let _ = nat_const;
+    let bool_ind = ctx.prelude.bool_;
+    let nat_ind = ctx.prelude.nat;
+    let false_const = {
+        let n = ctx.prelude().false_;
+        ctx.kernel_mut().const_(n, vec![])
+    };
+    Ok(ctx.kernel().render_lean_module_with_inductives(
+        LEAN_MODULE_THEOREM,
+        false_const,
+        false_term,
+        &[family.ind, bool_ind, nat_ind],
+    ))
+}
+
+/// Apply `Nat.succ` `j` times to `base`, returning `Nat.succ^j base`.
+fn succ_pow_apply(ctx: &mut ReconstructCtx, nat_succ: NameId, j: usize, base: ExprId) -> ExprId {
+    let mut e = base;
+    for _ in 0..j {
+        let s = ctx.kernel.const_(nat_succ, vec![]);
+        e = ctx.kernel.app(s, e);
+    }
+    e
+}
+
+/// Build `congrArg (Nat.succ^pow) h` as nested `congrArg Nat.succ` `Eq.rec`s:
+/// given `h : Eq Nat a b`, produce `Eq Nat (Nat.succ^pow a) (Nat.succ^pow b)`.
+/// `a`/`b` are the equands of `h`; `pow` is the number of `Nat.succ` wraps. Pure
+/// `Eq.rec` — axiom-free.
+fn build_congr_succ_pow(
+    ctx: &mut ReconstructCtx,
+    succ: ExprId,
+    nat_const: ExprId,
+    pow: usize,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let mut proof = h;
+    let mut left = a;
+    let mut right = b;
+    for _ in 0..pow {
+        proof = build_congr_unary(ctx, nat_const, succ, left, right, proof);
+        let new_left = ctx.kernel.app(succ, left);
+        let new_right = ctx.kernel.app(succ, right);
+        left = new_left;
+        right = new_right;
+    }
+    let _ = (left, right);
+    proof
+}
+
+/// Build `congrArg f h` for a unary `f : Nat → Nat` as an `Eq.rec`: given
+/// `h : Eq Nat a b`, produce `Eq Nat (f a) (f b)`. The `Nat → Nat` analogue of
+/// [`build_congr_size`] (`size : D → Nat`) specialised to a same-sort function.
+fn build_congr_unary(
+    ctx: &mut ReconstructCtx,
+    nat_const: ExprId,
+    f: ExprId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let f_a = ctx.kernel.app(f, a);
+    // motive := fun (z : Nat) (_ : Eq Nat a z) => Eq Nat (f a) (f z).
+    let transport_motive = {
+        let z1 = ctx.kernel.bvar(1);
+        let f_z = ctx.kernel.app(f, z1);
+        let body = mk_eq_at(ctx, nat_const, one, f_a, f_z);
+        let z0 = ctx.kernel.bvar(0);
+        let eq_a_z = mk_eq_at(ctx, nat_const, one, a, z0);
+        let inner = ctx.kernel.lam(anon, eq_a_z, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    let refl = ctx.kernel.const_(ctx.prelude.eq_refl, vec![one]);
+    let refl_case = {
+        let e = ctx.kernel.app(refl, nat_const);
+        ctx.kernel.app(e, f_a)
+    };
+    let v = ctx.kernel.level_zero();
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, one]);
+    let e = ctx.kernel.app(rec_eq, nat_const);
+    let e = ctx.kernel.app(e, a);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, b);
+    ctx.kernel.app(e, h)
+}
+
+/// Build `Eq.trans` over `Nat`: given `h1 : Eq Nat a b` and `h2 : Eq Nat b c`,
+/// produce `Eq Nat a c`. An `Eq.rec` transport of `h1` along `h2` (motive
+/// `fun (z) (_ : Eq Nat b z) => Eq Nat a z`, refl case `h1`). Pure `Eq.rec` —
+/// axiom-free. Specialised to `Nat` (the chained size argument's codomain).
+fn build_eq_trans_nat(
+    ctx: &mut ReconstructCtx,
+    nat_const: ExprId,
+    a: ExprId,
+    b: ExprId,
+    c: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    // motive := fun (z : Nat) (_ : Eq Nat b z) => Eq Nat a z.
+    let transport_motive = {
+        let z1 = ctx.kernel.bvar(1);
+        let body = mk_eq_at(ctx, nat_const, one, a, z1);
+        let z0 = ctx.kernel.bvar(0);
+        let eq_b_z = mk_eq_at(ctx, nat_const, one, b, z0);
+        let inner = ctx.kernel.lam(anon, eq_b_z, body, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    // refl case : Eq Nat a b — exactly `h1` (the `z := b` instance is `Eq Nat a b`).
+    let refl_case = h1;
+    let v = ctx.kernel.level_zero();
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![v, one]);
+    let e = ctx.kernel.app(rec_eq, nat_const);
+    let e = ctx.kernel.app(e, b);
+    let e = ctx.kernel.app(e, transport_motive);
+    let e = ctx.kernel.app(e, refl_case);
+    let e = ctx.kernel.app(e, c);
+    ctx.kernel.app(e, h2)
 }
 
 /// Position of constructor `cid` in `ctor_ids` (declaration order), or a
@@ -3781,6 +4307,152 @@ fn build_congr_pred_lemma(ctx: &mut ReconstructCtx, pred: ExprId) -> ExprId {
     let lam_h = ctx.kernel.lam(anon, h_ty, body, BinderInfo::Default);
     let lam_b = ctx.kernel.lam(anon, nat_const, lam_h, BinderInfo::Default);
     ctx.kernel.lam(anon, nat_const, lam_b, BinderInfo::Default)
+}
+
+/// Build `Nat.succ^k n` (k applications of `Nat.succ` to `n`); `k == 0` returns
+/// `n` unchanged.
+fn nat_succ_pow(ctx: &mut ReconstructCtx, n: ExprId, k: usize) -> ExprId {
+    let succ_const = ctx.kernel.const_(ctx.prelude.nat_succ, vec![]);
+    let mut e = n;
+    for _ in 0..k {
+        e = ctx.kernel.app(succ_const, e);
+    }
+    e
+}
+
+/// Build the proof `nat_ne_succ_pow k : Π (n : Nat), Eq Nat n (Nat.succ^k n) → False`
+/// — the fact that `n ≠ Nat.succ^k n` for `k ≥ 1` — **by induction on `Nat`**, the
+/// chained generalization of [`build_nat_ne_succ`] (the `k = 1` case). The proof is
+/// structurally identical to `nat_ne_succ` with `Nat.succ^k` in place of
+/// `Nat.succ`; the SAME discriminator and predecessor selector serve:
+///
+/// - **motive** `P := λ (n : Nat) => Eq Nat n (Nat.succ^k n) → False`;
+/// - **base** `P Nat.zero`: `Nat.succ^k Nat.zero` is `succ`-headed (k ≥ 1) so the
+///   `zero ≠ succ` discriminator `d` gives `d (succ^k zero)` ι→ `False`, and
+///   transporting `True.intro : d zero` along the hypothesis lands `False`;
+/// - **step** `Π (k_var) (ih), P (succ k_var)`: `Nat.succ^k (succ k_var)` is
+///   `succ (Nat.succ^k k_var)`, so from `h : Eq Nat (succ k_var)
+///   (succ (Nat.succ^k k_var))`, `congrArg pred h` is `def_eq`
+///   `Eq Nat k_var (Nat.succ^k k_var) = P k_var`'s hypothesis, which `ih` refutes.
+///
+/// Panics-free for `k ≥ 1`; `k == 0` would build the (true) `n ≠ n → False`, never
+/// requested by the chained acyclicity route (a cycle has `k ≥ 1` constructors).
+fn build_nat_ne_succ_pow(ctx: &mut ReconstructCtx, k: usize) -> ExprId {
+    let motive = build_nat_ne_succ_pow_motive(ctx, k);
+    let m_zero = build_nat_ne_succ_pow_m_zero(ctx, k);
+    let m_succ = build_nat_ne_succ_pow_m_succ(ctx, k);
+    // `Nat.rec.{0} P m_zero m_succ` : Π (n : Nat), P n.
+    let z = ctx.kernel.level_zero();
+    let rec0 = ctx.kernel.const_(ctx.prelude.nat_rec, vec![z]);
+    let e = ctx.kernel.app(rec0, motive);
+    let e = ctx.kernel.app(e, m_zero);
+    ctx.kernel.app(e, m_succ)
+}
+
+/// The induction motive `P := λ (n : Nat) => Eq Nat n (Nat.succ^k n) → False` of
+/// the `n ≠ Nat.succ^k n` proof.
+fn build_nat_ne_succ_pow_motive(ctx: &mut ReconstructCtx, k: usize) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    // Under the binder `n` (BVar 0): `Eq Nat n (Nat.succ^k n) → False`.
+    let n0 = ctx.kernel.bvar(0);
+    let succ_k_n = nat_succ_pow(ctx, n0, k);
+    let n0b = ctx.kernel.bvar(0);
+    let eq_n = mk_eq_at(ctx, nat_const, one, n0b, succ_k_n);
+    let arrow = ctx.kernel.pi(anon, eq_n, false_const, BinderInfo::Default);
+    ctx.kernel.lam(anon, nat_const, arrow, BinderInfo::Default)
+}
+
+/// The base-case minor `m_zero : P Nat.zero` = `Eq Nat zero (succ^k zero) → False`:
+/// `λ (h : Eq Nat zero (succ^k zero)), Eq.rec.{0,1} Nat zero
+///  (λ (m : Nat)(_ : Eq Nat zero m) => d m) (True.intro : d zero) (succ^k zero) h`,
+/// where (for `k ≥ 1`) `d zero` `def_eq` `True` and `d (succ^k zero)` `def_eq`
+/// `False`, so the transport lands `False`.
+fn build_nat_ne_succ_pow_m_zero(ctx: &mut ReconstructCtx, k: usize) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let z = ctx.kernel.level_zero();
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let zero_const = ctx.kernel.const_(ctx.prelude.nat_zero, vec![]);
+    let succ_k_zero = nat_succ_pow(ctx, zero_const, k);
+    let discr = build_nat_discriminator(ctx);
+
+    let hyp_ty = mk_eq_at(ctx, nat_const, one, zero_const, succ_k_zero);
+    // transport motive: λ (m : Nat) (_ : Eq Nat zero m) => d m.
+    let t_motive = {
+        let m1 = ctx.kernel.bvar(1);
+        let d_m = ctx.kernel.app(discr, m1);
+        let m0 = ctx.kernel.bvar(0);
+        let eq_zero_m = mk_eq_at(ctx, nat_const, one, zero_const, m0);
+        let inner = ctx.kernel.lam(anon, eq_zero_m, d_m, BinderInfo::Default);
+        ctx.kernel.lam(anon, nat_const, inner, BinderInfo::Default)
+    };
+    let refl_case = ctx.kernel.const_(ctx.prelude.true_intro, vec![]);
+    let rec_eq = ctx.kernel.const_(ctx.prelude.eq_rec, vec![z, one]);
+    let body = {
+        let e = ctx.kernel.app(rec_eq, nat_const);
+        let e = ctx.kernel.app(e, zero_const);
+        let e = ctx.kernel.app(e, t_motive);
+        let e = ctx.kernel.app(e, refl_case);
+        let e = ctx.kernel.app(e, succ_k_zero);
+        let h = ctx.kernel.bvar(0);
+        ctx.kernel.app(e, h)
+    };
+    ctx.kernel.lam(anon, hyp_ty, body, BinderInfo::Default)
+}
+
+/// The step minor `m_succ : Π (k_var : Nat) (ih : P k_var), P (succ k_var)`:
+/// `λ (k_var : Nat) (ih : Eq Nat k_var (succ^k k_var) → False)
+///  (h : Eq Nat (succ k_var) (succ^k (succ k_var))), ih (congrArg pred h)`.
+/// Since `succ^k (succ k_var) = succ (succ^k k_var)`, `congrArg pred h` is `def_eq`
+/// `Eq Nat k_var (succ^k k_var)` (ι: `pred (succ k_var)` ι→ `k_var`,
+/// `pred (succ (succ^k k_var))` ι→ `succ^k k_var`), which `ih` turns into `False`.
+fn build_nat_ne_succ_pow_m_succ(ctx: &mut ReconstructCtx, k: usize) -> ExprId {
+    let anon = ctx.kernel.anon();
+    let one = ctx.one;
+    let nat_const = ctx.kernel.const_(ctx.prelude.nat, vec![]);
+    let succ_const = ctx.kernel.const_(ctx.prelude.nat_succ, vec![]);
+    let false_const = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+    let pred = build_nat_pred(ctx);
+    let congr_pred = build_congr_pred_lemma(ctx, pred);
+
+    // Build inside three binders: k_var(BVar 2), ih(BVar 1), h(BVar 0).
+    // hyp type of `h`: Eq Nat (succ k_var) (succ^k (succ k_var))
+    //   (under k_var, ih ⇒ k_var = BVar 1).
+    let k_for_h = ctx.kernel.bvar(1);
+    let succ_k_h = ctx.kernel.app(succ_const, k_for_h);
+    let succ_pow_succ_k_h = nat_succ_pow(ctx, succ_k_h, k);
+    let h_ty = mk_eq_at(ctx, nat_const, one, succ_k_h, succ_pow_succ_k_h);
+
+    // congr_pred (succ k_var) (succ^k (succ k_var)) h
+    //   : Eq Nat (pred (succ k_var)) (pred (succ^k (succ k_var)))
+    //   def_eq Eq Nat k_var (succ^k k_var).
+    // Under k_var(BVar 2), ih(BVar 1), h(BVar 0): k_var = BVar 2, h = BVar 0.
+    let k_under_h = ctx.kernel.bvar(2);
+    let succ_k = ctx.kernel.app(succ_const, k_under_h);
+    let succ_pow_succ_k = nat_succ_pow(ctx, succ_k, k);
+    let h_var = ctx.kernel.bvar(0);
+    let congr = {
+        let e = ctx.kernel.app(congr_pred, succ_k);
+        let e = ctx.kernel.app(e, succ_pow_succ_k);
+        ctx.kernel.app(e, h_var)
+    };
+    // ih (congr) : False.
+    let ih_var = ctx.kernel.bvar(1);
+    let applied = ctx.kernel.app(ih_var, congr);
+
+    // Bind h, then ih, then k_var.
+    let lam_h = ctx.kernel.lam(anon, h_ty, applied, BinderInfo::Default);
+    // ih type: Eq Nat k_var (succ^k k_var) → False  (under k_var ⇒ k_var = BVar 0).
+    let k_for_ih = ctx.kernel.bvar(0);
+    let succ_pow_k_ih = nat_succ_pow(ctx, k_for_ih, k);
+    let k_for_ih2 = ctx.kernel.bvar(0);
+    let eq_k = mk_eq_at(ctx, nat_const, one, k_for_ih2, succ_pow_k_ih);
+    let ih_ty = ctx.kernel.pi(anon, eq_k, false_const, BinderInfo::Default);
+    let lam_ih = ctx.kernel.lam(anon, ih_ty, lam_h, BinderInfo::Default);
+    ctx.kernel.lam(anon, nat_const, lam_ih, BinderInfo::Default)
 }
 
 /// Assemble the kernel `False` term for a [`TesterContradiction`] and render the

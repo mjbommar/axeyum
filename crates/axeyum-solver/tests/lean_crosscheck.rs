@@ -523,6 +523,103 @@ fn acyclicity_cycle_reversed_check_in_real_lean() {
     lean_accepts("acyclicity_cycle_reversed", &source);
 }
 
+/// Datatype acyclicity, **MULTI-STEP** containment cycle (k = 2, the mutual-
+/// recursion case): `x = cons(h, y) ∧ y = cons(g, x)` over the recursive
+/// `IntList`. The cycle `x ⊐ y ⊐ x` is UNSAT, discharged by the CHAINED size
+/// argument — `congrArg size` on each link gives `size x = Nat.succ (size y)` and
+/// `size y = Nat.succ (size x)`; chaining by `Eq.trans` (wrapping `congrArg
+/// Nat.succ`) yields `size x = Nat.succ^2 (size x)`, refuted by `n ≠ Nat.succ^2 n`
+/// (the chained generalization of `n ≠ Nat.succ n`). No `noConfusion`, no assumed
+/// acyclicity axiom, no well-founded recursion; `#print axioms` stays clean.
+#[test]
+fn acyclicity_two_step_cycle_check_in_real_lean() {
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(2)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let h = {
+        let s = arena.declare("h", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let g = {
+        let s = arena.declare("g", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let x = {
+        let s = arena.declare("x", Sort::Datatype(list)).unwrap();
+        arena.var(s)
+    };
+    let y = {
+        let s = arena.declare("y", Sort::Datatype(list)).unwrap();
+        arena.var(s)
+    };
+    // x = cons(h, y) ∧ y = cons(g, x): a 2-step containment cycle x ⊐ y ⊐ x.
+    let cons_h_y = arena.construct(cons, &[h, y]).unwrap();
+    let cons_g_x = arena.construct(cons, &[g, x]).unwrap();
+    let e1 = arena.eq(x, cons_h_y).unwrap();
+    let e2 = arena.eq(y, cons_g_x).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2])
+        .expect("2-step acyclicity cycle unsat reconstructs");
+    assert!(
+        !source.to_lowercase().contains("acyclic"),
+        "the multi-step acyclicity module must not declare an acyclicity axiom:\n{source}"
+    );
+    lean_accepts("acyclicity_two_step_cycle", &source);
+}
+
+/// Datatype acyclicity, **3-step** containment cycle `x = cons(h, y) ∧
+/// y = cons(g, z) ∧ z = cons(f, x)` — the general-`k` chained size argument at
+/// k = 3 (`size x = Nat.succ^3 (size x)`, refuted by `n ≠ Nat.succ^3 n`). Confirms
+/// the chain length generalizes beyond the mutual-recursion (k = 2) case.
+#[test]
+fn acyclicity_three_step_cycle_check_in_real_lean() {
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(2)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let mk_bv = |arena: &mut TermArena, name: &str| {
+        let s = arena.declare(name, Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let mk_dt = |arena: &mut TermArena, name: &str| {
+        let s = arena.declare(name, Sort::Datatype(list)).unwrap();
+        arena.var(s)
+    };
+    let (h, g, f) = (
+        mk_bv(&mut arena, "h"),
+        mk_bv(&mut arena, "g"),
+        mk_bv(&mut arena, "f"),
+    );
+    let (x, y, z) = (
+        mk_dt(&mut arena, "x"),
+        mk_dt(&mut arena, "y"),
+        mk_dt(&mut arena, "z"),
+    );
+    let cons_h_y = arena.construct(cons, &[h, y]).unwrap();
+    let cons_g_z = arena.construct(cons, &[g, z]).unwrap();
+    let cons_f_x = arena.construct(cons, &[f, x]).unwrap();
+    let e1 = arena.eq(x, cons_h_y).unwrap();
+    let e2 = arena.eq(y, cons_g_z).unwrap();
+    let e3 = arena.eq(z, cons_f_x).unwrap();
+    let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[e1, e2, e3])
+        .expect("3-step acyclicity cycle unsat reconstructs");
+    lean_accepts("acyclicity_three_step_cycle", &source);
+}
+
 /// Soundness-negative: a FINITE list `x = cons(h, nil)` is **satisfiable** (no
 /// cycle — the tail `nil` does not contain `x`), so the acyclicity route must NOT
 /// claim it UNSAT. The reconstructor declines (the tail is not `x`), so no wrong
