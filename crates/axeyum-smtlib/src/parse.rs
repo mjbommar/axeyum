@@ -9,7 +9,7 @@
 //! (ADR-0009 lifecycle). Term conversion is iterative, so deep benchmark terms
 //! cannot overflow the stack.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
 use axeyum_ir::{Rational, Sort, TermArena, TermId, TermNode};
@@ -85,6 +85,15 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     // [`SmtError::Unsupported`] for a script whose set usage falls outside the
     // provably-sound subset (see [`desugar_sets`]).
     desugar_sets(&mut exprs)?;
+    // Constant-array elimination: a `(select ((as const A) v) i)` always denotes
+    // `v` (a const array maps *every* index to `v`), so const-array formulas can be
+    // decided without an `Int`-array IR sort by rewriting them away on the
+    // s-expression tree, before any term is built. Sound and **sort-agnostic** (the
+    // index/element sorts may be `Int`/`Bool`/`BV`); a no-op (and no allocation) for
+    // scripts that use no const arrays, and a clean [`SmtError::Unsupported`] for the
+    // const-array shapes outside the provably-sound subset (see
+    // [`desugar_const_arrays`]).
+    desugar_const_arrays(&mut exprs);
     // Bounded finite-sequence theory: build the packed-width → element-width
     // registry for every `(Seq E)` over a fixed-width element sort, once, up front
     // (mirroring [`uninterpreted_sort_width`]). The map is then immutable for the
@@ -199,6 +208,318 @@ fn count_sexpr_nodes(e: &SExpr) -> usize {
     match e {
         SExpr::Atom(_) => 1,
         SExpr::List(items) => 1 + items.iter().map(count_sexpr_nodes).sum::<usize>(),
+    }
+}
+
+// --- constant arrays: `(select ((as const A) v) i)` → `v` --------------------
+//
+// A *constant array* `((as const (Array I E)) v)` is the function that maps every
+// index to the single value `v`. The defining identity is therefore
+//
+//     ∀ i.  (select ((as const A) v) i) = v
+//
+// which is **sort-agnostic**: it holds for any index sort `I` and element sort `E`
+// (`Int`, `Bool`, `BitVec`, …). This lets us decide const-array formulas — e.g.
+// the cvc5 `QF_ALIA` `constarr` family, `(Array Int Int)` / `(Array Int Bool)`
+// that axeyum cannot otherwise represent — entirely by an s-expression rewrite,
+// with **no** IR `Sort::Array` generalization (just like uninterpreted sorts,
+// `79a0679`, and finite sets).
+//
+// # The sound subset (everything else is declined)
+//
+// A symbol `s` is treated as a *const-array alias* when the script binds it,
+// **exactly once**, with a top-level assertion `(= s ca)` (or `(= ca s)`) whose
+// right side `ca` is a const-array expression: either a literal
+// `((as const A) v)` or a `store`-chain over one. We then:
+//
+//   * substitute every *other* use of `s` by `ca` (so all reads/equalities see
+//     the concrete const array), and
+//   * drop both the defining assertion and `s`'s `declare-const`/`declare-fun`,
+//     so the (non-BV) `Array` sort never reaches `parse_sort`.
+//
+// With the aliases inlined, the remaining const-array operators are reduced
+// bottom-up by [`reduce_const_array_sexpr`]:
+//
+//   * `(select ca i)` with `ca` a literal const array → its value `v`. Sound by
+//     the identity above, for *any* index term `i`.
+//   * `(select (store arr j w) i)` → `(ite (= i j) w (select arr i))`
+//     (read-over-write, SMT-LIB array axiom), recursing until it bottoms out at a
+//     const array. The `=` over the index sort and the `ite` over the element sort
+//     are ordinary terms axeyum already decides.
+//   * `(= ca1 ca2)` with **both** sides const arrays → `(= v1 v2)` (two constant
+//     arrays are extensionally equal iff their values are equal — the index sort
+//     is non-empty, so the universally-quantified pointwise equality collapses to
+//     the single value equality).
+//
+// Anything outside this subset is left **declined** (a sound `unknown`/`Unsupported`
+// from the existing sort machinery), never given a wrong verdict:
+//
+//   * A `select`/`store` over a *free* (non-const-derived) `Int`-array variable —
+//     the general `Int`-array decision procedure, an IR keystone, out of scope.
+//   * A `store`-chain equality connecting two *different* const arrays
+//     (`constarr3`) — `(= ca1 ca2)` where the sides are `store`-derived, not bare
+//     const arrays — is not reduced (cvc5 itself errors on this), so the residual
+//     non-BV `Array` equality declines at `parse_sort`.
+//   * A const array of a non-modelable element sort declines when its value `v`
+//     reaches term conversion.
+//
+// Soundness rests only on the array axioms (read-over-write and constant-array
+// extensionality), so no wrong `sat`/`unsat` is possible: every rewrite step is a
+// denotation-preserving equality.
+
+/// Constant-array elimination over the whole script's s-expression tree
+/// (in place), before any term is built. See the module note above for the
+/// sound subset; out-of-subset const-array shapes are left for the existing sort
+/// machinery to decline (never given a wrong verdict).
+///
+/// Fast path: a script that mentions no `as const` form is left untouched (and
+/// unallocated). This pass never fails — unsupported residual array forms are
+/// declined later by [`parse_sort`]/term conversion — so it returns `()` rather
+/// than a `Result` (unlike the fallible [`desugar_sets`]).
+fn desugar_const_arrays(exprs: &mut Vec<SExpr>) {
+    // Fast path: nothing const-array-related anywhere.
+    if !exprs.iter().any(mentions_const_array) {
+        return;
+    }
+    // Phase A — collect const-array aliases: symbols bound *exactly once* by a
+    // top-level `(assert (= s ca))` / `(assert (= ca s))` whose `ca` is a
+    // const-array expression. A symbol bound more than once, or also used as a
+    // store target in a way we cannot inline, is left un-aliased (so its uses
+    // decline through the normal path rather than risk an unsound substitution).
+    let mut alias_value: HashMap<String, SExpr> = HashMap::new();
+    let mut alias_disqualified: HashSet<String> = HashSet::new();
+    for e in exprs.iter() {
+        if let Some((sym, ca)) = const_array_definition(e) {
+            if alias_value.contains_key(sym) || alias_disqualified.contains(sym) {
+                // Seen twice: a single concrete const-array binding is required for
+                // a sound inline, so disqualify the symbol entirely.
+                alias_value.remove(sym);
+                alias_disqualified.insert(sym.to_owned());
+            } else {
+                alias_value.insert(sym.to_owned(), ca.clone());
+            }
+        }
+    }
+    if alias_value.is_empty() {
+        // No safely-inlinable const-array alias; only literal const-array forms (if
+        // any) remain, which `reduce_const_array_sexpr` handles directly below.
+        for e in exprs.iter_mut() {
+            reduce_const_array_sexpr(e);
+        }
+        return;
+    }
+    // Phase B — rewrite the command list:
+    //   * drop the `declare-const`/`declare-fun` of every aliased symbol,
+    //   * drop each aliased symbol's defining `(assert (= s ca))`,
+    //   * inline `s → ca` everywhere else, then reduce const-array operators.
+    let mut rewritten: Vec<SExpr> = Vec::with_capacity(exprs.len());
+    for e in exprs.drain(..) {
+        if is_alias_declaration(&e, &alias_value) || is_alias_definition(&e, &alias_value) {
+            continue;
+        }
+        let mut e = e;
+        inline_aliases(&mut e, &alias_value);
+        reduce_const_array_sexpr(&mut e);
+        rewritten.push(e);
+    }
+    *exprs = rewritten;
+}
+
+/// Whether `e` mentions an `(as const …)` constant-array head anywhere.
+fn mentions_const_array(e: &SExpr) -> bool {
+    match e {
+        SExpr::Atom(_) => false,
+        SExpr::List(items) => {
+            (items.first().and_then(SExpr::atom) == Some("as")
+                && items.get(1).and_then(SExpr::atom) == Some("const"))
+                || items.iter().any(mentions_const_array)
+        }
+    }
+}
+
+/// Whether `e` is a constant-array *expression*: a literal `((as const A) v)`, or
+/// a `store`-chain whose base is one. (A bare symbol is *not* — alias inlining
+/// turns symbols into these before reduction.)
+fn is_const_array_expr(e: &SExpr) -> bool {
+    let Some(items) = e.list() else { return false };
+    if is_const_array_literal(e) {
+        return true;
+    }
+    // `(store arr j w)` over a const-array base.
+    items.len() == 4 && items[0].atom() == Some("store") && is_const_array_expr(&items[1])
+}
+
+/// Whether `e` is a *literal* constant array `((as const A) v)` whose array sort
+/// `A` is **not** purely bit-vector-indexed/valued — a list whose head is the
+/// `(as const A)` qualified identifier with one argument (the value).
+///
+/// The bit-vector-array case (`(Array (_ BitVec i) (_ BitVec e))`) is deliberately
+/// *excluded*: those const arrays are already handled by the IR
+/// `arena.const_array` and `eliminate_arrays` path (ADR-0010, `QF_ABV`), and this
+/// pass must leave that working path untouched (no regression). Only the
+/// otherwise-unrepresentable non-BV-array const arrays (`(Array Int Int)`,
+/// `(Array Int Bool)`, …) are rewritten here.
+fn is_const_array_literal(e: &SExpr) -> bool {
+    let Some(items) = e.list() else { return false };
+    if items.len() != 2 {
+        return false;
+    }
+    let Some(head) = items[0].list() else {
+        return false;
+    };
+    head.first().and_then(SExpr::atom) == Some("as")
+        && head.len() == 3
+        && head[1].atom() == Some("const")
+        && !is_bv_array_sort(&head[2])
+}
+
+/// Whether the sort s-expr `s` is `(Array (_ BitVec i) (_ BitVec e))` — a purely
+/// bit-vector-indexed/valued array, which the existing IR array path handles. Used
+/// to *exclude* BV const arrays from the s-expression const-array rewrite so the
+/// `QF_ABV` path is left untouched.
+fn is_bv_array_sort(s: &SExpr) -> bool {
+    let Some(items) = s.list() else { return false };
+    items.len() == 3
+        && items[0].atom() == Some("Array")
+        && is_bv_sort_sexpr(&items[1])
+        && is_bv_sort_sexpr(&items[2])
+}
+
+/// Whether the sort s-expr `s` is `(_ BitVec n)`.
+fn is_bv_sort_sexpr(s: &SExpr) -> bool {
+    s.list().is_some_and(|items| {
+        items.len() == 3 && items[0].atom() == Some("_") && items[1].atom() == Some("BitVec")
+    })
+}
+
+/// If `e` is `(assert (= s ca))` or `(assert (= ca s))` with `s` a symbol and
+/// `ca` a const-array expression, return `(s, ca)`. Used to collect const-array
+/// aliases; only the **defining** equality is matched (a single value binding).
+fn const_array_definition(e: &SExpr) -> Option<(&str, &SExpr)> {
+    let items = e.list()?;
+    if items.len() != 2 || items[0].atom() != Some("assert") {
+        return None;
+    }
+    let eq = items[1].list()?;
+    if eq.len() != 3 || eq[0].atom() != Some("=") {
+        return None;
+    }
+    // `(= s ca)` or `(= ca s)`.
+    if let Some(s) = eq[1].atom() {
+        if is_const_array_expr(&eq[2]) {
+            return Some((s, &eq[2]));
+        }
+    }
+    if let Some(s) = eq[2].atom() {
+        if is_const_array_expr(&eq[1]) {
+            return Some((s, &eq[1]));
+        }
+    }
+    None
+}
+
+/// Whether `e` is `(declare-const s …)` / `(declare-fun s () …)` for a symbol `s`
+/// in `aliases` (so the declaration of an inlined const-array alias is dropped).
+fn is_alias_declaration(e: &SExpr, aliases: &HashMap<String, SExpr>) -> bool {
+    let Some(items) = e.list() else { return false };
+    let head = items.first().and_then(SExpr::atom);
+    if head != Some("declare-const") && head != Some("declare-fun") {
+        return false;
+    }
+    items
+        .get(1)
+        .and_then(SExpr::atom)
+        .is_some_and(|s| aliases.contains_key(s))
+}
+
+/// Whether `e` is the defining `(assert (= s ca))` of an aliased symbol `s`
+/// (dropped after inlining: the binding is captured in the alias map).
+fn is_alias_definition(e: &SExpr, aliases: &HashMap<String, SExpr>) -> bool {
+    const_array_definition(e).is_some_and(|(s, _)| aliases.contains_key(s))
+}
+
+/// Replace every *atom* use of an aliased const-array symbol by its const-array
+/// value expression, recursively. Inlining a definition-free term position is
+/// sound: the alias map holds exactly the const array the symbol was asserted
+/// equal to.
+fn inline_aliases(e: &mut SExpr, aliases: &HashMap<String, SExpr>) {
+    match e {
+        SExpr::Atom(a) => {
+            if let Some(ca) = aliases.get(a) {
+                *e = ca.clone();
+            }
+        }
+        SExpr::List(items) => {
+            for child in items.iter_mut() {
+                inline_aliases(child, aliases);
+            }
+        }
+    }
+}
+
+/// Reduce constant-array operators bottom-up (in place):
+///
+/// * `(select ca i)` with `ca` a literal const array → its value `v`;
+/// * `(select (store arr j w) i)` → `(ite (= i j) w (select arr i))`, recursing
+///   until it bottoms out at a const array;
+/// * `(= ca1 ca2)` with both sides literal const arrays → `(= v1 v2)`.
+///
+/// Forms outside this subset are left untouched (and decline through the normal
+/// sort machinery). Every step is denotation-preserving (the array axioms).
+fn reduce_const_array_sexpr(e: &mut SExpr) {
+    let SExpr::List(items) = e else { return };
+    // Bottom-up: reduce children first so a `select` over a freshly-reduced
+    // store-chain still sees the const array underneath.
+    for child in items.iter_mut() {
+        reduce_const_array_sexpr(child);
+    }
+    let Some(head) = items.first().and_then(SExpr::atom) else {
+        return;
+    };
+    match head {
+        // `(select arr i)`.
+        "select" if items.len() == 3 => {
+            if let Some(v) = const_array_value(&items[1]) {
+                // `(select ((as const A) v) i)` = `v` for any `i`.
+                *e = v.clone();
+            } else if let Some(items1) = items[1].list()
+                && items1.len() == 4
+                && items1[0].atom() == Some("store")
+            {
+                // Read-over-write: `(select (store arr j w) i)`
+                //   → `(ite (= i j) w (select arr i))`.
+                let arr = items1[1].clone();
+                let j = items1[2].clone();
+                let w = items1[3].clone();
+                let i = items[2].clone();
+                let mut inner = SExpr::List(vec![atom("select"), arr, i.clone()]);
+                reduce_const_array_sexpr(&mut inner);
+                *e = SExpr::List(vec![
+                    atom("ite"),
+                    SExpr::List(vec![atom("="), i, j]),
+                    w,
+                    inner,
+                ]);
+            }
+        }
+        // `(= a b)` between two literal const arrays → value equality.
+        "=" if items.len() == 3 => {
+            if let (Some(v1), Some(v2)) =
+                (const_array_value(&items[1]), const_array_value(&items[2]))
+            {
+                *e = SExpr::List(vec![atom("="), v1.clone(), v2.clone()]);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The value `v` of a *literal* constant array `((as const A) v)`, or `None`.
+fn const_array_value(e: &SExpr) -> Option<&SExpr> {
+    if is_const_array_literal(e) {
+        e.list().map(|items| &items[1])
+    } else {
+        None
     }
 }
 

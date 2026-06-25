@@ -4454,3 +4454,247 @@ fn ff_two_distinct_width_primes_parse() {
     assert_eq!(script.arena.sort_of(av), Sort::BitVec(2));
     assert_eq!(script.arena.sort_of(bv), Sort::BitVec(3));
 }
+
+/// Const-array `select` over an `Int`-indexed/valued array — which axeyum cannot
+/// otherwise represent — is rewritten to the array's value, so the whole formula
+/// reduces to pure `Int` constraints. `all1 = (as const) 1`, `a = select(all1, i)`,
+/// `a != 1` is **unsat** (the const array is `1` at every index). We oracle-check
+/// the *reduction* by evaluation: the residual assertions are `(= a 1)` and
+/// `(not (= a 1))`, so under `a = 1` the first holds and the second fails, and
+/// under `a = 2` the first fails — there is no `a` satisfying both (unsat), and the
+/// rewrite eliminated the array entirely (no `select`/array sort remains).
+#[test]
+fn const_array_select_reduces_int_indexed() {
+    let text = r"
+        (set-logic QF_ALIA)
+        (declare-const all1 (Array Int Int))
+        (declare-const a Int)
+        (declare-const i Int)
+        (assert (= all1 ((as const (Array Int Int)) 1)))
+        (assert (= a (select all1 i)))
+        (assert (not (= a 1)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+    assert!(script.arena.find_symbol("all1").is_none());
+    let a = script.arena.find_symbol("a").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(a, Value::Int(1));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        eval(&script.arena, script.assertions[1], &asg).unwrap(),
+        Value::Bool(false)
+    );
+    asg.set(a, Value::Int(2));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// A **sat** const-array case (cvc5 `issue4414-2`): `c = (as const) 0`,
+/// `a = select(c, b)` reduces to `a = 0`. The witness `a = 0` satisfies it.
+#[test]
+fn const_array_select_sat_witness() {
+    let text = r"
+        (set-logic QF_ALIA)
+        (declare-const a Int)
+        (declare-const b Int)
+        (declare-const c (Array Int Int))
+        (assert (= c ((as const (Array Int Int)) 0)))
+        (assert (= a (select c b)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    assert!(script.arena.find_symbol("c").is_none());
+    let a = script.arena.find_symbol("a").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(a, Value::Int(0));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// A `store` over a const array reduces by read-over-write: `select(store(c,3,9), i)`
+/// is `9` when `i = 3` and the const value `7` otherwise.
+#[test]
+fn const_array_store_read_over_write() {
+    let hit = r"
+        (set-logic QF_ALIA)
+        (declare-const c (Array Int Int))
+        (declare-const r Int)
+        (assert (= c ((as const (Array Int Int)) 7)))
+        (assert (= r (select (store c 3 9) 3)))
+        (check-sat)
+    ";
+    let miss = r"
+        (set-logic QF_ALIA)
+        (declare-const c (Array Int Int))
+        (declare-const r Int)
+        (assert (= c ((as const (Array Int Int)) 7)))
+        (assert (= r (select (store c 3 9) 5)))
+        (check-sat)
+    ";
+    let s = parse_script(hit).unwrap();
+    assert!(s.arena.find_symbol("c").is_none());
+    let r = s.arena.find_symbol("r").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(r, Value::Int(9));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    asg.set(r, Value::Int(7));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
+    let s = parse_script(miss).unwrap();
+    let r = s.arena.find_symbol("r").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(r, Value::Int(7));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    asg.set(r, Value::Int(9));
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// Equality of two const arrays is value equality (cvc5 `constarr2`):
+/// `(= (as const A 1) (as const A 2))` reduces to `(= 1 2)` — the constant `false`,
+/// an **unsat** assertion with no free variables.
+#[test]
+fn const_array_equality_is_value_equality() {
+    let text = r"
+        (set-logic QF_ALIA)
+        (declare-const all1 (Array Int Int))
+        (declare-const all2 (Array Int Int))
+        (assert (= all1 ((as const (Array Int Int)) 1)))
+        (assert (= all2 ((as const (Array Int Int)) 2)))
+        (assert (= all1 all2))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    assert!(script.arena.find_symbol("all1").is_none());
+    assert!(script.arena.find_symbol("all2").is_none());
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+
+    let same = r"
+        (set-logic QF_ALIA)
+        (declare-const p (Array Int Int))
+        (declare-const q (Array Int Int))
+        (assert (= p ((as const (Array Int Int)) 5)))
+        (assert (= q ((as const (Array Int Int)) 5)))
+        (assert (= p q))
+        (check-sat)
+    ";
+    let s = parse_script(same).unwrap();
+    assert_eq!(
+        eval(&s.arena, s.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+/// `select`/`store` over a **free** (non-const-derived) `Int`-array variable is
+/// outside the sound subset — the general `Int`-array decision procedure is an IR
+/// keystone, out of scope. It declines cleanly as `Unsupported` (never a wrong
+/// verdict), exactly as before this rewrite existed.
+#[test]
+fn const_array_free_array_var_declines() {
+    let text = r"
+        (set-logic QF_ALIA)
+        (declare-const c (Array Int Int))
+        (declare-const i Int)
+        (declare-const r Int)
+        (assert (= r (select c i)))
+        (check-sat)
+    ";
+    assert!(matches!(parse_script(text), Err(SmtError::Unsupported(_))));
+
+    // `constarr3`: a store-chain equality connecting two *different* const arrays.
+    // Neither side of `(= aa bb)` is a bare const array (both are `store`-derived),
+    // so it is not reduced — the residual `Int`-array sort declines. (cvc5 itself
+    // errors on this shape.)
+    let constarr3 = r"
+        (set-logic QF_ALIA)
+        (declare-const all1 (Array Int Int))
+        (declare-const all2 (Array Int Int))
+        (declare-const aa (Array Int Int))
+        (declare-const bb (Array Int Int))
+        (declare-const i Int)
+        (assert (= all1 ((as const (Array Int Int)) 1)))
+        (assert (= aa (store all1 i 0)))
+        (assert (= all2 ((as const (Array Int Int)) 2)))
+        (assert (= bb (store all2 i 0)))
+        (assert (= aa bb))
+        (check-sat)
+    ";
+    assert!(matches!(
+        parse_script(constarr3),
+        Err(SmtError::Unsupported(_))
+    ));
+}
+
+/// The rewrite is **sort-agnostic**: an `(Array Int Bool)` const array — which
+/// axeyum also cannot represent — reduces its `select` to the `Bool` value.
+#[test]
+fn const_array_int_bool_sort_agnostic() {
+    let text = r"
+        (set-logic QF_ALIA)
+        (declare-const c (Array Int Bool))
+        (declare-const p Bool)
+        (declare-const i Int)
+        (assert (= c ((as const (Array Int Bool)) true)))
+        (assert (= p (select c i)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert!(script.arena.find_symbol("c").is_none());
+    let p = script.arena.find_symbol("p").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(p, Value::Bool(true));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+    asg.set(p, Value::Bool(false));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// A script with **no** `as const` form is untouched by the const-array pass (the
+/// fast-path no-op): a plain `QF_BV` formula is parsed and evaluated as before.
+#[test]
+fn const_array_pass_is_noop_without_as_const() {
+    let text = r"
+        (set-logic QF_BV)
+        (declare-const x (_ BitVec 8))
+        (assert (= (bvadd x #x01) #x02))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let x = script.arena.find_symbol("x").unwrap();
+    let mut asg = Assignment::new();
+    asg.set(x, Value::Bv { width: 8, value: 1 });
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+}
