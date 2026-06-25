@@ -85,7 +85,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   992 files, 640 decided, 591 oracle-compared, DISAGREE=0**, with **12 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla
-  `99% (167/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`,
+  `100% (169/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`,
   QF_LIA/cvc5 `70% (7/10)`, QF_LRA/cvc5 `67% (6/9)`, QF_NIA synthetic
   `50% (16/32)`, QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `50% (1/2)`, QF_UFLIA curated `0% (0/2)`, and QF_UFLIA
@@ -94,9 +94,10 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   `produce-evidence`, the timed evidence export guard cut that to 3, and the
   array budget-propagation pass eliminated the remaining timeout rows by
   returning checked budget `unknown` instead of falling through to expensive
-  qf-bv fallbacks. The former timeout files (`rw34`, `arraycond9`,
-  `fifo32ia04k05`) are now solve/search frontiers that finish under audit, not
-  evidence checking or Lean reconstruction runtime failures. The former bitwuzla
+  qf-bv fallbacks. The former ABV timeout/search-frontier files (`rw34` and
+  `arraycond9`) are now certified `array-axiom-unsat` rows, and the former
+  AUFBV timeout row `fifo32ia04k05` is closed by a replay-checked model. The
+  former bitwuzla
   AUFBV finite-array extensionality rows `smtextarrayaxiom{1..4}.smt2` are now
   certified by `UnsatFiniteArrayExtensionality` and reconstruct through the
   `FiniteArrayExtensionality` Lean fragment. The former AUFBV
@@ -142,9 +143,11 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   and the cvc5 same-cell store/range extension added `issue9519` and
   `proj-issue321`. The cvc5 store-restore no-op extension then added
   `bug637.delta`, the same-value store-chain coverage extension added
-  `bvproof2`, and the signed-BV1 read-congruence extension added `issue9041`,
-  lifting ABV Lean unsat coverage to **83/83** and leaving no ABV
-  `bare-unsat` rows in the exact audit.
+  `bvproof2`, the signed-BV1 read-congruence extension added `issue9041`, and
+  the ITE branch-exhaustion/read-congruence extension added `rw34` and
+  `arraycond9`, lifting ABV exact dominance to **169/169** and Lean unsat
+  coverage to **85/85** with no ABV `bare-unsat`, `unknown`, or non-dominant
+  rows in the exact audit.
   The exact bitwuzla AUFBV audit row is
   now fully dominant at **41/41**; remaining array work is broader proof coverage
   and cvc5/AUFLIA decide depth, not this exact row. The audit

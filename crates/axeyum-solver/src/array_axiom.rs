@@ -191,6 +191,11 @@ impl ReadCongruenceProbe {
             return Some(witness);
         }
         if let Some(witness) =
+            conflicting_ite_branch_disequalities(arena, &self.facts, &self.disequalities)
+        {
+            return Some(witness);
+        }
+        if let Some(witness) =
             forced_select_store_ite_bv1_value_conflict(arena, &self.facts, &self.disequalities)
         {
             return Some(witness);
@@ -2535,6 +2540,61 @@ fn conflicting_bool_negation_equalities(
     None
 }
 
+fn conflicting_ite_branch_disequalities(
+    arena: &TermArena,
+    facts: &EqFacts,
+    disequalities: &[(TermId, TermId)],
+) -> Option<(TermId, TermId)> {
+    for &(lhs, rhs) in disequalities {
+        if let Some(witness) =
+            conflicting_ite_branch_disequality_one(arena, facts, disequalities, lhs, rhs)
+        {
+            return Some(witness);
+        }
+        if let Some(witness) =
+            conflicting_ite_branch_disequality_one(arena, facts, disequalities, rhs, lhs)
+        {
+            return Some(witness);
+        }
+    }
+    None
+}
+
+fn conflicting_ite_branch_disequality_one(
+    arena: &TermArena,
+    facts: &EqFacts,
+    disequalities: &[(TermId, TermId)],
+    ite_term: TermId,
+    branch_term: TermId,
+) -> Option<(TermId, TermId)> {
+    let (_cond, then_term, else_term) = match_ite(arena, ite_term)?;
+    let branch_is_then = terms_equivalent(arena, facts, branch_term, then_term);
+    let branch_is_else = terms_equivalent(arena, facts, branch_term, else_term);
+    if !branch_is_then && !branch_is_else {
+        return None;
+    }
+    let opposite_branch = if branch_is_then { else_term } else { then_term };
+    disequalities
+        .iter()
+        .any(|&(lhs, rhs)| {
+            disequality_matches_ite_branch(arena, facts, lhs, rhs, ite_term, opposite_branch)
+                || disequality_matches_ite_branch(arena, facts, rhs, lhs, ite_term, opposite_branch)
+        })
+        .then_some((ite_term, branch_term))
+}
+
+fn disequality_matches_ite_branch(
+    arena: &TermArena,
+    facts: &EqFacts,
+    lhs: TermId,
+    rhs: TermId,
+    ite_term: TermId,
+    branch_term: TermId,
+) -> bool {
+    terms_equivalent(arena, facts, lhs, ite_term)
+        && terms_equivalent(arena, facts, rhs, branch_term)
+}
+
 fn forced_select_store_ite_bv1_value_conflict(
     arena: &TermArena,
     facts: &EqFacts,
@@ -3752,6 +3812,28 @@ mod tests {
         .expect("cvc5 signed BV1 read-congruence case parses");
         let cert = array_axiom_refutation(&script.arena, &script.assertions)
             .expect("signed BV1 read congruence refutes");
+        assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+    }
+
+    #[test]
+    fn recognizes_btor_array_ite_read_congruence_regression() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw34.btor.smt2"
+        ))
+        .expect("BTOR array-ITE read-congruence case parses");
+        let cert = array_axiom_refutation(&script.arena, &script.assertions)
+            .expect("array equality contradicts disequal reads at the same index");
+        assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+    }
+
+    #[test]
+    fn recognizes_btor_array_ite_branch_exhaustion_regression() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond9.btor.smt2"
+        ))
+        .expect("BTOR array-ITE branch-exhaustion case parses");
+        let cert = array_axiom_refutation(&script.arena, &script.assertions)
+            .expect("ITE term cannot be disequal from both branches");
         assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
     }
 

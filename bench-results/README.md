@@ -18,15 +18,15 @@ under `bench-results/local/`, which is gitignored.
   Local smoke artifacts belong under `bench-results/local/`; committed dominance
   audits live under `bench-results/dominance/` and are ingested by
   `gen-dominance-scoreboard.py`. Current exact committed audits: BV/bitwuzla
-  quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `99% (167/169)`,
+  quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `100% (169/169)`,
   QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`, QF_LIA/cvc5
   `70% (7/10)`, QF_LRA/cvc5 `67% (6/9)`, QF_NIA synthetic `50% (16/32)`,
   QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`, QF_UFBV/bitwuzla
   `50% (1/2)`, QF_UFLIA curated `0% (0/2)`, and QF_UFLIA bounded `80% (4/5)`.
   All exact audits currently have zero mismatches and zero audit timeouts.
-  Remaining gaps are Lean unsat coverage, lower timed-budget
-  evidence-certification on array unsats, and true solve-speed/depth on the hard
-  array frontiers. Current audit artifacts include phase timings; the timed
+  Remaining gaps are Lean unsat coverage in the non-closed audit rows and true
+  solve-speed/depth on the hard array frontiers. Current audit artifacts include
+  phase timings; the timed
   evidence export guard cut ABV/AUFBV timeout rows from 11 to 3, the array
   budget-propagation pass eliminated the remaining audit timeout rows, the direct
   array-extensionality Lean route moved the first five array unsats into the
@@ -63,11 +63,11 @@ under `bench-results/local/`, which is gitignored.
   `arraycond14`, `arraycond18`, and `ext11`, plus cvc5 same-cell store/range
   coverage for `issue9519` and `proj-issue321`, plus cvc5 store-restore no-op
   coverage for `bug637.delta`, same-value store-chain coverage for `bvproof2`,
-  and signed-BV1 read-congruence coverage for `issue9041`. The refreshed
-  artifact has no remaining ABV `bare-unsat` rows; the residual non-dominant
-  exact-audit entries are checked `unknown` search-frontier rows (`rw34`,
-  `arraycond9`). The audit also retains the current dominant ABV
-  `BvAbstraction` rows.
+  signed-BV1 read-congruence coverage for `issue9041`, and ITE
+  branch-exhaustion/read-congruence coverage for `rw34` and `arraycond9`. The
+  refreshed artifact has no remaining ABV `bare-unsat`, `unknown`, or
+  non-dominant exact-audit entries. The audit also retains the current
+  dominant ABV `BvAbstraction` rows.
 
 - [`baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json`](baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json):
   **the headline QF_BV head-to-head.** Pure-Rust `sat-bv` (rustsat-batsat,

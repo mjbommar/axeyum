@@ -36,7 +36,7 @@ use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{AletheCommand, check_alethe, check_drat, parse_dimacs, parse_drat};
-use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval};
 
 use crate::array_axiom::ArrayAxiomRefutationCertificate;
 use crate::array_binary_search::BinarySearch16Certificate;
@@ -1239,6 +1239,13 @@ pub fn produce_evidence(
     if let Some(report) = produce_diophantine_evidence(arena, assertions)? {
         return Ok(report);
     }
+    if let Some(cert) = small_pre_solve_array_axiom_refutation(arena, assertions) {
+        return Ok(EvidenceReport {
+            evidence: Evidence::UnsatArrayAxiom(cert),
+            provenance,
+            trusted_steps: Vec::new(),
+        });
+    }
     let (evidence, trusted_steps) = match solve(arena, assertions, config)? {
         CheckResult::Sat(model) => (Evidence::Sat(model), Vec::new()),
         CheckResult::Unsat => {
@@ -1346,6 +1353,19 @@ pub fn produce_evidence(
         provenance,
         trusted_steps,
     })
+}
+
+fn small_pre_solve_array_axiom_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<ArrayAxiomRefutationCertificate> {
+    const PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT: u64 = 256;
+
+    let stats = TermStats::compute(arena, assertions);
+    if stats.dag_nodes > PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT {
+        return None;
+    }
+    crate::array_axiom::array_axiom_refutation(arena, assertions)
 }
 
 fn direct_structural_unsat_evidence(

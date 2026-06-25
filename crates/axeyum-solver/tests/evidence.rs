@@ -875,6 +875,13 @@ fn produce_evidence_certifies_small_array_axiom_unsats() {
             ),
         ),
         (
+            "abv_btor_rw34",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/rewrite__array__rw34.btor.smt2"
+            ),
+        ),
+        (
             "abv_btor_write14",
             ArrayAxiomKind::ReadCongruence,
             include_str!(
@@ -928,6 +935,13 @@ fn produce_evidence_certifies_small_array_axiom_unsats() {
             ArrayAxiomKind::ReadCongruence,
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond8.btor.smt2"
+            ),
+        ),
+        (
+            "abv_btor_arraycond9",
+            ArrayAxiomKind::ReadCongruence,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__arraycond9.btor.smt2"
             ),
         ),
         (

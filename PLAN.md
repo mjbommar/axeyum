@@ -701,6 +701,19 @@ against competitor source, are now binding:
    now has **79** `array-axiom-unsat` rows and **0** remaining `bare-unsat`
    rows; the residual ABV non-dominant audit entries are checked `unknown`
    search-frontier rows (`rw34`, `arraycond9`).
+   **EXACT ABV DOMINANCE ROW CLOSED (2026-06-25):** the checked
+   `ArrayAxiom` read-congruence lane now recognizes ITE branch exhaustion:
+   `ite(c,t,e)` cannot be disequal from both `t` and `e`. The evidence front
+   door runs this structural refuter before the general solver only on small
+   assertion DAGs, so tiny unsat frontier rows avoid the expensive bit-blast
+   path while large SAT rewrite rows still replay models first. This closes
+   BTOR `rw34` and `arraycond9` as `array-axiom-unsat` with real-Lean
+   reconstruction. Re-running the exact ABV audit moved **167/169 → 169/169**
+   dominant and **Lean unsat 83/83 → 85/85**, with **mismatches=0,
+   audit_errors=0, timeouts=0**. The refreshed artifact now has **84**
+   `sat-model` rows, **81** `array-axiom-unsat` rows, **3**
+   `bv-abstraction-unsat` rows, **1** `alethe-unsat` row, and no `unknown` or
+   `bare-unsat` exact-audit entries.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:
