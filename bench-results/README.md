@@ -18,7 +18,7 @@ under `bench-results/local/`, which is gitignored.
   Local smoke artifacts belong under `bench-results/local/`; committed dominance
   audits live under `bench-results/dominance/` and are ingested by
   `gen-dominance-scoreboard.py`. Current exact committed audits: BV/bitwuzla
-  quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `98% (165/169)`,
+  quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla `98% (166/169)`,
   QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `83% (5/6)`, QF_LIA/cvc5
   `70% (7/10)`, QF_LRA/cvc5 `67% (6/9)`, QF_NIA synthetic `50% (16/32)`,
   QF_NRA synthetic `50% (15/30)`, QF_UFBV/cvc5 `100% (4/4)`, QF_UFBV/bitwuzla
@@ -62,9 +62,9 @@ under `bench-results/local/`, which is gitignored.
   self-update coverage for `arraycond11`, `arraycond12`, `arraycond13`,
   `arraycond14`, `arraycond18`, and `ext11`, plus cvc5 same-cell store/range
   coverage for `issue9519` and `proj-issue321`, plus cvc5 store-restore no-op
-  coverage for `bug637.delta`. The refreshed artifact leaves only two
-  cvc5-specific ABV `bare-unsat` rows (`issue9041` and `bvproof2`), plus the
-  current ABV `BvAbstraction` rows.
+  coverage for `bug637.delta`, plus same-value store-chain coverage for
+  `bvproof2`. The refreshed artifact leaves only one cvc5-specific ABV
+  `bare-unsat` row (`issue9041`), plus the current ABV `BvAbstraction` rows.
 
 - [`baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json`](baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json):
   **the headline QF_BV head-to-head.** Pure-Rust `sat-bv` (rustsat-batsat,

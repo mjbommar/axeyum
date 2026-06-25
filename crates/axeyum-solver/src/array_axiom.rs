@@ -866,6 +866,9 @@ fn is_store_shadowing(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
     if is_store_restore_noop_chain(arena, lhs, rhs) {
         return true;
     }
+    if is_same_value_store_chain_coverage(arena, lhs, rhs) {
+        return true;
+    }
 
     let lhs_norm = normalize_store_shadows(arena, lhs);
     let rhs_norm = normalize_store_shadows(arena, rhs);
@@ -896,6 +899,77 @@ fn is_base_select_at(arena: &TermArena, term: TermId, base: TermId, index: TermI
     match_select(arena, term).is_some_and(|(array, read_index)| {
         array == base && indices_definitely_equal(arena, read_index, index)
     })
+}
+
+fn is_same_value_store_chain_coverage(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    let (lhs_base, lhs_writes) = collect_store_chain(arena, lhs);
+    let (rhs_base, rhs_writes) = collect_store_chain(arena, rhs);
+    if lhs_base != rhs_base || lhs_writes.is_empty() || rhs_writes.is_empty() {
+        return false;
+    }
+
+    let Some(first_value) = lhs_writes.first().map(|&(_index, value)| value) else {
+        return false;
+    };
+    if lhs_writes
+        .iter()
+        .chain(rhs_writes.iter())
+        .any(|&(_index, value)| !values_definitely_equal(arena, value, first_value))
+    {
+        return false;
+    }
+
+    let lhs_indices: Vec<_> = lhs_writes.iter().map(|&(index, _value)| index).collect();
+    let rhs_indices: Vec<_> = rhs_writes.iter().map(|&(index, _value)| index).collect();
+    store_indices_cover(arena, &lhs_indices, &rhs_indices)
+        && store_indices_cover(arena, &rhs_indices, &lhs_indices)
+}
+
+fn store_indices_cover(arena: &TermArena, source: &[TermId], target: &[TermId]) -> bool {
+    source
+        .iter()
+        .all(|&index| store_index_covered_by(arena, index, target))
+}
+
+fn store_index_covered_by(arena: &TermArena, index: TermId, target: &[TermId]) -> bool {
+    if target
+        .iter()
+        .any(|&target_index| indices_definitely_equal(arena, index, target_index))
+    {
+        return true;
+    }
+
+    let Some(range) = bv_unsigned_range(arena, index) else {
+        return false;
+    };
+    let Some(range_len) = range
+        .max
+        .checked_sub(range.min)
+        .and_then(|span| span.checked_add(1))
+    else {
+        return false;
+    };
+    if range_len > crate::array_finite::MAX_FINITE_ARRAY_EXT_READS {
+        return false;
+    }
+
+    (range.min..=range.max).all(|value| {
+        target.iter().any(|&target_index| {
+            matches!(
+                const_bv_value(arena, target_index),
+                Some((width, target_value)) if width == range.width && target_value == value
+            )
+        })
+    })
+}
+
+fn values_definitely_equal(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    lhs == rhs
+        || matches!(
+            (const_bv_value(arena, lhs), const_bv_value(arena, rhs)),
+            (Some((lhs_width, lhs_value)), Some((rhs_width, rhs_value)))
+                if lhs_width == rhs_width && lhs_value == rhs_value
+        )
 }
 
 fn normalize_store_shadows(arena: &TermArena, term: TermId) -> StoreNorm {
@@ -3459,6 +3533,37 @@ mod tests {
         let cert = array_axiom_refutation(&script.arena, &script.assertions)
             .expect("store-restore no-op chain refutes");
         assert_eq!(cert.kind, ArrayAxiomKind::StoreShadowing);
+    }
+
+    #[test]
+    fn recognizes_cvc5_same_value_store_chain_coverage_regression() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__bv__bvproof2.smt2"
+        ))
+        .expect("cvc5 same-value store-chain coverage case parses");
+        let cert = array_axiom_refutation(&script.arena, &script.assertions)
+            .expect("same-value store-chain coverage refutes");
+        assert_eq!(cert.kind, ArrayAxiomKind::StoreShadowing);
+    }
+
+    #[test]
+    fn does_not_refute_uncovered_same_value_store_chains() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 2, 2).unwrap();
+        let zero_idx = arena.bv_const(2, 0).unwrap();
+        let one_idx = arena.bv_const(2, 1).unwrap();
+        let zero_val = arena.bv_const(2, 0).unwrap();
+        let lhs = arena.store(a, zero_idx, zero_val).unwrap();
+        let rhs = arena.store(a, one_idx, zero_val).unwrap();
+        let diseq = {
+            let eq = arena.eq(lhs, rhs).unwrap();
+            arena.not(eq).unwrap()
+        };
+
+        assert!(
+            array_axiom_refutation(&arena, &[diseq]).is_none(),
+            "same-value chains at uncovered distinct indices are satisfiable"
+        );
     }
 
     #[test]

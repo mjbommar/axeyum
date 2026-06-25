@@ -677,6 +677,17 @@ against competitor source, are now binding:
    and **Lean unsat 80/83 → 81/83**, with **mismatches=0, audit_errors=0,
    timeouts=0**. The refreshed artifact now has **77** `array-axiom-unsat`
    rows and **2** remaining `bare-unsat` rows: `issue9041` and `bvproof2`.
+   **ABV CVC5 SAME-VALUE STORE-CHAIN COVERAGE WIDENED (2026-06-25):**
+   the checked `ArrayAxiom` store-chain lane now proves same-base store chains
+   equal when every write stores the same definitely equal value and both write
+   index sets cover each other, including small concrete BV ranges such as a
+   zero-extended BV1 index covered by concrete writes at `0` and `1`. This
+   closes the cvc5 `bvproof2` row through the existing `StoreShadowing`
+   certificate path without invoking bit-blast trust. Re-running the exact ABV
+   audit moved **165/169 → 166/169** dominant and **Lean unsat 81/83 → 82/83**,
+   with **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact
+   now has **78** `array-axiom-unsat` rows and **1** remaining `bare-unsat`
+   row: `issue9041`.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:
