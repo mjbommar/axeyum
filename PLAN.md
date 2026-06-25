@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **640 decided**,
-   **591 oracle-compared**, **DISAGREE = 0**, with **13 complete exact audit rows**
+   **591 oracle-compared**, **DISAGREE = 0**, with **14 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **AUDIT HARNESS LANDED (2026-06-25):**
@@ -224,6 +224,15 @@ against competitor source, are now binding:
    rows, the exact BV/cvc5 quantified audit is now **100% (37/37)** dominant
    with Lean unsat **100% (8/8)**, zero mismatches, zero audit errors, and zero
    timeouts.
+   **QF_UFFF EXACT ROW CLOSED (2026-06-25):**
+   the cvc5 QF_UFFF finite-field+UF row now has a checked `bv-uf-local-unsat`
+   route. The checker derives local equality facts by exhaustive evaluation over
+   only the two small BV symbols involved in each pure-BV field constraint, then
+   closes the UF contradiction by congruence or a final tiny pure-BV conflict
+   after congruence. Lean reconstruction reruns that checker before rendering
+   the certificate-wrapper module. The exact QF_UFFF/cvc5 audit is now **100%
+   (8/8)** dominant with Lean unsat **100% (6/6)**, zero mismatches, zero audit
+   errors, and zero timeouts.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **100% (4/4)**, QF_BV/bvred **100% (6/6)**,

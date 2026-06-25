@@ -946,6 +946,75 @@ fn cvc5_quantified_bv_inversion_rows_use_checked_nonconstant_evidence() {
 }
 
 #[test]
+fn qf_ufff_rows_use_checked_bv_uf_local_evidence() {
+    for (tag, input) in [
+        (
+            "qf_ufff_with_uf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf2",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf2.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf3.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf5",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf5.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf7",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf7.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf8",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf8.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UFFF row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
+        let Evidence::UnsatBvUfLocal(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected local BV+UF evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(
+            !cert.derived_equalities.is_empty(),
+            "{tag}: certificate should carry derived BV equality facts"
+        );
+        assert!(
+            report.evidence.is_certified(),
+            "{tag}: evidence should be certified"
+        );
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}: evidence should re-check"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: direct structural certificate should carry no trust holes"
+        );
+    }
+}
+
+#[test]
 fn unified_front_door_routes_pure_real_to_a_refutation() {
     // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
     let mut arena = TermArena::new();

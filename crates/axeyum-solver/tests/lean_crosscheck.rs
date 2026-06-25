@@ -232,6 +232,63 @@ fn cvc5_quantified_bv_inversion_rows_check_in_real_lean() {
     }
 }
 
+/// The QF_UFFF cvc5 row parses finite-field values as small bit-vectors. These
+/// unsats are certified by deriving local BV equalities, then closing the UF
+/// contradiction by congruence. Reconstruction reruns that checker before
+/// rendering the certificate-wrapper module.
+#[test]
+fn qf_ufff_bv_uf_local_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_ufff_with_uf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf2",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf2.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf3.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf5",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf5.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf7",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf7.smt2"
+            ),
+        ),
+        (
+            "qf_ufff_with_uf8",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UFFF/cvc5-regress-clean/cli__regress0__ff__with_uf8.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UFFF row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: local BV+UF reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::BvUfLocal, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: local BV+UF module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {

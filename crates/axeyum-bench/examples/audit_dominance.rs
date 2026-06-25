@@ -111,6 +111,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatTermLevel { .. } => "term-level-unsat",
         Evidence::UnsatFiniteDomainEnum { .. } => "finite-domain-enum-unsat",
         Evidence::UnsatBvForallNonconstant(_) => "bv-forall-nonconstant-unsat",
+        Evidence::UnsatBvUfLocal(_) => "bv-uf-local-unsat",
         Evidence::UnsatFarkas(_) => "farkas-unsat",
         Evidence::UnsatLraDpll(_) => "lra-dpll-unsat",
         Evidence::UnsatArithDpll(_) => "arith-dpll-unsat",

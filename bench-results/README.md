@@ -23,7 +23,8 @@ under `bench-results/local/`, which is gitignored.
   QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`, QF_LIA/cvc5
   `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic `100% (32/32)`,
   QF_NRA synthetic `100% (30/30)`, QF_UFBV/cvc5 `100% (4/4)`, QF_UFBV/bitwuzla
-  `100% (2/2)`, QF_UFLIA curated `100% (2/2)`, and QF_UFLIA bounded `100% (5/5)`.
+  `100% (2/2)`, QF_UFFF/cvc5 `100% (8/8)`, QF_UFLIA curated `100% (2/2)`, and
+  QF_UFLIA bounded `100% (5/5)`.
   All exact audits currently have zero mismatches and zero audit timeouts.
   Remaining gaps are Lean unsat coverage in the non-closed audit rows and true
   solve-speed/depth on the hard array frontiers. Current audit artifacts include

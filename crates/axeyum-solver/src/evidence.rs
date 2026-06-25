@@ -53,6 +53,7 @@ use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast, solve};
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
 use crate::bool_simplify::BoolSimplificationRefutationCertificate;
 use crate::bv_forall_nonconstant::BvForallNonconstantRefutationCertificate;
+use crate::bv_uf_local::BvUfLocalRefutationCertificate;
 use crate::certify::{
     CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
 };
@@ -285,6 +286,11 @@ pub enum Evidence {
     /// value. The checker re-scans the original query and re-matches the exact
     /// witness schema before accepting.
     UnsatBvForallNonconstant(BvForallNonconstantRefutationCertificate),
+    /// Unsatisfiable (`BV` + UF): tiny local pure-BV enumeration derives
+    /// equality facts, then congruence closure over the original UF terms closes
+    /// a disequality or a one-step pure-BV contradiction. The checker re-scans
+    /// the original query and recomputes the certificate before accepting.
+    UnsatBvUfLocal(BvUfLocalRefutationCertificate),
     /// Unsatisfiable (`QF_LRA`): a Farkas refutation over the exact-rational
     /// constraints, whose [`FarkasCertificate::verify`] is the evidence.
     UnsatFarkas(FarkasCertificate),
@@ -553,6 +559,7 @@ impl Evidence {
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatNraEvenPower(_)
             | Evidence::UnsatBvForallNonconstant(_)
+            | Evidence::UnsatBvUfLocal(_)
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatTermIdentity(_)
             | Evidence::UnsatBoolSimplification(_)
@@ -585,6 +592,7 @@ impl Evidence {
                 | Evidence::UnsatTermLevel { .. }
                 | Evidence::UnsatFiniteDomainEnum { .. }
                 | Evidence::UnsatBvForallNonconstant(_)
+                | Evidence::UnsatBvUfLocal(_)
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
                 | Evidence::UnsatArithDpll(_)
@@ -630,6 +638,7 @@ fn check_direct_structural_evidence(
         Evidence::UnsatBvForallNonconstant(cert) => {
             check_bv_forall_nonconstant_evidence(arena, assertions, cert)
         }
+        Evidence::UnsatBvUfLocal(cert) => check_bv_uf_local_evidence(arena, assertions, cert),
         Evidence::UnsatArrayAxiom(cert) => check_array_axiom_evidence(arena, assertions, cert),
         Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
         Evidence::UnsatBoolSimplification(cert) => {
@@ -706,6 +715,15 @@ fn check_bv_forall_nonconstant_evidence(
     cert: &BvForallNonconstantRefutationCertificate,
 ) -> bool {
     crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bv_uf_local_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &BvUfLocalRefutationCertificate,
+) -> bool {
+    crate::bv_uf_local::bv_uf_local_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1194,6 +1212,13 @@ fn direct_pre_solve_structural_report(
     {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatBvForallNonconstant(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) = crate::bv_uf_local::bv_uf_local_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatBvUfLocal(cert),
             provenance: provenance.clone(),
             trusted_steps: Vec::new(),
         });
@@ -1690,6 +1715,9 @@ fn direct_structural_unsat_evidence(
     {
         return Some((Evidence::UnsatBvForallNonconstant(cert), Vec::new()));
     }
+    if let Some(cert) = crate::bv_uf_local::bv_uf_local_refutation(arena, assertions) {
+        return Some((Evidence::UnsatBvUfLocal(cert), Vec::new()));
+    }
     if let Some(cert) =
         crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
     {
@@ -2095,6 +2123,7 @@ pub fn prove(
         | Evidence::UnsatTermLevel { .. }
         | Evidence::UnsatFiniteDomainEnum { .. }
         | Evidence::UnsatBvForallNonconstant(_)
+        | Evidence::UnsatBvUfLocal(_)
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
         | Evidence::UnsatArithDpll(_)

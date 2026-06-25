@@ -38,6 +38,7 @@ mod bool_simplify;
 mod bv2nat_bound;
 mod bv_forall_nonconstant;
 mod bv_interpolant;
+mod bv_uf_local;
 pub mod capabilities;
 mod cardinality;
 mod certify;
@@ -190,6 +191,10 @@ pub use bv_forall_nonconstant::{
 };
 pub use bv_interpolant::{
     QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
+};
+pub use bv_uf_local::{
+    BvUfLocalDerivedEquality, BvUfLocalRefutationCertificate, BvUfLocalRefutationKind,
+    bv_uf_local_refutation,
 };
 pub use cardinality::{at_least, at_most, at_most_one, between, exactly, exactly_one};
 pub use certify::{CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration};
