@@ -1340,6 +1340,9 @@ pub enum ProofFragment {
     /// query `x*x < 0` (UNSAT: a square is never negative). The simplest SOS
     /// reconstruction, needing no ring normalizer (ADR-0040, SOS slice 1).
     Sos,
+    /// A syntactic even-power NRA refutation: a sum of even powers plus a
+    /// nonnegative rational constant is asserted strictly negative.
+    NraEvenPower,
     /// A top-level universal quantifier.
     Forall,
     /// A top-level existential quantifier (skolemized).
@@ -1746,6 +1749,11 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         || sos_certificate_certifies(arena, assertions)
     {
         ProofFragment::Sos
+    } else if crate::nra_even_power::nra_even_power_refutation(arena, assertions).is_some() {
+        // Higher even-power nonnegativity (e.g. `x^4 < 0`) is outside the
+        // degree-2 SOS/LDLᵀ certificate, but has its own checked structural
+        // certificate and Lean wrapper.
+        ProofFragment::NraEvenPower
     } else if crate::prove_lia_unsat_by_diophantine(arena, assertions) {
         // An integer-equality system that is integer-infeasible (`gcd ∤ const`).
         // Owned by the integer-prelude Diophantine reconstructor (ADR-0042);
@@ -2599,6 +2607,37 @@ fn reconstruct_bounded_int_blast_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_nra_even_power_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert =
+        crate::nra_even_power::nra_even_power_refutation(arena, assertions).ok_or_else(|| {
+            ReconstructError::MalformedStep {
+                rule: "nra_even_power".to_owned(),
+                detail: "expected a checked even-power NRA refutation".to_owned(),
+            }
+        })?;
+    if !crate::nra_even_power::nra_even_power_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == cert)
+    {
+        return Err(ReconstructError::MalformedStep {
+            rule: "nra_even_power".to_owned(),
+            detail: "even-power NRA certificate did not recheck".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("nra_even_power_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "nra_even_power")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_array_axiom_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3010,6 +3049,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::LraDpll
         | ProofFragment::ArithDpll
         | ProofFragment::BoundedIntBlast
+        | ProofFragment::NraEvenPower
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::ArrayAxiom
@@ -3089,6 +3129,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         ProofFragment::ArithDpll => reconstruct_arith_dpll_to_lean_module(arena, assertions)?,
         ProofFragment::BoundedIntBlast => {
             reconstruct_bounded_int_blast_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::NraEvenPower => {
+            reconstruct_nra_even_power_to_lean_module(arena, assertions)?
         }
         ProofFragment::FiniteDomainPigeonhole => {
             reconstruct_finite_domain_pigeonhole_to_lean_module(arena, assertions)?

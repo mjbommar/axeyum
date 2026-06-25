@@ -6,6 +6,32 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — exact QF_NRA synthetic dominance row closed.**
+  Added checked `UnsatNraEvenPower` evidence and `ProofFragment::NraEvenPower`
+  reconstruction for the remaining higher-degree synthetic NRA UNSAT rows. The
+  matcher is deliberately narrow: it accepts only original assertions where a
+  sum of syntactic even powers of real terms plus a nonnegative rational
+  constant is asserted `< 0`; `Evidence::check` re-scans the original query and
+  re-matches the certificate before accepting it. Lean reconstruction uses the
+  same rechecked certificate before rendering the wrapper module. Re-running
+  the exact QF_NRA audit moved **QF_NRA synthetic 24/30 -> 30/30 dominant**
+  with **Lean unsat 10/16 -> 16/16**, **mismatches=0**,
+  **audit_errors=0**, and **timeouts=0**. **Next:** attack quantified-BV Lean
+  gaps, build proof routes for strong unaudited rows (QF_UFFF/QF_FF/QF_FP), or
+  move back to the broader cvc5 NRA/high-degree decide frontier.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_nra_even_power_rows_use_checked_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_nra_even_power_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 30000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — exact QF_NIA synthetic dominance row closed.**
   Promoted the existing proven-box bounded-int-blast certificate into first-class
   evidence and Lean reconstruction for bounded nonlinear-integer UNSAT rows.
@@ -1466,8 +1492,9 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   QF_NRA synthetic and QF_NIA synthetic and regenerated
   `bench-results/DOMINANCE.md`: exact audit rows now total **10**. QF_NRA
   synthetic was later widened by the SOS certificate-wrapper pass to **80%
-  (24/30)** dominant with **Lean unsat 62% (10/16)**; QF_NIA synthetic remains
-  **50% (16/32)** dominant with **Lean unsat 0% (0/16)**. Both have
+  (24/30)** dominant with **Lean unsat 62% (10/16)**; later sessions closed
+  QF_NRA synthetic at **100% (30/30)** and QF_NIA synthetic at **100%
+  (32/32)**. Both have
   **DISAGREE=0**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
   The remaining first audit queue is now just QF_ABV and QF_AUFBV. **Next:**
   audit those array/BV rows, then decide whether to attack their proof gaps or
@@ -3267,9 +3294,33 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV/QF_BV-bvred/QF_LRA/QF_LIA/QF_NIA/QF_UFBV/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_UFBV/bitwuzla **2/2**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **5/5** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 640 decided, 591 oracle-compared, DISAGREE=0, and 12 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; ABV/AUFBV/QF_BV-bvred/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UFBV/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UFBV/bitwuzla **2/2**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **5/5** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-25** — **Exact QF_NRA synthetic dominance row closed.**
+  Added first-class `UnsatNraEvenPower` evidence and
+  `ProofFragment::NraEvenPower` reconstruction for the remaining higher-degree
+  synthetic NRA proof misses (`nra-neg-square-d02..d06` and
+  `nra-sos-strict-unsat-d02`). The certificate checker re-scans the original
+  assertions and accepts only strict-negative sums of syntactic even powers plus
+  a nonnegative rational constant; Lean reconstruction reuses the same checked
+  route before rendering. Re-ran the exact QF_NRA synthetic audit and
+  regenerated `bench-results/DOMINANCE.md`: QF_NRA synthetic is now **30/30
+  dominant** with Lean unsat **16/16**, with zero mismatches, audit errors, and
+  timeouts.
+  Verification:
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_nra_even_power_rows_use_checked_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_nra_even_power_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 30000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
 
 - **2026-06-25** — **Exact QF_NIA synthetic dominance row closed.**
   Added first-class `UnsatBoundedIntBlast` evidence and
@@ -4504,8 +4555,8 @@ plan is built and committed on the current branch:
   Committed exact QF_NRA synthetic and QF_NIA synthetic audit artifacts and
   regenerated `bench-results/DOMINANCE.md`: exact rows are now 10. The QF_NRA
   row first exposed the SOS proof gap and was later widened to 24/30 dominant
-  with 10/16 Lean unsats; QF_NIA synthetic remains at 50% dominant with 0/16
-  Lean unsats.
+  with 10/16 Lean unsats; later sessions closed QF_NRA synthetic at 30/30 and
+  QF_NIA synthetic at 32/32.
 
 - **2026-06-25** — **Dominance audit batch + pure-real evidence fallback.**
   Committed six more complete `audit_dominance` artifacts and regenerated

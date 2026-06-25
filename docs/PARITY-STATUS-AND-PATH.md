@@ -87,7 +87,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   rows now include BV/bitwuzla quantified `25% (1/4)`, QF_ABV/cvc5+bitwuzla
   `100% (169/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
-  `100% (32/32)`, QF_NRA synthetic `80% (24/30)`, QF_UFBV/cvc5 `100% (4/4)`,
+  `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `100% (2/2)`, QF_UFLIA curated `100% (2/2)`, and QF_UFLIA
   bounded `100% (5/5)`. QF_ABV/QF_AUFBV no longer carry audit runtime failures:
   phase timing first localized all 11 old ABV/AUFBV timeouts to
@@ -437,8 +437,10 @@ real lift is migrating the parser onto the solver's `BoundedString` `StrTerm` AP
    bit-blast rules or the miter-`hole` route.
 3. **DatatypeElim general case** (`is_certified` still false; the field axioms are
    Carcara+Lean-certified but the *elimination dispatch* isn't end-to-end witnessed).
-4. **NRA/NIA `unsat` Lean evidence** beyond degree-2 SOS — the certify-gap on the
-   nonlinear frontier.
+4. **NRA/NIA `unsat` Lean evidence beyond the closed synthetic rows** — bounded
+   NIA and the graduated NRA even-power/SOS slice are now certified and
+   Lean-checked; the remaining certify-gap is broader high-degree/cvc5 NRA and
+   genuinely symbolic nonlinear arithmetic.
 
 ### Tier D — soundness hardening (ongoing). Differential fuzzes are the highest-yield
 bug-finders (they caught 3 wrong-unsats + the FP `±0` wrong-unsat this session). The

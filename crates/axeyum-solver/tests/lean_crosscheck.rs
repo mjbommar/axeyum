@@ -342,6 +342,37 @@ fn qf_nra_sos_certificate_audit_rows_check_in_real_lean() {
     }
 }
 
+/// `QF_NRA`: higher even-power nonnegativity rows are outside the degree-2 SOS
+/// certificate but still reconstruct through a checked structural Lean wrapper.
+#[test]
+fn qf_nra_even_power_audit_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_nra_fourth_power_negative",
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-neg-square-d02.smt2"
+            ),
+        ),
+        (
+            "qf_nra_shifted_fourth_power_sum",
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-strict-unsat-d02.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("synthetic NRA even-power row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("even-power certificate row reconstructs");
+        assert_eq!(fragment, ProofFragment::NraEvenPower);
+        assert!(
+            !source.contains("sorryAx"),
+            "even-power module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `QF_NIA`: bounded nonlinear integer UNSAT rows are certified by the
 /// proven-box bounded-int-blast certificate (box + regenerated DIMACS + DRAT)
 /// and reconstruct through a certificate-gated Lean wrapper.

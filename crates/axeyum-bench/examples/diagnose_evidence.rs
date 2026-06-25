@@ -55,6 +55,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatLraDpll(_) => "lra-dpll-unsat",
         Evidence::UnsatArithDpll(_) => "arith-dpll-unsat",
         Evidence::UnsatSos { .. } => "sos-unsat",
+        Evidence::UnsatNraEvenPower(_) => "nra-even-power-unsat",
         Evidence::UnsatDiophantine { .. } => "diophantine-unsat",
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",

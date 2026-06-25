@@ -258,6 +258,44 @@ fn qf_nra_sos_certificate_wrapper_carries_lean_module() {
 }
 
 #[test]
+fn qf_nra_even_power_rows_use_checked_evidence() {
+    for (input, terms, max_exp) in [
+        (
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-neg-square-d02.smt2"
+            ),
+            1,
+            4,
+        ),
+        (
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-strict-unsat-d02.smt2"
+            ),
+            2,
+            4,
+        ),
+    ] {
+        let mut script = parse_script(input).expect("synthetic NRA even-power row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+        let Evidence::UnsatNraEvenPower(cert) = &report.evidence else {
+            panic!(
+                "expected NRA even-power evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert_eq!(cert.even_power_terms, terms);
+        assert_eq!(cert.max_even_exponent, max_exp);
+        assert!(report.evidence.is_certified());
+        assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+        assert!(
+            report.trusted_steps.is_empty(),
+            "the even-power certificate is checked directly from the original query"
+        );
+    }
+}
+
+#[test]
 fn qf_nia_bounded_unsat_rows_use_bounded_int_blast_evidence() {
     for input in [
         include_str!(

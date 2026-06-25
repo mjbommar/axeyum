@@ -275,12 +275,13 @@ against competitor source, are now binding:
    enumerating corpus files and using their `:status` annotations plus the
    committed aggregate `axeyum_decided` denominator. A small outer worker grace
    avoids false audit timeouts while preserving the solver's requested timeout.
-   QF_NRA synthetic is now exact at **80% (24/30)** dominant, Lean unsat
+   QF_NRA synthetic first landed exact at **80% (24/30)** dominant, Lean unsat
    **62% (10/16)** after certificate-gated SOS reconstruction; QF_NIA
    synthetic is exact at **50% (16/32)** dominant, Lean unsat **0% (0/16)**.
-   Both have zero mismatches, audit errors, and timeouts. The remaining QF_NRA
-   misses are the higher-degree `bare-unsat` rows (`nra-neg-square-d02..d06`
-   and `nra-sos-strict-unsat-d02`), not the already certified SOS rows.
+   Both had zero mismatches, audit errors, and timeouts. The remaining QF_NRA
+   misses at that point were the higher-degree `bare-unsat` rows
+   (`nra-neg-square-d02..d06` and `nra-sos-strict-unsat-d02`), not the already
+   certified SOS rows.
    **QF_NIA EXACT ROW CLOSED (2026-06-25):**
    bounded nonlinear-integer UNSAT rows now carry
    `bounded-int-blast-unsat` evidence: the checker re-derives the finite integer
@@ -291,6 +292,15 @@ against competitor source, are now binding:
    quickly instead of timing out in preprocessing/model reconstruction. Exact
    QF_NIA synthetic is now **100% (32/32)** dominant with Lean unsat
    **100% (16/16)**, zero mismatches, zero audit errors, and zero timeouts.
+   **QF_NRA EXACT ROW CLOSED (2026-06-25):**
+   the six remaining higher-degree synthetic NRA proof misses now use checked
+   `nra-even-power-unsat` evidence. The matcher accepts only original assertions
+   where a sum of syntactic even powers of real terms plus a nonnegative rational
+   constant is asserted `< 0`; evidence checking re-scans the original query, and
+   Lean reconstruction routes through `ProofFragment::NraEvenPower` only after
+   that certificate rechecks. Exact QF_NRA synthetic is now **100% (30/30)**
+   dominant with Lean unsat **100% (16/16)**, zero mismatches, zero audit errors,
+   and zero timeouts.
    **FIRST DOMINANCE AUDIT QUEUE CLEARED (2026-06-25):**
    QF_ABV/cvc5+bitwuzla is now exact at **50% (84/169)** dominant, Lean unsat
    **0% (0/85)**, with **6 audit errors/timeouts**; QF_AUFBV/bitwuzla is exact

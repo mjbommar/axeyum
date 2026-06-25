@@ -61,6 +61,7 @@ use crate::lia_gcd::{
 };
 use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
+use crate::nra_even_power::NraEvenPowerRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
 use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
 use crate::quant_finite_cert::{
@@ -291,6 +292,11 @@ pub enum Evidence {
         /// stored string is for output, not trusted on its own.
         lean_module: Option<String>,
     },
+    /// Unsatisfiable (`NRA`): the query asserts a syntactic sum of even powers
+    /// plus a nonnegative rational constant is strictly negative. The checker
+    /// re-scans the original assertions and re-matches the exact nonnegativity
+    /// shape before accepting.
+    UnsatNraEvenPower(NraEvenPowerRefutationCertificate),
     /// Unsatisfiable (integer-equality systems): a self-checking "integer Farkas" /
     /// Diophantine refutation of an integer-infeasible system of equalities. The
     /// `certificate`'s independent re-checker [`check_diophantine_certificate`]
@@ -515,6 +521,7 @@ impl Evidence {
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
+            | Evidence::UnsatNraEvenPower(_)
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatTermIdentity(_)
             | Evidence::UnsatBoolSimplification(_)
@@ -549,6 +556,7 @@ impl Evidence {
                 | Evidence::UnsatLraDpll(_)
                 | Evidence::UnsatArithDpll(_)
                 | Evidence::UnsatSos { .. }
+                | Evidence::UnsatNraEvenPower(_)
                 | Evidence::UnsatDiophantine { .. }
                 | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
@@ -585,6 +593,7 @@ fn check_direct_structural_evidence(
         Evidence::UnsatFiniteArrayExtensionality(cert) => {
             check_finite_array_extensionality_evidence(arena, assertions, cert)
         }
+        Evidence::UnsatNraEvenPower(cert) => check_nra_even_power_evidence(arena, assertions, cert),
         Evidence::UnsatArrayAxiom(cert) => check_array_axiom_evidence(arena, assertions, cert),
         Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
         Evidence::UnsatBoolSimplification(cert) => {
@@ -643,6 +652,15 @@ fn check_finite_array_extensionality_evidence(
     cert: &FiniteArrayExtensionalityCertificate,
 ) -> bool {
     crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_nra_even_power_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &NraEvenPowerRefutationCertificate,
+) -> bool {
+    crate::nra_even_power::nra_even_power_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1227,6 +1245,43 @@ pub fn produce_nra_sos_evidence(
     }))
 }
 
+/// Produces a checked NRA refutation for strict negative sums of syntactic even
+/// powers, such as `x^4 < 0` or `(x-1)^4 + (y-2)^4 + 1 < 0`.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] only to match the other evidence producers' `Result`
+/// contract; this path does not currently fail (the result is always `Ok`).
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "signature matches the other evidence producers' Result contract"
+)]
+pub fn produce_nra_even_power_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<EvidenceReport>, SolverError> {
+    let Some(cert) = crate::nra_even_power::nra_even_power_refutation(arena, assertions) else {
+        return Ok(None);
+    };
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
+        backend: "nra-even-power-certificate".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: None,
+        resource_limit: None,
+        node_budget: None,
+        cnf_variable_budget: None,
+        cnf_clause_budget: None,
+        prove_unsat: true,
+    };
+    Ok(Some(EvidenceReport {
+        evidence: Evidence::UnsatNraEvenPower(cert),
+        provenance,
+        trusted_steps: Vec::new(),
+    }))
+}
+
 /// Attaches a self-checking, Lean-backed integer-infeasibility certificate to a
 /// system of integer equalities that the Diophantine decision proves `unsat`
 /// (ADR-0043). The carried [`DiophantineCertificate`] is fully self-contained:
@@ -1332,6 +1387,9 @@ pub fn produce_evidence(
             // than the NRA abstraction's bare `unsat`. Declines (`None`) on anything
             // it does not decide, falling through to the linear / NRA route.
             if let Some(report) = produce_nra_sos_evidence(arena, assertions)? {
+                return Ok(report);
+            }
+            if let Some(report) = produce_nra_even_power_evidence(arena, assertions)? {
                 return Ok(report);
             }
             match produce_lra_dpll_evidence(arena, assertions, config) {
@@ -1956,6 +2014,7 @@ pub fn prove(
         | Evidence::UnsatLraDpll(_)
         | Evidence::UnsatArithDpll(_)
         | Evidence::UnsatSos { .. }
+        | Evidence::UnsatNraEvenPower(_)
         | Evidence::UnsatDiophantine { .. }
         | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)

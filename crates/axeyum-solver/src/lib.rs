@@ -84,6 +84,7 @@ mod mbp;
 mod model;
 mod nia_square;
 mod nra;
+mod nra_even_power;
 mod nra_real_root;
 mod optimize;
 mod pb;
@@ -227,8 +228,8 @@ pub use euf_interpolant::{
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
     produce_diophantine_evidence, produce_evidence, produce_lra_dpll_evidence,
-    produce_lra_evidence, produce_nra_evidence, produce_nra_sos_evidence, produce_qf_bv_evidence,
-    prove,
+    produce_lra_evidence, produce_nra_even_power_evidence, produce_nra_evidence,
+    produce_nra_sos_evidence, produce_qf_bv_evidence, prove,
 };
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;
@@ -270,6 +271,7 @@ pub use maxsat::{
 pub use mbp::{mbp_lia, mbp_lra};
 pub use model::Model;
 pub use nra::check_with_nra;
+pub use nra_even_power::{NraEvenPowerRefutationCertificate, nra_even_power_refutation};
 pub use nra_real_root::SosCertificate;
 pub use optimize::{
     BvLexObjective, LexObjective, LexOutcome, OptOutcome, ParetoOutcome, maximize_bv,
