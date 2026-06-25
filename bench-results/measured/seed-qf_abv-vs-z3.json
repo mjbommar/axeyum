@@ -1,0 +1,12 @@
+{
+  "dir": "corpus/regression/qf_abv",
+  "timeout_ms": 10000,
+  "considered": 2,
+  "z3_rejected_unfair": 0,
+  "axeyum_decided": 2,
+  "z3_decided": 2,
+  "agree": 2,
+  "disagree": 0,
+  "axeyum_par2_s": 0.0002,
+  "z3_par2_s": 0.0089
+}
