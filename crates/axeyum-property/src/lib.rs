@@ -9,25 +9,63 @@
 //! exist and are re-checked — it adds typing + lifting, no solver logic. See the
 //! design and build plan in `docs/consumer-track/property/PLAN.md`.
 //!
-//! **Scaffold:** the API below is the linking smoke test; the real surface
-//! (`property().forall::<T>().assuming(..).check(..) -> Outcome<T>`, phantom
-//! type-level bit-vector widths, `#[derive(Symbolic)]`) is built iteratively.
+//! ## At a glance
+//!
+//! Typed handles carry their bit-vector width at the type level, so a width
+//! mismatch is a *compile* error rather than z3.rs's runtime panic:
+//!
+//! ```rust
+//! use axeyum_property::{property, Bv, Ctx, Outcome};
+//!
+//! let ctx = Ctx::new();
+//! // For all 32-bit a, b with a, b < 2^31: a + b never wraps below a.
+//! let outcome = property()
+//!     .certificate(true)
+//!     .forall::<(Bv<32>, Bv<32>)>(&ctx)
+//!     .assuming(|(a, b)| a.ult(Bv::lit(&ctx, 1 << 31)) & b.ult(Bv::lit(&ctx, 1 << 31)))
+//!     .check(|(a, b)| (a + b).uge(a))?;
+//! match outcome {
+//!     Outcome::Proved(cert) => {
+//!         assert!(cert.verify()?);
+//!     }
+//!     Outcome::Counterexample((a, b)) => panic!("overflow at a={a}, b={b}"),
+//!     Outcome::Unknown(reason) => eprintln!("undecided: {reason:?}"),
+//! }
+//! # Ok::<(), axeyum_solver::SolverError>(())
+//! ```
 #![forbid(unsafe_code)]
 
-/// Smoke check: confirms the crate links `axeyum-solver` (the dependency edge the
-/// SDK is built on). Replaced by the real `property()` entry point as the API lands.
+mod ctx;
+mod handle;
+mod property;
+
+pub use ctx::Ctx;
+pub use handle::{Bool, Bv, Int};
+pub use property::{Certificate, Forall, Lifted, Outcome, PropertyBuilder, Slot, Symbolic};
+
+// Re-export the solver types that appear in the public surface so consumers need
+// not depend on `axeyum-solver` directly for them.
+pub use axeyum_solver::{EvidenceReport, SolverError, UnknownReason};
+
+/// The entry point: a fresh [`PropertyBuilder`] with default budgets.
+///
+/// Chain `.timeout(..)` / `.node_budget(..)` / `.seed(..)` / `.certificate(..)`,
+/// then `.forall::<T>(&ctx)` to declare symbolic inputs, `.assuming(..)` to add a
+/// precondition, and `.check(..)` to decide the property.
+///
+/// ```rust
+/// use axeyum_property::{property, Ctx, Int, Outcome};
+///
+/// let ctx = Ctx::new();
+/// // |x| is never negative, over bounded integers.
+/// let outcome = property()
+///     .forall::<Int>(&ctx)
+///     .assuming(|x| x.ge(Int::lit(&ctx, -1000)) & x.le(Int::lit(&ctx, 1000)))
+///     .check(|x| x.abs().ge(Int::lit(&ctx, 0)))?;
+/// assert!(matches!(outcome, Outcome::Proved(_)));
+/// # Ok::<(), axeyum_solver::SolverError>(())
+/// ```
 #[must_use]
-pub fn solver_linked() -> bool {
-    let _config = axeyum_solver::SolverConfig::default();
-    true
-}
-
-#[cfg(test)]
-mod tests {
-    use super::solver_linked;
-
-    #[test]
-    fn links_solver() {
-        assert!(solver_linked());
-    }
+pub fn property() -> PropertyBuilder {
+    PropertyBuilder::new()
 }
