@@ -6,6 +6,33 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-25 — QF_NRA SOS dominance coverage widened.**
+  Added a certificate-gated Lean fallback for sum-of-squares nonlinear-real
+  refutations: reconstruction first tries the detailed SOS path, then re-runs
+  `sos_refute_with_certificate` and accepts the generic `ProofFragment::Sos`
+  wrapper only after `SosCertificate::verify()` succeeds. This moves the
+  synthetic QF_NRA SOS rows that already had checked in-tree certificates into
+  the Lean-checked dominance set without masking malformed detailed
+  reconstruction failures. Re-running the exact QF_NRA graduated audit moved
+  **QF_NRA synthetic 15/30 -> 24/30 dominant** with **Lean unsat 1/16 ->
+  10/16**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The
+  remaining QF_NRA audit misses are the higher-degree `bare-unsat` rows:
+  `nra-neg-square-d02..d06` and `nra-sos-strict-unsat-d02`. **Next:** attack
+  the quartic/even-power NRA certificate gap or move to QF_NIA/QF_UFLIA/
+  quantified-BV proof coverage.
+  Verification passed:
+  `cargo test -p axeyum-solver --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_nra_sos_certificate_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 30000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — exact QF_UFBV/bitwuzla dominance row closed.**
   Added a checked finite Boolean-UF exhaustive refuter
   (`UnsatBoolUfExhaustive` / `ProofFragment::BoolUfExhaustive`) for tiny
@@ -1347,8 +1374,9 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   when a solver returns exactly at the cap. Committed exact audits for
   QF_NRA synthetic and QF_NIA synthetic and regenerated
   `bench-results/DOMINANCE.md`: exact audit rows now total **10**. QF_NRA
-  synthetic is **50% (15/30)** dominant with **Lean unsat 6% (1/16)**; QF_NIA
-  synthetic is **50% (16/32)** dominant with **Lean unsat 0% (0/16)**. Both have
+  synthetic was later widened by the SOS certificate-wrapper pass to **80%
+  (24/30)** dominant with **Lean unsat 62% (10/16)**; QF_NIA synthetic remains
+  **50% (16/32)** dominant with **Lean unsat 0% (0/16)**. Both have
   **DISAGREE=0**, **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
   The remaining first audit queue is now just QF_ABV and QF_AUFBV. **Next:**
   audit those array/BV rows, then decide whether to attack their proof gaps or
@@ -3152,6 +3180,31 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-25** — **QF_NRA SOS Lean coverage widened.**
+  Added a verified SOS certificate fallback in Lean reconstruction: detailed SOS
+  reconstruction remains first, and only `UnsupportedTerm` falls back to a
+  generic certificate-wrapper module after `sos_refute_with_certificate` returns
+  a certificate accepted by `SosCertificate::verify()`. This moves the
+  graduated QF_NRA `sos-unsat` rows into the Lean-checked dominance set while
+  keeping malformed detailed proofs visible. Re-ran the exact QF_NRA synthetic
+  dominance audit and regenerated `bench-results/DOMINANCE.md`: **dominant
+  15/30 -> 24/30**, Lean unsat **1/16 -> 10/16**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**. Remaining QF_NRA proof misses are the
+  higher-degree `bare-unsat` rows (`nra-neg-square-d02..d06` and
+  `nra-sos-strict-unsat-d02`).
+  Verification:
+  `cargo test -p axeyum-solver --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module -j1 -- --nocapture`;
+  `cargo test -p axeyum-solver --test lean_crosscheck qf_nra_sos_certificate_audit_rows_check_in_real_lean -j1 -- --nocapture`;
+  `cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2 30000`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-nra-synthetic-graduated-vs-z3.json 30000 30 bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **2026-06-25** — **Exact QF_UFBV/bitwuzla dominance row closed.**
   Added `UnsatBoolUfExhaustive` evidence and `ProofFragment::BoolUfExhaustive`
   for tiny finite Boolean-UF formulas. The checker enumerates reachable Boolean
@@ -4277,9 +4330,10 @@ plan is built and committed on the current branch:
   `axeyum_decided` denominator. Added a small outer worker grace window so
   baseline-budget solver results are not misclassified as audit thread timeouts.
   Committed exact QF_NRA synthetic and QF_NIA synthetic audit artifacts and
-  regenerated `bench-results/DOMINANCE.md`: exact rows are now 10, with QF_NRA
-  synthetic at 50% dominant / Lean unsat 1/16 and QF_NIA synthetic at 50%
-  dominant / Lean unsat 0/16.
+  regenerated `bench-results/DOMINANCE.md`: exact rows are now 10. The QF_NRA
+  row first exposed the SOS proof gap and was later widened to 24/30 dominant
+  with 10/16 Lean unsats; QF_NIA synthetic remains at 50% dominant with 0/16
+  Lean unsats.
 
 - **2026-06-25** — **Dominance audit batch + pure-real evidence fallback.**
   Committed six more complete `audit_dominance` artifacts and regenerated

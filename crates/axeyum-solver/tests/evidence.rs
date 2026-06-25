@@ -231,6 +231,33 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_unsat_carries_certificate() {
 }
 
 #[test]
+fn qf_nra_sos_certificate_wrapper_carries_lean_module() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2"
+    ))
+    .expect("synthetic NRA SOS row parses");
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatSos {
+        certificate,
+        lean_module,
+    } = &report.evidence
+    else {
+        panic!("expected SOS evidence, got {:?}", report.evidence);
+    };
+    assert!(certificate.verify());
+    assert!(lean_module.as_ref().is_some_and(|m| !m.contains("sorryAx")));
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.iter().all(|step| step.certified),
+        "SOS certificate should not introduce uncertified trust holes: {:?}",
+        step_ids(&report)
+    );
+}
+
+#[test]
 #[allow(clippy::many_single_char_names)]
 fn qf_abv_read_consistency_unsat_carries_a_zero_trust_alethe_certificate() {
     // select(a, i) = #b0…0 ∧ i = j ∧ ¬(select(a, j) = #b0…0): unsat by read

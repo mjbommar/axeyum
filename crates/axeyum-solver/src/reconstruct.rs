@@ -1588,6 +1588,11 @@ fn is_sos_rational_weight_gt(arena: &TermArena, assertions: &[TermId]) -> bool {
     }
 }
 
+fn sos_certificate_certifies(arena: &TermArena, assertions: &[TermId]) -> bool {
+    crate::nra_real_root::sos_refute_with_certificate(arena, assertions)
+        .is_some_and(|cert| cert.verify())
+}
+
 /// Detect a top-level assertion `not (= t t)`. This is a proof-route shortcut,
 /// not a simplifier: the original query itself supplies the contradictory
 /// disequality, and Lean closes it with `Eq.refl`.
@@ -1729,6 +1734,7 @@ fn scan_arithmetic_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> P
         || is_sos_multi_unit_square(arena, assertions)
         || is_sos_rational_weight(arena, assertions)
         || is_sos_rational_weight_gt(arena, assertions)
+        || sos_certificate_certifies(arena, assertions)
     {
         ProofFragment::Sos
     } else if crate::prove_lia_unsat_by_diophantine(arena, assertions) {
@@ -2986,11 +2992,7 @@ fn reconstruct_proof_fragment_to_lean_module(
             let t = reconstruct_disjunctive_lra_proof(&mut ctx, arena, assertions)?;
             gate_and_render_lra_module(&mut ctx, t, "disjunctive-LRA")?
         }
-        ProofFragment::Sos => {
-            let mut ctx = LraReconstructCtx::new();
-            let t = reconstruct_sos_proof(&mut ctx, arena, assertions)?;
-            gate_and_render_lra_module(&mut ctx, t, "SOS")?
-        }
+        ProofFragment::Sos => reconstruct_sos_to_lean_module(arena, assertions)?,
         ProofFragment::Diophantine => {
             // The integer Diophantine reconstructor builds its own integer-prelude
             // kernel, gates the `False` proof, and renders the module (ADR-0042).
@@ -3121,8 +3123,42 @@ pub fn reconstruct_sos_to_lean_module(
         });
     }
     let mut ctx = LraReconstructCtx::new();
-    let t = reconstruct_sos_proof(&mut ctx, arena, assertions)?;
-    gate_and_render_lra_module(&mut ctx, t, "SOS")
+    match reconstruct_sos_proof(&mut ctx, arena, assertions) {
+        Ok(t) => gate_and_render_lra_module(&mut ctx, t, "SOS"),
+        Err(ReconstructError::UnsupportedTerm { .. }) => {
+            reconstruct_sos_certificate_wrapper_to_lean_module(arena, assertions)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn reconstruct_sos_certificate_wrapper_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert =
+        crate::nra_real_root::sos_refute_with_certificate(arena, assertions).ok_or_else(|| {
+            ReconstructError::MalformedStep {
+                rule: "sos_certificate".to_owned(),
+                detail: "expected a self-checking SOS certificate".to_owned(),
+            }
+        })?;
+    if !cert.verify() {
+        return Err(ReconstructError::MalformedStep {
+            rule: "sos_certificate".to_owned(),
+            detail: "SOS certificate did not verify".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("sos_certificate_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "sos_certificate")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
 }
 
 /// Reconstruct a **complete** EUF `unsat` Alethe proof into a Lean proof term of

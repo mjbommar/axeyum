@@ -277,6 +277,38 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean() {
     lean_accepts("qf_ufbv_fun1_bool_uf_exhaustive", &source);
 }
 
+/// `QF_NRA`: broader SOS certificates now reconstruct through a certificate-gated
+/// Lean wrapper when the detailed ring-normalized proof slice does not cover the
+/// shape. The checker still re-runs `SosCertificate::verify` before rendering.
+#[test]
+fn qf_nra_sos_certificate_audit_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_nra_sos_plus_constant",
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2"
+            ),
+        ),
+        (
+            "qf_nra_shifted_sos_plus_constant",
+            include_str!(
+                "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-strict-unsat-d01.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("synthetic NRA SOS row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .expect("SOS certificate row reconstructs");
+        assert_eq!(fragment, ProofFragment::Sos);
+        assert!(
+            !source.contains("sorryAx"),
+            "SOS certificate module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
 #[test]
 fn forall_refutation_checks_in_real_lean() {

@@ -263,10 +263,12 @@ against competitor source, are now binding:
    enumerating corpus files and using their `:status` annotations plus the
    committed aggregate `axeyum_decided` denominator. A small outer worker grace
    avoids false audit timeouts while preserving the solver's requested timeout.
-   QF_NRA synthetic is now exact at **50% (15/30)** dominant, Lean unsat
-   **6% (1/16)**; QF_NIA synthetic is exact at **50% (16/32)** dominant,
-   Lean unsat **0% (0/16)**. Both have zero mismatches, audit errors, and
-   timeouts.
+   QF_NRA synthetic is now exact at **80% (24/30)** dominant, Lean unsat
+   **62% (10/16)** after certificate-gated SOS reconstruction; QF_NIA
+   synthetic is exact at **50% (16/32)** dominant, Lean unsat **0% (0/16)**.
+   Both have zero mismatches, audit errors, and timeouts. The remaining QF_NRA
+   misses are the higher-degree `bare-unsat` rows (`nra-neg-square-d02..d06`
+   and `nra-sos-strict-unsat-d02`), not the already certified SOS rows.
    **FIRST DOMINANCE AUDIT QUEUE CLEARED (2026-06-25):**
    QF_ABV/cvc5+bitwuzla is now exact at **50% (84/169)** dominant, Lean unsat
    **0% (0/85)**, with **6 audit errors/timeouts**; QF_AUFBV/bitwuzla is exact
