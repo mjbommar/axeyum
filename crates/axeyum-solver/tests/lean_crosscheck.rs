@@ -443,6 +443,12 @@ fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
             ),
         ),
         (
+            "qf_abv_btor_ext13",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext13.btor.smt2"
+            ),
+        ),
+        (
             "qf_abv_btor_ext19",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext19.btor.smt2"
@@ -464,6 +470,24 @@ fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
             "qf_abv_btor_3vl1",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__3vl1.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_read9",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__read9.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write16",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write16.btor.smt2"
+            ),
+        ),
+        (
+            "qf_abv_btor_write17",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__write17.btor.smt2"
             ),
         ),
         (

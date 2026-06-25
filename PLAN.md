@@ -613,6 +613,21 @@ against competitor source, are now binding:
    array families (`arraycond*`), the remaining extensionality/order row
    `ext13`, residual read/write shapes (`read9`, `write16`, `write17`), and
    cvc5-specific BV/array proof gaps.
+   **ABV SYMBOLIC-COVER/IMPLICATION EXTENSIONALITY COVERAGE WIDENED
+   (2026-06-25):** the checked `ArrayAxiom` read-congruence lane now proves
+   BV1 disjunctions of the form `¬antecedent ∨ consequent` by assuming the
+   antecedent and checking the consequent, recognizes complete symbolic finite
+   BV-domain covers from pairwise-distinct read indices, reads back through
+   stored arrays whose equality is itself proven by such a complete read cover,
+   and has a BV1 order-profile rule for arrays whose false/true rows are aligned
+   by equal index-order bits. This closes `read9`, `write16`, `write17`, and
+   `ext13` through the existing `ReadCongruence` certificate path. Re-running
+   the exact ABV audit moved **147/169 → 151/169** dominant and **Lean unsat
+   63/83 → 67/83**, with **mismatches=0, audit_errors=0, timeouts=0**. The
+   refreshed artifact now has **63** `array-axiom-unsat` rows and **16**
+   remaining `bare-unsat` rows. Remaining ABV bare-unsat work is now mostly
+   conditional array families (`arraycond*`), the residual `ext11` row, and
+   cvc5-specific BV/array proof gaps.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:
