@@ -1,0 +1,19 @@
+[package]
+name = "axeyum-property"
+description = "Bounded-property SDK for Axeyum: state a property over bounded ints/bit-vectors and get prove-or-counterexample with a re-checkable Lean certificate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+axeyum-solver = { path = "../axeyum-solver" }
+
+[lints]
+workspace = true
