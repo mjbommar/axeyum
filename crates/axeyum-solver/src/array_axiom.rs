@@ -863,11 +863,39 @@ struct StoreNorm {
 }
 
 fn is_store_shadowing(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    if is_store_restore_noop_chain(arena, lhs, rhs) {
+        return true;
+    }
+
     let lhs_norm = normalize_store_shadows(arena, lhs);
     let rhs_norm = normalize_store_shadows(arena, rhs);
     (lhs_norm.changed || rhs_norm.changed)
         && lhs_norm.base == rhs_norm.base
         && lhs_norm.writes == rhs_norm.writes
+}
+
+fn is_store_restore_noop_chain(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    let (base, writes) = collect_store_chain(arena, lhs);
+    let [
+        (first_index, _first_value),
+        (noop_index, noop_value),
+        (restore_index, restore_value),
+    ] = writes.as_slice()
+    else {
+        return false;
+    };
+
+    base == rhs
+        && indices_definitely_equal(arena, *first_index, *restore_index)
+        && indices_definitely_distinct(arena, *first_index, *noop_index)
+        && is_base_select_at(arena, *noop_value, base, *noop_index)
+        && is_base_select_at(arena, *restore_value, base, *first_index)
+}
+
+fn is_base_select_at(arena: &TermArena, term: TermId, base: TermId, index: TermId) -> bool {
+    match_select(arena, term).is_some_and(|(array, read_index)| {
+        array == base && indices_definitely_equal(arena, read_index, index)
+    })
 }
 
 fn normalize_store_shadows(arena: &TermArena, term: TermId) -> StoreNorm {
@@ -3420,6 +3448,17 @@ mod tests {
                 .expect("same-cell store value equality has disjoint BV ranges");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
+    }
+
+    #[test]
+    fn recognizes_cvc5_store_restore_noop_regression() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ABV/cvc5-regress-clean/cli__regress0__arrays__bug637.delta.smt2"
+        ))
+        .expect("cvc5 store-restore no-op case parses");
+        let cert = array_axiom_refutation(&script.arena, &script.assertions)
+            .expect("store-restore no-op chain refutes");
+        assert_eq!(cert.kind, ArrayAxiomKind::StoreShadowing);
     }
 
     #[test]

@@ -667,6 +667,16 @@ against competitor source, are now binding:
    **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact now has
    **76** `array-axiom-unsat` rows and **3** remaining `bare-unsat` rows:
    `bug637.delta`, `issue9041`, and `bvproof2`.
+   **ABV CVC5 STORE-RESTORE NO-OP COVERAGE WIDENED (2026-06-25):**
+   the checked `ArrayAxiom` store-chain lane now recognizes the cvc5
+   `bug637.delta` no-op/restore pattern: write a definitely distinct cell,
+   perform a store that writes the original value back to the other cell, then
+   restore the first cell from the original array. This closes the row through
+   the existing `StoreShadowing` certificate path without invoking bit-blast
+   trust. Re-running the exact ABV audit moved **164/169 → 165/169** dominant
+   and **Lean unsat 80/83 → 81/83**, with **mismatches=0, audit_errors=0,
+   timeouts=0**. The refreshed artifact now has **77** `array-axiom-unsat`
+   rows and **2** remaining `bare-unsat` rows: `issue9041` and `bvproof2`.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:
