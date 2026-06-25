@@ -251,9 +251,7 @@ impl BitLiteral {
     ) {
         if self.equal_when_true {
             facts.add(self.lhs, self.rhs);
-            add_bvnot_injectivity_fact(arena, facts, self.lhs, self.rhs);
-            add_store_same_cell_injectivity_fact(arena, facts, self.lhs, self.rhs);
-            add_store_self_update_read_fact(arena, facts, self.lhs, self.rhs);
+            add_derived_equality_facts(arena, facts, self.lhs, self.rhs);
         } else {
             disequalities.push((self.lhs, self.rhs));
             add_bvnot_injectivity_disequality(arena, disequalities, self.lhs, self.rhs);
@@ -271,9 +269,7 @@ impl BitLiteral {
             add_bvnot_injectivity_disequality(arena, disequalities, self.lhs, self.rhs);
         } else {
             facts.add(self.lhs, self.rhs);
-            add_bvnot_injectivity_fact(arena, facts, self.lhs, self.rhs);
-            add_store_same_cell_injectivity_fact(arena, facts, self.lhs, self.rhs);
-            add_store_self_update_read_fact(arena, facts, self.lhs, self.rhs);
+            add_derived_equality_facts(arena, facts, self.lhs, self.rhs);
         }
     }
 
@@ -302,6 +298,14 @@ impl BitLiteral {
     }
 }
 
+fn add_derived_equality_facts(arena: &TermArena, facts: &mut EqFacts, lhs: TermId, rhs: TermId) {
+    add_bvnot_injectivity_fact(arena, facts, lhs, rhs);
+    add_bvxor_zero_equality_fact(arena, facts, lhs, rhs);
+    add_concat_injectivity_fact(arena, facts, lhs, rhs);
+    add_store_same_cell_injectivity_fact(arena, facts, lhs, rhs);
+    add_store_self_update_read_fact(arena, facts, lhs, rhs);
+}
+
 fn add_bvnot_injectivity_fact(arena: &TermArena, facts: &mut EqFacts, lhs: TermId, rhs: TermId) {
     if let (Some(lhs_inner), Some(rhs_inner)) = (match_bv_not(arena, lhs), match_bv_not(arena, rhs))
     {
@@ -322,6 +326,42 @@ fn add_bvnot_injectivity_disequality(
         if arena.sort_of(lhs_inner) == arena.sort_of(rhs_inner) {
             disequalities.push((lhs_inner, rhs_inner));
         }
+    }
+}
+
+fn add_bvxor_zero_equality_fact(arena: &TermArena, facts: &mut EqFacts, lhs: TermId, rhs: TermId) {
+    add_bvxor_zero_equality_fact_one(arena, facts, lhs, rhs);
+    add_bvxor_zero_equality_fact_one(arena, facts, rhs, lhs);
+}
+
+fn add_bvxor_zero_equality_fact_one(
+    arena: &TermArena,
+    facts: &mut EqFacts,
+    xor_term: TermId,
+    zero_term: TermId,
+) {
+    if !is_bv_zero(arena, zero_term) {
+        return;
+    }
+    let Some((lhs, rhs)) = match_bv_xor(arena, xor_term) else {
+        return;
+    };
+    facts.add(lhs, rhs);
+    add_concat_injectivity_fact(arena, facts, lhs, rhs);
+}
+
+fn add_concat_injectivity_fact(arena: &TermArena, facts: &mut EqFacts, lhs: TermId, rhs: TermId) {
+    let Some((lhs_hi, lhs_lo)) = match_concat(arena, lhs) else {
+        return;
+    };
+    let Some((rhs_hi, rhs_lo)) = match_concat(arena, rhs) else {
+        return;
+    };
+    if arena.sort_of(lhs_hi) == arena.sort_of(rhs_hi)
+        && arena.sort_of(lhs_lo) == arena.sort_of(rhs_lo)
+    {
+        facts.add(lhs_hi, rhs_hi);
+        facts.add(lhs_lo, rhs_lo);
     }
 }
 
@@ -378,6 +418,34 @@ fn match_bv_not(arena: &TermArena, term: TermId) -> Option<TermId> {
         return None;
     };
     matches!(arena.sort_of(term), Sort::BitVec(_)).then_some(*inner)
+}
+
+fn match_bv_xor(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::BvXor,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    matches!(arena.sort_of(term), Sort::BitVec(_)).then_some((*lhs, *rhs))
+}
+
+fn match_concat(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Concat,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    matches!(arena.sort_of(term), Sort::BitVec(_)).then_some((*lhs, *rhs))
 }
 
 fn collect_bit_assertion(
@@ -1037,12 +1105,15 @@ fn terms_equivalent_inner(
         finite_array_extensional_bit_equivalence(arena, facts, distinct, lhs, rhs, memo);
     let finite_array_known_reads_equal =
         finite_array_known_read_equivalence(arena, facts, distinct, lhs, rhs, memo);
+    let finite_array_read_facts_equal =
+        finite_array_read_fact_equivalence(arena, facts, distinct, lhs, rhs, memo);
 
     let result = facts.same(lhs, rhs)
         || known_bv1_equal
         || known_const_bv_equal
         || finite_array_extensional_equal
         || finite_array_known_reads_equal
+        || finite_array_read_facts_equal
         || match (arena.node(lhs), arena.node(rhs)) {
             (
                 TermNode::BvConst {
@@ -1503,6 +1574,71 @@ fn finite_array_known_read_equivalence(
         }
     }
     extensional_reads_cover_domain(arena, facts, distinct, &covered_reads, domain_size, memo)
+}
+
+fn finite_array_read_fact_equivalence(
+    arena: &TermArena,
+    facts: &EqFacts,
+    distinct: &[(TermId, TermId)],
+    lhs_array: TermId,
+    rhs_array: TermId,
+    memo: &mut BTreeMap<(TermId, TermId), bool>,
+) -> bool {
+    let Sort::Array {
+        index: ArraySortKey::BitVec(index_width),
+        ..
+    } = arena.sort_of(lhs_array)
+    else {
+        return false;
+    };
+    if arena.sort_of(rhs_array) != arena.sort_of(lhs_array) {
+        return false;
+    }
+    let Some(domain_size) = finite_bv_domain_size(index_width) else {
+        return false;
+    };
+
+    let lhs_reads = select_terms_for_array(arena, facts, lhs_array);
+    let rhs_reads = select_terms_for_array(arena, facts, rhs_array);
+    if lhs_reads.is_empty() || rhs_reads.is_empty() {
+        return false;
+    }
+
+    let mut covered_reads = Vec::new();
+    for lhs in &lhs_reads {
+        if rhs_reads.iter().any(|rhs| {
+            facts.same(lhs.term, rhs.term)
+                && terms_equivalent_inner(arena, facts, distinct, lhs.index, rhs.index, memo)
+        }) {
+            covered_reads.push(ExtensionalReadBit {
+                index: lhs.index,
+                const_index: const_bv_value(arena, lhs.index).map(|(_width, value)| value),
+            });
+        }
+    }
+    extensional_reads_cover_domain(arena, facts, distinct, &covered_reads, domain_size, memo)
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SelectRead {
+    term: TermId,
+    index: TermId,
+}
+
+fn select_terms_for_array(
+    arena: &TermArena,
+    facts: &EqFacts,
+    expected_array: TermId,
+) -> Vec<SelectRead> {
+    facts
+        .parent
+        .keys()
+        .copied()
+        .filter_map(|term| {
+            let (array, index) = match_select(arena, term)?;
+            array_terms_match(facts, array, expected_array).then_some(SelectRead { term, index })
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2068,6 +2204,10 @@ fn is_bv_const(arena: &TermArena, term: TermId, expected_width: u32, expected_va
     )
 }
 
+fn is_bv_zero(arena: &TermArena, term: TermId) -> bool {
+    const_bv_value(arena, term).is_some_and(|(_width, value)| value == 0)
+}
+
 #[cfg(test)]
 mod tests {
     use axeyum_ir::TermArena;
@@ -2221,6 +2361,9 @@ mod tests {
             ),
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext21.btor.smt2"
+            ),
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ABV/bitwuzla-regress-clean/solver__array__ext23.btor.smt2"
             ),
         ];
 

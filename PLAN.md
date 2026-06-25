@@ -587,6 +587,18 @@ against competitor source, are now binding:
    Remaining ABV bare-unsat work is conditional-array families, remaining
    extensionality/order rows, residual write shapes (`write16`, `write17`), and
    cvc5-specific BV/array proof gaps.
+   **ABV CONCAT-XOR FINITE EXTENSIONALITY COVERAGE WIDENED (2026-06-25):**
+   the equality closure now records the zero-xor fact `bvxor(x, y) = 0 -> x = y`,
+   pushes equality through same-shaped `concat` terms, and lets finite array
+   equality consume asserted read-equality facts when those reads cover the full
+   finite BV-index domain. This closes the BTOR `ext23` row through the existing
+   `ReadCongruence` certificate path. Re-running the exact ABV audit moved
+   **143/169 → 144/169** dominant and **Lean unsat 59/83 → 60/83**, with
+   **mismatches=0, audit_errors=0, timeouts=0**. The refreshed artifact now has
+   **56** `array-axiom-unsat` rows and **23** remaining `bare-unsat` rows.
+   Remaining ABV bare-unsat work is conditional-array families, remaining
+   extensionality/order rows, residual write shapes (`write16`, `write17`), and
+   cvc5-specific BV/array proof gaps.
 4. **Two of the three "deprioritized hard rows" are actually cheap, decider-already-
    built, dominance-*eligible* wins — do NOT deprioritize them.** The deciders exist;
    the blocker is **one IR change**, and it is itself the highest-leverage move:
