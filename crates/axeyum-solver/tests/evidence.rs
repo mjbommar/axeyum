@@ -1109,6 +1109,54 @@ fn qf_fp_bitwuzla_rows_use_checked_bv_defined_enum_evidence() {
 }
 
 #[test]
+fn qf_bvfp_bitwuzla_rows_use_checked_bv_defined_enum_evidence() {
+    for (tag, input, max_cases) in [
+        (
+            "qf_bvfp_float_no_simp3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2"
+            ),
+            2,
+        ),
+        (
+            "qf_bvfp_fp_fromsbv",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2"
+            ),
+            10,
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_BVFP row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
+        let Evidence::UnsatBvDefinedEnum(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected definition-aware scalar enum evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(
+            (1..=max_cases).contains(&cert.cases),
+            "{tag}: QF_BVFP certificate should stay in the small replay slice, got {} cases",
+            cert.cases
+        );
+        assert!(
+            report.evidence.is_certified(),
+            "{tag}: evidence should be certified"
+        );
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}: evidence should re-check"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: direct structural certificate should carry no trust holes"
+        );
+    }
+}
+
+#[test]
 fn unified_front_door_routes_pure_real_to_a_refutation() {
     // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
     let mut arena = TermArena::new();

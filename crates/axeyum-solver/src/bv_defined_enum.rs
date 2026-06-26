@@ -16,7 +16,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{
-    Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
+    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
+    eval_with_memo,
 };
 
 const MAX_SYMBOL_WIDTH: u32 = 16;
@@ -51,6 +52,12 @@ struct EnumSymbol {
     full_len: usize,
 }
 
+#[derive(Debug, Clone)]
+struct IndependentDomains {
+    symbols: Vec<EnumSymbol>,
+    omitted_fp_helpers: Vec<SymbolId>,
+}
+
 /// Returns a certificate when all satisfying assignments are covered by bounded
 /// definition-aware enumeration and every covered assignment falsifies the
 /// original assertions.
@@ -78,11 +85,15 @@ pub fn bv_defined_enum_refutation(
     }
     let definitions = collect_definitions(arena, &required);
     let defined_symbols: BTreeSet<_> = definitions.iter().map(|d| d.symbol).collect();
-    if definitions.is_empty() {
+
+    let independent = independent_domains(arena, &required, &symbol_sorts, &defined_symbols)?;
+    if definitions.is_empty()
+        && independent.omitted_fp_helpers.is_empty()
+        && !contains_fp_from_bits(arena, assertions)
+    {
         return None;
     }
-
-    let enum_symbols = independent_domains(arena, &required, &symbol_sorts, &defined_symbols)?;
+    let enum_symbols = independent.symbols;
     let cases = enum_symbols.iter().try_fold(1_u64, |acc, symbol| {
         acc.checked_mul(u64::try_from(symbol.domain.len()).ok()?)
     })?;
@@ -126,11 +137,36 @@ fn collect_required_constraints(arena: &TermArena, term: TermId, out: &mut Vec<T
                 && inner_args.len() == 2
             {
                 collect_required_constraints(arena, inner_args[0], out);
+                collect_negated_required_constraints(arena, inner_args[1], out);
                 return;
             }
             out.push(term);
         }
         _ => out.push(term),
+    }
+}
+
+fn collect_negated_required_constraints(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolImplies,
+            args,
+        } if args.len() == 2 => {
+            collect_required_constraints(arena, args[0], out);
+            collect_negated_required_constraints(arena, args[1], out);
+        }
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } if args.len() == 1 => collect_required_constraints(arena, args[0], out),
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } if args.len() == 2 => {
+            collect_negated_required_constraints(arena, args[0], out);
+            collect_negated_required_constraints(arena, args[1], out);
+        }
+        _ => {}
     }
 }
 
@@ -200,10 +236,16 @@ fn independent_domains(
     required: &[TermId],
     symbol_sorts: &BTreeMap<SymbolId, Sort>,
     defined_symbols: &BTreeSet<SymbolId>,
-) -> Option<Vec<EnumSymbol>> {
+) -> Option<IndependentDomains> {
     let mut domains = BTreeMap::new();
+    let mut omitted_fp_helpers = Vec::new();
     for (&symbol, &sort) in symbol_sorts {
         if defined_symbols.contains(&symbol) {
+            continue;
+        }
+        let (name, _) = arena.symbol(symbol);
+        if is_fp_helper_symbol_name(name) {
+            omitted_fp_helpers.push(symbol);
             continue;
         }
         let domain = full_domain(sort)?;
@@ -235,7 +277,31 @@ fn independent_domains(
     if out.iter().any(|symbol| symbol.domain.is_empty()) {
         return None;
     }
-    Some(out)
+    Some(IndependentDomains {
+        symbols: out,
+        omitted_fp_helpers,
+    })
+}
+
+fn is_fp_helper_symbol_name(name: &str) -> bool {
+    name.starts_with("!fp.") || name.starts_with("axeyum_fp.")
+}
+
+fn contains_fp_from_bits(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::FpFromBits { .. }) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 fn match_finite_domain_constraint(
@@ -424,7 +490,7 @@ fn apply_definitions(
         let mut next = Vec::new();
         let mut progressed = false;
         for definition in pending {
-            match eval(arena, definition.expr, assignment) {
+            match selected_path_eval(arena, definition.expr, assignment) {
                 Ok(value) if value_matches_sort(definition.sort, &value) => {
                     assignment.set(definition.symbol, value);
                     progressed = true;
@@ -446,13 +512,91 @@ fn all_assertions_true(
     assignment: &Assignment,
 ) -> Option<bool> {
     for &assertion in assertions {
-        match eval(arena, assertion, assignment).ok()? {
+        match selected_path_eval(arena, assertion, assignment).ok()? {
             Value::Bool(true) => {}
             Value::Bool(false) => return Some(false),
             _ => return None,
         }
     }
     Some(true)
+}
+
+fn selected_path_eval(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+) -> Result<Value, IrError> {
+    let mut memo = std::collections::HashMap::new();
+    selected_path_eval_with_memo(arena, term, assignment, &mut memo)
+}
+
+fn selected_path_eval_with_memo(
+    arena: &TermArena,
+    term: TermId,
+    assignment: &Assignment,
+    memo: &mut std::collections::HashMap<TermId, Value>,
+) -> Result<Value, IrError> {
+    if let Some(value) = memo.get(&term) {
+        return Ok(value.clone());
+    }
+    let value = match arena.node(term) {
+        TermNode::App { op: Op::Ite, args } if args.len() == 3 => {
+            let cond = selected_path_eval_with_memo(arena, args[0], assignment, memo)?;
+            memo.insert(args[0], cond.clone());
+            let cond = cond.as_bool().expect("builder guaranteed Bool condition");
+            let selected = if cond { args[1] } else { args[2] };
+            selected_path_eval_with_memo(arena, selected, assignment, memo)?
+        }
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } if args.len() == 2 => {
+            let lhs = selected_path_eval_with_memo(arena, args[0], assignment, memo)?;
+            let lhs = lhs.as_bool().expect("builder guaranteed Bool operand");
+            if lhs {
+                let rhs = selected_path_eval_with_memo(arena, args[1], assignment, memo)?;
+                Value::Bool(rhs.as_bool().expect("builder guaranteed Bool operand"))
+            } else {
+                Value::Bool(false)
+            }
+        }
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } if args.len() == 2 => {
+            let lhs = selected_path_eval_with_memo(arena, args[0], assignment, memo)?;
+            let lhs = lhs.as_bool().expect("builder guaranteed Bool operand");
+            if lhs {
+                Value::Bool(true)
+            } else {
+                let rhs = selected_path_eval_with_memo(arena, args[1], assignment, memo)?;
+                Value::Bool(rhs.as_bool().expect("builder guaranteed Bool operand"))
+            }
+        }
+        TermNode::App {
+            op: Op::BoolImplies,
+            args,
+        } if args.len() == 2 => {
+            let lhs = selected_path_eval_with_memo(arena, args[0], assignment, memo)?;
+            let lhs = lhs.as_bool().expect("builder guaranteed Bool operand");
+            if lhs {
+                let rhs = selected_path_eval_with_memo(arena, args[1], assignment, memo)?;
+                Value::Bool(rhs.as_bool().expect("builder guaranteed Bool operand"))
+            } else {
+                Value::Bool(true)
+            }
+        }
+        TermNode::App { args, .. } => {
+            for &arg in &**args {
+                let value = selected_path_eval_with_memo(arena, arg, assignment, memo)?;
+                memo.insert(arg, value);
+            }
+            eval_with_memo(arena, term, assignment, memo)?
+        }
+        _ => eval_with_memo(arena, term, assignment, memo)?,
+    };
+    memo.insert(term, value.clone());
+    Ok(value)
 }
 
 fn match_equality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {

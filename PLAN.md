@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **640 decided**,
-   **591 oracle-compared**, **DISAGREE = 0**, with **16 complete exact audit rows**
+   **591 oracle-compared**, **DISAGREE = 0**, with **17 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **AUDIT HARNESS LANDED (2026-06-25):**
@@ -257,6 +257,17 @@ against competitor source, are now binding:
    pre-solve certification. The exact QF_FP audit is now **100% (16/16)**
    dominant with Lean unsat **100% (7/7)**, zero mismatches, zero audit errors,
    and zero timeouts.
+   **QF_BVFP EXACT ROW CLOSED (2026-06-26):**
+   the Bitwuzla QF_BVFP row now has a committed exact dominance audit. The two
+   prior proof-production timeouts (`Float-no-simp3-main` and `fp_fromsbv`) now
+   certify through the checked `bv-defined-enum-unsat` route. The checker collects
+   required facts through nested negated implications, replays top-level
+   definitions with selected-path `ite`/Boolean semantics so parser-created
+   FP-conversion witnesses are ignored only when the chosen semantic path never
+   reads them, and permits the no-definition FP-lowered `FpFromBits` slice to
+   enumerate its tiny real domain (`x` and restricted `rm`) directly. The exact
+   QF_BVFP audit is now **100% (7/7)** dominant with Lean unsat **100% (3/3)**,
+   zero mismatches, zero audit errors, and zero timeouts.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **100% (4/4)**, QF_BV/bvred **100% (6/6)**,

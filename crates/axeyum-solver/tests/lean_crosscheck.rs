@@ -392,6 +392,35 @@ fn qf_fp_bv_defined_enum_rows_check_in_real_lean() {
     }
 }
 
+#[test]
+fn qf_bvfp_bv_defined_enum_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_bvfp_float_no_simp3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2"
+            ),
+        ),
+        (
+            "qf_bvfp_fp_fromsbv",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_BVFP row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: BV defined enum reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::BvDefinedEnum, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: BV defined enum module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {
