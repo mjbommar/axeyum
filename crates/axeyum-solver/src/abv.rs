@@ -4725,34 +4725,23 @@ fn repair_projected_ext_candidate(
     Ok(repair_stats)
 }
 
-fn project_replay_ext_candidate(
+fn first_projected_replay_failure(
     arena: &TermArena,
-    ctx: &RowCtx,
     originals: &[TermId],
-    assignment: &Assignment,
-) -> Result<ExtReplay, SolverError> {
-    // Reconstruct array variables from the base-variable read sites only.
-    let arrays = collect_base_array_entries(arena, ctx, assignment, "lazy-ext projection failed")?;
-    let mut projected = complete_assignment(arena, assignment);
-    for (&array, entries) in &arrays {
-        projected.set(array, array_value_from_entries(arena, array, entries)?);
-    }
-    let repair_stats = repair_projected_ext_candidate(arena, originals, &mut projected)?;
-
-    // Replay against the ORIGINAL assertions, re-deriving every array (dis)equality
-    // extensionally from the reconstructed arrays. Accept only a genuine model;
-    // a replay miss (reconstruction underdetermined this shape) declines.
+    projected: &Assignment,
+    repair_stats: ProjectionRepairStats,
+) -> Result<Option<ReplayFailure>, SolverError> {
     for (ordinal, &assertion) in originals.iter().enumerate() {
-        match eval(arena, assertion, &projected) {
+        match eval(arena, assertion, projected) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => {
-                return Ok(ExtReplay::Failed(Box::new(first_false_replay_conjunct(
+                return Ok(Some(first_false_replay_conjunct(
                     arena,
                     assertion,
                     ordinal,
-                    &projected,
+                    projected,
                     repair_stats,
-                )?)));
+                )?));
             }
             Ok(value) => {
                 return Err(SolverError::Backend(format!(
@@ -4768,7 +4757,85 @@ fn project_replay_ext_candidate(
             }
         }
     }
+    Ok(None)
+}
 
+fn repair_projected_replay_failure(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    failure: &ReplayFailure,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    let Some(or_failure) = &failure.failed_or else {
+        return Ok(None);
+    };
+
+    if let Some(schedule_stats) =
+        repair_projected_branch_schedule(arena, originals, or_failure.best_branch_term, projected)?
+    {
+        return Ok(Some(schedule_stats));
+    }
+
+    if or_failure.best_branch_false_literals != 1 {
+        return Ok(None);
+    }
+    let Some(false_literal) = or_failure.best_branch_first_false_term else {
+        return Ok(None);
+    };
+
+    let mut stats = ProjectionRepairStats::default();
+    let changed =
+        repair_projected_branch_literal(arena, originals, false_literal, projected, &mut stats)?;
+    Ok(changed.then_some(stats))
+}
+
+fn project_replay_ext_candidate(
+    arena: &TermArena,
+    ctx: &RowCtx,
+    originals: &[TermId],
+    assignment: &Assignment,
+) -> Result<ExtReplay, SolverError> {
+    const MAX_TARGETED_REPLAY_REPAIRS: usize = 8;
+
+    // Reconstruct array variables from the base-variable read sites only.
+    let arrays = collect_base_array_entries(arena, ctx, assignment, "lazy-ext projection failed")?;
+    let mut projected = complete_assignment(arena, assignment);
+    for (&array, entries) in &arrays {
+        projected.set(array, array_value_from_entries(arena, array, entries)?);
+    }
+    let mut repair_stats = repair_projected_ext_candidate(arena, originals, &mut projected)?;
+
+    // Replay against the ORIGINAL assertions, re-deriving every array (dis)equality
+    // extensionally from the reconstructed arrays. Accept only a genuine model;
+    // a replay miss (reconstruction underdetermined this shape) declines.
+    for _ in 0..MAX_TARGETED_REPLAY_REPAIRS {
+        let Some(failure) =
+            first_projected_replay_failure(arena, originals, &projected, repair_stats)?
+        else {
+            return Ok(ExtReplay::Sat(model_from_projected_assignment(
+                arena, &projected,
+            )));
+        };
+        let Some(targeted_stats) =
+            repair_projected_replay_failure(arena, originals, &mut projected, &failure)?
+        else {
+            return Ok(ExtReplay::Failed(Box::new(failure)));
+        };
+        repair_stats.absorb(targeted_stats);
+    }
+
+    if let Some(failure) =
+        first_projected_replay_failure(arena, originals, &projected, repair_stats)?
+    {
+        return Ok(ExtReplay::Failed(Box::new(failure)));
+    }
+
+    Ok(ExtReplay::Sat(model_from_projected_assignment(
+        arena, &projected,
+    )))
+}
+
+fn model_from_projected_assignment(arena: &TermArena, projected: &Assignment) -> Model {
     let mut out = Model::new();
     for (symbol, name, _sort) in arena.symbols() {
         if name.starts_with("!row_sel_")
@@ -4784,7 +4851,7 @@ fn project_replay_ext_candidate(
     for (func, value) in projected.functions() {
         out.set_function(func, value.clone());
     }
-    Ok(ExtReplay::Sat(out))
+    out
 }
 
 fn first_false_replay_conjunct(
@@ -5179,9 +5246,10 @@ pub fn certify_array_elim_unsat(
 mod tests {
     use super::{
         ExtReplay, LastExtReplay, ProjectionRepairStats, RowCtx, RowKind, RowSite, StoreChainSide,
-        check_qf_abv_lazy, check_with_array_elimination, const_array_default_mismatch_refutation,
-        cross_store_array_disequality_refutation, first_false_replay_conjunct,
-        project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
+        check_qf_abv_lazy, check_with_array_elimination, complete_assignment,
+        const_array_default_mismatch_refutation, cross_store_array_disequality_refutation,
+        first_false_replay_conjunct, first_projected_replay_failure, project_replay_ext_candidate,
+        prove_unsat_by_symmetric_swap_chain, repair_projected_replay_failure,
         replay_last_ext_candidate, store_chain_readback_refutation,
     };
     use crate::backend::{CheckResult, SolverConfig};
@@ -5436,6 +5504,62 @@ mod tests {
                 Value::Bool(true)
             );
         }
+    }
+
+    #[test]
+    fn lazy_ext_targeted_replay_repairs_single_store_branch_literal() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let v = arena.bv_var("v", 8).unwrap();
+        let p = arena.bool_var("p").unwrap();
+        let stored = arena.store(a, i, v).unwrap();
+        let b_eq_store = arena.eq(b, stored).unwrap();
+        let branch_assertion = arena.or(b_eq_store, p).unwrap();
+
+        let mut candidate = Assignment::new();
+        for (symbol, name, sort) in arena.symbols() {
+            match name {
+                "i" => candidate.set(symbol, Value::Bv { width: 4, value: 0 }),
+                "v" => candidate.set(symbol, Value::Bv { width: 8, value: 7 }),
+                "p" => candidate.set(symbol, Value::Bool(false)),
+                _ if sort == Sort::BitVec(4) => {
+                    candidate.set(symbol, Value::Bv { width: 4, value: 0 });
+                }
+                _ if sort == Sort::BitVec(8) => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+                }
+                _ => {}
+            }
+        }
+
+        let originals = [branch_assertion];
+        let mut projected = complete_assignment(&arena, &candidate);
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected the store branch to fail before targeted repair");
+        assert_eq!(failure.conjunct_term, branch_assertion);
+
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected targeted branch repair to change the projection");
+        assert_eq!(stats.branch_symbol_changes, 1);
+        assert!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .is_none()
+        );
     }
 
     #[test]

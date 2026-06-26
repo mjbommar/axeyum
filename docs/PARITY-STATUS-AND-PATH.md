@@ -578,6 +578,17 @@ a named mechanism.**
    branch-consistent store-chain/readback projection for that target array, not
    a blanket one-literal target-readback alignment (that was tested and regressed
    existing focused coverage).
+   **Targeted replay branch repair landed later 2026-06-26:** after the general
+   projection pass, last-candidate replay can now repair the exact single false
+   branch literal named by full original replay and then replay again. On
+   `bug337`, this moves the 10 s diagnostic past branch term **3654** / first
+   false term **495** to direct readback equality ordinal **208**, term **3440**,
+   `x_384 = x_344`, values **0** vs **1**, after **419** projection repair
+   changes. The row remains `unknown`. A wider 96-round projection cap stayed at
+   branch **3654** with **929** projection repair changes, and a targeted scalar
+   fallback cycled among branch **3654**, equality **3440**, and lower branch
+   **3879**. The next AUFLIA move is a component-level branch-choice/store-chain
+   readback projection for that three-node queue-lock cycle.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

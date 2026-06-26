@@ -1802,6 +1802,17 @@ against competitor source, are now binding:
      store-chain/readback projection for that target array; a blanket
      one-literal target-readback alignment was tested and rejected because it
      regressed existing single-false branch repair behavior.
+     **TARGETED REPLAY BRANCH REPAIR LANDED (2026-06-26):** after the general
+     projection pass, the last-candidate replay path can now repair the exact
+     single false branch literal named by full original replay and replay again.
+     This remains SAT-only because the original evaluator replay is still the
+     only acceptance gate. On `bug337`, the 10 s probe moves past branch term
+     3654 / first false term 495 to direct readback equality ordinal 208 / term
+     3440, `x_384 = x_344`, values 0 vs 1, after 419 projection repair changes.
+     A wider 96-round projection cap did not move the frontier, and a targeted
+     scalar fallback cycled among branch 3654, equality 3440, and lower branch
+     3879. Next useful work is therefore a component-level branch-choice /
+     store-chain readback projection for that three-node queue-lock cycle.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
