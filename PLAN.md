@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 658 decided, 606 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 660 decided, 608 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **658 decided**,
-   **606 oracle-compared**, **DISAGREE = 0**, with **21 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **660 decided**,
+   **608 oracle-compared**, **DISAGREE = 0**, with **21 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -274,6 +274,18 @@ against competitor source, are now binding:
    (100.0%)**, with **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
    The first audit queue is now clear; QF_ALIA's next work is broader
    Int-array generalization, not deciding or certifying this slice.
+   **QF_AX CROSS-STORE ARRAY REFUTER LANDED (2026-06-26):**
+   same-index reciprocal stores over declared index/element sorts now refute
+   direct array disequalities before any finite-domain BV lowering. The structural
+   rule derives `A = B` from
+   `store(A,i,select(B,i)) = store(B,i,select(A,i))`, iterates that derivation
+   through the two-step `arrays4` shape, and deliberately does not match the SAT
+   `arrays3` mixed-index shape. Refreshing the current QF_AX cvc5 clean baseline
+   records **5/8 decided (62.5%)**, **unknown=1**, **unsupported=2**,
+   **oracle-compared=5/8**, **DISAGREE=0**, and PAR-2 mean **10.000 s**.
+   This is a decide-rate improvement only; evidence/Lean certification for this
+   direct refuter is still open. Remaining QF_AX blockers are declared-sort SAT
+   model construction for `arrays2`/`arrays3` and the Bool-array unsat row.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

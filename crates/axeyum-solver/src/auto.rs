@@ -4386,7 +4386,8 @@ mod tests {
     #[allow(clippy::many_single_char_names)]
     fn array_extensionality_conflict_is_unsat_via_congruence() {
         // a = b ∧ select(a, i) ≠ select(b, i) over a 16-bit index (too wide for the
-        // eager extensionality enumeration, which refuses indices > 8 bits) ⇒ UNSAT
+        // eager extensionality enumeration, which refuses indices above its small
+        // finite-index cap) ⇒ UNSAT
         // by congruence: a = b makes select(a,i) and select(b,i) congruent.
         let mut arena = TermArena::new();
         let a = arena.array_var("a", 16, 8).unwrap();

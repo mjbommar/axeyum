@@ -12,7 +12,7 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 
 ## Headline
 
-- 35 measured division rows, 992 files, 658 decided, 606 oracle-compared.
+- 35 measured division rows, 992 files, 660 decided, 608 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
 - 18 rows are decide-strong (Decide% >= 80). 14 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
 - Complete committed dominance audits with exact audited `dominant%(D)`: 21. Remaining rows are readiness or partial-audit entries.
@@ -77,7 +77,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 44 | 41 | 93% | strong | 0 | complete | 100% (41/41) | 100% (20/20) | dominant on audited row | split direct ROW/congruence wins from general array elimination |
 | QF_AUFBV | `qf-aufbv-cvc5-regress-clean` | 9 | 5 | 56% | mid | 0 | not run | - | - | grow decide + classify certs | split direct ROW/congruence wins from general array elimination |
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 7 | 5 | 71% | mid | 0 | not run | - | - | grow decide + classify certs | finish decide frontier before spending cert budget beyond narrow refuters |
-| QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 3 | 38% | weak | 0 | not run | - | - | decider first | replace finite index enumeration with witnessed extensionality, then certify |
+| QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 5 | 62% | mid | 0 | not run | - | - | grow decide + classify certs | replace finite index enumeration with witnessed extensionality, then certify |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (2/2) | dominant on audited row | add per-instance BV operator classifier; close mul/rem/shift Lean gap |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 100% (7/7) | 100% (3/3) | dominant on audited row | separate pure-BV certs from FP-to-BV trust-hole cases |
 | QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (3/3) | dominant on audited row | witness the general DatatypeElim dispatch end to end |

@@ -7,7 +7,7 @@
 //! assertions with the ground evaluator. Pure `QF_BV` queries pass straight
 //! through unchanged.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use axeyum_ir::{
@@ -400,7 +400,7 @@ fn contextual_unknown(
 ///   this delegates to [`check_qf_abv_lazy`] verbatim — the verdict is unchanged.
 /// * Only when eager elimination **refuses** (`Unsupported`) — the canonical case
 ///   being a wide-index *array equality involving a store*, `b = store(a, i, v)`,
-///   which bounded extensionality declines above its 8-bit index cap — does the
+///   which bounded extensionality declines above its small finite-index cap — does the
 ///   lazy-ROW path engage.
 ///
 /// # The lazy-ROW procedure
@@ -1392,6 +1392,10 @@ pub fn prove_unsat_by_symmetric_swap_chain_within(
         collect_positive_conjuncts(arena, assertion, &mut conjuncts);
     }
 
+    if prove_unsat_by_cross_store_array_disequality(arena, &conjuncts, deadline) {
+        return true;
+    }
+
     let mut normalizer = SwapNormalizer::new(arena, deadline);
     for conjunct in conjuncts {
         if past_deadline(deadline) {
@@ -1419,6 +1423,119 @@ pub fn prove_unsat_by_symmetric_swap_chain_within(
     }
 
     false
+}
+
+fn prove_unsat_by_cross_store_array_disequality(
+    arena: &TermArena,
+    conjuncts: &[TermId],
+    deadline: Option<Instant>,
+) -> bool {
+    let disequalities: Vec<(TermId, TermId)> = conjuncts
+        .iter()
+        .filter_map(|&term| negated_array_equality(arena, term))
+        .map(canonical_term_pair)
+        .collect();
+    if disequalities.is_empty() {
+        return false;
+    }
+
+    let mut work: Vec<(TermId, TermId)> = conjuncts
+        .iter()
+        .filter_map(|&term| positive_array_equality(arena, term))
+        .collect();
+    let mut seen = BTreeSet::new();
+
+    while let Some((lhs, rhs)) = work.pop() {
+        if past_deadline(deadline) {
+            return false;
+        }
+        let pair = canonical_term_pair((lhs, rhs));
+        if !seen.insert(pair) {
+            continue;
+        }
+        if disequalities.contains(&pair) {
+            return true;
+        }
+        if let Some(base_pair) = cross_store_base_equality(arena, lhs, rhs) {
+            work.push(base_pair);
+        }
+    }
+
+    false
+}
+
+fn positive_array_equality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    array_equality_args(arena, args[0], args[1])
+}
+
+fn negated_array_equality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    positive_array_equality(arena, args[0])
+}
+
+fn array_equality_args(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<(TermId, TermId)> {
+    if matches!(arena.sort_of(lhs), Sort::Array { .. }) && arena.sort_of(lhs) == arena.sort_of(rhs)
+    {
+        Some((lhs, rhs))
+    } else {
+        None
+    }
+}
+
+fn canonical_term_pair((lhs, rhs): (TermId, TermId)) -> (TermId, TermId) {
+    if lhs <= rhs { (lhs, rhs) } else { (rhs, lhs) }
+}
+
+fn cross_store_base_equality(
+    arena: &TermArena,
+    lhs: TermId,
+    rhs: TermId,
+) -> Option<(TermId, TermId)> {
+    let lhs = store_same_index_read_parts(arena, lhs)?;
+    let rhs = store_same_index_read_parts(arena, rhs)?;
+    if lhs.index == rhs.index && lhs.selected_array == rhs.base && rhs.selected_array == lhs.base {
+        Some((lhs.base, rhs.base))
+    } else {
+        None
+    }
+}
+
+#[derive(Clone, Copy)]
+struct StoreSameIndexRead {
+    base: TermId,
+    index: TermId,
+    selected_array: TermId,
+}
+
+fn store_same_index_read_parts(arena: &TermArena, term: TermId) -> Option<StoreSameIndexRead> {
+    let TermNode::App {
+        op: Op::Store,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let base = args[0];
+    let index = args[1];
+    let (selected_array, selected_index) = select_parts(arena, args[2])?;
+    if index == selected_index {
+        Some(StoreSameIndexRead {
+            base,
+            index,
+            selected_array,
+        })
+    } else {
+        None
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -3520,6 +3637,39 @@ mod tests {
         assert!(
             prove_unsat_by_symmetric_swap_chain(&script.arena, &script.assertions),
             "expected the structural swap-chain refuter to close the real cvc5 regression"
+        );
+    }
+
+    #[test]
+    fn cross_store_array_refuter_closes_qf_ax_unsats_only() {
+        for (tag, input) in [
+            (
+                "arrays0",
+                include_str!(
+                    "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays0.smt2"
+                ),
+            ),
+            (
+                "arrays4",
+                include_str!(
+                    "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays4.smt2"
+                ),
+            ),
+        ] {
+            let script = parse_script(input).unwrap_or_else(|error| panic!("{tag}: {error}"));
+            assert!(
+                prove_unsat_by_symmetric_swap_chain(&script.arena, &script.assertions),
+                "expected structural cross-store refuter to close {tag}"
+            );
+        }
+
+        let sat_script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays3.smt2"
+        ))
+        .unwrap();
+        assert!(
+            !prove_unsat_by_symmetric_swap_chain(&sat_script.arena, &sat_script.assertions),
+            "arrays3 is SAT and must not match the same-index cross-store refuter"
         );
     }
 

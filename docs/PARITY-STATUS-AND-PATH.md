@@ -22,7 +22,7 @@ the decidable fragments, honest `unknown` elsewhere; **Lean parity** = every
 ## 2. Where we actually stand (the honest top-down)
 
 **The single most important fact: across ~24 logic fragments measured head-to-head
-vs Z3 4.13.3 — 992 files, 658 decided, 606 oracle-compared — DISAGREE = 0. Zero
+vs Z3 4.13.3 — 992 files, 660 decided, 608 oracle-compared — DISAGREE = 0. Zero
 wrong sat/unsat, anywhere.** Soundness is the settled foundation. The gap to
 Z3/cvc5 is **decide-rate and depth, never correctness.**
 
@@ -36,12 +36,12 @@ The capability frontier (decide% per division) partitions cleanly:
   quantified-BV 69–80%, QF_SEQ 79%, QF_BVFP 88%, QF_LRA 82%.
 - **Mid (40–75%):** QF_UF 54–67% after the first-class carrier-sort remeasurement
   and the 2026-06-26 SMT-LIB div/mod underspecification guard, QF_AUFLIA 71%,
-  QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%, QF_UFLIA 50–83%.
+  QF_AX 62%, QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%, QF_UFLIA 50–83%.
 - **Weak / open (<40%) — the real frontier:** QF_SLIA 30% (bounded-string length
-  wall), QF_NRA-cvc5 24% (high-degree nonlinear), QF_AX 38%,
+  wall), QF_NRA-cvc5 24% (high-degree nonlinear),
   **quantified-LIA/UF over infinite domains 0%**. Int-indexed arrays now have a
-  complete QF_ALIA cvc5 slice, but AUFLIA still has concrete scalar-search
-  blockers and QF_AX remains broad/open.
+  complete QF_ALIA cvc5 slice and a mid-tier QF_AX slice, but AUFLIA still has
+  concrete scalar-search blockers and QF_AX remains broad/open.
 - **QF_BV:** measured at parity with Z3 on the hard public p4dfa slice (both
   hard-capped) — see PLAN's lazy-bitblasting findings.
 
@@ -81,7 +81,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 658 decided, 606 oracle-compared, DISAGREE=0**, with **21 complete
+  992 files, 660 decided, 608 oracle-compared, DISAGREE=0**, with **21 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
@@ -182,7 +182,7 @@ a named mechanism.**
 ### Tier A — decide-rate keystones (the biggest capability gaps). Mostly the
 **deciders/IR**, actively advanced by the parallel agent's `axeyum-ir`/`axeyum-rewrite`/CAD work.
 
-1. **Int-indexed arrays** (QF_ALIA 100%, QF_AUFLIA 71%, QF_AX 38%). The first IR blocker is
+1. **Int-indexed arrays** (QF_ALIA 100%, QF_AUFLIA 71%, QF_AX 62%). The first IR blocker is
    **partially lifted (2026-06-25):** `Sort::Array` now carries sort-valued
    index/element metadata (`ArraySortKey`) instead of BV widths only; SMT-LIB
    parses/writes free `(Array Int Int)` terms, and congruence-UNSAT over
@@ -438,6 +438,15 @@ a named mechanism.**
    two QF_ALIA-specific unsats reconstruct through `ConstArrayDefaultMismatch`
    and `StoreChainReadback`. QF_ALIA is no longer the current decide or
    certification blocker for this cvc5 slice.
+   **QF_AX declared-sort cross-store refuter landed later 2026-06-26:**
+   same-index reciprocal stores over declared carrier sorts now derive the base
+   array equality they force, including the two-step `arrays4` chain, and close
+   direct asserted disequalities before any BV lowering. The current QF_AX cvc5
+   row is **5/8 decided (62%)**, **unknown=1**, **unsupported=2**,
+   **oracle-compared=5/8**, **DISAGREE=0**. The remaining QF_AX work is not the
+   finite-index cap: it is declared-sort SAT model construction for
+   `arrays2`/`arrays3`, the Bool-array unsat row, and certification for the new
+   direct refuter.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

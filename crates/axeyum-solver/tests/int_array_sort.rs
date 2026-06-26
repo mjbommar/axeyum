@@ -250,6 +250,33 @@ fn cvc5_swap_chain_refuter_closes_real_regression() {
 }
 
 #[test]
+fn qf_ax_declared_sort_array_extensionality_unsats_close() {
+    for (tag, input) in [
+        (
+            "arrays0",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays0.smt2"
+            ),
+        ),
+        (
+            "arrays4",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays4.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).unwrap_or_else(|error| panic!("{tag}: {error}"));
+        let result = check_auto(
+            &mut script.arena,
+            &script.assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(result, CheckResult::Unsat, "{tag}");
+    }
+}
+
+#[test]
 fn select_over_array_ite_lowers_to_branch_reads() {
     let mut script = parse_script(
         r"
