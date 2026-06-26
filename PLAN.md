@@ -414,6 +414,18 @@ against competitor source, are now binding:
    practical lever: incremental/relevance-preserving arithmetic across UF CEGAR
    rounds, or a measured narrow guarded-congruence preseed; broad preseed and
    broad simplification are explicitly rejected for these rows.
+   **UF PAIR PROFILE LANDED; GUARDED PRESEED REJECTED (2026-06-26):**
+   `axeyum-bench --example uf_pair_profile` now reports deterministic
+   same-function application groups, potential Ackermann pair categories, and
+   bounded concrete samples for an SMT-LIB file. On the hard overbound row it
+   reports **42** applications, **3** function groups, **282** potential pairs,
+   and **214** constant-vs-constant pairs. A capped **64** unary-Int
+   nonconstant/constant congruence preseed was measured and rejected before
+   commit: it grew the arithmetic abstraction to **673 atoms**, spent 10 s in
+   **297** support-conflict batches, and reached **0** UF candidates. This
+   narrows the next lever further: preserve/reuse arithmetic learning across UF
+   CEGAR rounds or make the arithmetic solve incremental under added UF lemmas;
+   more upfront congruence seeding is not promising on this row.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
