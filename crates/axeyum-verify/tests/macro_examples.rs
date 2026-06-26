@@ -121,6 +121,92 @@ fn unwrap_none_witness_reproduces() {
     }));
 }
 
+// ---- (d) BUG: array index out of bounds (Phase 2 macro array support) ----------
+
+/// `a[i]` panics when `i >= 4`. The runtime models index-OOB; Phase 2 wires the
+/// macro to parse the `[u8; 4]` param and the `a[i]` indexing.
+#[verify(expect_bug)]
+fn get(a: [u8; 4], i: usize) -> u8 {
+    a[i]
+}
+
+#[test]
+fn array_oob_witness_reproduces() {
+    let Verdict::Counterexample { class, inputs } = get__axeyum_verdict() else {
+        panic!("a[i] must be able to go out of bounds");
+    };
+    assert_eq!(class, "index out of bounds");
+    // The witness `i` must be >= 4 (the array length).
+    let i = inputs
+        .iter()
+        .find_map(|w| match w {
+            Witness::Int { name, bits, .. } if name == "i" => Some(*bits),
+            _ => None,
+        })
+        .expect("an `i` witness");
+    assert!(i >= 4, "OOB witness i={i} must be >= len 4");
+    let arr = [0u8; 4];
+    let iw = usize::try_from(i).unwrap();
+    assert!(
+        axeyum_verify::reproduce::panics_on(move || {
+            let _ = get(arr, iw);
+        }),
+        "witness get(_, {iw}) must index-panic in the original fn"
+    );
+}
+
+// ---- SAFE: guarded array access is verified ------------------------------------
+
+/// Indexing is guarded by `i < 4`, so it never goes out of bounds; the `&[u8; 4]`
+/// reference form is also exercised here.
+#[verify]
+#[allow(clippy::trivially_copy_pass_by_ref)] // the `&[T; N]` form is intentionally exercised
+fn safe_get(a: &[u8; 4], i: usize) -> u8 {
+    let mut r: u8 = 0;
+    if i < 4 {
+        r = a[i];
+    }
+    r
+}
+
+#[test]
+fn guarded_array_access_is_verified() {
+    match safe_get__axeyum_verdict() {
+        Verdict::Verified { .. } => {}
+        other => panic!("guarded array access must verify, got {other:?}"),
+    }
+}
+
+// ---- usize/isize width mapping (Phase 2 #2) ------------------------------------
+
+/// A `usize` add can overflow at the modeled 64-bit width.
+#[verify(expect_bug)]
+fn usize_add(a: usize, b: usize) -> usize {
+    a + b
+}
+
+#[test]
+fn usize_add_overflows() {
+    let Verdict::Counterexample { class, inputs } = usize_add__axeyum_verdict() else {
+        panic!("usize add can overflow at 64-bit");
+    };
+    assert_eq!(class, "add overflow");
+    // The witnesses are 64-bit ints (the documented usize model width).
+    let (w, _, _) = inputs
+        .iter()
+        .find_map(|wit| match wit {
+            Witness::Int {
+                name,
+                width,
+                signed,
+                bits,
+            } if name == "a" => Some((*width, *signed, *bits)),
+            _ => None,
+        })
+        .expect("an `a` witness");
+    assert_eq!(w, 64, "usize is modeled at 64 bits");
+}
+
 // ---- helper --------------------------------------------------------------------
 
 fn int_bits(inputs: &[Witness], name: &str) -> u128 {

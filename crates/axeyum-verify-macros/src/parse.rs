@@ -17,11 +17,21 @@ use syn::{
     Type, UnOp as SynUnOp,
 };
 
+/// The bit width `usize`/`isize` are modeled at for the bounded check. Rust does
+/// not fix the pointer width, so we pick a documented, deterministic default
+/// (64-bit, the dominant target); a narrower target only *removes* reachable
+/// values, so a 64-bit model is the conservative (sound) over-approximation for
+/// index reasoning. Documented in STATUS.md.
+const USIZE_WIDTH: u32 = 64;
+
 /// A parsed scalar type.
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Ty {
     width: Option<u32>, // None ⇒ bool
     signed: bool,
+    /// `true` for `usize`/`isize` (modeled at [`USIZE_WIDTH`] bits but written
+    /// back as `usize`/`isize` in the reproduction so the call type-checks).
+    is_size: bool,
 }
 
 impl Ty {
@@ -29,6 +39,7 @@ impl Ty {
         Ty {
             width: None,
             signed: false,
+            is_size: false,
         }
     }
     /// Tokens building the runtime `axeyum_verify::ast::Ty`.
@@ -59,6 +70,21 @@ fn parse_scalar_ty(ty: &Type) -> syn::Result<Ty> {
     if s == "bool" {
         return Ok(Ty::bool());
     }
+    // `usize`/`isize` map to a configured width (64-bit default); documented.
+    if s == "usize" {
+        return Ok(Ty {
+            width: Some(USIZE_WIDTH),
+            signed: false,
+            is_size: true,
+        });
+    }
+    if s == "isize" {
+        return Ok(Ty {
+            width: Some(USIZE_WIDTH),
+            signed: true,
+            is_size: true,
+        });
+    }
     let (signed, rest) = if let Some(r) = s.strip_prefix('u') {
         (false, r)
     } else if let Some(r) = s.strip_prefix('i') {
@@ -84,6 +110,7 @@ fn parse_scalar_ty(ty: &Type) -> syn::Result<Ty> {
     Ok(Ty {
         width: Some(width),
         signed,
+        is_size: false,
     })
 }
 
@@ -94,6 +121,86 @@ struct ParamInfo {
     ty: Ty,
 }
 
+/// A fixed-length array parameter: `name: [elem; len]` or `name: &[elem; len]`.
+/// Slices (`&[T]`) without a compile-time length are rejected — the bounded
+/// check needs a fixed element count.
+struct ArrayInfo {
+    name: String,
+    elem: Ty,
+    len: u128,
+    /// `true` if the parameter was a reference `&[T; N]` (so the reproduction
+    /// call passes `&arr`, not `arr`).
+    by_ref: bool,
+}
+
+/// A parameter is either a scalar or a fixed-length array.
+enum ParsedArg {
+    Scalar(ParamInfo),
+    Array(ArrayInfo),
+}
+
+/// Classify a `name: ty` parameter as scalar (`uN`/`iN`/`bool`/`usize`/`isize`)
+/// or a fixed-length array (`[T; N]` / `&[T; N]`).
+fn parse_arg(name: String, ty: &Type) -> syn::Result<ParsedArg> {
+    if let Some(info) = try_parse_array_ty(&name, ty)? {
+        return Ok(ParsedArg::Array(info));
+    }
+    let scalar = parse_scalar_ty(ty)?;
+    Ok(ParsedArg::Scalar(ParamInfo { name, ty: scalar }))
+}
+
+/// Recognize a fixed-length array type `[elem; N]` or a reference to one
+/// `&[elem; N]`. Returns `None` for non-array types (so the caller falls back to
+/// scalar parsing); errors for an array with a bad element type or a non-literal
+/// length, and for an unsized slice `&[T]` (no fixed length to bound).
+fn try_parse_array_ty(name: &str, ty: &Type) -> syn::Result<Option<ArrayInfo>> {
+    match ty {
+        Type::Array(arr) => {
+            let elem = parse_scalar_ty(&arr.elem)?;
+            let len = parse_array_len(&arr.len)?;
+            Ok(Some(ArrayInfo {
+                name: name.to_string(),
+                elem,
+                len,
+                by_ref: false,
+            }))
+        }
+        Type::Reference(r) => match &*r.elem {
+            Type::Array(arr) => {
+                let elem = parse_scalar_ty(&arr.elem)?;
+                let len = parse_array_len(&arr.len)?;
+                Ok(Some(ArrayInfo {
+                    name: name.to_string(),
+                    elem,
+                    len,
+                    by_ref: true,
+                }))
+            }
+            Type::Slice(s) => Err(syn::Error::new(
+                s.span(),
+                "axeyum::verify: an unsized slice `&[T]` needs a fixed length for the \
+                 bounded check — use `&[T; N]` (or `[T; N]`)",
+            )),
+            other => Err(syn::Error::new(
+                other.span(),
+                "axeyum::verify: only `&[T; N]` references are supported",
+            )),
+        },
+        _ => Ok(None),
+    }
+}
+
+/// Parse the `N` in `[T; N]` — a non-negative integer literal.
+fn parse_array_len(len: &Expr) -> syn::Result<u128> {
+    if let Expr::Lit(el) = len {
+        return lit_u128(&el.lit, el.span());
+    }
+    Err(syn::Error::new(
+        len.span(),
+        "axeyum::verify: array length must be an integer literal",
+    ))
+}
+
 /// Expand the whole function. `expect_bug` flips the generated `#[test]` to
 /// assert that a counterexample is *found* (and reproduces a panic in the
 /// original) rather than asserting the function verifies.
@@ -102,6 +209,7 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
 
     // --- parse parameters ---------------------------------------------------
     let mut params: Vec<ParamInfo> = Vec::new();
+    let mut arrays: Vec<ArrayInfo> = Vec::new();
     for arg in &func.sig.inputs {
         let FnArg::Typed(pt) = arg else {
             return Err(syn::Error::new(
@@ -115,11 +223,10 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
                 "axeyum::verify: only simple `name: ty` parameters are supported",
             ));
         };
-        let ty = parse_scalar_ty(&pt.ty)?;
-        params.push(ParamInfo {
-            name: pi.ident.to_string(),
-            ty,
-        });
+        match parse_arg(pi.ident.to_string(), &pt.ty)? {
+            ParsedArg::Scalar(p) => params.push(p),
+            ParsedArg::Array(a) => arrays.push(a),
+        }
     }
 
     // --- parse body into runtime-AST-building tokens ------------------------
@@ -129,6 +236,9 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
     let mut ctx = Lowerer::new(fn_unwind);
     for p in &params {
         ctx.declare(&p.name, p.ty);
+    }
+    for a in &arrays {
+        ctx.declare_array(&a.name, a.elem, a.len);
     }
     let body_tokens = ctx.lower_block(&func.block)?;
 
@@ -141,8 +251,18 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
         })
         .collect();
 
+    let array_tokens: Vec<TokenStream> = arrays
+        .iter()
+        .map(|a| {
+            let name = &a.name;
+            let elem = a.elem.to_tokens();
+            let len = a.len;
+            quote! { axeyum_verify::ast::ArrayParam { name: #name.into(), elem: #elem, len: #len } }
+        })
+        .collect();
+
     // --- reproduction glue: call the original fn on the witness -------------
-    let repro = reproduction_glue(func, &params, expect_bug);
+    let repro = reproduction_glue(func, &params, &arrays, expect_bug);
 
     let test_ident = format_ident!("axeyum_verify_{}", func.sig.ident);
     let verdict_ident = format_ident!("{}__axeyum_verdict", func.sig.ident);
@@ -159,7 +279,7 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
             axeyum_verify::ast::Program {
                 name: #fn_name.into(),
                 params: vec![ #(#param_tokens),* ],
-                arrays: vec![],
+                arrays: vec![ #(#array_tokens),* ],
                 body: vec![ #(#body_tokens),* ],
             }
         }
@@ -203,52 +323,38 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
 /// Builds the `Counterexample` arm: extract typed witnesses, run the original
 /// function under `catch_unwind`, and assert it actually panics (DISAGREE=0),
 /// then fail the test reporting the reproducing inputs.
-fn reproduction_glue(func: &ItemFn, params: &[ParamInfo], expect_bug: bool) -> TokenStream {
+///
+/// The call arguments are emitted in the **original signature order** (scalars
+/// and arrays interleaved), keyed by parameter name into the witness list.
+fn reproduction_glue(
+    func: &ItemFn,
+    params: &[ParamInfo],
+    arrays: &[ArrayInfo],
+    expect_bug: bool,
+) -> TokenStream {
     let fn_ident = &func.sig.ident;
-    // For each param, pull the matching witness and convert to its Rust type.
     let mut bindings = Vec::new();
     let mut call_args = Vec::new();
     let mut fmt_parts = Vec::new();
-    for (idx, p) in params.iter().enumerate() {
+    // Iterate the original signature so call args are in declaration order.
+    for (idx, arg) in func.sig.inputs.iter().enumerate() {
+        let FnArg::Typed(pt) = arg else { continue };
+        let Pat::Ident(pi) = &*pt.pat else { continue };
+        let pname = pi.ident.to_string();
         let var = format_ident!("__w{idx}");
-        let pname = &p.name;
-        match p.ty.width {
-            None => {
-                bindings.push(quote! {
-                    let #var: bool = inputs.iter().find_map(|w| match w {
-                        axeyum_verify::Witness::Bool { name, value } if name == #pname => Some(*value),
-                        _ => None,
-                    }).unwrap_or(false);
-                });
+        if let Some(p) = params.iter().find(|p| p.name == pname) {
+            scalar_binding(&var, &p.name, p.ty, &mut bindings);
+            call_args.push(quote! { #var });
+            fmt_parts.push(quote! { format!("{}={:?}", #pname, #var) });
+        } else if let Some(a) = arrays.iter().find(|a| a.name == pname) {
+            array_binding(&var, a, &mut bindings);
+            if a.by_ref {
+                call_args.push(quote! { &#var });
+            } else {
+                call_args.push(quote! { #var });
             }
-            Some(width) => {
-                let rust_ty = format_ident!("{}{}", if p.ty.signed { "i" } else { "u" }, width);
-                if p.ty.signed {
-                    bindings.push(quote! {
-                        let #var: #rust_ty = {
-                            let (w, _, bits) = inputs.iter().find_map(|wit| match wit {
-                                axeyum_verify::Witness::Int { name, width, signed, bits } if name == #pname => Some((*width, *signed, *bits)),
-                                _ => None,
-                            }).unwrap_or((#width, true, 0));
-                            let v = axeyum_verify::signed_value(w, bits);
-                            <#rust_ty as ::core::convert::TryFrom<i128>>::try_from(v).unwrap_or_default()
-                        };
-                    });
-                } else {
-                    bindings.push(quote! {
-                        let #var: #rust_ty = {
-                            let bits = inputs.iter().find_map(|wit| match wit {
-                                axeyum_verify::Witness::Int { name, bits, .. } if name == #pname => Some(*bits),
-                                _ => None,
-                            }).unwrap_or(0);
-                            <#rust_ty as ::core::convert::TryFrom<u128>>::try_from(bits).unwrap_or_default()
-                        };
-                    });
-                }
-            }
+            fmt_parts.push(quote! { format!("{}={:?}", #pname, #var) });
         }
-        call_args.push(quote! { #var });
-        fmt_parts.push(quote! { format!("{}={:?}", #pname, #var) });
     }
 
     // When `expect_bug`, a confirmed reproduction is a PASS (the demonstration);
@@ -284,12 +390,100 @@ fn reproduction_glue(func: &ItemFn, params: &[ParamInfo], expect_bug: bool) -> T
     }
 }
 
+/// Emits a `let __wN: RustTy = <witness lookup>;` binding for one scalar param.
+fn scalar_binding(var: &proc_macro2::Ident, pname: &str, ty: Ty, bindings: &mut Vec<TokenStream>) {
+    match ty.width {
+        None => {
+            bindings.push(quote! {
+                let #var: bool = inputs.iter().find_map(|w| match w {
+                    axeyum_verify::Witness::Bool { name, value } if name == #pname => Some(*value),
+                    _ => None,
+                }).unwrap_or(false);
+            });
+        }
+        Some(width) => {
+            let rust_ty = rust_int_ident(ty, width);
+            if ty.signed {
+                bindings.push(quote! {
+                    let #var: #rust_ty = {
+                        let (w, _, bits) = inputs.iter().find_map(|wit| match wit {
+                            axeyum_verify::Witness::Int { name, width, signed, bits } if name == #pname => Some((*width, *signed, *bits)),
+                            _ => None,
+                        }).unwrap_or((#width, true, 0));
+                        let v = axeyum_verify::signed_value(w, bits);
+                        <#rust_ty as ::core::convert::TryFrom<i128>>::try_from(v).unwrap_or_default()
+                    };
+                });
+            } else {
+                bindings.push(quote! {
+                    let #var: #rust_ty = {
+                        let bits = inputs.iter().find_map(|wit| match wit {
+                            axeyum_verify::Witness::Int { name, bits, .. } if name == #pname => Some(*bits),
+                            _ => None,
+                        }).unwrap_or(0);
+                        <#rust_ty as ::core::convert::TryFrom<u128>>::try_from(bits).unwrap_or_default()
+                    };
+                });
+            }
+        }
+    }
+}
+
+/// Emits a `let __wN: [RustTy; len] = [..];` binding for one array param,
+/// decoding each element from the array witness (defaulting missing elements to
+/// 0 — a don't-care, since the bad state already captures the reachable panic).
+fn array_binding(var: &proc_macro2::Ident, a: &ArrayInfo, bindings: &mut Vec<TokenStream>) {
+    let pname = &a.name;
+    let len = usize::try_from(a.len).unwrap_or(usize::MAX);
+    // Array elements are integers in the supported fragment (bool arrays are
+    // rejected at lowering); the element width is always set.
+    let width = a.elem.width.unwrap_or(8);
+    let rust_ty = rust_int_ident(a.elem, width);
+    let decode = if a.elem.signed {
+        quote! {
+            let v = axeyum_verify::signed_value(#width, *bits);
+            <#rust_ty as ::core::convert::TryFrom<i128>>::try_from(v).unwrap_or_default()
+        }
+    } else {
+        quote! {
+            <#rust_ty as ::core::convert::TryFrom<u128>>::try_from(*bits).unwrap_or_default()
+        }
+    };
+    bindings.push(quote! {
+        let #var: [#rust_ty; #len] = {
+            let ints: Vec<u128> = inputs.iter().find_map(|wit| match wit {
+                axeyum_verify::Witness::Array { name, ints, .. } if name == #pname => Some(ints.clone()),
+                _ => None,
+            }).unwrap_or_default();
+            let mut arr = [<#rust_ty as ::core::default::Default>::default(); #len];
+            for (slot, bits) in arr.iter_mut().zip(ints.iter()) {
+                *slot = { #decode };
+            }
+            arr
+        };
+    });
+}
+
+/// The Rust integer type identifier for an integer scalar `Ty`. `usize`/`isize`
+/// are written back as `usize`/`isize` (so the reproduction call type-checks);
+/// every other width maps to `uN`/`iN`.
+fn rust_int_ident(ty: Ty, width: u32) -> proc_macro2::Ident {
+    if ty.is_size {
+        format_ident!("{}size", if ty.signed { "i" } else { "u" })
+    } else {
+        format_ident!("{}{}", if ty.signed { "i" } else { "u" }, width)
+    }
+}
+
 // --- body lowering -----------------------------------------------------------
 
 /// Tracks declared variable types for whitelisting (lets the translator reject
 /// references to undeclared names and emit correct literal types).
 struct Lowerer {
     scopes: Vec<std::collections::HashMap<String, Ty>>,
+    /// array name → (element type, length). Arrays live at function scope (they
+    /// are parameters), so a single map suffices.
+    arrays: std::collections::HashMap<String, (Ty, u128)>,
     /// The function-level `#[axeyum::unwind(K)]` bound applied to every loop
     /// (`None` ⇒ loops are rejected; the user must supply a bound).
     unwind: Option<u64>,
@@ -299,6 +493,7 @@ impl Lowerer {
     fn new(unwind: Option<u64>) -> Self {
         Lowerer {
             scopes: vec![std::collections::HashMap::new()],
+            arrays: std::collections::HashMap::new(),
             unwind,
         }
     }
@@ -308,6 +503,15 @@ impl Lowerer {
             .last_mut()
             .expect("at least one scope")
             .insert(name.to_string(), ty);
+    }
+
+    /// Register a fixed-length array parameter for `a[i]` indexing.
+    fn declare_array(&mut self, name: &str, elem: Ty, len: u128) {
+        self.arrays.insert(name.to_string(), (elem, len));
+    }
+
+    fn lookup_array(&self, name: &str) -> Option<(Ty, u128)> {
+        self.arrays.get(name).copied()
     }
 
     fn lookup(&self, name: &str) -> Option<Ty> {
@@ -508,6 +712,7 @@ impl Lowerer {
         let var_ty = hi_ty.unwrap_or(Ty {
             width: Some(32),
             signed: false,
+            is_size: false,
         });
         let var_ty_tok = var_ty.to_tokens();
         self.push_scope();
@@ -638,11 +843,43 @@ impl Lowerer {
                 ))
             }
             Expr::MethodCall(mc) => self.lower_method_call(mc),
+            Expr::Index(idx) => self.lower_index(idx),
             other => Err(syn::Error::new(
                 other.span(),
                 "axeyum::verify: unsupported expression (out of the bounded fragment)",
             )),
         }
+    }
+
+    /// `a[i]` — a fixed-length array index. The array must be a declared array
+    /// parameter; the index is any integer expression. Out-of-bounds (`i >= len`)
+    /// is a checked panic class handled by the runtime lowering.
+    fn lower_index(&mut self, idx: &syn::ExprIndex) -> syn::Result<(TokenStream, Ty)> {
+        let Expr::Path(p) = &*idx.expr else {
+            return Err(syn::Error::new(
+                idx.expr.span(),
+                "axeyum::verify: only a simple array variable can be indexed (`a[i]`)",
+            ));
+        };
+        let name = path_ident(p)?;
+        let (elem, _len) = self.lookup_array(&name).ok_or_else(|| {
+            syn::Error::new(
+                p.span(),
+                format!("axeyum::verify: `{name}` is not a known array parameter"),
+            )
+        })?;
+        let (index_tok, _idx_ty) = self.lower_expr(&idx.index)?;
+        let elem_tok = elem.to_tokens();
+        Ok((
+            quote! {
+                axeyum_verify::ast::Expr::Index {
+                    array: #name.into(),
+                    index: Box::new(#index_tok),
+                    ty: #elem_tok,
+                }
+            },
+            elem,
+        ))
     }
 
     fn lower_else_expr(&mut self, expr: &Expr) -> syn::Result<(TokenStream, Ty)> {
@@ -769,6 +1006,7 @@ fn lower_lit(lit: &Lit, span: proc_macro2::Span) -> syn::Result<(TokenStream, Ty
                 Ty {
                     width: Some(32),
                     signed: true,
+                    is_size: false,
                 }
             } else {
                 parse_suffix_ty(suffix)
@@ -835,6 +1073,20 @@ fn parse_suffix_ty(suffix: &str) -> Option<Ty> {
     if suffix == "bool" {
         return Some(Ty::bool());
     }
+    if suffix == "usize" {
+        return Some(Ty {
+            width: Some(USIZE_WIDTH),
+            signed: false,
+            is_size: true,
+        });
+    }
+    if suffix == "isize" {
+        return Some(Ty {
+            width: Some(USIZE_WIDTH),
+            signed: true,
+            is_size: true,
+        });
+    }
     let (signed, rest) = if let Some(r) = suffix.strip_prefix('u') {
         (false, r)
     } else if let Some(r) = suffix.strip_prefix('i') {
@@ -847,6 +1099,7 @@ fn parse_suffix_ty(suffix: &str) -> Option<Ty> {
         Some(Ty {
             width: Some(width),
             signed,
+            is_size: false,
         })
     } else {
         None
