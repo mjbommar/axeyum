@@ -2813,6 +2813,10 @@ struct ProjectionRepairStats {
     branch_candidates: usize,
     branch_symbol_changes: usize,
     scalar_candidates: usize,
+    scalar_support_candidates: usize,
+    scalar_stabilized_trials: usize,
+    scalar_rejected_worse_trials: usize,
+    scalar_equal_support_repairs: usize,
     scalar_symbol_changes: usize,
 }
 
@@ -2831,6 +2835,10 @@ impl ProjectionRepairStats {
         self.branch_candidates += other.branch_candidates;
         self.branch_symbol_changes += other.branch_symbol_changes;
         self.scalar_candidates += other.scalar_candidates;
+        self.scalar_support_candidates += other.scalar_support_candidates;
+        self.scalar_stabilized_trials += other.scalar_stabilized_trials;
+        self.scalar_rejected_worse_trials += other.scalar_rejected_worse_trials;
+        self.scalar_equal_support_repairs += other.scalar_equal_support_repairs;
         self.scalar_symbol_changes += other.scalar_symbol_changes;
     }
 }
@@ -3110,6 +3118,42 @@ fn direct_select_support_score(
             let index = eval(arena, index_term, projected).map_err(ir)?;
             let element = eval(arena, element_term, projected).map_err(ir)?;
             if select_value(array_value, &index)? == element {
+                score += 1;
+            }
+        }
+    }
+    Ok(score)
+}
+
+fn scalar_select_support_score(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &Assignment,
+    symbol: SymbolId,
+) -> Result<usize, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext scalar support scoring failed: {e}"))
+    };
+    let mut score = 0;
+    let mut conjuncts = Vec::new();
+    for &assertion in originals {
+        conjuncts.clear();
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+        for &conjunct in &conjuncts {
+            let Some((array, index_term, element_term)) =
+                direct_select_repair_target(arena, conjunct)
+            else {
+                continue;
+            };
+            if direct_value_symbol(arena, element_term) != Some(symbol) {
+                continue;
+            }
+            let array_value = projected
+                .get(array)
+                .unwrap_or(default_value_for_symbol(arena, array)?);
+            let index = eval(arena, index_term, projected).map_err(ir)?;
+            let element = eval(arena, element_term, projected).map_err(ir)?;
+            if select_value(&array_value, &index)? == element {
                 score += 1;
             }
         }
@@ -3702,27 +3746,58 @@ fn repair_projected_scalar_equalities(
                 }
                 stats.scalar_candidates += 1;
 
-                let mut best: Option<(usize, Assignment)> = None;
+                let mut best: Option<(usize, usize, Assignment, ProjectionRepairStats)> = None;
                 for (symbol, value_term) in choices {
                     let mut trial = projected.clone();
                     let value = eval(arena, value_term, &trial).map_err(ir)?;
                     if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
                         continue;
                     }
-                    let false_count = positive_replay_false_count(arena, originals, &trial)?;
-                    if false_count < current_false
-                        && best
-                            .as_ref()
-                            .is_none_or(|(best_false, _)| false_count < *best_false)
-                    {
-                        best = Some((false_count, trial));
+                    let target_support =
+                        scalar_select_support_score(arena, originals, projected, symbol)?;
+                    let source_support = direct_value_symbol(arena, value_term)
+                        .map_or(Ok(0), |source| {
+                            scalar_select_support_score(arena, originals, projected, source)
+                        })?;
+                    let support_gain = source_support.saturating_sub(target_support);
+                    if support_gain > 0 {
+                        stats.scalar_support_candidates += 1;
+                    }
+                    let mut trial_stats = ProjectionRepairStats::default();
+                    let mut false_count = positive_replay_false_count(arena, originals, &trial)?;
+                    if false_count >= current_false && support_gain > 0 {
+                        stats.scalar_stabilized_trials += 1;
+                        trial_stats =
+                            stabilize_projected_after_scalar_trial(arena, originals, &mut trial)?;
+                        false_count = positive_replay_false_count(arena, originals, &trial)?;
+                    }
+                    if false_count > current_false {
+                        stats.scalar_rejected_worse_trials += 1;
+                        continue;
+                    }
+                    if false_count == current_false && support_gain == 0 {
+                        continue;
+                    }
+                    let replace =
+                        best.as_ref()
+                            .is_none_or(|(best_false, best_support_gain, _, _)| {
+                                support_gain > *best_support_gain
+                                    || (support_gain == *best_support_gain
+                                        && false_count < *best_false)
+                            });
+                    if replace {
+                        best = Some((false_count, support_gain, trial, trial_stats));
                     }
                 }
-                let Some((false_count, trial)) = best else {
+                let Some((false_count, _, trial, trial_stats)) = best else {
                     continue;
                 };
                 *projected = trial;
+                if false_count == current_false {
+                    stats.scalar_equal_support_repairs += 1;
+                }
                 current_false = false_count;
+                stats.absorb(trial_stats);
                 stats.scalar_symbol_changes += 1;
                 repairs += 1;
                 changed_this_pass = true;
@@ -3731,6 +3806,26 @@ fn repair_projected_scalar_equalities(
         if !changed_this_pass {
             break;
         }
+    }
+    Ok(stats)
+}
+
+fn stabilize_projected_after_scalar_trial(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+) -> Result<ProjectionRepairStats, SolverError> {
+    let mut stats = ProjectionRepairStats::default();
+    let select_stats =
+        repair_projected_arrays_from_asserted_select_equalities(arena, originals, projected)?;
+    stats.absorb(select_stats);
+    let branch_stats = repair_projected_branch_disjunctions(arena, originals, projected)?;
+    let branch_changes = branch_stats.changes();
+    stats.absorb(branch_stats);
+    if branch_changes > 0 {
+        let after_branch_select =
+            repair_projected_arrays_from_asserted_select_equalities(arena, originals, projected)?;
+        stats.absorb(after_branch_select);
     }
     Ok(stats)
 }
@@ -3958,7 +4053,7 @@ fn ext_contextual_unknown_note(
 
 enum LastExtReplay {
     Sat(Model),
-    Failed(ReplayFailure),
+    Failed(Box<ReplayFailure>),
     Error,
     Missing,
 }
@@ -4436,7 +4531,7 @@ fn refine_diff_skolem(
 /// genuinely satisfies every original assertion, else `unknown`.
 enum ExtReplay {
     Sat(Model),
-    Failed(ReplayFailure),
+    Failed(Box<ReplayFailure>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -4466,6 +4561,8 @@ impl ReplayFailure {
              select_repair_candidates={}, select_repair_array_changes={}, \
              select_repair_symbol_changes={}, branch_repair_candidates={}, \
              branch_repair_symbol_changes={}, scalar_repair_candidates={}, \
+             scalar_support_candidates={}, scalar_stabilized_trials={}, \
+             scalar_rejected_worse_trials={}, scalar_equal_support_repairs={}, \
              scalar_repair_symbol_changes={}, projection_repair_changes={})",
             self.assertion_ordinal,
             self.assertion_term.index(),
@@ -4477,6 +4574,10 @@ impl ReplayFailure {
             self.repair_stats.branch_candidates,
             self.repair_stats.branch_symbol_changes,
             self.repair_stats.scalar_candidates,
+            self.repair_stats.scalar_support_candidates,
+            self.repair_stats.scalar_stabilized_trials,
+            self.repair_stats.scalar_rejected_worse_trials,
+            self.repair_stats.scalar_equal_support_repairs,
             self.repair_stats.scalar_symbol_changes,
             self.repair_stats.changes()
         );
@@ -4552,8 +4653,10 @@ fn repair_projected_ext_candidate(
     originals: &[TermId],
     projected: &mut Assignment,
 ) -> Result<ProjectionRepairStats, SolverError> {
+    const MAX_PROJECTION_REPAIR_ROUNDS: usize = 32;
+
     let mut repair_stats = ProjectionRepairStats::default();
-    for _ in 0..=3 {
+    for _ in 0..MAX_PROJECTION_REPAIR_ROUNDS {
         let select_stats =
             repair_projected_arrays_from_asserted_select_equalities(arena, originals, projected)?;
         let mut changes = select_stats.changes();
@@ -4601,6 +4704,23 @@ fn repair_projected_ext_candidate(
                 )?;
             repair_stats.absorb(after_scalar_branch_select);
         }
+        let after_scalar_stabilizing_scalar =
+            repair_projected_scalar_equalities(arena, originals, projected)?;
+        let after_scalar_stabilizing_scalar_changes = after_scalar_stabilizing_scalar.changes();
+        repair_stats.absorb(after_scalar_stabilizing_scalar);
+        if after_scalar_stabilizing_scalar_changes > 0 {
+            let after_stabilizing_scalar_branch =
+                repair_projected_branch_disjunctions(arena, originals, projected)?;
+            let after_stabilizing_scalar_branch_changes = after_stabilizing_scalar_branch.changes();
+            repair_stats.absorb(after_stabilizing_scalar_branch);
+            if after_stabilizing_scalar_branch_changes > 0 {
+                let after_stabilizing_scalar_select =
+                    repair_projected_arrays_from_asserted_select_equalities(
+                        arena, originals, projected,
+                    )?;
+                repair_stats.absorb(after_stabilizing_scalar_select);
+            }
+        }
     }
     Ok(repair_stats)
 }
@@ -4626,13 +4746,13 @@ fn project_replay_ext_candidate(
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => {
-                return Ok(ExtReplay::Failed(first_false_replay_conjunct(
+                return Ok(ExtReplay::Failed(Box::new(first_false_replay_conjunct(
                     arena,
                     assertion,
                     ordinal,
                     &projected,
                     repair_stats,
-                )?));
+                )?)));
             }
             Ok(value) => {
                 return Err(SolverError::Backend(format!(
@@ -5498,6 +5618,81 @@ mod tests {
         let assignment = model.to_assignment();
         assert_eq!(assignment.get(*x_symbol), Some(Value::Int(1)));
         assert_eq!(assignment.get(*y_symbol), Some(Value::Int(1)));
+        for &original in &originals {
+            assert_eq!(
+                eval(&arena, original, &assignment).unwrap(),
+                Value::Bool(true)
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_ext_projection_propagates_select_supported_scalar_equalities() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let x = arena.bv_var("x", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let seven = arena.bv_const(8, 7).unwrap();
+        let read = arena.select(a, i).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let y_eq_seven = arena.eq(y, seven).unwrap();
+        let x_eq_y = arena.eq(x, y).unwrap();
+        let x_eq_z = arena.eq(x, z).unwrap();
+        let z_eq_y = arena.eq(z, y).unwrap();
+
+        let TermNode::Symbol(array) = arena.node(a) else {
+            panic!("array should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut ctx = RowCtx::default();
+        ctx.sites.push(RowSite {
+            fresh: *y_symbol,
+            index: i,
+            kind: RowKind::Var { array: *array },
+        });
+
+        let mut candidate = Assignment::new();
+        for (symbol, name, sort) in arena.symbols() {
+            match name {
+                "i" => candidate.set(symbol, Value::Bv { width: 4, value: 0 }),
+                "y" => candidate.set(symbol, Value::Bv { width: 8, value: 7 }),
+                "x" | "z" => candidate.set(symbol, Value::Bv { width: 8, value: 0 }),
+                _ if sort == Sort::BitVec(4) => {
+                    candidate.set(symbol, Value::Bv { width: 4, value: 0 });
+                }
+                _ if sort == Sort::BitVec(8) => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+                }
+                _ => {}
+            }
+        }
+
+        let originals = [y_eq_read, y_eq_seven, x_eq_y, x_eq_z, z_eq_y];
+        let ExtReplay::Sat(model) =
+            project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
+        else {
+            panic!("expected select-supported scalar propagation to replay");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(
+            assignment.get(*x_symbol),
+            Some(Value::Bv { width: 8, value: 7 })
+        );
+        assert_eq!(
+            assignment.get(*z_symbol),
+            Some(Value::Bv { width: 8, value: 7 })
+        );
         for &original in &originals {
             assert_eq!(
                 eval(&arena, original, &assignment).unwrap(),

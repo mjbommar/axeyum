@@ -566,6 +566,18 @@ a named mechanism.**
    `x_366 = x_92`, values **1** vs **0**, after **218** projection repair
    changes. The next AUFLIA move is support-aware scalar/readback propagation
    for the remaining generated equality chain.
+   **Support-aware scalar/readback projection landed later 2026-06-26:**
+   scalar equality direction choice now scores asserted-select readback support,
+   support-aware scalar trial counters are emitted in lazy-extensionality replay
+   notes, and the bounded projection stabilization loop can walk the repeated
+   queue-lock readback chain under a named 32-round cap. On `bug337`, the 10 s
+   probe advances past the scalar chain to branch disjunction ordinal **209**,
+   term **3654**; best branch **0** has **1/8** false literals, first false term
+   **495**, `x_345 = store(x_331, x_334, x_351)`, after **417** projection
+   repair changes. The row remains `unknown`; the next AUFLIA move is a
+   branch-consistent store-chain/readback projection for that target array, not
+   a blanket one-literal target-readback alignment (that was tested and regressed
+   existing focused coverage).
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
