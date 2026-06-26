@@ -7,10 +7,12 @@
 //! interpretations and replays it against the original assertions with the
 //! ground evaluator. Pure `QF_BV` queries pass straight through unchanged.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::time::Instant;
 
-use axeyum_ir::{Assignment, FuncId, Op, TermArena, TermId, TermNode, TermStats, Value, eval};
+use axeyum_ir::{
+    Assignment, FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
+};
 use axeyum_rewrite::{FuncElimError, eliminate_functions};
 
 use crate::backend::{
@@ -162,6 +164,15 @@ pub(crate) const MAX_LAZY_DAG_NODES: u64 = 2_000_000;
 /// over-bound cvc5-regression files are < 100 deep) yet well below a depth that
 /// would overflow the default stack during the recursive rewrite.
 pub(crate) const MAX_LAZY_DEPTH: u64 = 65_536;
+
+/// Per-query cap on congruence lemmas the lazy UF route may add before the first
+/// abstract solve from cheap syntactic / fixed-bound evidence.
+///
+/// These are ordinary Ackermann lemmas, hence valid for any same-function pair;
+/// the heuristic only chooses a small relevant subset up front so the arithmetic
+/// skeleton does not first have to discover the obvious equal-argument pairs by
+/// producing a candidate model.
+const MAX_PRESEEDED_FUNCTION_CONSISTENCY_LEMMAS: usize = 256;
 
 /// Whether an over-eager-bound instance is *also* beyond the secondary
 /// (pathological-input) bounds for the lazy route — in which case even the lazy
@@ -531,11 +542,11 @@ pub fn check_with_uf_arithmetic_lazy(
 /// The shared functional-consistency CEGAR loop: abstract each uninterpreted
 /// application to a fresh result variable, solve the abstraction with `solve`, and
 /// add a congruence lemma `(⋀ argsᵢ = argsⱼ) ⇒ freshᵢ = freshⱼ` for each
-/// model-observed violation, to a fixpoint. Sound (the abstraction is a relaxation,
-/// so its UNSAT transfers; a `sat` model is projected and replayed against the
-/// originals) and terminating (finitely many application pairs; each lemma added
-/// once). `solve` decides the abstracted, function-free query — a bit-vector backend
-/// ([`check_qf_ufbv_lazy`]) or the arithmetic dispatcher
+/// model-relevant equal-argument pair, to a fixpoint. Sound (the abstraction is a
+/// relaxation, so its UNSAT transfers; a `sat` model is projected and replayed
+/// against the originals) and terminating (finitely many application pairs; each
+/// lemma added once). `solve` decides the abstracted, function-free query — a
+/// bit-vector backend ([`check_qf_ufbv_lazy`]) or the arithmetic dispatcher
 /// ([`check_with_uf_arithmetic`]).
 fn check_with_function_consistency<F>(
     arena: &mut TermArena,
@@ -574,6 +585,16 @@ where
     // Index pairs whose congruence lemma has already been asserted; bounds the
     // loop and prevents re-adding the same lemma.
     let mut added: HashSet<(usize, usize)> = HashSet::new();
+    let preseeded = preseed_function_consistency_lemmas(
+        arena,
+        assertions,
+        &applications,
+        &groups,
+        &mut working,
+        &mut added,
+    )?;
+    stats.preseeded_lemmas = preseeded;
+    stats.lemmas_added += preseeded;
 
     loop {
         stats.solve_rounds += 1;
@@ -589,9 +610,10 @@ where
             }
         };
 
-        // Collect every newly-violated pair before mutating the arena, so the
+        // Collect every newly-relevant pair before mutating the arena, so the
         // `assignment` borrow does not collide with the IR builders.
-        let mut new_lemmas: Vec<(usize, usize)> = Vec::new();
+        let mut equal_arg_lemmas: Vec<(usize, usize)> = Vec::new();
+        let mut round_violations = 0usize;
         for (_func, members) in &groups {
             for a in 0..members.len() {
                 for b in (a + 1)..members.len() {
@@ -608,14 +630,21 @@ where
                     stats.pair_checks += 1;
                     if args_tuples_equal(arena, args_i, args_j, &assignment) {
                         stats.equal_arg_pairs += 1;
+                        equal_arg_lemmas.push((i, j));
                         if results_differ(&assignment, *fresh_i, *fresh_j) {
                             stats.violated_pairs += 1;
-                            new_lemmas.push((i, j));
+                            round_violations += 1;
                         }
                     }
                 }
             }
         }
+
+        let new_lemmas = if round_violations == 0 {
+            Vec::new()
+        } else {
+            equal_arg_lemmas
+        };
 
         if new_lemmas.is_empty() {
             // Model is functionally consistent: project, replay, and return.
@@ -653,6 +682,7 @@ struct FunctionConsistencyStats {
     pair_checks: usize,
     equal_arg_pairs: usize,
     violated_pairs: usize,
+    preseeded_lemmas: usize,
     lemmas_added: usize,
     last_new_lemmas: usize,
 }
@@ -675,6 +705,7 @@ impl FunctionConsistencyStats {
             pair_checks: 0,
             equal_arg_pairs: 0,
             violated_pairs: 0,
+            preseeded_lemmas: 0,
             lemmas_added: 0,
             last_new_lemmas: 0,
         }
@@ -684,7 +715,7 @@ impl FunctionConsistencyStats {
         format!(
             "applications={}, function_groups={}, potential_pairs={}, solve_rounds={}, \
              sat_candidates={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
-             lemmas_added={}, last_new_lemmas={}",
+             preseeded_lemmas={}, lemmas_added={}, last_new_lemmas={}",
             self.applications,
             self.function_groups,
             self.potential_pairs,
@@ -693,6 +724,7 @@ impl FunctionConsistencyStats {
             self.pair_checks,
             self.equal_arg_pairs,
             self.violated_pairs,
+            self.preseeded_lemmas,
             self.lemmas_added,
             self.last_new_lemmas
         )
@@ -708,6 +740,210 @@ impl FunctionConsistencyStats {
             ),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct IntBounds {
+    lower: Option<i128>,
+    upper: Option<i128>,
+}
+
+fn preseed_function_consistency_lemmas(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    applications: &[(FuncId, Vec<TermId>, SymbolId)],
+    groups: &[(FuncId, Vec<usize>)],
+    working: &mut Vec<TermId>,
+    added: &mut HashSet<(usize, usize)>,
+) -> Result<usize, SolverError> {
+    let fixed = fixed_int_assignment_from_top_level_assertions(arena, assertions);
+    let mut count = 0usize;
+    for (_func, members) in groups {
+        for a in 0..members.len() {
+            for b in (a + 1)..members.len() {
+                if count >= MAX_PRESEEDED_FUNCTION_CONSISTENCY_LEMMAS {
+                    return Ok(count);
+                }
+                let i = members[a];
+                let j = members[b];
+                if added.contains(&(i, j)) {
+                    continue;
+                }
+                let (_fi, args_i, fresh_i) = &applications[i];
+                let (_fj, args_j, fresh_j) = &applications[j];
+                if args_i.len() != args_j.len() {
+                    continue;
+                }
+                if !args_tuples_equal_under_fixed_assignment(arena, args_i, args_j, &fixed) {
+                    continue;
+                }
+                let lemma = congruence_lemma(arena, args_i, args_j, *fresh_i, *fresh_j)?;
+                working.push(lemma);
+                added.insert((i, j));
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
+}
+
+fn fixed_int_assignment_from_top_level_assertions(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Assignment {
+    let mut bounds = BTreeMap::<SymbolId, IntBounds>::new();
+    for &assertion in assertions {
+        collect_top_level_int_bound(arena, assertion, &mut bounds);
+    }
+
+    let mut assignment = Assignment::new();
+    for (symbol, bound) in bounds {
+        if let (Some(lower), Some(upper)) = (bound.lower, bound.upper) {
+            if lower == upper {
+                assignment.set(symbol, Value::Int(lower));
+            }
+        }
+    }
+    assignment
+}
+
+fn collect_top_level_int_bound(
+    arena: &TermArena,
+    assertion: TermId,
+    bounds: &mut BTreeMap<SymbolId, IntBounds>,
+) {
+    let TermNode::App { op, args } = arena.node(assertion) else {
+        return;
+    };
+    if args.len() != 2 {
+        return;
+    }
+
+    let left = args[0];
+    let right = args[1];
+    match op {
+        Op::Eq => {
+            if let Some((symbol, value)) = int_symbol_const_pair(arena, left, right) {
+                tighten_lower(bounds, symbol, value);
+                tighten_upper(bounds, symbol, value);
+            }
+        }
+        Op::IntLe => {
+            record_int_le_bound(arena, left, right, bounds);
+        }
+        Op::IntGe => {
+            record_int_le_bound(arena, right, left, bounds);
+        }
+        Op::IntLt => {
+            if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, left, right) {
+                if let Some(upper) = value.checked_sub(1) {
+                    tighten_upper(bounds, symbol, upper);
+                }
+            } else if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, right, left)
+            {
+                if let Some(lower) = value.checked_add(1) {
+                    tighten_lower(bounds, symbol, lower);
+                }
+            }
+        }
+        Op::IntGt => {
+            if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, left, right) {
+                if let Some(lower) = value.checked_add(1) {
+                    tighten_lower(bounds, symbol, lower);
+                }
+            } else if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, right, left)
+            {
+                if let Some(upper) = value.checked_sub(1) {
+                    tighten_upper(bounds, symbol, upper);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn record_int_le_bound(
+    arena: &TermArena,
+    left: TermId,
+    right: TermId,
+    bounds: &mut BTreeMap<SymbolId, IntBounds>,
+) {
+    if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, left, right) {
+        tighten_upper(bounds, symbol, value);
+    } else if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, right, left) {
+        tighten_lower(bounds, symbol, value);
+    }
+}
+
+fn int_symbol_const_pair(
+    arena: &TermArena,
+    left: TermId,
+    right: TermId,
+) -> Option<(SymbolId, i128)> {
+    if let (Some(symbol), Some(value)) = (int_symbol(arena, left), int_const(arena, right)) {
+        Some((symbol, value))
+    } else if let (Some(symbol), Some(value)) = (int_symbol(arena, right), int_const(arena, left)) {
+        Some((symbol, value))
+    } else {
+        None
+    }
+}
+
+fn ordered_int_symbol_const_pair(
+    arena: &TermArena,
+    symbol_term: TermId,
+    const_term: TermId,
+) -> Option<(SymbolId, i128)> {
+    Some((
+        int_symbol(arena, symbol_term)?,
+        int_const(arena, const_term)?,
+    ))
+}
+
+fn int_symbol(arena: &TermArena, term: TermId) -> Option<SymbolId> {
+    let TermNode::Symbol(symbol) = arena.node(term) else {
+        return None;
+    };
+    if arena.symbol(*symbol).1 == Sort::Int {
+        Some(*symbol)
+    } else {
+        None
+    }
+}
+
+fn int_const(arena: &TermArena, term: TermId) -> Option<i128> {
+    let TermNode::IntConst(value) = arena.node(term) else {
+        return None;
+    };
+    Some(*value)
+}
+
+fn tighten_lower(bounds: &mut BTreeMap<SymbolId, IntBounds>, symbol: SymbolId, value: i128) {
+    let entry = bounds.entry(symbol).or_default();
+    entry.lower = Some(entry.lower.map_or(value, |old| old.max(value)));
+}
+
+fn tighten_upper(bounds: &mut BTreeMap<SymbolId, IntBounds>, symbol: SymbolId, value: i128) {
+    let entry = bounds.entry(symbol).or_default();
+    entry.upper = Some(entry.upper.map_or(value, |old| old.min(value)));
+}
+
+fn args_tuples_equal_under_fixed_assignment(
+    arena: &TermArena,
+    args_i: &[TermId],
+    args_j: &[TermId],
+    fixed: &Assignment,
+) -> bool {
+    for (&a, &b) in args_i.iter().zip(args_j) {
+        if a == b {
+            continue;
+        }
+        match (eval(arena, a, fixed), eval(arena, b, fixed)) {
+            (Ok(va), Ok(vb)) if va == vb => {}
+            _ => return false,
+        }
+    }
+    true
 }
 
 /// Whether every argument of two applications evaluates to the **same value** under
@@ -1168,6 +1404,36 @@ mod tests {
         assert!(reason.detail.contains("solve_rounds=1"));
         assert!(reason.detail.contains("sat_candidates=0"));
         assert!(reason.detail.contains("inner timeout"));
+    }
+
+    #[test]
+    fn lazy_function_consistency_preseeds_fixed_integer_argument_lemmas() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let x = arena.int_var("x").unwrap();
+        let zero = arena.int_const(0);
+        let fx = arena.apply(f, &[x]).unwrap();
+        let f0 = arena.apply(f, &[zero]).unwrap();
+        let same_result = arena.eq(fx, f0).unwrap();
+        let x_le_zero = arena.int_le(x, zero).unwrap();
+        let x_ge_zero = arena.int_ge(x, zero).unwrap();
+        let assertions = [same_result, x_le_zero, x_ge_zero];
+
+        let result = super::check_with_function_consistency(&mut arena, &assertions, |_a, _q| {
+            Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "inner timeout".to_string(),
+            }))
+        })
+        .unwrap();
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected wrapped unknown, got {result:?}");
+        };
+        assert!(reason.detail.contains("applications=2"));
+        assert!(reason.detail.contains("potential_pairs=1"));
+        assert!(reason.detail.contains("preseeded_lemmas=1"));
+        assert!(reason.detail.contains("lemmas_added=1"));
     }
 
     #[test]

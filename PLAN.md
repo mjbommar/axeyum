@@ -339,6 +339,23 @@ against competitor source, are now binding:
    arithmetic abstraction. This is real search movement but not a row closure;
    next work should target the post-CEGAR arithmetic skeleton, especially
    assumption/core-guided solving or relevance pruning after UF lemmas are added.
+   **LAZY UF CONSISTENCY BATCHING LANDED (2026-06-26):**
+   the lazy UF CEGAR loop now can pre-seed up to 256 cheap congruence lemmas
+   whose argument tuples are syntactically equal or equal under top-level fixed
+   integer bounds, and its timeout telemetry reports `preseeded_lemmas`.
+   Once a candidate has a real functional-consistency violation, the loop now
+   batches every same-candidate equal-argument pair rather than only the
+   result-different pair, avoiding a later rediscovery round while still not
+   adding gratuitous lemmas for already-consistent SAT candidates. On the two
+   generated QF_UFLIA overbound rows, pre-seeding finds **0** lemmas because the
+   equal UF arguments depend on branch/model choices such as `fmt1`, so the
+   1 s result is intentionally unchanged: **461 atoms**, **372 bound lemmas**,
+   **61** rounds, no candidate. At 10 s the first row still reaches one UF CEGAR
+   candidate, but now records **equal_arg_pairs=6**, **violated_pairs=5**,
+   **lemmas_added=6**, then times out in a **479-atom** post-CEGAR arithmetic
+   abstraction. This rules out missed same-candidate UF consistency as the main
+   blocker; the practical next lever remains post-CEGAR arithmetic relevance /
+   assumption-core solving.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
