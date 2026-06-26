@@ -1196,12 +1196,107 @@ fn annotate_lia_budget_before_uf(
     UnknownReason {
         kind: reason.kind,
         detail: format!(
-            "{}; UF-aware routes were not reached because the generic LIA DPLL route \
-             exhausted its budget first (arithmetic_function={}, ackermann_pairs={})",
+            "{}; downstream UF-aware routes were not reached because the generic LIA DPLL \
+             route exhausted its budget first (arithmetic_function={}, ackermann_pairs={})",
             reason.detail,
             has_arithmetic_function(arena),
             crate::euf::ackermann_congruence_pairs(arena, assertions)
         ),
+    }
+}
+
+const MAX_PRE_LIA_UF_PROBE_ASSERTIONS: usize = 256;
+
+fn dispatch_arith_uf_overbound_probe_before_lia(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    if !features.has_int
+        || features.has_real
+        || features.has_array
+        || !features.has_function
+        || !has_arithmetic_function(arena)
+    {
+        return Ok(None);
+    }
+    let pairs = crate::euf::ackermann_congruence_pairs(arena, assertions);
+    if pairs <= crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS {
+        return Ok(None);
+    }
+    if assertions.len() > MAX_PRE_LIA_UF_PROBE_ASSERTIONS {
+        with_recorder(rec, |t| {
+            t.record_declined(
+                "uf-arith-lazy-overbound-pre-lia",
+                DeclineReason::from_unknown(&UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!(
+                        "pre-LIA UF+arithmetic probe skipped for generated query with {} \
+                         assertions > {MAX_PRE_LIA_UF_PROBE_ASSERTIONS} (ackermann_pairs={pairs}); \
+                         avoid duplicating the large function-free arithmetic skeleton solve",
+                        assertions.len()
+                    ),
+                }),
+            );
+        });
+        return Ok(None);
+    }
+
+    // Run on a clone so an inconclusive probe cannot enlarge the caller's arena
+    // before the existing generic LIA fallback. Original SymbolId/FuncId values
+    // are stable across the clone, so a returned model is still over the original
+    // query surface.
+    let mut scratch = arena.clone();
+    let probe_config = pre_lia_uf_probe_budget(config);
+    let probe = crate::euf::try_lazy_arith_for_overbound(
+        &mut scratch,
+        assertions,
+        &probe_config,
+        "UF+arithmetic pre-LIA probe",
+    );
+    let Some(result) = (match probe {
+        Ok(result) => result,
+        Err(SolverError::Unsupported(_)) => {
+            with_recorder(rec, |t| {
+                t.record_declined(
+                    "uf-arith-lazy-overbound-pre-lia",
+                    DeclineReason::Unsupported,
+                );
+            });
+            return Ok(None);
+        }
+        Err(SolverError::Backend(detail)) => {
+            with_recorder(rec, |t| {
+                t.record_declined(
+                    "uf-arith-lazy-overbound-pre-lia",
+                    DeclineReason::VerifierRejected(detail),
+                );
+            });
+            return Ok(None);
+        }
+        Err(other) => return Err(other),
+    }) else {
+        return Ok(None);
+    };
+
+    with_recorder(rec, |t| match &result {
+        CheckResult::Sat(_) => {
+            t.record_decided("uf-arith-lazy-overbound-pre-lia", Verdict::Sat);
+        }
+        CheckResult::Unsat => {
+            t.record_decided("uf-arith-lazy-overbound-pre-lia", Verdict::Unsat);
+        }
+        CheckResult::Unknown(reason) => t.record_declined(
+            "uf-arith-lazy-overbound-pre-lia",
+            DeclineReason::from_unknown(reason),
+        ),
+    });
+
+    match result {
+        CheckResult::Sat(_) | CheckResult::Unsat => Ok(Some(result)),
+        CheckResult::Unknown(_) => Ok(None),
     }
 }
 
@@ -1437,6 +1532,20 @@ fn probe_budget(config: &SolverConfig) -> SolverConfig {
     probe
 }
 
+fn pre_lia_uf_probe_budget(config: &SolverConfig) -> SolverConfig {
+    let mut probe = config.clone();
+    if let Some(timeout) = probe.timeout {
+        let tenth = timeout / 10;
+        let bounded = if tenth.is_zero() {
+            timeout
+        } else {
+            tenth.min(Duration::from_millis(250))
+        };
+        probe.timeout = Some(bounded);
+    }
+    probe
+}
+
 /// The **online** EUF + linear-arithmetic combination, tried *before* the eager
 /// Ackermann route in [`dispatch_uf_fast_paths`]. Routes by sort — reals present
 /// ⇒ [`crate::check_qf_uflra_online`] (`QF_UFLRA`), otherwise
@@ -1630,6 +1739,11 @@ fn check_auto_dispatch(
             }
             Err(e) => return Err(e),
         }
+    }
+    if let Some(result) =
+        dispatch_arith_uf_overbound_probe_before_lia(arena, assertions, config, &features, rec)?
+    {
+        return Ok(result);
     }
     if features.has_int {
         // `bv2nat(b)` finite-range refutation (G2): a `bv2nat(b)` of a `W`-bit
@@ -4475,10 +4589,57 @@ mod tests {
         assert!(
             annotated
                 .detail
-                .contains("UF-aware routes were not reached")
+                .contains("downstream UF-aware routes were not reached")
         );
         assert!(annotated.detail.contains("arithmetic_function=true"));
         assert!(annotated.detail.contains("ackermann_pairs=1"));
+    }
+
+    #[test]
+    fn arithmetic_uf_overbound_pre_lia_probe_decides_on_clone() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Int], Sort::Int)
+            .expect("declare f");
+        let mut assertions = Vec::new();
+        for i in 0..20 {
+            let v = arena.int_var(&format!("pad{i}")).expect("pad");
+            let app = arena.apply(f, &[v]).expect("f(pad)");
+            let value = arena.int_const(i as i128);
+            assertions.push(arena.eq(app, value).expect("pin app"));
+        }
+        let a = arena.int_var("a").expect("a");
+        let b = arena.int_var("b").expect("b");
+        let fa = arena.apply(f, &[a]).expect("f(a)");
+        let fb = arena.apply(f, &[b]).expect("f(b)");
+        let fa_eq_fb = arena.eq(fa, fb).expect("f(a)=f(b)");
+        assertions.push(arena.not(fa_eq_fb).expect("diseq"));
+        assertions.push(arena.eq(a, b).expect("a=b"));
+        assert!(
+            crate::euf::ackermann_congruence_pairs(&arena, &assertions)
+                > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS
+        );
+
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(10));
+        let features = Features::scan_within(&arena, &assertions, None).unwrap();
+        let mut trace = RouteTrace::new();
+        let mut rec = Some(&mut trace);
+        let result = dispatch_arith_uf_overbound_probe_before_lia(
+            &arena,
+            &assertions,
+            &config,
+            &features,
+            &mut rec,
+        )
+        .unwrap();
+        drop(rec);
+
+        assert_eq!(result, Some(CheckResult::Unsat));
+        let trace_text = trace.to_string();
+        assert!(
+            trace_text.contains("uf-arith-lazy-overbound-pre-lia: decided unsat"),
+            "pre-LIA UF-aware route should decide the overbound congruence conflict, got:\n{trace_text}"
+        );
     }
 
     /// `solve` routes a *too-wide-to-enumerate* (`BitVec(32)`) quantified EUF

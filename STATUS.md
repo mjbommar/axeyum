@@ -6,6 +6,33 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — bounded pre-LIA UF+arithmetic probe added.**
+  Added a cloned, bounded pre-LIA probe for non-array integer UF+arithmetic
+  instances whose eager Ackermann pair count is over the deterministic bound.
+  Small overbound instances now get the lazy UF+arithmetic CEGAR route before
+  generic opaque-app `lia-dpll`, and a regression pins that it can decide an
+  overbound congruence contradiction without mutating the caller's arena. Probe
+  `Unsupported` / backend replay failures are trace declines, not hard solver
+  errors, so the existing fallback path remains available.
+
+  The generated QF_UFLIA overbound rows are intentionally not admitted to this
+  cloned probe: each has **1248 assertions** and `ackermann_pairs=282`, and even
+  a tiny nominal probe timeout duplicates the large function-free arithmetic
+  skeleton solve. The route now records a fast deterministic skip for those rows
+  and then reaches the existing `lia-dpll` timeout. **Next:** attack the large
+  generated arithmetic skeleton directly: shared global deadlines, relevance /
+  assumption filtering, or a cheaper first-SAT-model probe that can report
+  `sat_candidates=0` without solving the whole 873-atom abstraction.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith_overbound_unsat_decided_by_lazy -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_unknown_reports_cegar_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`.
+
 - **Session 2026-06-26 — QF_UFLIA overbound dispatch starvation diagnosed.**
   Added two low-cost diagnostics for the hard parent
   `qf-uflia-cvc5-regress-clean-overbound` rows. First, the shared lazy
@@ -4191,6 +4218,13 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **Bounded pre-LIA UF+arithmetic probe added.**
+  Over-eager-bound non-array integer UF+arithmetic queries now get a cloned,
+  capped lazy UF+arithmetic probe before generic opaque-app `lia-dpll`. Small
+  overbound congruence conflicts can decide there; generated QF_UFLIA overbound
+  rows skip the probe quickly because their 1248 assertions would duplicate the
+  large function-free arithmetic skeleton solve.
 
 - **2026-06-26** — **QF_UFLIA overbound dispatch starvation diagnosed.**
   Added `unknown` diagnostics for lazy function-consistency CEGAR stats and for

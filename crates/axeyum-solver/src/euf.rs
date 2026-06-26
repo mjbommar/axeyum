@@ -1432,8 +1432,12 @@ mod tests {
         for i in 0..n {
             let v = arena.int_var(&format!("pad{i}")).unwrap();
             let app = arena.apply(f, &[v]).unwrap();
-            // Touch each application in a trivially-true atom so it is reachable.
-            let eq = arena.eq(app, app).unwrap();
+            // Touch each application and pin its abstract result so the first
+            // function-free abstraction has a complete candidate model; the
+            // padding arguments remain unconstrained, so they do not force
+            // congruence refinements.
+            let value = arena.int_const(i as i128);
+            let eq = arena.eq(app, value).unwrap();
             assertions.push(eq);
         }
         // The refutation: f(a) != f(b) AND a = b.

@@ -263,6 +263,16 @@ against competitor source, are now binding:
    get a UF-aware probe before opaque-app LIA DPLL consumes the budget. If that
    probe reports `sat_candidates=0`, then the blocker is the 873-atom function-free
    Boolean arithmetic skeleton itself.
+   **BOUNDED PRE-LIA UF+ARITH PROBE LANDED (2026-06-26):**
+   small non-array integer UF+arithmetic instances over the eager Ackermann bound
+   now get a cloned, capped lazy UF+arithmetic probe before generic opaque-app
+   `lia-dpll`; probe errors decline and fall through instead of changing solver
+   semantics. The cvc5 generated overbound rows are deliberately outside this
+   probe's admission cap (**1248 assertions > 256**, `ackermann_pairs=282`), because
+   the cloned probe duplicates the same large function-free arithmetic skeleton
+   solve and costs seconds even with a tiny nominal timeout. Their next lever is
+   not "try lazy CEGAR earlier" anymore; it is a cheaper relevance/global-deadline
+   or first-model strategy for the 873-atom arithmetic Boolean skeleton.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
