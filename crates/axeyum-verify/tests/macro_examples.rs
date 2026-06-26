@@ -29,7 +29,7 @@ fn clamp(x: u8) -> u8 {
 #[test]
 fn clamp_verdict_is_certified() {
     match clamp__axeyum_verdict() {
-        Verdict::Verified { certified } => assert!(certified, "clamp proof must re-check"),
+        Verdict::Verified { certified, .. } => assert!(certified, "clamp proof must re-check"),
         other => panic!("clamp must verify, got {other:?}"),
     }
 }

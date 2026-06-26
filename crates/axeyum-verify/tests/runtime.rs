@@ -116,7 +116,7 @@ fn masked_value_is_bounded_and_verified() {
         ],
     };
     match run(&p) {
-        Verdict::Verified { certified } => assert!(certified, "safety proof must re-check"),
+        Verdict::Verified { certified, .. } => assert!(certified, "safety proof must re-check"),
         other => panic!("clamp must be verified, got {other:?}"),
     }
 }
@@ -254,7 +254,7 @@ fn guarded_division_is_verified() {
         }],
     };
     match run(&p) {
-        Verdict::Verified { certified } => assert!(certified),
+        Verdict::Verified { certified, .. } => assert!(certified),
         other => panic!("guarded division must be verified, got {other:?}"),
     }
 }

@@ -298,13 +298,16 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
         #[test]
         fn #test_ident() {
             match #verdict_ident() {
-                axeyum_verify::Verdict::Verified { certified } => {
+                axeyum_verify::Verdict::Verified { certified, lean_module } => {
                     assert!(
                         !#expect_bug,
                         "axeyum::verify[{}]: expected a bug (#[verify(expect_bug)]) but the \
                          function VERIFIED (certified={})", #fn_name, certified
                     );
-                    eprintln!("axeyum::verify[{}]: VERIFIED (certified={})", #fn_name, certified);
+                    eprintln!(
+                        "axeyum::verify[{}]: VERIFIED (certified={}, lean={})",
+                        #fn_name, certified, lean_module.is_some()
+                    );
                 }
                 axeyum_verify::Verdict::Counterexample { class, inputs } => {
                     #repro

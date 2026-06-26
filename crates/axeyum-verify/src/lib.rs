@@ -60,7 +60,9 @@ pub use axeyum_verify_macros::verify;
 pub use axeyum_verify_macros::unwind;
 
 pub use ast::{ArrayParam, BinOp, Expr, Param, Program, Stmt, Ty, UnOp};
-pub use verify::{Verdict, Witness, default_config, signed_value, verify_program};
+pub use verify::{
+    CertCoverage, Verdict, Witness, cert_coverage, default_config, signed_value, verify_program,
+};
 
 /// The modeled `Option` constructor recognized by `#[axeyum::verify]`:
 /// `opt(is_some, value).unwrap()` is `Some(value)` when `is_some`, else `None`.
