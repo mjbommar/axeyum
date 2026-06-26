@@ -6,6 +6,40 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_FP exact audit ingested; two FP proof gaps closed.**
+  Widened the checked `UnsatBvDefinedEnum` / `ProofFragment::BvDefinedEnum`
+  route from Bool/BV-only terms to finite scalar terms, including `Float`
+  values via Axeyum's ADR-0026 bit-pattern representation. This certifies the
+  Bitwuzla QF_FP `fp_inf` and `fp_zero` constant-chain rows by re-deriving
+  top-level definitions for the Float64 symbols, then replaying the original
+  assertions in one independent case. The route remains bounded: independent
+  Float symbols are still limited to 16 bits and the definition-aware case cap is
+  now 100k, so the large `fp_misc` Float16 row declines quickly and stays on the
+  checked DRAT path rather than spending unbounded time in pre-solve
+  certification. A committed exact QF_FP audit now reports **15/16** dominant,
+  **Lean unsat 6/7**, **mismatches=0**, **audit_errors=1**, and
+  **timeouts=1**, with the single remaining gap a `lean-reconstruction` timeout
+  on `solver__fp__fp_misc.smt2`. The dominance
+  report now has **16 complete exact audit rows**. **Next:** close `fp_misc`
+  with a narrow checked FP-zero/rem/fma contradiction or move to the QF_BVFP
+  proof-route row.
+  Verification passed:
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --lib bv_defined_enum -j1 -- --nocapture`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_inf.smt2 10000`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2 10000`;
+  `AXEYUM_DIAGNOSE_ONLY_EVIDENCE=1 CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2 10000`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test evidence qf_fp_constant_chain_rows_use_checked_bv_defined_enum_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo test -p axeyum-solver --test lean_crosscheck qf_fp_bv_defined_enum_constant_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=4 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json 30000 16 bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=4 cargo check -p axeyum-bench --examples -j1`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=4 cargo clippy -p axeyum-solver --lib --all-features -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-25 — exact QF_FF dominance row closed.**
   Added checked `UnsatBvDefinedEnum` evidence and
   `ProofFragment::BvDefinedEnum` reconstruction for finite-field rows whose raw

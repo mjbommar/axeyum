@@ -1,4 +1,4 @@
-//! Bounded Bool/BV enumeration modulo checked top-level definitions.
+//! Bounded finite-scalar enumeration modulo checked top-level definitions.
 //!
 //! This certificate is narrower than a solver and broader than raw term-level
 //! enumeration. It uses only constraints that are required by the original query:
@@ -7,16 +7,21 @@
 //! `x < p` and `x = 0 or x = 1` shrink independent domains. The checker then
 //! enumerates every independent assignment, extends it with the definitions, and
 //! replays the original assertions with the trusted evaluator.
+//!
+//! Floating-point values use Axeyum's existing ADR-0026 representation: a
+//! `Float` value is its `exp + sig` bit pattern carried in a [`Value::Bv`].
+//! Independent Float symbols are width-bounded; wider Float symbols may still
+//! appear when a required top-level equality defines them.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 const MAX_SYMBOL_WIDTH: u32 = 16;
-const MAX_CASES: u64 = 1_000_000;
+const MAX_CASES: u64 = 100_000;
 
-/// A self-checking Bool/BV refutation by exhaustive enumeration after applying
-/// required top-level symbol definitions and finite-domain restrictions.
+/// A self-checking finite-scalar refutation by exhaustive enumeration after
+/// applying required top-level symbol definitions and finite-domain restrictions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BvDefinedEnumRefutationCertificate {
     /// Number of independent assignments evaluated.
@@ -54,7 +59,7 @@ pub fn bv_defined_enum_refutation(
     if assertions.is_empty()
         || assertions
             .iter()
-            .any(|&assertion| !is_pure_bool_bv_term(arena, assertion))
+            .any(|&assertion| !is_finite_scalar_term(arena, assertion))
     {
         return None;
     }
@@ -70,7 +75,7 @@ pub fn bv_defined_enum_refutation(
     }
     let definitions = collect_definitions(arena, &required);
     let defined_symbols: BTreeSet<_> = definitions.iter().map(|d| d.symbol).collect();
-    if definitions.is_empty() || defined_symbols.len() == symbol_sorts.len() {
+    if definitions.is_empty() {
         return None;
     }
 
@@ -140,7 +145,7 @@ fn collect_symbol_sorts(
         match arena.node(term) {
             TermNode::Symbol(symbol) => {
                 let sort = arena.sort_of(term);
-                if !small_enum_sort(sort) {
+                if !finite_scalar_sort(sort) {
                     return None;
                 }
                 out.insert(*symbol, sort);
@@ -174,9 +179,9 @@ fn definition_from_equality(arena: &TermArena, lhs: TermId, rhs: TermId) -> Opti
     };
     let sort = arena.sort_of(lhs);
     if arena.sort_of(rhs) != sort
-        || !small_enum_sort(sort)
+        || !finite_scalar_sort(sort)
         || contains_symbol(arena, rhs, *symbol)
-        || !is_pure_bool_bv_term(arena, rhs)
+        || !is_finite_scalar_term(arena, rhs)
     {
         return None;
     }
@@ -418,29 +423,33 @@ fn constant_value(arena: &TermArena, term: TermId) -> Option<Value> {
             width: *width,
             value: *value,
         }),
-        _ => None,
+        _ => eval(arena, term, &Assignment::new()).ok(),
     }
 }
 
 fn full_domain(sort: Sort) -> Option<Vec<Value>> {
     match sort {
         Sort::Bool => Some(vec![Value::Bool(false), Value::Bool(true)]),
-        Sort::BitVec(width) if width <= MAX_SYMBOL_WIDTH => {
-            let count = 1_u128.checked_shl(width)?;
-            let mut values = Vec::new();
-            for value in 0..count {
-                values.push(Value::Bv { width, value });
-            }
-            Some(values)
-        }
+        Sort::BitVec(width) if width <= MAX_SYMBOL_WIDTH => bit_pattern_domain(width),
+        Sort::Float { exp, sig } if exp + sig <= MAX_SYMBOL_WIDTH => bit_pattern_domain(exp + sig),
         _ => None,
     }
 }
 
-fn small_enum_sort(sort: Sort) -> bool {
+fn bit_pattern_domain(width: u32) -> Option<Vec<Value>> {
+    let count = 1_u128.checked_shl(width)?;
+    let mut values = Vec::new();
+    for value in 0..count {
+        values.push(Value::Bv { width, value });
+    }
+    Some(values)
+}
+
+fn finite_scalar_sort(sort: Sort) -> bool {
     match sort {
         Sort::Bool => true,
-        Sort::BitVec(width) => width <= MAX_SYMBOL_WIDTH,
+        Sort::BitVec(width) => width <= 128,
+        Sort::Float { exp, sig } => exp + sig <= 128,
         _ => false,
     }
 }
@@ -454,6 +463,12 @@ fn value_matches_sort(sort: Sort, value: &Value) -> bool {
                 width: value_width, ..
             },
         ) => width == *value_width,
+        (
+            Sort::Float { exp, sig },
+            Value::Bv {
+                width: value_width, ..
+            },
+        ) => exp + sig == *value_width,
         _ => false,
     }
 }
@@ -474,7 +489,7 @@ fn contains_symbol(arena: &TermArena, term: TermId, target: SymbolId) -> bool {
     false
 }
 
-fn is_pure_bool_bv_term(arena: &TermArena, term: TermId) -> bool {
+fn is_finite_scalar_term(arena: &TermArena, term: TermId) -> bool {
     let mut seen = BTreeSet::new();
     let mut stack = vec![term];
     while let Some(next) = stack.pop() {
@@ -483,8 +498,12 @@ fn is_pure_bool_bv_term(arena: &TermArena, term: TermId) -> bool {
         }
         match arena.node(next) {
             TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {}
-            TermNode::Symbol(_) if matches!(arena.sort_of(next), Sort::Bool | Sort::BitVec(_)) => {}
-            TermNode::App { op, args } if is_pure_bool_bv_op(*op) => {
+            TermNode::Symbol(_)
+                if matches!(
+                    arena.sort_of(next),
+                    Sort::Bool | Sort::BitVec(_) | Sort::Float { .. }
+                ) => {}
+            TermNode::App { op, args } if is_finite_scalar_op(*op) => {
                 stack.extend(args.iter().copied());
             }
             _ => return false,
@@ -493,7 +512,7 @@ fn is_pure_bool_bv_term(arena: &TermArena, term: TermId) -> bool {
     true
 }
 
-fn is_pure_bool_bv_op(op: Op) -> bool {
+fn is_finite_scalar_op(op: Op) -> bool {
     matches!(
         op,
         Op::BoolNot
@@ -537,6 +556,7 @@ fn is_pure_bool_bv_op(op: Op) -> bool {
             | Op::SignExt { .. }
             | Op::RotateLeft { .. }
             | Op::RotateRight { .. }
+            | Op::FpFromBits { .. }
     )
 }
 
@@ -570,5 +590,40 @@ mod tests {
         assert!(cert.cases <= 20_000);
         assert!(!cert.defined_symbols.is_empty());
         assert!(cert.restricted_symbols.len() >= 7);
+    }
+
+    #[test]
+    fn certifies_qf_fp_constant_infinity_chain() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_inf.smt2"
+        ))
+        .expect("fp_inf parses");
+        let cert = bv_defined_enum_refutation(&script.arena, &script.assertions)
+            .expect("definition-aware enumeration certifies fp_inf");
+        assert_eq!(cert.cases, 1);
+        assert_eq!(cert.defined_symbols.len(), 2);
+        assert!(cert.independent_symbols.is_empty());
+    }
+
+    #[test]
+    fn certifies_qf_fp_constant_zero_chain() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2"
+        ))
+        .expect("fp_zero parses");
+        let cert = bv_defined_enum_refutation(&script.arena, &script.assertions)
+            .expect("definition-aware enumeration certifies fp_zero");
+        assert_eq!(cert.cases, 1);
+        assert_eq!(cert.defined_symbols.len(), 2);
+        assert!(cert.independent_symbols.is_empty());
+    }
+
+    #[test]
+    fn declines_large_qf_fp_misc_enumeration() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
+        ))
+        .expect("fp_misc parses");
+        assert!(bv_defined_enum_refutation(&script.arena, &script.assertions).is_none());
     }
 }

@@ -1057,6 +1057,48 @@ fn qf_ff_gap_rows_use_checked_bv_defined_enum_evidence() {
 }
 
 #[test]
+fn qf_fp_constant_chain_rows_use_checked_bv_defined_enum_evidence() {
+    for (tag, input) in [
+        (
+            "qf_fp_inf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_inf.smt2"
+            ),
+        ),
+        (
+            "qf_fp_zero",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_FP row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
+        let Evidence::UnsatBvDefinedEnum(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected definition-aware scalar enum evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert_eq!(cert.cases, 1, "{tag}: constants define all FP symbols");
+        assert!(
+            report.evidence.is_certified(),
+            "{tag}: evidence should be certified"
+        );
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}: evidence should re-check"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: direct structural certificate should carry no trust holes"
+        );
+    }
+}
+
+#[test]
 fn unified_front_door_routes_pure_real_to_a_refutation() {
     // Boolean-structured pure-real unsat → the lazy-SMT refutation route.
     let mut arena = TermArena::new();

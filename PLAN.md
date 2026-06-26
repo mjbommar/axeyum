@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **640 decided**,
-   **591 oracle-compared**, **DISAGREE = 0**, with **15 complete exact audit rows**
+   **591 oracle-compared**, **DISAGREE = 0**, with **16 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **AUDIT HARNESS LANDED (2026-06-25):**
@@ -243,6 +243,18 @@ against competitor source, are now binding:
    such as bitness guards, then replays the original assertions. The exact
    QF_FF/cvc5 audit is now **100% (24/24)** dominant with Lean unsat **100%
    (10/10)**, zero mismatches, zero audit errors, and zero timeouts.
+   **QF_FP EXACT AUDIT INGESTED + CONSTANT-CHAIN ROUTE LANDED (2026-06-26):**
+   the Bitwuzla QF_FP row is now a committed exact dominance audit. The checked
+   `bv-defined-enum-unsat` route was widened from Bool/BV to finite scalar terms,
+   using Axeyum's existing ADR-0026 Float-as-bit-pattern representation. This
+   closes the `fp_inf` and `fp_zero` constant-chain rows (`a = b`, `a = +oo/+0`,
+   `b = -oo/-0`) with `ProofFragment::BvDefinedEnum`, no trust holes, and
+   one-case replay through the original assertions. The route remains bounded:
+   independent Float symbols are still limited to 16 bits and the definition-aware
+   case cap is 100k, so the larger `fp_misc` Float16 row declines instead of
+   spending unbounded time in pre-solve certification. The exact QF_FP audit is
+   now **94% (15/16)** dominant with Lean unsat **86% (6/7)**, zero mismatches,
+   and one remaining `lean-reconstruction` timeout on `solver__fp__fp_misc.smt2`.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **100% (4/4)**, QF_BV/bvred **100% (6/6)**,
