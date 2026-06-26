@@ -490,234 +490,325 @@ impl ArithSupportStats {
     }
 }
 
-#[allow(clippy::too_many_lines)]
+/// Warm lazy-SMT state for callers that strengthen the same arithmetic
+/// abstraction monotonically.
+pub(crate) struct IncrementalArithDpll {
+    ctx: ArithAbstractor,
+    skeleton: Vec<TermId>,
+    prop_solver: BoolSkeletonSolver,
+    initial_clauses: HashSet<TermId>,
+    blocking: Vec<TermId>,
+    lemmas: Vec<Vec<ArithLemmaLiteral>>,
+    initial_lemma_count: usize,
+    core_stats: ArithCoreStats,
+    support_stats: ArithSupportStats,
+    total_rounds: usize,
+    solve_calls: usize,
+}
+
+impl IncrementalArithDpll {
+    pub(crate) fn new(arena: &mut TermArena, assertions: &[TermId]) -> Result<Self, SolverError> {
+        if contains_smtlib_unspecified_arith(arena, assertions) {
+            return Err(SolverError::Unsupported(
+                "lazy arithmetic: integer/real division or modulo with a divisor \
+                 that may be zero needs an explicit SMT-LIB underspecification encoding"
+                    .to_owned(),
+            ));
+        }
+
+        let mut solver = Self {
+            ctx: ArithAbstractor::default(),
+            skeleton: Vec::with_capacity(assertions.len()),
+            prop_solver: BoolSkeletonSolver::new(),
+            initial_clauses: HashSet::new(),
+            blocking: Vec::new(),
+            lemmas: Vec::new(),
+            initial_lemma_count: 0,
+            core_stats: ArithCoreStats::default(),
+            support_stats: ArithSupportStats::default(),
+            total_rounds: 0,
+            solve_calls: 0,
+        };
+        solver.assert_all(arena, assertions)?;
+        solver.refresh_initial_lemmas(arena)?;
+        solver.initial_lemma_count = solver.lemmas.len();
+        Ok(solver)
+    }
+
+    pub(crate) fn assert_incremental(
+        &mut self,
+        arena: &mut TermArena,
+        assertion: TermId,
+    ) -> Result<(), SolverError> {
+        if contains_smtlib_unspecified_arith(arena, &[assertion]) {
+            return Err(SolverError::Unsupported(
+                "lazy arithmetic: integer/real division or modulo with a divisor \
+                 that may be zero needs an explicit SMT-LIB underspecification encoding"
+                    .to_owned(),
+            ));
+        }
+        self.assert_one(arena, assertion)?;
+        self.refresh_initial_lemmas(arena)
+    }
+
+    fn assert_all(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+    ) -> Result<(), SolverError> {
+        for &assertion in assertions {
+            self.assert_one(arena, assertion)?;
+        }
+        Ok(())
+    }
+
+    fn assert_one(&mut self, arena: &mut TermArena, assertion: TermId) -> Result<(), SolverError> {
+        let skeleton = self.ctx.abstract_term(arena, assertion)?;
+        self.prop_solver.assert(arena, skeleton)?;
+        self.skeleton.push(skeleton);
+        Ok(())
+    }
+
+    fn refresh_initial_lemmas(&mut self, arena: &mut TermArena) -> Result<(), SolverError> {
+        let mut initial_lemmas = initial_int_bound_mutex_lemmas(arena, &self.ctx)?;
+        initial_lemmas.extend(initial_int_bound_implication_lemmas(arena, &self.ctx)?);
+        for (clause, lemma) in initial_lemmas {
+            if self.initial_clauses.insert(clause) {
+                self.prop_solver.assert(arena, clause)?;
+                self.lemmas.push(lemma);
+            }
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_lines)]
+    pub(crate) fn solve(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        // Wall-clock deadline (graceful `Unknown`, never an unbounded hang — the
+        // standing hard rule). The lazy-SMT loop can need many refinements, each a
+        // SAT solve plus simplex over a growing clause set; on a large instance
+        // that is effectively unbounded, so honor `config.timeout` at the top of
+        // every round. A decided verdict is only ever reached *inside* a round,
+        // never by timeout.
+        let deadline = config.timeout.map(|t| Instant::now() + t);
+        self.solve_calls += 1;
+
+        for round in 0..MAX_DPLL_ROUNDS {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!(
+                        "lazy linear arithmetic exhausted the configured timeout after {round} \
+                         rounds this solve (solve_calls={}, total_rounds={}, atoms={}, \
+                         bound_lemmas={}, blocking_lemmas={}, {}, {})",
+                        self.solve_calls,
+                        self.total_rounds,
+                        self.ctx.atoms.len(),
+                        self.initial_clauses.len(),
+                        self.blocking.len(),
+                        self.core_stats.summary(),
+                        self.support_stats.summary()
+                    ),
+                }));
+            }
+            self.total_rounds += 1;
+            let round_config = config_with_deadline(config, deadline);
+            let propositional = match self.prop_solver.solve(&round_config)? {
+                CheckResult::Sat(model) => model,
+                CheckResult::Unsat => return Ok(CheckResult::Unsat),
+                CheckResult::Unknown(reason) => {
+                    return Ok(CheckResult::Unknown(UnknownReason {
+                        kind: reason.kind,
+                        detail: format!(
+                            "lazy linear arithmetic SAT skeleton declined after round {round} \
+                             (solve_calls={}, total_rounds={}, atoms={}, bound_lemmas={}, \
+                             blocking_lemmas={}, {}, {}): {}",
+                            self.solve_calls,
+                            self.total_rounds,
+                            self.ctx.atoms.len(),
+                            self.initial_clauses.len(),
+                            self.blocking.len(),
+                            self.core_stats.summary(),
+                            self.support_stats.summary(),
+                            reason.detail
+                        ),
+                    }));
+                }
+            };
+
+            let mut truths = Vec::with_capacity(self.ctx.atoms.len());
+            let mut lits = Vec::with_capacity(self.ctx.atoms.len());
+            for atom in &self.ctx.atoms {
+                let truth = propositional
+                    .get(atom.prop)
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                truths.push(truth);
+                lits.push(if truth {
+                    atom.term
+                } else {
+                    arena.not(atom.term)?
+                });
+            }
+
+            if let Some(support) =
+                justified_theory_indices(arena, &self.ctx, &self.skeleton, &propositional)
+            {
+                self.support_stats.attempts += 1;
+                let int_conflicts = theory_conflicts_for_indices(
+                    arena,
+                    &self.ctx,
+                    &lits,
+                    &support,
+                    Theory::Int,
+                    check_with_lia_opaque_apps,
+                )?;
+                if !int_conflicts.is_empty() {
+                    self.support_stats.conflict_batches += 1;
+                    let mut learn = ArithLearnState {
+                        prop_solver: &mut self.prop_solver,
+                        blocking: &mut self.blocking,
+                        lemmas: &mut self.lemmas,
+                        core_stats: &mut self.core_stats,
+                    };
+                    record_conflict_batch(
+                        arena,
+                        &self.ctx,
+                        &truths,
+                        &lits,
+                        &int_conflicts,
+                        &mut learn,
+                    )?;
+                    continue;
+                }
+                let real_conflicts = theory_conflicts_for_indices(
+                    arena,
+                    &self.ctx,
+                    &lits,
+                    &support,
+                    Theory::Real,
+                    check_with_lra,
+                )?;
+                if !real_conflicts.is_empty() {
+                    self.support_stats.conflict_batches += 1;
+                    let mut learn = ArithLearnState {
+                        prop_solver: &mut self.prop_solver,
+                        blocking: &mut self.blocking,
+                        lemmas: &mut self.lemmas,
+                        core_stats: &mut self.core_stats,
+                    };
+                    record_conflict_batch(
+                        arena,
+                        &self.ctx,
+                        &truths,
+                        &lits,
+                        &real_conflicts,
+                        &mut learn,
+                    )?;
+                    continue;
+                }
+                if !self.ctx.has_opaque_int_apps(arena) {
+                    self.support_stats.model_attempts += 1;
+                    if let Some(result) = try_finish_sat(
+                        arena,
+                        assertions,
+                        &self.ctx,
+                        &propositional,
+                        &lits,
+                        &support,
+                    )? {
+                        return Ok(result);
+                    }
+                    self.support_stats.replay_failures += 1;
+                }
+            } else {
+                self.support_stats.unavailable += 1;
+            }
+
+            self.support_stats.full_fallbacks += 1;
+            let int_conflicts = theory_conflicts(
+                arena,
+                &self.ctx,
+                &lits,
+                Theory::Int,
+                check_with_lia_opaque_apps,
+            )?;
+            if !int_conflicts.is_empty() {
+                let mut learn = ArithLearnState {
+                    prop_solver: &mut self.prop_solver,
+                    blocking: &mut self.blocking,
+                    lemmas: &mut self.lemmas,
+                    core_stats: &mut self.core_stats,
+                };
+                record_conflict_batch(
+                    arena,
+                    &self.ctx,
+                    &truths,
+                    &lits,
+                    &int_conflicts,
+                    &mut learn,
+                )?;
+                continue;
+            }
+            let real_conflicts =
+                theory_conflicts(arena, &self.ctx, &lits, Theory::Real, check_with_lra)?;
+            if !real_conflicts.is_empty() {
+                let mut learn = ArithLearnState {
+                    prop_solver: &mut self.prop_solver,
+                    blocking: &mut self.blocking,
+                    lemmas: &mut self.lemmas,
+                    core_stats: &mut self.core_stats,
+                };
+                record_conflict_batch(
+                    arena,
+                    &self.ctx,
+                    &truths,
+                    &lits,
+                    &real_conflicts,
+                    &mut learn,
+                )?;
+                continue;
+            }
+
+            if self.ctx.has_opaque_int_apps(arena) {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "linear-arithmetic abstraction with opaque integer UF applications is \
+                             satisfiable; use the UFLIA backend for model lifting"
+                        .to_owned(),
+                }));
+            }
+            return finish_sat(arena, assertions, &self.ctx, &propositional, &lits);
+        }
+
+        Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: format!("lazy linear arithmetic exceeded {MAX_DPLL_ROUNDS} refinement rounds"),
+        }))
+    }
+
+    fn into_run(self, result: CheckResult) -> ArithRun {
+        ArithRun {
+            result,
+            skeleton: self.skeleton,
+            lemmas: self.lemmas,
+            initial_lemma_count: self.initial_lemma_count,
+        }
+    }
+}
+
 fn run_arith_dpll(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<ArithRun, SolverError> {
-    let mut ctx = ArithAbstractor::default();
-    let mut skeleton = Vec::with_capacity(assertions.len());
-    for &assertion in assertions {
-        skeleton.push(ctx.abstract_term(arena, assertion)?);
-    }
-
-    let mut initial_lemmas = initial_int_bound_mutex_lemmas(arena, &ctx)?;
-    initial_lemmas.extend(initial_int_bound_implication_lemmas(arena, &ctx)?);
-    let mut prop_solver = BoolSkeletonSolver::new();
-    prop_solver.assert_all(arena, &skeleton)?;
-    for (clause, _) in &initial_lemmas {
-        prop_solver.assert(arena, *clause)?;
-    }
-    let mut blocking: Vec<TermId> = Vec::new();
-    let mut lemmas: Vec<Vec<ArithLemmaLiteral>> = initial_lemmas
-        .iter()
-        .map(|(_, lemma)| lemma.clone())
-        .collect();
-    let initial_lemma_count = lemmas.len();
-    let mut core_stats = ArithCoreStats::default();
-    let mut support_stats = ArithSupportStats::default();
-
-    // Wall-clock deadline (graceful `Unknown`, never an unbounded hang — the
-    // standing hard rule). The lazy-SMT loop can need up to `MAX_DPLL_ROUNDS`
-    // refinements, each a fresh SAT solve plus simplex over a growing clause set;
-    // on a large instance that is effectively unbounded, so honor `config.timeout`
-    // by checking the deadline at the top of every round. Exceeding it degrades to
-    // the same sound `Unknown(ResourceLimit)` the round-exhaustion path returns —
-    // a decided verdict is only ever reached *inside* a round, never by timeout.
-    let deadline = config.timeout.map(|t| Instant::now() + t);
-
-    for round in 0..MAX_DPLL_ROUNDS {
-        if deadline.is_some_and(|d| Instant::now() >= d) {
-            return Ok(ArithRun {
-                result: CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::ResourceLimit,
-                    detail: format!(
-                        "lazy linear arithmetic exhausted the configured timeout after {round} \
-                         rounds (atoms={}, bound_lemmas={}, blocking_lemmas={}, {}, {})",
-                        ctx.atoms.len(),
-                        initial_lemmas.len(),
-                        blocking.len(),
-                        core_stats.summary(),
-                        support_stats.summary()
-                    ),
-                }),
-                skeleton,
-                lemmas,
-                initial_lemma_count,
-            });
-        }
-        let round_config = config_with_deadline(config, deadline);
-        let propositional = match prop_solver.solve(&round_config)? {
-            CheckResult::Sat(model) => model,
-            CheckResult::Unsat => {
-                return Ok(ArithRun {
-                    result: CheckResult::Unsat,
-                    skeleton,
-                    lemmas,
-                    initial_lemma_count,
-                });
-            }
-            CheckResult::Unknown(reason) => {
-                return Ok(ArithRun {
-                    result: CheckResult::Unknown(UnknownReason {
-                        kind: reason.kind,
-                        detail: format!(
-                            "lazy linear arithmetic SAT skeleton declined after round {round} \
-                             (atoms={}, bound_lemmas={}, blocking_lemmas={}, {}, {}): {}",
-                            ctx.atoms.len(),
-                            initial_lemmas.len(),
-                            blocking.len(),
-                            core_stats.summary(),
-                            support_stats.summary(),
-                            reason.detail
-                        ),
-                    }),
-                    skeleton,
-                    lemmas,
-                    initial_lemma_count,
-                });
-            }
-        };
-
-        // The arithmetic literal implied by this assignment for each atom, in
-        // `ctx.atoms` order.
-        let mut truths = Vec::with_capacity(ctx.atoms.len());
-        let mut lits = Vec::with_capacity(ctx.atoms.len());
-        for atom in &ctx.atoms {
-            let truth = propositional
-                .get(atom.prop)
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            truths.push(truth);
-            lits.push(if truth {
-                atom.term
-            } else {
-                arena.not(atom.term)?
-            });
-        }
-
-        // First check only the arithmetic atoms needed to justify the current
-        // Boolean model. SAT solvers assign every Boolean variable, including
-        // atoms sitting in dead branches of generated selector ladders; those
-        // irrelevant choices need not be theory-consistent for a real model.
-        if let Some(support) = justified_theory_indices(arena, &ctx, &skeleton, &propositional) {
-            support_stats.attempts += 1;
-            let int_conflicts = theory_conflicts_for_indices(
-                arena,
-                &ctx,
-                &lits,
-                &support,
-                Theory::Int,
-                check_with_lia_opaque_apps,
-            )?;
-            if !int_conflicts.is_empty() {
-                support_stats.conflict_batches += 1;
-                let mut learn = ArithLearnState {
-                    prop_solver: &mut prop_solver,
-                    blocking: &mut blocking,
-                    lemmas: &mut lemmas,
-                    core_stats: &mut core_stats,
-                };
-                record_conflict_batch(arena, &ctx, &truths, &lits, &int_conflicts, &mut learn)?;
-                continue;
-            }
-            let real_conflicts = theory_conflicts_for_indices(
-                arena,
-                &ctx,
-                &lits,
-                &support,
-                Theory::Real,
-                check_with_lra,
-            )?;
-            if !real_conflicts.is_empty() {
-                support_stats.conflict_batches += 1;
-                let mut learn = ArithLearnState {
-                    prop_solver: &mut prop_solver,
-                    blocking: &mut blocking,
-                    lemmas: &mut lemmas,
-                    core_stats: &mut core_stats,
-                };
-                record_conflict_batch(arena, &ctx, &truths, &lits, &real_conflicts, &mut learn)?;
-                continue;
-            }
-            if !ctx.has_opaque_int_apps(arena) {
-                support_stats.model_attempts += 1;
-                if let Some(result) =
-                    try_finish_sat(arena, assertions, &ctx, &propositional, &lits, &support)?
-                {
-                    return Ok(ArithRun {
-                        result,
-                        skeleton,
-                        lemmas,
-                        initial_lemma_count,
-                    });
-                }
-                support_stats.replay_failures += 1;
-            }
-        } else {
-            support_stats.unavailable += 1;
-        }
-
-        // If the support path did not produce a replaying model, fall back to
-        // the traditional full-assignment theory check.
-        support_stats.full_fallbacks += 1;
-        let int_conflicts =
-            theory_conflicts(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?;
-        if !int_conflicts.is_empty() {
-            let mut learn = ArithLearnState {
-                prop_solver: &mut prop_solver,
-                blocking: &mut blocking,
-                lemmas: &mut lemmas,
-                core_stats: &mut core_stats,
-            };
-            record_conflict_batch(arena, &ctx, &truths, &lits, &int_conflicts, &mut learn)?;
-            continue;
-        }
-        let real_conflicts = theory_conflicts(arena, &ctx, &lits, Theory::Real, check_with_lra)?;
-        if !real_conflicts.is_empty() {
-            let mut learn = ArithLearnState {
-                prop_solver: &mut prop_solver,
-                blocking: &mut blocking,
-                lemmas: &mut lemmas,
-                core_stats: &mut core_stats,
-            };
-            record_conflict_batch(arena, &ctx, &truths, &lits, &real_conflicts, &mut learn)?;
-            continue;
-        }
-
-        // Both theories consistent: build and replay the combined model.
-        if ctx.has_opaque_int_apps(arena) {
-            return Ok(ArithRun {
-                result: CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail: "linear-arithmetic abstraction with opaque integer UF applications is \
-                             satisfiable; use the UFLIA backend for model lifting"
-                        .to_owned(),
-                }),
-                skeleton,
-                lemmas,
-                initial_lemma_count,
-            });
-        }
-        let result = finish_sat(arena, assertions, &ctx, &propositional, &lits)?;
-        return Ok(ArithRun {
-            result,
-            skeleton,
-            lemmas,
-            initial_lemma_count,
-        });
-    }
-
-    Ok(ArithRun {
-        result: CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
-            detail: format!("lazy linear arithmetic exceeded {MAX_DPLL_ROUNDS} refinement rounds"),
-        }),
-        skeleton,
-        lemmas,
-        initial_lemma_count,
-    })
+    let mut solver = IncrementalArithDpll::new(arena, assertions)?;
+    let result = solver.solve(arena, assertions, config)?;
+    Ok(solver.into_run(result))
 }
 
 /// Records a theory conflict core as a structured lemma for certification.
@@ -1487,13 +1578,6 @@ struct BoolSkeletonSolver {
 impl BoolSkeletonSolver {
     fn new() -> Self {
         Self::default()
-    }
-
-    fn assert_all(&mut self, arena: &TermArena, assertions: &[TermId]) -> Result<(), SolverError> {
-        for &assertion in assertions {
-            self.assert(arena, assertion)?;
-        }
-        Ok(())
     }
 
     fn assert(&mut self, arena: &TermArena, assertion: TermId) -> Result<(), SolverError> {
@@ -3093,6 +3177,43 @@ mod tests {
             reusable.len(),
             0,
             "static upfront bound lemmas are regenerated per solve and should not be carried"
+        );
+    }
+
+    #[test]
+    fn incremental_arith_dpll_accepts_strengthened_assertions() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let z = arena.declare("z", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let zv = arena.var(z);
+        let x_le_y = arena.int_le(xv, yv).unwrap();
+        let y_le_z = arena.int_le(yv, zv).unwrap();
+        let z_lt_x = arena.int_lt(zv, xv).unwrap();
+        let first = [x_le_y, y_le_z];
+
+        let mut solver = IncrementalArithDpll::new(&mut arena, &first).unwrap();
+        assert!(matches!(
+            solver
+                .solve(&mut arena, &first, &SolverConfig::default())
+                .unwrap(),
+            CheckResult::Sat(_)
+        ));
+
+        solver.assert_incremental(&mut arena, z_lt_x).unwrap();
+        let strengthened = [x_le_y, y_le_z, z_lt_x];
+        assert!(matches!(
+            solver
+                .solve(&mut arena, &strengthened, &SolverConfig::default())
+                .unwrap(),
+            CheckResult::Unsat
+        ));
+        assert_eq!(solver.solve_calls, 2);
+        assert!(
+            !solver.blocking.is_empty(),
+            "the strengthened solve should reuse the same warm state and learn a theory block"
         );
     }
 

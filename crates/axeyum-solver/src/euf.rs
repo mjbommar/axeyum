@@ -18,7 +18,9 @@ use axeyum_rewrite::{FuncElimError, eliminate_functions};
 use crate::backend::{
     CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
-use crate::dpll_lia::{ReusableArithLemmas, check_with_arith_dpll_reusing_lemmas};
+use crate::dpll_lia::{
+    IncrementalArithDpll, ReusableArithLemmas, check_with_arith_dpll_reusing_lemmas,
+};
 use crate::model::Model;
 
 /// Deterministic admission bound on the number of **Ackermann congruence
@@ -519,6 +521,8 @@ pub fn check_with_uf_arithmetic_lazy(
     // gets only the *remaining* budget and an exhausted deadline ends the loop with
     // a graceful `Unknown` — the loop is bounded by `config.timeout`, not a multiple.
     let deadline = config.timeout.map(|t| Instant::now() + t);
+    let mut incremental_arith: Option<IncrementalArithDpll> = None;
+    let mut incremental_assertions = 0usize;
     let mut reusable_arith_lemmas = ReusableArithLemmas::default();
     check_with_function_consistency(arena, assertions, |a, asserts| {
         if let Some(d) = deadline {
@@ -534,29 +538,74 @@ pub fn check_with_uf_arithmetic_lazy(
             // Give this round only the remaining budget, so the aggregate loop stays
             // within `config.timeout`.
             let round_config = config.clone().with_timeout(d - now);
-            match check_with_arith_dpll_reusing_lemmas(
+            match check_with_incremental_arith(
                 a,
                 asserts,
                 &round_config,
-                &mut reusable_arith_lemmas,
+                &mut incremental_arith,
+                &mut incremental_assertions,
             ) {
                 Ok(result) => Ok(result),
-                Err(SolverError::Unsupported(_)) => crate::check_auto(a, asserts, &round_config),
+                Err(SolverError::Unsupported(_)) => match check_with_arith_dpll_reusing_lemmas(
+                    a,
+                    asserts,
+                    &round_config,
+                    &mut reusable_arith_lemmas,
+                ) {
+                    Ok(result) => Ok(result),
+                    Err(SolverError::Unsupported(_)) => {
+                        crate::check_auto(a, asserts, &round_config)
+                    }
+                    Err(error) => Err(error),
+                },
                 Err(error) => Err(error),
             }
         } else {
-            match check_with_arith_dpll_reusing_lemmas(
+            match check_with_incremental_arith(
                 a,
                 asserts,
                 config,
-                &mut reusable_arith_lemmas,
+                &mut incremental_arith,
+                &mut incremental_assertions,
             ) {
                 Ok(result) => Ok(result),
-                Err(SolverError::Unsupported(_)) => crate::check_auto(a, asserts, config),
+                Err(SolverError::Unsupported(_)) => match check_with_arith_dpll_reusing_lemmas(
+                    a,
+                    asserts,
+                    config,
+                    &mut reusable_arith_lemmas,
+                ) {
+                    Ok(result) => Ok(result),
+                    Err(SolverError::Unsupported(_)) => crate::check_auto(a, asserts, config),
+                    Err(error) => Err(error),
+                },
                 Err(error) => Err(error),
             }
         }
     })
+}
+
+fn check_with_incremental_arith(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    solver: &mut Option<IncrementalArithDpll>,
+    asserted: &mut usize,
+) -> Result<CheckResult, SolverError> {
+    if solver.is_none() || assertions.len() < *asserted {
+        *solver = Some(IncrementalArithDpll::new(arena, assertions)?);
+        *asserted = assertions.len();
+    } else if let Some(solver) = solver.as_mut() {
+        for &assertion in &assertions[*asserted..] {
+            solver.assert_incremental(arena, assertion)?;
+        }
+        *asserted = assertions.len();
+    }
+
+    let solver = solver
+        .as_mut()
+        .expect("incremental arithmetic solver is initialized");
+    solver.solve(arena, assertions, config)
 }
 
 /// The shared functional-consistency CEGAR loop: abstract each uninterpreted

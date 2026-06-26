@@ -440,6 +440,22 @@ against competitor source, are now binding:
    Next practical lever: keep the arithmetic SAT core warm directly or make UF
    lemma addition incremental inside one combined skeleton; the row still needs
    convergence/relevance after several candidate models.
+   **WARM ARITHMETIC SKELETON LANDED (2026-06-26):**
+   the lazy arithmetic DPLL loop is now an `IncrementalArithDpll` state, and
+   lazy UF+arithmetic CEGAR asserts newly learned UF congruence lemmas into the
+   same warm arithmetic Boolean skeleton. The term-level reusable arithmetic
+   lemma path remains as fallback for unsupported warm-state shapes. The
+   generated rows remain `unknown`, but at 1 s both hard rows now reach actual
+   UF refinement (**2** UF rounds, **1** candidate, **282** pair checks,
+   **6** equal-argument pairs, **5** violations, **6** learned UF lemmas)
+   instead of spending the whole short budget in the first arithmetic solve. At
+   10 s the first hard row keeps **6** UF rounds, **5** candidates,
+   **23** equal-argument pairs, and **23** learned UF lemmas; the final timeout
+   is now inside the warm arithmetic state with **solve_calls=6**,
+   **total_rounds=279**, **atoms=531**, **bound_lemmas=664**, and
+   **blocking_lemmas=295**. Next practical lever: CEGAR relevance/convergence
+   after the fifth candidate, via model-guided UF-pair scheduling or the real
+   combined CDCL(T) interface-equality loop.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
