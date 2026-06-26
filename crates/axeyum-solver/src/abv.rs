@@ -1434,13 +1434,16 @@ fn check_scalar_abstraction<B: SolverBackend>(
     for &assertion in assertions {
         collect_positive_conjuncts(arena, assertion, &mut flattened);
     }
-    crate::preprocess::check_with_preprocessing_and_local_search(
+    match crate::preprocess::check_with_preprocessing_and_local_search(
         backend,
         arena,
         &flattened,
         config,
         Duration::from_millis(SCALAR_LOCAL_SEARCH_PROBE_MS),
-    )
+    ) {
+        Ok(result) => Ok(result),
+        Err(_) => backend.check(arena, &flattened, config),
+    }
 }
 
 #[allow(clippy::too_many_lines)]

@@ -50,6 +50,36 @@ fn decides_unsat_bitvector_script() {
     assert_eq!(outcome.result, CheckResult::Unsat);
 }
 
+/// cvc5's `:arrays-exp` `eqrange` extension lowers to finite pointwise array
+/// equalities when the bounds are constant. This is the shape of the AUFLIA
+/// `eqrange3` regression row.
+#[test]
+fn decides_cvc5_eqrange_extension_script() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_AUFLIA)
+(set-option :arrays-exp true)
+(declare-fun a1 () (Array Int Int))
+(declare-fun a2 () (Array Int Int))
+(declare-fun e1 () Int)
+(declare-fun e2 () Int)
+(assert (distinct e1 e2))
+(assert (= a1 (store (store (store (store a1 0 e1) 1 e1) 2 e1) 3 e1)))
+(assert (= a2 (store (store (store (store a2 1 e1) 0 e1) 2 e2) 3 e1)))
+(assert (eqrange a1 a2 (- 1) 1))
+(assert (eqrange a1 a2 3 3))
+(check-sat)
+";
+    let outcome = run(text);
+    assert_eq!(outcome.logic.as_deref(), Some("QF_AUFLIA"));
+    assert_eq!(outcome.expected_status.as_deref(), Some("sat"));
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "eqrange extension row must decide sat, got {:?}",
+        outcome.result
+    );
+}
+
 /// A quantified script flows through the same front door: `forall x:BV3. x|x = x`
 /// is valid, so its assertion is `sat` (decided by finite-domain expansion).
 #[test]

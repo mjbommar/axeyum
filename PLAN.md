@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 651 decided, 600 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 656 decided, 604 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **651 decided**,
-   **600 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **656 decided**,
+   **604 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -236,6 +236,16 @@ against competitor source, are now binding:
    generated formulas, it did not certify the overbound rows within the 10 s
    budget. The next useful move there is a deeper arithmetic/UF Boolean-skeleton
    reduction, not another shallow equality-propagation seed.
+   **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
+   cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
+   constant Int ranges, and constant-index self-store array equalities
+   (`a = store(...store(a,k,v)...)`) lower to point constraints. The scalar array
+   abstraction also treats preprocessing replay failure as an optimization miss
+   and falls back to the raw scalar backend before the existing array
+   projection/replay gate. The refreshed rows are **QF_ALIA 4/6 decided** and
+   **QF_AUFLIA 5/7 decided**, both with **unsupported=0** and **DISAGREE=0**.
+   Remaining blockers: QF_ALIA `ios_np_sf`/`constarr3` lazy-extensionality replay
+   incompletes, and QF_AUFLIA `bug330`/`bug337` scalar-search timeouts.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

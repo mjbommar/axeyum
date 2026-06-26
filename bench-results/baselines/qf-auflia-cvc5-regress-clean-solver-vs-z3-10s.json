@@ -1,6 +1,6 @@
 {
   "config": {
-    "backend": "axeyum-solver check_auto",
+    "backend": "axeyum-solver solve",
     "backend_kind": "solver",
     "cnf_clause_budget": null,
     "cnf_inprocessing": false,
@@ -8,7 +8,7 @@
     "cnf_vivify": false,
     "compare_backend": "z3 4.13.3.0",
     "compare_z3": true,
-    "config_hash": "ab0a222602d260b1",
+    "config_hash": "8eeed567c8115f34",
     "corpus": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean",
     "corpus_hash": "fb8159315402923b",
     "corpus_source": null,
@@ -19,9 +19,9 @@
       "parallelism": 16
     },
     "harness": "axeyum-bench 0.1.0",
-    "jobs": 4,
+    "jobs": 2,
     "limit": null,
-    "logic": "QF_AUFLIA",
+    "logic": null,
     "native_cdcl": false,
     "node_budget": null,
     "preprocess": false,
@@ -44,24 +44,228 @@
   },
   "instances": [
     {
-      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
+      "assertions": 1,
+      "backend_stats": {
+        "solve_ms": 0.37187899999999996
+      },
+      "dag_nodes": 21,
+      "distinct_symbols": 6,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2",
-      "outcome": "unsupported"
+      "max_depth": 6,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 11,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 21,
+          "digest": "066b114418935df7",
+          "tree_nodes": 27
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 21,
+            "digest": "066b114418935df7",
+            "tree_nodes": 27
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 21,
+        "input_tree_nodes": 27,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 21,
+        "output_distinct_symbols": 6,
+        "output_max_depth": 6,
+        "output_tree_nodes": 27,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 27
     },
     {
-      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
+      "assertions": 5,
+      "backend_stats": {
+        "solve_ms": 4.665226
+      },
+      "dag_nodes": 46,
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__eqrange3.smt2",
-      "outcome": "unsupported"
+      "max_depth": 7,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": null,
+        "decision_compared": false,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support integer symbols yet (ADR-0014)",
+        "model_lift_ms": 0,
+        "outcome": "unsupported",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "(error \"line 2 column 24: unknown parameter 'arrays_exp'",
+          "solve_ms": 8,
+          "verdict": null
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 5,
+          "assumptions": 0,
+          "dag_nodes": 46,
+          "digest": "caf7e9c3b3681001",
+          "tree_nodes": 88
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 5,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 5,
+            "assumptions": 0,
+            "dag_nodes": 46,
+            "digest": "caf7e9c3b3681001",
+            "tree_nodes": 88
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 46,
+        "input_tree_nodes": 88,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 5,
+        "output_dag_nodes": 46,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 7,
+        "output_tree_nodes": 88,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 4,
+      "translate_ms": 0,
+      "tree_nodes": 88
     },
     {
-      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
+      "assertions": 2,
+      "backend_stats": {
+        "solve_ms": 3.169985
+      },
+      "dag_nodes": 20,
+      "distinct_symbols": 4,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__prop__cadical_bug8.smt2",
-      "outcome": "unsupported"
+      "max_depth": 9,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support integer symbols yet (ADR-0014)",
+        "model_lift_ms": 0,
+        "outcome": "sat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 8,
+          "verdict": "sat"
+        }
+      },
+      "outcome": "sat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 2,
+          "assumptions": 0,
+          "dag_nodes": 20,
+          "digest": "ace3c84a62870655",
+          "tree_nodes": 52
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 2,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 2,
+            "assumptions": 0,
+            "dag_nodes": 20,
+            "digest": "ace3c84a62870655",
+            "tree_nodes": 52
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 20,
+        "input_tree_nodes": 52,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 2,
+        "output_dag_nodes": 20,
+        "output_distinct_symbols": 4,
+        "output_max_depth": 9,
+        "output_tree_nodes": 52,
+        "rewritten_outcome": "sat",
+        "rule_counts": {}
+      },
+      "solve_ms": 3,
+      "translate_ms": 0,
+      "tree_nodes": 52
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "check_auto_ms": 0.212471
+        "solve_ms": 1.0415649999999999
       },
       "dag_nodes": 5,
       "distinct_symbols": 2,
@@ -82,7 +286,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 7,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -127,50 +331,234 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 5
     },
     {
-      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
+      "assertions": 1,
+      "backend_stats": {
+        "solve_ms": 35406.560915999995
+      },
+      "dag_nodes": 503,
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
+      "distinct_symbols": 20,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress1__auflia__bug330.smt2",
-      "outcome": "unsupported"
+      "max_depth": 56,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 503,
+          "digest": "1cd3dac3cfe586c9",
+          "tree_nodes": 12700808
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 503,
+            "digest": "1cd3dac3cfe586c9",
+            "tree_nodes": 12700808
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 503,
+        "input_tree_nodes": 12700808,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 503,
+        "output_distinct_symbols": 20,
+        "output_max_depth": 56,
+        "output_tree_nodes": 12700808,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 35406,
+      "translate_ms": 0,
+      "tree_nodes": 12700808
     },
     {
-      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
+      "assertions": 1,
+      "backend_stats": {
+        "solve_ms": 10694.635463
+      },
+      "dag_nodes": 2919,
+      "detail": "Timeout: preprocessed dispatch timeout after reduced solve",
+      "distinct_symbols": 512,
+      "expected": "sat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2",
-      "outcome": "unsupported"
+      "max_depth": 239,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3",
+        "enabled": true,
+        "skipped": "primary-outcome-unknown"
+      },
+      "outcome": "unknown",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 2919,
+          "digest": "fbb5e6d4bdfabe34",
+          "tree_nodes": 5383
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 2919,
+            "digest": "fbb5e6d4bdfabe34",
+            "tree_nodes": 5383
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 2919,
+        "input_tree_nodes": 5383,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 2919,
+        "output_distinct_symbols": 512,
+        "output_max_depth": 239,
+        "output_tree_nodes": 5383,
+        "rewritten_outcome": "unknown",
+        "rule_counts": {}
+      },
+      "solve_ms": 10694,
+      "translate_ms": 0,
+      "tree_nodes": 5383
     },
     {
-      "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
+      "assertions": 1,
+      "backend_stats": {
+        "solve_ms": 0.217108
+      },
+      "dag_nodes": 90,
+      "distinct_symbols": 9,
+      "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2",
-      "outcome": "unsupported"
+      "max_depth": 35,
+      "model_lift_ms": 0,
+      "oracle": {
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
+        "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 54,
+          "verdict": "unsat"
+        }
+      },
+      "outcome": "unsat",
+      "query_plan": {
+        "cache_key": {
+          "assertions": 1,
+          "assumptions": 0,
+          "dag_nodes": 90,
+          "digest": "2db1c175d3cac5a4",
+          "tree_nodes": 1771452
+        },
+        "submitted": {
+          "dropped_terms": 0,
+          "planned_terms": 1,
+          "sliced": false,
+          "solver_cache_key": {
+            "assertions": 1,
+            "assumptions": 0,
+            "dag_nodes": 90,
+            "digest": "2db1c175d3cac5a4",
+            "tree_nodes": 1771452
+          },
+          "strategy": "full",
+          "target_support_symbols": 0
+        }
+      },
+      "rewrite": {
+        "applications": 0,
+        "changed": false,
+        "decision_changed": null,
+        "input_dag_nodes": 90,
+        "input_tree_nodes": 1771452,
+        "mode": "off",
+        "original_detail": null,
+        "original_outcome": null,
+        "output_assertions": 1,
+        "output_dag_nodes": 90,
+        "output_distinct_symbols": 9,
+        "output_max_depth": 35,
+        "output_tree_nodes": 1771452,
+        "rewritten_outcome": "unsat",
+        "rule_counts": {}
+      },
+      "solve_ms": 0,
+      "translate_ms": 0,
+      "tree_nodes": 1771452
     }
   ],
   "summary": {
-    "agree": 1,
-    "blocker_buckets": {},
+    "agree": 5,
+    "blocker_buckets": {
+      "unknown:Timeout": 2
+    },
     "disagree": 0,
     "errors": 0,
     "files": 7,
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 1,
+      "agree": 4,
       "backend": "z3 4.13.3.0",
-      "compared": 1,
+      "compared": 4,
       "disagree": 0,
       "enabled": true,
-      "skipped": 0
+      "skipped": 3
     },
-    "par2_mean_s": 0.000212471,
+    "par2_mean_s": 5.715637966142857,
     "query_plan": {
-      "original_dag_nodes": 5,
-      "original_tree_nodes": 5,
+      "original_dag_nodes": 3604,
+      "original_tree_nodes": 14477815,
       "slice_changed_instances": 0,
-      "slice_dag_nodes": 5,
+      "slice_dag_nodes": 3604,
       "slice_dropped_terms": 0,
-      "slice_tree_nodes": 5
+      "slice_tree_nodes": 14477815
     },
     "rewrite": {
       "applications": 0,
@@ -184,10 +572,10 @@
       "output_tree_nodes": 0,
       "sat_unsat_conflicts": 0
     },
-    "sat": 1,
-    "unknown": 0,
-    "unsat": 0,
-    "unsupported": 6
+    "sat": 3,
+    "unknown": 2,
+    "unsat": 2,
+    "unsupported": 0
   },
   "triage": {
     "errors": [],
@@ -198,38 +586,7 @@
       "rewrite_sat_unsat_conflicts": 0,
       "status_disagreements": 0
     },
-    "unsupported": [
-      {
-        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__eqrange3.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__prop__cadical_bug8.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress1__auflia__bug330.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2",
-        "outcome": "unsupported"
-      },
-      {
-        "detail": "only bit-vector-indexed/valued arrays are supported: List([Atom(\"Array\"), Atom(\"Int\"), Atom(\"Int\")])",
-        "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2",
-        "outcome": "unsupported"
-      }
-    ]
+    "unsupported": []
   },
   "version": 14
 }

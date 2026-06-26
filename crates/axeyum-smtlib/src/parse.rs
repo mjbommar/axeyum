@@ -9,10 +9,10 @@
 //! (ADR-0009 lifecycle). Term conversion is iterative, so deep benchmark terms
 //! cannot overflow the stack.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
-use axeyum_ir::{ArraySortKey, Rational, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{ArraySortKey, Op, Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
@@ -6816,6 +6816,146 @@ fn apply_seq_op(
     Ok(Some(term))
 }
 
+const MAX_EQRANGE_POINTS: i128 = 1024;
+
+fn constant_int_value(arena: &TermArena, term: TermId) -> Option<i128> {
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        TermNode::App { op, args } => match (*op, args.as_ref()) {
+            (Op::IntNeg, [a]) => constant_int_value(arena, *a)?.checked_neg(),
+            (Op::IntAdd, [a, b]) => {
+                constant_int_value(arena, *a)?.checked_add(constant_int_value(arena, *b)?)
+            }
+            (Op::IntSub, [a, b]) => {
+                constant_int_value(arena, *a)?.checked_sub(constant_int_value(arena, *b)?)
+            }
+            (Op::IntMul, [a, b]) => {
+                constant_int_value(arena, *a)?.checked_mul(constant_int_value(arena, *b)?)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn constant_int_bound(arena: &TermArena, term: TermId, context: &str) -> Result<i128, SmtError> {
+    match constant_int_value(arena, term) {
+        Some(value) => Ok(value),
+        _ => Err(SmtError::Unsupported(format!(
+            "{context} requires constant integer bounds"
+        ))),
+    }
+}
+
+fn array_eqrange(
+    arena: &mut TermArena,
+    array_a: TermId,
+    array_b: TermId,
+    lo: TermId,
+    hi: TermId,
+) -> Result<TermId, SmtError> {
+    let sort_a = arena.sort_of(array_a);
+    let sort_b = arena.sort_of(array_b);
+    let Sort::Array { index, element } = sort_a else {
+        return Err(SmtError::Unsupported(format!(
+            "eqrange expects array operands, got {sort_a:?}"
+        )));
+    };
+    if sort_b != sort_a {
+        return Err(SmtError::Unsupported(format!(
+            "eqrange expects matching array operands, got {sort_a:?} and {sort_b:?}"
+        )));
+    }
+    if index != ArraySortKey::Int {
+        return Err(SmtError::Unsupported(format!(
+            "eqrange currently supports only Int-indexed arrays, got {index:?}"
+        )));
+    }
+
+    let lo = constant_int_bound(arena, lo, "eqrange")?;
+    let hi = constant_int_bound(arena, hi, "eqrange")?;
+    if lo > hi {
+        return Ok(arena.bool_const(true));
+    }
+    let points = hi
+        .checked_sub(lo)
+        .and_then(|delta| delta.checked_add(1))
+        .ok_or_else(|| SmtError::Unsupported("eqrange bound span overflows".to_owned()))?;
+    if points > MAX_EQRANGE_POINTS {
+        return Err(SmtError::Unsupported(format!(
+            "eqrange finite expansion is capped at {MAX_EQRANGE_POINTS} points, got {points}"
+        )));
+    }
+
+    let mut acc = arena.bool_const(true);
+    for point in lo..=hi {
+        let idx = arena.int_const(point);
+        let lhs = arena.select(array_a, idx)?;
+        let rhs = arena.select(array_b, idx)?;
+        debug_assert_eq!(arena.sort_of(lhs), element.to_sort());
+        let eq = arena.eq(lhs, rhs)?;
+        acc = arena.and(acc, eq)?;
+    }
+    Ok(acc)
+}
+
+fn self_store_array_equality(
+    arena: &mut TermArena,
+    lhs: TermId,
+    rhs: TermId,
+) -> Result<Option<TermId>, SmtError> {
+    if let Some(term) = self_store_array_equality_direction(arena, lhs, rhs)? {
+        return Ok(Some(term));
+    }
+    self_store_array_equality_direction(arena, rhs, lhs)
+}
+
+fn self_store_array_equality_direction(
+    arena: &mut TermArena,
+    target: TermId,
+    store_chain: TermId,
+) -> Result<Option<TermId>, SmtError> {
+    if !matches!(
+        arena.sort_of(target),
+        Sort::Array {
+            index: ArraySortKey::Int,
+            ..
+        }
+    ) {
+        return Ok(None);
+    }
+
+    let mut current = store_chain;
+    let mut reversed_writes = Vec::new();
+    while let TermNode::App {
+        op: Op::Store,
+        args,
+    } = arena.node(current)
+    {
+        reversed_writes.push((args[1], args[2]));
+        current = args[0];
+    }
+    if current != target || reversed_writes.is_empty() {
+        return Ok(None);
+    }
+
+    let mut final_writes = BTreeMap::new();
+    for (index, value) in reversed_writes.into_iter().rev() {
+        let Some(point) = constant_int_value(arena, index) else {
+            return Ok(None);
+        };
+        final_writes.insert(point, (index, value));
+    }
+
+    let mut acc = arena.bool_const(true);
+    for (_point, (index, value)) in final_writes {
+        let selected = arena.select(target, index)?;
+        let eq = arena.eq(selected, value)?;
+        acc = arena.and(acc, eq)?;
+    }
+    Ok(Some(acc))
+}
+
 /// Applies an operator list head to evaluated arguments.
 // Flat dispatch over the operator vocabulary; length is inherent.
 #[allow(clippy::too_many_lines)]
@@ -7032,7 +7172,10 @@ fn apply_op(
                     }
                     match string_aware_eq(arena, p, q)? {
                         Some(e) => Ok(e),
-                        None => arena.eq(p, q).map_err(SmtError::Ir),
+                        None => match self_store_array_equality(arena, p, q)? {
+                            Some(e) => Ok(e),
+                            None => arena.eq(p, q).map_err(SmtError::Ir),
+                        },
                     }
                 };
             let mut acc = eq_pair(arena, eq_args[0], eq_args[1])?;
@@ -7288,6 +7431,12 @@ fn apply_op(
         "store" => {
             need(3)?;
             arena.store(args[0], args[1], args[2])?
+        }
+        // cvc5 `:arrays-exp` extension: arrays are equal on the inclusive
+        // integer interval `[lo, hi]`. Keep this parse-only expansion finite.
+        "eqrange" => {
+            need(4)?;
+            array_eqrange(arena, args[0], args[1], args[2], args[3])?
         }
         // --- linear arithmetic, sort-directed Int/Real (ADR-0014/0015) ----
         // `+`/`-`/`*`/comparisons are polymorphic: if any operand is `Real`,

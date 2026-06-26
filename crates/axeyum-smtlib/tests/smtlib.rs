@@ -1,6 +1,8 @@
 //! Reader/writer tests: feature coverage, round trips, and corpus smoke.
 
-use axeyum_ir::{ArraySortKey, Assignment, Sort, SymbolId, TermStats, Value, eval};
+use axeyum_ir::{
+    ArraySortKey, Assignment, GenericArrayValue, Sort, SymbolId, TermStats, Value, eval,
+};
 use axeyum_smtlib::{SmtError, parse_script, write_script};
 
 #[test]
@@ -4687,6 +4689,79 @@ fn free_int_array_var_is_representable() {
         (check-sat)
     ";
     assert!(parse_script(constarr3).is_ok());
+}
+
+/// cvc5's `:arrays-exp` `eqrange` extension means pointwise equality on an
+/// inclusive integer interval. The front end expands small constant ranges to a
+/// finite conjunction of `select` equalities, so the rest of the stack only sees
+/// ordinary arrays.
+#[test]
+fn eqrange_expands_constant_int_range() {
+    let text = r"
+        (set-logic QF_AUFLIA)
+        (set-option :arrays-exp true)
+        (assert (eqrange
+            ((as const (Array Int Int)) 4)
+            (store ((as const (Array Int Int)) 4) 3 9)
+            0
+            2))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+
+    let miss = r"
+        (set-logic QF_AUFLIA)
+        (set-option :arrays-exp true)
+        (assert (eqrange
+            ((as const (Array Int Int)) 4)
+            (store ((as const (Array Int Int)) 4) 3 9)
+            0
+            3))
+    ";
+    let script = parse_script(miss).unwrap();
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+}
+
+/// A recursive self-store equality `a = store(...store(a,k,v)...)` is exactly the
+/// finite set of point constraints at the concrete written indices. This avoids
+/// manufacturing an extensional array equality for cvc5 regression shapes such
+/// as `eqrange3`.
+#[test]
+fn int_array_self_store_equality_reduces_to_point_constraints() {
+    let text = r"
+        (set-logic QF_AUFLIA)
+        (declare-const a (Array Int Int))
+        (assert (= a (store (store a 0 7) 1 8)))
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    let a = script.arena.find_symbol("a").unwrap();
+
+    let good = GenericArrayValue::constant(ArraySortKey::Int, ArraySortKey::Int, Value::Int(0))
+        .store(Value::Int(0), Value::Int(7))
+        .store(Value::Int(1), Value::Int(8));
+    let mut asg = Assignment::new();
+    asg.set(a, Value::GenericArray(good));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(true)
+    );
+
+    let bad = GenericArrayValue::constant(ArraySortKey::Int, ArraySortKey::Int, Value::Int(0))
+        .store(Value::Int(0), Value::Int(7))
+        .store(Value::Int(1), Value::Int(9));
+    asg.set(a, Value::GenericArray(bad));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &asg).unwrap(),
+        Value::Bool(false)
+    );
 }
 
 /// The rewrite is **sort-agnostic**: an `(Array Int Bool)` const array reduces

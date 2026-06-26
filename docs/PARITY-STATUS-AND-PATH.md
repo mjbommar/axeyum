@@ -22,9 +22,9 @@ the decidable fragments, honest `unknown` elsewhere; **Lean parity** = every
 ## 2. Where we actually stand (the honest top-down)
 
 **The single most important fact: across ~24 logic fragments measured head-to-head
-vs Z3 4.13.3 — 992 files, 597 oracle-compared — DISAGREE = 0. Zero wrong sat/unsat,
-anywhere.** Soundness is the settled foundation. The gap to Z3/cvc5 is **decide-rate
-and depth, never correctness.**
+vs Z3 4.13.3 — 992 files, 656 decided, 604 oracle-compared — DISAGREE = 0. Zero
+wrong sat/unsat, anywhere.** Soundness is the settled foundation. The gap to
+Z3/cvc5 is **decide-rate and depth, never correctness.**
 
 ### 2a. The Z3-functionality axis — measured (see SCOREBOARD.md for live numbers)
 
@@ -34,15 +34,15 @@ The capability frontier (decide% per division) partitions cleanly:
   100%, QF_UFFF 100%, QF_FF 80%, QF_LIA 91%, QF_NIA-synthetic 100%,
   QF_NRA-synthetic 91%, quantified-BV 69–80%, QF_SEQ 79%, QF_BVFP 88%,
   QF_LRA 82%.
-- **Mid (40–70%):** QF_UF 54–67% after the first-class carrier-sort remeasurement
-  and the 2026-06-26 SMT-LIB div/mod underspecification guard, QF_ALIA 50%,
-  QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%,
+- **Mid (40–75%):** QF_UF 54–67% after the first-class carrier-sort remeasurement
+  and the 2026-06-26 SMT-LIB div/mod underspecification guard, QF_ALIA 67%,
+  QF_AUFLIA 71%, QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%,
   QF_UFLIA 50–83%.
 - **Weak / open (<40%) — the real frontier:** QF_SLIA 30% (bounded-string length
-  wall), QF_NRA-cvc5 24% (high-degree nonlinear), QF_AX 38%, QF_AUFLIA 14%,
-  **quantified-LIA/UF over infinite domains 0%**. Int-indexed arrays are now
-  split: QF_ALIA has moved to the mid band after the generic Bool/linear-Int
-  array route, while broader AUFLIA remains weak.
+  wall), QF_NRA-cvc5 24% (high-degree nonlinear), QF_AX 38%,
+  **quantified-LIA/UF over infinite domains 0%**. Int-indexed arrays have moved
+  into the mid band for QF_ALIA/QF_AUFLIA after the generic Bool/linear-Int
+  array route, but still have concrete replay/search blockers.
 - **QF_BV:** measured at parity with Z3 on the hard public p4dfa slice (both
   hard-capped) — see PLAN's lazy-bitblasting findings.
 
@@ -82,7 +82,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 648 decided, 597 oracle-compared, DISAGREE=0**, with **19 complete
+  992 files, 656 decided, 604 oracle-compared, DISAGREE=0**, with **20 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
@@ -91,10 +91,10 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   QF_FF/cvc5 `100% (24/24)`, QF_FP/bitwuzla `100% (16/16)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
   `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UF/cvc5 bounded
-  declared-sort `98% (43/44)` with Lean unsat `100% (14/14)`,
+  declared-sort `100% (44/44)` with Lean unsat `100% (15/15)`,
   QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `100% (2/2)`, QF_UFFF/cvc5 `100% (8/8)`, QF_UFLIA curated
-  `100% (2/2)`, and QF_UFLIA bounded `100% (5/5)`. QF_ABV/QF_AUFBV no longer
+  `100% (2/2)`, and QF_UFLIA bounded `100% (6/6)`. QF_ABV/QF_AUFBV no longer
   carry audit runtime failures:
   phase timing first localized all 11 old ABV/AUFBV timeouts to
   `produce-evidence`, the timed evidence export guard cut that to 3, and the
@@ -182,7 +182,7 @@ a named mechanism.**
 ### Tier A — decide-rate keystones (the biggest capability gaps). Mostly the
 **deciders/IR**, actively advanced by the parallel agent's `axeyum-ir`/`axeyum-rewrite`/CAD work.
 
-1. **Int-indexed arrays** (QF_ALIA/QF_AUFLIA/QF_AX ~0–38%). The first IR blocker is
+1. **Int-indexed arrays** (QF_ALIA 67%, QF_AUFLIA 71%, QF_AX 38%). The first IR blocker is
    **partially lifted (2026-06-25):** `Sort::Array` now carries sort-valued
    index/element metadata (`ArraySortKey`) instead of BV widths only; SMT-LIB
    parses/writes free `(Array Int Int)` terms, and congruence-UNSAT over
@@ -405,6 +405,15 @@ a named mechanism.**
    times out after 851 blocking lemmas. The next AUFLIA move should be a real
    branch-schedule/model constructor, finite UF-table reasoning for `bug330`, or
    SAT relevance in the large scalar skeleton.
+   **Committed baseline refresh landed 2026-06-26:** cvc5 `:arrays-exp`
+   `eqrange` now lowers to finite pointwise equality on constant Int ranges,
+   constant-index self-store array equalities lower to point constraints, and
+   scalar-array preprocessing replay failures fall back to the raw scalar backend
+   before the normal array projection/replay gate. The committed scoreboard now
+   records **QF_ALIA 4/6 decided (67%)** and **QF_AUFLIA 5/7 decided (71%)**,
+   both with **unsupported=0** and **DISAGREE=0**. Remaining blockers are
+   concrete: QF_ALIA `ios_np_sf`/`constarr3` lazy-extensionality replay
+   incompletes, and QF_AUFLIA `bug330`/`bug337` scalar-search timeouts.
    Then extend from the current Bool/linear-Int array slice to broader non-BV
    component sorts.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
