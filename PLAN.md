@@ -598,6 +598,29 @@ against competitor source, are now binding:
    `arg1`, so `preseeded_lemmas` remains **0** at 1 s and 10 s. The practical
    next lever remains lazy UF/LIA relevance after candidate models, LP-core
    branch pressure, or a stronger combined interface-equality loop.
+   **STAGED AFFINE ARITHMETIC CORE EXTRACTION LANDED (2026-06-26):**
+   the warm lazy arithmetic loop now has a checked affine integer parser and a
+   dynamic two-literal conflict extractor for algebraically equal but
+   syntactically different linear expressions, such as `x - y` vs
+   `x + (-1 * y)`. The extractor handles constants, symbols, `+`, `-`, unary
+   negation, and multiplication by constants with checked overflow, and every
+   learned core still goes through the existing arithmetic-lemma self-check. To
+   avoid flooding the first pure arithmetic solve, affine cores are enabled only
+   after the warm skeleton has been strengthened by UF lemmas and are capped at
+   **1** affine core per theory conflict; the existing simple-bound batch cap
+   remains **32**. Telemetry now reports `core_src_affine`.
+
+   This is not a generated-row closure, but it is a measured LP-pressure
+   reduction without losing the useful UF frontier. On
+   `cli__regress2__uflia-error0.smt2`, the 1 s run still reaches **2** UF
+   rounds, **1** candidate, **282** pair checks, and **6** learned UF lemmas. At
+   10 s the row remains `unknown` but preserves **6** UF rounds, **5**
+   candidates, and **24** learned UF lemmas while the final warm arithmetic
+   timeout reports **core_src_affine=49** and **core_src_lp=207** (down from the
+   prior low-260s LP-core samples), with **total_rounds=286** and
+   **blocking_lemmas=300**. Next practical work is still UF/LIA convergence:
+   relevance after several candidates, model-guided UF-pair scheduling, or the
+   stronger online interface-equality loop.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

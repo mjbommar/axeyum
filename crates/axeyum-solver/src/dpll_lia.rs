@@ -47,6 +47,7 @@ const MAX_MINIMIZED_THEORY_CORE_ATOMS: usize = 128;
 const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
 const MAX_DYNAMIC_BOUND_CONFLICT_BATCH: usize = 32;
+const MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH: usize = 1;
 
 /// The arithmetic theory an atom belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -436,6 +437,7 @@ struct ArithCoreStats {
     last_len: usize,
     bound_count: usize,
     diff_count: usize,
+    affine_count: usize,
     lp_count: usize,
     minimized_count: usize,
     large_count: usize,
@@ -455,6 +457,7 @@ impl ArithCoreStats {
         match source {
             ArithCoreSource::Bound => self.bound_count += 1,
             ArithCoreSource::Difference => self.diff_count += 1,
+            ArithCoreSource::AffineBound => self.affine_count += 1,
             ArithCoreSource::LpRelaxation => self.lp_count += 1,
             ArithCoreSource::Minimized => self.minimized_count += 1,
             ArithCoreSource::Large => self.large_count += 1,
@@ -468,8 +471,8 @@ impl ArithCoreStats {
         let avg_tenths = self.total_len.saturating_mul(10) / self.count;
         format!(
             "core_len_last={}, core_len_min={}, core_len_max={}, core_len_avg={}.{}, \
-             core_src_bound={}, core_src_diff={}, core_src_lp={}, core_src_minimized={}, \
-             core_src_large={}",
+             core_src_bound={}, core_src_diff={}, core_src_affine={}, core_src_lp={}, \
+             core_src_minimized={}, core_src_large={}",
             self.last_len,
             self.min_len,
             self.max_len,
@@ -477,6 +480,7 @@ impl ArithCoreStats {
             avg_tenths % 10,
             self.bound_count,
             self.diff_count,
+            self.affine_count,
             self.lp_count,
             self.minimized_count,
             self.large_count
@@ -488,6 +492,7 @@ impl ArithCoreStats {
 enum ArithCoreSource {
     Bound,
     Difference,
+    AffineBound,
     LpRelaxation,
     Minimized,
     Large,
@@ -635,6 +640,7 @@ impl IncrementalArithDpll {
         // never by timeout.
         let deadline = config.timeout.map(|t| Instant::now() + t);
         self.solve_calls += 1;
+        let enable_affine_bound_cores = self.solve_calls > 1;
 
         for round in 0..MAX_DPLL_ROUNDS {
             if deadline.is_some_and(|d| Instant::now() >= d) {
@@ -705,6 +711,7 @@ impl IncrementalArithDpll {
                     &support,
                     Theory::Int,
                     check_with_lia_opaque_apps,
+                    enable_affine_bound_cores,
                 )?;
                 if !int_conflicts.is_empty() {
                     self.support_stats.conflict_batches += 1;
@@ -731,6 +738,7 @@ impl IncrementalArithDpll {
                     &support,
                     Theory::Real,
                     check_with_lra,
+                    enable_affine_bound_cores,
                 )?;
                 if !real_conflicts.is_empty() {
                     self.support_stats.conflict_batches += 1;
@@ -775,6 +783,7 @@ impl IncrementalArithDpll {
                 &lits,
                 Theory::Int,
                 check_with_lia_opaque_apps,
+                enable_affine_bound_cores,
             )?;
             if !int_conflicts.is_empty() {
                 let mut learn = ArithLearnState {
@@ -793,8 +802,14 @@ impl IncrementalArithDpll {
                 )?;
                 continue;
             }
-            let real_conflicts =
-                theory_conflicts(arena, &self.ctx, &lits, Theory::Real, check_with_lra)?;
+            let real_conflicts = theory_conflicts(
+                arena,
+                &self.ctx,
+                &lits,
+                Theory::Real,
+                check_with_lra,
+                enable_affine_bound_cores,
+            )?;
             if !real_conflicts.is_empty() {
                 let mut learn = ArithLearnState {
                     prop_solver: &mut self.prop_solver,
@@ -905,11 +920,20 @@ fn theory_conflicts(
     lits: &[TermId],
     theory: Theory,
     oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+    enable_affine_bound_cores: bool,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
     let indices: Vec<usize> = (0..ctx.atoms.len())
         .filter(|&i| ctx.atoms[i].theory == theory)
         .collect();
-    theory_conflicts_for_indices(arena, ctx, lits, &indices, theory, oracle)
+    theory_conflicts_for_indices(
+        arena,
+        ctx,
+        lits,
+        &indices,
+        theory,
+        oracle,
+        enable_affine_bound_cores,
+    )
 }
 
 fn theory_conflicts_for_indices(
@@ -919,6 +943,7 @@ fn theory_conflicts_for_indices(
     indices: &[usize],
     theory: Theory,
     oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+    enable_affine_bound_cores: bool,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
     let indices: Vec<usize> = indices
         .iter()
@@ -945,6 +970,15 @@ fn theory_conflicts_for_indices(
                 ArithCoreSource::Difference,
                 core,
             )]);
+        }
+        if enable_affine_bound_cores {
+            let affine_cores = cheap_int_affine_bound_conflict_cores(arena, ctx, lits, &indices);
+            if !affine_cores.is_empty() {
+                return Ok(affine_cores
+                    .into_iter()
+                    .map(|core| ArithConflictCore::new(ArithCoreSource::AffineBound, core))
+                    .collect());
+            }
         }
         if let Some(core) = lp_relaxation_conflict_core(arena, lits, &indices)? {
             return Ok(vec![ArithConflictCore::new(
@@ -1028,6 +1062,296 @@ fn cheap_int_bound_conflict_cores(
         }
     }
     conflicts
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct AffineBound {
+    coeffs: BTreeMap<SymbolId, i128>,
+    upper: i128,
+    atom_idx: usize,
+}
+
+#[derive(Clone, Debug)]
+struct LinearIntExpr {
+    coeffs: BTreeMap<SymbolId, i128>,
+    constant: i128,
+}
+
+impl LinearIntExpr {
+    fn zero() -> Self {
+        Self {
+            coeffs: BTreeMap::new(),
+            constant: 0,
+        }
+    }
+
+    fn constant(value: i128) -> Self {
+        Self {
+            coeffs: BTreeMap::new(),
+            constant: value,
+        }
+    }
+
+    fn symbol(symbol: SymbolId) -> Self {
+        let mut coeffs = BTreeMap::new();
+        coeffs.insert(symbol, 1);
+        Self {
+            coeffs,
+            constant: 0,
+        }
+    }
+
+    fn add(mut self, rhs: &Self) -> Option<Self> {
+        self.constant = self.constant.checked_add(rhs.constant)?;
+        for (&symbol, &coeff) in &rhs.coeffs {
+            let next = self
+                .coeffs
+                .get(&symbol)
+                .copied()
+                .unwrap_or(0)
+                .checked_add(coeff)?;
+            if next == 0 {
+                self.coeffs.remove(&symbol);
+            } else {
+                self.coeffs.insert(symbol, next);
+            }
+        }
+        Some(self)
+    }
+
+    fn sub(self, rhs: &Self) -> Option<Self> {
+        self.add(&rhs.clone().scale(-1)?)
+    }
+
+    fn scale(mut self, scalar: i128) -> Option<Self> {
+        if scalar == 0 {
+            return Some(Self::zero());
+        }
+        self.constant = self.constant.checked_mul(scalar)?;
+        let mut scaled = BTreeMap::new();
+        for (symbol, coeff) in self.coeffs {
+            let next = coeff.checked_mul(scalar)?;
+            if next != 0 {
+                scaled.insert(symbol, next);
+            }
+        }
+        self.coeffs = scaled;
+        Some(self)
+    }
+}
+
+/// Extracts batched two-literal conflicts between bounds on the same general
+/// linear integer expression. This covers generated selector ladders that encode
+/// alternatives as paired bounds over `x - y`, `x - y + c`, or constant-scaled
+/// variants. The full LIA oracle has already proved the current conjunction
+/// infeasible; this helper only replaces a larger LP core with a smaller core
+/// that the existing arithmetic-lemma verifier still rechecks independently.
+fn cheap_int_affine_bound_conflict_cores(
+    arena: &TermArena,
+    ctx: &ArithAbstractor,
+    lits: &[TermId],
+    indices: &[usize],
+) -> Vec<Vec<usize>> {
+    let mut bounds = Vec::new();
+    for &idx in indices {
+        let Some(truth) = assigned_atom_truth(arena, &ctx.atoms[idx], lits[idx]) else {
+            return Vec::new();
+        };
+        if let Some(bound) = affine_bound_for_atom(arena, idx, &ctx.atoms[idx], truth) {
+            bounds.push(bound);
+        }
+    }
+
+    let mut conflicts = Vec::new();
+    let mut seen = HashSet::new();
+    for i in 0..bounds.len() {
+        for j in (i + 1)..bounds.len() {
+            let Some(core) = conflicting_affine_bounds(&bounds[i], &bounds[j]) else {
+                continue;
+            };
+            let key = if core[0] <= core[1] {
+                (core[0], core[1])
+            } else {
+                (core[1], core[0])
+            };
+            if !seen.insert(key) {
+                continue;
+            }
+            conflicts.push(core);
+            if conflicts.len() >= MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH {
+                return conflicts;
+            }
+        }
+    }
+    conflicts
+}
+
+fn affine_bound_for_atom(
+    arena: &TermArena,
+    atom_idx: usize,
+    atom: &ArithAtom,
+    truth: bool,
+) -> Option<AffineBound> {
+    if atom.theory != Theory::Int {
+        return None;
+    }
+    let TermNode::App { op, args } = arena.node(atom.term) else {
+        return None;
+    };
+    if *op != Op::IntLe {
+        return None;
+    }
+    if truth {
+        affine_bound_for_order(arena, atom_idx, args[0], args[1], 0)
+    } else {
+        // not (lhs <= rhs) is rhs < lhs, i.e. rhs - lhs <= -1 over integers.
+        affine_bound_for_order(arena, atom_idx, args[1], args[0], -1)
+    }
+}
+
+fn affine_bound_for_order(
+    arena: &TermArena,
+    atom_idx: usize,
+    lhs: TermId,
+    rhs: TermId,
+    offset: i128,
+) -> Option<AffineBound> {
+    let expr = linear_int_expr(arena, lhs)?.sub(&linear_int_expr(arena, rhs)?)?;
+    if expr.coeffs.is_empty() {
+        return None;
+    }
+    Some(AffineBound {
+        coeffs: expr.coeffs,
+        upper: offset.checked_sub(expr.constant)?,
+        atom_idx,
+    })
+}
+
+fn conflicting_affine_bounds(lhs: &AffineBound, rhs: &AffineBound) -> Option<Vec<usize>> {
+    if coeffs_are_negated(&lhs.coeffs, &rhs.coeffs) {
+        let lower = rhs.upper.checked_neg()?;
+        if lower > lhs.upper {
+            return Some(vec![lhs.atom_idx, rhs.atom_idx]);
+        }
+    }
+    if coeffs_are_negated(&rhs.coeffs, &lhs.coeffs) {
+        let lower = lhs.upper.checked_neg()?;
+        if lower > rhs.upper {
+            return Some(vec![lhs.atom_idx, rhs.atom_idx]);
+        }
+    }
+    None
+}
+
+fn coeffs_are_negated(lhs: &BTreeMap<SymbolId, i128>, rhs: &BTreeMap<SymbolId, i128>) -> bool {
+    lhs.len() == rhs.len()
+        && lhs.iter().all(|(symbol, coeff)| {
+            coeff
+                .checked_neg()
+                .is_some_and(|negated| rhs.get(symbol).is_some_and(|other| *other == negated))
+        })
+}
+
+fn linear_int_expr(arena: &TermArena, term: TermId) -> Option<LinearIntExpr> {
+    if arena.sort_of(term) != Sort::Int {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(LinearIntExpr::constant(*value)),
+        TermNode::Symbol(symbol) if arena.symbol(*symbol).1 == Sort::Int => {
+            Some(LinearIntExpr::symbol(*symbol))
+        }
+        TermNode::App {
+            op: Op::IntNeg | Op::IntSub,
+            args,
+        } if args.len() == 1 => linear_int_expr(arena, args[0])?.scale(-1),
+        TermNode::App {
+            op: Op::IntAdd,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = LinearIntExpr::zero();
+            for &arg in args {
+                acc = acc.add(&linear_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntSub,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = linear_int_expr(arena, args[0])?;
+            for &arg in &args[1..] {
+                acc = acc.sub(&linear_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntMul,
+            args,
+        } if !args.is_empty() => linear_int_product(arena, args),
+        _ => None,
+    }
+}
+
+fn linear_int_product(arena: &TermArena, args: &[TermId]) -> Option<LinearIntExpr> {
+    let mut scalar = 1i128;
+    let mut nonconstant = None;
+    for &arg in args {
+        if let Some(value) = constant_int_expr(arena, arg) {
+            scalar = scalar.checked_mul(value)?;
+            continue;
+        }
+        if nonconstant.replace(linear_int_expr(arena, arg)?).is_some() {
+            return None;
+        }
+    }
+    nonconstant
+        .unwrap_or_else(|| LinearIntExpr::constant(1))
+        .scale(scalar)
+}
+
+fn constant_int_expr(arena: &TermArena, term: TermId) -> Option<i128> {
+    if arena.sort_of(term) != Sort::Int {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        TermNode::App {
+            op: Op::IntNeg | Op::IntSub,
+            args,
+        } if args.len() == 1 => constant_int_expr(arena, args[0])?.checked_neg(),
+        TermNode::App {
+            op: Op::IntAdd,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = 0i128;
+            for &arg in args {
+                acc = acc.checked_add(constant_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntSub,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = constant_int_expr(arena, args[0])?;
+            for &arg in &args[1..] {
+                acc = acc.checked_sub(constant_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntMul,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = 1i128;
+            for &arg in args {
+                acc = acc.checked_mul(constant_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        _ => None,
+    }
 }
 
 fn assigned_atom_truth(arena: &TermArena, atom: &ArithAtom, lit: TermId) -> Option<bool> {
@@ -3296,6 +3620,7 @@ mod tests {
                 &all,
                 Theory::Int,
                 check_with_lia_opaque_apps,
+                true,
             )
             .unwrap()
             .is_empty(),
@@ -3309,6 +3634,7 @@ mod tests {
                 &support,
                 Theory::Int,
                 check_with_lia_opaque_apps,
+                true,
             )
             .unwrap()
             .is_empty(),
@@ -3358,6 +3684,7 @@ mod tests {
         assert!(summary.contains("core_len_max=20"));
         assert!(summary.contains("core_src_bound=1"));
         assert!(summary.contains("core_src_diff=0"));
+        assert!(summary.contains("core_src_affine=0"));
         assert!(summary.contains("core_src_lp=1"));
         assert!(summary.contains("core_src_minimized=0"));
         assert!(summary.contains("core_src_large=1"));
@@ -3612,6 +3939,46 @@ mod tests {
         let lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
         let indices: Vec<usize> = (0..ctx.atoms.len()).collect();
         let mut core = cheap_int_difference_conflict_core(&arena, &ctx, &lits, &indices).unwrap();
+        core.sort_unstable();
+        assert_eq!(core, indices);
+
+        let core_lits = core.iter().map(|&idx| lits[idx]).collect::<Vec<_>>();
+        assert!(matches!(
+            check_with_lia_simplex(&arena, &core_lits).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
+
+    #[test]
+    fn cheap_integer_affine_bound_cores_batch_general_linear_conflicts() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let minus_one = arena.int_const(-1);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_minus_y = arena.int_sub(xv, yv).unwrap();
+        let neg_y = arena.int_mul(minus_one, yv).unwrap();
+        let x_plus_neg_y = arena.int_add(xv, neg_y).unwrap();
+        let expr_le_zero = arena.int_le(x_minus_y, zero).unwrap();
+        let expr_ge_one = arena.int_ge(x_plus_neg_y, one).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, expr_le_zero).unwrap();
+        let _ = ctx.abstract_term(&mut arena, expr_ge_one).unwrap();
+        let lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        let indices: Vec<usize> = (0..ctx.atoms.len()).collect();
+
+        assert!(
+            cheap_int_difference_conflict_core(&arena, &ctx, &lits, &indices).is_none(),
+            "this regression must exercise the general affine extractor, not the old unit-difference path"
+        );
+
+        let mut cores = cheap_int_affine_bound_conflict_cores(&arena, &ctx, &lits, &indices);
+        assert_eq!(cores.len(), 1);
+        let mut core = cores.pop().unwrap();
         core.sort_unstable();
         assert_eq!(core, indices);
 
