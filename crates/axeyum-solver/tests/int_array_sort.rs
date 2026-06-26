@@ -293,6 +293,43 @@ fn qf_ax_bool_array_read_collapse_unsat_closes() {
 }
 
 #[test]
+fn qf_ax_declared_sort_sat_models_replay() {
+    for (tag, input) in [
+        (
+            "arrays2",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays2.smt2"
+            ),
+        ),
+        (
+            "arrays3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays3.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).unwrap_or_else(|error| panic!("{tag}: {error}"));
+        let result = check_auto(
+            &mut script.arena,
+            &script.assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("{tag}: expected SAT, got {result:?}");
+        };
+        let assignment = model.to_assignment();
+        for &assertion in &script.assertions {
+            assert_eq!(
+                eval(&script.arena, assertion, &assignment),
+                Ok(Value::Bool(true)),
+                "{tag}"
+            );
+        }
+    }
+}
+
+#[test]
 fn select_over_array_ite_lowers_to_branch_reads() {
     let mut script = parse_script(
         r"

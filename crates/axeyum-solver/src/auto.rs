@@ -1833,6 +1833,16 @@ fn dispatch_array_fast_paths(
             Err(error) => Err(error),
         };
     }
+    // Pure declared-sort arrays (`QF_AX`): after select/store abstraction the
+    // scalar side is Bool + equality over uninterpreted carrier tokens. Reuse
+    // the same lazy ROW/extensionality CEGAR with the replaying EUF backend.
+    if features.has_non_bv_array && scalar_qf_ax_declared_arrays_supported(features) {
+        return match crate::abv::check_qf_ax_declared_sort_lazy_row(arena, assertions, config) {
+            Ok(result) => Ok(Some(result)),
+            Err(SolverError::Unsupported(_)) => Ok(None),
+            Err(error) => Err(error),
+        };
+    }
     // Pure `QF_ABV` (no int/real/UF): the lazy read-over-write (ROW) path, which
     // delegates to the eager elimination for the cases it accepts and decides the
     // wide-index store shapes it refuses (`dispatch_pure_qf_abv`).
@@ -1846,6 +1856,15 @@ fn scalar_alia_auflia_arrays_supported(features: &Features) -> bool {
     !features.has_real
         && !features.has_bv_or_float
         && !features.has_uninterpreted_sort
+        && !features.has_datatype
+}
+
+fn scalar_qf_ax_declared_arrays_supported(features: &Features) -> bool {
+    !features.has_real
+        && !features.has_int
+        && !features.has_bv_or_float
+        && !features.has_function
+        && features.has_uninterpreted_sort
         && !features.has_datatype
 }
 

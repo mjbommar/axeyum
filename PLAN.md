@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 661 decided, 609 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 663 decided, 611 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **661 decided**,
-   **609 oracle-compared**, **DISAGREE = 0**, with **22 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **663 decided**,
+   **611 oracle-compared**, **DISAGREE = 0**, with **22 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -291,8 +291,9 @@ against competitor source, are now binding:
    through `CrossStoreArrayDisequality`. Real Lean accepts the generated modules
    with no `sorryAx`. The audited decided slice is **5/5 dominant (100.0%)**,
    **Lean unsat 4/4 (100.0%)**, with **mismatches=0**, **audit_errors=0**, and
-   **timeouts=0**. Remaining QF_AX blockers are decide-side: declared-sort SAT
-   model construction for `arrays2`/`arrays3` and the Bool-array unsat row.
+   **timeouts=0**. At that point the remaining QF_AX blockers were decide-side:
+   declared-sort SAT model construction for `arrays2`/`arrays3` and the
+   Bool-array unsat row.
    **QF_AX BOOL-ARRAY READ-COLLAPSE LANDED (2026-06-26):**
    Bool-index arrays now have a checked read-collapse refuter: if
    `select a false = select a true`, an asserted disequality between any two
@@ -305,6 +306,18 @@ against competitor source, are now binding:
    **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Remaining QF_AX
    blockers are the SAT `arrays2`/`arrays3` rows, which need replay-checked
    declared-sort model construction.
+   **QF_AX DECLARED-SORT SAT MODELS LANDED (2026-06-26):**
+   pure declared-sort arrays now route through the lazy ROW/extensionality loop
+   with a replaying EUF e-graph scalar backend. Generic array model projection
+   closes the remaining SAT `arrays2`/`arrays3` rows, and true array-equality
+   refinement now checks compatible materialized indices plus finite store
+   indices so store-equality witnesses interact with disequality skolems. The
+   refreshed QF_AX row is **8/8 decided (100.0%)**, **unknown=0**,
+   **unsupported=0**, **oracle-compared=8/8**, **DISAGREE=0**, PAR-2 mean
+   **0.004 s**. The exact audit is **8/8 dominant (100.0%)**, **Lean unsat
+   5/5 (100.0%)**, with **mismatches=0**, **audit_errors=0**, and
+   **timeouts=0**. QF_AX is closed for this small cvc5 slice; next array work is
+   AUFLIA scalar-search depth and broader neutral QF_AX/non-BV-array corpora.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

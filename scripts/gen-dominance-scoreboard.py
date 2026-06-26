@@ -100,7 +100,7 @@ PROOF_ROUTES: dict[str, ProofRoute] = {
     "QF_ALIA": ProofRoute(
         "checked Int-array ROW/readback refuters plus scalar-array replay",
         "partial",
-        "move solve frontier to AUFLIA scalar search and QF_AX declared-sort SAT models",
+        "move solve frontier to AUFLIA scalar search depth",
     ),
     "QF_AUFBV": ProofRoute(
         "array+UF/BV certificates exist for narrow ROW/congruence subcases",
@@ -113,9 +113,9 @@ PROOF_ROUTES: dict[str, ProofRoute] = {
         "finish decide frontier before spending cert budget beyond narrow refuters",
     ),
     "QF_AX": ProofRoute(
-        "array axiom, cross-store, and Bool-index collapse certificates",
+        "declared-sort array ROW/extensionality models plus narrow unsat certificates",
         "partial",
-        "build replay-checked declared-sort SAT models for arrays2/arrays3",
+        "broaden beyond this small cvc5 slice with neutral QF_AX arrays",
     ),
     "QF_BV": ProofRoute(
         "Lean-kernel bitwise/comparison subfragment; DRAT/Alethe beyond that",

@@ -497,6 +497,30 @@ pub fn check_qf_auflia_lazy_row(
     check_qf_abv_lazy_row(&mut backend, arena, assertions, config)
 }
 
+/// Decides the pure declared-sort `QF_AX` array slice through the same lazy
+/// ROW/extensionality CEGAR used for BV and Int arrays, but with the replaying
+/// EUF e-graph backend as the scalar solver.
+///
+/// This covers arrays indexed by and returning declared uninterpreted carriers:
+/// every `select` is abstracted to a fresh carrier value, ROW/extensionality
+/// lemmas are added on demand, and a final `sat` is projected to
+/// [`GenericArrayValue`]s and replayed against the original assertions before it
+/// is returned.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] when the input contains array or scalar
+/// constructs outside this declared-sort array slice, and propagates scalar
+/// backend errors from the replaying EUF solver.
+pub fn check_qf_ax_declared_sort_lazy_row(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let mut backend = DeclaredSortEufBackend;
+    check_qf_abv_lazy_row(&mut backend, arena, assertions, config)
+}
+
 /// A checked refutation for finite write chains over two different constant
 /// arrays on an infinite (`Int`) index sort.
 ///
@@ -1918,6 +1942,32 @@ impl SolverBackend for UfliaDpllBackend {
     }
 }
 
+struct DeclaredSortEufBackend;
+
+impl SolverBackend for DeclaredSortEufBackend {
+    fn capabilities(&self) -> Capabilities {
+        Capabilities {
+            name: "declared-sort-euf".to_owned(),
+            produces_models: true,
+            complete: true,
+        }
+    }
+
+    fn check(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        let mut scratch = arena.clone();
+        Ok(crate::euf_egraph::check_qf_uf_with_config(
+            &mut scratch,
+            assertions,
+            config,
+        ))
+    }
+}
+
 fn is_budget_unknown_kind(kind: UnknownKind) -> bool {
     matches!(
         kind,
@@ -3090,7 +3140,7 @@ fn refine_eq_congruence(
         let atom = &ctx.eq_atoms[atom_idx];
         (atom.lhs, atom.rhs, atom.flag)
     };
-    let indices = read_indices_for(ctx, lhs, rhs);
+    let indices = read_indices_for(arena, ctx, lhs, rhs);
     let mut progressed = false;
     for index in indices {
         let Some(read_a) = ctx.resolve_select(arena, lhs, index)? else {
@@ -3119,17 +3169,58 @@ fn refine_eq_congruence(
     Ok(progressed)
 }
 
-/// The set of index terms already read (as `select` sites) on `lhs` or `rhs`.
-fn read_indices_for(ctx: &RowCtx, lhs: TermId, rhs: TermId) -> Vec<TermId> {
+/// The set of index terms worth checking for a true array equality `lhs = rhs`.
+///
+/// Equality implies `select(lhs, i) = select(rhs, i)` for *any* index term of
+/// the right sort. Besides reads already materialised directly on the operands,
+/// include every materialised compatible index (notably diff-skolems from other
+/// array disequalities) and the finite store indices occurring inside the two
+/// compared array terms. The latter closes store-chain equalities with no
+/// external read at a write index; the former lets `a != b` witnesses interact
+/// with surrounding store equalities.
+fn read_indices_for(arena: &TermArena, ctx: &RowCtx, lhs: TermId, rhs: TermId) -> Vec<TermId> {
+    let Some((index_sort, _)) = arena.sort_of(lhs).array_sorts() else {
+        return Vec::new();
+    };
     let mut indices: Vec<TermId> = Vec::new();
-    for &(base, index) in ctx.memo.keys() {
-        if (base == lhs || base == rhs) && !indices.contains(&index) {
+    for &(_, index) in ctx.memo.keys() {
+        if arena.sort_of(index) == index_sort && !indices.contains(&index) {
             indices.push(index);
         }
     }
+    collect_store_indices(arena, lhs, index_sort, &mut indices);
+    collect_store_indices(arena, rhs, index_sort, &mut indices);
     // Deterministic order independent of hash-map iteration.
     indices.sort_by_key(|t| t.index());
     indices
+}
+
+fn collect_store_indices(arena: &TermArena, term: TermId, index_sort: Sort, out: &mut Vec<TermId>) {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return;
+    };
+    match op {
+        Op::Store => {
+            if let Some(&index) = args.get(1)
+                && arena.sort_of(index) == index_sort
+                && !out.contains(&index)
+            {
+                out.push(index);
+            }
+            if let Some(&base) = args.first() {
+                collect_store_indices(arena, base, index_sort, out);
+            }
+        }
+        Op::Ite => {
+            if let Some(&then_branch) = args.get(1) {
+                collect_store_indices(arena, then_branch, index_sort, out);
+            }
+            if let Some(&else_branch) = args.get(2) {
+                collect_store_indices(arena, else_branch, index_sort, out);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// For a *false*-flagged atom `a != b`, introduces a fresh diff-skolem index `k`
