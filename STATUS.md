@@ -6,6 +6,44 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — affine fixed-argument UF preseed coverage.**
+  The lazy UF functional-consistency CEGAR preseed now derives fixed integer
+  assignments from top-level affine equalities and paired non-strict bounds,
+  not only direct singleton bounds such as `x <= c` and `x >= c`. The extractor
+  is deliberately conservative: it accepts checked linear integer expressions
+  over constants, symbols, `+`, `-`, unary negation, and multiplication by
+  constants; solves only equalities with exactly one unassigned symbol after the
+  current fixed assignment; and declines overflow, nonlinear terms, UF
+  applications inside the affine proof, and one-sided inequalities.
+
+  This closes a real cheap-preseed blind spot but is **not** the generated
+  overbound row closure. Focused tests pin both directions: paired affine bounds
+  can preseed a congruence lemma for `f(x)` vs `f(2)`, while the same one-sided
+  affine bound does not preseed. On
+  `cli__regress2__uflia-error0.smt2`, diagnostics remain neutral because the
+  relevant hard-row UF arguments still depend on Boolean/model choices such as
+  `fmt1` and `arg1`, not top-level forced affine values: at 1 s,
+  `preseeded_lemmas=0`, **2** UF rounds, **1** candidate, **282** pair checks,
+  **6** equal-argument pairs, **5** violations, and **6** learned UF lemmas; at
+  10 s, `preseeded_lemmas=0`, **6** UF rounds, **5** candidates, **24** learned
+  UF lemmas, and the timeout remains dominated by LP-core-producing arithmetic
+  branches. The direct online probes are unchanged and still decline quickly at
+  `opaque_app_order_atoms=334 > 128, total=485`.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_preseeds_affine_fixed_integer_argument_lemmas -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_does_not_preseed_one_sided_affine_bounds -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_preseeds_fixed_integer_argument_lemmas -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_batches_all_equal_arg_pairs_after_violation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uf_pair_profile -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 20`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
 - **Session 2026-06-26 — opaque-app online UFLIA construction is bounded.**
   Large combined UFLIA layouts now reuse the pure-LIA large-query pattern:
   the opaque-app `LiaTheory` records assignments cheaply and performs one

@@ -7,7 +7,7 @@
 //! interpretations and replays it against the original assertions with the
 //! ground evaluator. Pure `QF_BV` queries pass straight through unchanged.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::time::Instant;
 
 use axeyum_ir::{
@@ -817,6 +817,104 @@ struct IntBounds {
     upper: Option<i128>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct AffineIntExpr {
+    coeffs: BTreeMap<SymbolId, i128>,
+    constant: i128,
+}
+
+impl AffineIntExpr {
+    fn zero() -> Self {
+        Self {
+            coeffs: BTreeMap::new(),
+            constant: 0,
+        }
+    }
+
+    fn constant(value: i128) -> Self {
+        Self {
+            coeffs: BTreeMap::new(),
+            constant: value,
+        }
+    }
+
+    fn symbol(symbol: SymbolId) -> Self {
+        let mut coeffs = BTreeMap::new();
+        coeffs.insert(symbol, 1);
+        Self {
+            coeffs,
+            constant: 0,
+        }
+    }
+
+    fn add(mut self, rhs: &Self) -> Option<Self> {
+        self.constant = self.constant.checked_add(rhs.constant)?;
+        for (&symbol, &coeff) in &rhs.coeffs {
+            let next = self
+                .coeffs
+                .get(&symbol)
+                .copied()
+                .unwrap_or(0)
+                .checked_add(coeff)?;
+            if next == 0 {
+                self.coeffs.remove(&symbol);
+            } else {
+                self.coeffs.insert(symbol, next);
+            }
+        }
+        Some(self)
+    }
+
+    fn sub(self, rhs: &Self) -> Option<Self> {
+        self.add(&rhs.clone().scale(-1)?)
+    }
+
+    fn scale(mut self, scalar: i128) -> Option<Self> {
+        if scalar == 0 {
+            return Some(Self::zero());
+        }
+        self.constant = self.constant.checked_mul(scalar)?;
+        let mut scaled = BTreeMap::new();
+        for (symbol, coeff) in self.coeffs {
+            let next = coeff.checked_mul(scalar)?;
+            if next != 0 {
+                scaled.insert(symbol, next);
+            }
+        }
+        self.coeffs = scaled;
+        Some(self)
+    }
+
+    fn negated(&self) -> Option<Self> {
+        self.clone().scale(-1)
+    }
+
+    fn solve_one_unassigned(&self, assignment: &Assignment) -> Option<(SymbolId, i128)> {
+        let mut residual = self.constant;
+        let mut unassigned: Option<(SymbolId, i128)> = None;
+        for (&symbol, &coeff) in &self.coeffs {
+            match assignment.get(symbol) {
+                Some(Value::Int(value)) => {
+                    residual = residual.checked_add(coeff.checked_mul(value)?)?;
+                }
+                Some(_) => return None,
+                None => {
+                    if unassigned.replace((symbol, coeff)).is_some() {
+                        return None;
+                    }
+                }
+            }
+        }
+
+        let (symbol, coeff) = unassigned?;
+        let numerator = residual.checked_neg()?;
+        if numerator.checked_rem(coeff)? != 0 {
+            return None;
+        }
+        Some((symbol, numerator.checked_div(coeff)?))
+    }
+}
+
 fn preseed_function_consistency_lemmas(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -861,8 +959,24 @@ fn fixed_int_assignment_from_top_level_assertions(
     assertions: &[TermId],
 ) -> Assignment {
     let mut bounds = BTreeMap::<SymbolId, IntBounds>::new();
+    let mut affine_le = BTreeSet::<AffineIntExpr>::new();
+    let mut affine_equalities = BTreeSet::<AffineIntExpr>::new();
     for &assertion in assertions {
         collect_top_level_int_bound(arena, assertion, &mut bounds);
+        collect_top_level_affine_constraint(
+            arena,
+            assertion,
+            &mut affine_le,
+            &mut affine_equalities,
+        );
+    }
+
+    for expr in &affine_le {
+        if let Some(negated) = expr.negated()
+            && affine_le.contains(&negated)
+        {
+            affine_equalities.insert(expr.clone());
+        }
     }
 
     let mut assignment = Assignment::new();
@@ -873,7 +987,174 @@ fn fixed_int_assignment_from_top_level_assertions(
             }
         }
     }
+    close_fixed_assignment_with_affine_equalities(&mut assignment, &affine_equalities);
     assignment
+}
+
+fn collect_top_level_affine_constraint(
+    arena: &TermArena,
+    assertion: TermId,
+    le_constraints: &mut BTreeSet<AffineIntExpr>,
+    equalities: &mut BTreeSet<AffineIntExpr>,
+) {
+    let TermNode::App { op, args } = arena.node(assertion) else {
+        return;
+    };
+    if args.len() != 2 {
+        return;
+    }
+
+    let left = args[0];
+    let right = args[1];
+    match op {
+        Op::Eq => {
+            if let Some(expr) = affine_int_difference(arena, left, right) {
+                equalities.insert(expr);
+            }
+        }
+        Op::IntLe => {
+            if let Some(expr) = affine_int_difference(arena, left, right) {
+                le_constraints.insert(expr);
+            }
+        }
+        Op::IntGe => {
+            if let Some(expr) = affine_int_difference(arena, right, left) {
+                le_constraints.insert(expr);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn close_fixed_assignment_with_affine_equalities(
+    assignment: &mut Assignment,
+    equalities: &BTreeSet<AffineIntExpr>,
+) {
+    loop {
+        let mut changed = false;
+        for equality in equalities {
+            let Some((symbol, value)) = equality.solve_one_unassigned(assignment) else {
+                continue;
+            };
+            match assignment.get(symbol) {
+                Some(Value::Int(existing)) if existing == value => {}
+                Some(_) => {}
+                None => {
+                    assignment.set(symbol, Value::Int(value));
+                    changed = true;
+                }
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+}
+
+fn affine_int_difference(arena: &TermArena, left: TermId, right: TermId) -> Option<AffineIntExpr> {
+    linear_int_expr(arena, left)?.sub(&linear_int_expr(arena, right)?)
+}
+
+fn linear_int_expr(arena: &TermArena, term: TermId) -> Option<AffineIntExpr> {
+    if arena.sort_of(term) != Sort::Int {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(AffineIntExpr::constant(*value)),
+        TermNode::Symbol(symbol) if arena.symbol(*symbol).1 == Sort::Int => {
+            Some(AffineIntExpr::symbol(*symbol))
+        }
+        TermNode::App {
+            op: Op::IntNeg | Op::IntSub,
+            args,
+        } if args.len() == 1 => linear_int_expr(arena, args[0])?.scale(-1),
+        TermNode::App {
+            op: Op::IntAdd,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = AffineIntExpr::zero();
+            for &arg in args {
+                acc = acc.add(&linear_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntSub,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = linear_int_expr(arena, args[0])?;
+            for &arg in &args[1..] {
+                acc = acc.sub(&linear_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntMul,
+            args,
+        } if !args.is_empty() => linear_int_product(arena, args),
+        _ => None,
+    }
+}
+
+fn linear_int_product(arena: &TermArena, args: &[TermId]) -> Option<AffineIntExpr> {
+    let mut scalar = 1i128;
+    let mut nonconstant = None;
+    for &arg in args {
+        if let Some(value) = constant_int_expr(arena, arg) {
+            scalar = scalar.checked_mul(value)?;
+            continue;
+        }
+        if nonconstant.replace(linear_int_expr(arena, arg)?).is_some() {
+            return None;
+        }
+    }
+    nonconstant
+        .unwrap_or_else(|| AffineIntExpr::constant(1))
+        .scale(scalar)
+}
+
+fn constant_int_expr(arena: &TermArena, term: TermId) -> Option<i128> {
+    if arena.sort_of(term) != Sort::Int {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        TermNode::App {
+            op: Op::IntNeg | Op::IntSub,
+            args,
+        } if args.len() == 1 => constant_int_expr(arena, args[0])?.checked_neg(),
+        TermNode::App {
+            op: Op::IntAdd,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = 0i128;
+            for &arg in args {
+                acc = acc.checked_add(constant_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntSub,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = constant_int_expr(arena, args[0])?;
+            for &arg in &args[1..] {
+                acc = acc.checked_sub(constant_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        TermNode::App {
+            op: Op::IntMul,
+            args,
+        } if !args.is_empty() => {
+            let mut acc = 1i128;
+            for &arg in args {
+                acc = acc.checked_mul(constant_int_expr(arena, arg)?)?;
+            }
+            Some(acc)
+        }
+        _ => None,
+    }
 }
 
 fn collect_top_level_int_bound(
@@ -1504,6 +1785,81 @@ mod tests {
         assert!(reason.detail.contains("potential_pairs=1"));
         assert!(reason.detail.contains("preseeded_lemmas=1"));
         assert!(reason.detail.contains("lemmas_added=1"));
+    }
+
+    #[test]
+    fn lazy_function_consistency_preseeds_affine_fixed_integer_argument_lemmas() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let two = arena.int_const(2);
+        let five = arena.int_const(5);
+        let minus_one = arena.int_const(-1);
+        let minus_three = arena.int_const(-3);
+        let neg_y = arena.int_mul(minus_one, y).unwrap();
+        let x_minus_y = arena.int_add(x, neg_y).unwrap();
+        let fx = arena.apply(f, &[x]).unwrap();
+        let f2 = arena.apply(f, &[two]).unwrap();
+        let same_result = arena.eq(fx, f2).unwrap();
+        let y_le_five = arena.int_le(y, five).unwrap();
+        let y_ge_five = arena.int_ge(y, five).unwrap();
+        let affine_le = arena.int_le(x_minus_y, minus_three).unwrap();
+        let affine_ge = arena.int_ge(x_minus_y, minus_three).unwrap();
+        let assertions = [same_result, y_le_five, y_ge_five, affine_le, affine_ge];
+
+        let result = super::check_with_function_consistency(&mut arena, &assertions, |_a, _q| {
+            Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "inner timeout".to_string(),
+            }))
+        })
+        .unwrap();
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected wrapped unknown, got {result:?}");
+        };
+        assert!(reason.detail.contains("applications=2"));
+        assert!(reason.detail.contains("potential_pairs=1"));
+        assert!(reason.detail.contains("preseeded_lemmas=1"));
+        assert!(reason.detail.contains("lemmas_added=1"));
+    }
+
+    #[test]
+    fn lazy_function_consistency_does_not_preseed_one_sided_affine_bounds() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let two = arena.int_const(2);
+        let five = arena.int_const(5);
+        let minus_one = arena.int_const(-1);
+        let minus_three = arena.int_const(-3);
+        let neg_y = arena.int_mul(minus_one, y).unwrap();
+        let x_minus_y = arena.int_add(x, neg_y).unwrap();
+        let fx = arena.apply(f, &[x]).unwrap();
+        let f2 = arena.apply(f, &[two]).unwrap();
+        let same_result = arena.eq(fx, f2).unwrap();
+        let y_le_five = arena.int_le(y, five).unwrap();
+        let y_ge_five = arena.int_ge(y, five).unwrap();
+        let affine_le = arena.int_le(x_minus_y, minus_three).unwrap();
+        let assertions = [same_result, y_le_five, y_ge_five, affine_le];
+
+        let result = super::check_with_function_consistency(&mut arena, &assertions, |_a, _q| {
+            Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "inner timeout".to_string(),
+            }))
+        })
+        .unwrap();
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected wrapped unknown, got {result:?}");
+        };
+        assert!(reason.detail.contains("applications=2"));
+        assert!(reason.detail.contains("potential_pairs=1"));
+        assert!(reason.detail.contains("preseeded_lemmas=0"));
+        assert!(reason.detail.contains("lemmas_added=0"));
     }
 
     #[test]

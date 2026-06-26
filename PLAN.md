@@ -585,6 +585,19 @@ against competitor source, are now binding:
    remains **128**, and the next solve work is partitioned opaque-heavy
    admission that preserves incremental-build safety, opaque-app model lifting,
    or lazy UF/LIA relevance that reduces LP-core-producing branches.
+   **AFFINE FIXED-ARGUMENT UF PRESEED LANDED (2026-06-26):**
+   lazy UF functional-consistency preseed now closes a narrow soundness-preserving
+   relevance gap: top-level affine integer equalities and paired non-strict
+   bounds can derive fixed symbol values for cheap congruence lemmas, not only
+   direct singleton bounds. The extractor is checked and conservative (linear
+   integer syntax only, multiplication by constants only, one unassigned symbol
+   per equality, no one-sided-bound inference). Focused tests pin both the
+   positive paired-affine case and the one-sided decline case. The generated
+   overbound row is measured neutral, which is useful information: its relevant
+   UF arguments still depend on Boolean/model choices such as `fmt1` and
+   `arg1`, so `preseeded_lemmas` remains **0** at 1 s and 10 s. The practical
+   next lever remains lazy UF/LIA relevance after candidate models, LP-core
+   branch pressure, or a stronger combined interface-equality loop.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
