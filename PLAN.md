@@ -197,11 +197,14 @@ against competitor source, are now binding:
    UF+arithmetic congruence pass added a checked Ackermann/congruence residual
    certificate for the mixed `list`/integer `bug303` row: congruence over the
    declared carrier sort derives the needed integer equality, then arithmetic
-   DPLL refutes the retained Boolean-structured linear-arithmetic core. The
-   exact row is now **43/44 dominant (97.7%)**, **Lean unsat 14/14 (100.0%)**, with
-   **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Remaining QF_UF
-   blocker is now the nonlinear-extension `issue3970-nl-ext-purify` evidence
-   frontier: baseline `unsat`, checked audit `unknown`.
+   DPLL refutes the retained Boolean-structured linear-arithmetic core. A final
+   direct-evidence routing pass lets structural certificates run before the
+   pure-real LRA/NRA evidence branch, so the nonlinear-extension
+   `issue3970-nl-ext-purify` row is now certified as a term-identity
+   contradiction from its expanded `distinct` disequality `(not (= t t))`. The
+   exact row is now **44/44 dominant (100.0%)**, **Lean unsat 15/15 (100.0%)**,
+   with **mismatches=0**, **audit_errors=0**, **timeouts=0**, and no remaining
+   evidence gaps.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

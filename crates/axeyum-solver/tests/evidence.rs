@@ -927,6 +927,24 @@ fn qf_lia_boolean_stress_row_uses_bool_simplification_evidence() {
 }
 
 #[test]
+fn qf_uf_issue3970_uses_checked_term_identity_evidence() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2"
+    ))
+    .expect("issue3970 row parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::UnsatTermIdentity(_)),
+        "expected term-identity evidence, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(report.trusted_steps.is_empty());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+}
+
+#[test]
 fn congruence_free_uflia_uses_opaque_arith_alethe_evidence() {
     // f(0) <= 0 ∧ f(0) >= 1 is unsat after treating the repeated UF application
     // as one opaque integer term; no Ackermann/congruence lemmas are needed.

@@ -1,10 +1,11 @@
 //! Small checked Boolean-simplification refutations.
 //!
 //! This module recognizes assertions that normalize to Boolean `false` using a
-//! deliberately tiny propositional simplifier: constants, double negation,
-//! associative/idempotent `and`/`or`, and complement pairs (`p ∧ ¬p`, `p ∨ ¬p`).
-//! Non-Boolean-theory structure is kept opaque, so every accepted certificate is
-//! re-checkable by re-running the same normalizer over the original assertions.
+//! deliberately tiny simplifier: constants, equality reflexivity, double
+//! negation, associative/idempotent `and`/`or`, and complement pairs
+//! (`p ∧ ¬p`, `p ∨ ¬p`). Other non-Boolean-theory structure is kept opaque, so
+//! every accepted certificate is re-checkable by re-running the same normalizer
+//! over the original assertions.
 
 use std::collections::BTreeSet;
 
@@ -63,6 +64,9 @@ fn simplify_bool(arena: &TermArena, term: TermId) -> BoolExpr {
     match arena.node(term) {
         TermNode::BoolConst(false) => BoolExpr::False,
         TermNode::BoolConst(true) => BoolExpr::True,
+        TermNode::App { op: Op::Eq, args } if args.len() == 2 && args[0] == args[1] => {
+            BoolExpr::True
+        }
         TermNode::App {
             op: Op::BoolNot,
             args,
@@ -143,6 +147,7 @@ fn complement(expr: &BoolExpr) -> BoolExpr {
 #[cfg(test)]
 mod tests {
     use axeyum_ir::{Sort, TermArena};
+    use axeyum_smtlib::parse_script;
 
     use super::bool_simplification_refutation;
 
@@ -186,5 +191,33 @@ mod tests {
             .expect("not (p and q), p, q simplifies to false");
         assert_eq!(cert.assertion, not_both);
         assert!(cert.combined_assertions);
+    }
+
+    #[test]
+    fn recognizes_reflexive_disequality_inside_conjunction() {
+        let mut arena = TermArena::new();
+        let p_symbol = arena.declare("p", Sort::Bool).unwrap();
+        let q_symbol = arena.declare("q", Sort::Bool).unwrap();
+        let p = arena.var(p_symbol);
+        let q = arena.var(q_symbol);
+        let p_eq_p = arena.eq(p, p).unwrap();
+        let not_p_eq_p = arena.not(p_eq_p).unwrap();
+        let assertion = arena.and(q, not_p_eq_p).unwrap();
+
+        let cert = bool_simplification_refutation(&arena, &[assertion])
+            .expect("q and not (p = p) simplifies to false");
+        assert_eq!(cert.assertion, assertion);
+        assert!(!cert.combined_assertions);
+    }
+
+    #[test]
+    fn recognizes_issue3970_purified_distinct_contradiction() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2"
+        ))
+        .expect("issue3970 parses");
+        let cert = bool_simplification_refutation(&script.arena, &script.assertions)
+            .expect("issue3970 contains a checked Boolean/reflexivity contradiction");
+        assert!(!cert.combined_assertions);
     }
 }

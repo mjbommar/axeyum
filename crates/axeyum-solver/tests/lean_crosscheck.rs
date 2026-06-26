@@ -608,6 +608,26 @@ fn qf_lia_bool_simplification_audit_row_checks_in_real_lean() {
     lean_accepts("qf_lia_bool_simplification_rf11", &source);
 }
 
+/// `QF_UFNRA`: cvc5 `issue3970-nl-ext-purify` contains a purified `distinct`
+/// contradiction whose expansion includes a disequality of the same term with
+/// itself, before any nonlinear arithmetic certificate is needed.
+#[test]
+fn qf_uf_issue3970_term_identity_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2"
+    ))
+    .expect("issue3970 row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("issue3970 term-identity row reconstructs");
+    assert_eq!(fragment, ProofFragment::TermIdentity);
+    assert!(
+        !source.contains("sorryAx"),
+        "term-identity module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_uf_issue3970_term_identity", &source);
+}
+
 /// `QF_UFBV`: bitwuzla `fun1` is a tiny Boolean functional-graph
 /// contradiction. Exhaustively checking the two Boolean variables and the
 /// four unary-Boolean function interpretations gives a direct certificate,

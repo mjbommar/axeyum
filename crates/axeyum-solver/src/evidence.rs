@@ -1628,6 +1628,18 @@ pub fn produce_evidence(
     let evidence_deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
+    let provenance = Provenance {
+        semantics_version: SEMANTICS_VERSION,
+        layers: LayerVersions::CURRENT,
+        backend: "auto-solve".to_owned(),
+        assertion_count: assertions.len(),
+        timeout: config.timeout,
+        resource_limit: config.resource_limit,
+        node_budget: config.node_budget,
+        cnf_variable_budget: config.cnf_variable_budget,
+        cnf_clause_budget: config.cnf_clause_budget,
+        prove_unsat: false,
+    };
     match evidence_route(arena, assertions) {
         // Pure QF_BV/Boolean: the bit-blast → DRAT route gives a checkable `unsat`.
         EvidenceRoute::QfBv => return produce_qf_bv_evidence(arena, assertions, config),
@@ -1638,6 +1650,10 @@ pub fn produce_evidence(
         // front door now dispatches nonlinear real goals to NRA instead of
         // hard-erroring `Unsupported`).
         EvidenceRoute::PureReal => {
+            if let Some(report) = direct_pre_solve_structural_report(arena, assertions, &provenance)
+            {
+                return Ok(report);
+            }
             // Prefer the self-checked, Lean-backed degree-2 SOS certificate when the
             // query is an SOS-decided `unsat` (ADR-0039/0041): it is re-checkable two
             // independent ways (exact-rational LDLᵀ + kernel-checked Lean), stronger
@@ -1672,18 +1688,6 @@ pub fn produce_evidence(
     // now carries a re-checkable DRAT certificate of the reduced CNF (clausal
     // layer, modulo the trusted reduction); fragments without a reduction-to-BV
     // certificate (e.g. integers/real/nonlinear) still record a bare `unsat`.
-    let provenance = Provenance {
-        semantics_version: SEMANTICS_VERSION,
-        layers: LayerVersions::CURRENT,
-        backend: "auto-solve".to_owned(),
-        assertion_count: assertions.len(),
-        timeout: config.timeout,
-        resource_limit: config.resource_limit,
-        node_budget: config.node_budget,
-        cnf_variable_budget: config.cnf_variable_budget,
-        cnf_clause_budget: config.cnf_clause_budget,
-        prove_unsat: false,
-    };
     // Prefer the self-checking, Lean-backed integer-Farkas (Diophantine) certificate
     // for an integer-systems `unsat` (ADR-0042/0043): unlike the `lia_generic` Alethe
     // route (a Carcara hole for integer systems), it is independently checkable in-tree
