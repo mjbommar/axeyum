@@ -85,6 +85,12 @@ struct Lowerer<'a> {
     path: Vec<TermId>,
     /// Discovered bad states.
     bad_states: Vec<BadState>,
+    /// A stack of the names `let`-declared in each currently-open lexical scope
+    /// (an `if`/`else` arm or loop body). A fresh `let` inside an arm shadows any
+    /// outer binding only *within* that arm; on leaving the arm the outer value
+    /// is restored (the runtime `env` is flat, so without this an arm-local
+    /// shadow would leak through the join as a reassignment — a spurious bug).
+    scopes: Vec<Vec<String>>,
 }
 
 impl Lowerer<'_> {
@@ -394,6 +400,33 @@ impl Lowerer<'_> {
         Ok(())
     }
 
+    /// Lower a block as a fresh lexical scope: any name `let`-declared *inside*
+    /// `body` is local to it. After the block, a name that shadowed an outer
+    /// binding (present in `outer`) is restored to its outer value; a name newly
+    /// introduced (absent from `outer`) is removed. This keeps an arm-local `let`
+    /// from leaking out as if it were a reassignment.
+    fn lower_scoped(
+        &mut self,
+        body: &[Stmt],
+        outer: &HashMap<String, SymVal>,
+    ) -> Result<(), LowerError> {
+        self.scopes.push(Vec::new());
+        let result = self.lower_block(body);
+        let declared = self.scopes.pop().unwrap_or_default();
+        // Restore/remove even on the error path so the env stays consistent.
+        for name in declared {
+            match outer.get(&name) {
+                Some(outer_val) => {
+                    self.env.insert(name, *outer_val);
+                }
+                None => {
+                    self.env.remove(&name);
+                }
+            }
+        }
+        result
+    }
+
     fn lower_stmt(&mut self, s: &Stmt) -> Result<(), LowerError> {
         match s {
             Stmt::Let { name, ty, value } => {
@@ -403,6 +436,9 @@ impl Lowerer<'_> {
                         "let `{name}`: declared {ty:?} but initializer is {:?}",
                         v.ty
                     )));
+                }
+                if let Some(scope) = self.scopes.last_mut() {
+                    scope.push(name.clone());
                 }
                 self.env.insert(name.clone(), v);
                 Ok(())
@@ -426,15 +462,19 @@ impl Lowerer<'_> {
                 expect_bool(c, "if condition")?;
                 let not_c = self.arena.not(c.term).map_err(|e| ir(&e))?;
                 // Then-branch: snapshot env so assignments don't leak across arms;
-                // values that must merge are recombined via ite below.
+                // values that must merge are recombined via ite below. Each arm is
+                // a lexical scope: a fresh `let` inside it shadows an outer binding
+                // only within the arm, so we restore shadowed outer values before
+                // capturing the arm env (otherwise the shadow leaks through the
+                // join — see the `if_merge` shadowing test).
                 let env_before = self.env.clone();
                 self.path.push(c.term);
-                self.lower_block(then)?;
+                self.lower_scoped(then, &env_before)?;
                 let env_then = std::mem::replace(&mut self.env, env_before.clone());
                 self.path.pop();
 
                 self.path.push(not_c);
-                self.lower_block(els)?;
+                self.lower_scoped(els, &env_before)?;
                 let env_else = std::mem::take(&mut self.env);
                 self.path.pop();
 
@@ -495,7 +535,10 @@ impl Lowerer<'_> {
                             ty: *var_ty,
                         },
                     );
-                    self.lower_block(body)?;
+                    // The body is a lexical scope: a `let` inside it is local to
+                    // the iteration (and must not leak as an outer shadow).
+                    let outer = self.env.clone();
+                    self.lower_scoped(body, &outer)?;
                 }
                 self.env.remove(var);
                 Ok(())
@@ -600,6 +643,7 @@ pub fn lower_program(arena: &mut TermArena, program: &Program) -> Result<Lowered
         arrays,
         path: Vec::new(),
         bad_states: Vec::new(),
+        scopes: Vec::new(),
     };
     lowerer.lower_block(&program.body)?;
 

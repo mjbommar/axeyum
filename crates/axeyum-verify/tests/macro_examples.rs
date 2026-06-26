@@ -262,6 +262,32 @@ fn bounded_while_is_verified() {
     }
 }
 
+// ---- (f) SAFE: arm-local shadow must not leak (env-merge edge case) -------------
+
+/// The outer `q` stays 5 after the `if` — the inner `let q` shadows it only
+/// within the arm. A merge that leaked the shadow would report a phantom bug; the
+/// generated test would then fail to reproduce it. Verifying confirms the
+/// shadow is correctly scoped end-to-end through the macro.
+#[verify]
+#[allow(clippy::no_effect, unused_variables)]
+fn shadow_ok(c: bool) -> u8 {
+    let q: u8 = 5;
+    if c {
+        let q: u8 = 99;
+        assert!(q == 99);
+    }
+    assert!(q == 5);
+    q
+}
+
+#[test]
+fn arm_local_shadow_verifies_via_macro() {
+    match shadow_ok__axeyum_verdict() {
+        Verdict::Verified { .. } => {}
+        other => panic!("arm-local shadow must verify (no leak), got {other:?}"),
+    }
+}
+
 // ---- helper --------------------------------------------------------------------
 
 fn int_bits(inputs: &[Witness], name: &str) -> u128 {
