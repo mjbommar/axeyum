@@ -533,6 +533,17 @@ a named mechanism.**
    The next AUFLIA move is replay-gated direct array-equality branch repair, or
    a branch-schedule projection that chooses equality direction from readback
    support.
+   **Branch array-equality repair landed later 2026-06-26:** a single false
+   direct array equality in the chosen branch is now repaired by copying the side
+   with stronger projected readback evidence into the weaker side, scored by
+   non-default projected entries and direct asserted `select` support, then
+   aligning scalar readbacks for the target. This remains full-replay gated.
+   `bug337` still does not close, but the first false replay point moves to
+   generated branch ordinal **233**, term **10144**; best branch **0** now has
+   **2/8** false literals. The first is `x_17 = store(x_2, x_15, 2)`, with
+   `x_17` carrying `[0 -> 1]`, `[1 -> 3]`, `[2 -> 3]` and the RHS store carrying
+   incompatible `[1 -> 2]`, `[2 -> 1]`. The next AUFLIA move is a multi-literal
+   branch-schedule/store-chain projection for this queue-lock branch.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

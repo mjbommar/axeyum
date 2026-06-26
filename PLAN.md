@@ -1758,6 +1758,18 @@ against competitor source, are now binding:
      `x_325` is still default. Next useful work is replay-gated direct
      array-equality branch repair, or the more general branch-schedule projection
      that chooses equality direction from readback support.
+     **BRANCH ARRAY-EQUALITY REPAIR LANDED (2026-06-26):** a single false direct
+     array equality in the chosen branch is now repaired by copying the side with
+     stronger projected readback evidence into the weaker side, scored by
+     non-default projected entries and direct asserted `select` support, then
+     aligning scalar readbacks for the target. This is still full-replay gated.
+     `bug337` still does not close, but the first false replay point moves again:
+     generated branch ordinal 233 / term 10144, best branch 0, now **two** false
+     literals. The first is `x_17 = store(x_2, x_15, 2)`, where `x_17` has
+     `[0 -> 1]`, `[1 -> 3]`, `[2 -> 3]` and the RHS store has incompatible
+     `[1 -> 2]`, `[2 -> 1]`. Next useful work is a multi-literal branch-schedule
+     / store-chain projection for the queue-lock branch, not more one-literal
+     local repair.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
