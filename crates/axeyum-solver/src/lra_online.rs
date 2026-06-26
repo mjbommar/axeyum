@@ -45,6 +45,7 @@
 //! a conservative [`CheckResult::Unknown`] verdict.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::fmt;
 use std::time::Instant;
 
 use axeyum_ir::{
@@ -1011,6 +1012,8 @@ pub(crate) struct Dpll {
     /// The current decision level (incremented on every decision, restored on
     /// backjump).
     decision_level: usize,
+    /// Number of Boolean decisions attempted by the search.
+    decisions: usize,
     /// `VSIDS` activity per variable (higher ⇒ decided sooner). Bumped for every
     /// variable that participates in a conflict's 1-UIP resolution
     /// ([`Self::analyze_conflict`]); decided most-active-first by
@@ -1059,6 +1062,8 @@ pub(crate) struct Dpll {
     /// restart). Bumped once per conflict in [`Self::learn_and_backjump`] and
     /// compared against [`Self::restart_limit`] in [`Self::solve`].
     conflicts_since_restart: usize,
+    /// Total Boolean/theory conflicts analyzed by this search.
+    conflicts: usize,
     /// The Luby-sequence index (1-based; advances by one on each restart), so the
     /// next restart fires after `luby(restart_count) * LUBY_UNIT` conflicts.
     /// Restarting is verdict-invariant: it abandons only the current partial
@@ -1078,6 +1083,48 @@ pub(crate) struct Dpll {
     /// conflict-clause lengths). Compiled out of the production library.
     #[cfg(test)]
     diag: Diagnostics,
+}
+
+/// Stable snapshot of the shared online DPLL(T) state for timeout diagnostics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DpllStats {
+    vars: usize,
+    theory_atoms: usize,
+    clauses: usize,
+    original_clauses: usize,
+    learned_live: usize,
+    learned_deleted: usize,
+    trail: usize,
+    decision_level: usize,
+    decisions: usize,
+    conflicts: usize,
+    conflicts_since_restart: usize,
+    restarts: u64,
+    reductions: usize,
+}
+
+impl fmt::Display for DpllStats {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "vars={}, theory_atoms={}, clauses={} (original={}, learned_live={}, \
+             learned_deleted={}), trail={}, decision_level={}, decisions={}, conflicts={}, \
+             conflicts_since_restart={}, restarts={}, reductions={}",
+            self.vars,
+            self.theory_atoms,
+            self.clauses,
+            self.original_clauses,
+            self.learned_live,
+            self.learned_deleted,
+            self.trail,
+            self.decision_level,
+            self.decisions,
+            self.conflicts,
+            self.conflicts_since_restart,
+            self.restarts,
+            self.reductions
+        )
+    }
 }
 
 /// Test-only counters proving the 1-UIP analysis fires and that its asserting
@@ -1130,6 +1177,7 @@ impl Dpll {
             reason_theory: vec![false; var_count],
             reason_clause: vec![None; var_count],
             decision_level: 0,
+            decisions: 0,
             activity: vec![0.0; var_count],
             var_inc: 1.0,
             saved_phase: vec![true; var_count],
@@ -1141,6 +1189,7 @@ impl Dpll {
             reductions: 0,
             learned_live: 0,
             conflicts_since_restart: 0,
+            conflicts: 0,
             restart_count: 1,
             #[cfg(test)]
             reduce_first_override: None,
@@ -1681,6 +1730,25 @@ impl Dpll {
         self.value.get(var).copied().flatten()
     }
 
+    /// Snapshot of the current search state for budget/timeout diagnostics.
+    pub(crate) fn stats(&self) -> DpllStats {
+        DpllStats {
+            vars: self.var_count,
+            theory_atoms: self.atom_count,
+            clauses: self.clauses.len(),
+            original_clauses: self.num_original,
+            learned_live: self.learned_live,
+            learned_deleted: (self.clauses.len() - self.num_original) - self.learned_live,
+            trail: self.trail.len(),
+            decision_level: self.decision_level,
+            decisions: self.decisions,
+            conflicts: self.conflicts,
+            conflicts_since_restart: self.conflicts_since_restart,
+            restarts: self.restart_count - 1,
+            reductions: self.reductions,
+        }
+    }
+
     /// Test-only: the number of 1-UIP conflict analyses run (the "the loop fires"
     /// diagnostic for the `QF_UFLRA` real-`CDCL(T)` layer, mirroring the `LRA` driver's
     /// own `analyze_fires` gate).
@@ -1827,6 +1895,7 @@ impl Dpll {
                 None => return Some(false),
                 Some(var) => {
                     self.decision_level += 1;
+                    self.decisions += 1;
                     theory.push();
                     // Phase saving: branch on the variable's last-settled polarity
                     // (its `saved_phase`, initialized to `true` so a never-yet-seen
@@ -1865,6 +1934,7 @@ impl Dpll {
         // the single chokepoint every conflict (Boolean or theory) routes through,
         // so one bump here counts each conflict exactly once. Heuristic only.
         self.conflicts_since_restart += 1;
+        self.conflicts += 1;
         #[cfg(test)]
         {
             self.diag.analyze_fires += 1;

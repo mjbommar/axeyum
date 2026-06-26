@@ -821,9 +821,10 @@ pub fn check_qf_lia_online(
         Some(true) => return Ok(CheckResult::Unsat),
         Some(false) => {}
         None => {
+            let stats = solver.stats();
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::Timeout,
-                detail: "online LIA DPLL(T) exhausted the configured timeout".to_owned(),
+                detail: format!("online LIA DPLL(T) exhausted the configured timeout ({stats})"),
             }));
         }
     }
@@ -993,6 +994,29 @@ mod tests {
     fn ivar(arena: &mut TermArena, name: &str) -> TermId {
         let s = arena.declare(name, Sort::Int).expect("declare int");
         arena.var(s)
+    }
+
+    #[test]
+    fn online_lia_timeout_reports_dpll_stats() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let zero = iconst(&mut arena, 0);
+        let ge = arena.int_ge(x, zero).expect("x>=0");
+
+        let config = SolverConfig::default().with_timeout(std::time::Duration::ZERO);
+        let verdict = check_qf_lia_online(&arena, &[ge], &config).expect("timeout result");
+        let CheckResult::Unknown(reason) = verdict else {
+            panic!("expected timeout unknown");
+        };
+
+        assert_eq!(reason.kind, UnknownKind::Timeout);
+        assert!(reason.detail.contains("vars="), "{:?}", reason.detail);
+        assert!(
+            reason.detail.contains("theory_atoms=1"),
+            "{:?}",
+            reason.detail
+        );
+        assert!(reason.detail.contains("decisions=0"), "{:?}", reason.detail);
     }
 
     #[test]

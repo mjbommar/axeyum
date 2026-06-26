@@ -6,6 +6,34 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — online LIA timeout stats expose first-propagation cost.**
+  Added a stable stats snapshot for the shared online DPLL(T) engine and wired it
+  into `check_qf_lia_online` timeout `Unknown` details. The counters report
+  variables, theory atoms, clause counts, live/deleted learned clauses, trail
+  depth, decision level, decisions, conflicts, conflicts since restart, restarts,
+  and reductions. A zero-timeout regression pins that online LIA timeout reports
+  include these stats without changing verdict behavior.
+
+  Short diagnostics on both generated QF_UFLIA overbound rows now show the
+  immediate bottleneck more precisely: the generic opaque-app `lia-dpll` path
+  times out with **vars=3873**, **theory_atoms=485**, **clauses=10651**,
+  **trail=1314**, **decision_level=1**, **decisions=1**, **conflicts=0**,
+  **learned_live=0**, **restarts=0**, and **reductions=0**. This is not a
+  conflict-learning / restart-policy stall; the budget is being spent before the
+  first meaningful SAT skeleton exploration, during giant initial propagation and
+  repeated LIA feasibility checks. **Next:** attack this route with relevance
+  filtering, batched/cheap propagation, or a first-model/skeleton precheck before
+  pushing 1k+ propagated literals through incremental LIA.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib online_lia_timeout_reports_dpll_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
 - **Session 2026-06-26 — bounded pre-LIA UF+arithmetic probe added.**
   Added a cloned, bounded pre-LIA probe for non-array integer UF+arithmetic
   instances whose eager Ackermann pair count is over the deterministic bound.
@@ -4218,6 +4246,12 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **Online LIA timeout stats added.**
+  Online LIA DPLL(T) timeouts now include search-state counters. The generated
+  QF_UFLIA overbound rows time out at 1 s with one decision, zero conflicts, no
+  learned clauses, and a 1314-literal trail, pointing next work at relevance /
+  propagation cost rather than conflict-learning churn.
 
 - **2026-06-26** — **Bounded pre-LIA UF+arithmetic probe added.**
   Over-eager-bound non-array integer UF+arithmetic queries now get a cloned,

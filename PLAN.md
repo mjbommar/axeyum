@@ -273,6 +273,18 @@ against competitor source, are now binding:
    solve and costs seconds even with a tiny nominal timeout. Their next lever is
    not "try lazy CEGAR earlier" anymore; it is a cheaper relevance/global-deadline
    or first-model strategy for the 873-atom arithmetic Boolean skeleton.
+   **ONLINE LIA TIMEOUT STATS LANDED (2026-06-26):**
+   online LIA DPLL(T) timeouts now report a stable search-state snapshot
+   (variables, theory atoms, clause counts, trail depth, decisions, conflicts,
+   restarts, reductions). On both generated QF_UFLIA overbound rows at 1 s the
+   generic opaque-app LIA path times out with **vars=3873**, **theory_atoms=485**,
+   **clauses=10651**, **trail=1314**, **decisions=1**, **conflicts=0**,
+   **learned_live=0**, and **restarts=0**. This rules out conflict-learning churn
+   as the immediate short-budget blocker: the route burns its budget during the
+   first giant propagation / repeated LIA-feasibility phase before any useful SAT
+   skeleton exploration. Next work should add relevance filtering, batched/cheap
+   propagation, or a first-model/skeleton precheck before asserting 1k+ literals
+   through the incremental LIA theory.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
