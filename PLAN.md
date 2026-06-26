@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 649 decided, 598 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 651 decided, 600 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **649 decided**,
-   **598 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **651 decided**,
+   **600 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -225,6 +225,17 @@ against competitor source, are now binding:
    **0.002 s**. The exact dominance audit is refreshed at **6/6 dominant
    (100.0%)**, **Lean unsat 2/2 (100.0%)**, with **mismatches=0**,
    **audit_errors=0**, and **timeouts=0**.
+   **QF_UFLIA PARENT ROW REMEASURE LANDED (2026-06-26):**
+   the parent cvc5-regress-clean QF_UFLIA baseline was still a stale bounded
+   snapshot. Re-running it over the actual parent corpus now records
+   **6/8 decided (75.0%)**, **unsupported=0**, **oracle-compared=6/8**,
+   **DISAGREE=0**, and PAR-2 mean **5.001 s**. The two remaining blockers are
+   the real overbound `Timeout` rows, not parser/command-surface unsupported
+   rows. A narrow paired-bound substitution prototype was tested and deliberately
+   not committed: even after avoiding recursive-rewrite stack overflow on the
+   generated formulas, it did not certify the overbound rows within the 10 s
+   budget. The next useful move there is a deeper arithmetic/UF Boolean-skeleton
+   reduction, not another shallow equality-propagation seed.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

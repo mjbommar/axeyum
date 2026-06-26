@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 598 oracle-compared instances (992 files total, 649 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 600 oracle-compared instances (992 files total, 651 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -56,11 +56,11 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 8 | 100% | 0 | 0 | 0 | 0 | :status | 0.003 |
 | QF_UFLIA | `qf-uflia-curated-named` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 0.001 |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 6 | 6 | 100% | 0 | 0 | 6 | 0 | z3-binary | 0.002 |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean` | 8 | 4 | 50% | 0 | 4 | 4 | 0 | z3-binary | 0.000 |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean` | 8 | 6 | 75% | 2 | 0 | 6 | 0 | z3-binary | 5.001 |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | 2 | 0 | 0 | 0 | :status | 20.000 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 649 decided, 598 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 651 decided, 600 oracle-compared, **0 disagreements.**
 
 ## Progress frontiers (lever depth)
 
