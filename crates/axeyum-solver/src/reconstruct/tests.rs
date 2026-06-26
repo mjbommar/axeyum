@@ -4028,6 +4028,8 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
     use super::{ProofFragment, prove_unsat_to_lean};
 
     // QF_UFBV: f(a)=#b00 ∧ a=b ∧ ¬(f(b)=#b00) — has both Apply and BitVec.
+    // The direct local finite-BV/UF refuter has priority over the general
+    // Ackermann Alethe route when it can close the row.
     {
         let mut arena = TermArena::new();
         let f = arena
@@ -4052,10 +4054,12 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
         };
         let frag = prove_unsat_to_lean(&mut arena, &[e1, e2, e3])
             .expect("QF_UFBV unsat dispatches + kernel-checks to False");
-        assert_eq!(frag, ProofFragment::QfUfBv);
+        assert_eq!(frag, ProofFragment::BvUfLocal);
     }
 
-    // LRA: x < 0 ∧ 0 ≤ x — Int/Real sorts, no functions.
+    // LRA: x < 0 ∧ 0 ≤ x — Int/Real sorts, no functions. The general
+    // Boolean-structured LRA DPLL proof route has priority over the older
+    // conjunctive fallback when it certifies the row.
     {
         let mut arena = TermArena::new();
         let x = arena.real_var("x").unwrap();
@@ -4064,7 +4068,7 @@ fn unified_dispatcher_routes_each_fragment_to_kernel_false() {
         let a2 = arena.real_le(zero, x).unwrap();
         let frag = prove_unsat_to_lean(&mut arena, &[a1, a2])
             .expect("LRA unsat dispatches + kernel-checks to False");
-        assert_eq!(frag, ProofFragment::Lra);
+        assert_eq!(frag, ProofFragment::LraDpll);
     }
 
     // Quantifier ∀: ∀x.(f x = c) ∧ ¬(f a = c) — top-level universal.

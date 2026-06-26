@@ -6,6 +6,36 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — arithmetic order polarity shrinks UFLIA skeletons.**
+  The arithmetic DPLL abstractor now represents strict order atoms as Boolean
+  negations of their non-strict reversed-order representative: `a < b` is
+  abstracted as `¬(b <= a)`, and `a > b` as `¬(a <= b)`, for both Int and Real.
+  This makes an order atom and its negation share one SAT variable instead of
+  entering the theory loop as unrelated atoms. The Boolean skeleton simplifier
+  also folds the generated definition-tautology shapes common in cvc5's
+  justification regressions, including `¬(A ∧ B) ∨ A`, `¬(A ∧ B) ∨ B`, and
+  `(A ∧ B) ∨ ¬A ∨ ¬B`. With the smaller abstraction, adjacent bound-implication
+  seeding is admitted up to 512 atoms.
+
+  The two generated QF_UFLIA overbound rows are still `unknown`, but the 1 s
+  trace moved from **873 atoms / 1433 bound lemmas / ~32 rounds** to
+  **461 atoms / 372 bound lemmas / 61 rounds**. At 10 s, the first row reaches a
+  real UF CEGAR candidate (**sat_candidates=1**), checks all **282** possible
+  function-consistency pairs, and adds **5** Ackermann lemmas before the second
+  abstraction solve times out. The next blocker is now the post-CEGAR
+  477-atom arithmetic skeleton after those UF lemmas, not the initial duplicated
+  order/complement noise.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib abstractor_ -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib upfront_integer_bound_implication_lemmas_are_certified -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib overbound_integer_uf_arith_skips_generic_lia_dpll_for_uf_routes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
 - **Session 2026-06-26 — LIA LP core diagnostics expose small-core search.**
   Integer linear collection now stamps every generated simplex constraint with
   its source assertion, and the solver exposes a self-checked
@@ -4296,7 +4326,7 @@ plan is built and committed on the current branch:
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
-| P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **EUF+LIA/LRA combination landed & dispatched (QF_UFLIA/UFLRA), complete for conjunctive UNSAT**: `declare_fun` admits Int/Real UF sorts, and `check_with_uf_arithmetic` (eager Ackermann → `check_auto`) decides the squeeze + `f(x+0)≠f(x)` + nested `f(g(a))≠f(g(b))∧a=b` UNSAT; `check_auto` routes arithmetic UF there. SAT model for arith UF degrades to sound Unknown (project_model scalar-keys). Plus the combination primitives `theory_combination` (shared/propose/classify/arrangement) + `th_eq` bus (`theory_var_classes`/`interface_th_eqs`). Earlier: **T1.6.1 shared-term discovery landed** (`theory_combination::shared_terms`): the BV-sorted EUF/BV interface terms (arg-or-result of `Op::Apply` ∩ operand-or-result of an interpreted BV op), deterministic, the foundation for the `th_eq` bus + interface-equality case-splitting. Plus the earlier **lazy/on-demand Ackermann for QF_UFBV** (`check_qf_ufbv_lazy`): CEGAR functional-consistency lemmas (abstract apps → fresh vars; add `(⋀ args=) ⇒ result=` only on a model-observed violation; re-solve to fixpoint). Sound (relaxation ⇒ UNSAT transfers; sat replays) + terminating; 300-formula differential vs eager `check_with_all_theories` (all agree). Remaining: wire into dispatch; then the full online interface-equality (Nelson–Oppen) combination of the e-graph + BV to drop the Ackermann reduction entirely |
+| P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **EUF+LIA/LRA combination landed & dispatched (QF_UFLIA/UFLRA), complete for conjunctive UNSAT**: `declare_fun` admits Int/Real UF sorts, and `check_with_uf_arithmetic` (eager Ackermann → `check_auto`) decides the squeeze + `f(x+0)≠f(x)` + nested `f(g(a))≠f(g(b))∧a=b` UNSAT; `check_auto` routes arithmetic UF there. SAT model for arith UF degrades to sound Unknown (project_model scalar-keys). The QF_UFLIA overbound lazy CEGAR path now avoids duplicate generic LIA timeouts and collapses strict/non-strict order complements in the arithmetic skeleton: the generated rows shrink to **461 atoms** at 1 s and reach real UF consistency candidates at 10 s, but still time out in the post-CEGAR arithmetic abstraction. Plus the combination primitives `theory_combination` (shared/propose/classify/arrangement) + `th_eq` bus (`theory_var_classes`/`interface_th_eqs`). Earlier: **T1.6.1 shared-term discovery landed** (`theory_combination::shared_terms`): the BV-sorted EUF/BV interface terms (arg-or-result of `Op::Apply` ∩ operand-or-result of an interpreted BV op), deterministic, the foundation for the `th_eq` bus + interface-equality case-splitting. Plus the earlier **lazy/on-demand Ackermann for QF_UFBV** (`check_qf_ufbv_lazy`): CEGAR functional-consistency lemmas (abstract apps → fresh vars; add `(⋀ args=) ⇒ result=` only on a model-observed violation; re-solve to fixpoint). Sound (relaxation ⇒ UNSAT transfers; sat replays) + terminating; 300-formula differential vs eager `check_with_all_theories` (all agree). Remaining: post-CEGAR arithmetic-skeleton relevance/assumption-core solving for hard QF_UFLIA, then the full online interface-equality (Nelson–Oppen) combination of the e-graph + BV to drop the Ackermann reduction entirely |
 | P1.7 | PBLS local-search BV engine (portfolio) | WIP — **word-level WalkSAT landed** (`solve_local_search` + `PblsBackend`, `pbls.rs`): keeps a concrete Bool/BitVec(≤128) assignment, scores by evaluator-falsified assertions, nudges a variable in an unsatisfied assertion (greedy + WalkSAT noise + random restarts) toward a model. One-sided + sound: `Sat` only with an evaluator-verified model, never `Unsat`, `Unknown` (incl. out-of-scope sorts) otherwise. Read-only on the arena (fits the trait); deterministic (fixed seed, explicit budgets). 4 unit + an ignored 150-formula differential vs the eager backend (never contradicts). Remaining: integrate as a portfolio strategy; tune moves/budgets; measure on satisfiable corpora |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO — Codex review recommends promoting this from cleanup to risk control: split `solve()` into explicit tactic contracts with fragment predicates, transformation class, replay/proof obligation, resource behavior, and benchmark-visible per-step metrics |
 
@@ -4335,6 +4365,16 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **Arithmetic order polarity abstraction shrank UFLIA.**
+  Strict arithmetic orders now abstract as Boolean negations of non-strict
+  reversed-order representatives, and generated Boolean definition tautologies
+  are folded before SAT encoding. The QF_UFLIA overbound rows still return
+  `unknown`, but their 1 s abstraction shrank from 873 to 461 atoms and now
+  reaches roughly 61 lazy-LIA rounds; at 10 s it reaches a UF CEGAR candidate and
+  adds Ackermann lemmas before timing out in the post-CEGAR arithmetic skeleton.
+  Full `axeyum-solver` library tests pass again after aligning two proof-route
+  priority assertions with the current dispatcher.
 
 - **2026-06-26** — **LIA LP core diagnostics added.**
   Integer simplex collection now preserves assertion origins and exposes a

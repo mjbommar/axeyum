@@ -40,7 +40,7 @@ const ATOM_PREFIX: &str = "!arith_atom_";
 const MAX_DPLL_ROUNDS: usize = 10_000;
 const MAX_INITIAL_BOUND_MUTEX_LEMMAS: usize = 8_192;
 const MAX_INITIAL_BOUND_IMPLICATION_LEMMAS: usize = 4_096;
-const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 256;
+const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 512;
 const MAX_MINIMIZED_THEORY_CORE_ATOMS: usize = 128;
 const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
@@ -1695,17 +1695,15 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         args: &[TermId],
     ) -> Result<TermId, SolverError> {
-        let a = self.abstract_term(arena, args[0])?;
-        if matches!(bool_const_value(arena, a), Some(false)) {
-            return Ok(a);
+        let mut terms = Vec::with_capacity(args.len());
+        for &arg in args {
+            let term = self.abstract_term(arena, arg)?;
+            if matches!(bool_const_value(arena, term), Some(false)) {
+                return Ok(term);
+            }
+            terms.push(term);
         }
-        let b = self.abstract_term(arena, args[1])?;
-        match (bool_const_value(arena, a), bool_const_value(arena, b)) {
-            (_, Some(false)) | (Some(true), _) => Ok(b),
-            (_, Some(true)) => Ok(a),
-            _ if a == b => Ok(a),
-            _ => Ok(arena.and(a, b)?),
-        }
+        simplify_bool_and(arena, terms)
     }
 
     fn abstract_or(
@@ -1713,17 +1711,15 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         args: &[TermId],
     ) -> Result<TermId, SolverError> {
-        let a = self.abstract_term(arena, args[0])?;
-        if matches!(bool_const_value(arena, a), Some(true)) {
-            return Ok(a);
+        let mut terms = Vec::with_capacity(args.len());
+        for &arg in args {
+            let term = self.abstract_term(arena, arg)?;
+            if matches!(bool_const_value(arena, term), Some(true)) {
+                return Ok(term);
+            }
+            terms.push(term);
         }
-        let b = self.abstract_term(arena, args[1])?;
-        match (bool_const_value(arena, a), bool_const_value(arena, b)) {
-            (_, Some(true)) | (Some(false), _) => Ok(b),
-            (_, Some(false)) => Ok(a),
-            _ if a == b => Ok(a),
-            _ => Ok(arena.or(a, b)?),
-        }
+        simplify_bool_or(arena, terms)
     }
 
     fn abstract_xor(
@@ -1786,6 +1782,9 @@ impl ArithAbstractor {
         if let Some(value) = bool_const_value(arena, term) {
             return Ok(arena.bool_const(!value));
         }
+        if let Some(inner) = bool_not_child(arena, term) {
+            return Ok(inner);
+        }
         Ok(arena.not(term)?)
     }
 
@@ -1798,38 +1797,6 @@ impl ArithAbstractor {
         match node {
             TermNode::BoolConst(value) => Ok(arena.bool_const(!value)),
             TermNode::App { op, args } => match op {
-                Op::IntLt => {
-                    let ge = arena.int_ge(args[0], args[1])?;
-                    self.abstract_term(arena, ge)
-                }
-                Op::IntLe => {
-                    let gt = arena.int_gt(args[0], args[1])?;
-                    self.abstract_term(arena, gt)
-                }
-                Op::IntGt => {
-                    let le = arena.int_le(args[0], args[1])?;
-                    self.abstract_term(arena, le)
-                }
-                Op::IntGe => {
-                    let lt = arena.int_lt(args[0], args[1])?;
-                    self.abstract_term(arena, lt)
-                }
-                Op::RealLt => {
-                    let ge = arena.real_ge(args[0], args[1])?;
-                    self.abstract_term(arena, ge)
-                }
-                Op::RealLe => {
-                    let gt = arena.real_gt(args[0], args[1])?;
-                    self.abstract_term(arena, gt)
-                }
-                Op::RealGt => {
-                    let le = arena.real_le(args[0], args[1])?;
-                    self.abstract_term(arena, le)
-                }
-                Op::RealGe => {
-                    let lt = arena.real_lt(args[0], args[1])?;
-                    self.abstract_term(arena, lt)
-                }
                 Op::Eq if args[0] == args[1] => Ok(arena.bool_const(false)),
                 _ => {
                     let a = self.abstract_term(arena, inner)?;
@@ -1857,17 +1824,24 @@ impl ArithAbstractor {
                 Op::IntLe | Op::IntGe | Op::RealLe | Op::RealGe
             )));
         }
-        let canonical = match op {
-            Op::IntLt | Op::IntLe | Op::RealLt | Op::RealLe => term,
-            Op::IntGt => arena.int_lt(args[1], args[0])?,
-            Op::IntGe => arena.int_le(args[1], args[0])?,
-            Op::RealGt => arena.real_lt(args[1], args[0])?,
-            Op::RealGe => arena.real_le(args[1], args[0])?,
+        let (canonical, polarity) = match op {
+            Op::IntLe | Op::RealLe => (term, true),
+            Op::IntGe => (arena.int_le(args[1], args[0])?, true),
+            Op::IntLt => (arena.int_le(args[1], args[0])?, false),
+            Op::IntGt => (arena.int_le(args[0], args[1])?, false),
+            Op::RealGe => (arena.real_le(args[1], args[0])?, true),
+            Op::RealLt => (arena.real_le(args[1], args[0])?, false),
+            Op::RealGt => (arena.real_le(args[0], args[1])?, false),
             _ => unreachable!("order_atom called only for arithmetic order atoms"),
         };
         Self::ensure_supported_atom(arena, canonical, theory)?;
         let prop = self.atom(arena, canonical, theory);
-        Ok(arena.var(prop))
+        let prop_term = arena.var(prop);
+        if polarity {
+            Ok(prop_term)
+        } else {
+            Self::negate_abstracted(arena, prop_term)
+        }
     }
 
     fn ensure_supported_atom(
@@ -1916,6 +1890,193 @@ fn bool_const_value(arena: &TermArena, term: TermId) -> Option<bool> {
         TermNode::BoolConst(value) => Some(*value),
         _ => None,
     }
+}
+
+fn simplify_bool_and(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId, SolverError> {
+    let mut flat = Vec::new();
+    for term in terms {
+        flatten_bool_and(arena, term, &mut flat);
+    }
+
+    let mut active = Vec::new();
+    for term in flat {
+        match bool_const_value(arena, term) {
+            Some(false) => return Ok(arena.bool_const(false)),
+            Some(true) => continue,
+            None => {}
+        }
+        if active.contains(&term) {
+            continue;
+        }
+        if active
+            .iter()
+            .any(|&existing| bool_terms_are_complements(arena, existing, term))
+        {
+            return Ok(arena.bool_const(false));
+        }
+        active.push(term);
+    }
+    if bool_and_is_contradiction(arena, &active) {
+        return Ok(arena.bool_const(false));
+    }
+    rebuild_bool_and(arena, active)
+}
+
+fn simplify_bool_or(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId, SolverError> {
+    let mut flat = Vec::new();
+    for term in terms {
+        flatten_bool_or(arena, term, &mut flat);
+    }
+
+    let mut active = Vec::new();
+    for term in flat {
+        match bool_const_value(arena, term) {
+            Some(true) => return Ok(arena.bool_const(true)),
+            Some(false) => continue,
+            None => {}
+        }
+        if active.contains(&term) {
+            continue;
+        }
+        if active
+            .iter()
+            .any(|&existing| bool_terms_are_complements(arena, existing, term))
+        {
+            return Ok(arena.bool_const(true));
+        }
+        active.push(term);
+    }
+    if bool_or_is_tautology(arena, &active) {
+        return Ok(arena.bool_const(true));
+    }
+    rebuild_bool_or(arena, active)
+}
+
+fn flatten_bool_and(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+    {
+        for &arg in args {
+            flatten_bool_and(arena, arg, out);
+        }
+    } else {
+        out.push(term);
+    }
+}
+
+fn flatten_bool_or(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    if let TermNode::App {
+        op: Op::BoolOr,
+        args,
+    } = arena.node(term)
+    {
+        for &arg in args {
+            flatten_bool_or(arena, arg, out);
+        }
+    } else {
+        out.push(term);
+    }
+}
+
+fn bool_not_child(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    Some(args[0])
+}
+
+fn bool_terms_are_complements(arena: &TermArena, a: TermId, b: TermId) -> bool {
+    bool_not_child(arena, a) == Some(b) || bool_not_child(arena, b) == Some(a)
+}
+
+fn bool_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
+    for &term in terms {
+        if let Some(inner) = bool_not_child(arena, term) {
+            let mut and_children = Vec::new();
+            flatten_bool_and(arena, inner, &mut and_children);
+            if and_children.len() > 1 && and_children.iter().any(|child| terms.contains(child)) {
+                return true;
+            }
+
+            let mut or_children = Vec::new();
+            flatten_bool_or(arena, inner, &mut or_children);
+            if or_children.len() > 1 && or_children.iter().all(|child| terms.contains(child)) {
+                return true;
+            }
+        } else {
+            let mut and_children = Vec::new();
+            flatten_bool_and(arena, term, &mut and_children);
+            if and_children.len() > 1
+                && and_children.iter().all(|&child| {
+                    terms
+                        .iter()
+                        .any(|&t| bool_terms_are_complements(arena, t, child))
+                })
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn bool_and_is_contradiction(arena: &TermArena, terms: &[TermId]) -> bool {
+    for &term in terms {
+        if let Some(inner) = bool_not_child(arena, term) {
+            let mut or_children = Vec::new();
+            flatten_bool_or(arena, inner, &mut or_children);
+            if or_children.len() > 1 && or_children.iter().any(|child| terms.contains(child)) {
+                return true;
+            }
+
+            let mut and_children = Vec::new();
+            flatten_bool_and(arena, inner, &mut and_children);
+            if and_children.len() > 1 && and_children.iter().all(|child| terms.contains(child)) {
+                return true;
+            }
+        } else {
+            let mut or_children = Vec::new();
+            flatten_bool_or(arena, term, &mut or_children);
+            if or_children.len() > 1
+                && or_children.iter().all(|&child| {
+                    terms
+                        .iter()
+                        .any(|&t| bool_terms_are_complements(arena, t, child))
+                })
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn rebuild_bool_and(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId, SolverError> {
+    let mut iter = terms.into_iter();
+    let Some(mut acc) = iter.next() else {
+        return Ok(arena.bool_const(true));
+    };
+    for term in iter {
+        acc = arena.and(acc, term)?;
+    }
+    Ok(acc)
+}
+
+fn rebuild_bool_or(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId, SolverError> {
+    let mut iter = terms.into_iter();
+    let Some(mut acc) = iter.next() else {
+        return Ok(arena.bool_const(false));
+    };
+    for term in iter {
+        acc = arena.or(acc, term)?;
+    }
+    Ok(acc)
 }
 
 fn contains_int_uf_application(
@@ -2036,6 +2197,55 @@ mod tests {
             ctx.atoms.len(),
             1,
             "not (x < y) and y <= x must share one canonical arithmetic atom"
+        );
+    }
+
+    #[test]
+    fn abstractor_collapses_order_complements_to_boolean_negations() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let not_x_le_zero = arena.not(x_le_zero).unwrap();
+        let both = arena.and(x_le_zero, not_x_le_zero).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let folded = ctx.abstract_term(&mut arena, both).unwrap();
+        assert!(matches!(arena.node(folded), TermNode::BoolConst(false)));
+        assert_eq!(
+            ctx.atoms.len(),
+            1,
+            "an order atom and its negation should share one Boolean proposition"
+        );
+    }
+
+    #[test]
+    fn abstractor_folds_generated_boolean_definition_tautologies() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let x_ge_zero = arena.int_ge(xv, zero).unwrap();
+        let equality_pair = arena.and(x_le_zero, x_ge_zero).unwrap();
+        let not_pair = arena.not(equality_pair).unwrap();
+        let pair_implies_le = arena.or(not_pair, x_le_zero).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let folded = ctx.abstract_term(&mut arena, pair_implies_le).unwrap();
+        assert!(matches!(arena.node(folded), TermNode::BoolConst(true)));
+
+        let not_le = arena.not(x_le_zero).unwrap();
+        let not_ge = arena.not(x_ge_zero).unwrap();
+        let not_le_or_not_ge = arena.or(not_le, not_ge).unwrap();
+        let reverse_definition = arena.or(not_le_or_not_ge, equality_pair).unwrap();
+        let folded = ctx.abstract_term(&mut arena, reverse_definition).unwrap();
+        assert!(matches!(arena.node(folded), TermNode::BoolConst(true)));
+        assert_eq!(
+            ctx.atoms.len(),
+            2,
+            "the equality-pair tautologies should allocate only the two real bounds"
         );
     }
 

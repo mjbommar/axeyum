@@ -325,6 +325,20 @@ against competitor source, are now binding:
    many tiny bound conflicts in the generated arithmetic skeleton: assumption
    filtering, a cheaper first-model/core-producing loop, or branch-selector
    pruning.
+   **ARITHMETIC ORDER POLARITY SHRINK LANDED (2026-06-26):**
+   strict arithmetic orders now abstract as Boolean negations of their non-strict
+   reversed-order representative (`a < b` as `¬(b <= a)`, `a > b` as
+   `¬(a <= b)`) instead of allocating a second unrelated SAT atom for the
+   complement. The skeleton simplifier also folds generated Boolean-definition
+   tautologies (`¬(A∧B)∨A`, `¬(A∧B)∨B`, `(A∧B)∨¬A∨¬B`) before CNF encoding. On
+   both generated QF_UFLIA overbound rows at 1 s, the abstraction now reports
+   **461 atoms**, **372 upfront bound lemmas**, and **61** lazy-LIA rounds
+   (previously **873 / 1433 / ~32**). A 10 s diagnostic reaches an actual UF CEGAR
+   candidate, checks all **282** possible function-consistency pairs, and learns
+   **5** Ackermann lemmas before timing out in the second, **477-atom**
+   arithmetic abstraction. This is real search movement but not a row closure;
+   next work should target the post-CEGAR arithmetic skeleton, especially
+   assumption/core-guided solving or relevance pruning after UF lemmas are added.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

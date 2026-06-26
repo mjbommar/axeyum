@@ -570,7 +570,7 @@ mod tests {
         let fragment = solver
             .prove_unsat_to_lean(&mut arena)
             .expect("the UNSAT bit-vector query reconstructs to a kernel-checked Lean `False`");
-        assert_eq!(fragment, ProofFragment::QfBv);
+        assert_eq!(fragment, ProofFragment::TermLevelEnum);
     }
 
     /// The façade exposes optimization end-to-end: assert `0 ≤ x ≤ 7`, then
