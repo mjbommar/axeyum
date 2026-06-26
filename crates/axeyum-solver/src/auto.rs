@@ -1159,6 +1159,24 @@ fn dispatch_int_linear_refuters(
         }
         Err(other) => return Err(other),
     }
+    if should_route_uf_arith_before_lia_dpll(arena, assertions, features) {
+        let pairs = crate::euf::ackermann_congruence_pairs(arena, assertions);
+        with_recorder(rec, |t| {
+            t.record_declined(
+                "lia-dpll",
+                DeclineReason::from_unknown(&UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!(
+                        "generic LIA DPLL skipped for overbound non-array integer \
+                         UF+arithmetic query (ackermann_pairs={pairs}); route the single \
+                         large function-free arithmetic abstraction through the UF-aware \
+                         lazy CEGAR path instead"
+                    ),
+                }),
+            );
+        });
+        return Ok(None);
+    }
     match check_with_lia_dpll(arena, &lin, config) {
         Ok(mut result) => {
             if let CheckResult::Unknown(reason) = &result
@@ -1186,6 +1204,20 @@ fn dispatch_int_linear_refuters(
         }
         Err(other) => Err(other),
     }
+}
+
+fn should_route_uf_arith_before_lia_dpll(
+    arena: &TermArena,
+    assertions: &[TermId],
+    features: &Features,
+) -> bool {
+    features.has_int
+        && !features.has_real
+        && !features.has_array
+        && features.has_function
+        && has_arithmetic_function(arena)
+        && crate::euf::ackermann_congruence_pairs(arena, assertions)
+            > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS
 }
 
 fn annotate_lia_budget_before_uf(
@@ -4593,6 +4625,63 @@ mod tests {
         );
         assert!(annotated.detail.contains("arithmetic_function=true"));
         assert!(annotated.detail.contains("ackermann_pairs=1"));
+    }
+
+    #[test]
+    fn overbound_integer_uf_arith_skips_generic_lia_dpll_for_uf_routes() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Int], Sort::Int)
+            .expect("declare f");
+        let mut assertions = Vec::new();
+        for i in 0..12 {
+            let v = arena.int_var(&format!("x{i}")).expect("x");
+            let app = arena.apply(f, &[v]).expect("f(x)");
+            let value = arena.int_const(i as i128);
+            assertions.push(arena.eq(app, value).expect("pin app"));
+        }
+        while assertions.len() <= MAX_PRE_LIA_UF_PROBE_ASSERTIONS {
+            let i = assertions.len();
+            let pad = arena.int_var(&format!("pad{i}")).expect("pad");
+            let zero = arena.int_const(0);
+            assertions.push(arena.int_ge(pad, zero).expect("pad>=0"));
+        }
+
+        assert!(
+            crate::euf::ackermann_congruence_pairs(&arena, &assertions)
+                > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS
+        );
+        let features = Features::scan_within(&arena, &assertions, None).unwrap();
+        assert!(should_route_uf_arith_before_lia_dpll(
+            &arena,
+            &assertions,
+            &features
+        ));
+
+        let mut trace = RouteTrace::new();
+        let mut rec = Some(&mut trace);
+        let result = dispatch_int_linear_refuters(
+            &mut arena,
+            &assertions,
+            &SolverConfig::default(),
+            &features,
+            &mut rec,
+        )
+        .expect("dispatch");
+
+        assert!(
+            result.is_none(),
+            "linear refuters should fall through to UF routes"
+        );
+        let trace_text = trace.to_string();
+        assert!(
+            trace_text.contains("lia-dpll: declined"),
+            "trace should record the skipped generic LIA route, got:\n{trace_text}"
+        );
+        assert!(
+            trace_text.contains("route the single large function-free arithmetic abstraction"),
+            "trace should explain the UF-aware scheduling, got:\n{trace_text}"
+        );
     }
 
     #[test]

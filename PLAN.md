@@ -298,6 +298,20 @@ against competitor source, are now binding:
    **1433 bound lemmas**, **31-33 blocking lemmas**. The rows are still `unknown`;
    the next lever is the legacy 873-atom arithmetic refinement loop / route
    scheduling, not online DPLL(T)'s initial propagation.
+   **QF_UFLIA OVERBOUND ROUTE SCHEDULING LANDED (2026-06-26):**
+   large non-array integer UF+arithmetic queries whose Ackermann pair count is
+   over the eager bound now skip generic `lia-dpll` after the exact linear
+   refuters decline, and fall through to the UF-aware lazy CEGAR route. This
+   avoids solving the same large function-free arithmetic abstraction twice.
+   The generated overbound rows now trace as: pre-LIA cloned probe skipped
+   (`1248 > 256` assertions), `lia-simplex` unsupported, `lia-dpll` explicitly
+   skipped for overbound UF+arithmetic, then `uf-arith-lazy-overbound` owns the
+   single abstraction solve and reports **applications=42**, **function_groups=3**,
+   **potential_pairs=282**, **solve_rounds=1**, **sat_candidates=0**, and no
+   pair checks / lemmas before the 873-atom arithmetic abstraction times out after
+   about **32** lazy-LIA rounds. The rows remain `unknown`; next work is the
+   arithmetic abstraction itself (relevance / assumption filtering or a cheaper
+   first-model / UNSAT-core-producing skeleton loop), not more route duplication.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
