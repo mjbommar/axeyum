@@ -183,15 +183,11 @@ pub fn check_qf_uflia_online(
         if literals.is_empty() {
             return Ok(decline("no UFLIA literals for the online combination path"));
         }
-        if literals.len() > MAX_OPAQUE_BOOLEAN_ATOMS
-            && literals
-                .iter()
-                .any(|lit| is_opaque_lia_order_atom(arena, lit.atom))
-        {
-            return Ok(decline(format!(
-                "too many theory atoms for opaque-app online UFLIA: {} > {}",
+        let opaque_atoms = opaque_lia_order_literal_count(arena, &literals);
+        if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
+            return Ok(decline(large_opaque_online_detail(
                 literals.len(),
-                MAX_OPAQUE_BOOLEAN_ATOMS
+                opaque_atoms,
             )));
         }
         return Ok(decide_conjunction(arena, &literals));
@@ -777,6 +773,27 @@ fn is_opaque_lia_order_atom(arena: &TermArena, term: TermId) -> bool {
         }
         _ => false,
     }
+}
+
+fn opaque_lia_order_literal_count(arena: &TermArena, literals: &[Literal]) -> usize {
+    literals
+        .iter()
+        .filter(|lit| is_opaque_lia_order_atom(arena, lit.atom))
+        .count()
+}
+
+fn opaque_lia_order_atom_count(arena: &TermArena, atoms: &[TermId]) -> usize {
+    atoms
+        .iter()
+        .filter(|&&atom| is_opaque_lia_order_atom(arena, atom))
+        .count()
+}
+
+fn large_opaque_online_detail(total_atoms: usize, opaque_atoms: usize) -> String {
+    format!(
+        "too many theory atoms for opaque-app online UFLIA: opaque_app_order_atoms={opaque_atoms} \
+         > {MAX_OPAQUE_BOOLEAN_ATOMS}, total={total_atoms}"
+    )
 }
 
 /// The `EUF` assertion terms for the `EUF` literals: a `true` equality literal is its
@@ -1374,16 +1391,9 @@ fn check_qf_uflia_boolean(
             MAX_BOOLEAN_ATOMS
         ));
     }
-    if atom_terms.len() > MAX_OPAQUE_BOOLEAN_ATOMS
-        && atom_terms
-            .iter()
-            .any(|&atom| is_opaque_lia_order_atom(arena, atom))
-    {
-        return decline(format!(
-            "too many theory atoms for opaque-app online UFLIA: {} > {}",
-            atom_terms.len(),
-            MAX_OPAQUE_BOOLEAN_ATOMS
-        ));
+    let opaque_atoms = opaque_lia_order_atom_count(arena, &atom_terms);
+    if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
+        return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     if deadline.is_some_and(|d| Instant::now() >= d) {
@@ -1686,16 +1696,9 @@ fn check_qf_uflia_boolean_enumerative(
             MAX_BOOLEAN_ATOMS
         ));
     }
-    if atom_terms.len() > MAX_OPAQUE_BOOLEAN_ATOMS
-        && atom_terms
-            .iter()
-            .any(|&atom| is_opaque_lia_order_atom(arena, atom))
-    {
-        return decline(format!(
-            "too many theory atoms for opaque-app online UFLIA: {} > {}",
-            atom_terms.len(),
-            MAX_OPAQUE_BOOLEAN_ATOMS
-        ));
+    let opaque_atoms = opaque_lia_order_atom_count(arena, &atom_terms);
+    if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
+        return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
 
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));

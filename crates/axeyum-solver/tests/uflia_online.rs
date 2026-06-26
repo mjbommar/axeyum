@@ -202,6 +202,36 @@ fn large_opaque_int_app_online_skeleton_declines_before_search() {
 }
 
 #[test]
+fn large_total_atom_skeleton_with_small_opaque_subset_is_admitted() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let app = arena.apply(f, &[x]).unwrap();
+    let zero = iconst(&mut arena, 0);
+    let mut assertion = arena.int_le(app, zero).unwrap();
+
+    for i in 0..129 {
+        let y = ivar(&mut arena, &format!("y{i}"));
+        let bound = iconst(&mut arena, i);
+        let pure = arena.int_ge(y, bound).unwrap();
+        assertion = arena.or(assertion, pure).unwrap();
+    }
+
+    let config = SolverConfig::default().with_timeout(Duration::from_millis(100));
+    let online = check_qf_uflia_online(&mut arena, &[assertion], &config).unwrap();
+    assert!(
+        !matches!(
+            &online,
+            CheckResult::Unknown(reason)
+                if reason.detail.contains("too many theory atoms for opaque-app online UFLIA")
+        ),
+        "only the opaque-app subset should drive the opaque guard, got {online:?}"
+    );
+}
+
+#[test]
 fn interface_equality_forces_euf_contradiction_unsat() {
     // f(x) != f(y)  AND  x <= y  AND  y <= x.
     // LIA forces x = y; EUF then needs f(x) = f(y) by congruence, contradicting the

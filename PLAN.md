@@ -548,6 +548,18 @@ against competitor source, are now binding:
    **1** candidate, and **6** learned UF lemmas. Next practical work is using
    this deadline-safe substrate to relax/partition the guard or reducing
    LP-core-producing lazy branches.
+   **OPAQUE-APP ONLINE GUARD PARTITIONED BY OPAQUE ATOMS (2026-06-26):**
+   the online UFLIA opaque guard now counts actual opaque Int-UF order atoms
+   instead of treating total theory-atom count as the expensive proxy. Large
+   Boolean skeletons with a small opaque subset are admitted to the
+   deadline-aware path; a regression covers **>128** total atoms with only one
+   opaque order atom. The generated overbound rows remain guarded, now with a
+   precise count: **485** total theory atoms, **334** opaque-app order atoms,
+   declining as `opaque_app_order_atoms=334 > 128, total=485`. A broad cap-raise
+   experiment to **512** was rejected before commit because both 1 s direct
+   probes were still running after **30 s**. Next practical work is
+   construction-deadline checks or partitioned opaque-heavy admission, plus
+   opaque-app model lifting.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
