@@ -6,6 +6,38 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UF SAT evidence audit errors closed.**
+  Closed the two QF_UF bounded declared-sort SAT evidence audit errors. The
+  Diophantine and arithmetic-DPLL optional evidence prepasses now decline
+  queries with no Int/Real content before invoking arithmetic/BV machinery, so
+  declared-sort-only SAT rows fall through to the normal EUF/auto solver model
+  and replay through `Evidence::Sat`. This closes `parser/as` and `ite4`; both
+  now produce checked, trust-hole-free SAT evidence. The exact audit is refreshed
+  at **37/44 dominant (84.1%)**, **Lean unsat 8/14 (57.1%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=1**. The dominance report now
+  correctly labels the next action as **fix audit timeouts** rather than a
+  phantom audit error. Remaining QF_UF blockers are the `sets/card-6`
+  check-evidence timeout, the `sets/card` bit-blast trust-hole row, the
+  CNF/Boolean-normalization pure-UF proof gaps, and the guarded nonlinear
+  `unknown`. **Next:** fix the `sets/card-6` evidence timeout or add the sound
+  Boolean proof bridge for the `bare-unsat` pure-UF rows.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_parser_as_sat_evidence_replays_declared_sort_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_ite_sat_evidence_replays_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence satisfiable_uflia_opaque_arith_abstraction_still_replays_sat_model -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__parser__as.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__ite4.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 /tmp/qf-uf-bounded-dominance-audit-after-sat-errors-v2.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-26 — QF_UF declared-sort equality audit route.**
   The refreshed QF_UF bounded declared-sort row now has a committed exact
   dominance audit. `scan_proof_fragment` treats equality/disequality over
@@ -15,13 +47,13 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   it already had checked Alethe evidence, but Lean reconstruction was routed to
   the wrong fragment. The exact audit for
   `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` is now committed at
-  **36/44 dominant (81.8%)**, **Lean unsat 8/14 (57.1%)**,
-  **mismatches=0**, **audit_errors=2**, **timeouts=1**. The dominance report now
+  **37/44 dominant (84.1%)**, **Lean unsat 8/14 (57.1%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=1**. The dominance report now
   has **19 complete exact audit rows**. Remaining QF_UF blockers are concrete:
   Boolean-normalization proof bridges for `not =>`/CNF-shaped pure-UF rows,
-  replay-safe SAT evidence for `parser/as`, a Lean route for the set/card
-  bit-blast trust-hole row, the nonlinear-extension `unknown`, and one
-  check-evidence timeout. **Next:** fix the two audit errors first, then add a
+  a Lean route for the set/card bit-blast trust-hole row, the
+  nonlinear-extension `unknown`, and one check-evidence timeout. **Next:** fix
+  the timeout first, then add a
   sound Boolean proof bridge for the `bare-unsat` pure-UF rows.
   Verification passed:
   `cargo fmt --all --check`;

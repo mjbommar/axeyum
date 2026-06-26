@@ -1203,6 +1203,9 @@ fn produce_arith_dpll_evidence(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<Option<EvidenceReport>, SolverError> {
+    if !contains_arithmetic_content(arena, assertions) {
+        return Ok(None);
+    }
     let provenance = Provenance {
         semantics_version: SEMANTICS_VERSION,
         layers: LayerVersions::CURRENT,
@@ -1229,6 +1232,23 @@ fn produce_arith_dpll_evidence(
         Ok(ArithDpllOutcome::Unknown(_)) | Err(SolverError::Unsupported(_)) => Ok(None),
         Err(error) => Err(error),
     }
+}
+
+fn contains_arithmetic_content(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if matches!(arena.sort_of(term), Sort::Int | Sort::Real) {
+            return true;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 fn direct_pre_solve_structural_report(
@@ -1450,6 +1470,9 @@ pub fn produce_diophantine_evidence(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<Option<EvidenceReport>, SolverError> {
+    if !contains_arithmetic_content(arena, assertions) {
+        return Ok(None);
+    }
     let Some((equalities, certificate)) =
         prove_lia_unsat_by_diophantine_certified(arena, assertions)
     else {

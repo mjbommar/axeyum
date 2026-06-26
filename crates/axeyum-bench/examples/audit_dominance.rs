@@ -449,7 +449,7 @@ fn audit_instance_capped(path: PathBuf, baseline_outcome: Verdict, cap: Duration
             lean_checked: false,
             unsat: baseline_outcome == Verdict::Unsat,
             timed_out: true,
-            audit_error: true,
+            audit_error: false,
         }
     })
 }

@@ -200,6 +200,58 @@ fn qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate() {
 }
 
 #[test]
+fn qf_uf_parser_as_sat_evidence_replays_declared_sort_model() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_UF)
+        (declare-sort I 0)
+        (declare-fun e0 () I)
+        (assert (= (as e0 I) (as e0 I)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::Sat(_)),
+        "expected replayable SAT evidence for parser/as row, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(report.trusted_steps.is_empty());
+}
+
+#[test]
+fn qf_uf_declared_sort_ite_sat_evidence_replays_model() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_UF)
+        (declare-sort U 0)
+        (declare-fun x () U)
+        (declare-fun y () U)
+        (declare-fun a () Bool)
+        (assert (not (= x (ite a (ite a x y) (ite (not a) y x)))))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    assert!(
+        matches!(report.evidence, Evidence::Sat(_)),
+        "expected replayable SAT evidence for declared-sort ITE row, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(report.trusted_steps.is_empty());
+}
+
+#[test]
 fn qf_ufbv_finite_domain_pigeonhole_unsat_carries_certificate() {
     let mut script = parse_script(
         r"

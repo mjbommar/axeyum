@@ -185,12 +185,15 @@ against competitor source, are now binding:
    dominance audit. Equality-only conflicts over declared uninterpreted carrier
    sorts now route to the EUF Lean fragment even without an `Apply` node, and the
    zero-trust evidence lane tries the pure EUF Alethe congruence emitter directly.
-   This closes the `parallel-let` Lean gap and moves the exact row to
-   **36/44 dominant (81.8%)**, **Lean unsat 8/14 (57.1%)**, with
-   **mismatches=0**, **audit_errors=2**, and **timeouts=1**. Remaining QF_UF
-   blockers are now named audit gaps: two audit errors, Boolean-normalization
-   proof bridges for CNF-shaped pure-UF rows, one set/card bit-blast trust hole,
-   one nonlinear-extension `unknown`, and one check-evidence timeout.
+   This closes the `parallel-let` Lean gap. A follow-up SAT evidence pass made
+   the arithmetic/Diophantine optional evidence prepasses decline declared-sort
+   rows with no Int/Real content, closing the `parser/as` and `ite4` audit
+   errors. The exact row is now **37/44 dominant (84.1%)**,
+   **Lean unsat 8/14 (57.1%)**, with **mismatches=0**, **audit_errors=0**, and
+   **timeouts=1**. Remaining QF_UF blockers are now named audit gaps:
+   Boolean-normalization proof bridges for CNF-shaped pure-UF rows, one set/card
+   bit-blast trust hole, one nonlinear-extension `unknown`, and one
+   check-evidence timeout.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances
