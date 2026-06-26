@@ -199,6 +199,26 @@ pub enum Stmt {
         /// The loop body.
         body: Vec<Stmt>,
     },
+    /// `#[unwind(K)] while cond { body }` — bounded model checking by unrolling
+    /// up to `bound` iterations: each iteration runs `body` under the path
+    /// condition that `cond` (re-evaluated against the iteration's environment)
+    /// still holds. Panic classes in `body` are checked at every reachable
+    /// iteration; the guarantee is **bounded** ("no bug within `bound`
+    /// iterations"), exactly like [`bounded_model_check`]'s
+    /// `UnreachableWithinBound`. A data-dependent `cond` means later iterations
+    /// run under a narrower path condition (they may be infeasible), so the
+    /// check is sound without a fixed trip count.
+    ///
+    /// [`bounded_model_check`]: axeyum_solver::bounded_model_check
+    While {
+        /// The loop guard, re-evaluated per iteration.
+        cond: Expr,
+        /// The (maximum) number of iterations to unroll — the honest unwind
+        /// budget `K`.
+        bound: u128,
+        /// The loop body.
+        body: Vec<Stmt>,
+    },
 }
 
 /// A declared input (parameter) of the verified function.

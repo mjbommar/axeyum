@@ -48,6 +48,7 @@
 #![forbid(unsafe_code)]
 
 pub mod ast;
+pub mod bmc;
 pub mod lower;
 pub mod reproduce;
 pub mod verify;

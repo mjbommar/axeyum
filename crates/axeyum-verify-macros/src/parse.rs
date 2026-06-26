@@ -582,6 +582,13 @@ impl Lowerer {
                     });
                     return Ok(());
                 }
+                // compound assignment `name op= expr;` → `name = name op expr;`
+                if let Expr::Binary(b) = expr {
+                    if let Some(s) = self.try_lower_compound_assign(b)? {
+                        out.push(s);
+                        return Ok(());
+                    }
+                }
                 // a bare/tail expression: evaluate for side effects.
                 let _ = (semi, is_tail);
                 let (val, _ty) = self.lower_expr(expr)?;
@@ -598,6 +605,59 @@ impl Lowerer {
                 Ok(())
             }
         }
+    }
+
+    /// Recognize a compound assignment `name op= rhs` (`+=`, `-=`, …) and lower
+    /// it as `name = name op rhs;`. Returns `None` if `b.op` is not a compound
+    /// assignment (the caller then treats `b` as a value expression).
+    fn try_lower_compound_assign(&mut self, b: &ExprBinary) -> syn::Result<Option<TokenStream>> {
+        let variant = match b.op {
+            SynBinOp::AddAssign(_) => "Add",
+            SynBinOp::SubAssign(_) => "Sub",
+            SynBinOp::MulAssign(_) => "Mul",
+            SynBinOp::DivAssign(_) => "Div",
+            SynBinOp::RemAssign(_) => "Rem",
+            SynBinOp::BitAndAssign(_) => "BitAnd",
+            SynBinOp::BitOrAssign(_) => "BitOr",
+            SynBinOp::BitXorAssign(_) => "BitXor",
+            SynBinOp::ShlAssign(_) => "Shl",
+            SynBinOp::ShrAssign(_) => "Shr",
+            _ => return Ok(None),
+        };
+        let Expr::Path(p) = &*b.left else {
+            return Err(syn::Error::new(
+                b.left.span(),
+                "axeyum::verify: compound-assignment target must be a simple variable",
+            ));
+        };
+        let name = path_ident(p)?;
+        let lty = self.lookup(&name).ok_or_else(|| {
+            syn::Error::new(
+                p.span(),
+                format!("axeyum::verify: unknown variable `{name}`"),
+            )
+        })?;
+        // RHS, coercing an untyped literal to the target's type (as `bin_op` does).
+        let (rhs_tok, _rty) = if is_untyped_int_lit(&b.right) && lty.width.is_some() {
+            if let Expr::Lit(el) = &*b.right {
+                lower_lit_as(&el.lit, lty, el.span())?
+            } else {
+                self.lower_expr(&b.right)?
+            }
+        } else {
+            self.lower_expr(&b.right)?
+        };
+        let op_ident = format_ident!("{}", variant);
+        Ok(Some(quote! {
+            axeyum_verify::ast::Stmt::Assign {
+                name: #name.into(),
+                value: axeyum_verify::ast::Expr::Binary {
+                    op: axeyum_verify::ast::BinOp::#op_ident,
+                    lhs: Box::new(axeyum_verify::ast::Expr::Var(#name.into())),
+                    rhs: Box::new(#rhs_tok),
+                },
+            }
+        }))
     }
 
     /// `let name: ty = expr;` → (name, Ty, value tokens). Requires a type
@@ -668,11 +728,7 @@ impl Lowerer {
                 }))
             }
             Expr::ForLoop(forloop) => Ok(Some(self.lower_for(forloop)?)),
-            Expr::While(w) => Err(syn::Error::new(
-                w.span(),
-                "axeyum::verify: `while` loops are not supported in Phase 1; use \
-                 `#[axeyum::unwind(K)] for i in 0..K { .. }` (see STATUS.md)",
-            )),
+            Expr::While(w) => Ok(Some(self.lower_while(w)?)),
             _ => Ok(None),
         }
     }
@@ -726,6 +782,47 @@ impl Lowerer {
             axeyum_verify::ast::Stmt::For {
                 var: #var.into(),
                 var_ty: #var_ty_tok,
+                bound: #bound,
+                body: vec![ #(#body),* ],
+            }
+        })
+    }
+
+    /// `#[axeyum::unwind(K)] while cond { body }` — bounded model checking by
+    /// unrolling up to `K` iterations (the function-level unwind bound, or a
+    /// per-loop one). The guard is re-evaluated each iteration; panic classes in
+    /// the body are checked on every feasible iteration. The result is a
+    /// **bounded** guarantee (no bug within `K` iterations).
+    fn lower_while(&mut self, w: &syn::ExprWhile) -> syn::Result<TokenStream> {
+        if w.label.is_some() {
+            return Err(syn::Error::new(
+                w.span(),
+                "axeyum::verify: labeled `while` loops are not supported",
+            ));
+        }
+        let bound = extract_unwind(&w.attrs)?.or(self.unwind).ok_or_else(|| {
+            syn::Error::new(
+                w.span(),
+                "axeyum::verify: a `while` loop needs an unwind bound — put \
+                 `#[axeyum::unwind(K)]` on the function (alongside `#[axeyum::verify]`)",
+            )
+        })?;
+        let bound = u128::from(bound);
+        // `while let` desugars to a different node; only a boolean guard is in
+        // fragment.
+        let (cond, cty) = self.lower_expr(&w.cond)?;
+        if cty != Ty::bool() {
+            return Err(syn::Error::new(
+                w.cond.span(),
+                "axeyum::verify: `while` guard must be a boolean expression",
+            ));
+        }
+        self.push_scope();
+        let body = self.lower_block(&w.body)?;
+        self.pop_scope();
+        Ok(quote! {
+            axeyum_verify::ast::Stmt::While {
+                cond: #cond,
                 bound: #bound,
                 body: vec![ #(#body),* ],
             }

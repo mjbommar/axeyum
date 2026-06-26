@@ -207,6 +207,61 @@ fn usize_add_overflows() {
     assert_eq!(w, 64, "usize is modeled at 64 bits");
 }
 
+// ---- (e) BUG: data-dependent `while` loop (Phase 2 #4 — bounded `while`) -------
+
+/// `while i < n { i += 1; assert!(i != 3); }` — for `n >= 4` the counter passes
+/// through 3 and trips the assert. The loop is bounded-unrolled by the
+/// function-level `#[axeyum::unwind(8)]`; this is the data-dependent `while`
+/// Phase-1 could not express.
+#[verify(expect_bug)]
+#[axeyum_verify::unwind(8)]
+fn count_to(n: u8) -> u8 {
+    let mut i: u8 = 0;
+    while i < n {
+        i += 1;
+        assert!(i != 3);
+    }
+    i
+}
+
+#[test]
+fn while_loop_assert_reproduces() {
+    let Verdict::Counterexample { class, inputs } = count_to__axeyum_verdict() else {
+        panic!("the while-loop assert must be violable");
+    };
+    assert_eq!(class, "assert! violated");
+    let n = u8::try_from(int_bits(&inputs, "n")).unwrap();
+    assert!(
+        axeyum_verify::reproduce::panics_on(move || {
+            let _ = count_to(n);
+        }),
+        "witness count_to({n}) must trip the assert in the original fn"
+    );
+}
+
+// ---- SAFE: bounded `while` that stays in range is verified ---------------------
+
+/// `while i < 3 { i += 1; } assert!(i <= 3);` — the guard caps `i` at 3, so the
+/// post-loop assert always holds within the unwind bound.
+#[verify]
+#[axeyum_verify::unwind(8)]
+fn bounded_while() -> u8 {
+    let mut i: u8 = 0;
+    while i < 3 {
+        i += 1;
+    }
+    assert!(i <= 3);
+    i
+}
+
+#[test]
+fn bounded_while_is_verified() {
+    match bounded_while__axeyum_verdict() {
+        Verdict::Verified { .. } => {}
+        other => panic!("bounded while must verify, got {other:?}"),
+    }
+}
+
 // ---- helper --------------------------------------------------------------------
 
 fn int_bits(inputs: &[Witness], name: &str) -> u128 {

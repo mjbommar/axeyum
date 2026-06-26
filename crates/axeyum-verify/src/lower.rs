@@ -456,6 +456,24 @@ impl Lowerer<'_> {
                 self.lower_expr(e)?;
                 Ok(())
             }
+            Stmt::While { cond, bound, body } => {
+                // Bounded model checking by unrolling: each of the `bound`
+                // iterations is exactly `if cond { body }` evaluated in sequence.
+                // Reusing `If` gives the correct env-merge (an iteration that does
+                // not run leaves the bindings untouched) and accumulates the guard
+                // `cond` into the path condition, so panic classes in `body` are
+                // only flagged on feasible iterations. This is a *bounded*
+                // guarantee (no bug within `bound` iterations), never a claim of
+                // total correctness.
+                for _ in 0..*bound {
+                    self.lower_stmt(&Stmt::If {
+                        cond: cond.clone(),
+                        then: body.clone(),
+                        els: Vec::new(),
+                    })?;
+                }
+                Ok(())
+            }
             Stmt::For {
                 var,
                 var_ty,
