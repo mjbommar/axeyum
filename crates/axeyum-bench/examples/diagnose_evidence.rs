@@ -70,6 +70,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatUfArithCongruence(_) => "uf-arith-congruence-unsat",
         Evidence::UnsatDatatypeStructural(_) => "datatype-structural-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",
+        Evidence::UnsatBoolArrayReadCollapse(_) => "bool-array-read-collapse-unsat",
         Evidence::UnsatArrayAxiom(_) => "array-axiom-unsat",
         Evidence::UnsatConstArrayDefaultMismatch(_) => "const-array-default-mismatch-unsat",
         Evidence::UnsatStoreChainReadback(_) => "store-chain-readback-unsat",

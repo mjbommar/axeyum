@@ -1783,6 +1783,11 @@ fn dispatch_array_unsat_refuters(
     if crate::abv::prove_unsat_by_two_store_same_target_split_within(arena, assertions, deadline)? {
         return Ok(Some(CheckResult::Unsat));
     }
+    if let Some(cert) = crate::array_finite::bool_array_read_collapse_refutation(arena, assertions)
+        && cert.recheck(arena, assertions)
+    {
+        return Ok(Some(CheckResult::Unsat));
+    }
     if past_deadline(deadline) {
         return Ok(None);
     }

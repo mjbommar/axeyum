@@ -154,7 +154,8 @@ pub use array_binary_search::{BinarySearch16Certificate, binary_search16_refutat
 pub use array_bv_abs::{BvAbstractionRefutationCertificate, bv_abstraction_refutation};
 pub use array_fifo::{FifoBc04Certificate, fifo_bc04_refutation, fifo_ia04_sat_model};
 pub use array_finite::{
-    FiniteArrayExtensionalityCertificate, FiniteArrayReadEquality,
+    BoolArrayReadCollapseCertificate, FiniteArrayExtensionalityCertificate,
+    FiniteArrayReadEquality, bool_array_read_collapse_refutation,
     finite_array_extensionality_refutation,
 };
 pub use array_memcpy::{TwoByteMemcpyRefutationCertificate, two_byte_memcpy_refutation};

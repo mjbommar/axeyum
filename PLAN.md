@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 660 decided, 608 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 661 decided, 609 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **660 decided**,
-   **608 oracle-compared**, **DISAGREE = 0**, with **22 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **661 decided**,
+   **609 oracle-compared**, **DISAGREE = 0**, with **22 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -293,6 +293,18 @@ against competitor source, are now binding:
    **Lean unsat 4/4 (100.0%)**, with **mismatches=0**, **audit_errors=0**, and
    **timeouts=0**. Remaining QF_AX blockers are decide-side: declared-sort SAT
    model construction for `arrays2`/`arrays3` and the Bool-array unsat row.
+   **QF_AX BOOL-ARRAY READ-COLLAPSE LANDED (2026-06-26):**
+   Bool-index arrays now have a checked read-collapse refuter: if
+   `select a false = select a true`, an asserted disequality between any two
+   reads from `a` is impossible. The route exports
+   `bool-array-read-collapse-unsat` evidence and reconstructs through
+   `BoolArrayReadCollapse`. Refreshing the cvc5 QF_AX row now records
+   **6/8 decided (75.0%)**, **unknown=0**, **unsupported=2**,
+   **oracle-compared=6/8**, **DISAGREE=0**, and PAR-2 mean **6.667 s**. The
+   exact audit is **6/6 dominant (100.0%)**, **Lean unsat 5/5 (100.0%)**, with
+   **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Remaining QF_AX
+   blockers are the SAT `arrays2`/`arrays3` rows, which need replay-checked
+   declared-sort model construction.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

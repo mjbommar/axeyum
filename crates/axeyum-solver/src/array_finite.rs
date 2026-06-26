@@ -1,8 +1,10 @@
-//! Finite-domain array extensionality refuters.
+//! Finite-domain array refuters.
 //!
 //! This covers the small, explicit `QF_ABV`/`QF_AUFBV` shape where two arrays over
 //! a finite BV index sort are asserted unequal while every concrete read in that
-//! finite domain is asserted equal.
+//! finite domain is asserted equal, plus the analogous Bool-index read-collapse
+//! shape where the two concrete reads of one array are asserted equal but two
+//! arbitrary reads of that array are asserted unequal.
 
 use std::collections::BTreeMap;
 
@@ -37,6 +39,40 @@ pub struct FiniteArrayExtensionalityCertificate {
     pub index_width: u32,
     /// One read equality for each concrete index value, in ascending value order.
     pub read_equalities: Vec<FiniteArrayReadEquality>,
+}
+
+/// A self-checking Bool-index array read-collapse refutation.
+///
+/// For an array `a : Array Bool E`, the assertion
+/// `select a false = select a true` makes all reads from `a` equal, because every
+/// Boolean index is either `false` or `true`. A simultaneous disequality between
+/// two reads of `a` is therefore impossible.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoolArrayReadCollapseCertificate {
+    /// The array whose Bool-index domain has collapsed to one read value.
+    pub array: TermId,
+    /// The original top-level equality between the concrete `false` and `true`
+    /// reads.
+    pub concrete_equality: TermId,
+    /// The read at index `false`, oriented from `concrete_equality`.
+    pub false_read: TermId,
+    /// The read at index `true`, oriented from `concrete_equality`.
+    pub true_read: TermId,
+    /// The original top-level disequality between two arbitrary reads of
+    /// `array`.
+    pub disequality: TermId,
+    /// Left read from `disequality`.
+    pub lhs_read: TermId,
+    /// Right read from `disequality`.
+    pub rhs_read: TermId,
+}
+
+impl BoolArrayReadCollapseCertificate {
+    /// Re-runs the deterministic matcher against the original assertions.
+    #[must_use]
+    pub fn recheck(&self, arena: &TermArena, assertions: &[TermId]) -> bool {
+        bool_array_read_collapse_refutation(arena, assertions).is_some_and(|fresh| fresh == *self)
+    }
 }
 
 /// Returns a finite-array extensionality certificate when the top-level
@@ -101,6 +137,50 @@ pub fn finite_array_extensionality_refutation(
     None
 }
 
+/// Returns a Bool-index array read-collapse certificate when the top-level
+/// conjunction contains:
+///
+/// - `(= (select a false) (select a true))`, in either orientation; and
+/// - `(not (= (select a i) (select a j)))`, where `i` and `j` are Bool-sorted
+///   terms.
+#[must_use]
+pub fn bool_array_read_collapse_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<BoolArrayReadCollapseCertificate> {
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        collect_top_conjuncts(arena, assertion, &mut conjuncts);
+    }
+
+    let mut concrete_equalities: BTreeMap<TermId, BoolConcreteReadEquality> = BTreeMap::new();
+    let mut disequalities = Vec::new();
+    for &conjunct in &conjuncts {
+        if let Some(eq) = match_bool_concrete_read_equality(arena, conjunct) {
+            concrete_equalities.entry(eq.array).or_insert(eq);
+        }
+        if let Some(diseq) = match_bool_read_disequality(arena, conjunct) {
+            disequalities.push(diseq);
+        }
+    }
+
+    for diseq in disequalities {
+        let Some(eq) = concrete_equalities.get(&diseq.array) else {
+            continue;
+        };
+        return Some(BoolArrayReadCollapseCertificate {
+            array: diseq.array,
+            concrete_equality: eq.equality,
+            false_read: eq.false_read,
+            true_read: eq.true_read,
+            disequality: diseq.disequality,
+            lhs_read: diseq.lhs_read,
+            rhs_read: diseq.rhs_read,
+        });
+    }
+    None
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ArrayDisequality {
     lhs_array: TermId,
@@ -115,6 +195,22 @@ struct ReadEquality {
     lhs_read: TermId,
     rhs_read: TermId,
     index_value: u128,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BoolConcreteReadEquality {
+    equality: TermId,
+    array: TermId,
+    false_read: TermId,
+    true_read: TermId,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BoolReadDisequality {
+    disequality: TermId,
+    array: TermId,
+    lhs_read: TermId,
+    rhs_read: TermId,
 }
 
 fn finite_bv_domain_size(width: u32) -> Option<u128> {
@@ -198,6 +294,112 @@ fn match_read_equality(arena: &TermArena, term: TermId) -> Option<ReadEquality> 
         rhs_read: *rhs,
         index_value: lhs_read.index_value,
     })
+}
+
+fn match_bool_concrete_read_equality(
+    arena: &TermArena,
+    term: TermId,
+) -> Option<BoolConcreteReadEquality> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    let lhs_read = match_bool_select(arena, *lhs)?;
+    let rhs_read = match_bool_select(arena, *rhs)?;
+    if lhs_read.array != rhs_read.array || arena.sort_of(*lhs) != arena.sort_of(*rhs) {
+        return None;
+    }
+    let lhs_index = bool_const_value(arena, lhs_read.index)?;
+    let rhs_index = bool_const_value(arena, rhs_read.index)?;
+    if lhs_index == rhs_index {
+        return None;
+    }
+    let (false_read, true_read) = if !lhs_index && rhs_index {
+        (*lhs, *rhs)
+    } else {
+        (*rhs, *lhs)
+    };
+    Some(BoolConcreteReadEquality {
+        equality: term,
+        array: lhs_read.array,
+        false_read,
+        true_read,
+    })
+}
+
+fn match_bool_read_disequality(arena: &TermArena, term: TermId) -> Option<BoolReadDisequality> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [inner] = &**args else {
+        return None;
+    };
+    let TermNode::App { op: Op::Eq, args } = arena.node(*inner) else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    if lhs == rhs {
+        return None;
+    }
+    let lhs_read = match_bool_select(arena, *lhs)?;
+    let rhs_read = match_bool_select(arena, *rhs)?;
+    if lhs_read.array != rhs_read.array || arena.sort_of(*lhs) != arena.sort_of(*rhs) {
+        return None;
+    }
+    Some(BoolReadDisequality {
+        disequality: term,
+        array: lhs_read.array,
+        lhs_read: *lhs,
+        rhs_read: *rhs,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BoolSelect {
+    array: TermId,
+    index: TermId,
+}
+
+fn match_bool_select(arena: &TermArena, term: TermId) -> Option<BoolSelect> {
+    let TermNode::App {
+        op: Op::Select,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [array, index] = &**args else {
+        return None;
+    };
+    if arena.sort_of(*index) != Sort::Bool {
+        return None;
+    }
+    let Sort::Array {
+        index: ArraySortKey::Bool,
+        ..
+    } = arena.sort_of(*array)
+    else {
+        return None;
+    };
+    Some(BoolSelect {
+        array: *array,
+        index: *index,
+    })
+}
+
+fn bool_const_value(arena: &TermArena, term: TermId) -> Option<bool> {
+    let TermNode::BoolConst(value) = arena.node(term) else {
+        return None;
+    };
+    Some(*value)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -296,5 +498,62 @@ mod tests {
         assertions.push(ne);
 
         assert!(finite_array_extensionality_refutation(&arena, &assertions).is_none());
+    }
+
+    #[test]
+    fn refutes_bool_index_read_collapse_disequality() {
+        let mut arena = TermArena::new();
+        let a = arena
+            .array_var_with_sorts("a", Sort::Bool, Sort::Bool)
+            .unwrap();
+        let p = {
+            let sym = arena.declare("p", Sort::Bool).unwrap();
+            arena.var(sym)
+        };
+        let not_p = arena.not(p).unwrap();
+        let false_term = arena.bool_const(false);
+        let true_term = arena.bool_const(true);
+        let a_false = arena.select(a, false_term).unwrap();
+        let a_true = arena.select(a, true_term).unwrap();
+        let concrete_eq = arena.eq(a_false, a_true).unwrap();
+        let a_p = arena.select(a, p).unwrap();
+        let a_not_p = arena.select(a, not_p).unwrap();
+        let read_eq = arena.eq(a_p, a_not_p).unwrap();
+        let read_ne = arena.not(read_eq).unwrap();
+
+        let cert = bool_array_read_collapse_refutation(&arena, &[read_ne, concrete_eq])
+            .expect("Bool-index concrete read equality refutes arbitrary read disequality");
+        assert_eq!(cert.array, a);
+        assert_eq!(cert.concrete_equality, concrete_eq);
+        assert_eq!(cert.false_read, a_false);
+        assert_eq!(cert.true_read, a_true);
+        assert_eq!(cert.disequality, read_ne);
+        assert!(cert.recheck(&arena, &[read_ne, concrete_eq]));
+    }
+
+    #[test]
+    fn bool_index_read_collapse_needs_same_array() {
+        let mut arena = TermArena::new();
+        let a = arena
+            .array_var_with_sorts("a", Sort::Bool, Sort::Bool)
+            .unwrap();
+        let b = arena
+            .array_var_with_sorts("b", Sort::Bool, Sort::Bool)
+            .unwrap();
+        let p = {
+            let sym = arena.declare("p", Sort::Bool).unwrap();
+            arena.var(sym)
+        };
+        let false_term = arena.bool_const(false);
+        let true_term = arena.bool_const(true);
+        let a_false = arena.select(a, false_term).unwrap();
+        let a_true = arena.select(a, true_term).unwrap();
+        let concrete_eq = arena.eq(a_false, a_true).unwrap();
+        let a_p = arena.select(a, p).unwrap();
+        let b_p = arena.select(b, p).unwrap();
+        let read_eq = arena.eq(a_p, b_p).unwrap();
+        let read_ne = arena.not(read_eq).unwrap();
+
+        assert!(bool_array_read_collapse_refutation(&arena, &[read_ne, concrete_eq]).is_none());
     }
 }

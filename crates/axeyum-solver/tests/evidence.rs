@@ -2209,6 +2209,30 @@ fn produce_evidence_certifies_qf_ax_declared_sort_unsats() {
 }
 
 #[test]
+fn produce_evidence_certifies_qf_ax_bool_array_read_collapse() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__bool-array.smt2"
+    ))
+    .expect("bool-array parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("bool-array produces evidence");
+    let Evidence::UnsatBoolArrayReadCollapse(cert) = &report.evidence else {
+        panic!(
+            "expected Bool-array read-collapse evidence, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(cert.recheck(&script.arena, &assertions));
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "Bool-array read-collapse evidence carries no outer reduction trust holes"
+    );
+}
+
+#[test]
 fn produce_evidence_certifies_aligned_write_chain_commutation_unsat() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__wchains002ue.smt2"

@@ -46,7 +46,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.470889
+        "solve_ms": 0.611359
       },
       "dag_nodes": 9,
       "distinct_symbols": 3,
@@ -119,7 +119,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.053855
+        "solve_ms": 0.047976000000000005
       },
       "dag_nodes": 10,
       "distinct_symbols": 3,
@@ -140,7 +140,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 10,
+          "solve_ms": 7,
           "verdict": "unsat"
         }
       },
@@ -192,7 +192,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.13670100000000002
+        "solve_ms": 0.125993
       },
       "dag_nodes": 11,
       "distinct_symbols": 3,
@@ -213,7 +213,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 10,
+          "solve_ms": 9,
           "verdict": "unsat"
         }
       },
@@ -265,7 +265,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.8728230000000001
+        "solve_ms": 1.823311
       },
       "dag_nodes": 14,
       "detail": "term #35 has sort (Uninterpreted 1) that the pure-Rust BV backend cannot bit-blast",
@@ -327,7 +327,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 2.263822
+        "solve_ms": 3.460864
       },
       "dag_nodes": 15,
       "detail": "term #26 has sort (Uninterpreted 1) that the pure-Rust BV backend cannot bit-blast",
@@ -382,14 +382,14 @@
         "rewritten_outcome": "unsupported",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 3,
       "translate_ms": 0,
       "tree_nodes": 37
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.042238
+        "solve_ms": 0.063316
       },
       "dag_nodes": 15,
       "distinct_symbols": 4,
@@ -462,21 +462,32 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 1.3240669999999999
+        "solve_ms": 0.07721800000000001
       },
       "dag_nodes": 13,
-      "detail": "Incomplete: non-bit-vector array sorts are represented in IR, but this shape is outside the current Bool/Int lazy array route",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__bool-array.smt2",
       "max_depth": 6,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "in_repo_z3_detail": "z3 oracle does not support array symbols",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 10,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -514,17 +525,17 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 6,
         "output_tree_nodes": 20,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 0,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.745273
+        "solve_ms": 0.869715
       },
       "dag_nodes": 5,
       "distinct_symbols": 2,
@@ -545,7 +556,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 13,
+          "solve_ms": 8,
           "verdict": "sat"
         }
       },
@@ -596,9 +607,8 @@
     }
   ],
   "summary": {
-    "agree": 5,
+    "agree": 6,
     "blocker_buckets": {
-      "unknown:Incomplete": 1,
       "unsupported": 2
     },
     "disagree": 0,
@@ -607,14 +617,14 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 5,
+      "agree": 6,
       "backend": "z3 4.13.3.0",
-      "compared": 5,
+      "compared": 6,
       "disagree": 0,
       "enabled": true,
-      "skipped": 3
+      "skipped": 2
     },
-    "par2_mean_s": 10.000241492666666,
+    "par2_mean_s": 6.666965929500001,
     "query_plan": {
       "original_dag_nodes": 92,
       "original_tree_nodes": 297,
@@ -636,8 +646,8 @@
       "sat_unsat_conflicts": 0
     },
     "sat": 1,
-    "unknown": 1,
-    "unsat": 4,
+    "unknown": 0,
+    "unsat": 5,
     "unsupported": 2
   },
   "triage": {

@@ -277,6 +277,22 @@ fn qf_ax_declared_sort_array_extensionality_unsats_close() {
 }
 
 #[test]
+fn qf_ax_bool_array_read_collapse_unsat_closes() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__bool-array.smt2"
+    ))
+    .unwrap();
+
+    let result = check_auto(
+        &mut script.arena,
+        &script.assertions,
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert_eq!(result, CheckResult::Unsat);
+}
+
+#[test]
 fn select_over_array_ite_lowers_to_branch_reads() {
     let mut script = parse_script(
         r"

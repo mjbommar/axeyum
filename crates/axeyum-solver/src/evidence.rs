@@ -48,7 +48,7 @@ use crate::array_axiom::ArrayAxiomRefutationCertificate;
 use crate::array_binary_search::BinarySearch16Certificate;
 use crate::array_bv_abs::BvAbstractionRefutationCertificate;
 use crate::array_fifo::FifoBc04Certificate;
-use crate::array_finite::FiniteArrayExtensionalityCertificate;
+use crate::array_finite::{BoolArrayReadCollapseCertificate, FiniteArrayExtensionalityCertificate};
 use crate::array_memcpy::TwoByteMemcpyRefutationCertificate;
 use crate::array_sort2::{TwoElementBubbleSortCertificate, TwoElementSelectionSortCertificate};
 use crate::array_write_chain::AlignedWriteChainCommutationCertificate;
@@ -399,6 +399,11 @@ pub enum Evidence {
     /// confirms it asserts two arrays over a small finite BV index domain are
     /// unequal while also asserting their reads equal at every concrete index.
     UnsatFiniteArrayExtensionality(FiniteArrayExtensionalityCertificate),
+    /// Unsatisfiable (`QF_AX`): one Bool-index array has equal `false` and
+    /// `true` reads, contradicting an asserted disequality between two reads of
+    /// that same array. The checker re-scans the original assertions and
+    /// re-matches the exact certificate.
+    UnsatBoolArrayReadCollapse(BoolArrayReadCollapseCertificate),
     /// Unsatisfiable (`QF_ABV`/`QF_AUFBV`): the query asserts the negation of one
     /// of a small set of checked array axiom schemas (read-over-write,
     /// select-over-ite, or store-over-ite under select). The checker re-scans the
@@ -614,6 +619,7 @@ impl Evidence {
             | Evidence::UnsatUfArithCongruence(_)
             | Evidence::UnsatDatatypeStructural(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
+            | Evidence::UnsatBoolArrayReadCollapse(_)
             | Evidence::UnsatNraEvenPower(_)
             | Evidence::UnsatBvDefinedEnum(_)
             | Evidence::UnsatBvForallNonconstant(_)
@@ -671,6 +677,7 @@ impl Evidence {
                 | Evidence::UnsatUfArithCongruence(_)
                 | Evidence::UnsatDatatypeStructural(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
+                | Evidence::UnsatBoolArrayReadCollapse(_)
                 | Evidence::UnsatArrayAxiom(_)
                 | Evidence::UnsatConstArrayDefaultMismatch(_)
                 | Evidence::UnsatStoreChainReadback(_)
@@ -716,6 +723,9 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatFiniteArrayExtensionality(cert) => {
             check_finite_array_extensionality_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatBoolArrayReadCollapse(cert) => {
+            check_bool_array_read_collapse_evidence(arena, assertions, cert)
         }
         Evidence::UnsatNraEvenPower(cert) => check_nra_even_power_evidence(arena, assertions, cert),
         Evidence::UnsatBvDefinedEnum(cert) => {
@@ -832,6 +842,14 @@ fn check_finite_array_extensionality_evidence(
 ) -> bool {
     crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bool_array_read_collapse_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &BoolArrayReadCollapseCertificate,
+) -> bool {
+    cert.recheck(arena, assertions)
 }
 
 fn check_nra_even_power_evidence(
@@ -2038,6 +2056,10 @@ fn direct_structural_unsat_evidence(
     {
         return Some((Evidence::UnsatFiniteArrayExtensionality(cert), Vec::new()));
     }
+    if let Some(cert) = crate::array_finite::bool_array_read_collapse_refutation(arena, assertions)
+    {
+        return Some((Evidence::UnsatBoolArrayReadCollapse(cert), Vec::new()));
+    }
     if let Some(cert) = crate::term_identity::term_identity_refutation(arena, assertions) {
         return Some((Evidence::UnsatTermIdentity(cert), Vec::new()));
     }
@@ -2471,6 +2493,7 @@ pub fn prove(
         | Evidence::UnsatUfArithCongruence(_)
         | Evidence::UnsatDatatypeStructural(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)
+        | Evidence::UnsatBoolArrayReadCollapse(_)
         | Evidence::UnsatArrayAxiom(_)
         | Evidence::UnsatConstArrayDefaultMismatch(_)
         | Evidence::UnsatStoreChainReadback(_)

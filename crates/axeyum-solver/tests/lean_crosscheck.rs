@@ -1492,6 +1492,23 @@ fn qf_ax_declared_sort_certificates_check_in_real_lean() {
     }
 }
 
+#[test]
+fn qf_ax_bool_array_read_collapse_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__bool-array.smt2"
+    ))
+    .expect("bool-array parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("bool-array reconstructs");
+    assert_eq!(fragment, ProofFragment::BoolArrayReadCollapse);
+    assert!(
+        !source.contains("sorryAx"),
+        "Bool-array read-collapse module must not lean on sorryAx:\n{source}"
+    );
+    lean_accepts("qf_ax_bool_array_read_collapse", &source);
+}
+
 /// `QF_AUFBV`: generated aligned byte write chains commute when both word
 /// addresses have their low two bits cleared. The `wchains002ue` regression
 /// asserts the opposite store orders differ under those guards.

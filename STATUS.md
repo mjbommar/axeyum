@@ -6,6 +6,34 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_AX Bool-array read-collapse row closed.**
+  Added a checked `BoolArrayReadCollapseCertificate` for Bool-index arrays:
+  once `(select a false) = (select a true)`, every read from `a` is equal, so an
+  asserted disequality between two reads of `a` is impossible. The rule is wired
+  into the array fast path, `produce_evidence`, dominance labels, and Lean
+  reconstruction as `bool-array-read-collapse-unsat` /
+  `ProofFragment::BoolArrayReadCollapse`. This closes the cvc5 QF_AX
+  `bool-array.smt2` row as `unsat` without bit-blasting arrays. The refreshed
+  QF_AX baseline is **6/8 decided (75.0%)**, **unknown=0**,
+  **unsupported=2**, **oracle-compared=6/8**, **DISAGREE=0**, PAR-2 mean
+  **6.667 s**. The refreshed QF_AX dominance audit is **6/6 dominant
+  (100.0%)**, **Lean unsat 5/5 (100.0%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=6/6**, and
+  **evidence_certified=6/6**. Scoreboards now report **661 decided** and
+  **609 oracle-compared** overall. **Next:** the remaining QF_AX blockers are
+  the SAT `arrays2`/`arrays3` rows, which need replay-checked declared-sort
+  model construction rather than another UNSAT refuter; nearby AUFLIA remains
+  gated by `bug330`/`bug337` scalar-search depth.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_index_read_collapse -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort qf_ax_bool_array_read_collapse_unsat_closes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence produce_evidence_certifies_qf_ax_bool_array_read_collapse -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_ax_bool_array_read_collapse_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean --timeout-ms 10000 --backend solver --compare-z3 --jobs 2 --out bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`.
+
 - **Session 2026-06-26 — QF_AX exact dominance audit closed.**
   Added checked evidence and Lean reconstruction for the QF_AX declared-sort
   slice decided in the previous increment. The array-axiom matcher now
@@ -4004,9 +4032,17 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 660 decided, 608 oracle-compared, DISAGREE=0, and 22 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **5/5**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 661 decided, 609 oracle-compared, DISAGREE=0, and 22 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **6/6**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **QF_AX Bool-array read-collapse row closed.**
+  Added a checked Bool-index array read-collapse refuter with evidence and Lean
+  reconstruction. It closes cvc5 QF_AX `bool-array.smt2` as UNSAT and refreshes
+  QF_AX to **6/8 decided**, **unknown=0**, **unsupported=2**,
+  **DISAGREE=0**. The exact audit is now **6/6 dominant**, Lean unsat **5/5**,
+  with no mismatches, audit errors, or timeouts. Scoreboards now report
+  **661 decided** and **609 oracle-compared** overall.
 
 - **2026-06-26** — **Exact QF_AX dominance row closed.**
   Added checked evidence and Lean reconstruction for QF_AX declared-sort

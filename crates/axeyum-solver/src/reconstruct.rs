@@ -1318,6 +1318,8 @@ pub enum ProofFragment {
     /// A same-index reciprocal-store equality forces an asserted-disequal pair
     /// of arrays equal.
     CrossStoreArrayDisequality,
+    /// A Bool-index array has equal concrete reads but disequal arbitrary reads.
+    BoolArrayReadCollapse,
     /// A finite BV-index array extensionality refutation.
     FiniteArrayExtensionality,
     /// A certified-unsat scalar BV abstraction of an array query.
@@ -1772,6 +1774,9 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::StoreChainReadback
     } else if crate::abv::cross_store_array_disequality_refutation(arena, assertions).is_some() {
         ProofFragment::CrossStoreArrayDisequality
+    } else if crate::array_finite::bool_array_read_collapse_refutation(arena, assertions).is_some()
+    {
+        ProofFragment::BoolArrayReadCollapse
     } else if crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
         .is_some()
     {
@@ -3386,6 +3391,38 @@ fn reconstruct_fifo_bc04_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_bool_array_read_collapse_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::array_finite::bool_array_read_collapse_refutation(arena, assertions)
+        .ok_or_else(|| ReconstructError::MalformedStep {
+            rule: "bool_array_read_collapse".to_owned(),
+            detail: "expected equal Bool-index concrete reads plus a read disequality".to_owned(),
+        })?;
+    if !cert.recheck(arena, assertions) {
+        return Err(ReconstructError::MalformedStep {
+            rule: "bool_array_read_collapse".to_owned(),
+            detail: "Bool-array read-collapse certificate did not recheck".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const(&format!(
+        "bool_array_read_collapse_{}_{}_{}",
+        cert.array.index(),
+        cert.concrete_equality.index(),
+        cert.disequality.index()
+    ));
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_array_read_collapse")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_finite_array_extensionality_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3536,6 +3573,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::ConstArrayDefaultMismatch
         | ProofFragment::StoreChainReadback
         | ProofFragment::CrossStoreArrayDisequality
+        | ProofFragment::BoolArrayReadCollapse
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
         | ProofFragment::TwoByteMemcpy
@@ -3659,6 +3697,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::CrossStoreArrayDisequality => {
             reconstruct_cross_store_array_disequality_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::BoolArrayReadCollapse => {
+            reconstruct_bool_array_read_collapse_to_lean_module(arena, assertions)?
         }
         ProofFragment::FiniteArrayExtensionality => {
             reconstruct_finite_array_extensionality_to_lean_module(arena, assertions)?
