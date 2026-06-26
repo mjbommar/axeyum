@@ -45,6 +45,17 @@
 //!     x + 1.0
 //! }
 //! ```
+//!
+//! An **unsized slice** `&[T]` (no fixed length) is likewise rejected — the
+//! bounded check needs a compile-time element count, so a fixed `&[T; N]` (or
+//! `[T; N]`) is required:
+//!
+//! ```compile_fail
+//! #[axeyum_verify::verify]
+//! fn reads_a_slice(a: &[u8], i: usize) -> u8 {
+//!     a[i]
+//! }
+//! ```
 #![forbid(unsafe_code)]
 
 pub mod ast;
