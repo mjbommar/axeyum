@@ -2927,7 +2927,7 @@ fn ext_contextual_unknown_note(
 
 enum LastExtReplay {
     Sat(Model),
-    Failed { ordinal: usize, term: TermId },
+    Failed(ReplayFailure),
     Error,
     Missing,
 }
@@ -2935,10 +2935,7 @@ enum LastExtReplay {
 impl LastExtReplay {
     fn note(&self) -> Option<String> {
         match self {
-            LastExtReplay::Failed { ordinal, term } => Some(format!(
-                "last_candidate_replay=false(assertion_ordinal={ordinal}, term={})",
-                term.index()
-            )),
+            LastExtReplay::Failed(failure) => Some(failure.note()),
             LastExtReplay::Error => Some("last_candidate_replay=error".to_owned()),
             LastExtReplay::Sat(_) | LastExtReplay::Missing => None,
         }
@@ -2956,7 +2953,7 @@ fn replay_last_ext_candidate(
     };
     match project_replay_ext_candidate(arena, ctx, originals, assignment) {
         Ok(ExtReplay::Sat(model)) => LastExtReplay::Sat(model),
-        Ok(ExtReplay::Failed { ordinal, term }) => LastExtReplay::Failed { ordinal, term },
+        Ok(ExtReplay::Failed(failure)) => LastExtReplay::Failed(failure),
         Err(_) => LastExtReplay::Error,
     }
 }
@@ -3408,7 +3405,28 @@ fn refine_diff_skolem(
 /// genuinely satisfies every original assertion, else `unknown`.
 enum ExtReplay {
     Sat(Model),
-    Failed { ordinal: usize, term: TermId },
+    Failed(ReplayFailure),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ReplayFailure {
+    assertion_ordinal: usize,
+    assertion_term: TermId,
+    conjunct_ordinal: usize,
+    conjunct_term: TermId,
+}
+
+impl ReplayFailure {
+    fn note(self) -> String {
+        format!(
+            "last_candidate_replay=false(assertion_ordinal={}, term={}, \
+             failed_conjunct_ordinal={}, failed_conjunct_term={})",
+            self.assertion_ordinal,
+            self.assertion_term.index(),
+            self.conjunct_ordinal,
+            self.conjunct_term.index()
+        )
+    }
 }
 
 fn project_replay_ext(
@@ -3419,10 +3437,14 @@ fn project_replay_ext(
 ) -> Result<CheckResult, SolverError> {
     match project_replay_ext_candidate(arena, ctx, originals, assignment)? {
         ExtReplay::Sat(model) => Ok(CheckResult::Sat(model)),
-        ExtReplay::Failed { ordinal, term } => Ok(ext_unknown(format!(
+        ExtReplay::Failed(failure) => Ok(ext_unknown(format!(
             "lazy-extensionality candidate failed replay: assertion #{} evaluated to \
-             false (top-level ordinal {ordinal}, incomplete on this shape)",
-            term.index()
+             false (top-level ordinal {}, first false conjunct ordinal {}, term {}, \
+             incomplete on this shape)",
+            failure.assertion_term.index(),
+            failure.assertion_ordinal,
+            failure.conjunct_ordinal,
+            failure.conjunct_term.index()
         ))),
     }
 }
@@ -3447,10 +3469,9 @@ fn project_replay_ext_candidate(
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => {
-                return Ok(ExtReplay::Failed {
-                    ordinal,
-                    term: assertion,
-                });
+                return Ok(ExtReplay::Failed(first_false_replay_conjunct(
+                    arena, assertion, ordinal, &projected,
+                )?));
             }
             Ok(value) => {
                 return Err(SolverError::Backend(format!(
@@ -3483,6 +3504,50 @@ fn project_replay_ext_candidate(
         out.set_function(func, value.clone());
     }
     Ok(ExtReplay::Sat(out))
+}
+
+fn first_false_replay_conjunct(
+    arena: &TermArena,
+    assertion: TermId,
+    assertion_ordinal: usize,
+    assignment: &Assignment,
+) -> Result<ReplayFailure, SolverError> {
+    let mut conjuncts = Vec::new();
+    collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+    for (conjunct_ordinal, conjunct) in conjuncts.iter().copied().enumerate() {
+        match eval(arena, conjunct, assignment) {
+            Ok(Value::Bool(true)) => {}
+            Ok(Value::Bool(false)) => {
+                return Ok(ReplayFailure {
+                    assertion_ordinal,
+                    assertion_term: assertion,
+                    conjunct_ordinal,
+                    conjunct_term: conjunct,
+                });
+            }
+            Ok(value) => {
+                return Err(SolverError::Backend(format!(
+                    "lazy-ext replay: conjunct #{} of assertion #{} evaluated to non-Boolean \
+                     {value}",
+                    conjunct.index(),
+                    assertion.index()
+                )));
+            }
+            Err(error) => {
+                return Err(SolverError::Backend(format!(
+                    "lazy-ext replay: conjunct #{} of assertion #{} failed evaluation: {error}",
+                    conjunct.index(),
+                    assertion.index()
+                )));
+            }
+        }
+    }
+    Ok(ReplayFailure {
+        assertion_ordinal,
+        assertion_term: assertion,
+        conjunct_ordinal: 0,
+        conjunct_term: assertion,
+    })
 }
 
 // ===========================================================================
@@ -3915,7 +3980,7 @@ mod tests {
         let ck_zero = arena.eq(ck, zero).unwrap();
         let loose_j = arena.or(cj_zero, p).unwrap();
         let loose_k = arena.or(ck_zero, p).unwrap();
-        let originals = [array_eq, loose_j, loose_k];
+        let originals = [array_eq, loose_j, loose_k, p];
 
         let mut ctx = RowCtx::default();
         for &assertion in &originals {
@@ -3960,6 +4025,23 @@ mod tests {
         for &t in &originals {
             assert_eq!(eval(&arena, t, &assignment).unwrap(), Value::Bool(true));
         }
+
+        let mut failing = candidate.clone();
+        for (symbol, name, _sort) in arena.symbols() {
+            if name == "p" {
+                failing.set(symbol, Value::Bool(false));
+            }
+        }
+        let LastExtReplay::Failed(failure) =
+            replay_last_ext_candidate(&arena, &ctx, &originals, Some(&failing))
+        else {
+            panic!("expected replay helper to reject the candidate");
+        };
+        assert_eq!(failure.assertion_ordinal, 3);
+        assert_eq!(failure.assertion_term, p);
+        assert_eq!(failure.conjunct_ordinal, 0);
+        assert_eq!(failure.conjunct_term, p);
+        assert!(failure.note().contains("failed_conjunct_term="));
     }
 
     #[test]

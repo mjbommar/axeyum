@@ -495,9 +495,10 @@ a named mechanism.**
    loop now tries one final projection/original replay before budget declines.
    It is sound SAT-only salvage, but `bug337` still does not close: the final
    candidate fails original replay at **top-level assertion ordinal 0**, term
-   **13053**. Next work should inspect that assertion's branch schedule/support
-   and apply SAT relevance / site admission / queue-lock model construction, not
-   broader timeout or local-search knobs.
+   **13053**, with first false flattened conjunct **ordinal 30**, term **465**.
+   Next work should inspect that branch schedule/support and apply SAT relevance
+   / site admission / queue-lock model construction, not broader timeout or
+   local-search knobs.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
