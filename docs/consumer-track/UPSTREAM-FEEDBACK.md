@@ -63,6 +63,26 @@ Status: `open` unless noted.
   consumer apps.
 - **Source:** `bench-results/DOMINANCE.md`; consumer-track decision doc.
 
+### U5 · medium · proofs/Lean · QF_ABV array proofs emit no Lean module
+- **What:** the property scoreboard's array `should-prove` rows
+  (`array-store-select-roundtrip`, `array-store-other-unchanged` — the
+  read-over-write axioms over `BvArray<8,4>`) `prove` and the in-process
+  `EvidenceReport` re-checks, but `prove_unsat_to_lean_module` declines them, so
+  `to_lean_module()` is `None`. Empirically QF_ABV refutations are outside the
+  Lean-reconstructable fragment even when the BV sub-reasoning would be.
+- **Why it matters:** arrays are the natural model for consumer-app memory /
+  storage / fixed buffers (App B `BvArray`, App C slices, App A EVM storage). The
+  read-over-write/extensionality lemmas are exactly the proofs a user most wants
+  a Lean certificate for, and right now none of them carry one — the array
+  `should-prove` rows are the only proved rows on the scoreboard with `Lean = no`
+  that are *not* arithmetic.
+- **Ask:** extend Lean reconstruction to the array-elimination path — emit a Lean
+  module for a QF_ABV `unsat` whose certificate is built via `eliminate_arrays` /
+  `certify_array_elim_unsat` (read-over-write + Ackermann are self-evidently valid
+  theory rewrites; the residual is QF_BV, already partly reconstructable).
+- **Source:** `docs/consumer-track/property/SCOREBOARD.md` (array rows);
+  `axeyum-property` `BvArray` over `Sort::Array`.
+
 ---
 
 ## Resolved / superseded
