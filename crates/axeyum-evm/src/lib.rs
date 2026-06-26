@@ -31,11 +31,13 @@
 #![forbid(unsafe_code)]
 
 pub mod concrete;
+pub mod keccak;
 pub mod opcode;
+pub mod reproduce;
 pub mod symbolic;
 pub mod word;
 
-use axeyum_ir::{TermArena, Value};
+use axeyum_ir::Value;
 use axeyum_solver::{EvidenceReport, SolverConfig, SolverError};
 
 use crate::concrete::{Env, Halt};
@@ -199,11 +201,13 @@ fn analyze_inner(bytecode: &[u8], cfg: &AnalyzeConfig) -> Result<AnalysisReport,
     let verdict = if exploration.saw_unknown {
         Verdict::InconclusiveDueToUnknown
     } else {
-        // Best-effort safety certificate: the path tree was fully decided and bug
-        // free. We produce an EvidenceReport for the trivial unsat (no feasible
-        // bug path) when possible; this is the App-B certificate hook.
+        // The path tree was fully decided and bug free. Tie the certificate to the
+        // explorer's *real* refutation (item #3): the disjunction of every
+        // bug-reachability obligation it proved infeasible is UNSAT, and that is
+        // the "no bad state is path-reachable up to the bound" proof — no longer a
+        // fabricated `0==1`.
         Verdict::SafeUpToBound {
-            evidence: safety_evidence(&cfg.solver),
+            evidence: safety_evidence(exploration.refuted_obligations, &cfg.solver),
         }
     };
     Ok(AnalysisReport {
@@ -212,19 +216,40 @@ fn analyze_inner(bytecode: &[u8], cfg: &AnalyzeConfig) -> Result<AnalysisReport,
     })
 }
 
-/// Produces a best-effort re-checked evidence report witnessing the safety query
-/// `false` is unsat (a trivially-certifiable placeholder for the App-B
-/// certificate plumbing). Phase-2 ties this to the actual reachability query.
-fn safety_evidence(config: &SolverConfig) -> Option<Box<EvidenceReport>> {
-    let mut arena = TermArena::new();
-    // The bug-reachability formula was exhaustively refuted by the explorer; we
-    // record a checkable `false`-is-unsat certificate as the carrier and verify it.
-    let f = arena.bv_const(1, 0).ok()?;
-    let one = arena.bv_const(1, 1).ok()?;
-    let contradiction = arena.eq(f, one).ok()?; // 0 == 1, unsat
-    let report = axeyum_solver::produce_evidence(&mut arena, &[contradiction], config).ok()?;
+/// Produces a re-checked evidence report for the **real** safety claim: the
+/// disjunction of the bug-reachability obligations the explorer refuted is UNSAT
+/// (item #3). Each obligation `pathᵢ ∧ bug_predicateᵢ` was individually proved
+/// infeasible during exploration, so their disjunction is unsatisfiable — a
+/// genuine "no bad state is reachable up to the bound" certificate, re-checked
+/// before it is handed out. When the explored program had **no** bug site at all
+/// the obligation set is empty and the claim is vacuously the unsatisfiable
+/// `false` — still derived from the real structure (nothing reachable to refute),
+/// not an invented contradiction.
+fn safety_evidence(
+    refuted: symbolic::RefutedSafety,
+    config: &SolverConfig,
+) -> Option<Box<EvidenceReport>> {
+    let symbolic::RefutedSafety {
+        mut arena,
+        obligations,
+    } = refuted;
+
+    // The safety formula = OR of the refuted obligations (each individually
+    // infeasible ⇒ the disjunction is UNSAT). Empty ⇒ `false` (vacuous safety).
+    let formula = match obligations.split_first() {
+        None => arena.bool_const(false),
+        Some((&first, rest)) => {
+            let mut acc = first;
+            for &ob in rest {
+                acc = arena.or(acc, ob).ok()?;
+            }
+            acc
+        }
+    };
+
+    let report = axeyum_solver::produce_evidence(&mut arena, &[formula], config).ok()?;
     // Re-check before handing it out (DISAGREE=0 discipline for the cert path too).
-    if report.evidence.check(&arena, &[contradiction]).ok()? {
+    if report.evidence.check(&arena, &[formula]).ok()? {
         Some(Box::new(report))
     } else {
         None

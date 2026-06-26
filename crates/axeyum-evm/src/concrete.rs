@@ -267,6 +267,26 @@ fn run_core(
                     }
                 });
             }
+            Op::Sha3 => {
+                let (off, len) = (pop!(), pop!());
+                let (Some(o), Some(l)) = (off.to_usize(), len.to_usize()) else {
+                    return (
+                        Halt::Unsupported("SHA3 offset/length too large".into()),
+                        overflowed,
+                    );
+                };
+                if l > 1 << 20 {
+                    return (
+                        Halt::Unsupported("SHA3 region too large".into()),
+                        overflowed,
+                    );
+                }
+                let preimage: Vec<u8> = (0..l)
+                    .map(|i| memory.get(&(o + i)).copied().unwrap_or(0))
+                    .collect();
+                let digest = crate::keccak::keccak256(&preimage);
+                stack.push(Word::from_be_bytes(&digest));
+            }
             Op::CallValue => stack.push(env.callvalue.clone()),
             Op::Caller => stack.push(env.caller.clone()),
             Op::CallDataSize => stack.push(Word::from_u128(env.calldata.len() as u128)),

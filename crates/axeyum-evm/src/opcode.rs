@@ -71,6 +71,9 @@ pub enum Op {
     Shr,
     /// `SAR` (0x1d): arithmetic (sign-propagating) right shift.
     Sar,
+    // --- 0x20 range: hashing ---
+    /// `KECCAK256` / `SHA3` (0x20): `keccak256(memory[offset:offset+length])`.
+    Sha3,
     // --- 0x30 range: environment (calldata / value / caller) ---
     /// `CALLVALUE` (0x34): the wei sent with the call.
     CallValue,
@@ -151,6 +154,7 @@ impl Op {
             0x1b => Op::Shl,
             0x1c => Op::Shr,
             0x1d => Op::Sar,
+            0x20 => Op::Sha3,
             0x34 => Op::CallValue,
             0x35 => Op::CallDataLoad,
             0x36 => Op::CallDataSize,

@@ -11,10 +11,36 @@
 //! * EVM `DIV`/`MOD`/`SDIV`/`SMOD`-by-0 = 0 via an `ite` guard (NOT SMT-LIB
 //!   all-ones).
 //! * `ADDMOD`/`MULMOD` evaluated at 512 bits then truncated.
-//! * KECCAK / CALL / GAS / unsupported opcodes → **havoc** (a fresh unconstrained
+//! * CALL / GAS / unsupported opcodes → **havoc** (a fresh unconstrained
 //!   word), so those paths become sound `Unknown`, never wrong.
-//! * Symbolic memory/jump offsets that are not concretely resolvable terminate
-//!   the path as `Unknown` (never silently mis-stepped).
+//! * Symbolic jump offsets that are not concretely resolvable terminate the
+//!   path as `Unknown` (never silently mis-stepped).
+//!
+//! ## Phase 2 — symbolic-offset memory / storage (read-over-write at the frontend)
+//!
+//! Symbolic `SLOAD`/`SSTORE` keys and symbolic `MSTORE`/`MLOAD` offsets are no
+//! longer havoc'd. Storage and (word-granular) memory carry an **ordered write
+//! list**: a `store(k, v)` appends `(k, v)`; a `load(k)` folds
+//! `ite(k == kᵢ, vᵢ, prev)` from newest to oldest write, ending in the base
+//! value. This is read-over-write done in the frontend — it emits **pure `QF_BV`**
+//! (`eq` / `ite` only), so the warm incremental `SymbolicExecutor` reasons about
+//! it directly (the executor's bit-blast path refuses `select`/`store` array
+//! terms; the ite-fold sidesteps that while giving the same semantics, last-write
+//! -wins by key equality, exactly mirroring the concrete `BTreeMap` oracle).
+//! Concrete-key/offset fast-paths are retained.
+//!
+//! ## Phase 2 — keccak with injectivity constraints
+//!
+//! `KECCAK256` (`SHA3`, 0x20) over a concrete-length byte span is modeled with a
+//! **fresh symbolic `BV256`** result (not an uninterpreted `apply`, which the
+//! warm bit-blaster cannot encode). For every pair of same-width keccak
+//! applications on a path we assert the injectivity lemma
+//! `argᵢ == argⱼ ⇔ resultᵢ == resultⱼ` — pure `QF_BV` `eq` over the fresh symbols
+//! (the halmos/hevm precision trick expressed in the warm fragment) — so
+//! mapping-style storage keyed by `keccak(slot . key)` is *decided* by key
+//! (dis)equality, not havoc'd. The concrete oracle uses *real* keccak256 (so a
+//! witness whose bug hinges on an invented hash value, not key equality, simply
+//! does not reproduce and is not reported).
 
 use std::collections::BTreeMap;
 
@@ -29,6 +55,10 @@ const W: u32 = 256;
 /// Bound on how many `CALLDATALOAD` / `CALLDATASIZE` care about; calldata symbols
 /// past this are still fresh but unconstrained.
 const MAX_CALLDATA_BYTES: usize = 256;
+/// Largest keccak preimage (in bytes) we model symbolically. The dominant
+/// mapping-storage pattern hashes a 32-byte slot or a 64-byte `(key . slot)`
+/// pair; longer preimages are havoc'd to a sound `Unknown`.
+const MAX_KECCAK_BYTES: usize = 128;
 
 /// The kind of bug a path can witness.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,7 +90,6 @@ pub struct PathBug {
 }
 
 /// Outcome of exploring the program.
-#[derive(Debug)]
 pub struct Exploration {
     /// The first bug found, with a lifted concrete witness (Phase-1 reports the
     /// first feasible bug).
@@ -68,15 +97,77 @@ pub struct Exploration {
     /// Whether any path ended in `Unknown` (havoc/limit) — the result is not a
     /// sound "no bug" proof when this is set on the explored sub-tree.
     pub saw_unknown: bool,
+    /// The real bug-reachability obligations the explorer **refuted** (each is a
+    /// term `pathᵢ ∧ bug_predicateᵢ` the solver found infeasible). On a clean
+    /// no-bug run their disjunction is the actual "no bad state is reachable up
+    /// to the bound" formula — UNSAT — which becomes the `SafeUpToBound` proof
+    /// (item #3), replacing the Phase-1 `0==1` placeholder. Carried with the
+    /// arena they live in.
+    pub refuted_obligations: RefutedSafety,
+}
+
+/// The refuted bug-reachability obligations plus the arena they were built in,
+/// so the caller can hand them to `produce_evidence` as the real safety proof.
+pub struct RefutedSafety {
+    /// The arena holding the obligation terms.
+    pub arena: TermArena,
+    /// Each refuted `pathᵢ ∧ bug_predicateᵢ` term (proved infeasible).
+    pub obligations: Vec<TermId>,
+}
+
+/// A symbolic store record `array[key] = value` (key/value are 256-bit IR
+/// terms). Reads fold over these newest-first.
+#[derive(Clone)]
+struct Write {
+    key: TermId,
+    value: TermId,
 }
 
 /// The symbolic machine state along one path.
+#[derive(Clone)]
 struct State {
     stack: Vec<TermId>,
-    /// Concrete-offset memory: byte offset -> an 8-bit IR term.
+    /// Concrete-offset memory: byte offset -> an 8-bit IR term (the fast path,
+    /// used whenever every offset on the path is a syntactic constant).
     memory: BTreeMap<usize, TermId>,
-    /// Concrete-key storage: 256-bit key bytes -> a 256-bit IR term.
+    /// Word-granular memory writes at *symbolic* offsets (read-over-write list,
+    /// key = byte offset as a 256-bit word, value = the stored 256-bit word).
+    /// Populated only once a symbolic `MSTORE` offset is seen; `MLOAD` then folds
+    /// these over the concrete `memory` base.
+    sym_memory: Vec<Write>,
+    /// Concrete-key storage: 256-bit key bytes -> a 256-bit IR term (fast path).
     storage: BTreeMap<[u8; 32], TermId>,
+    /// Symbolic-key storage writes (read-over-write list); a symbolic `SSTORE`
+    /// appends here and an `SLOAD` folds these over the concrete `storage` base.
+    sym_storage: Vec<Write>,
+    /// `keccak(arg)` applications observed on this path: `(arg_term, byte_len,
+    /// result_term)`. Used to emit pairwise injectivity constraints when a hash
+    /// participates in a feasibility query.
+    keccak_apps: Vec<KeccakApp>,
+}
+
+/// A keccak application observed on a path.
+#[derive(Clone)]
+struct KeccakApp {
+    /// The concatenated argument bytes as one `BV(8 * len)` term.
+    arg: TermId,
+    /// The argument byte length (selects which `keccak_n` was applied).
+    len: usize,
+    /// The `BV256` hash result.
+    result: TermId,
+}
+
+impl State {
+    fn new() -> Self {
+        State {
+            stack: Vec::new(),
+            memory: BTreeMap::new(),
+            sym_memory: Vec::new(),
+            storage: BTreeMap::new(),
+            sym_storage: Vec::new(),
+            keccak_apps: Vec::new(),
+        }
+    }
 }
 
 /// Reusable symbolic environment (declared once, shared across all paths).
@@ -109,6 +200,7 @@ pub fn explore(
     let mut exec = SymbolicExecutor::with_config(config.clone());
 
     let mut saw_unknown = false;
+    let mut obligations = Vec::new();
     let bug = walk(
         program,
         &mut arena,
@@ -117,9 +209,14 @@ pub fn explore(
         max_steps,
         track_overflow,
         &mut saw_unknown,
+        &mut obligations,
     )?;
 
-    Ok(Exploration { bug, saw_unknown })
+    Ok(Exploration {
+        bug,
+        saw_unknown,
+        refuted_obligations: RefutedSafety { arena, obligations },
+    })
 }
 
 fn build_env(arena: &mut TermArena) -> Result<SymEnv, SolverError> {
@@ -173,12 +270,9 @@ fn walk(
     max_steps: usize,
     track_overflow: bool,
     saw_unknown: &mut bool,
+    obligations: &mut Vec<TermId>,
 ) -> Result<Option<PathBug>, SolverError> {
-    let mut state = State {
-        stack: Vec::new(),
-        memory: BTreeMap::new(),
-        storage: BTreeMap::new(),
-    };
+    let mut state = State::new();
     run_from(
         program,
         arena,
@@ -190,6 +284,7 @@ fn walk(
         max_steps,
         track_overflow,
         saw_unknown,
+        obligations,
     )
 }
 
@@ -208,6 +303,7 @@ fn run_from(
     max_steps: usize,
     track_overflow: bool,
     saw_unknown: &mut bool,
+    obligations: &mut Vec<TermId>,
 ) -> Result<Option<PathBug>, SolverError> {
     macro_rules! pop_or_unknown {
         () => {
@@ -265,6 +361,7 @@ fn run_from(
                         BugKind::AddOverflow,
                         pc,
                         saw_unknown,
+                        obligations,
                     )? {
                         return Ok(Some(bug));
                     }
@@ -284,6 +381,7 @@ fn run_from(
                         BugKind::MulOverflow,
                         pc,
                         saw_unknown,
+                        obligations,
                     )? {
                         return Ok(Some(bug));
                     }
@@ -414,6 +512,50 @@ fn run_from(
                 state.stack.push(h);
                 *saw_unknown = true;
             }
+            Op::Sha3 => {
+                let off = pop_or_unknown!();
+                let len = pop_or_unknown!();
+                // We need a concrete offset and length to gather the hashed bytes
+                // (a symbolic-length hash is beyond this model → sound Unknown).
+                let (Some(o), Some(l)) = (concrete_usize(arena, off), concrete_usize(arena, len))
+                else {
+                    *saw_unknown = true;
+                    return Ok(None);
+                };
+                if l == 0 || l > MAX_KECCAK_BYTES {
+                    // Empty / oversized preimage: havoc to stay sound (the common
+                    // mapping pattern hashes 32- or 64-byte slots).
+                    let h = env.havoc(arena)?;
+                    state.stack.push(h);
+                    *saw_unknown = true;
+                    return Ok(None);
+                }
+                let arg = gather_bytes(arena, state, o, l)?;
+                // Model the hash result as a **fresh symbolic BV256** rather than
+                // an uninterpreted `apply` (the warm executor cannot bit-blast
+                // `Op::Apply`). Injectivity is then stated as pure `QF_BV` `eq`
+                // constraints over these fresh symbols — the halmos trick expressed
+                // entirely in the warm fragment, so feasibility/model queries work.
+                let result = env.havoc(arena)?;
+                let new_app = KeccakApp {
+                    arg,
+                    len: l,
+                    result,
+                };
+                // Assert injectivity of this new hash against every prior
+                // same-width hash on the path (`argᵢ == argⱼ ⇔ resultᵢ == resultⱼ`),
+                // so the solver reasons about mapping keys by (dis)equality. These
+                // are monotone facts; asserting them now keeps them live for all
+                // downstream feasibility queries on this path.
+                if let Some(lemma) = keccak_injectivity_pair(arena, &state.keccak_apps, &new_app)? {
+                    let status = exec.assume(arena, lemma)?;
+                    if matches!(status, PathStatus::Unknown(_)) {
+                        *saw_unknown = true;
+                    }
+                }
+                state.keccak_apps.push(new_app);
+                state.stack.push(result);
+            }
             Op::CallValue => state.stack.push(env.callvalue),
             Op::Caller => state.stack.push(env.caller),
             Op::CallDataSize => {
@@ -435,26 +577,48 @@ fn run_from(
             }
             Op::Mload => {
                 let off = pop_or_unknown!();
-                let Some(o) = concrete_usize(arena, off) else {
-                    *saw_unknown = true;
-                    return Ok(None);
+                let word = if let Some(o) = concrete_usize(arena, off) {
+                    // Concrete-offset fast path: byte-granular over the base map,
+                    // then any symbolic word-writes folded on top.
+                    let base = mem_load(arena, state, o)?;
+                    let off_word = arena.bv_const(W, o as u128)?;
+                    fold_word_writes(arena, &state.sym_memory, off_word, base)?
+                } else {
+                    // Symbolic offset: a word-granular read-over-write fold. The
+                    // byte-addressed `memory` base is conservatively read as 0
+                    // (a symbolic offset that aliases a concrete byte write is
+                    // outside this word-level model — see UPSTREAM-FEEDBACK).
+                    let base = arena.bv_const(W, 0)?;
+                    fold_word_writes(arena, &state.sym_memory, off, base)?
                 };
-                let word = mem_load(arena, state, o)?;
                 state.stack.push(word);
             }
             Op::Mstore => {
                 let off = pop_or_unknown!();
                 let val = pop_or_unknown!();
-                let Some(o) = concrete_usize(arena, off) else {
-                    *saw_unknown = true;
-                    return Ok(None);
-                };
-                mem_store(arena, state, o, val)?;
+                if let Some(o) = concrete_usize(arena, off) {
+                    mem_store(arena, state, o, val)?;
+                    // A concrete store also shadows any earlier symbolic write to
+                    // the same word offset (record it so a later symbolic read at
+                    // an aliasing offset sees the newest value).
+                    let off_word = arena.bv_const(W, o as u128)?;
+                    state.sym_memory.push(Write {
+                        key: off_word,
+                        value: val,
+                    });
+                } else {
+                    state.sym_memory.push(Write {
+                        key: off,
+                        value: val,
+                    });
+                }
             }
             Op::Mstore8 => {
                 let off = pop_or_unknown!();
                 let val = pop_or_unknown!();
                 let Some(o) = concrete_usize(arena, off) else {
+                    // A symbolic single-byte store is below our word granularity;
+                    // stay honest rather than mis-model byte aliasing.
                     *saw_unknown = true;
                     return Ok(None);
                 };
@@ -463,24 +627,20 @@ fn run_from(
             }
             Op::Sload => {
                 let key = pop_or_unknown!();
-                let Some(k) = concrete_bytes(arena, key) else {
-                    *saw_unknown = true;
-                    return Ok(None);
-                };
-                let v = match state.storage.get(&k) {
-                    Some(t) => *t,
-                    None => arena.bv_const(W, 0)?,
-                };
-                state.stack.push(v);
+                let base = storage_base(arena, state, key)?;
+                let word = fold_word_writes(arena, &state.sym_storage, key, base)?;
+                state.stack.push(word);
             }
             Op::Sstore => {
                 let key = pop_or_unknown!();
                 let val = pop_or_unknown!();
-                let Some(k) = concrete_bytes(arena, key) else {
-                    *saw_unknown = true;
-                    return Ok(None);
-                };
-                state.storage.insert(k, val);
+                if let Some(k) = concrete_bytes(arena, key) {
+                    state.storage.insert(k, val);
+                }
+                // Always record on the symbolic write-list too: a later symbolic
+                // read must see this write even when the key is concrete (it may
+                // alias a symbolic key), and a symbolic key only lives here.
+                state.sym_storage.push(Write { key, value: val });
             }
             Op::Pc => {
                 state.stack.push(arena.bv_const(W, pc as u128)?);
@@ -526,11 +686,7 @@ fn run_from(
                             exec.enter()?;
                             let status = exec.assume(arena, taken)?;
                             if !status.is_infeasible() {
-                                let mut forked = State {
-                                    stack: state.stack.clone(),
-                                    memory: state.memory.clone(),
-                                    storage: state.storage.clone(),
-                                };
+                                let mut forked = state.clone();
                                 let found = run_from(
                                     program,
                                     arena,
@@ -542,6 +698,7 @@ fn run_from(
                                     max_steps,
                                     track_overflow,
                                     saw_unknown,
+                                    obligations,
                                 )?;
                                 if found.is_some() {
                                     exec.backtrack();
@@ -637,6 +794,7 @@ fn lift_witness(
 
 /// Tests whether an overflow predicate is path-feasible. Returns the bug if so;
 /// flags `saw_unknown` if the feasibility query is undecided.
+#[allow(clippy::too_many_arguments)]
 fn check_overflow(
     arena: &mut TermArena,
     exec: &mut SymbolicExecutor,
@@ -645,6 +803,7 @@ fn check_overflow(
     kind: BugKind,
     pc: usize,
     saw_unknown: &mut bool,
+    obligations: &mut Vec<TermId>,
 ) -> Result<Option<PathBug>, SolverError> {
     let branch = exec.branch(arena, ovf)?;
     if branch.if_true.is_feasible() {
@@ -654,8 +813,30 @@ fn check_overflow(
     }
     if matches!(branch.if_true, PathStatus::Unknown(_)) {
         *saw_unknown = true;
+    } else {
+        // The overflow is *infeasible* under the current path: record the real
+        // refuted obligation `path ∧ ovf` (item #3 — the SafeUpToBound proof is
+        // the conjunction of these being UNSAT, not a fabricated `0==1`).
+        if let Some(ob) = path_obligation(arena, exec, ovf)? {
+            obligations.push(ob);
+        }
     }
     Ok(None)
+}
+
+/// Builds the term `(⋀ path_condition) ∧ predicate` — a single self-contained
+/// reachability obligation the solver refuted. Returns `None` if the path
+/// condition references nothing (the obligation is just `predicate`).
+fn path_obligation(
+    arena: &mut TermArena,
+    exec: &SymbolicExecutor,
+    predicate: TermId,
+) -> Result<Option<TermId>, SolverError> {
+    let mut acc = predicate;
+    for &c in exec.path_condition() {
+        acc = arena.and(acc, c)?;
+    }
+    Ok(Some(acc))
 }
 
 /// EVM div/mod-by-zero = 0 guard around a partial SMT-LIB op.
@@ -756,6 +937,119 @@ fn mem_store(
         state.memory.insert(o + i as usize, byte);
     }
     Ok(())
+}
+
+/// Folds a symbolic read-over-write list newest-first into an `ite` chain:
+/// `select(key) = ite(key == kₙ, vₙ, … ite(key == k₀, v₀, base))`. All terms are
+/// pure `QF_BV` (`eq`/`ite`), so the warm executor reasons about them directly.
+fn fold_word_writes(
+    arena: &mut TermArena,
+    writes: &[Write],
+    key: TermId,
+    base: TermId,
+) -> Result<TermId, SolverError> {
+    let mut acc = base;
+    for w in writes {
+        let hit = arena.eq(key, w.key)?;
+        acc = arena.ite(hit, w.value, acc)?;
+    }
+    Ok(acc)
+}
+
+/// The base value for a storage read at `key`: the concrete-key fast-path entry
+/// when `key` is a syntactic constant present in the concrete map, else 0 (the
+/// EVM cold-slot default). Symbolic writes are layered on top by the caller.
+fn storage_base(arena: &mut TermArena, state: &State, key: TermId) -> Result<TermId, SolverError> {
+    if let Some(k) = concrete_bytes(arena, key) {
+        if let Some(&t) = state.storage.get(&k) {
+            // A concrete write is also on the symbolic list (SSTORE records both);
+            // returning 0 here and letting the fold pick it up keeps a single
+            // source of truth. But constant-folding the common pure-concrete path
+            // is cheaper, so prefer the map value when no symbolic key exists.
+            if state
+                .sym_storage
+                .iter()
+                .all(|w| concrete_bytes(arena, w.key).is_some())
+            {
+                return Ok(t);
+            }
+        }
+    }
+    Ok(arena.bv_const(W, 0)?)
+}
+
+/// Gathers `len` bytes of memory starting at concrete offset `o` into one
+/// `BV(8*len)` term (most-significant byte first), reading symbolic word-writes
+/// when the byte is not in the concrete map. Used to build a keccak preimage.
+fn gather_bytes(
+    arena: &mut TermArena,
+    state: &State,
+    o: usize,
+    len: usize,
+) -> Result<TermId, SolverError> {
+    let mut acc: Option<TermId> = None;
+    for i in 0..len {
+        let byte = byte_at(arena, state, o + i)?;
+        acc = Some(match acc {
+            None => byte,
+            Some(prev) => arena.concat(prev, byte)?,
+        });
+    }
+    Ok(acc.expect("len >= 1"))
+}
+
+/// The 8-bit memory term at byte offset `b`: the concrete byte map first, else
+/// the byte sliced out of a symbolic word-write covering `b` (newest-first),
+/// else zero.
+fn byte_at(arena: &mut TermArena, state: &State, b: usize) -> Result<TermId, SolverError> {
+    if let Some(&t) = state.memory.get(&b) {
+        return Ok(t);
+    }
+    // Look for the newest symbolic word-write whose 32-byte span covers `b` at a
+    // *constant* offset. Symbolic-offset word writes cannot be byte-sliced for a
+    // keccak preimage here, so they contribute zero (a conservative read).
+    let base = arena.bv_const(8, 0)?;
+    let mut acc = base;
+    for w in &state.sym_memory {
+        if let Some(off) = concrete_usize(arena, w.key) {
+            if b >= off && b < off + 32 {
+                let bit_hi = 255 - u32::try_from((b - off) * 8).unwrap_or(0);
+                let lo = bit_hi.saturating_sub(7);
+                acc = arena.extract(bit_hi, lo, w.value)?;
+            }
+        }
+    }
+    Ok(acc)
+}
+
+/// The keccak injectivity lemma pairing a *new* hash application against every
+/// prior *same-width* one: `⋀ᵢ (argᵢ == arg_new ⇔ resultᵢ == result_new)` (the
+/// collision-freedom assumption; same-width because the UF is per-length). `None`
+/// when there is no prior same-width hash to relate. Asserted when the hash is
+/// created so a mapping keyed by `keccak(slot.key)` is decided by key
+/// (dis)equality rather than havoc'd.
+fn keccak_injectivity_pair(
+    arena: &mut TermArena,
+    prior: &[KeccakApp],
+    new_app: &KeccakApp,
+) -> Result<Option<TermId>, SolverError> {
+    let mut lemma: Option<TermId> = None;
+    for p in prior {
+        if p.len != new_app.len {
+            continue;
+        }
+        let arg_eq = arena.eq(p.arg, new_app.arg)?;
+        let res_eq = arena.eq(p.result, new_app.result)?;
+        // arg_eq <=> res_eq : injective both ways (no collisions, and equal args
+        // hash equally). Stating both keeps the UF from being forced apart on
+        // equal preimages.
+        let inj = arena.eq(arg_eq, res_eq)?;
+        lemma = Some(match lemma {
+            None => inj,
+            Some(prev) => arena.and(prev, inj)?,
+        });
+    }
+    Ok(lemma)
 }
 
 /// Resolves a term to a concrete `usize` offset/target *on the current path*:

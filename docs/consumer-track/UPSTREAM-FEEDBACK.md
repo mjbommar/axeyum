@@ -83,6 +83,45 @@ Status: `open` unless noted.
 - **Source:** `docs/consumer-track/property/SCOREBOARD.md` (array rows);
   `axeyum-property` `BvArray` over `Sort::Array`.
 
+### U6 · high · solver/symexec · `SymbolicExecutor` cannot reason about arrays or UFs
+- **What:** the warm incremental path behind `SymbolicExecutor` (`branch` / `assume`
+  / `model`, via `IncrementalBvSolver::check`) **refuses** any active array
+  assertion (`select`/`store`) — `solve_with_extra` returns `Unsupported` — and the
+  bit-blaster lists `Op::Apply` (uninterpreted functions) among its unsupported ops.
+  So a DFS explorer that wants symbolic-array memory or an uninterpreted keccak in
+  its *live, incremental* path condition cannot use the array theory / UF at all;
+  only the one-shot `check_with_memory` decides arrays, and it is not incremental.
+- **Why it matters:** symbolic-offset memory/storage and keccak-keyed mappings are
+  THE high-value EVM (App A) targets, and the same wall blocks App B/C buffer
+  reasoning. App A Phase 2 worked around it by lowering both to **pure QF_BV**
+  (frontend read-over-write `ite`-fold for memory/storage; fresh-symbol + pairwise
+  `eq` injectivity for keccak) — sound and it ships, but it (a) loses the solver's
+  array decision procedure, (b) makes every symbolic read O(writes) in `ite` depth,
+  and (c) cannot byte-slice a symbolic-offset word write for a keccak preimage.
+- **Ask:** a warm/incremental array+UF path for `SymbolicExecutor` — either a lazy
+  array axiom instantiation in the incremental engine (ADR-0030 is named for this)
+  or an incremental wrapper over `check_with_memory` that keeps push/pop scopes.
+  Even incremental `Op::Apply` (Ackermann-on-demand) would let consumers keep
+  keccak uninterpreted instead of re-deriving injectivity by hand.
+- **Source:** `crates/axeyum-solver/src/incremental.rs` (`solve_with_extra` array
+  refusal; `check_with_memory`); `crates/axeyum-bv/src/lib.rs` (`Op::Apply`
+  unsupported); `crates/axeyum-evm/src/symbolic.rs` Phase-2 workaround.
+
+### U7 · medium · perf/encoding · `ite`-chain read-over-write scales poorly for deep stores
+- **What:** the frontend read-over-write encoding a consumer must use (see U6)
+  produces a `select(k)` term of `ite` depth = number of prior stores, each guard a
+  256-bit `eq`. For a contract with many `SSTORE`s on a path the per-read CNF grows
+  linearly and reads compound; there is no structure-sharing of the disequality
+  chain the way a real array solver's congruence closure gives.
+- **Why it matters:** it caps how deep a path App A can explore before the
+  bit-blast cost dominates — exactly the QF_BV/QF_ABV fragment the project measures
+  as dominant, so leaving the array DP unused on the incremental path forfeits that
+  edge for symbolic-state contracts.
+- **Ask:** (subsumed by U6) a native incremental array path; failing that, a helper
+  that canonicalizes/dedups a frontend write-list into a minimal `ite` chain
+  (drop shadowed concrete-key writes, share guards).
+- **Source:** `crates/axeyum-evm/src/symbolic.rs` `fold_word_writes`.
+
 ---
 
 ## Resolved / superseded
