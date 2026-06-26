@@ -252,6 +252,17 @@ against competitor source, are now binding:
    rejected because it inflated upfront lemmas to 5484 without deciding either
    row. Next work should instrument lazy UF+LIA CEGAR iterations and attack SAT
    relevance / Boolean-skeleton reduction, not add more shallow bound seeding.
+   **QF_UFLIA OVERBOUND DISPATCH DIAGNOSTICS LANDED (2026-06-26):**
+   lazy function-consistency CEGAR `unknown`s now report refinement counters, and
+   generic `lia-dpll` budget `unknown`s over UF queries report when UF-aware routes
+   were not reached plus the Ackermann pair count. The two overbound rows both
+   show the same immediate shape at short budget: `lia-dpll` exhausts the budget
+   first, `arithmetic_function=true`, `ackermann_pairs=282`; the UF-aware lazy
+   route is not reached by `check_auto`. The next useful move is therefore route
+   scheduling / shared-deadline work so admitted arithmetic-UF overbound instances
+   get a UF-aware probe before opaque-app LIA DPLL consumes the budget. If that
+   probe reports `sat_candidates=0`, then the blocker is the 873-atom function-free
+   Boolean arithmetic skeleton itself.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

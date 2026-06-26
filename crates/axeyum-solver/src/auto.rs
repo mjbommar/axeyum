@@ -1160,7 +1160,14 @@ fn dispatch_int_linear_refuters(
         Err(other) => return Err(other),
     }
     match check_with_lia_dpll(arena, &lin, config) {
-        Ok(result) => {
+        Ok(mut result) => {
+            if let CheckResult::Unknown(reason) = &result
+                && features.has_function
+                && is_budget_unknown_kind(reason.kind)
+            {
+                result =
+                    CheckResult::Unknown(annotate_lia_budget_before_uf(arena, assertions, reason));
+            }
             with_recorder(rec, |t| t.record_result("lia-dpll", &result));
             match &result {
                 CheckResult::Unknown(reason)
@@ -1178,6 +1185,23 @@ fn dispatch_int_linear_refuters(
             Ok(None)
         }
         Err(other) => Err(other),
+    }
+}
+
+fn annotate_lia_budget_before_uf(
+    arena: &TermArena,
+    assertions: &[TermId],
+    reason: &UnknownReason,
+) -> UnknownReason {
+    UnknownReason {
+        kind: reason.kind,
+        detail: format!(
+            "{}; UF-aware routes were not reached because the generic LIA DPLL route \
+             exhausted its budget first (arithmetic_function={}, ackermann_pairs={})",
+            reason.detail,
+            has_arithmetic_function(arena),
+            crate::euf::ackermann_congruence_pairs(arena, assertions)
+        ),
     }
 }
 
@@ -4426,6 +4450,35 @@ mod tests {
             trace.contains("term-identity-refuter"),
             "trace should record term-identity-refuter, got:\n{trace}"
         );
+    }
+
+    #[test]
+    fn lia_budget_unknown_annotation_reports_skipped_uf_context() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Int], Sort::Int)
+            .expect("declare f");
+        let x = arena.int_var("x").expect("x");
+        let y = arena.int_var("y").expect("y");
+        let fx = arena.apply(f, &[x]).expect("f(x)");
+        let fy = arena.apply(f, &[y]).expect("f(y)");
+        let assertion = arena.eq(fx, fy).expect("eq");
+        let reason = UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "inner arithmetic timeout".to_string(),
+        };
+
+        let annotated = annotate_lia_budget_before_uf(&arena, &[assertion], &reason);
+
+        assert_eq!(annotated.kind, UnknownKind::ResourceLimit);
+        assert!(annotated.detail.contains("inner arithmetic timeout"));
+        assert!(
+            annotated
+                .detail
+                .contains("UF-aware routes were not reached")
+        );
+        assert!(annotated.detail.contains("arithmetic_function=true"));
+        assert!(annotated.detail.contains("ackermann_pairs=1"));
     }
 
     /// `solve` routes a *too-wide-to-enumerate* (`BitVec(32)`) quantified EUF

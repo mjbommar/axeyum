@@ -6,6 +6,34 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UFLIA overbound dispatch starvation diagnosed.**
+  Added two low-cost diagnostics for the hard parent
+  `qf-uflia-cvc5-regress-clean-overbound` rows. First, the shared lazy
+  function-consistency CEGAR loop now wraps any `unknown` with refinement stats:
+  application count, function groups, possible congruence pairs, solve rounds,
+  candidate models, checked/equal/violated pairs, and lemmas added. Second, a
+  generic `lia-dpll` budget `unknown` on a query with UF applications now records
+  when UF-aware routes were not reached, including whether an arithmetic function
+  exists and the Ackermann pair count.
+
+  Short diagnostics on both overbound rows now expose the immediate blocker:
+  both time out in the generic opaque-app `lia-dpll` route before UF-aware
+  solving, with `arithmetic_function=true` and `ackermann_pairs=282`. This
+  corrects the prior working assumption that lazy UF+LIA CEGAR refinement churn
+  had been observed on these rows; in the current dispatcher it is not reached
+  from `check_auto` for this shape. **Next:** fix route scheduling / deadline
+  sharing so admitted arithmetic-UF overbound instances get a UF-aware probe
+  before generic LIA DPLL can consume the whole budget; if that probe then reports
+  `sat_candidates=0`, the next bottleneck is the 873-atom function-free Boolean
+  arithmetic skeleton itself.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_unknown_reports_cegar_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`.
+
 - **Session 2026-06-26 — QF_UFLIA overbound equality-propagation probe retained.**
   Revisited the two parent `qf-uflia-cvc5-regress-clean-overbound` timeout rows
   after the restart. The retained solver change is deliberately narrow:
@@ -4163,6 +4191,14 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **QF_UFLIA overbound dispatch starvation diagnosed.**
+  Added `unknown` diagnostics for lazy function-consistency CEGAR stats and for
+  generic LIA DPLL budget exhaustion before UF-aware routes. Both QF_UFLIA
+  overbound rows now report that UF-aware solving is not reached from
+  `check_auto` because opaque-app LIA DPLL consumes the budget first
+  (`ackermann_pairs=282`), sharpening the next task to route scheduling /
+  deadline sharing rather than more shallow bound seeding.
 
 - **2026-06-26** — **QF_UFLIA overbound equality propagation retained.**
   Added conservative online LIA propagation for integer equality atoms:

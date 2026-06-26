@@ -569,17 +569,24 @@ where
         }
     }
 
+    let mut stats = FunctionConsistencyStats::new(applications.len(), &groups);
     let mut working = elim.abstraction().to_vec();
     // Index pairs whose congruence lemma has already been asserted; bounds the
     // loop and prevents re-adding the same lemma.
     let mut added: HashSet<(usize, usize)> = HashSet::new();
 
     loop {
+        stats.solve_rounds += 1;
         let assignment = match solve(arena, &working)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
-            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
-            CheckResult::Sat(model) => model.to_assignment(),
+            CheckResult::Unknown(reason) => {
+                return Ok(CheckResult::Unknown(stats.wrap_unknown(&reason)));
+            }
+            CheckResult::Sat(model) => {
+                stats.sat_candidates += 1;
+                model.to_assignment()
+            }
         };
 
         // Collect every newly-violated pair before mutating the arena, so the
@@ -598,10 +605,13 @@ where
                     if added.contains(&(i, j)) {
                         continue;
                     }
-                    if args_tuples_equal(arena, args_i, args_j, &assignment)
-                        && results_differ(&assignment, *fresh_i, *fresh_j)
-                    {
-                        new_lemmas.push((i, j));
+                    stats.pair_checks += 1;
+                    if args_tuples_equal(arena, args_i, args_j, &assignment) {
+                        stats.equal_arg_pairs += 1;
+                        if results_differ(&assignment, *fresh_i, *fresh_j) {
+                            stats.violated_pairs += 1;
+                            new_lemmas.push((i, j));
+                        }
                     }
                 }
             }
@@ -609,9 +619,16 @@ where
 
         if new_lemmas.is_empty() {
             // Model is functionally consistent: project, replay, and return.
-            return Ok(project_replay_build(arena, &elim, assertions, &assignment));
+            let result = project_replay_build(arena, &elim, assertions, &assignment);
+            return Ok(match result {
+                CheckResult::Unknown(reason) => CheckResult::Unknown(stats.wrap_unknown(&reason)),
+                other => other,
+            });
         }
 
+        let new_count = new_lemmas.len();
+        stats.last_new_lemmas = new_count;
+        stats.lemmas_added += new_count;
         for (i, j) in new_lemmas {
             let lemma = congruence_lemma(
                 arena,
@@ -622,6 +639,73 @@ where
             )?;
             working.push(lemma);
             added.insert((i, j));
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct FunctionConsistencyStats {
+    applications: usize,
+    function_groups: usize,
+    potential_pairs: usize,
+    solve_rounds: usize,
+    sat_candidates: usize,
+    pair_checks: usize,
+    equal_arg_pairs: usize,
+    violated_pairs: usize,
+    lemmas_added: usize,
+    last_new_lemmas: usize,
+}
+
+impl FunctionConsistencyStats {
+    fn new(applications: usize, groups: &[(FuncId, Vec<usize>)]) -> Self {
+        let potential_pairs = groups.iter().fold(0usize, |acc, (_func, members)| {
+            let pairs = members
+                .len()
+                .saturating_mul(members.len().saturating_sub(1))
+                / 2;
+            acc.saturating_add(pairs)
+        });
+        Self {
+            applications,
+            function_groups: groups.len(),
+            potential_pairs,
+            solve_rounds: 0,
+            sat_candidates: 0,
+            pair_checks: 0,
+            equal_arg_pairs: 0,
+            violated_pairs: 0,
+            lemmas_added: 0,
+            last_new_lemmas: 0,
+        }
+    }
+
+    fn summary(&self) -> String {
+        format!(
+            "applications={}, function_groups={}, potential_pairs={}, solve_rounds={}, \
+             sat_candidates={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
+             lemmas_added={}, last_new_lemmas={}",
+            self.applications,
+            self.function_groups,
+            self.potential_pairs,
+            self.solve_rounds,
+            self.sat_candidates,
+            self.pair_checks,
+            self.equal_arg_pairs,
+            self.violated_pairs,
+            self.lemmas_added,
+            self.last_new_lemmas
+        )
+    }
+
+    fn wrap_unknown(&self, reason: &UnknownReason) -> UnknownReason {
+        UnknownReason {
+            kind: reason.kind,
+            detail: format!(
+                "lazy function-consistency CEGAR inconclusive ({}): {}",
+                self.summary(),
+                reason.detail
+            ),
         }
     }
 }
@@ -1022,7 +1106,7 @@ pub fn certify_ackermann_unsat(
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {
     use super::check_qf_ufbv_lazy;
-    use crate::backend::{CheckResult, SolverConfig};
+    use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
     use crate::combined::check_with_all_theories;
     use crate::lia::DEFAULT_INT_WIDTH;
     use crate::sat_bv_backend::SatBvBackend;
@@ -1051,6 +1135,39 @@ mod tests {
         let result =
             check_qf_ufbv_lazy(&mut backend, &mut arena, &[fa_ne_fb, a_eq_b], &config).unwrap();
         assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn lazy_function_consistency_unknown_reports_cegar_stats() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .unwrap();
+        let a = arena.bv_var("a", 8).unwrap();
+        let b = arena.bv_var("b", 8).unwrap();
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let assertion = arena.eq(fa, fb).unwrap();
+
+        let result = super::check_with_function_consistency(&mut arena, &[assertion], |_a, _q| {
+            Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "inner timeout".to_string(),
+            }))
+        })
+        .unwrap();
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected wrapped unknown, got {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(reason.detail.contains("lazy function-consistency CEGAR"));
+        assert!(reason.detail.contains("applications=2"));
+        assert!(reason.detail.contains("function_groups=1"));
+        assert!(reason.detail.contains("potential_pairs=1"));
+        assert!(reason.detail.contains("solve_rounds=1"));
+        assert!(reason.detail.contains("sat_candidates=0"));
+        assert!(reason.detail.contains("inner timeout"));
     }
 
     #[test]
