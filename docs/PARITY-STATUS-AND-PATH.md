@@ -82,7 +82,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 648 decided, 597 oracle-compared, DISAGREE=0**, with **18 complete
+  992 files, 648 decided, 597 oracle-compared, DISAGREE=0**, with **19 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
@@ -90,7 +90,9 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   QF_BVFP/bitwuzla `100% (7/7)`, QF_DT/cvc5 `100% (3/3)`,
   QF_FF/cvc5 `100% (24/24)`, QF_FP/bitwuzla `100% (16/16)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
-  `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UFBV/cvc5 `100% (4/4)`,
+  `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UF/cvc5 bounded
+  declared-sort `82% (36/44)` with Lean unsat `57% (8/14)`,
+  QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `100% (2/2)`, QF_UFFF/cvc5 `100% (8/8)`, QF_UFLIA curated
   `100% (2/2)`, and QF_UFLIA bounded `100% (5/5)`. QF_ABV/QF_AUFBV no longer
   carry audit runtime failures:

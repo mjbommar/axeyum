@@ -629,6 +629,33 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean() {
     lean_accepts("qf_ufbv_fun1_bool_uf_exhaustive", &source);
 }
 
+/// `QF_UF`: `parallel-let` reduces to a declared-carrier equality conflict
+/// without any `Apply` node. It is still EUF, not ground BV.
+#[test]
+fn qf_uf_declared_sort_equality_checks_in_real_lean() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_UF)
+        (declare-sort U 0)
+        (declare-fun x () U)
+        (declare-fun y () U)
+        (assert (distinct x y))
+        (assert (let ((x y) (y x)) (= x y)))
+        (check-sat)
+    ",
+    )
+    .expect("parallel-let slice parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("declared-sort EUF equality row reconstructs");
+    assert_eq!(fragment, ProofFragment::QfUf);
+    assert!(
+        !source.contains("sorryAx"),
+        "declared-sort EUF module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_uf_declared_sort_equality", &source);
+}
+
 /// `QF_NRA`: broader SOS certificates now reconstruct through a certificate-gated
 /// Lean wrapper when the detailed ring-normalized proof slice does not cover the
 /// shape. The checker still re-runs `SosCertificate::verify` before rendering.

@@ -1848,11 +1848,13 @@ fn direct_structural_unsat_evidence(
 ///
 /// 1. [`crate::prove_qf_abv_unsat_alethe`] — the array read-over-write-same /
 ///    extensionality DIRECT cert (proves the conflict via the array axiom);
-/// 2. [`crate::prove_qf_ufbv_unsat_alethe`] — the Ackermann (`QF_UFBV`) cert (derives
+/// 2. [`crate::prove_qf_uf_unsat_alethe`] — the pure EUF congruence cert over
+///    uninterpreted functions and carrier-sort equalities;
+/// 3. [`crate::prove_qf_ufbv_unsat_alethe`] — the Ackermann (`QF_UFBV`) cert (derives
 ///    each functional-consistency constraint by `eq_congruent`);
-/// 3. [`crate::prove_qf_abv_unsat_alethe_via_elimination`] — the array-elimination
+/// 4. [`crate::prove_qf_abv_unsat_alethe_via_elimination`] — the array-elimination
 ///    (`QF_ABV`) cert (derives each read-consistency constraint by `eq_congruent`);
-/// 4. [`crate::prove_qf_dt_unsat_alethe_via_simplification`] — the datatype
+/// 5. [`crate::prove_qf_dt_unsat_alethe_via_simplification`] — the datatype
 ///    read-over-construct cert (folds each `select`-over-`construct` by
 ///    `eq_transitive`, the projection discharged by ι-reduction — no datatype axiom).
 ///
@@ -1867,6 +1869,11 @@ fn zero_trust_alethe_certificate(
     assertions: &[TermId],
 ) -> Option<Vec<AletheCommand>> {
     if let Some(proof) = crate::prove_qf_abv_unsat_alethe(arena, assertions)
+        && matches!(check_alethe(&proof), Ok(true))
+    {
+        return Some(proof);
+    }
+    if let Some(proof) = crate::prove_qf_uf_unsat_alethe(arena, assertions)
         && matches!(check_alethe(&proof), Ok(true))
     {
         return Some(proof);

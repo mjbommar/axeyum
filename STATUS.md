@@ -6,6 +6,39 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UF declared-sort equality audit route.**
+  The refreshed QF_UF bounded declared-sort row now has a committed exact
+  dominance audit. `scan_proof_fragment` treats equality/disequality over
+  declared uninterpreted carrier sorts as `QfUf` even when no `Apply` node is
+  present, and the zero-trust Alethe evidence path now tries the pure EUF
+  congruence emitter directly. This closes the `parallel-let` proof-route gap:
+  it already had checked Alethe evidence, but Lean reconstruction was routed to
+  the wrong fragment. The exact audit for
+  `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` is now committed at
+  **36/44 dominant (81.8%)**, **Lean unsat 8/14 (57.1%)**,
+  **mismatches=0**, **audit_errors=2**, **timeouts=1**. The dominance report now
+  has **19 complete exact audit rows**. Remaining QF_UF blockers are concrete:
+  Boolean-normalization proof bridges for `not =>`/CNF-shaped pure-UF rows,
+  replay-safe SAT evidence for `parser/as`, a Lean route for the set/card
+  bit-blast trust-hole row, the nonlinear-extension `unknown`, and one
+  check-evidence timeout. **Next:** fix the two audit errors first, then add a
+  sound Boolean proof bridge for the `bare-unsat` pure-UF rows.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_refutation_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__parallel-let.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 /tmp/qf-uf-bounded-dominance-audit-after-declsort.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-26 — QF_UF underspecified div/mod soundness guard.**
   Re-ran the current QF_UF cvc5 rows and found a false `unsat` on
   `cli__regress1__sygus__proj-issue165.smt2`: the formula is satisfiable under

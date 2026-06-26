@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **648 decided**,
-   **597 oracle-compared**, **DISAGREE = 0**, with **18 complete exact audit rows**
+   **597 oracle-compared**, **DISAGREE = 0**, with **19 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -180,6 +180,17 @@ against competitor source, are now binding:
    syntactically known nonzero constant until an explicit underspecification
    encoding exists. The cvc5 QF_UF bounded rows are now **44/82 decided** with
    **DISAGREE=0**; the overbound row remains **4/6 decided**, **DISAGREE=0**.
+   **QF_UF DECLARED-SORT EXACT AUDIT INGESTED (2026-06-26):**
+   the refreshed bounded declared-sort QF_UF row now has a complete committed
+   dominance audit. Equality-only conflicts over declared uninterpreted carrier
+   sorts now route to the EUF Lean fragment even without an `Apply` node, and the
+   zero-trust evidence lane tries the pure EUF Alethe congruence emitter directly.
+   This closes the `parallel-let` Lean gap and moves the exact row to
+   **36/44 dominant (81.8%)**, **Lean unsat 8/14 (57.1%)**, with
+   **mismatches=0**, **audit_errors=2**, and **timeouts=1**. Remaining QF_UF
+   blockers are now named audit gaps: two audit errors, Boolean-normalization
+   proof bridges for CNF-shaped pure-UF rows, one set/card bit-blast trust hole,
+   one nonlinear-extension `unknown`, and one check-evidence timeout.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

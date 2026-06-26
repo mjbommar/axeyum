@@ -1685,6 +1685,7 @@ fn scan_ground_bv_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> Pr
 pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
     let mut has_bv = false;
     let mut has_func = false;
+    let mut has_uninterpreted_sort = false;
     let mut has_array = false;
     let mut has_datatype = false;
     let mut has_arith = false;
@@ -1698,6 +1699,7 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         }
         match arena.sort_of(term) {
             IrSort::BitVec(_) => has_bv = true,
+            IrSort::Uninterpreted(_) => has_uninterpreted_sort = true,
             IrSort::Array { .. } => has_array = true,
             IrSort::Datatype(_) => has_datatype = true,
             IrSort::Int | IrSort::Real => has_arith = true,
@@ -1783,7 +1785,7 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         // needed as opaque arithmetic terms. The ArithDPLL checker re-derives the
         // abstraction refutation before the Lean wrapper is allowed.
         ProofFragment::ArithDpll
-    } else if has_func {
+    } else if has_func || (has_uninterpreted_sort && !has_arith) {
         ProofFragment::QfUf
     } else if has_arith {
         scan_arithmetic_proof_fragment(arena, assertions)

@@ -126,20 +126,22 @@ fn large_in_fragment_qf_bv_unsat_carries_an_alethe_proof() {
 
 #[test]
 fn qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate() {
-    // f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00): unsat by Ackermann congruence over `f`.
+    // f(a) = #x00 ∧ a = b ∧ ¬(f(b) = #x00): unsat by Ackermann congruence over `f`.
+    // Use 8-bit variables so the newer tiny local BV+UF enumerator declines and
+    // this test continues to exercise the zero-trust Alethe route directly.
     // produce_evidence must now certify it with a check_alethe-validated Alethe proof
     // that DERIVES the functional-consistency reduction by eq_congruent — so the
     // evidence carries NO trusted reduction step, rather than the old trusted DRAT
     // certificate that recorded TrustId::Ackermann as a trust hole.
     let mut arena = TermArena::new();
     let f = arena
-        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
         .unwrap();
-    let a = arena.bv_var("a", 2).unwrap();
-    let b = arena.bv_var("b", 2).unwrap();
+    let a = arena.bv_var("a", 8).unwrap();
+    let b = arena.bv_var("b", 8).unwrap();
     let fa = arena.apply(f, &[a]).unwrap();
     let fb = arena.apply(f, &[b]).unwrap();
-    let c00 = arena.bv_const(2, 0).unwrap();
+    let c00 = arena.bv_const(8, 0).unwrap();
     let e1 = arena.eq(fa, c00).unwrap();
     let e2 = arena.eq(a, b).unwrap();
     let e3 = {
@@ -163,6 +165,37 @@ fn qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate() {
         report.trusted_steps.is_empty(),
         "expected zero trust holes (Ackermann proven via eq_congruent), got {:?}",
         step_ids(&report)
+    );
+}
+
+#[test]
+fn qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_UF)
+        (declare-sort U 0)
+        (declare-fun x () U)
+        (declare-fun y () U)
+        (assert (distinct x y))
+        (assert (let ((x y) (y x)) (= x y)))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatAletheProof(_) = &report.evidence else {
+        panic!(
+            "expected a pure EUF Alethe certificate, got {:?}",
+            report.evidence
+        );
+    };
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "carrier-sort equality conflicts should be proved, not trusted"
     );
 }
 
