@@ -6,6 +6,31 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — structural refuter dispatch aligned; AUFLIA probes narrowed.**
+  After the restart, I re-ran the QF_AUFLIA `bug330`/`bug337` diagnostics from
+  the current tree. `bug330` is not a raw or preprocessed simple
+  `term_identity` row: both the original single disequality and the
+  model-sound preprocessed residual still have distinct top-level `ite`
+  decision trees. A temporary bounded contextual-ITE equivalence prototype
+  exhausted a 200k-step cap on both raw and reduced forms, so no solver code was
+  kept from that route. `bug337` is confirmed `sat`, but the Z3 model is a large
+  transition/table witness rather than a compact all-default array assignment;
+  this reinforces the prior PBLS result that a generic local-search hook is not
+  the right retained path. The practical AUFLIA next actions remain: SAT
+  relevance or a replay-gated branch-schedule/model constructor for `bug337`,
+  and a stronger Boolean/relevance or BDD-style scalar abstraction for the
+  processor-shaped `bug330`.
+
+  Retained code change: `check_auto` now tries the already-checked
+  `term_identity_refutation` before heavier theory routes, so obvious
+  `not (= t t)` / constant-`ite` identity contradictions are decided through
+  the same certificate matcher that `produce_evidence` and Lean reconstruction
+  already recheck. This is a dispatch alignment, not an AUFLIA closure.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib check_auto_uses_term_identity_refuter_before_theory_routes -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence term_identity -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_lra_ite_true_identity_checks_in_real_lean -j1 -- --nocapture`.
+
 - **Session 2026-06-26 — AUFLIA `bug337` direct PBLS-array probe rejected.**
   After the QF_AX closure, the next measured frontier is still QF_AUFLIA
   `bug330`/`bug337`. I tested a replay-gated direct local-search path on the

@@ -422,6 +422,12 @@ fn check_auto_with_recorder(
         )));
     };
     record_probe(&features, has_quantifier, rec);
+    if crate::term_identity::term_identity_refutation(arena, assertions).is_some() {
+        with_recorder(rec, |t| {
+            t.record_decided("term-identity-refuter", Verdict::Unsat);
+        });
+        return Ok(CheckResult::Unsat);
+    }
     if features.has_array
         && let Some(model) = crate::array_fifo::fifo_ia04_sat_model(arena, assertions)
     {
@@ -4398,6 +4404,29 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn check_auto_uses_term_identity_refuter_before_theory_routes() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let true_ = arena.bool_const(true);
+        let ite = arena.ite(true_, x, y).unwrap();
+        let eq = arena.eq(x, ite).unwrap();
+        let diseq = arena.not(eq).unwrap();
+
+        let config = SolverConfig::default();
+        let (result, trace) = check_auto_explained(&mut arena, &[diseq], &config).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "term identity disequality must be unsat, got {result:?}"
+        );
+        let trace = trace.to_string();
+        assert!(
+            trace.contains("term-identity-refuter"),
+            "trace should record term-identity-refuter, got:\n{trace}"
+        );
+    }
 
     /// `solve` routes a *too-wide-to-enumerate* (`BitVec(32)`) quantified EUF
     /// refutation through the e-graph keystone instantiation loop: finite-domain
