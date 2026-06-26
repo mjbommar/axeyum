@@ -1747,6 +1747,17 @@ against competitor source, are now binding:
      `[1 -> 3]` and `[2 -> 3]` not stably propagated through the current local
      projection loop. Next useful work is a branch-consistent store-chain/readback
      projection for the queue-lock transition, not another scalar timeout knob.
+     **BRANCH READBACK ALIGNMENT LANDED (2026-06-26):** the store-base repair now
+     immediately aligns direct scalar readback symbols for the repaired base
+     array, preventing the following select-repair pass from using stale scalar
+     reads to undo branch-consistent base entries. The focused regression now
+     includes a stale `z = select(a,j)` read on the repaired base. `bug337` still
+     does not close, but the first false replay point moves to generated branch
+     ordinal 210 / term 3879, best branch 3, with one false direct array equality
+     `x_339 = x_325`: `x_339` has `[0 -> 1]`, `[1 -> 3]`, `[2 -> 3]` while
+     `x_325` is still default. Next useful work is replay-gated direct
+     array-equality branch repair, or the more general branch-schedule projection
+     that chooses equality direction from readback support.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

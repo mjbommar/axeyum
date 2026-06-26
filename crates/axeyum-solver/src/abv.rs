@@ -3013,6 +3013,45 @@ fn repair_projected_arrays_from_asserted_select_equalities(
     Ok(stats)
 }
 
+fn align_direct_select_symbols_for_array(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    array_symbol: SymbolId,
+) -> Result<usize, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext branch readback repair failed: {e}"))
+    };
+    let array_value = projected
+        .get(array_symbol)
+        .unwrap_or(default_value_for_symbol(arena, array_symbol)?);
+    let mut changes = 0;
+    let mut conjuncts = Vec::new();
+    for &assertion in originals {
+        conjuncts.clear();
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+        for &conjunct in &conjuncts {
+            let Some((array, index_term, element_term)) =
+                direct_select_repair_target(arena, conjunct)
+            else {
+                continue;
+            };
+            if array != array_symbol {
+                continue;
+            }
+            let Some(element_symbol) = direct_value_symbol(arena, element_term) else {
+                continue;
+            };
+            let index = eval(arena, index_term, projected).map_err(ir)?;
+            let element = select_value(&array_value, &index)?;
+            if store_projected_symbol_value(arena, projected, element_symbol, element)? {
+                changes += 1;
+            }
+        }
+    }
+    Ok(changes)
+}
+
 fn compact_replay_value(value: &Value) -> String {
     const LIMIT: usize = 120;
     let rendered = value.to_string();
@@ -3300,6 +3339,12 @@ fn repair_projected_branch_disjunctions(
                     if store_projected_symbol_value(arena, projected, base_symbol, repaired_base)? {
                         stats.branch_symbol_changes += 1;
                     }
+                    stats.symbol_changes += align_direct_select_symbols_for_array(
+                        arena,
+                        originals,
+                        projected,
+                        base_symbol,
+                    )?;
                     continue;
                 }
             }
@@ -4751,12 +4796,15 @@ mod tests {
         let j = arena.bv_var("j", 4).unwrap();
         let v = arena.bv_var("v", 8).unwrap();
         let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
         let p = arena.bool_var("p").unwrap();
         let stored = arena.store(a, i, v).unwrap();
         let b_eq_stored = arena.eq(b, stored).unwrap();
         let branch_assertion = arena.or(b_eq_stored, p).unwrap();
         let read_b_j = arena.select(b, j).unwrap();
         let y_eq_read = arena.eq(y, read_b_j).unwrap();
+        let read_a_j = arena.select(a, j).unwrap();
+        let z_eq_base_read = arena.eq(z, read_a_j).unwrap();
 
         let mut candidate = Assignment::new();
         for (symbol, name, sort) in arena.symbols() {
@@ -4765,6 +4813,7 @@ mod tests {
                 "j" => candidate.set(symbol, Value::Bv { width: 4, value: 1 }),
                 "v" => candidate.set(symbol, Value::Bv { width: 8, value: 7 }),
                 "y" => candidate.set(symbol, Value::Bv { width: 8, value: 3 }),
+                "z" => candidate.set(symbol, Value::Bv { width: 8, value: 0 }),
                 "p" => candidate.set(symbol, Value::Bool(false)),
                 _ if sort == Sort::BitVec(4) => {
                     candidate.set(symbol, Value::Bv { width: 4, value: 0 });
@@ -4777,13 +4826,20 @@ mod tests {
         }
 
         let ctx = RowCtx::default();
-        let originals = [branch_assertion, y_eq_read];
+        let originals = [branch_assertion, y_eq_read, z_eq_base_read];
         let ExtReplay::Sat(model) =
             project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
         else {
             panic!("expected branch-repaired projection to replay");
         };
         let assignment = model.to_assignment();
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+        assert_eq!(
+            assignment.get(*z_symbol),
+            Some(Value::Bv { width: 8, value: 3 })
+        );
         for &original in &originals {
             assert_eq!(
                 eval(&arena, original, &assignment).unwrap(),

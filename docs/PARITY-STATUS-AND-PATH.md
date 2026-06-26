@@ -521,6 +521,18 @@ a named mechanism.**
    `[1 -> 3]` and `[2 -> 3]` not stably propagated by the local projection loop.
    The next AUFLIA move is a branch-consistent store-chain/readback projection
    for that queue-lock transition.
+   **Branch readback alignment landed later 2026-06-26:** after a branch
+   store-base repair, projection now aligns direct scalar readback symbols for
+   that repaired base array. This prevents the following select-repair pass from
+   using stale scalar reads to erase branch-consistent base entries. The focused
+   regression now includes a stale `z = select(a,j)` read on the repaired base.
+   `bug337` still does not close, but the first false replay point moves to
+   generated branch ordinal **210**, term **3879**; best branch **3** has one
+   false literal, direct array equality `x_339 = x_325`, with `x_339`
+   carrying `[0 -> 1]`, `[1 -> 3]`, `[2 -> 3]` and `x_325` still default.
+   The next AUFLIA move is replay-gated direct array-equality branch repair, or
+   a branch-schedule projection that chooses equality direction from readback
+   support.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
