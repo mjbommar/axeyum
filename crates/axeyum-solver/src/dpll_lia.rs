@@ -261,6 +261,13 @@ pub fn check_with_arith_dpll(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    if contains_smtlib_unspecified_arith(arena, assertions) {
+        return Err(SolverError::Unsupported(
+            "lazy arithmetic: integer/real division or modulo with a divisor \
+             that may be zero needs an explicit SMT-LIB underspecification encoding"
+                .to_owned(),
+        ));
+    }
     // Prefer the shared CDCL(T) spine for pure-integer arithmetic
     // searches: it has 1-UIP learning, non-chronological backjumping, restarts,
     // and theory propagation, whereas the legacy path below repeatedly launches
@@ -1790,8 +1797,27 @@ impl ArithAbstractor {
             Op::RealGe => arena.real_le(args[1], args[0])?,
             _ => unreachable!("order_atom called only for arithmetic order atoms"),
         };
+        Self::ensure_supported_atom(arena, canonical, theory)?;
         let prop = self.atom(arena, canonical, theory);
         Ok(arena.var(prop))
+    }
+
+    fn ensure_supported_atom(
+        arena: &TermArena,
+        atom: TermId,
+        theory: Theory,
+    ) -> Result<(), SolverError> {
+        let result = match theory {
+            Theory::Int => check_with_lia_opaque_apps(arena, &[atom]),
+            Theory::Real => check_with_lra(arena, &[atom]),
+        };
+        match result {
+            Ok(_) => Ok(()),
+            Err(SolverError::Unsupported(detail)) => Err(SolverError::Unsupported(format!(
+                "lazy arithmetic: unsupported arithmetic atom: {detail}"
+            ))),
+            Err(error) => Err(error),
+        }
     }
 
     fn atom(&mut self, arena: &mut TermArena, term: TermId, theory: Theory) -> SymbolId {
@@ -1840,6 +1866,45 @@ fn contains_int_uf_application(
     }
     args.iter()
         .any(|&arg| contains_int_uf_application(arena, arg, seen))
+}
+
+fn contains_smtlib_unspecified_arith(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = HashSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            match op {
+                Op::IntDiv | Op::IntMod
+                    if args
+                        .get(1)
+                        .is_none_or(|&divisor| !is_known_nonzero_int(arena, divisor)) =>
+                {
+                    return true;
+                }
+                Op::RealDiv
+                    if args
+                        .get(1)
+                        .is_none_or(|&divisor| !is_known_nonzero_real(arena, divisor)) =>
+                {
+                    return true;
+                }
+                _ => {}
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+fn is_known_nonzero_int(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.node(term), TermNode::IntConst(value) if *value != 0)
+}
+
+fn is_known_nonzero_real(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.node(term), TermNode::RealConst(value) if !value.is_zero())
 }
 
 #[cfg(test)]
@@ -1923,6 +1988,28 @@ mod tests {
         assert!(
             ctx.atoms.is_empty(),
             "a dead Boolean branch must not allocate arithmetic atoms"
+        );
+    }
+
+    #[test]
+    fn abstractor_rejects_unsupported_integer_mod_atom() {
+        let mut arena = TermArena::new();
+        let zero = arena.int_const(0);
+        let large = arena.int_const(775);
+        let modulo = arena.int_mod(zero, zero).unwrap();
+        let atom = arena.int_lt(large, modulo).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let err = ctx
+            .abstract_term(&mut arena, atom)
+            .expect_err("mod-by-zero atom is outside linear arithmetic");
+        assert!(
+            matches!(err, SolverError::Unsupported(_)),
+            "expected unsupported arithmetic atom, got {err:?}"
+        );
+        assert!(
+            ctx.atoms.is_empty(),
+            "unsupported arithmetic atoms must not enter the Boolean skeleton"
         );
     }
 

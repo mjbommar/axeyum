@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 641 decided, 592 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 648 decided, 597 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,10 +168,18 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **641 decided**,
-   **592 oracle-compared**, **DISAGREE = 0**, with **18 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **648 decided**,
+   **597 oracle-compared**, **DISAGREE = 0**, with **18 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
+   **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
+   remeasuring the QF_UF rows exposed a real soundness hazard: SMT-LIB leaves
+   integer/real division by zero and integer modulo by zero underspecified, while
+   Axeyum's executable evaluator uses deterministic total conventions for model
+   replay. The solver now declines arithmetic routes whose divisor is not a
+   syntactically known nonzero constant until an explicit underspecification
+   encoding exists. The cvc5 QF_UF bounded rows are now **44/82 decided** with
+   **DISAGREE=0**; the overbound row remains **4/6 decided**, **DISAGREE=0**.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

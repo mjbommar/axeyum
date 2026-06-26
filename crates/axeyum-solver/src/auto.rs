@@ -438,6 +438,7 @@ fn check_auto_with_recorder(
     }
     if features.has_int
         && !has_quantifier
+        && !contains_smtlib_unspecified_arith(arena, assertions)
         && let Some(result) = decide_bounded_int_box_by_evaluation(arena, assertions)
     {
         with_recorder(rec, |t| t.record_result("int-box-eval", &result));
@@ -2361,6 +2362,45 @@ fn enumerate_int_box_model(
         value = value.checked_add(1)?;
     }
     None
+}
+
+fn contains_smtlib_unspecified_arith(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            match op {
+                Op::IntDiv | Op::IntMod
+                    if args
+                        .get(1)
+                        .is_none_or(|&divisor| !is_known_nonzero_int(arena, divisor)) =>
+                {
+                    return true;
+                }
+                Op::RealDiv
+                    if args
+                        .get(1)
+                        .is_none_or(|&divisor| !is_known_nonzero_real(arena, divisor)) =>
+                {
+                    return true;
+                }
+                _ => {}
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+fn is_known_nonzero_int(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.node(term), TermNode::IntConst(value) if *value != 0)
+}
+
+fn is_known_nonzero_real(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.node(term), TermNode::RealConst(value) if !value.is_zero())
 }
 
 /// A proven finite integer box: a closed interval per free `Int` variable
@@ -4407,6 +4447,49 @@ mod tests {
         assert!(
             matches!(result, CheckResult::Unsat),
             "bounded x*x=2 must be unsat, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn int_mod_by_zero_underspecification_is_not_refuted() {
+        // SMT-LIB leaves `mod` by zero underspecified. This formula is satisfiable:
+        // choose i7 = 0, so both modulo terms denote `mod(0, 0)`, then choose that
+        // total-function value above 775. The in-tree evaluator convention
+        // `mod 0 0 = 0` must therefore never be used as an UNSAT proof.
+        let mut arena = TermArena::new();
+        let i7 = arena.declare("i7", Sort::Int).unwrap();
+        let i7v = arena.var(i7);
+        let zero = arena.int_const(0);
+        let five = arena.int_const(5);
+        let forty_six = arena.int_const(46);
+        let seven_seventy_five = arena.int_const(775);
+        let i7_mod_5 = arena.int_mod(i7v, five).unwrap();
+        let mod_0_i7_mod_5 = arena.int_mod(zero, i7_mod_5).unwrap();
+        let le = arena.int_le(mod_0_i7_mod_5, forty_six).unwrap();
+        let not_le = arena.not(le).unwrap();
+        let mod_0_0 = arena.int_mod(zero, zero).unwrap();
+        let gt = arena.int_lt(seven_seventy_five, mod_0_0).unwrap();
+
+        let result = check_auto(&mut arena, &[not_le, gt], &SolverConfig::default());
+        assert!(
+            !matches!(result, Ok(CheckResult::Unsat)),
+            "SMT-LIB underspecified mod-by-zero formula must not be refuted, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn int_mod_by_nonzero_constant_can_still_be_refuted() {
+        let mut arena = TermArena::new();
+        let five = arena.int_const(5);
+        let two = arena.int_const(2);
+        let zero = arena.int_const(0);
+        let modulo = arena.int_mod(five, two).unwrap();
+        let false_assertion = arena.eq(modulo, zero).unwrap();
+
+        let result = check_auto(&mut arena, &[false_assertion], &SolverConfig::default());
+        assert!(
+            matches!(result, Ok(CheckResult::Unsat)),
+            "nonzero constant divisor has fixed SMT-LIB semantics and remains refutable, got {result:?}"
         );
     }
 
