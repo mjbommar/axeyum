@@ -1057,7 +1057,7 @@ fn qf_ff_gap_rows_use_checked_bv_defined_enum_evidence() {
 }
 
 #[test]
-fn qf_fp_constant_chain_rows_use_checked_bv_defined_enum_evidence() {
+fn qf_fp_bitwuzla_rows_use_checked_bv_defined_enum_evidence() {
     for (tag, input) in [
         (
             "qf_fp_inf",
@@ -1071,6 +1071,12 @@ fn qf_fp_constant_chain_rows_use_checked_bv_defined_enum_evidence() {
                 "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2"
             ),
         ),
+        (
+            "qf_fp_misc",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
+            ),
+        ),
     ] {
         let mut script = parse_script(input).expect("QF_FP row parses");
         let assertions = script.assertions.clone();
@@ -1082,7 +1088,11 @@ fn qf_fp_constant_chain_rows_use_checked_bv_defined_enum_evidence() {
                 report.evidence
             );
         };
-        assert_eq!(cert.cases, 1, "{tag}: constants define all FP symbols");
+        assert!(
+            (1..=10).contains(&cert.cases),
+            "{tag}: FP certificate should stay in the small replay slice, got {} cases",
+            cert.cases
+        );
         assert!(
             report.evidence.is_certified(),
             "{tag}: evidence should be certified"

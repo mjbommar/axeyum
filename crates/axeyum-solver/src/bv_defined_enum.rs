@@ -15,10 +15,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval,
+};
 
 const MAX_SYMBOL_WIDTH: u32 = 16;
-const MAX_CASES: u64 = 100_000;
+const MAX_CASES: u64 = 20_000;
+const MAX_RESTRICTION_DAG_NODES: u64 = 128;
 
 /// A self-checking finite-scalar refutation by exhaustive enumeration after
 /// applying required top-level symbol definitions and finite-domain restrictions.
@@ -214,8 +217,16 @@ fn independent_domains(
         );
     }
 
-    for &constraint in required {
-        if let Some((symbol, allowed)) = match_finite_domain_constraint(arena, constraint) {
+    let mut ordered_constraints = required.to_vec();
+    ordered_constraints.sort_by_key(|&constraint| {
+        let stats = TermStats::compute(arena, &[constraint]);
+        let symbol_count =
+            collect_symbol_sorts(arena, &[constraint]).map_or(usize::MAX, |s| s.len());
+        (symbol_count, stats.dag_nodes)
+    });
+    for constraint in ordered_constraints {
+        if let Some((symbol, allowed)) = match_finite_domain_constraint(arena, constraint, &domains)
+        {
             apply_restriction(&mut domains, symbol, &allowed);
         }
     }
@@ -230,6 +241,7 @@ fn independent_domains(
 fn match_finite_domain_constraint(
     arena: &TermArena,
     constraint: TermId,
+    domains: &BTreeMap<SymbolId, EnumSymbol>,
 ) -> Option<(SymbolId, Vec<Value>)> {
     if let Some((symbol, value)) = match_symbol_constant_equality(arena, constraint) {
         return Some((symbol, vec![value]));
@@ -238,6 +250,43 @@ fn match_finite_domain_constraint(
         return Some((symbol, values));
     }
     match_bv_range(arena, constraint)
+        .or_else(|| match_single_symbol_constraint_by_enumeration(arena, constraint, domains))
+}
+
+fn match_single_symbol_constraint_by_enumeration(
+    arena: &TermArena,
+    constraint: TermId,
+    domains: &BTreeMap<SymbolId, EnumSymbol>,
+) -> Option<(SymbolId, Vec<Value>)> {
+    if arena.sort_of(constraint) != Sort::Bool || !is_finite_scalar_term(arena, constraint) {
+        return None;
+    }
+    if TermStats::compute(arena, &[constraint]).dag_nodes > MAX_RESTRICTION_DAG_NODES {
+        return None;
+    }
+    let mut symbols = collect_symbol_sorts(arena, &[constraint])?.into_iter();
+    let (symbol, sort) = symbols.next()?;
+    if symbols.next().is_some() {
+        return None;
+    }
+    let domain = &domains.get(&symbol)?.domain;
+    if domain.is_empty() || !value_matches_sort(sort, &domain[0]) {
+        return None;
+    }
+    let mut allowed = Vec::new();
+    for value in domain {
+        let mut assignment = Assignment::new();
+        assignment.set(symbol, value.clone());
+        match eval(arena, constraint, &assignment).ok()? {
+            Value::Bool(true) => allowed.push(value.clone()),
+            Value::Bool(false) => {}
+            _ => return None,
+        }
+    }
+    if allowed.len() == domain.len() {
+        return None;
+    }
+    Some((symbol, allowed))
 }
 
 fn match_symbol_constant_or(arena: &TermArena, term: TermId) -> Option<(SymbolId, Vec<Value>)> {
@@ -619,11 +668,15 @@ mod tests {
     }
 
     #[test]
-    fn declines_large_qf_fp_misc_enumeration() {
+    fn certifies_qf_fp_misc_with_single_symbol_restriction() {
         let script = parse_script(include_str!(
             "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
         ))
         .expect("fp_misc parses");
-        assert!(bv_defined_enum_refutation(&script.arena, &script.assertions).is_none());
+        let cert = bv_defined_enum_refutation(&script.arena, &script.assertions)
+            .expect("definition-aware enumeration certifies fp_misc");
+        assert!(cert.cases <= 10);
+        assert_eq!(cert.defined_symbols.len(), 1);
+        assert!(cert.restricted_symbols.len() >= 2);
     }
 }

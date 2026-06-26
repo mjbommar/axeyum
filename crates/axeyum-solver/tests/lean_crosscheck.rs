@@ -354,11 +354,11 @@ fn qf_ff_bv_defined_enum_gap_rows_check_in_real_lean() {
     }
 }
 
-/// Constant-chain QF_FP rows lower to finite scalar terms with Float values
-/// represented as bit patterns. The definition-aware enum route rechecks those
-/// original assertions before rendering the Lean wrapper.
+/// QF_FP rows lower to finite scalar terms with Float values represented as bit
+/// patterns. The definition-aware enum route rechecks the original assertions
+/// before rendering the Lean wrapper.
 #[test]
-fn qf_fp_bv_defined_enum_constant_rows_check_in_real_lean() {
+fn qf_fp_bv_defined_enum_rows_check_in_real_lean() {
     for (tag, input) in [
         (
             "qf_fp_inf",
@@ -370,6 +370,12 @@ fn qf_fp_bv_defined_enum_constant_rows_check_in_real_lean() {
             "qf_fp_zero",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2"
+            ),
+        ),
+        (
+            "qf_fp_misc",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
             ),
         ),
     ] {

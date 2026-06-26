@@ -1661,10 +1661,10 @@ fn finite_domain_enum_certifies(arena: &TermArena, assertions: &[TermId]) -> boo
 fn scan_ground_bv_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
     if assertions.is_empty() {
         ProofFragment::Unsupported
-    } else if term_level_enum_certifies(arena, assertions) {
-        ProofFragment::TermLevelEnum
     } else if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_some() {
         ProofFragment::BvDefinedEnum
+    } else if term_level_enum_certifies(arena, assertions) {
+        ProofFragment::TermLevelEnum
     } else {
         ProofFragment::QfBv
     }
@@ -1722,6 +1722,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::Forall
     } else if has_datatype {
         ProofFragment::Datatype
+    } else if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_some() {
+        ProofFragment::BvDefinedEnum
     } else if reflexive_disequality_assertion(arena, assertions).is_some() {
         ProofFragment::ReflexiveDisequality
     } else if crate::term_identity::term_identity_refutation(arena, assertions).is_some() {
