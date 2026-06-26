@@ -1279,6 +1279,10 @@ pub enum ProofFragment {
     FiniteDomainPigeonhole,
     /// An exhaustive refutation over tiny Boolean-UF interpretations.
     BoolUfExhaustive,
+    /// A datatype structural refutation by
+    /// acyclicity/distinctness/injectivity/exhaustiveness, optionally split over
+    /// every branch of a top-level disjunction.
+    DatatypeStructural,
     /// An exhaustive finite-domain Bool/BV refutation, including finite
     /// quantifiers, certified by the executable evaluator.
     FiniteDomainEnum,
@@ -1677,6 +1681,7 @@ fn scan_ground_bv_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> Pr
 /// before `∀`), then the reduction theories (datatype/array), then the
 /// mixed/ground cores.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
     let mut has_bv = false;
     let mut has_func = false;
@@ -1720,6 +1725,10 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::Exists
     } else if has_forall {
         ProofFragment::Forall
+    } else if crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions)
+        .is_some()
+    {
+        ProofFragment::DatatypeStructural
     } else if has_datatype {
         ProofFragment::Datatype
     } else if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_some() {
@@ -2508,6 +2517,28 @@ fn reconstruct_bool_uf_exhaustive_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_datatype_structural_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    if crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions).is_none() {
+        return Err(ReconstructError::MalformedStep {
+            rule: "datatype_structural".to_owned(),
+            detail: "datatype structural refutation failed".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("datatype_structural_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "datatype_structural")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_finite_domain_enum_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3261,6 +3292,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::NraEvenPower
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
+        | ProofFragment::DatatypeStructural
         | ProofFragment::FiniteDomainEnum
         | ProofFragment::TermLevelEnum
         | ProofFragment::BvDefinedEnum
@@ -3352,6 +3384,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::BoolUfExhaustive => {
             reconstruct_bool_uf_exhaustive_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::DatatypeStructural => {
+            reconstruct_datatype_structural_to_lean_module(arena, assertions)?
         }
         ProofFragment::FiniteDomainEnum => {
             reconstruct_finite_domain_enum_to_lean_module(arena, assertions)?

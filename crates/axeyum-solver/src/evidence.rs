@@ -58,6 +58,7 @@ use crate::bv_uf_local::BvUfLocalRefutationCertificate;
 use crate::certify::{
     CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
 };
+use crate::datatype_acyclicity::DatatypeStructuralRefutationCertificate;
 use crate::dpll_lia::{ArithDpllOutcome, ArithDpllRefutation, certify_arith_dpll_unsat};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
 use crate::lia_gcd::{
@@ -363,6 +364,12 @@ pub enum Evidence {
     /// `Bool^n -> Bool` functions, accepting only when every case falsifies an
     /// original assertion.
     UnsatBoolUfExhaustive(BoolUfExhaustiveCertificate),
+    /// Unsatisfiable (`QF_DT`): datatype structural axioms
+    /// (acyclicity/distinctness/injectivity/exhaustiveness) refute either the top-level
+    /// conjunction directly or every branch of a top-level datatype disjunction.
+    /// The checker re-scans the original query and re-matches the structural
+    /// refutation before accepting.
+    UnsatDatatypeStructural(DatatypeStructuralRefutationCertificate),
     /// Unsatisfiable (`QF_ABV`/`QF_AUFBV`): a finite-array extensionality
     /// refutation. The checker re-scans the original top-level conjunction and
     /// confirms it asserts two arrays over a small finite BV index domain are
@@ -564,6 +571,7 @@ impl Evidence {
             Evidence::UnsatBoundedIntBlast(certificate) => certificate.recheck(arena, assertions),
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatBoolUfExhaustive(_)
+            | Evidence::UnsatDatatypeStructural(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatNraEvenPower(_)
             | Evidence::UnsatBvDefinedEnum(_)
@@ -612,6 +620,7 @@ impl Evidence {
                 | Evidence::UnsatBoundedIntBlast(_)
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
                 | Evidence::UnsatBoolUfExhaustive(_)
+                | Evidence::UnsatDatatypeStructural(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
                 | Evidence::UnsatArrayAxiom(_)
                 | Evidence::UnsatTermIdentity(_)
@@ -640,6 +649,9 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatBoolUfExhaustive(cert) => {
             check_bool_uf_exhaustive_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatDatatypeStructural(cert) => {
+            check_datatype_structural_evidence(arena, assertions, cert)
         }
         Evidence::UnsatFiniteArrayExtensionality(cert) => {
             check_finite_array_extensionality_evidence(arena, assertions, cert)
@@ -701,6 +713,15 @@ fn check_bool_uf_exhaustive_evidence(
     cert: &BoolUfExhaustiveCertificate,
 ) -> bool {
     crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_datatype_structural_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &DatatypeStructuralRefutationCertificate,
+) -> bool {
+    crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1237,6 +1258,15 @@ fn direct_pre_solve_structural_report(
         });
     }
     if let Some(cert) =
+        crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions)
+    {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatDatatypeStructural(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) =
         crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
     {
         return Some(EvidenceReport {
@@ -1747,6 +1777,11 @@ fn direct_structural_unsat_evidence(
         return Some((Evidence::UnsatBoolUfExhaustive(cert), Vec::new()));
     }
     if let Some(cert) =
+        crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions)
+    {
+        return Some((Evidence::UnsatDatatypeStructural(cert), Vec::new()));
+    }
+    if let Some(cert) =
         crate::bv_forall_nonconstant::bv_forall_nonconstant_refutation(arena, assertions)
     {
         return Some((Evidence::UnsatBvForallNonconstant(cert), Vec::new()));
@@ -2173,6 +2208,7 @@ pub fn prove(
         | Evidence::UnsatBoundedIntBlast(_)
         | Evidence::UnsatFiniteDomainPigeonhole(_)
         | Evidence::UnsatBoolUfExhaustive(_)
+        | Evidence::UnsatDatatypeStructural(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)
         | Evidence::UnsatArrayAxiom(_)
         | Evidence::UnsatTermIdentity(_)

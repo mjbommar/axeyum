@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 591 oracle-compared instances (992 files total, 640 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 592 oracle-compared instances (992 files total, 641 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -35,7 +35,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 3 | 38% | 0 | 5 | 3 | 0 | z3-binary | 20.001 |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | 0 | 0 | 6 | 0 | z3-library | 0.000 |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | 0 | 1 | 6 | 0 | z3-library+binary | 0.005 |
-| QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 2 | 67% | 0 | 1 | 2 | 0 | z3-binary | 10.000 |
+| QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 3 | 100% | 0 | 0 | 3 | 0 | z3-binary | 0.003 |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 30 | 24 | 80% | 0 | 6 | 24 | 0 | z3-library | 0.010 |
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | 0 | 0 | 16 | 0 | z3-library+binary | 0.010 |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 11 | 10 | 91% | 1 | 0 | 9 | 0 | z3-binary | 1.819 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | 2 | 0 | 0 | 0 | :status | 20.000 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 640 decided, 591 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 641 decided, 592 oracle-compared, **0 disagreements.**
 
 ## Progress frontiers (lever depth)
 

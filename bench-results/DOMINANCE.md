@@ -12,10 +12,10 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 
 ## Headline
 
-- 35 measured division rows, 992 files, 640 decided, 591 oracle-compared.
+- 35 measured division rows, 992 files, 641 decided, 592 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
-- 16 rows are decide-strong (Decide% >= 80). 12 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
-- Complete committed dominance audits with exact audited `dominant%(D)`: 17. Remaining rows are readiness or partial-audit entries.
+- 17 rows are decide-strong (Decide% >= 80). 13 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
+- Complete committed dominance audits with exact audited `dominant%(D)`: 18. Remaining rows are readiness or partial-audit entries.
 
 ## Audit Harness
 
@@ -39,6 +39,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 41 | 100% (41/41) | 100% (20/20) | none | `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 100% (7/7) | 100% (3/3) | none | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 100% (3/3) | 100% (3/3) | none | `bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json` |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 24 | 100% (24/24) | 100% (10/10) | none | `bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json` |
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 100% (16/16) | 100% (7/7) | none | `bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 10 | 100% (10/10) | 100% (4/4) | none | `bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json` |
@@ -76,7 +77,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_AX | `qf-ax-cvc5-regress-clean` | 8 | 3 | 38% | weak | 0 | not run | - | - | decider first | replace finite index enumeration with witnessed extensionality, then certify |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (2/2) | dominant on audited row | add per-instance BV operator classifier; close mul/rem/shift Lean gap |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 8 | 7 | 88% | strong | 0 | complete | 100% (7/7) | 100% (3/3) | dominant on audited row | separate pure-BV certs from FP-to-BV trust-hole cases |
-| QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 2 | 67% | mid | 0 | not run | - | - | grow decide + classify certs | witness the general DatatypeElim dispatch end to end |
+| QF_DT | `qf-dt-cvc5-regress-clean` | 3 | 3 | 100% | strong | 0 | complete | 100% (3/3) | 100% (3/3) | dominant on audited row | witness the general DatatypeElim dispatch end to end |
 | QF_FF | `qf-ff-cvc5-regress-clean` | 30 | 24 | 80% | strong | 0 | complete | 100% (24/24) | 100% (10/10) | dominant on audited row | broaden finite-field audits beyond the cvc5 slice and grow algebraic certificates |
 | QF_FP | `qf-fp-bitwuzla-regress-clean` | 16 | 16 | 100% | strong | 0 | complete | 100% (16/16) | 100% (7/7) | dominant on audited row | keep FP as measured-competitive, not Lean-dominant, until Fpa2Bv certs grow |
 | QF_LIA | `qf-lia-cvc5-regress-clean` | 11 | 10 | 91% | strong | 0 | complete | 100% (10/10) | 100% (4/4) | dominant on audited row | audit unsats by Diophantine/IntInequality/general LIA route |

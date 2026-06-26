@@ -231,6 +231,58 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_unsat_carries_certificate() {
 }
 
 #[test]
+fn qf_dt_cvc5_slice_uses_checked_datatype_structural_evidence() {
+    for (tag, input, min_branches) in [
+        (
+            "pf-v2l60078",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__datatypes__pf-v2l60078.smt2"
+            ),
+            1,
+        ),
+        (
+            "dt-cons-eq-clash",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__proofs__dt-cons-eq-clash-qfdt.smt2"
+            ),
+            1,
+        ),
+        (
+            "acyclicity-sr-ground096",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress1__datatypes__acyclicity-sr-ground096.smt2"
+            ),
+            2,
+        ),
+    ] {
+        let mut script = parse_script(input).unwrap_or_else(|e| panic!("{tag}: parses: {e}"));
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|e| panic!("{tag}: should produce evidence: {e}"));
+        let Evidence::UnsatDatatypeStructural(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected datatype structural evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(
+            cert.branches >= min_branches,
+            "{tag}: expected at least {min_branches} structural branch(es), got {}",
+            cert.branches
+        );
+        assert!(report.evidence.is_certified(), "{tag}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: the datatype structural certificate is checked directly from the original query"
+        );
+    }
+}
+
+#[test]
 fn qf_nra_sos_certificate_wrapper_carries_lean_module() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/synthetic/QF_NRA/graduated/nra-sos-unsat-k01.smt2"

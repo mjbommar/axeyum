@@ -22,7 +22,7 @@ the decidable fragments, honest `unknown` elsewhere; **Lean parity** = every
 ## 2. Where we actually stand (the honest top-down)
 
 **The single most important fact: across ~24 logic fragments measured head-to-head
-vs Z3 4.13.3 — 992 files, 591 oracle-compared — DISAGREE = 0. Zero wrong sat/unsat,
+vs Z3 4.13.3 — 992 files, 592 oracle-compared — DISAGREE = 0. Zero wrong sat/unsat,
 anywhere.** Soundness is the settled foundation. The gap to Z3/cvc5 is **decide-rate
 and depth, never correctness.**
 
@@ -30,13 +30,13 @@ and depth, never correctness.**
 
 The capability frontier (decide% per division) partitions cleanly:
 
-- **Strong / competitive (≥80%):** QF_ABV 88%, QF_AUFBV 93%, QF_FP 100%, QF_UFBV
+- **Strong / competitive (≥80%):** QF_ABV 88%, QF_AUFBV 93%, QF_DT 100%, QF_FP 100%, QF_UFBV
   100%, QF_UFFF 100%, QF_FF 80%, QF_LIA 91%, QF_NIA-synthetic 100%,
   QF_NRA-synthetic 91%, quantified-BV 69–80%, QF_SEQ 79%, QF_BVFP 88%,
   QF_LRA 82%.
 - **Mid (40–70%):** QF_UF 43–56% (previously capped by the uninterpreted-sort
   BitVec modeling; first-class carrier sort landed 2026-06-25, remeasurement
-  pending), QF_ALIA 50%, QF_NIA 54%, QF_S 44%, QF_DT 67%, QF_AUFBV-cvc5 56%,
+  pending), QF_ALIA 50%, QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%,
   QF_UFLIA 50–83%.
 - **Weak / open (<40%) — the real frontier:** QF_SLIA 30% (bounded-string length
   wall), QF_NRA-cvc5 24% (high-degree nonlinear), QF_AX 38%, QF_AUFLIA 14%,
@@ -82,11 +82,13 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 640 decided, 591 oracle-compared, DISAGREE=0**, with **14 complete
+  992 files, 641 decided, 592 oracle-compared, DISAGREE=0**, with **18 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
   `100% (169/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
+  QF_BVFP/bitwuzla `100% (7/7)`, QF_DT/cvc5 `100% (3/3)`,
+  QF_FF/cvc5 `100% (24/24)`, QF_FP/bitwuzla `100% (16/16)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
   `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `100% (2/2)`, QF_UFFF/cvc5 `100% (8/8)`, QF_UFLIA curated

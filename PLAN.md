@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 640 decided, 591 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 641 decided, 592 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **640 decided**,
-   **591 oracle-compared**, **DISAGREE = 0**, with **17 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **641 decided**,
+   **592 oracle-compared**, **DISAGREE = 0**, with **18 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **AUDIT HARNESS LANDED (2026-06-25):**
@@ -268,6 +268,17 @@ against competitor source, are now binding:
    enumerate its tiny real domain (`x` and restricted `rm`) directly. The exact
    QF_BVFP audit is now **100% (7/7)** dominant with Lean unsat **100% (3/3)**,
    zero mismatches, zero audit errors, and zero timeouts.
+   **QF_DT EXACT ROW CLOSED (2026-06-26):**
+   the cvc5 QF_DT row is now a committed complete dominance audit. The datatype
+   structural checker now flattens Boolean conjunctions, splits top-level
+   disjunctions into independently checked branches, and records constructor
+   exhaustiveness facts from negative testers plus nullary-constructor
+   disequalities. This closes the prior `acyclicity-sr-ground096` unsupported
+   row and the former bare `pf-v2l60078` evidence row through checked
+   `datatype-structural-unsat` evidence and `ProofFragment::DatatypeStructural`
+   Lean reconstruction. The exact QF_DT audit is now **100% (3/3)** dominant
+   with Lean unsat **100% (3/3)**, zero mismatches, zero audit errors, and zero
+   timeouts.
    **DOMINANCE AUDIT BATCH + PURE-REAL EVIDENCE FALLBACK LANDED (2026-06-25):**
    six more complete audit artifacts are now committed and ingested:
    BV/bitwuzla quantified **100% (4/4)**, QF_BV/bvred **100% (6/6)**,

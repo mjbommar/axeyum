@@ -421,6 +421,41 @@ fn qf_bvfp_bv_defined_enum_rows_check_in_real_lean() {
     }
 }
 
+#[test]
+fn qf_dt_cvc5_slice_checks_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_dt_pf_v2l60078",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__datatypes__pf-v2l60078.smt2"
+            ),
+        ),
+        (
+            "qf_dt_cons_eq_clash",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress0__proofs__dt-cons-eq-clash-qfdt.smt2"
+            ),
+        ),
+        (
+            "qf_dt_acyclicity_or",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_DT/cvc5-regress-clean/cli__regress1__datatypes__acyclicity-sr-ground096.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).unwrap_or_else(|e| panic!("{tag}: parses: {e}"));
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|e| panic!("{tag}: datatype structural row reconstructs: {e}"));
+        assert_eq!(fragment, ProofFragment::DatatypeStructural, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: datatype structural module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
 #[test]
 fn lra_refutation_checks_in_real_lean() {

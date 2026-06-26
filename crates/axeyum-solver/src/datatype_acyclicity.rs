@@ -1,6 +1,6 @@
 //! Structural datatype refutation (Track 2, P2.9): acyclicity (occurs-check),
-//! constructor distinctness, and constructor injectivity, over the top-level
-//! (dis)equalities.
+//! constructor distinctness, constructor injectivity, and constructor
+//! exhaustiveness, over the top-level Boolean structure and (dis)equalities.
 //!
 //! Algebraic datatypes obey three structural axioms that make many conjunctions
 //! unsatisfiable on shape alone, independent of the field theories:
@@ -13,6 +13,8 @@
 //!   `a = c ∧ b = d`, so `cons(h, x) = cons(h, y) ∧ x ≠ y` is `unsat` — a fact the
 //!   eager tag/field expansion misses, since it relaxes (skips) *datatype-typed*
 //!   fields when comparing.
+//! - **Exhaustiveness.** Every datatype value was built by exactly one
+//!   constructor, so excluding every constructor for one value is `unsat`.
 //!
 //! [`prove_datatype_unsat_structurally`] decides these by a small term-level
 //! union-find: it unions the sides of every definite equality, closes under
@@ -26,9 +28,18 @@
 //! (`false`) otherwise — satisfiability and the field theories are left to the
 //! native datatype path.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{ConstructorId, Op, Sort, TermArena, TermId, TermNode};
+
+/// A self-checking datatype structural refutation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatatypeStructuralRefutationCertificate {
+    /// Number of branch conjunctions independently refuted. Direct top-level
+    /// structural conflicts use `1`; top-level `or` refutations use one case per
+    /// disjunct.
+    pub branches: u64,
+}
 
 /// Tries to prove `assertions` `unsat` by the datatype structural axioms
 /// (acyclicity, distinctness, injectivity). Returns `true` only on a genuine
@@ -36,8 +47,92 @@ use axeyum_ir::{ConstructorId, Op, Sort, TermArena, TermId, TermNode};
 /// satisfiability).
 #[must_use]
 pub fn prove_datatype_unsat_structurally(arena: &TermArena, assertions: &[TermId]) -> bool {
+    datatype_structural_refutation(arena, assertions).is_some()
+}
+
+/// Returns a certificate when datatype structural axioms refute the conjunction.
+///
+/// Besides direct top-level structural conflicts, this handles the common cvc5
+/// acyclicity shape `or(branch_1, ..., branch_n)`: if every disjunct branch,
+/// conjoined with the remaining top-level assertions, is structurally refutable,
+/// then the original assertion is also unsatisfiable.
+#[must_use]
+pub fn datatype_structural_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<DatatypeStructuralRefutationCertificate> {
+    let mut flattened = Vec::new();
+    for &assertion in assertions {
+        collect_and_leaves(arena, assertion, &mut flattened);
+    }
+
+    if conjunction_structural_conflict(arena, &flattened) {
+        return Some(DatatypeStructuralRefutationCertificate { branches: 1 });
+    }
+
+    for (idx, &assertion) in flattened.iter().enumerate() {
+        let mut disjuncts = Vec::new();
+        collect_or_leaves(arena, assertion, &mut disjuncts);
+        if disjuncts.len() < 2 {
+            continue;
+        }
+        let mut proved = 0_u64;
+        let mut all_refuted = true;
+        for disjunct in disjuncts {
+            let mut branch = Vec::new();
+            branch.extend(
+                flattened
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(other_idx, &other)| (other_idx != idx).then_some(other)),
+            );
+            collect_and_leaves(arena, disjunct, &mut branch);
+            if conjunction_structural_conflict(arena, &branch) {
+                proved += 1;
+            } else {
+                all_refuted = false;
+                break;
+            }
+        }
+        if all_refuted && proved > 0 {
+            return Some(DatatypeStructuralRefutationCertificate { branches: proved });
+        }
+    }
+
+    None
+}
+
+fn collect_or_leaves(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } if args.len() == 2 => {
+            collect_or_leaves(arena, args[0], out);
+            collect_or_leaves(arena, args[1], out);
+        }
+        _ => out.push(term),
+    }
+}
+
+fn collect_and_leaves(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } if args.len() == 2 => {
+            collect_and_leaves(arena, args[0], out);
+            collect_and_leaves(arena, args[1], out);
+        }
+        _ => out.push(term),
+    }
+}
+
+fn conjunction_structural_conflict(arena: &TermArena, assertions: &[TermId]) -> bool {
     let mut s = Structural::default();
     let mut diseqs: Vec<(TermId, TermId)> = Vec::new();
+    let mut excluded_ctors: BTreeMap<TermId, BTreeSet<ConstructorId>> = BTreeMap::new();
+    let mut positive_testers: Vec<(TermId, ConstructorId)> = Vec::new();
 
     for &assertion in assertions {
         match arena.node(assertion) {
@@ -63,8 +158,27 @@ pub fn prove_datatype_unsat_structurally(arena: &TermArena, assertions: &[TermId
                         s.intern(arena, p);
                         s.intern(arena, q);
                         diseqs.push((p, q));
+                        record_nullary_constructor_exclusion(arena, p, q, &mut excluded_ctors);
+                        record_nullary_constructor_exclusion(arena, q, p, &mut excluded_ctors);
                     }
+                } else if let TermNode::App {
+                    op: Op::DtTest(ctor),
+                    args: test_args,
+                } = arena.node(args[0])
+                    && test_args.len() == 1
+                {
+                    let value = test_args[0];
+                    s.intern(arena, value);
+                    excluded_ctors.entry(value).or_default().insert(*ctor);
                 }
+            }
+            TermNode::App {
+                op: Op::DtTest(ctor),
+                args,
+            } if args.len() == 1 => {
+                let value = args[0];
+                s.intern(arena, value);
+                positive_testers.push((value, *ctor));
             }
             _ => {}
         }
@@ -80,8 +194,30 @@ pub fn prove_datatype_unsat_structurally(arena: &TermArena, assertions: &[TermId
             return true;
         }
     }
+    // Constructor exhaustiveness: a class cannot exclude every constructor of
+    // its datatype, and a positive constructor fact cannot be excluded.
+    if s.has_constructor_coverage_conflict(arena, &excluded_ctors, &positive_testers) {
+        return true;
+    }
     // Acyclicity: a value forced to strictly contain itself.
     s.has_containment_cycle(arena)
+}
+
+fn record_nullary_constructor_exclusion(
+    arena: &TermArena,
+    maybe_value: TermId,
+    maybe_ctor: TermId,
+    excluded_ctors: &mut BTreeMap<TermId, BTreeSet<ConstructorId>>,
+) {
+    let Some((ctor, args)) = as_construction(arena, maybe_ctor) else {
+        return;
+    };
+    if !args.is_empty()
+        || arena.sort_of(maybe_value) != Sort::Datatype(arena.constructor_datatype(ctor))
+    {
+        return;
+    }
+    excluded_ctors.entry(maybe_value).or_default().insert(ctor);
 }
 
 /// Whether `term` is datatype-sorted.
@@ -263,6 +399,75 @@ impl Structural {
         }
         false
     }
+
+    fn has_constructor_coverage_conflict(
+        &mut self,
+        arena: &TermArena,
+        excluded_ctors: &BTreeMap<TermId, BTreeSet<ConstructorId>>,
+        positive_testers: &[(TermId, ConstructorId)],
+    ) -> bool {
+        let mut excluded_by_class: BTreeMap<
+            (usize, axeyum_ir::DatatypeId),
+            BTreeSet<ConstructorId>,
+        > = BTreeMap::new();
+        for (&term, ctors) in excluded_ctors {
+            let Sort::Datatype(dt) = arena.sort_of(term) else {
+                continue;
+            };
+            let Some(root) = self.class_of(term) else {
+                continue;
+            };
+            excluded_by_class
+                .entry((root, dt))
+                .or_default()
+                .extend(ctors.iter().copied());
+        }
+
+        let mut positive_by_class: BTreeMap<
+            (usize, axeyum_ir::DatatypeId),
+            BTreeSet<ConstructorId>,
+        > = BTreeMap::new();
+        for &(term, ctor) in positive_testers {
+            let dt = arena.constructor_datatype(ctor);
+            let Some(root) = self.class_of(term) else {
+                continue;
+            };
+            positive_by_class
+                .entry((root, dt))
+                .or_default()
+                .insert(ctor);
+        }
+        for node in self.ctor_nodes.clone() {
+            let (ctor, _args) = as_construction(arena, self.term_of[node])
+                .expect("ctor_nodes holds constructor terms");
+            let dt = arena.constructor_datatype(ctor);
+            let root = self.find(node);
+            positive_by_class
+                .entry((root, dt))
+                .or_default()
+                .insert(ctor);
+        }
+
+        for ((class, dt), excluded) in &excluded_by_class {
+            let constructors = arena.datatype_constructors(*dt);
+            if !constructors.is_empty() && constructors.iter().all(|ctor| excluded.contains(ctor)) {
+                return true;
+            }
+            if let Some(positive) = positive_by_class.get(&(*class, *dt))
+                && positive.iter().any(|ctor| excluded.contains(ctor))
+            {
+                return true;
+            }
+        }
+
+        positive_by_class
+            .values()
+            .any(|constructors| constructors.len() > 1)
+    }
+
+    fn class_of(&mut self, term: TermId) -> Option<usize> {
+        self.index.get(&term).copied().map(|i| self.find(i))
+    }
 }
 
 #[cfg(test)]
@@ -407,6 +612,90 @@ mod tests {
         let e1 = arena.eq(xv, cx).unwrap();
         let e2 = arena.eq(yv, cy).unwrap();
         assert!(!prove_datatype_unsat_structurally(&arena, &[e1, e2]));
+    }
+
+    #[test]
+    fn or_of_structurally_unsat_branches_is_unsat() {
+        // (x = cons(h, x)) OR (y = cons(g, y)): every branch violates datatype
+        // acyclicity, so the disjunction is unsat.
+        let mut arena = TermArena::new();
+        let (dt, [_nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let y = arena.declare("y", Sort::Datatype(dt)).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let h = arena.bv_var("h", 8).unwrap();
+        let g = arena.bv_var("g", 8).unwrap();
+        let cx = arena.construct(cons, &[h, xv]).unwrap();
+        let cy = arena.construct(cons, &[g, yv]).unwrap();
+        let e1 = arena.eq(xv, cx).unwrap();
+        let e2 = arena.eq(yv, cy).unwrap();
+        let disj = arena.or(e1, e2).unwrap();
+        let cert = super::datatype_structural_refutation(&arena, &[disj])
+            .expect("both datatype branches are structurally unsat");
+        assert_eq!(cert.branches, 2);
+    }
+
+    #[test]
+    fn or_with_one_non_refuted_branch_is_not_refuted() {
+        // The second branch is satisfiable, so the disjunction must not be
+        // refuted merely because the first branch contains a cycle.
+        let mut arena = TermArena::new();
+        let (dt, [_nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let y = arena.declare("y", Sort::Datatype(dt)).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let h = arena.bv_var("h", 8).unwrap();
+        let cx = arena.construct(cons, &[h, xv]).unwrap();
+        let cyclic = arena.eq(xv, cx).unwrap();
+        let non_refuted = arena.eq(yv, yv).unwrap();
+        let disj = arena.or(cyclic, non_refuted).unwrap();
+        assert!(super::datatype_structural_refutation(&arena, &[disj]).is_none());
+    }
+
+    #[test]
+    fn constructor_coverage_over_selector_is_unsat() {
+        // cvc5 regression shape:
+        //   (and (not (= nil (tail x))) (not (is-cons (tail x))))
+        // A datatype value with every constructor excluded is impossible.
+        let mut arena = TermArena::new();
+        let (dt, [nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let xv = arena.var(x);
+        let tail = arena.dt_select(cons, 1, xv).unwrap();
+        let nil_value = arena.construct(nil, &[]).unwrap();
+        let eq_nil = arena.eq(nil_value, tail).unwrap();
+        let not_nil = arena.not(eq_nil).unwrap();
+        let is_cons = arena.dt_test(cons, tail).unwrap();
+        let not_cons = arena.not(is_cons).unwrap();
+        let conjunction = arena.and(not_nil, not_cons).unwrap();
+        let cert = super::datatype_structural_refutation(&arena, &[conjunction])
+            .expect("both constructors are excluded");
+        assert_eq!(cert.branches, 1);
+    }
+
+    #[test]
+    fn one_constructor_exclusion_is_not_refuted() {
+        let mut arena = TermArena::new();
+        let (dt, [nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let xv = arena.var(x);
+        let nil_value = arena.construct(nil, &[]).unwrap();
+        let eq_nil = arena.eq(nil_value, xv).unwrap();
+        let not_nil = arena.not(eq_nil).unwrap();
+        assert!(super::datatype_structural_refutation(&arena, &[not_nil]).is_none());
+        let is_cons = arena.dt_test(cons, xv).unwrap();
+        assert!(super::datatype_structural_refutation(&arena, &[is_cons]).is_none());
+    }
+
+    #[test]
+    fn positive_and_negative_tester_conflict_is_unsat() {
+        let mut arena = TermArena::new();
+        let (dt, [_nil, cons]) = int_list(&mut arena);
+        let x = arena.declare("x", Sort::Datatype(dt)).unwrap();
+        let xv = arena.var(x);
+        let is_cons = arena.dt_test(cons, xv).unwrap();
+        let not_cons = arena.not(is_cons).unwrap();
+        assert!(super::datatype_structural_refutation(&arena, &[is_cons, not_cons]).is_some());
     }
 
     #[test]
