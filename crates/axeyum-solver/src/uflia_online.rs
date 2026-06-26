@@ -1374,11 +1374,18 @@ fn check_qf_uflia_boolean(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> CheckResult {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if deadline.is_some_and(|d| Instant::now() >= d) {
+        return timeout_unknown("timeout in the online combination boolean layer");
+    }
     // The distinct theory atoms over the whole assertion set become propositional
     // variables 0..atom_count (deterministic left-to-right scan).
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen: BTreeSet<TermId> = BTreeSet::new();
     for &a in assertions {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return timeout_unknown("timeout while collecting online UFLIA theory atoms");
+        }
         collect_uflia_atoms(arena, a, &mut atom_terms, &mut seen);
     }
     if atom_terms.is_empty() {
@@ -1395,11 +1402,6 @@ fn check_qf_uflia_boolean(
     if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
         return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    if deadline.is_some_and(|d| Instant::now() >= d) {
-        return timeout_unknown("timeout in the online combination boolean layer");
-    }
-
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
     // the original `atom_count`. If it cannot be built, fall back to the enumerative layer.
     let Some(combined) = crate::combined_theory_lia::CombinedIncrementalLia::new_with_deadline(
@@ -1407,6 +1409,14 @@ fn check_qf_uflia_boolean(
         &atom_terms,
         deadline,
     ) else {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return timeout_unknown("timeout while building online UFLIA combined state");
+        }
+        if opaque_atoms > 0 {
+            return decline(
+                "opaque-app online UFLIA incremental combined state could not be built safely",
+            );
+        }
         return check_qf_uflia_boolean_enumerative(arena, assertions, config, true, None);
     };
     cdclt_combined(arena, assertions, &atom_terms, combined, deadline)
@@ -1435,6 +1445,9 @@ fn cdclt_combined(
     let mut enc = BoolEncoder::with_reserved(atom_terms, combined_count);
     let mut bool_clauses: Vec<Vec<BoolLit>> = Vec::new();
     for &assertion in assertions {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return timeout_unknown("timeout while encoding online UFLIA boolean skeleton");
+        }
         let Some(top) = enc.encode(arena, assertion, &mut bool_clauses) else {
             return decline(format!(
                 "boolean skeleton outside the online combination encoder: {}",
@@ -1452,6 +1465,9 @@ fn cdclt_combined(
     // The interface structural clauses (eq ∨ lt ∨ gt totality + pairwise exclusion) over
     // the registered interface variables — so the SAT layer branches the case-split.
     for structural in combined.structural_clauses() {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return timeout_unknown("timeout while adding online UFLIA interface clauses");
+        }
         bool_clauses.push(
             structural
                 .into_iter()
@@ -1679,11 +1695,18 @@ fn check_qf_uflia_boolean_enumerative(
     enable_early_prune: bool,
     metrics: Option<&mut Metrics>,
 ) -> CheckResult {
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if deadline.is_some_and(|d| Instant::now() >= d) {
+        return timeout_unknown("timeout in the online combination boolean layer");
+    }
     // The distinct theory atoms over the whole assertion set become the proposition
     // variables 0..atom_count (deterministic left-to-right scan).
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen: BTreeSet<TermId> = BTreeSet::new();
     for &a in assertions {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return timeout_unknown("timeout while collecting online UFLIA theory atoms");
+        }
         collect_uflia_atoms(arena, a, &mut atom_terms, &mut seen);
     }
     if atom_terms.is_empty() {
@@ -1701,15 +1724,13 @@ fn check_qf_uflia_boolean_enumerative(
         return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
 
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    if deadline.is_some_and(|d| Instant::now() >= d) {
-        return timeout_unknown("timeout in the online combination boolean layer");
-    }
-
     // Tseitin-encode each assertion; assert each top variable.
     let mut enc = BoolEncoder::new(&atom_terms);
     let mut clauses: Vec<Vec<BoolLit>> = Vec::new();
     for &assertion in assertions {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return timeout_unknown("timeout while encoding online UFLIA boolean skeleton");
+        }
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
             return decline(format!(
                 "boolean skeleton outside the online combination encoder: {}",

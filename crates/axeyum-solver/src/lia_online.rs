@@ -224,7 +224,28 @@ impl LiaTheory {
     /// shape seen in generated `QF_UFLIA` arithmetic skeletons.
     #[must_use]
     pub(crate) fn new_deferred_for_large_search(arena: &TermArena, atom_terms: &[TermId]) -> Self {
-        let mut theory = Self::new(arena, atom_terms);
+        Self::new_deferred_with_options(arena, atom_terms, false)
+    }
+
+    /// Builds the same large-query deferred theory while treating Int-sorted UF
+    /// applications as opaque integer variables. This is used by the combined
+    /// UFLIA CDCL(T) path: SAT search can record a large opaque-app assignment
+    /// cheaply, then surface one conservative feasibility conflict at the
+    /// theory-propagation boundary.
+    #[must_use]
+    pub(crate) fn new_with_opaque_apps_deferred_for_large_search(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+    ) -> Self {
+        Self::new_deferred_with_options(arena, atom_terms, true)
+    }
+
+    fn new_deferred_with_options(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        allow_opaque_apps: bool,
+    ) -> Self {
+        let mut theory = Self::new_with_options(arena, atom_terms, allow_opaque_apps);
         theory.defer_feasibility_until_propagate = true;
         theory.skip_entailment_propagation = true;
         theory
@@ -393,6 +414,9 @@ impl LiaTheory {
     /// under-approximation that **never** fabricates a propagation.
     #[must_use]
     pub fn propagate(&self) -> Vec<TheoryProp> {
+        if self.deadline_expired() {
+            return Vec::new();
+        }
         if self.defer_feasibility_until_propagate {
             if let Some(prop) = self.deferred_feasibility_conflict() {
                 return vec![prop];
@@ -405,6 +429,9 @@ impl LiaTheory {
         let asserted = self.live_lits();
         let mut out = Vec::new();
         for atom in 0..self.kinds.len() {
+            if self.deadline_expired() {
+                return out;
+            }
             if self.assigned.get(atom).copied().flatten().is_some() {
                 continue; // already decided by the search
             }
@@ -565,6 +592,9 @@ impl LiaTheory {
     fn minimize_probe_reason(&self, asserted: &[TheoryLit], probe: TheoryLit) -> Vec<TheoryLit> {
         let mut keep: Vec<bool> = vec![true; asserted.len()];
         for drop_idx in 0..asserted.len() {
+            if self.deadline_expired() {
+                break;
+            }
             keep[drop_idx] = false;
             let subset: Vec<TheoryLit> = asserted
                 .iter()
@@ -606,6 +636,9 @@ impl LiaTheory {
     ) -> Vec<TheoryLit> {
         let mut keep: Vec<bool> = vec![true; asserted.len()];
         for drop_idx in 0..asserted.len() {
+            if self.deadline_expired() {
+                break;
+            }
             keep[drop_idx] = false;
             let subset: Vec<TheoryLit> = asserted
                 .iter()

@@ -570,6 +570,21 @@ against competitor source, are now binding:
    remaining overrun sits in construction, encoding, or theory-propagation
    generation before these inner DPLL checks regain control. The committed guard
    remains **128** opaque-app order atoms.
+   **OPAQUE-APP ONLINE CONSTRUCTION/FALLBACK GUARD LANDED (2026-06-26):**
+   large combined opaque-app UFLIA layouts now defer LIA feasibility to the
+   theory-propagation boundary instead of re-solving on every asserted literal;
+   the Boolean UFLIA construction path checks the caller deadline while
+   collecting atoms, building the combined state, encoding the Boolean skeleton,
+   and adding interface clauses; and opaque-app layouts that cannot build the
+   incremental combined state decline instead of restarting through the older
+   enumerative fallback. Re-running the broad cap experiment with the opaque cap
+   temporarily raised to **512** now makes both generated direct probes decline
+   in about **4 ms** with `opaque-app online UFLIA incremental combined state
+   could not be built safely` instead of running past **30 s**. This fixes the
+   unsafe admission/fallback path, not the solve-rate gap: the committed guard
+   remains **128**, and the next solve work is partitioned opaque-heavy
+   admission that preserves incremental-build safety, opaque-app model lifting,
+   or lazy UF/LIA relevance that reduces LP-core-producing branches.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

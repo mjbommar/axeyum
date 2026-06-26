@@ -232,6 +232,39 @@ fn large_total_atom_skeleton_with_small_opaque_subset_is_admitted() {
 }
 
 #[test]
+fn opaque_app_interface_overflow_declines_without_enumerative_fallback() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let zero = iconst(&mut arena, 0);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let mut assertion = arena.int_le(fx, zero).unwrap();
+
+    for i in 0..12 {
+        let y = ivar(&mut arena, &format!("y{i}"));
+        let z = ivar(&mut arena, &format!("z{i}"));
+        let fy = arena.apply(f, &[y]).unwrap();
+        let eq = arena.eq(fy, z).unwrap();
+        assertion = arena.or(assertion, eq).unwrap();
+    }
+
+    let config = SolverConfig::default().with_timeout(Duration::from_millis(100));
+    let online = check_qf_uflia_online(&mut arena, &[assertion], &config).unwrap();
+    assert!(
+        matches!(
+            &online,
+            CheckResult::Unknown(reason)
+                if reason
+                    .detail
+                    .contains("opaque-app online UFLIA incremental combined state could not be built safely")
+        ),
+        "opaque-app layouts that exceed the incremental interface split should not restart the unsafe enumerative fallback, got {online:?}"
+    );
+}
+
+#[test]
 fn interface_equality_forces_euf_contradiction_unsat() {
     // f(x) != f(y)  AND  x <= y  AND  y <= x.
     // LIA forces x = y; EUF then needs f(x) = f(y) by congruence, contradicting the

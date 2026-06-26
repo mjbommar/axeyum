@@ -50,6 +50,12 @@ use crate::uflia_online::{
 /// decline so the warm and cold paths reject the same oversized splits identically.
 const MAX_SPLIT_PAIRS: usize = 64;
 
+/// Mirror the pure-LIA online large-query threshold: once the combined UFLIA
+/// layout reaches this size, the live LIA sub-theory records assignments and
+/// performs one feasibility check at the propagation boundary instead of
+/// re-solving after every asserted literal.
+const DEFER_COMBINED_LIA_FEASIBILITY_ATOMS: usize = 128;
+
 /// The warm `EUF` + `LIA` equality-sharing theory oracle (slice 1).
 ///
 /// Constructed once over the `BoolSearch` atom set (the indices are not load-bearing —
@@ -562,6 +568,9 @@ impl CombinedIncrementalLia {
         atom_terms: &[TermId],
         deadline: Option<Instant>,
     ) -> Option<Self> {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return None;
+        }
         let original_atoms: Vec<TermId> = atom_terms.to_vec();
 
         // Shared pairs over the full atom set, once. Build a Partition from "all atoms
@@ -572,6 +581,9 @@ impl CombinedIncrementalLia {
             .map(|&atom| Literal { atom, value: true })
             .collect();
         let part = partition(arena, &all_true)?;
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return None;
+        }
         let interface = interface_terms(arena, &part);
         let raw_pairs = interface_pairs(&interface);
         if raw_pairs.len() > MAX_SPLIT_PAIRS {
@@ -581,6 +593,9 @@ impl CombinedIncrementalLia {
         let mut combined: Vec<TermId> = original_atoms.clone();
         let mut pairs: Vec<InterfacePair> = Vec::with_capacity(raw_pairs.len());
         for &(s, t) in &raw_pairs {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return None;
+            }
             let (Ok(eq), Ok(lt), Ok(gt)) = (arena.eq(s, t), arena.int_lt(s, t), arena.int_gt(s, t))
             else {
                 return None;
@@ -599,9 +614,20 @@ impl CombinedIncrementalLia {
             });
         }
 
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return None;
+        }
         let routes = build_routes(&part, &original_atoms, &combined, &pairs);
         let euf = EufTheory::new(arena, &combined);
-        let lia = LiaTheory::new_with_opaque_apps(arena, &combined).with_deadline(deadline);
+        let lia = if should_defer_combined_lia_feasibility(combined.len()) {
+            LiaTheory::new_with_opaque_apps_deferred_for_large_search(arena, &combined)
+        } else {
+            LiaTheory::new_with_opaque_apps(arena, &combined)
+        }
+        .with_deadline(deadline);
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            return None;
+        }
         let n = combined.len();
         Some(Self {
             euf,
@@ -671,6 +697,10 @@ impl CombinedIncrementalLia {
             .filter_map(|&v| self.assigned[v].map(|value| TheoryLit { atom: v, value }))
             .collect()
     }
+}
+
+fn should_defer_combined_lia_feasibility(atom_count: usize) -> bool {
+    atom_count >= DEFER_COMBINED_LIA_FEASIBILITY_ATOMS
 }
 
 /// The outcome of recording an assertion against the current assignment.
@@ -953,4 +983,74 @@ fn live_euf_assertions(arena: &mut TermArena, literals: &[Literal]) -> Vec<TermI
         return Vec::new();
     };
     build_euf_assertions(arena, &part.euf)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axeyum_ir::Sort;
+
+    fn iconst(arena: &mut TermArena, n: i128) -> TermId {
+        arena.int_const(n)
+    }
+
+    fn ivar(arena: &mut TermArena, name: &str) -> TermId {
+        let s = arena.declare(name, Sort::Int).expect("declare int");
+        arena.var(s)
+    }
+
+    #[test]
+    fn large_combined_opaque_lia_defers_feasibility_to_propagation() {
+        let mut arena = TermArena::new();
+        let mut atoms = Vec::new();
+
+        for i in 0..DEFER_COMBINED_LIA_FEASIBILITY_ATOMS {
+            let y = ivar(&mut arena, &format!("pad_{i}"));
+            let zero = iconst(&mut arena, 0);
+            atoms.push(arena.int_ge(y, zero).expect("pad>=0"));
+        }
+
+        let f = arena
+            .declare_fun("f", &[Sort::Int], Sort::Int)
+            .expect("declare f");
+        let x = ivar(&mut arena, "x");
+        let fx = arena.apply(f, &[x]).expect("f(x)");
+        let zero = iconst(&mut arena, 0);
+        let one = iconst(&mut arena, 1);
+        let fx_le_zero = arena.int_le(fx, zero).expect("f(x)<=0");
+        let fx_ge_one = arena.int_ge(fx, one).expect("f(x)>=1");
+        let le_var = atoms.len();
+        atoms.push(fx_le_zero);
+        let ge_var = atoms.len();
+        atoms.push(fx_ge_one);
+
+        assert!(should_defer_combined_lia_feasibility(atoms.len()));
+        let mut state =
+            CombinedIncrementalLia::new(&mut arena, &atoms).expect("combined state builds");
+
+        assert!(
+            state.assert(le_var, true).is_ok(),
+            "large combined state should record opaque LIA assertions cheaply"
+        );
+        assert!(
+            state.assert(ge_var, true).is_ok(),
+            "deferred mode should not re-solve on every opaque LIA assertion"
+        );
+
+        let props = state.propagate();
+        let conflict = props
+            .iter()
+            .find(|prop| state.assigned[prop.lit.atom] == Some(!prop.lit.value))
+            .expect("deferred feasibility conflict should surface as a propagation");
+        let mut core = conflict.reason.clone();
+        core.push(TheoryLit {
+            atom: conflict.lit.atom,
+            value: !conflict.lit.value,
+        });
+        assert!(
+            core.iter().any(|lit| lit.atom == le_var && lit.value)
+                && core.iter().any(|lit| lit.atom == ge_var && lit.value),
+            "conflict core should name both opaque contradictory bounds: {core:?}"
+        );
+    }
 }
