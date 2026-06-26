@@ -675,7 +675,7 @@ where
                 return Ok(CheckResult::Unknown(stats.wrap_unknown(&reason)));
             }
             CheckResult::Sat(model) => {
-                stats.sat_candidates += 1;
+                stats.record_candidate();
                 model.to_assignment()
             }
         };
@@ -781,11 +781,14 @@ fn candidate_function_consistency_lemmas(
 
 #[derive(Debug, Clone)]
 struct FunctionConsistencyStats {
+    started: Instant,
     applications: usize,
     function_groups: usize,
     potential_pairs: usize,
     solve_rounds: usize,
     sat_candidates: usize,
+    first_candidate_ms: Option<u128>,
+    last_candidate_ms: Option<u128>,
     pair_checks: usize,
     equal_arg_pairs: usize,
     violated_pairs: usize,
@@ -805,11 +808,14 @@ impl FunctionConsistencyStats {
             acc.saturating_add(pairs)
         });
         Self {
+            started: Instant::now(),
             applications,
             function_groups: groups.len(),
             potential_pairs,
             solve_rounds: 0,
             sat_candidates: 0,
+            first_candidate_ms: None,
+            last_candidate_ms: None,
             pair_checks: 0,
             equal_arg_pairs: 0,
             violated_pairs: 0,
@@ -820,16 +826,27 @@ impl FunctionConsistencyStats {
         }
     }
 
+    fn record_candidate(&mut self) {
+        let elapsed_ms = self.started.elapsed().as_millis();
+        self.sat_candidates += 1;
+        self.first_candidate_ms.get_or_insert(elapsed_ms);
+        self.last_candidate_ms = Some(elapsed_ms);
+    }
+
     fn summary(&self) -> String {
         format!(
             "applications={}, function_groups={}, potential_pairs={}, solve_rounds={}, \
-             sat_candidates={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
+             elapsed_ms={}, sat_candidates={}, first_candidate_ms={}, \
+             last_candidate_ms={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
              preseeded_lemmas={}, sibling_lemmas={}, lemmas_added={}, last_new_lemmas={}",
             self.applications,
             self.function_groups,
             self.potential_pairs,
             self.solve_rounds,
+            self.started.elapsed().as_millis(),
             self.sat_candidates,
+            optional_ms(self.first_candidate_ms),
+            optional_ms(self.last_candidate_ms),
             self.pair_checks,
             self.equal_arg_pairs,
             self.violated_pairs,
@@ -850,6 +867,10 @@ impl FunctionConsistencyStats {
             ),
         }
     }
+}
+
+fn optional_ms(value: Option<u128>) -> String {
+    value.map_or_else(|| "none".to_string(), |ms| ms.to_string())
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -1871,7 +1892,10 @@ mod tests {
         assert!(reason.detail.contains("function_groups=1"));
         assert!(reason.detail.contains("potential_pairs=1"));
         assert!(reason.detail.contains("solve_rounds=1"));
+        assert!(reason.detail.contains("elapsed_ms="));
         assert!(reason.detail.contains("sat_candidates=0"));
+        assert!(reason.detail.contains("first_candidate_ms=none"));
+        assert!(reason.detail.contains("last_candidate_ms=none"));
         assert!(reason.detail.contains("inner timeout"));
     }
 
@@ -2094,6 +2118,10 @@ mod tests {
             panic!("expected wrapped unknown, got {result:?}");
         };
         assert!(reason.detail.contains("sat_candidates=1"));
+        assert!(reason.detail.contains("first_candidate_ms="));
+        assert!(reason.detail.contains("last_candidate_ms="));
+        assert!(!reason.detail.contains("first_candidate_ms=none"));
+        assert!(!reason.detail.contains("last_candidate_ms=none"));
         assert!(reason.detail.contains("equal_arg_pairs=1"));
         assert!(reason.detail.contains("violated_pairs=1"));
         assert!(reason.detail.contains("sibling_lemmas=1"));

@@ -630,16 +630,17 @@ against competitor source, are now binding:
    arithmetic solve, while this only fires after the row has already identified
    a relevant violated UF application. Wider caps were measured and rejected:
    cap **16** dropped the 10 s hard row to **3** UF rounds / **2** candidates,
-   and cap **4** to **4** rounds / **3** candidates. The committed cap **1**
-   preserves the frontier.
+   cap **4** to **4** rounds / **3** candidates, and cap **2** to **5** rounds /
+   **4** candidates. The committed cap **1** preserves the frontier.
 
    On `cli__regress2__uflia-error0.smt2`, the 1 s run remains `unknown` but
    preserves **2** UF rounds, **1** candidate, **282** pair checks, **5**
-   violations, and now reports **sibling_lemmas=1**, **lemmas_added=7**. At
-   10 s the row remains `unknown` but preserves **6** UF rounds and **5**
-   candidates, reports **sibling_lemmas=5**, **lemmas_added=27**, and slightly
-   lowers warm arithmetic pressure to **total_rounds=280**,
-   **blocking_lemmas=295**, **core_src_affine=45**, and **core_src_lp=204**.
+   violations, **first_candidate_ms=1040**, **sibling_lemmas=1**, and
+   **lemmas_added=7**. At 10 s the row remains `unknown` but preserves **6** UF
+   rounds and **5** candidates, with candidates spanning
+   **first_candidate_ms=1025** to **last_candidate_ms=8324**; it reports
+   **sibling_lemmas=5**, **lemmas_added=27**, **total_rounds=285**,
+   **blocking_lemmas=300**, **core_src_affine=45**, and **core_src_lp=209**.
    The remaining blocker is still convergence/search after several UF
    candidates, not missing bulk Ackermann constraints.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**

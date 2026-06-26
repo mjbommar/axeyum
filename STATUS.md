@@ -6,39 +6,39 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-26 — post-candidate unary-Int UF sibling scheduling.**
-  Lazy function-consistency CEGAR now tracks `sibling_lemmas` and, after a
-  candidate exposes a real violated equal-argument UF pair, schedules at most
-  one additional valid Ackermann lemma between the same unary-Int dynamic
-  application and a sibling constant application from that function group. The
-  key constraint is timing: this is post-candidate scheduling, not pre-seeding,
-  so it does not perturb the first arithmetic solve that must produce the first
-  useful UF candidate.
+- **Session 2026-06-26 — lazy UF CEGAR timing telemetry.**
+  Lazy function-consistency CEGAR `unknown` details now include elapsed time and
+  first/last SAT abstraction candidate timestamps, alongside the existing
+  refinement counters. The retained post-candidate unary-Int sibling scheduler
+  still schedules at most one additional valid Ackermann lemma after a real
+  violated equal-argument UF pair; the new timing fields make clear whether a
+  hard row is failing before the first candidate or after several refinement
+  rounds.
 
-  Wider caps were measured and rejected before commit: cap **16** dropped the
-  10 s hard row to **3** UF rounds / **2** candidates, and cap **4** to **4**
-  UF rounds / **3** candidates. The committed cap **1** preserves the useful
-  frontier. On `cli__regress2__uflia-error0.smt2`, the 1 s run remains
+  Wider sibling caps were measured and rejected before commit: cap **16**
+  dropped the 10 s hard row to **3** UF rounds / **2** candidates, cap **4** to
+  **4** UF rounds / **3** candidates, and cap **2** to **5** UF rounds / **4**
+  candidates. The committed cap **1** preserves the useful frontier. On
+  `cli__regress2__uflia-error0.smt2`, the 1 s run remains
   `unknown` with **2** UF rounds, **1** candidate, **282** pair checks,
-  **6** equal-argument pairs, **5** violations, **sibling_lemmas=1**, and
-  **lemmas_added=7**. At 10 s the row remains `unknown` but preserves **6** UF
-  rounds and **5** candidates, with **1352** pair checks,
+  **6** equal-argument pairs, **5** violations, **first_candidate_ms=1040**,
+  **sibling_lemmas=1**, and **lemmas_added=7**. At 10 s the row remains
+  `unknown` but preserves **6** UF rounds and **5** candidates, with
+  **first_candidate_ms=1025**, **last_candidate_ms=8324**, **1352** pair checks,
   **22** equal-argument pairs, **15** violations, **sibling_lemmas=5**,
-  **lemmas_added=27**, **total_rounds=280**, **blocking_lemmas=295**,
-  **core_src_affine=45**, **core_src_lp=204**, and **core_len_avg=6.4**. Direct
+  **lemmas_added=27**, **total_rounds=285**, **blocking_lemmas=300**,
+  **core_src_affine=45**, **core_src_lp=209**, and **core_len_avg=6.6**. Direct
   online probes are unchanged and still decline quickly at
   `opaque_app_order_atoms=334 > 128, total=485`.
   Verification passed:
   `cargo fmt --all --check`;
   `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_unknown_reports_cegar_stats -j1 -- --nocapture`;
   `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_schedules_unary_int_siblings_after_violation -j1 -- --nocapture`;
-  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_batches_all_equal_arg_pairs_after_violation -j1 -- --nocapture`;
-  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_preseeds_affine_fixed_integer_argument_lemmas -j1 -- --nocapture`;
   `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
   `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
-  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
-  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
   `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example uflia_online_probe -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
   `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
 
 - **Session 2026-06-26 — staged affine arithmetic core extraction.**
@@ -5082,6 +5082,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **Lazy UF CEGAR timing telemetry.**
+  Lazy function-consistency `unknown` details now report `elapsed_ms`,
+  `first_candidate_ms`, and `last_candidate_ms` in addition to the refinement
+  counters. The cap-2 sibling experiment was measured and rejected
+  (**5** UF rounds / **4** candidates at 10 s), so the committed cap remains
+  **1**. On the hard generated QF_UFLIA row, cap 1 still preserves **6** UF
+  rounds / **5** candidates at 10 s, with candidate timing now visible
+  (**first_candidate_ms=1025**, **last_candidate_ms=8324**).
 
 - **2026-06-26** — **Post-candidate unary-Int UF sibling scheduling.**
   Lazy UF CEGAR now reports `sibling_lemmas` and adds at most one sibling
