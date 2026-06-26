@@ -456,6 +456,16 @@ against competitor source, are now binding:
    **blocking_lemmas=295**. Next practical lever: CEGAR relevance/convergence
    after the fifth candidate, via model-guided UF-pair scheduling or the real
    combined CDCL(T) interface-equality loop.
+   **UF BATCHING POLICY GUARDRAIL RETAINED (2026-06-26):**
+   a narrower violated-pair-only refinement policy was measured and rejected
+   before commit: both generated QF_UFLIA 1 s rows regressed to **0** UF
+   candidates and timed out in the first arithmetic solve after **42**
+   support-conflict rounds. The retained all-equal-argument batching restores
+   the warm-skeleton baseline (**1** candidate / **6** UF lemmas at 1 s,
+   **5** candidates / **23** UF lemmas at 10 s). A focused regression test now
+   pins the policy that once a candidate exposes any violated congruence pair,
+   every currently equal-argument pair in that candidate is batched, including
+   pairs whose result values already agree.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

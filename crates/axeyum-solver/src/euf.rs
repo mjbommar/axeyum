@@ -1414,6 +1414,7 @@ mod tests {
     use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
     use crate::combined::check_with_all_theories;
     use crate::lia::DEFAULT_INT_WIDTH;
+    use crate::model::Model;
     use crate::sat_bv_backend::SatBvBackend;
     use axeyum_ir::{Sort, TermArena, Value, eval};
 
@@ -1503,6 +1504,70 @@ mod tests {
         assert!(reason.detail.contains("potential_pairs=1"));
         assert!(reason.detail.contains("preseeded_lemmas=1"));
         assert!(reason.detail.contains("lemmas_added=1"));
+    }
+
+    #[test]
+    fn lazy_function_consistency_batches_all_equal_arg_pairs_after_violation() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+            .unwrap();
+        let a_sym = arena.declare("a", Sort::BitVec(2)).unwrap();
+        let b_sym = arena.declare("b", Sort::BitVec(2)).unwrap();
+        let c_sym = arena.declare("c", Sort::BitVec(2)).unwrap();
+        let d_sym = arena.declare("d", Sort::BitVec(2)).unwrap();
+        let a = arena.var(a_sym);
+        let b = arena.var(b_sym);
+        let c = arena.var(c_sym);
+        let d = arena.var(d_sym);
+        let fa = arena.apply(f, &[a]).unwrap();
+        let fb = arena.apply(f, &[b]).unwrap();
+        let fc = arena.apply(f, &[c]).unwrap();
+        let fd = arena.apply(f, &[d]).unwrap();
+        let first_pair = arena.eq(fa, fb).unwrap();
+        let second_pair = arena.eq(fc, fd).unwrap();
+        let assertion = arena.and(first_pair, second_pair).unwrap();
+
+        let mut calls = 0usize;
+        let result = super::check_with_function_consistency(&mut arena, &[assertion], |a, _q| {
+            calls += 1;
+            if calls == 1 {
+                let mut model = Model::new();
+                model.set(a_sym, Value::Bv { width: 2, value: 0 });
+                model.set(b_sym, Value::Bv { width: 2, value: 0 });
+                model.set(c_sym, Value::Bv { width: 2, value: 1 });
+                model.set(d_sym, Value::Bv { width: 2, value: 1 });
+
+                let mut fresh = a
+                    .symbols()
+                    .filter_map(|(symbol, name, sort)| {
+                        (name.starts_with("!fn_app_") && sort == Sort::BitVec(2))
+                            .then_some((name.to_owned(), symbol))
+                    })
+                    .collect::<Vec<_>>();
+                fresh.sort_by(|lhs, rhs| lhs.0.cmp(&rhs.0));
+                assert_eq!(fresh.len(), 4);
+                for ((_, symbol), value) in fresh.into_iter().zip([0, 1, 1, 1]) {
+                    model.set(symbol, Value::Bv { width: 2, value });
+                }
+                Ok(CheckResult::Sat(model))
+            } else {
+                Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "stop after first refinement".to_string(),
+                }))
+            }
+        })
+        .unwrap();
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected wrapped unknown, got {result:?}");
+        };
+        assert!(reason.detail.contains("sat_candidates=1"));
+        assert!(reason.detail.contains("equal_arg_pairs=2"));
+        assert!(reason.detail.contains("violated_pairs=1"));
+        assert!(reason.detail.contains("lemmas_added=2"));
+        assert!(reason.detail.contains("last_new_lemmas=2"));
     }
 
     #[test]

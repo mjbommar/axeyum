@@ -6,6 +6,36 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — UF refinement batching guardrail retained.**
+  Measured a narrower lazy UF refinement policy that added only
+  result-violating equal-argument pairs instead of all equal-argument pairs in a
+  candidate once any violation appears. It was rejected before commit: on both
+  generated QF_UFLIA overbound rows at 1 s, the route regressed to **0** UF
+  candidates and timed out in the first arithmetic solve after **42**
+  support-conflict rounds, whereas the retained all-equal batching reaches
+  **1** candidate and learns **6** UF lemmas at the same budget.
+
+  Added a focused regression test,
+  `lazy_function_consistency_batches_all_equal_arg_pairs_after_violation`, that
+  pins the retained policy: if one candidate exposes a violating congruence
+  pair, every currently equal-argument pair in that candidate is batched, even
+  pairs whose result values already agree. The hard-row diagnostics are back at
+  the warm-skeleton baseline: 1 s rows reach **2** UF rounds, **1** candidate,
+  **282** pair checks, **6** equal-argument pairs, **5** violations, and
+  **6** learned UF lemmas; the 10 s first row reaches **6** rounds,
+  **5** candidates, **1361** pair checks, **23** equal-argument pairs,
+  **15** violations, and **23** learned UF lemmas.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency_batches_all_equal_arg_pairs_after_violation -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_function_consistency -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith_overbound_unsat_decided_by_lazy -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`.
+
 - **Session 2026-06-26 — warm arithmetic skeleton for lazy UFLIA CEGAR.**
   The lazy arithmetic DPLL loop is now backed by an `IncrementalArithDpll`
   state object. The one-shot API still wraps that state, but lazy
@@ -4571,7 +4601,7 @@ plan is built and committed on the current branch:
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |
-| P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **EUF+LIA/LRA combination landed & dispatched (QF_UFLIA/UFLRA), complete for conjunctive UNSAT**: `declare_fun` admits Int/Real UF sorts, and `check_with_uf_arithmetic` decides the core squeeze/nested congruence UNSAT cases; SAT model lifting for arith UF remains conservatively `Unknown`. The QF_UFLIA overbound lazy CEGAR path now avoids duplicate generic LIA timeouts, collapses strict/non-strict order complements, batches same-candidate UF lemmas, batches simple bound conflicts, seeds bounded complement-bound monotonicity, checks deterministic Boolean-justified arithmetic supports, reports support-path counters, carries reusable arithmetic clauses, and now keeps an `IncrementalArithDpll` warm while UF lemmas are appended. The `uf_pair_profile` diagnostic shows the hard row has **214/282** constant-vs-constant pairs, and capped unary-Int preseed was rejected (**673 atoms**, **0** candidates at 10 s). The generated rows stay `unknown`, but 1 s diagnostics now reach actual UF refinement (**2** UF rounds, **1** candidate, **6** UF lemmas), and at 10 s the first row reaches **6** UF CEGAR rounds, **5** candidates, **1361** pair checks, **23** equal-argument pairs, **15** violations, and **23** learned UF lemmas; the warm arithmetic state reports **solve_calls=6**, **total_rounds=279**, **bound_lemmas=664**, and **blocking_lemmas=295** before timeout. Plus the combination primitives `theory_combination` (shared/propose/classify/arrangement) + `th_eq` bus (`theory_var_classes`/`interface_th_eqs`) and the earlier lazy/on-demand Ackermann for QF_UFBV. Remaining: UF CEGAR convergence/relevance after several candidate models, then full online interface-equality (Nelson-Oppen) combination of the e-graph + BV to drop Ackermann reduction entirely |
+| P1.6 | Theory combination (th_eq bus, interface equalities) | WIP — **EUF+LIA/LRA combination landed & dispatched (QF_UFLIA/UFLRA), complete for conjunctive UNSAT**: `declare_fun` admits Int/Real UF sorts, and `check_with_uf_arithmetic` decides the core squeeze/nested congruence UNSAT cases; SAT model lifting for arith UF remains conservatively `Unknown`. The QF_UFLIA overbound lazy CEGAR path now avoids duplicate generic LIA timeouts, collapses strict/non-strict order complements, batches same-candidate UF lemmas, batches simple bound conflicts, seeds bounded complement-bound monotonicity, checks deterministic Boolean-justified arithmetic supports, reports support-path counters, carries reusable arithmetic clauses, and now keeps an `IncrementalArithDpll` warm while UF lemmas are appended. The `uf_pair_profile` diagnostic shows the hard row has **214/282** constant-vs-constant pairs, capped unary-Int preseed was rejected (**673 atoms**, **0** candidates at 10 s), and violated-pair-only refinement was rejected because it lost the 1 s UF candidate; the retained all-equal-argument batching is regression-tested. The generated rows stay `unknown`, but 1 s diagnostics now reach actual UF refinement (**2** UF rounds, **1** candidate, **6** UF lemmas), and at 10 s the first row reaches **6** UF CEGAR rounds, **5** candidates, **1361** pair checks, **23** equal-argument pairs, **15** violations, and **23** learned UF lemmas; the warm arithmetic state reports **solve_calls=6**, **total_rounds=279**, **bound_lemmas=664**, and **blocking_lemmas=295** before timeout. Plus the combination primitives `theory_combination` (shared/propose/classify/arrangement) + `th_eq` bus (`theory_var_classes`/`interface_th_eqs`) and the earlier lazy/on-demand Ackermann for QF_UFBV. Remaining: UF CEGAR convergence/relevance after several candidate models, then full online interface-equality (Nelson-Oppen) combination of the e-graph + BV to drop Ackermann reduction entirely |
 | P1.7 | PBLS local-search BV engine (portfolio) | WIP — **word-level WalkSAT landed** (`solve_local_search` + `PblsBackend`, `pbls.rs`): keeps a concrete Bool/BitVec(≤128) assignment, scores by evaluator-falsified assertions, nudges a variable in an unsatisfied assertion (greedy + WalkSAT noise + random restarts) toward a model. One-sided + sound: `Sat` only with an evaluator-verified model, never `Unsat`, `Unknown` (incl. out-of-scope sorts) otherwise. Read-only on the arena (fits the trait); deterministic (fixed seed, explicit budgets). 4 unit + an ignored 150-formula differential vs the eager backend (never contradicts). Remaining: integrate as a portfolio strategy; tune moves/budgets; measure on satisfiable corpora |
 | P1.8 | Strategy & tactics (combinators + probes + per-logic scripts) | TODO — Codex review recommends promoting this from cleanup to risk control: split `solve()` into explicit tactic contracts with fragment predicates, transformation class, replay/proof obligation, resource behavior, and benchmark-visible per-step metrics |
 
@@ -4610,6 +4640,14 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **UF batching policy guardrail retained.**
+  A violated-pair-only lazy UF refinement experiment was measured and rejected:
+  both generated QF_UFLIA 1 s rows regressed to **0** candidates. Added a
+  focused test pinning the retained policy that once any violation appears in a
+  candidate, all currently equal-argument pairs are batched. The warm-skeleton
+  hard-row diagnostics remain at **1** candidate / **6** UF lemmas at 1 s and
+  **5** candidates / **23** UF lemmas at 10 s.
 
 - **2026-06-26** — **Warm arithmetic skeleton for lazy UFLIA CEGAR.**
   Lazy UF+arithmetic now keeps one `IncrementalArithDpll` state across
