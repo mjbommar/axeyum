@@ -728,6 +728,63 @@ pub fn store_chain_readback_refutation_within(
     None
 }
 
+/// A checked refutation for same-index reciprocal stores followed by an array
+/// disequality.
+///
+/// The core array consequence is:
+///
+/// ```text
+/// store(A, i, select(B, i)) = store(B, i, select(A, i))  ==>  A = B
+/// ```
+///
+/// The certificate checker iterates that consequence through nested store-chain
+/// equalities, accepting only when it reaches an asserted direct disequality of
+/// the derived base arrays. This covers declared-sort `QF_AX` rows where eager
+/// finite-index extensionality and BV lowering are intentionally unavailable.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrossStoreArrayDisequalityCertificate {
+    /// Left side of the final asserted array disequality.
+    pub disequality_lhs: TermId,
+    /// Right side of the final asserted array disequality.
+    pub disequality_rhs: TermId,
+    /// Number of reciprocal-store equality steps used to derive the refuted
+    /// base-array equality.
+    pub steps: usize,
+}
+
+impl CrossStoreArrayDisequalityCertificate {
+    /// Re-derives the certificate from the original assertions.
+    #[must_use]
+    pub fn recheck(&self, arena: &TermArena, assertions: &[TermId]) -> bool {
+        cross_store_array_disequality_refutation(arena, assertions).as_ref() == Some(self)
+    }
+}
+
+/// Returns a certificate for a same-index reciprocal-store disequality
+/// refutation, if present.
+#[must_use]
+pub fn cross_store_array_disequality_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<CrossStoreArrayDisequalityCertificate> {
+    cross_store_array_disequality_refutation_within(arena, assertions, None)
+}
+
+pub fn cross_store_array_disequality_refutation_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<CrossStoreArrayDisequalityCertificate> {
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        if past_deadline(deadline) {
+            return None;
+        }
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+    }
+    cross_store_array_disequality_refutation_from_conjuncts(arena, &conjuncts, deadline)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn store_chain_readback_side(
     arena: &TermArena,
@@ -1392,7 +1449,9 @@ pub fn prove_unsat_by_symmetric_swap_chain_within(
         collect_positive_conjuncts(arena, assertion, &mut conjuncts);
     }
 
-    if prove_unsat_by_cross_store_array_disequality(arena, &conjuncts, deadline) {
+    if cross_store_array_disequality_refutation_from_conjuncts(arena, &conjuncts, deadline)
+        .is_some()
+    {
         return true;
     }
 
@@ -1425,43 +1484,48 @@ pub fn prove_unsat_by_symmetric_swap_chain_within(
     false
 }
 
-fn prove_unsat_by_cross_store_array_disequality(
+fn cross_store_array_disequality_refutation_from_conjuncts(
     arena: &TermArena,
     conjuncts: &[TermId],
     deadline: Option<Instant>,
-) -> bool {
+) -> Option<CrossStoreArrayDisequalityCertificate> {
     let disequalities: Vec<(TermId, TermId)> = conjuncts
         .iter()
         .filter_map(|&term| negated_array_equality(arena, term))
         .map(canonical_term_pair)
         .collect();
     if disequalities.is_empty() {
-        return false;
+        return None;
     }
 
-    let mut work: Vec<(TermId, TermId)> = conjuncts
+    let mut work: Vec<((TermId, TermId), usize)> = conjuncts
         .iter()
         .filter_map(|&term| positive_array_equality(arena, term))
+        .map(|pair| (pair, 0))
         .collect();
     let mut seen = BTreeSet::new();
 
-    while let Some((lhs, rhs)) = work.pop() {
+    while let Some(((lhs, rhs), steps)) = work.pop() {
         if past_deadline(deadline) {
-            return false;
+            return None;
         }
         let pair = canonical_term_pair((lhs, rhs));
         if !seen.insert(pair) {
             continue;
         }
-        if disequalities.contains(&pair) {
-            return true;
+        if steps > 0 && disequalities.contains(&pair) {
+            return Some(CrossStoreArrayDisequalityCertificate {
+                disequality_lhs: pair.0,
+                disequality_rhs: pair.1,
+                steps,
+            });
         }
         if let Some(base_pair) = cross_store_base_equality(arena, lhs, rhs) {
-            work.push(base_pair);
+            work.push((base_pair, steps + 1));
         }
     }
 
-    false
+    None
 }
 
 fn positive_array_equality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
@@ -3518,8 +3582,8 @@ pub fn certify_array_elim_unsat(
 mod tests {
     use super::{
         StoreChainSide, check_qf_abv_lazy, check_with_array_elimination,
-        const_array_default_mismatch_refutation, prove_unsat_by_symmetric_swap_chain,
-        store_chain_readback_refutation,
+        const_array_default_mismatch_refutation, cross_store_array_disequality_refutation,
+        prove_unsat_by_symmetric_swap_chain, store_chain_readback_refutation,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -3657,6 +3721,12 @@ mod tests {
             ),
         ] {
             let script = parse_script(input).unwrap_or_else(|error| panic!("{tag}: {error}"));
+            let cert = cross_store_array_disequality_refutation(&script.arena, &script.assertions)
+                .unwrap_or_else(|| panic!("{tag}: expected cross-store certificate"));
+            assert!(
+                cert.recheck(&script.arena, &script.assertions),
+                "{tag}: cross-store certificate must recheck"
+            );
             assert!(
                 prove_unsat_by_symmetric_swap_chain(&script.arena, &script.assertions),
                 "expected structural cross-store refuter to close {tag}"
@@ -3667,6 +3737,11 @@ mod tests {
             "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays3.smt2"
         ))
         .unwrap();
+        assert!(
+            cross_store_array_disequality_refutation(&sat_script.arena, &sat_script.assertions)
+                .is_none(),
+            "arrays3 is SAT and must not produce a cross-store certificate"
+        );
         assert!(
             !prove_unsat_by_symmetric_swap_chain(&sat_script.arena, &sat_script.assertions),
             "arrays3 is SAT and must not match the same-index cross-store refuter"

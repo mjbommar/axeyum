@@ -654,6 +654,14 @@ fn collect_bool_assertion(
             Some(())
         }
         TermNode::App {
+            op: Op::BoolImplies,
+            args,
+        } if !polarity && args.len() == 2 => {
+            collect_bool_assertion(arena, args[0], true, probe)?;
+            collect_bool_assertion(arena, args[1], false, probe)?;
+            Some(())
+        }
+        TermNode::App {
             op: Op::BoolNot,
             args,
         } if args.len() == 1 => collect_bool_assertion(arena, args[0], !polarity, probe),
@@ -3655,6 +3663,18 @@ mod tests {
                 .expect("read congruence refutes");
             assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
         }
+    }
+
+    #[test]
+    fn recognizes_false_implication_read_congruence() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arr1.smt2"
+        ))
+        .unwrap();
+
+        let cert = array_axiom_refutation(&script.arena, &script.assertions)
+            .expect("false implication of read congruence refutes");
+        assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
     }
 
     #[test]

@@ -1315,6 +1315,9 @@ pub enum ProofFragment {
     ConstArrayDefaultMismatch,
     /// A finite store-chain readback contradiction over `(Array Int Int)`.
     StoreChainReadback,
+    /// A same-index reciprocal-store equality forces an asserted-disequal pair
+    /// of arrays equal.
+    CrossStoreArrayDisequality,
     /// A finite BV-index array extensionality refutation.
     FiniteArrayExtensionality,
     /// A certified-unsat scalar BV abstraction of an array query.
@@ -1767,6 +1770,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::ConstArrayDefaultMismatch
     } else if crate::abv::store_chain_readback_refutation(arena, assertions).is_some() {
         ProofFragment::StoreChainReadback
+    } else if crate::abv::cross_store_array_disequality_refutation(arena, assertions).is_some() {
+        ProofFragment::CrossStoreArrayDisequality
     } else if crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
         .is_some()
     {
@@ -3092,6 +3097,29 @@ fn reconstruct_store_chain_readback_to_lean_module(
     )
 }
 
+fn reconstruct_cross_store_array_disequality_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::abv::cross_store_array_disequality_refutation(arena, assertions).ok_or_else(
+        || ReconstructError::MalformedStep {
+            rule: "cross_store_array_disequality".to_owned(),
+            detail: "expected a checked cross-store array disequality refutation".to_owned(),
+        },
+    )?;
+    if !cert.recheck(arena, assertions) {
+        return Err(ReconstructError::MalformedStep {
+            rule: "cross_store_array_disequality".to_owned(),
+            detail: "cross-store array disequality certificate did not recheck".to_owned(),
+        });
+    }
+
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "cross_store_array_disequality_assertions",
+        "cross_store_array_disequality",
+    )
+}
+
 fn reconstruct_checked_structural_certificate_to_lean_module(
     prop_stem: &str,
     refuter_role: &str,
@@ -3507,6 +3535,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::ArrayAxiom
         | ProofFragment::ConstArrayDefaultMismatch
         | ProofFragment::StoreChainReadback
+        | ProofFragment::CrossStoreArrayDisequality
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
         | ProofFragment::TwoByteMemcpy
@@ -3627,6 +3656,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::StoreChainReadback => {
             reconstruct_store_chain_readback_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::CrossStoreArrayDisequality => {
+            reconstruct_cross_store_array_disequality_to_lean_module(arena, assertions)?
         }
         ProofFragment::FiniteArrayExtensionality => {
             reconstruct_finite_array_extensionality_to_lean_module(arena, assertions)?

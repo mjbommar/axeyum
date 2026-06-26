@@ -73,6 +73,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatArrayAxiom(_) => "array-axiom-unsat",
         Evidence::UnsatConstArrayDefaultMismatch(_) => "const-array-default-mismatch-unsat",
         Evidence::UnsatStoreChainReadback(_) => "store-chain-readback-unsat",
+        Evidence::UnsatCrossStoreArrayDisequality(_) => "cross-store-array-disequality-unsat",
         Evidence::UnsatTermIdentity(_) => "term-identity-unsat",
         Evidence::UnsatBoolSimplification(_) => "bool-simplification-unsat",
         Evidence::UnsatBvAbstraction(_) => "bv-abstraction-unsat",

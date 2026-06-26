@@ -1452,6 +1452,46 @@ fn qf_alia_store_chain_certificates_check_in_real_lean() {
     }
 }
 
+#[test]
+fn qf_ax_declared_sort_certificates_check_in_real_lean() {
+    let cases = [
+        (
+            "qf_ax_arr1",
+            ProofFragment::ArrayAxiom,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arr1.smt2"
+            ),
+        ),
+        (
+            "qf_ax_arrays0",
+            ProofFragment::CrossStoreArrayDisequality,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays0.smt2"
+            ),
+        ),
+        (
+            "qf_ax_arrays4",
+            ProofFragment::CrossStoreArrayDisequality,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays4.smt2"
+            ),
+        ),
+    ];
+
+    for (tag, expected, smt2) in cases {
+        let mut script = parse_script(smt2).unwrap_or_else(|err| panic!("{tag} parses: {err}"));
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|err| panic!("{tag} reconstructs: {err}"));
+        assert_eq!(fragment, expected, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: QF_AX certificate module must not lean on sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `QF_AUFBV`: generated aligned byte write chains commute when both word
 /// addresses have their low two bits cleared. The `wchains002ue` regression
 /// asserts the opposite store orders differ under those guards.

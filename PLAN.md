@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **660 decided**,
-   **608 oracle-compared**, **DISAGREE = 0**, with **21 complete exact audit rows**
+   **608 oracle-compared**, **DISAGREE = 0**, with **22 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -283,8 +283,15 @@ against competitor source, are now binding:
    `arrays3` mixed-index shape. Refreshing the current QF_AX cvc5 clean baseline
    records **5/8 decided (62.5%)**, **unknown=1**, **unsupported=2**,
    **oracle-compared=5/8**, **DISAGREE=0**, and PAR-2 mean **10.000 s**.
-   This is a decide-rate improvement only; evidence/Lean certification for this
-   direct refuter is still open. Remaining QF_AX blockers are declared-sort SAT
+   **QF_AX EXACT DOMINANCE AUDIT INGESTED (2026-06-26):**
+   the decided QF_AX cvc5 clean slice now has a committed complete dominance
+   audit. The `arr1` false-implication read-congruence row certifies as
+   `array-axiom-unsat`, and the new declared-sort reciprocal-store rows certify
+   as checked `cross-store-array-disequality-unsat` evidence reconstructing
+   through `CrossStoreArrayDisequality`. Real Lean accepts the generated modules
+   with no `sorryAx`. The audited decided slice is **5/5 dominant (100.0%)**,
+   **Lean unsat 4/4 (100.0%)**, with **mismatches=0**, **audit_errors=0**, and
+   **timeouts=0**. Remaining QF_AX blockers are decide-side: declared-sort SAT
    model construction for `arrays2`/`arrays3` and the Bool-array unsat row.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>

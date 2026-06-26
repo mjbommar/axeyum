@@ -40,7 +40,10 @@ use std::time::{Duration, Instant};
 use axeyum_cnf::{AletheCommand, check_alethe, check_drat, parse_dimacs, parse_drat};
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval};
 
-use crate::abv::{ConstArrayDefaultMismatchCertificate, StoreChainReadbackCertificate};
+use crate::abv::{
+    ConstArrayDefaultMismatchCertificate, CrossStoreArrayDisequalityCertificate,
+    StoreChainReadbackCertificate,
+};
 use crate::array_axiom::ArrayAxiomRefutationCertificate;
 use crate::array_binary_search::BinarySearch16Certificate;
 use crate::array_bv_abs::BvAbstractionRefutationCertificate;
@@ -410,6 +413,11 @@ pub enum Evidence {
     /// read, contradicting an asserted disequality. The checker re-scans the
     /// original assertions and re-matches the exact certificate.
     UnsatStoreChainReadback(StoreChainReadbackCertificate),
+    /// Unsatisfiable (`QF_AX`): same-index reciprocal store equalities force a
+    /// base-array equality that contradicts an asserted array disequality. The
+    /// checker re-scans the original assertions and re-matches the exact
+    /// certificate.
+    UnsatCrossStoreArrayDisequality(CrossStoreArrayDisequalityCertificate),
     /// Unsatisfiable: the query asserts the negation of a small checked term
     /// identity such as `ite true t e = t`. The checker re-scans the original
     /// assertions and re-matches the exact identity before accepting.
@@ -614,6 +622,7 @@ impl Evidence {
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatConstArrayDefaultMismatch(_)
             | Evidence::UnsatStoreChainReadback(_)
+            | Evidence::UnsatCrossStoreArrayDisequality(_)
             | Evidence::UnsatTermIdentity(_)
             | Evidence::UnsatBoolSimplification(_)
             | Evidence::UnsatBvAbstraction(_)
@@ -665,6 +674,7 @@ impl Evidence {
                 | Evidence::UnsatArrayAxiom(_)
                 | Evidence::UnsatConstArrayDefaultMismatch(_)
                 | Evidence::UnsatStoreChainReadback(_)
+                | Evidence::UnsatCrossStoreArrayDisequality(_)
                 | Evidence::UnsatTermIdentity(_)
                 | Evidence::UnsatBoolSimplification(_)
                 | Evidence::UnsatBvAbstraction(_)
@@ -724,6 +734,9 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatStoreChainReadback(cert) => {
             check_store_chain_readback_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatCrossStoreArrayDisequality(cert) => {
+            check_cross_store_array_disequality_evidence(arena, assertions, cert)
         }
         Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
         Evidence::UnsatBoolSimplification(cert) => {
@@ -890,6 +903,15 @@ fn check_store_chain_readback_evidence(
     cert: &StoreChainReadbackCertificate,
 ) -> bool {
     crate::abv::store_chain_readback_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_cross_store_array_disequality_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &CrossStoreArrayDisequalityCertificate,
+) -> bool {
+    crate::abv::cross_store_array_disequality_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1460,6 +1482,14 @@ fn direct_pre_solve_structural_report(
             trusted_steps: Vec::new(),
         });
     }
+    direct_pre_solve_array_report(arena, assertions, provenance)
+}
+
+fn direct_pre_solve_array_report(
+    arena: &TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
     if let Some(cert) = crate::abv::const_array_default_mismatch_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatConstArrayDefaultMismatch(cert),
@@ -1470,6 +1500,13 @@ fn direct_pre_solve_structural_report(
     if let Some(cert) = crate::abv::store_chain_readback_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatStoreChainReadback(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) = crate::abv::cross_store_array_disequality_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatCrossStoreArrayDisequality(cert),
             provenance: provenance.clone(),
             trusted_steps: Vec::new(),
         });
@@ -2016,6 +2053,9 @@ fn direct_structural_unsat_evidence(
     if let Some(cert) = crate::abv::store_chain_readback_refutation(arena, assertions) {
         return Some((Evidence::UnsatStoreChainReadback(cert), Vec::new()));
     }
+    if let Some(cert) = crate::abv::cross_store_array_disequality_refutation(arena, assertions) {
+        return Some((Evidence::UnsatCrossStoreArrayDisequality(cert), Vec::new()));
+    }
     if let Some(cert) = crate::array_bv_abs::bv_abstraction_refutation(arena, assertions) {
         return Some((Evidence::UnsatBvAbstraction(cert), Vec::new()));
     }
@@ -2434,6 +2474,7 @@ pub fn prove(
         | Evidence::UnsatArrayAxiom(_)
         | Evidence::UnsatConstArrayDefaultMismatch(_)
         | Evidence::UnsatStoreChainReadback(_)
+        | Evidence::UnsatCrossStoreArrayDisequality(_)
         | Evidence::UnsatTermIdentity(_)
         | Evidence::UnsatBoolSimplification(_)
         | Evidence::UnsatBvAbstraction(_)

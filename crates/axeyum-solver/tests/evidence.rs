@@ -2160,6 +2160,55 @@ fn produce_evidence_certifies_qf_alia_store_chain_unsats() {
 }
 
 #[test]
+fn produce_evidence_certifies_qf_ax_declared_sort_unsats() {
+    let cases = [
+        (
+            "arr1",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arr1.smt2"
+            ),
+        ),
+        (
+            "arrays0",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays0.smt2"
+            ),
+        ),
+        (
+            "arrays4",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays4.smt2"
+            ),
+        ),
+    ];
+
+    for (name, smt2) in cases {
+        let mut script = parse_script(smt2).unwrap_or_else(|err| panic!("{name} parses: {err}"));
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|err| panic!("{name} decides: {err}"));
+        match (name, &report.evidence) {
+            ("arr1", Evidence::UnsatArrayAxiom(cert)) => {
+                assert_eq!(cert.kind, ArrayAxiomKind::ReadCongruence);
+            }
+            ("arrays0" | "arrays4", Evidence::UnsatCrossStoreArrayDisequality(cert)) => {
+                assert!(
+                    cert.steps > 0,
+                    "{name}: expected at least one cross-store step"
+                );
+            }
+            (_, other) => panic!("{name}: unexpected evidence: {other:?}"),
+        }
+        assert!(report.evidence.is_certified(), "{name}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{name}"
+        );
+        assert!(report.trusted_steps.is_empty(), "{name}");
+    }
+}
+
+#[test]
 fn produce_evidence_certifies_aligned_write_chain_commutation_unsat() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__wchains002ue.smt2"

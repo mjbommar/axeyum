@@ -141,8 +141,9 @@ mod z3_backend;
 
 pub use abduct::{MAX_CANDIDATES, abduct};
 pub use abv::{
-    ArrayElimUnsatCertificate, certify_array_elim_unsat, check_qf_abv_lazy, check_qf_abv_lazy_row,
-    check_with_array_elimination,
+    ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate, certify_array_elim_unsat,
+    check_qf_abv_lazy, check_qf_abv_lazy_row, check_with_array_elimination,
+    cross_store_array_disequality_refutation,
 };
 pub use alethe_lra::{
     check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe,

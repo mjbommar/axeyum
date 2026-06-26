@@ -81,12 +81,13 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 660 decided, 608 oracle-compared, DISAGREE=0**, with **21 complete
+  992 files, 660 decided, 608 oracle-compared, DISAGREE=0**, with **22 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
   `100% (169/169)`, QF_ALIA/cvc5 `100% (6/6)`,
-  QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
+  QF_AUFBV/bitwuzla `100% (41/41)`, QF_AX/cvc5 `100% (5/5)`,
+  QF_BV/bvred `100% (6/6)`,
   QF_BVFP/bitwuzla `100% (7/7)`, QF_DT/cvc5 `100% (3/3)`,
   QF_FF/cvc5 `100% (24/24)`, QF_FP/bitwuzla `100% (16/16)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
@@ -445,8 +446,14 @@ a named mechanism.**
    row is **5/8 decided (62%)**, **unknown=1**, **unsupported=2**,
    **oracle-compared=5/8**, **DISAGREE=0**. The remaining QF_AX work is not the
    finite-index cap: it is declared-sort SAT model construction for
-   `arrays2`/`arrays3`, the Bool-array unsat row, and certification for the new
-   direct refuter.
+   `arrays2`/`arrays3` and the Bool-array unsat row.
+   **QF_AX exact dominance audit landed later 2026-06-26:** the decided slice is
+   now **5/5 dominant (100%)**, Lean unsat **4/4**, with no mismatches, audit
+   errors, or timeouts. `arr1` certifies as a checked `ArrayAxiom`
+   read-congruence refutation, and `arrays0`/`arrays4` certify through the new
+   checked `CrossStoreArrayDisequality` evidence/Lean route. The remaining QF_AX
+   work is decide-side model construction/refutation, not proof coverage for the
+   current decided rows.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
