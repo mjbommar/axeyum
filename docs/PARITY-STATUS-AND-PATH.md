@@ -510,6 +510,17 @@ a named mechanism.**
    `diagnose_evidence` can render generated arena terms by stable term id, so
    the next AUFLIA work is now specifically replay-guided branch-schedule/model
    repair for that disjunction.
+   **Branch-replay diagnostics and store-base repair landed later 2026-06-26:**
+   false branch disjunctions now report the best branch and its first false
+   literal with equality values. A narrow replay-only repair handles
+   `target = store(base,i,v)` by copying target readback entries into the store
+   base while preserving the overwritten store cell. This is checked by replay
+   and by a focused regression, but `bug337` still does not close: the remaining
+   best branch is branch **0**, one false literal,
+   `x_353 = store(x_339, x_351, 2)`, with target readback entries
+   `[1 -> 3]` and `[2 -> 3]` not stably propagated by the local projection loop.
+   The next AUFLIA move is a branch-consistent store-chain/readback projection
+   for that queue-lock transition.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

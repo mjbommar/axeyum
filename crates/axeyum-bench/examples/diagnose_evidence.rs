@@ -180,6 +180,10 @@ fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &Rou
         for (label, key) in [
             ("replay_assertion", "term"),
             ("failed_conjunct", "failed_conjunct_term"),
+            (
+                "best_branch_first_false",
+                "failed_or_best_branch_first_false_term",
+            ),
         ] {
             let Some(index) = extract_named_usize(detail, key) else {
                 continue;

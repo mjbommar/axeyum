@@ -1735,6 +1735,18 @@ against competitor source, are now binding:
      disjunction. `diagnose_evidence` can now render generated arena terms by
      stable term id. Next useful work is replay-guided branch-schedule/model
      repair for that disjunction, not more select-equality projection.
+     **BRANCH-REPLAY DIAGNOSTICS + STORE-BASE REPAIR LANDED (2026-06-26):**
+     replay failures on false branch disjunctions now report branch count, best
+     branch, false-literal count, first false literal, and equality values. A
+     narrow replay-only repair handles `target = store(base,i,v)` by copying the
+     target array into the base everywhere except the store index, preserving the
+     base cell that the store overwrites. This is pinned by a target-readback
+     regression and remains behind full replay. `bug337` still does not close:
+     the best branch is branch 0 with one false literal,
+     `x_353 = store(x_339, x_351, 2)`, where `x_353` has extra readback entries
+     `[1 -> 3]` and `[2 -> 3]` not stably propagated through the current local
+     projection loop. Next useful work is a branch-consistent store-chain/readback
+     projection for the queue-lock transition, not another scalar timeout knob.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
