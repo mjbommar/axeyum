@@ -643,6 +643,20 @@ against competitor source, are now binding:
    **blocking_lemmas=300**, **core_src_affine=45**, and **core_src_lp=209**.
    The remaining blocker is still convergence/search after several UF
    candidates, not missing bulk Ackermann constraints.
+   **QF_UFLIA CEGAR TUNING REJECTIONS RECORDED (2026-06-26):**
+   three narrow follow-up knobs were measured and deliberately not committed.
+   Reordering the cap-1 post-candidate sibling lemma to prefer the nearest
+   constant to the just-violated constant regressed the 10 s hard row to
+   **5** UF rounds / **4** candidates, so the discovery-order cap-1 policy stays.
+   Raising the staged affine-core batch cap from **1** to **2** preserved
+   **6** rounds / **5** candidates, but increased blocker pressure
+   (**blocking_lemmas=323**, **core_src_lp=221**) without closing the row, so
+   the cap stays **1**. Raising the simple-bound dynamic batch cap from **32**
+   to **64** was neutral/slightly worse (**blocking_lemmas=301**,
+   **core_src_lp=210**) and is likewise rejected. The next useful lever is not
+   these batch caps or sibling ordering; it is either a different CEGAR
+   relevance signal, true combined UF/LIA interface propagation, or reducing the
+   500-ish-atom arithmetic Boolean skeleton before the warm loop starts.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
