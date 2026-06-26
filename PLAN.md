@@ -369,6 +369,19 @@ against competitor source, are now binding:
    lazy-LIA rounds and **296** blocking lemmas. The next practical move is
    relevance / assumption-core solving or branch-selector pruning in that
    post-CEGAR arithmetic skeleton, not more individual core extraction.
+   **BOUNDED COMPLEMENT-BOUND IMPLICATIONS LANDED (2026-06-26):**
+   the upfront integer-bound implication pass now also seeds adjacent
+   monotonicity for complement literals (`not (x <= 1)` as `x >= 2`) while
+   retaining the existing 512-atom admission guard and 4096-lemma cap. This is
+   the controlled version of complement-bound pruning, not the rejected broad
+   experiment that removed the large-query guard. The two generated QF_UFLIA
+   overbound rows remain `unknown`, but 1 s diagnostics now report **461 atoms**,
+   **642 bound lemmas**, **27** lazy-LIA rounds, and **171** dynamic blocking
+   lemmas. At 10 s the first row learns **5** UF consistency lemmas under the
+   pruned skeleton, then times out in a **475-atom** post-CEGAR arithmetic
+   skeleton after **60** lazy-LIA rounds and **200** dynamic blocking lemmas.
+   The remaining blocker is still relevance / assumption-core solving in that
+   post-CEGAR arithmetic skeleton.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

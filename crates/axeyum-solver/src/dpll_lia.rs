@@ -1419,11 +1419,12 @@ fn initial_int_bound_mutex_lemmas(
 ///
 /// For a fixed expression, a stronger lower bound implies the next weaker lower
 /// bound (`x >= 2 => x >= 1`), and a stronger upper bound implies the next
-/// weaker upper bound (`x <= 1 => x <= 2`). We seed only asserted bounds and
-/// only adjacent distinct thresholds, so the clause count is linear in the
-/// discovered bound ladder rather than quadratic. Each implication is recorded
-/// as the unsatisfiable core `{stronger_bound, not weaker_bound}`, so it is
-/// checked by the same LIA certificate route as dynamic theory lemmas.
+/// weaker upper bound (`x <= 1 => x <= 2`). The same monotonicity applies to
+/// complement literals once they are viewed as bounds (`not (x <= 1)` is
+/// `x >= 2`). We seed only adjacent distinct thresholds, so the clause count is
+/// linear in the discovered bound ladder rather than quadratic. Each implication
+/// is recorded as the unsatisfiable core `{stronger_bound, not weaker_bound}`,
+/// so it is checked by the same LIA certificate route as dynamic theory lemmas.
 fn initial_int_bound_implication_lemmas(
     arena: &mut TermArena,
     ctx: &ArithAbstractor,
@@ -1435,9 +1436,6 @@ fn initial_int_bound_implication_lemmas(
     let mut groups: BTreeMap<(TermId, BoundSide), Vec<SimpleIntBound>> = BTreeMap::new();
     for (idx, atom) in ctx.atoms.iter().enumerate() {
         for bound in simple_int_literal_bounds(arena, idx, atom) {
-            if !bound.truth {
-                continue;
-            }
             groups
                 .entry((bound.expr, bound.side))
                 .or_default()
@@ -2409,6 +2407,61 @@ mod tests {
                 })
             })
             .expect("x <= 0 should imply x <= 1");
+
+        let core_lits = expected_core
+            .iter()
+            .map(|literal| literal.literal)
+            .collect::<Vec<_>>();
+        assert!(matches!(
+            check_with_lia_simplex(&arena, &core_lits).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
+
+    #[test]
+    fn upfront_integer_bound_complement_implication_lemmas_are_certified() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let x_le_one = arena.int_le(xv, one).unwrap();
+        let either = arena.or(x_le_zero, x_le_one).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, either).unwrap();
+        let x_le_zero_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_zero)
+            .unwrap();
+        let x_le_one_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_one)
+            .unwrap();
+
+        let lemmas = initial_int_bound_implication_lemmas(&mut arena, &ctx).unwrap();
+        let expected_core = lemmas
+            .iter()
+            .map(|(_, lemma)| lemma)
+            .find(|lemma| {
+                lemma.iter().any(|lit| {
+                    lit.prop == ctx.atoms[x_le_one_idx].prop
+                        && !lit.truth
+                        && matches!(
+                            arena.node(lit.literal),
+                            TermNode::App { op: Op::BoolNot, args }
+                                if args[0] == x_le_one
+                        )
+                }) && lemma.iter().any(|lit| {
+                    lit.prop == ctx.atoms[x_le_zero_idx].prop
+                        && lit.truth
+                        && lit.literal == x_le_zero
+                })
+            })
+            .expect("not (x <= 1) should imply not (x <= 0)");
 
         let core_lits = expected_core
             .iter()
