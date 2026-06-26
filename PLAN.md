@@ -382,6 +382,22 @@ against competitor source, are now binding:
    skeleton after **60** lazy-LIA rounds and **200** dynamic blocking lemmas.
    The remaining blocker is still relevance / assumption-core solving in that
    post-CEGAR arithmetic skeleton.
+   **BOOLEAN-SUPPORT ARITHMETIC CHECKS LANDED (2026-06-26):**
+   lazy arithmetic DPLL now extracts a deterministic Boolean justification
+   support from each SAT skeleton candidate and theory-checks that support before
+   checking the solver's full arbitrary Boolean assignment. This stops dead
+   branches of generated selector ladders from forcing irrelevant arithmetic
+   conflicts first; any supported model is still replay-gated against the
+   original assertions, with fallback to the previous full-assignment check if
+   replay fails. The two generated QF_UFLIA overbound rows remain `unknown`, but
+   1 s diagnostics now report **461 atoms**, **642 bound lemmas**, **21**
+   lazy-LIA rounds, and **29** dynamic blocking lemmas. At 10 s the first row
+   reaches **4** UF CEGAR solve rounds and **3** SAT candidates, checks **830**
+   function-consistency pairs, finds **14** equal-argument pairs and **9**
+   violations, learns **14** UF lemmas, then times out in outer
+   `lazy UF+arithmetic` convergence. The next blocker is UF CEGAR convergence
+   and relevance after several candidate models, not dead-branch arithmetic
+   churn.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

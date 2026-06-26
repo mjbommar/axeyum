@@ -23,11 +23,13 @@
 //! plus learned lemmas is propositionally unsatisfiable. A round budget bounds
 //! the search (`unknown`, never wrong).
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{CnfClause, CnfLit, CnfVar, IncrementalSat, SatError, SatResult};
-use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval, well_founded_default,
+};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::lra::{
@@ -488,7 +490,62 @@ fn run_arith_dpll(
             });
         }
 
-        // Theory-check each theory's conjunction independently.
+        // First check only the arithmetic atoms needed to justify the current
+        // Boolean model. SAT solvers assign every Boolean variable, including
+        // atoms sitting in dead branches of generated selector ladders; those
+        // irrelevant choices need not be theory-consistent for a real model.
+        if let Some(support) = justified_theory_indices(arena, &ctx, &skeleton, &propositional) {
+            let int_conflicts = theory_conflicts_for_indices(
+                arena,
+                &ctx,
+                &lits,
+                &support,
+                Theory::Int,
+                check_with_lia_opaque_apps,
+            )?;
+            if !int_conflicts.is_empty() {
+                let mut learn = ArithLearnState {
+                    prop_solver: &mut prop_solver,
+                    blocking: &mut blocking,
+                    lemmas: &mut lemmas,
+                    core_stats: &mut core_stats,
+                };
+                record_conflict_batch(arena, &ctx, &truths, &lits, &int_conflicts, &mut learn)?;
+                continue;
+            }
+            let real_conflicts = theory_conflicts_for_indices(
+                arena,
+                &ctx,
+                &lits,
+                &support,
+                Theory::Real,
+                check_with_lra,
+            )?;
+            if !real_conflicts.is_empty() {
+                let mut learn = ArithLearnState {
+                    prop_solver: &mut prop_solver,
+                    blocking: &mut blocking,
+                    lemmas: &mut lemmas,
+                    core_stats: &mut core_stats,
+                };
+                record_conflict_batch(arena, &ctx, &truths, &lits, &real_conflicts, &mut learn)?;
+                continue;
+            }
+            if !ctx.has_opaque_int_apps(arena) {
+                if let Some(result) =
+                    try_finish_sat(arena, assertions, &ctx, &propositional, &lits, &support)?
+                {
+                    return Ok(ArithRun {
+                        result,
+                        skeleton,
+                        lemmas,
+                    });
+                }
+            }
+        }
+
+        // If the support path did not produce a replaying model, fall back to
+        // the traditional full-assignment theory check.
         let int_conflicts =
             theory_conflicts(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?;
         if !int_conflicts.is_empty() {
@@ -597,6 +654,22 @@ fn theory_conflicts(
     oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
 ) -> Result<Vec<Vec<usize>>, SolverError> {
     let indices: Vec<usize> = (0..ctx.atoms.len())
+        .filter(|&i| ctx.atoms[i].theory == theory)
+        .collect();
+    theory_conflicts_for_indices(arena, ctx, lits, &indices, theory, oracle)
+}
+
+fn theory_conflicts_for_indices(
+    arena: &TermArena,
+    ctx: &ArithAbstractor,
+    lits: &[TermId],
+    indices: &[usize],
+    theory: Theory,
+    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+) -> Result<Vec<Vec<usize>>, SolverError> {
+    let indices: Vec<usize> = indices
+        .iter()
+        .copied()
         .filter(|&i| ctx.atoms[i].theory == theory)
         .collect();
     if indices.is_empty() {
@@ -940,6 +1013,242 @@ fn minimize_core(
     Ok(core)
 }
 
+fn justified_theory_indices(
+    arena: &TermArena,
+    ctx: &ArithAbstractor,
+    skeleton: &[TermId],
+    propositional: &Model,
+) -> Option<Vec<usize>> {
+    let prop_to_atom: HashMap<SymbolId, usize> = ctx
+        .atoms
+        .iter()
+        .enumerate()
+        .map(|(idx, atom)| (atom.prop, idx))
+        .collect();
+    let mut support = BTreeSet::new();
+    for &assertion in skeleton {
+        collect_bool_support(
+            arena,
+            assertion,
+            true,
+            propositional,
+            &prop_to_atom,
+            &mut support,
+        )?;
+    }
+    Some(support.into_iter().collect())
+}
+
+fn collect_bool_support(
+    arena: &TermArena,
+    term: TermId,
+    expected: bool,
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    if skeleton_bool_value(arena, term, propositional)? != expected {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::BoolConst(_) => Some(()),
+        TermNode::Symbol(symbol) if arena.sort_of(term) == Sort::Bool => {
+            if let Some(&idx) = prop_to_atom.get(symbol) {
+                support.insert(idx);
+            }
+            Some(())
+        }
+        TermNode::App { op, args } => match op {
+            Op::BoolNot => collect_bool_support(
+                arena,
+                args[0],
+                !expected,
+                propositional,
+                prop_to_atom,
+                support,
+            ),
+            Op::BoolAnd => {
+                collect_and_support(arena, args, expected, propositional, prop_to_atom, support)
+            }
+            Op::BoolOr => {
+                collect_or_support(arena, args, expected, propositional, prop_to_atom, support)
+            }
+            Op::BoolImplies => {
+                collect_implies_support(arena, args, expected, propositional, prop_to_atom, support)
+            }
+            Op::BoolXor => {
+                collect_binary_value_support(arena, args, propositional, prop_to_atom, support)
+            }
+            Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
+                collect_binary_value_support(arena, args, propositional, prop_to_atom, support)
+            }
+            Op::Ite if arena.sort_of(term) == Sort::Bool => {
+                collect_ite_support(arena, args, expected, propositional, prop_to_atom, support)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn collect_all_bool_support(
+    arena: &TermArena,
+    args: &[TermId],
+    expected: bool,
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    for &arg in args {
+        collect_bool_support(arena, arg, expected, propositional, prop_to_atom, support)?;
+    }
+    Some(())
+}
+
+fn collect_and_support(
+    arena: &TermArena,
+    args: &[TermId],
+    expected: bool,
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    if expected {
+        collect_all_bool_support(arena, args, true, propositional, prop_to_atom, support)
+    } else {
+        let witness = args
+            .iter()
+            .copied()
+            .find(|&arg| skeleton_bool_value(arena, arg, propositional) == Some(false))?;
+        collect_bool_support(arena, witness, false, propositional, prop_to_atom, support)
+    }
+}
+
+fn collect_or_support(
+    arena: &TermArena,
+    args: &[TermId],
+    expected: bool,
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    if expected {
+        let witness = args
+            .iter()
+            .copied()
+            .find(|&arg| skeleton_bool_value(arena, arg, propositional) == Some(true))?;
+        collect_bool_support(arena, witness, true, propositional, prop_to_atom, support)
+    } else {
+        collect_all_bool_support(arena, args, false, propositional, prop_to_atom, support)
+    }
+}
+
+fn collect_implies_support(
+    arena: &TermArena,
+    args: &[TermId],
+    expected: bool,
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    let lhs = skeleton_bool_value(arena, args[0], propositional)?;
+    let rhs = skeleton_bool_value(arena, args[1], propositional)?;
+    if expected {
+        if lhs {
+            collect_bool_support(arena, args[1], true, propositional, prop_to_atom, support)
+        } else {
+            collect_bool_support(arena, args[0], false, propositional, prop_to_atom, support)
+        }
+    } else if lhs && !rhs {
+        collect_bool_support(arena, args[0], true, propositional, prop_to_atom, support)?;
+        collect_bool_support(arena, args[1], false, propositional, prop_to_atom, support)
+    } else {
+        None
+    }
+}
+
+fn collect_ite_support(
+    arena: &TermArena,
+    args: &[TermId],
+    expected: bool,
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    let condition = skeleton_bool_value(arena, args[0], propositional)?;
+    collect_bool_support(
+        arena,
+        args[0],
+        condition,
+        propositional,
+        prop_to_atom,
+        support,
+    )?;
+    collect_bool_support(
+        arena,
+        args[if condition { 1 } else { 2 }],
+        expected,
+        propositional,
+        prop_to_atom,
+        support,
+    )
+}
+
+fn collect_binary_value_support(
+    arena: &TermArena,
+    args: &[TermId],
+    propositional: &Model,
+    prop_to_atom: &HashMap<SymbolId, usize>,
+    support: &mut BTreeSet<usize>,
+) -> Option<()> {
+    let lhs = skeleton_bool_value(arena, args[0], propositional)?;
+    let rhs = skeleton_bool_value(arena, args[1], propositional)?;
+    collect_bool_support(arena, args[0], lhs, propositional, prop_to_atom, support)?;
+    collect_bool_support(arena, args[1], rhs, propositional, prop_to_atom, support)
+}
+
+fn skeleton_bool_value(arena: &TermArena, term: TermId, propositional: &Model) -> Option<bool> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(*value),
+        TermNode::Symbol(symbol) if arena.sort_of(term) == Sort::Bool => propositional
+            .get(*symbol)
+            .and_then(|value| value.as_bool())
+            .or(Some(false)),
+        TermNode::App { op, args } => match op {
+            Op::BoolNot => Some(!skeleton_bool_value(arena, args[0], propositional)?),
+            Op::BoolAnd => Some(
+                skeleton_bool_value(arena, args[0], propositional)?
+                    && skeleton_bool_value(arena, args[1], propositional)?,
+            ),
+            Op::BoolOr => Some(
+                skeleton_bool_value(arena, args[0], propositional)?
+                    || skeleton_bool_value(arena, args[1], propositional)?,
+            ),
+            Op::BoolImplies => Some(
+                !skeleton_bool_value(arena, args[0], propositional)?
+                    || skeleton_bool_value(arena, args[1], propositional)?,
+            ),
+            Op::BoolXor => Some(
+                skeleton_bool_value(arena, args[0], propositional)?
+                    ^ skeleton_bool_value(arena, args[1], propositional)?,
+            ),
+            Op::Eq if arena.sort_of(args[0]) == Sort::Bool => Some(
+                skeleton_bool_value(arena, args[0], propositional)?
+                    == skeleton_bool_value(arena, args[1], propositional)?,
+            ),
+            Op::Ite if arena.sort_of(term) == Sort::Bool => {
+                if skeleton_bool_value(arena, args[0], propositional)? {
+                    skeleton_bool_value(arena, args[1], propositional)
+                } else {
+                    skeleton_bool_value(arena, args[2], propositional)
+                }
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 /// Builds the combined model (integers from the integer simplex, reals from the
 /// real engine, Booleans from the skeleton) and replays the original assertions.
 fn finish_sat(
@@ -949,10 +1258,26 @@ fn finish_sat(
     propositional: &Model,
     lits: &[TermId],
 ) -> Result<CheckResult, SolverError> {
+    let all_indices = (0..ctx.atoms.len()).collect::<Vec<_>>();
+    try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices)?.ok_or_else(|| {
+        SolverError::Backend(
+            "arith dpll sat model replay failed after full theory check".to_owned(),
+        )
+    })
+}
+
+fn try_finish_sat(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    ctx: &ArithAbstractor,
+    propositional: &Model,
+    lits: &[TermId],
+    indices: &[usize],
+) -> Result<Option<CheckResult>, SolverError> {
     // Re-decide each theory's conjunction to recover its model (the loop only
     // learned that they are *consistent*).
-    let int_lits: Vec<TermId> = atom_lits(ctx, lits, Theory::Int);
-    let real_lits: Vec<TermId> = atom_lits(ctx, lits, Theory::Real);
+    let int_lits: Vec<TermId> = atom_lits(ctx, lits, indices, Theory::Int);
+    let real_lits: Vec<TermId> = atom_lits(ctx, lits, indices, Theory::Real);
     let int_model = theory_model(arena, &int_lits, check_with_lia_simplex)?;
     let real_model = theory_model(arena, &real_lits, check_with_lra)?;
 
@@ -962,26 +1287,23 @@ fn finish_sat(
         if ctx.is_atom_prop(symbol) || name.starts_with(ATOM_PREFIX) {
             continue;
         }
-        let value = match sort {
+        let value = (match sort {
             Sort::Int => int_model.as_ref().and_then(|m| m.get(symbol)),
             Sort::Real => real_model.as_ref().and_then(|m| m.get(symbol)),
             Sort::Bool => propositional.get(symbol),
             _ => None,
+        })
+        .or_else(|| well_founded_default(arena, sort));
+        let Some(value) = value else {
+            continue;
         };
-        if let Some(value) = value {
-            model.set(symbol, value.clone());
-            assignment.set(symbol, value);
-        }
+        model.set(symbol, value.clone());
+        assignment.set(symbol, value);
     }
     for &assertion in assertions {
         match eval(arena, assertion, &assignment) {
             Ok(Value::Bool(true)) => {}
-            Ok(_) => {
-                return Err(SolverError::Backend(format!(
-                    "arith dpll sat model replay failed: assertion #{} not satisfied",
-                    assertion.index()
-                )));
-            }
+            Ok(_) => return Ok(None),
             Err(error) => {
                 return Err(SolverError::Backend(format!(
                     "arith dpll sat model replay error on assertion #{}: {error}",
@@ -990,12 +1312,19 @@ fn finish_sat(
             }
         }
     }
-    Ok(CheckResult::Sat(model))
+    Ok(Some(CheckResult::Sat(model)))
 }
 
 /// The literals of one theory's atoms.
-fn atom_lits(ctx: &ArithAbstractor, lits: &[TermId], theory: Theory) -> Vec<TermId> {
-    (0..ctx.atoms.len())
+fn atom_lits(
+    ctx: &ArithAbstractor,
+    lits: &[TermId],
+    indices: &[usize],
+    theory: Theory,
+) -> Vec<TermId> {
+    indices
+        .iter()
+        .copied()
         .filter(|&i| ctx.atoms[i].theory == theory)
         .map(|i| lits[i])
         .collect()
@@ -2470,6 +2799,77 @@ mod tests {
         assert!(matches!(
             check_with_lia_simplex(&arena, &core_lits).unwrap(),
             CheckResult::Unsat
+        ));
+    }
+
+    #[test]
+    fn justified_support_ignores_dead_or_branch_conflict() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let x_ge_two = arena.int_ge(xv, two).unwrap();
+        let x_le_one = arena.int_le(xv, one).unwrap();
+        let dead_conflict = arena.and(x_ge_two, x_le_one).unwrap();
+        let assertion = arena.or(x_le_zero, dead_conflict).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let skeleton = vec![ctx.abstract_term(&mut arena, assertion).unwrap()];
+        let mut propositional = Model::new();
+        for atom in &ctx.atoms {
+            propositional.set(atom.prop, Value::Bool(true));
+        }
+
+        let support = justified_theory_indices(&arena, &ctx, &skeleton, &propositional).unwrap();
+        let x_le_zero_idx = ctx
+            .atoms
+            .iter()
+            .position(|atom| atom.term == x_le_zero)
+            .unwrap();
+        assert_eq!(support, vec![x_le_zero_idx]);
+
+        let lits = ctx.atoms.iter().map(|atom| atom.term).collect::<Vec<_>>();
+        let all = (0..ctx.atoms.len()).collect::<Vec<_>>();
+        assert!(
+            !theory_conflicts_for_indices(
+                &arena,
+                &ctx,
+                &lits,
+                &all,
+                Theory::Int,
+                check_with_lia_opaque_apps,
+            )
+            .unwrap()
+            .is_empty(),
+            "the full arbitrary SAT assignment is theory-inconsistent"
+        );
+        assert!(
+            theory_conflicts_for_indices(
+                &arena,
+                &ctx,
+                &lits,
+                &support,
+                Theory::Int,
+                check_with_lia_opaque_apps,
+            )
+            .unwrap()
+            .is_empty(),
+            "the Boolean justification branch is theory-consistent"
+        );
+        assert!(matches!(
+            try_finish_sat(
+                &mut arena,
+                &[assertion],
+                &ctx,
+                &propositional,
+                &lits,
+                &support,
+            )
+            .unwrap(),
+            Some(CheckResult::Sat(_))
         ));
     }
 
