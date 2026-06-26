@@ -2812,11 +2812,16 @@ struct ProjectionRepairStats {
     symbol_changes: usize,
     branch_candidates: usize,
     branch_symbol_changes: usize,
+    scalar_candidates: usize,
+    scalar_symbol_changes: usize,
 }
 
 impl ProjectionRepairStats {
     fn changes(self) -> usize {
-        self.array_changes + self.symbol_changes + self.branch_symbol_changes
+        self.array_changes
+            + self.symbol_changes
+            + self.branch_symbol_changes
+            + self.scalar_symbol_changes
     }
 
     fn absorb(&mut self, other: Self) {
@@ -2825,6 +2830,8 @@ impl ProjectionRepairStats {
         self.symbol_changes += other.symbol_changes;
         self.branch_candidates += other.branch_candidates;
         self.branch_symbol_changes += other.branch_symbol_changes;
+        self.scalar_candidates += other.scalar_candidates;
+        self.scalar_symbol_changes += other.scalar_symbol_changes;
     }
 }
 
@@ -3293,6 +3300,25 @@ fn direct_scalar_equality_repair_target(
     }
 }
 
+fn direct_scalar_equality_repair_choices(
+    arena: &TermArena,
+    term: TermId,
+) -> Vec<(SymbolId, TermId)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return Vec::new();
+    };
+    let lhs = direct_value_symbol(arena, args[0])
+        .filter(|symbol| !matches!(arena.symbol(*symbol).1, Sort::Array { .. }));
+    let rhs = direct_value_symbol(arena, args[1])
+        .filter(|symbol| !matches!(arena.symbol(*symbol).1, Sort::Array { .. }));
+    match (lhs, rhs) {
+        (Some(lhs), Some(rhs)) if lhs != rhs => vec![(lhs, args[1]), (rhs, args[0])],
+        (Some(lhs), _) => vec![(lhs, args[1])],
+        (_, Some(rhs)) => vec![(rhs, args[0])],
+        _ => Vec::new(),
+    }
+}
+
 fn store_projected_symbol_value(
     arena: &TermArena,
     projected: &mut Assignment,
@@ -3428,6 +3454,38 @@ fn branch_false_literal_count(
         }
     }
     Ok(false_literals)
+}
+
+fn positive_replay_false_count(
+    arena: &TermArena,
+    originals: &[TermId],
+    assignment: &Assignment,
+) -> Result<usize, SolverError> {
+    let mut false_conjuncts = 0;
+    let mut conjuncts = Vec::new();
+    for &assertion in originals {
+        conjuncts.clear();
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+        for &conjunct in &conjuncts {
+            match eval(arena, conjunct, assignment) {
+                Ok(Value::Bool(true)) => {}
+                Ok(Value::Bool(false)) => false_conjuncts += 1,
+                Ok(value) => {
+                    return Err(SolverError::Backend(format!(
+                        "lazy-ext scalar repair: conjunct #{} evaluated to non-Boolean {value}",
+                        conjunct.index()
+                    )));
+                }
+                Err(error) => {
+                    return Err(SolverError::Backend(format!(
+                        "lazy-ext scalar repair: conjunct #{} failed evaluation: {error}",
+                        conjunct.index()
+                    )));
+                }
+            }
+        }
+    }
+    Ok(false_conjuncts)
 }
 
 fn repair_projected_store_base_literal(
@@ -3606,6 +3664,75 @@ fn repair_projected_branch_schedule(
     } else {
         Ok(None)
     }
+}
+
+fn repair_projected_scalar_equalities(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+) -> Result<ProjectionRepairStats, SolverError> {
+    const MAX_SCALAR_EQUALITY_REPAIRS: usize = 64;
+
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext scalar equality repair failed: {e}"))
+    };
+    let mut stats = ProjectionRepairStats::default();
+    let mut current_false = positive_replay_false_count(arena, originals, projected)?;
+    if current_false == 0 {
+        return Ok(stats);
+    }
+
+    let mut repairs = 0;
+    for _ in 0..=2 {
+        let mut changed_this_pass = false;
+        let mut conjuncts = Vec::new();
+        for &assertion in originals {
+            conjuncts.clear();
+            collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+            for &conjunct in &conjuncts {
+                if repairs >= MAX_SCALAR_EQUALITY_REPAIRS || current_false == 0 {
+                    return Ok(stats);
+                }
+                if eval(arena, conjunct, projected).map_err(ir)? != Value::Bool(false) {
+                    continue;
+                }
+                let choices = direct_scalar_equality_repair_choices(arena, conjunct);
+                if choices.is_empty() {
+                    continue;
+                }
+                stats.scalar_candidates += 1;
+
+                let mut best: Option<(usize, Assignment)> = None;
+                for (symbol, value_term) in choices {
+                    let mut trial = projected.clone();
+                    let value = eval(arena, value_term, &trial).map_err(ir)?;
+                    if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+                        continue;
+                    }
+                    let false_count = positive_replay_false_count(arena, originals, &trial)?;
+                    if false_count < current_false
+                        && best
+                            .as_ref()
+                            .is_none_or(|(best_false, _)| false_count < *best_false)
+                    {
+                        best = Some((false_count, trial));
+                    }
+                }
+                let Some((false_count, trial)) = best else {
+                    continue;
+                };
+                *projected = trial;
+                current_false = false_count;
+                stats.scalar_symbol_changes += 1;
+                repairs += 1;
+                changed_this_pass = true;
+            }
+        }
+        if !changed_this_pass {
+            break;
+        }
+    }
+    Ok(stats)
 }
 
 fn repair_projected_branch_disjunctions(
@@ -4338,7 +4465,8 @@ impl ReplayFailure {
              failed_conjunct_ordinal={}, failed_conjunct_term={}, \
              select_repair_candidates={}, select_repair_array_changes={}, \
              select_repair_symbol_changes={}, branch_repair_candidates={}, \
-             branch_repair_symbol_changes={}, projection_repair_changes={})",
+             branch_repair_symbol_changes={}, scalar_repair_candidates={}, \
+             scalar_repair_symbol_changes={}, projection_repair_changes={})",
             self.assertion_ordinal,
             self.assertion_term.index(),
             self.conjunct_ordinal,
@@ -4348,6 +4476,8 @@ impl ReplayFailure {
             self.repair_stats.symbol_changes,
             self.repair_stats.branch_candidates,
             self.repair_stats.branch_symbol_changes,
+            self.repair_stats.scalar_candidates,
+            self.repair_stats.scalar_symbol_changes,
             self.repair_stats.changes()
         );
         if let Some(eq) = &self.failed_eq {
@@ -4417,6 +4547,64 @@ fn project_replay_ext(
     }
 }
 
+fn repair_projected_ext_candidate(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+) -> Result<ProjectionRepairStats, SolverError> {
+    let mut repair_stats = ProjectionRepairStats::default();
+    for _ in 0..=3 {
+        let select_stats =
+            repair_projected_arrays_from_asserted_select_equalities(arena, originals, projected)?;
+        let mut changes = select_stats.changes();
+        repair_stats.absorb(select_stats);
+        let branch_stats = repair_projected_branch_disjunctions(arena, originals, projected)?;
+        let branch_changes = branch_stats.changes();
+        changes += branch_changes;
+        repair_stats.absorb(branch_stats);
+        if branch_changes > 0 {
+            let after_branch_select = repair_projected_arrays_from_asserted_select_equalities(
+                arena, originals, projected,
+            )?;
+            changes += after_branch_select.changes();
+            repair_stats.absorb(after_branch_select);
+        }
+        let scalar_stats = repair_projected_scalar_equalities(arena, originals, projected)?;
+        let scalar_changes = scalar_stats.changes();
+        changes += scalar_changes;
+        repair_stats.absorb(scalar_stats);
+        if changes == 0 {
+            break;
+        }
+    }
+
+    let final_branch_stats = repair_projected_branch_disjunctions(arena, originals, projected)?;
+    repair_stats.absorb(final_branch_stats);
+    let final_select_stats =
+        repair_projected_arrays_from_asserted_select_equalities(arena, originals, projected)?;
+    repair_stats.absorb(final_select_stats);
+    let final_scalar_stats = repair_projected_scalar_equalities(arena, originals, projected)?;
+    let final_scalar_changes = final_scalar_stats.changes();
+    repair_stats.absorb(final_scalar_stats);
+    if final_scalar_changes > 0 {
+        let after_scalar_select =
+            repair_projected_arrays_from_asserted_select_equalities(arena, originals, projected)?;
+        repair_stats.absorb(after_scalar_select);
+        let after_scalar_branch =
+            repair_projected_branch_disjunctions(arena, originals, projected)?;
+        let after_scalar_branch_changes = after_scalar_branch.changes();
+        repair_stats.absorb(after_scalar_branch);
+        if after_scalar_branch_changes > 0 {
+            let after_scalar_branch_select =
+                repair_projected_arrays_from_asserted_select_equalities(
+                    arena, originals, projected,
+                )?;
+            repair_stats.absorb(after_scalar_branch_select);
+        }
+    }
+    Ok(repair_stats)
+}
+
 fn project_replay_ext_candidate(
     arena: &TermArena,
     ctx: &RowCtx,
@@ -4429,38 +4617,7 @@ fn project_replay_ext_candidate(
     for (&array, entries) in &arrays {
         projected.set(array, array_value_from_entries(arena, array, entries)?);
     }
-    let mut repair_stats = ProjectionRepairStats::default();
-    for _ in 0..=3 {
-        let select_stats = repair_projected_arrays_from_asserted_select_equalities(
-            arena,
-            originals,
-            &mut projected,
-        )?;
-        let mut changes = select_stats.changes();
-        repair_stats.absorb(select_stats);
-        let branch_stats = repair_projected_branch_disjunctions(arena, originals, &mut projected)?;
-        let branch_changes = branch_stats.changes();
-        changes += branch_changes;
-        repair_stats.absorb(branch_stats);
-        if branch_changes > 0 {
-            let after_branch_select = repair_projected_arrays_from_asserted_select_equalities(
-                arena,
-                originals,
-                &mut projected,
-            )?;
-            changes += after_branch_select.changes();
-            repair_stats.absorb(after_branch_select);
-        }
-        if changes == 0 {
-            break;
-        }
-    }
-    let final_branch_stats =
-        repair_projected_branch_disjunctions(arena, originals, &mut projected)?;
-    repair_stats.absorb(final_branch_stats);
-    let final_select_stats =
-        repair_projected_arrays_from_asserted_select_equalities(arena, originals, &mut projected)?;
-    repair_stats.absorb(final_select_stats);
+    let repair_stats = repair_projected_ext_candidate(arena, originals, &mut projected)?;
 
     // Replay against the ORIGINAL assertions, re-deriving every array (dis)equality
     // extensionally from the reconstructed arrays. Accept only a genuine model;
@@ -5303,6 +5460,44 @@ mod tests {
             assignment.get(*z_symbol),
             Some(Value::Bv { width: 8, value: 9 })
         );
+        for &original in &originals {
+            assert_eq!(
+                eval(&arena, original, &assignment).unwrap(),
+                Value::Bool(true)
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_ext_projection_repairs_scalar_equality_by_replay_improvement() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let one = arena.int_const(1);
+        let y_eq_x = arena.eq(y, x).unwrap();
+        let y_eq_one = arena.eq(y, one).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+
+        let mut candidate = Assignment::new();
+        candidate.set(*x_symbol, Value::Int(0));
+        candidate.set(*y_symbol, Value::Int(1));
+
+        let ctx = RowCtx::default();
+        let originals = [y_eq_x, y_eq_one];
+        let ExtReplay::Sat(model) =
+            project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
+        else {
+            panic!("expected scalar equality repair to replay");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(assignment.get(*x_symbol), Some(Value::Int(1)));
+        assert_eq!(assignment.get(*y_symbol), Some(Value::Int(1)));
         for &original in &originals {
             assert_eq!(
                 eval(&arena, original, &assignment).unwrap(),

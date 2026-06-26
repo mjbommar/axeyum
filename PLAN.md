@@ -1780,6 +1780,16 @@ against competitor source, are now binding:
      `x_361 = x_22`, with values 1 vs 0, after 207 projection repair changes.
      Next useful work is replay-gated scalar equality projection for generated
      non-branch equalities, with direction chosen from branch/readback support.
+     **SCALAR EQUALITY PROJECTION REPAIR LANDED (2026-06-26):** replay projection
+     now tries bounded scalar equality repair for false generated equalities,
+     testing both directions where possible and keeping only assignments that
+     reduce the positive replay-conjunct false count. Scalar repair has separate
+     telemetry and remains full-replay gated. A final post-scalar stabilization
+     reruns select repair if scalar-triggered branch repair mutates arrays. On
+     `bug337`, the 10 s probe now reports **5** scalar repairs and advances to
+     direct equality ordinal 190 / term 3017, `x_366 = x_92`, values 1 vs 0,
+     after 218 projection repair changes. Next useful work is support-aware
+     scalar/readback propagation for the remaining generated equality chain.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

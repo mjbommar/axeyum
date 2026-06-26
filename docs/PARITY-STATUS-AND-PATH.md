@@ -555,6 +555,17 @@ a named mechanism.**
    changes. The next AUFLIA move is replay-gated scalar equality projection for
    generated non-branch equalities, with direction chosen from branch/readback
    support.
+   **Scalar equality projection repair landed later 2026-06-26:** replay
+   projection now tries bounded scalar equality repair for false generated
+   equalities, testing both directions where possible and keeping only
+   assignments that reduce the positive replay-conjunct false count. Scalar
+   repair has separate telemetry and remains full-replay gated. A final
+   post-scalar stabilization reruns select repair if scalar-triggered branch
+   repair mutates arrays. On `bug337`, the 10 s probe now reports **5** scalar
+   repairs and advances to direct equality ordinal **190**, term **3017**,
+   `x_366 = x_92`, values **1** vs **0**, after **218** projection repair
+   changes. The next AUFLIA move is support-aware scalar/readback propagation
+   for the remaining generated equality chain.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
