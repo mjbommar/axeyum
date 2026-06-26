@@ -6,6 +6,39 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — large online LIA feasibility deferred.**
+  Added a large-query mode to `check_qf_lia_online`: for skeletons with at least
+  128 LIA atoms or 4096 CNF clauses, `LiaTheory` records Boolean assignments
+  cheaply and performs one full LIA feasibility check at the theory-propagation
+  boundary instead of re-solving the live conjunction on every atom assignment.
+  If that deferred check is infeasible, it is surfaced as a normal theory
+  propagation contradicting one asserted core literal, so the shared DPLL learns a
+  sound `¬core` conflict clause. The large mode skips LP entailment propagation
+  and core minimization; both are pruning/precision choices, not soundness
+  requirements, and skipping them avoids reintroducing hundreds of LIA checks.
+
+  The target QF_UFLIA overbound rows moved to the next blocker. At 1 s, the
+  generic route no longer times out inside online LIA's first propagation; it now
+  reaches the legacy lazy arithmetic fallback and times out after **31-33
+  rounds** over **873 atoms**, with **1433 bound lemmas** and **31-33 blocking
+  lemmas**. The rows remain `unknown`, but the bottleneck is now the legacy
+  arithmetic refinement loop / route scheduling, not online DPLL(T)'s initial
+  assertion cascade. **Next:** reduce the 873-atom fallback loop with relevance /
+  assumption filtering, or route these generated UF+arithmetic rows to a UF-aware
+  search before the legacy arithmetic loop consumes the remaining budget.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib deferred_lia_feasibility_reports_conflict_from_propagate -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib large_online_lia_root_conflict_uses_deferred_feasibility -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib online_lia_timeout_reports_dpll_stats -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lia_online -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lia_budget_unknown_annotation_reports_skipped_uf_context -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib arithmetic_uf_overbound_pre_lia_probe_decides_on_clone -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
 - **Session 2026-06-26 — online LIA timeout stats expose first-propagation cost.**
   Added a stable stats snapshot for the shared online DPLL(T) engine and wired it
   into `check_qf_lia_online` timeout `Unknown` details. The counters report
@@ -4246,6 +4279,14 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **Large online LIA feasibility deferred.**
+  Large online LIA skeletons now defer full feasibility checks to the
+  theory-propagation boundary and skip LP entailment/core minimization in that
+  mode. The generated QF_UFLIA overbound rows now get past the online
+  first-propagation stall and reach the legacy lazy arithmetic fallback at 1 s
+  (31-33 rounds over 873 atoms), leaving the fallback refinement loop as the next
+  blocker.
 
 - **2026-06-26** — **Online LIA timeout stats added.**
   Online LIA DPLL(T) timeouts now include search-state counters. The generated

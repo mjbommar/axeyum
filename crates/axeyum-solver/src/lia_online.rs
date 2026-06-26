@@ -76,6 +76,14 @@ use crate::lra::{LpRelaxation, check_with_lia_simplex, lp_relaxation_feasibility
 use crate::lra_online::{Dpll, Lit};
 use crate::model::Model;
 
+/// Above this many LIA atoms, the online driver avoids re-running the full
+/// conjunctive integer feasibility check on every single Boolean assignment.
+const DEFER_LIA_FEASIBILITY_ATOMS: usize = 128;
+
+/// Clause-count companion to [`DEFER_LIA_FEASIBILITY_ATOMS`] for generated
+/// Boolean skeletons with fewer theory atoms but a large Tseitin surface.
+const DEFER_LIA_FEASIBILITY_CLAUSES: usize = 4096;
+
 /// The kind of a registered atom, used to reconstruct the live conjunctive
 /// `QF_LIA` term the offline decider consumes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,6 +130,17 @@ pub struct LiaTheory {
     /// (the offline decider needs an arena; building polarity-applied
     /// `BoolNot`/conjunction terms can grow it, hence an owned clone).
     arena: TermArena,
+    /// If set, [`TheorySolver::assert`] records assignments without re-solving the
+    /// whole live conjunction. The next [`TheorySolver::propagate`] call performs
+    /// one feasibility check and reports an infeasible core as a conflict
+    /// propagation. This is sound because `DPLL` calls theory propagation before
+    /// every decision/model return; it only changes when the expensive check runs.
+    defer_feasibility_until_propagate: bool,
+    /// In the large-query deferred mode, skip LP entailment probes after the single
+    /// feasibility check. Returning fewer propagations is a sound
+    /// under-approximation and avoids probing hundreds of unassigned atoms against
+    /// a thousand-literal live set.
+    skip_entailment_propagation: bool,
 }
 
 /// Outcome of an incremental integer-feasibility check over the asserted atoms.
@@ -153,7 +172,22 @@ impl LiaTheory {
             assigned_log: Vec::new(),
             trail: Vec::new(),
             arena: arena.clone(),
+            defer_feasibility_until_propagate: false,
+            skip_entailment_propagation: false,
         }
+    }
+
+    /// Builds the same theory in large-query mode: assertions are recorded cheaply,
+    /// one full feasibility check runs at the theory-propagation boundary, and LP
+    /// entailment propagation is skipped. This preserves soundness while avoiding
+    /// the pathological "hundreds of full LIA solves before the first decision"
+    /// shape seen in generated `QF_UFLIA` arithmetic skeletons.
+    #[must_use]
+    pub(crate) fn new_deferred_for_large_search(arena: &TermArena, atom_terms: &[TermId]) -> Self {
+        let mut theory = Self::new(arena, atom_terms);
+        theory.defer_feasibility_until_propagate = true;
+        theory.skip_entailment_propagation = true;
+        theory
     }
 
     /// Whether atom `index` is a `LIA` order/equality atom this theory tracks.
@@ -225,6 +259,14 @@ impl LiaTheory {
     /// by the trusted offline [`check_with_lia_simplex`]. On `unsat`, returns a
     /// deletion-minimized infeasible subset as the conflict core.
     fn feasibility(&self) -> Feasibility {
+        self.feasibility_with_core_minimization(true)
+    }
+
+    /// Same as [`Self::feasibility`], but lets large-query callers keep the full
+    /// infeasible set as the conflict core. A full core is less precise but still
+    /// sound; avoiding deletion minimization is critical when the point of the
+    /// caller is to avoid hundreds of repeated LIA checks.
+    fn feasibility_with_core_minimization(&self, minimize: bool) -> Feasibility {
         let lits = self.live_lits();
         if lits.is_empty() {
             return Feasibility::Sat;
@@ -235,7 +277,35 @@ impl LiaTheory {
         match check_with_lia_simplex(&arena, &terms) {
             Ok(CheckResult::Sat(_)) => Feasibility::Sat,
             Ok(CheckResult::Unknown(_)) | Err(_) => Feasibility::Unknown,
-            Ok(CheckResult::Unsat) => Feasibility::Unsat(minimize_core(&arena, &lits, &terms)),
+            Ok(CheckResult::Unsat) if minimize => {
+                Feasibility::Unsat(minimize_core(&arena, &lits, &terms))
+            }
+            Ok(CheckResult::Unsat) => Feasibility::Unsat(lits),
+        }
+    }
+
+    /// Converts a currently-infeasible core into a propagation that contradicts
+    /// one asserted core literal. `Dpll::theory_propagate` turns that contradiction
+    /// back into the conflict clause `¬core`, so this is the same sound conflict
+    /// explanation an eager `assert` would have returned.
+    fn core_conflict_propagation(core: &[TheoryLit]) -> Option<TheoryProp> {
+        let (&pivot, reason) = core.split_last()?;
+        Some(TheoryProp {
+            lit: TheoryLit {
+                atom: pivot.atom,
+                value: !pivot.value,
+            },
+            reason: reason.to_vec(),
+        })
+    }
+
+    /// In deferred large-query mode, perform exactly one full feasibility check at
+    /// the propagation boundary and surface an infeasible live set as a normal
+    /// theory conflict propagation.
+    fn deferred_feasibility_conflict(&self) -> Option<TheoryProp> {
+        match self.feasibility_with_core_minimization(false) {
+            Feasibility::Unsat(core) => Self::core_conflict_propagation(&core),
+            Feasibility::Sat | Feasibility::Unknown => None,
         }
     }
 
@@ -257,6 +327,15 @@ impl LiaTheory {
     /// under-approximation that **never** fabricates a propagation.
     #[must_use]
     pub fn propagate(&self) -> Vec<TheoryProp> {
+        if self.defer_feasibility_until_propagate {
+            if let Some(prop) = self.deferred_feasibility_conflict() {
+                return vec![prop];
+            }
+            if self.skip_entailment_propagation {
+                return Vec::new();
+            }
+        }
+
         let asserted = self.live_lits();
         let mut out = Vec::new();
         for atom in 0..self.kinds.len() {
@@ -509,6 +588,10 @@ impl TheorySolver for LiaTheory {
         }
         self.assigned[index] = Some(value);
         self.assigned_log.push(index);
+
+        if self.defer_feasibility_until_propagate {
+            return Ok(());
+        }
 
         match self.feasibility() {
             Feasibility::Sat | Feasibility::Unknown => Ok(()),
@@ -813,7 +896,12 @@ pub fn check_qf_lia_online(
     }
 
     let atom_count = atom_terms.len();
-    let mut theory = LiaTheory::new(arena, &atom_terms);
+    let defer_feasibility = should_defer_online_lia_feasibility(atom_count, clauses.len());
+    let mut theory = if defer_feasibility {
+        LiaTheory::new_deferred_for_large_search(arena, &atom_terms)
+    } else {
+        LiaTheory::new(arena, &atom_terms)
+    };
 
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
@@ -846,6 +934,10 @@ pub fn check_qf_lia_online(
             "online LIA model did not replay (arithmetic outside the incremental engine)",
         ))),
     }
+}
+
+fn should_defer_online_lia_feasibility(atom_count: usize, clause_count: usize) -> bool {
+    atom_count >= DEFER_LIA_FEASIBILITY_ATOMS || clause_count >= DEFER_LIA_FEASIBILITY_CLAUSES
 }
 
 fn add_boolean_leaf_values(
@@ -1017,6 +1109,75 @@ mod tests {
             reason.detail
         );
         assert!(reason.detail.contains("decisions=0"), "{:?}", reason.detail);
+    }
+
+    #[test]
+    fn deferred_lia_feasibility_reports_conflict_from_propagate() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let zero = iconst(&mut arena, 0);
+        let one = iconst(&mut arena, 1);
+        let gt = arena.int_gt(x, zero).expect("x>0");
+        let lt = arena.int_lt(x, one).expect("x<1");
+        let atoms = [gt, lt];
+
+        let mut theory = LiaTheory::new_deferred_for_large_search(&arena, &atoms);
+        assert!(theory.assert(0, true).is_ok());
+        assert!(theory.assert(1, true).is_ok());
+
+        let props = theory.propagate();
+        assert_eq!(props.len(), 1, "deferred conflict should surface once");
+        let prop = props[0].clone();
+        assert_eq!(
+            theory.assigned[prop.lit.atom],
+            Some(!prop.lit.value),
+            "propagation must contradict an asserted core literal"
+        );
+
+        let mut core = prop.reason;
+        core.push(TheoryLit {
+            atom: prop.lit.atom,
+            value: !prop.lit.value,
+        });
+        let mut core_arena = arena.clone();
+        let core_terms: Vec<TermId> = core
+            .iter()
+            .map(|lit| {
+                if lit.value {
+                    atoms[lit.atom]
+                } else {
+                    core_arena.not(atoms[lit.atom]).expect("not")
+                }
+            })
+            .collect();
+        assert_eq!(
+            check_with_lia_simplex(&core_arena, &core_terms).expect("core decidable"),
+            CheckResult::Unsat,
+            "deferred propagation conflict must encode an unsat core"
+        );
+    }
+
+    #[test]
+    fn large_online_lia_root_conflict_uses_deferred_feasibility() {
+        let mut arena = TermArena::new();
+        let mut assertions = Vec::new();
+
+        for i in 0..DEFER_LIA_FEASIBILITY_ATOMS {
+            let y = ivar(&mut arena, &format!("pad_{i}"));
+            let zero = iconst(&mut arena, 0);
+            assertions.push(arena.int_ge(y, zero).expect("pad>=0"));
+        }
+
+        let x = ivar(&mut arena, "x");
+        let zero = iconst(&mut arena, 0);
+        let one = iconst(&mut arena, 1);
+        assertions.push(arena.int_ge(x, one).expect("x>=1"));
+        assertions.push(arena.int_le(x, zero).expect("x<=0"));
+
+        assert!(should_defer_online_lia_feasibility(assertions.len(), 0));
+        let verdict =
+            check_qf_lia_online(&arena, &assertions, &SolverConfig::default()).expect("decidable");
+        assert_eq!(verdict, CheckResult::Unsat);
     }
 
     #[test]

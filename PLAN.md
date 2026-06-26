@@ -285,6 +285,19 @@ against competitor source, are now binding:
    skeleton exploration. Next work should add relevance filtering, batched/cheap
    propagation, or a first-model/skeleton precheck before asserting 1k+ literals
    through the incremental LIA theory.
+   **DEFERRED LARGE ONLINE LIA FEASIBILITY LANDED (2026-06-26):**
+   the online LIA driver now switches large skeletons (>=128 LIA atoms or >=4096
+   CNF clauses) to a sound deferred-feasibility mode: Boolean assignments are
+   recorded cheaply, one full LIA feasibility check runs at the theory-propagation
+   boundary, infeasible live sets are reported as ordinary theory-conflict
+   propagations, and expensive LP entailment probes are skipped. Core minimization
+   is also skipped in this mode, so the fallback does not reintroduce hundreds of
+   LIA checks just to shrink a conflict. On the two generated QF_UFLIA overbound
+   rows at 1 s, the timeout now moves past the online first-propagation stall and
+   reaches the legacy lazy arithmetic loop: **31-33 rounds**, **873 atoms**,
+   **1433 bound lemmas**, **31-33 blocking lemmas**. The rows are still `unknown`;
+   the next lever is the legacy 873-atom arithmetic refinement loop / route
+   scheduling, not online DPLL(T)'s initial propagation.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
