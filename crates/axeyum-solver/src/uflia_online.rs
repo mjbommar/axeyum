@@ -1385,15 +1385,21 @@ fn check_qf_uflia_boolean(
             MAX_OPAQUE_BOOLEAN_ATOMS
         ));
     }
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if deadline.is_some_and(|d| Instant::now() >= d) {
+        return timeout_unknown("timeout in the online combination boolean layer");
+    }
 
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
     // the original `atom_count`. If it cannot be built, fall back to the enumerative layer.
-    let Some(combined) =
-        crate::combined_theory_lia::CombinedIncrementalLia::new(arena, &atom_terms)
-    else {
+    let Some(combined) = crate::combined_theory_lia::CombinedIncrementalLia::new_with_deadline(
+        arena,
+        &atom_terms,
+        deadline,
+    ) else {
         return check_qf_uflia_boolean_enumerative(arena, assertions, config, true, None);
     };
-    cdclt_combined(arena, assertions, config, &atom_terms, combined)
+    cdclt_combined(arena, assertions, &atom_terms, combined, deadline)
 }
 
 /// The real-`CDCL(T)` body (slice 3c-lia): build the extended skeleton (theory atoms ++
@@ -1405,9 +1411,9 @@ fn check_qf_uflia_boolean(
 fn cdclt_combined(
     arena: &mut TermArena,
     assertions: &[TermId],
-    config: &SolverConfig,
     atom_terms: &[TermId],
     mut combined: crate::combined_theory_lia::CombinedIncrementalLia,
+    deadline: Option<Instant>,
 ) -> CheckResult {
     let atom_count = atom_terms.len();
     let interface_count = combined.interface_pairs().len() * 3;
@@ -1457,7 +1463,6 @@ fn cdclt_combined(
         })
         .collect();
 
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     if deadline.is_some_and(|d| Instant::now() >= d) {
         return timeout_unknown("timeout in the online combination boolean layer");
     }
@@ -1693,6 +1698,11 @@ fn check_qf_uflia_boolean_enumerative(
         ));
     }
 
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    if deadline.is_some_and(|d| Instant::now() >= d) {
+        return timeout_unknown("timeout in the online combination boolean layer");
+    }
+
     // Tseitin-encode each assertion; assert each top variable.
     let mut enc = BoolEncoder::new(&atom_terms);
     let mut clauses: Vec<Vec<BoolLit>> = Vec::new();
@@ -1712,11 +1722,14 @@ fn check_qf_uflia_boolean_enumerative(
         }]);
     }
 
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     // Build the warm equality-sharing oracle once over the atom set (the indices align
     // with the BoolSearch variables). The enumeration is unchanged — only this theory
     // oracle is warm across the per-model checks.
-    let combined = crate::combined_theory_lia::CombinedTheoryLia::new(arena, &atom_terms);
+    let combined = crate::combined_theory_lia::CombinedTheoryLia::new_with_deadline(
+        arena,
+        &atom_terms,
+        deadline,
+    );
     let mut search = BoolSearch {
         var_count: enc.var_count,
         atom_count: atom_terms.len(),

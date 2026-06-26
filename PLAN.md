@@ -533,6 +533,21 @@ against competitor source, are now binding:
    checks, **6** equal-argument pairs, **5** violations, and **6** learned UF
    lemmas. Next practical work is deadline-aware opaque-app online assertion
    plus model lifting, or reducing LP-core-producing lazy branches.
+   **DEADLINE-AWARE OPAQUE-APP ONLINE THEORY CHECKS LANDED (2026-06-26):**
+   the online `LiaTheory` now carries the Boolean-layer deadline into
+   feasibility checks, deletion-minimized core checks, model reconstruction, and
+   propagation probes, including the opaque Int-UF application abstraction used
+   by UFLIA. `CombinedIncrementalLia` and the enumerative fallback
+   `CombinedTheoryLia` pass that deadline into their nested LIA state, and an
+   elapsed deadline degrades theory checks to inconclusive `Unknown` rather than
+   producing conflicts or propagations. This is a resource-control prerequisite,
+   not a solve-rate win: a zero-timeout Boolean opaque-app UFLIA regression now
+   returns `Timeout` before theory work, but the generated overbound rows still
+   decline at the deliberate **128** opaque-app atom guard
+   (`485 > 128`), and the production lazy 1 s frontier remains **2** UF rounds,
+   **1** candidate, and **6** learned UF lemmas. Next practical work is using
+   this deadline-safe substrate to relax/partition the guard or reducing
+   LP-core-producing lazy branches.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

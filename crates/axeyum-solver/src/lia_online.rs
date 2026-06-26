@@ -72,9 +72,11 @@ use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+#[cfg(test)]
+use crate::lra::check_with_lia_simplex;
 use crate::lra::{
-    LpRelaxation, check_with_lia_opaque_apps, check_with_lia_simplex, lp_relaxation_feasibility,
-    lp_relaxation_feasibility_opaque_apps,
+    LpRelaxation, check_with_lia_opaque_apps_within, check_with_lia_simplex_within,
+    lp_relaxation_feasibility, lp_relaxation_feasibility_opaque_apps,
 };
 use crate::lra_online::{Dpll, Lit};
 use crate::model::Model;
@@ -150,6 +152,10 @@ pub struct LiaTheory {
     /// the original problem. Satisfiable opaque abstractions still do not produce
     /// a model through [`integer_model`](Self::integer_model).
     allow_opaque_apps: bool,
+    /// Optional wall-clock deadline inherited from the online DPLL(T) caller. A
+    /// passed deadline makes feasibility/probe checks inconclusive, never
+    /// conflicting, so timeout handling remains sound.
+    deadline: Option<Instant>,
 }
 
 /// Outcome of an incremental integer-feasibility check over the asserted atoms.
@@ -198,7 +204,17 @@ impl LiaTheory {
             defer_feasibility_until_propagate: false,
             skip_entailment_propagation: false,
             allow_opaque_apps,
+            deadline: None,
         }
+    }
+
+    /// Attaches a wall-clock deadline to this theory. Once the deadline passes,
+    /// feasibility and propagation probes return inconclusive results rather than
+    /// deriving conflicts or propagations.
+    #[must_use]
+    pub(crate) fn with_deadline(mut self, deadline: Option<Instant>) -> Self {
+        self.deadline = deadline;
+        self
     }
 
     /// Builds the same theory in large-query mode: assertions are recorded cheaply,
@@ -291,6 +307,9 @@ impl LiaTheory {
     /// sound; avoiding deletion minimization is critical when the point of the
     /// caller is to avoid hundreds of repeated LIA checks.
     fn feasibility_with_core_minimization(&self, minimize: bool) -> Feasibility {
+        if self.deadline_expired() {
+            return Feasibility::Unknown;
+        }
         let lits = self.live_lits();
         if lits.is_empty() {
             return Feasibility::Sat;
@@ -301,27 +320,34 @@ impl LiaTheory {
         match self.check_terms(&arena, &terms) {
             Ok(CheckResult::Sat(_)) => Feasibility::Sat,
             Ok(CheckResult::Unknown(_)) | Err(_) => Feasibility::Unknown,
-            Ok(CheckResult::Unsat) if minimize => {
-                Feasibility::Unsat(minimize_core(&arena, &lits, &terms, self.allow_opaque_apps))
-            }
+            Ok(CheckResult::Unsat) if minimize => Feasibility::Unsat(minimize_core(
+                &arena,
+                &lits,
+                &terms,
+                self.allow_opaque_apps,
+                self.deadline,
+            )),
             Ok(CheckResult::Unsat) => Feasibility::Unsat(lits),
         }
     }
 
     fn check_terms(&self, arena: &TermArena, terms: &[TermId]) -> Result<CheckResult, SolverError> {
-        if self.allow_opaque_apps {
-            check_with_lia_opaque_apps(arena, terms)
-        } else {
-            check_with_lia_simplex(arena, terms)
-        }
+        check_terms_with_options(arena, terms, self.allow_opaque_apps, self.deadline)
     }
 
     fn lp_relaxation(&self, arena: &TermArena, terms: &[TermId]) -> LpRelaxation {
+        if self.deadline_expired() {
+            return LpRelaxation::Unknown;
+        }
         if self.allow_opaque_apps {
             lp_relaxation_feasibility_opaque_apps(arena, terms)
         } else {
             lp_relaxation_feasibility(arena, terms)
         }
+    }
+
+    fn deadline_expired(&self) -> bool {
+        self.deadline.is_some_and(|d| Instant::now() >= d)
     }
 
     /// Converts a currently-infeasible core into a propagation that contradicts
@@ -677,21 +703,21 @@ fn minimize_core(
     lits: &[TheoryLit],
     terms: &[TermId],
     allow_opaque_apps: bool,
+    deadline: Option<Instant>,
 ) -> Vec<TheoryLit> {
     // Start from the full asserted set; try removing each literal in turn.
     let mut keep: Vec<bool> = vec![true; lits.len()];
     for drop_idx in 0..lits.len() {
+        if deadline.is_some_and(|d| Instant::now() >= d) {
+            break;
+        }
         keep[drop_idx] = false;
         let subset: Vec<TermId> = terms
             .iter()
             .zip(&keep)
             .filter_map(|(&t, &k)| k.then_some(t))
             .collect();
-        let verdict = if allow_opaque_apps {
-            check_with_lia_opaque_apps(arena, &subset)
-        } else {
-            check_with_lia_simplex(arena, &subset)
-        };
+        let verdict = check_terms_with_options(arena, &subset, allow_opaque_apps, deadline);
         let still_unsat = subset.len() < terms.len() && matches!(verdict, Ok(CheckResult::Unsat));
         if !still_unsat {
             // Dropping this literal lost (or could not confirm) the refutation —
@@ -712,6 +738,25 @@ fn minimize_core(
 /// Whether `term` is integer-sorted.
 fn is_int(arena: &TermArena, term: TermId) -> bool {
     arena.sort_of(term) == Sort::Int
+}
+
+fn check_terms_with_options(
+    arena: &TermArena,
+    terms: &[TermId],
+    allow_opaque_apps: bool,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    if deadline.is_some_and(|d| Instant::now() >= d) {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "online LIA theory check reached its deadline".to_owned(),
+        }));
+    }
+    if allow_opaque_apps {
+        check_with_lia_opaque_apps_within(arena, terms, deadline)
+    } else {
+        check_with_lia_simplex_within(arena, terms, deadline)
+    }
 }
 
 // --- The online DPLL(T) driver. ---------------------------------------------
@@ -936,15 +981,16 @@ pub fn check_qf_lia_online(
     }
 
     let atom_count = atom_terms.len();
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let defer_feasibility = should_defer_online_lia_feasibility(atom_count, clauses.len());
     let mut theory = if defer_feasibility {
         LiaTheory::new_deferred_for_large_search(arena, &atom_terms)
     } else {
         LiaTheory::new(arena, &atom_terms)
-    };
+    }
+    .with_deadline(deadline);
 
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     match solver.solve_with_deadline(&mut theory, deadline) {
         Some(true) => return Ok(CheckResult::Unsat),
         Some(false) => {}

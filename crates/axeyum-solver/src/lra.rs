@@ -1119,6 +1119,15 @@ pub(crate) fn check_with_lia_opaque_apps(
     lia_simplex_with_options(arena, assertions, None, true)
 }
 
+/// Deadline-aware variant of [`check_with_lia_opaque_apps`].
+pub(crate) fn check_with_lia_opaque_apps_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    lia_simplex_with_options(arena, assertions, deadline, true)
+}
+
 fn lia_simplex_within(
     arena: &TermArena,
     assertions: &[TermId],

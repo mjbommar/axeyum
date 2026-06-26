@@ -32,6 +32,7 @@
 //! is warmed in slice 1.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Instant;
 
 use axeyum_ir::{TermArena, TermId};
 
@@ -72,6 +73,8 @@ pub(crate) struct CombinedTheoryLia {
     /// equality atom; an atom absent from it has no variable (its interface equality is
     /// then dropped — a sound omission, propagation only ever *adds* assignments).
     atom_var: BTreeMap<TermId, usize>,
+    /// Optional wall-clock deadline inherited from the online Boolean driver.
+    deadline: Option<Instant>,
 }
 
 /// One warm-reusable `LiaTheory` together with the layout it was built for.
@@ -93,7 +96,19 @@ impl CombinedTheoryLia {
     /// cache fills lazily from the first conjunction); it is kept so the wiring mirrors
     /// the cold core's atom-set discovery and leaves room for a future eager pre-warm.
     #[must_use]
-    pub(crate) fn new(_arena: &mut TermArena, atom_terms: &[TermId]) -> Self {
+    pub(crate) fn new(arena: &mut TermArena, atom_terms: &[TermId]) -> Self {
+        Self::new_with_deadline(arena, atom_terms, None)
+    }
+
+    /// Builds the warm oracle with a caller-owned deadline. Once that deadline
+    /// passes, the nested `LIA` checks become inconclusive instead of producing
+    /// conflicts or propagations.
+    #[must_use]
+    pub(crate) fn new_with_deadline(
+        _arena: &mut TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Self {
         let mut atom_var = BTreeMap::new();
         for (var, &atom) in atom_terms.iter().enumerate() {
             atom_var.entry(atom).or_insert(var);
@@ -102,6 +117,7 @@ impl CombinedTheoryLia {
             cache: None,
             atom_terms: atom_terms.to_vec(),
             atom_var,
+            deadline,
         }
     }
 
@@ -152,7 +168,8 @@ impl CombinedTheoryLia {
         // LIA literals — the same state the cold core constructs.
         let warm = matches!(&self.cache, Some(c) if c.layout == layout);
         if !warm {
-            let mut theory = LiaTheory::new_with_opaque_apps(arena, &layout);
+            let mut theory =
+                LiaTheory::new_with_opaque_apps(arena, &layout).with_deadline(self.deadline);
             for (index, lit) in part.lia.iter().enumerate() {
                 if theory.assert(index, lit.value).is_err() {
                     // A base conflict is the cold core's immediate `Unsat`. Do not cache a
@@ -237,7 +254,8 @@ impl CombinedTheoryLia {
         asserted: &[Literal],
         out: &mut Vec<TheoryProp>,
     ) {
-        let mut lia = LiaTheory::new_with_opaque_apps(arena, &self.atom_terms);
+        let mut lia =
+            LiaTheory::new_with_opaque_apps(arena, &self.atom_terms).with_deadline(self.deadline);
         for lit in asserted {
             let var = self.atom_var[&lit.atom];
             if lia.assert(var, lit.value).is_err() {
@@ -531,6 +549,19 @@ impl CombinedIncrementalLia {
     /// caller then falls back to the per-call [`CombinedTheoryLia::check`].
     #[must_use]
     pub(crate) fn new(arena: &mut TermArena, atom_terms: &[TermId]) -> Option<Self> {
+        Self::new_with_deadline(arena, atom_terms, None)
+    }
+
+    /// Builds the incremental combined state with a caller-owned deadline. The
+    /// deadline is forwarded to the `LIA` sub-theory so expensive theory asserts
+    /// and model reconstruction degrade to `Unknown` once the caller's budget is
+    /// exhausted.
+    #[must_use]
+    pub(crate) fn new_with_deadline(
+        arena: &mut TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Option<Self> {
         let original_atoms: Vec<TermId> = atom_terms.to_vec();
 
         // Shared pairs over the full atom set, once. Build a Partition from "all atoms
@@ -570,7 +601,7 @@ impl CombinedIncrementalLia {
 
         let routes = build_routes(&part, &original_atoms, &combined, &pairs);
         let euf = EufTheory::new(arena, &combined);
-        let lia = LiaTheory::new_with_opaque_apps(arena, &combined);
+        let lia = LiaTheory::new_with_opaque_apps(arena, &combined).with_deadline(deadline);
         let n = combined.len();
         Some(Self {
             euf,

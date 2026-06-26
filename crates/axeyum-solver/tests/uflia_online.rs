@@ -126,6 +126,33 @@ fn opaque_int_app_order_conflict_is_lia_unsat() {
 }
 
 #[test]
+fn opaque_int_app_boolean_path_zero_timeout_is_timeout_unknown() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let zero = iconst(&mut arena, 0);
+    let one = iconst(&mut arena, 1);
+    let fx_le_zero = arena.int_le(fx, zero).unwrap();
+    let fx_ge_one = arena.int_ge(fx, one).unwrap();
+    let assertion = arena.or(fx_le_zero, fx_ge_one).unwrap();
+
+    let config = SolverConfig::default().with_timeout(Duration::ZERO);
+    let online = check_qf_uflia_online(&mut arena, &[assertion], &config).unwrap();
+    assert!(
+        matches!(
+            &online,
+            CheckResult::Unknown(reason)
+                if reason.kind == UnknownKind::Timeout
+                    && reason.detail.contains("timeout in the online combination boolean layer")
+        ),
+        "Boolean-structured opaque-app UFLIA should honor zero timeout before theory work, got {online:?}"
+    );
+}
+
+#[test]
 fn opaque_int_app_equality_only_sat_still_replays() {
     let mut arena = TermArena::new();
     let f = arena
