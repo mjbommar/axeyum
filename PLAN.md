@@ -560,6 +560,16 @@ against competitor source, are now binding:
    probes were still running after **30 s**. Next practical work is
    construction-deadline checks or partitioned opaque-heavy admission, plus
    opaque-app model lifting.
+   **SHARED CDCL(T) PROPAGATION DEADLINE CHECKS LANDED (2026-06-26):**
+   the generic online `Dpll<T: TheorySolver>` now checks deadlines inside
+   Boolean unit propagation and theory propagation, not only between outer
+   search iterations. This closes one timeout hole shared by LIA/UFLIA/UFLRA and
+   is pinned by a direct unit test. It does **not** yet make opaque-heavy
+   generated UFLIA safe to admit wholesale: with the opaque cap temporarily
+   raised to **512**, the first 1 s direct probe still ran past **30 s**, so the
+   remaining overrun sits in construction, encoding, or theory-propagation
+   generation before these inner DPLL checks regain control. The committed guard
+   remains **128** opaque-app order atoms.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

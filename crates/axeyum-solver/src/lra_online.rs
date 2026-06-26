@@ -972,6 +972,11 @@ struct Conflict {
     is_theory: bool,
 }
 
+enum PropagationStop {
+    Conflict(Conflict),
+    Timeout,
+}
+
 /// A self-contained `DPLL(T)` search over the CNF skeleton driving any online
 /// [`TheorySolver`]: **1-UIP** theory-conflict learning with non-chronological
 /// backjumping, the theory pushed on each decision and popped once per decision
@@ -1243,11 +1248,21 @@ impl Dpll {
     /// Boolean unit propagation to fixpoint. `Err` carries a falsified conflict
     /// clause (literals all currently false) on a Boolean conflict, or a learned
     /// theory-conflict clause on a forced theory inconsistency — tagged with which.
-    fn unit_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
+    fn unit_propagate<T: TheorySolver>(
+        &mut self,
+        theory: &mut T,
+        deadline: Option<Instant>,
+    ) -> Result<(), PropagationStop> {
         let mut changed = true;
         while changed {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return Err(PropagationStop::Timeout);
+            }
             changed = false;
             for ci in 0..self.clauses.len() {
+                if deadline.is_some_and(|d| Instant::now() >= d) {
+                    return Err(PropagationStop::Timeout);
+                }
                 // Skip tombstoned (reduce_db-deleted) learned clauses: they are
                 // redundant resolvents, so omitting them only forgoes pruning.
                 if self.deleted[ci] {
@@ -1274,10 +1289,10 @@ impl Dpll {
                 }
                 if count == 0 {
                     // The whole clause is falsified: a Boolean conflict clause.
-                    return Err(Conflict {
+                    return Err(PropagationStop::Conflict(Conflict {
                         clause: self.clauses[ci].clone(),
                         is_theory: false,
-                    });
+                    }));
                 }
                 if count == 1 {
                     let lit = unassigned.expect("count == 1 has the unit literal");
@@ -1292,10 +1307,10 @@ impl Dpll {
                         Some(reason),
                         false,
                     ) {
-                        return Err(Conflict {
+                        return Err(PropagationStop::Conflict(Conflict {
                             clause: Self::theory_conflict_clause(&core),
                             is_theory: true,
-                        });
+                        }));
                     }
                     changed = true;
                 }
@@ -1308,11 +1323,21 @@ impl Dpll {
     /// learned theory-conflict clause on a theory conflict, else `Ok(())`. A
     /// mirror of `crate::euf_egraph::Dpll::theory_propagate` retargeted to
     /// [`LraTheory`].
-    fn theory_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
+    fn theory_propagate<T: TheorySolver>(
+        &mut self,
+        theory: &mut T,
+        deadline: Option<Instant>,
+    ) -> Result<(), PropagationStop> {
         loop {
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return Err(PropagationStop::Timeout);
+            }
             let props = theory.propagate();
             let mut progress = false;
             for prop in props {
+                if deadline.is_some_and(|d| Instant::now() >= d) {
+                    return Err(PropagationStop::Timeout);
+                }
                 let var = prop.lit.atom;
                 match self.value[var] {
                     Some(v) if v == prop.lit.value => {}
@@ -1324,10 +1349,10 @@ impl Dpll {
                             atom: var,
                             value: !prop.lit.value,
                         });
-                        return Err(Conflict {
+                        return Err(PropagationStop::Conflict(Conflict {
                             clause: Self::theory_conflict_clause(&core),
                             is_theory: true,
-                        });
+                        }));
                     }
                     None => {
                         // The reason clause for the propagated literal is
@@ -1342,10 +1367,10 @@ impl Dpll {
                             Some(reason_clause),
                             true,
                         ) {
-                            return Err(Conflict {
+                            return Err(PropagationStop::Conflict(Conflict {
                                 clause: Self::theory_conflict_clause(&c),
                                 is_theory: true,
-                            });
+                            }));
                         }
                         progress = true;
                     }
@@ -1359,11 +1384,15 @@ impl Dpll {
 
     /// Unit propagation interleaved with theory propagation to a joint fixpoint. A
     /// mirror of `crate::euf_egraph::Dpll::propagate` retargeted to [`LraTheory`].
-    fn propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
+    fn propagate<T: TheorySolver>(
+        &mut self,
+        theory: &mut T,
+        deadline: Option<Instant>,
+    ) -> Result<(), PropagationStop> {
         loop {
-            self.unit_propagate(theory)?;
+            self.unit_propagate(theory, deadline)?;
             let before = self.trail.len();
-            self.theory_propagate(theory)?;
+            self.theory_propagate(theory, deadline)?;
             if self.trail.len() == before {
                 return Ok(());
             }
@@ -1866,9 +1895,10 @@ impl Dpll {
             if deadline.is_some_and(|d| Instant::now() >= d) {
                 return None;
             }
-            match self.propagate(theory) {
+            match self.propagate(theory, deadline) {
                 Ok(()) => {}
-                Err(conflict) => {
+                Err(PropagationStop::Timeout) => return None,
+                Err(PropagationStop::Conflict(conflict)) => {
                     if !self.learn_and_backjump(theory, &conflict) {
                         return Some(true);
                     }
@@ -2490,6 +2520,7 @@ fn unknown(detail: &str) -> UnknownReason {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     fn rconst(arena: &mut TermArena, n: i128) -> TermId {
         arena.real_const(Rational::integer(n))
@@ -2890,6 +2921,40 @@ mod tests {
             dpll.saved_phase[2],
             "an untouched variable still decides at the true-first default"
         );
+    }
+
+    #[test]
+    fn dpll_unit_propagation_honors_expired_deadline() {
+        struct NoTheory;
+        impl TheorySolver for NoTheory {
+            fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                Ok(())
+            }
+            fn push(&mut self) {}
+            fn pop(&mut self) {}
+            fn propagate(&self) -> Vec<TheoryProp> {
+                Vec::new()
+            }
+        }
+
+        let mut theory = NoTheory;
+        let clauses = vec![vec![Lit {
+            var: 0,
+            positive: true,
+        }]];
+        let mut dpll = Dpll::new(1, 0, clauses);
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("subtract one second from now");
+
+        assert!(
+            matches!(
+                dpll.unit_propagate(&mut theory, Some(expired)),
+                Err(PropagationStop::Timeout)
+            ),
+            "expired deadline should stop unit propagation before scanning clauses"
+        );
+        assert_eq!(dpll.value[0], None, "timeout must not assign any literal");
     }
 
     /// End-to-end determinism through the public driver: the same `QF_LRA` query
