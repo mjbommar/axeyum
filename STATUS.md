@@ -6,6 +6,45 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UF mixed UF+arithmetic audit gap closed.**
+  Added a checked `uf-arith-congruence-unsat` certificate for the cvc5 `bug303`
+  row. The checker re-runs the shared Ackermann/congruence construction,
+  retains only Boolean-structured linear-arithmetic rewritten assertions plus
+  arithmetic-sorted derived congruence consequents, and verifies that residual
+  with the existing arithmetic-DPLL certificate. This covers the benchmark
+  shape where congruence over the declared `list` carrier proves
+  `length(one_cons nil) = length(cons 1 nil)`, after which the integer facts
+  force the contradiction. Lean reconstruction now routes through
+  `ProofFragment::UfArithCongruence` and re-runs the checker before rendering
+  the wrapper. The assertion-set Boolean simplifier also learned a conservative
+  cross-assertion `not (and ...)` contradiction rule, but the nonlinear
+  `issue3970-nl-ext-purify` row still returns checked `unknown`. The exact
+  QF_UF bounded declared-sort audit is refreshed at **43/44 dominant (97.7%)**,
+  **Lean unsat 14/14 (100.0%)**, **mismatches=0**, **audit_errors=0**,
+  **timeouts=0**, **evidence_checked=44/44**, and
+  **evidence_certified=43/44**. Remaining QF_UF blocker: the nonlinear-extension
+  row `issue3970-nl-ext-purify`, where baseline is `unsat` but evidence remains
+  checked `unknown`. **Next:** decide whether to add an explicit nonlinear
+  arithmetic/propositional certificate for `issue3970`, or mark it as the honest
+  frontier for this bounded QF_UF audit row and move to the next measured row.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib uf_arith::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_simplify::tests:: -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_bug303_uses_checked_uf_arith_congruence_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_bug303_uf_arith_congruence_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-26 — QF_UF Boolean-EUF audit gaps closed.**
   Added a checked Boolean-structured EUF refutation bridge for pure
   uninterpreted-sort formulas whose contradiction is hidden behind Boolean

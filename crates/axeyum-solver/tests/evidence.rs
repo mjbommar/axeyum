@@ -404,6 +404,31 @@ fn qf_uf_boolean_euf_rows_use_checked_exhaustive_evidence() {
 }
 
 #[test]
+fn qf_uf_bug303_uses_checked_uf_arith_congruence_evidence() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2"
+    ))
+    .expect("bug303 parses");
+    let assertions = script.assertions.clone();
+    let report = produce_evidence(&mut script.arena, &assertions, &config())
+        .expect("bug303 evidence is produced");
+    let Evidence::UnsatUfArithCongruence(cert) = &report.evidence else {
+        panic!(
+            "expected UF arithmetic congruence evidence for bug303, got {:?}",
+            report.evidence
+        );
+    };
+    assert_eq!(cert.arithmetic_assertions, 3);
+    assert_eq!(cert.congruence_consequents, 1);
+    assert!(report.evidence.is_certified());
+    assert!(report.evidence.check(&script.arena, &assertions).unwrap());
+    assert!(
+        report.trusted_steps.is_empty(),
+        "UF arithmetic congruence certificate should be checked directly"
+    );
+}
+
+#[test]
 fn qf_dt_cvc5_slice_uses_checked_datatype_structural_evidence() {
     for (tag, input, min_branches) in [
         (

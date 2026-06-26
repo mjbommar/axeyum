@@ -686,6 +686,25 @@ fn qf_uf_boolean_euf_rows_check_in_real_lean() {
     }
 }
 
+/// `QF_UFLIA`: `bug303` needs congruence over the declared `list` carrier before
+/// the integer contradiction is visible.
+#[test]
+fn qf_uf_bug303_uf_arith_congruence_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2"
+    ))
+    .expect("bug303 parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) =
+        prove_unsat_to_lean_module(&mut script.arena, &assertions).expect("bug303 reconstructs");
+    assert_eq!(fragment, ProofFragment::UfArithCongruence);
+    assert!(
+        !source.contains("sorryAx"),
+        "UF arithmetic congruence module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_uf_bug303_uf_arith_congruence", &source);
+}
+
 /// `QF_UF`: `parallel-let` reduces to a declared-carrier equality conflict
 /// without any `Apply` node. It is still EUF, not ground BV.
 #[test]

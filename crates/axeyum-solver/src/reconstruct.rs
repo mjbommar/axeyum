@@ -1282,6 +1282,9 @@ pub enum ProofFragment {
     /// An exhaustive Boolean-skeleton refutation whose every skeleton model is
     /// rejected by EUF congruence closure.
     BoolEufExhaustive,
+    /// A mixed UF+linear-arithmetic refutation: congruence derives arithmetic
+    /// equalities, then arithmetic DPLL refutes the retained residual.
+    UfArithCongruence,
     /// A datatype structural refutation by
     /// acyclicity/distinctness/injectivity/exhaustiveness, optionally split over
     /// every branch of a top-level disjunction.
@@ -1790,6 +1793,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::BoolUfExhaustive
     } else if crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions).is_some() {
         ProofFragment::BoolEufExhaustive
+    } else if crate::uf_arith::uf_arith_congruence_refutation(arena, assertions).is_some() {
+        ProofFragment::UfArithCongruence
     } else if has_func && has_bv {
         ProofFragment::QfUfBv
     } else if has_func && has_arith && arith_dpll_refutation_certifies(arena, assertions) {
@@ -2555,6 +2560,35 @@ fn reconstruct_bool_euf_exhaustive_to_lean_module(
     let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
     let refuter_prop = ctx.mk_not(prop);
     let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_euf_exhaustive")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+fn reconstruct_uf_arith_congruence_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert =
+        crate::uf_arith::uf_arith_congruence_refutation(arena, assertions).ok_or_else(|| {
+            ReconstructError::MalformedStep {
+                rule: "uf_arith_congruence".to_owned(),
+                detail: "expected a mixed UF+arithmetic congruence refutation".to_owned(),
+            }
+        })?;
+    if cert.congruence_consequents == 0 {
+        return Err(ReconstructError::MalformedStep {
+            rule: "uf_arith_congruence".to_owned(),
+            detail: "certificate carried no arithmetic congruence consequents".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("uf_arith_congruence_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "uf_arith_congruence")?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
     Ok(render_ctx_module(&mut ctx, proof))
@@ -3359,6 +3393,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::BoolEufExhaustive
+        | ProofFragment::UfArithCongruence
         | ProofFragment::DatatypeStructural
         | ProofFragment::FiniteDomainEnum
         | ProofFragment::TermLevelEnum
@@ -3455,6 +3490,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::BoolEufExhaustive => {
             reconstruct_bool_euf_exhaustive_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::UfArithCongruence => {
+            reconstruct_uf_arith_congruence_to_lean_module(arena, assertions)?
         }
         ProofFragment::DatatypeStructural => {
             reconstruct_datatype_structural_to_lean_module(arena, assertions)?

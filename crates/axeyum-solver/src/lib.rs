@@ -130,6 +130,7 @@ mod symexec;
 mod term_identity;
 mod theory_combination;
 pub mod trust;
+mod uf_arith;
 mod ufbv_finite;
 mod uflia_interpolant;
 mod uflia_online;
@@ -365,6 +366,7 @@ pub use theory_combination::{
     propose_interface_equalities, shared_terms,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
+pub use uf_arith::{UfArithCongruenceCertificate, uf_arith_congruence_refutation};
 pub use ufbv_finite::{
     BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate, bool_uf_exhaustive_refutation,
     finite_domain_pigeonhole_refutation,

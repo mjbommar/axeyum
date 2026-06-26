@@ -149,6 +149,17 @@ pub(crate) struct AckermannCongruence {
 }
 
 impl AckermannCongruence {
+    /// The rewritten originals after Ackermann abstraction, before consistency
+    /// consequents are appended.
+    pub(crate) fn rewritten_assertions(&self) -> &[TermId] {
+        &self.rewritten
+    }
+
+    /// The derivable functional-consistency consequents `(= v_i v_j)`.
+    pub(crate) fn consequent_assertions(&self) -> impl Iterator<Item = TermId> + '_ {
+        self.consequent_terms.iter().map(|&(eq, _, _)| eq)
+    }
+
     /// The reduced (Ackermannized) assertions: the rewritten originals plus each
     /// derivable consistency *consequent* `(= v_i v_j)`. For a `QF_UFLIA`/
     /// `QF_UFLRA` query whose only UF applications are arithmetic-sorted, this is a

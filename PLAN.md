@@ -193,11 +193,15 @@ against competitor source, are now binding:
    trust-hole row and the `sets/card-6` evidence timeout. A follow-up
    Boolean-EUF pass added a checked equality-skeleton refutation bridge for
    pure-UF rows whose contradiction is hidden behind `not =>`, CNF, or Boolean
-   `ite`, closing `simple-uf`, `uf/cnf-and-neg`, and `uf/cnf-ite`. The exact row
-   is now **42/44 dominant (95.5%)**, **Lean unsat 13/14 (92.9%)**, with
+   `ite`, closing `simple-uf`, `uf/cnf-and-neg`, and `uf/cnf-ite`. A follow-up
+   UF+arithmetic congruence pass added a checked Ackermann/congruence residual
+   certificate for the mixed `list`/integer `bug303` row: congruence over the
+   declared carrier sort derives the needed integer equality, then arithmetic
+   DPLL refutes the retained Boolean-structured linear-arithmetic core. The
+   exact row is now **43/44 dominant (97.7%)**, **Lean unsat 14/14 (100.0%)**, with
    **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Remaining QF_UF
-   blockers are now two named audit gaps: mixed UF+arithmetic `bug303` and one
-   nonlinear-extension `unknown`.
+   blocker is now the nonlinear-extension `issue3970-nl-ext-purify` evidence
+   frontier: baseline `unsat`, checked audit `unknown`.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

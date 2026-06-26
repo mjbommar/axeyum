@@ -13,21 +13,40 @@ use axeyum_ir::{Op, TermArena, TermId, TermNode};
 /// A self-checking refutation: one original assertion simplifies to `false`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BoolSimplificationRefutationCertificate {
-    /// The original top-level assertion that normalizes to Boolean `false`.
+    /// The original top-level assertion that normalizes to Boolean `false`, or
+    /// the first assertion when the whole assertion conjunction normalizes to
+    /// `false`.
     pub assertion: TermId,
+    /// Whether the certificate uses the conjunction of all assertions.
+    pub combined_assertions: bool,
 }
 
 /// Returns a certificate when any assertion is propositionally `false` under the
-/// small checked Boolean normalizer.
+/// small checked Boolean normalizer, or when the conjunction of all assertions is
+/// propositionally `false`.
 #[must_use]
 pub fn bool_simplification_refutation(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Option<BoolSimplificationRefutationCertificate> {
-    assertions.iter().copied().find_map(|assertion| {
-        matches!(simplify_bool(arena, assertion), BoolExpr::False)
-            .then_some(BoolSimplificationRefutationCertificate { assertion })
-    })
+    if let Some(cert) = assertions.iter().copied().find_map(|assertion| {
+        matches!(simplify_bool(arena, assertion), BoolExpr::False).then_some(
+            BoolSimplificationRefutationCertificate {
+                assertion,
+                combined_assertions: false,
+            },
+        )
+    }) {
+        return Some(cert);
+    }
+
+    let first = assertions.first().copied()?;
+    matches!(simplify_nary(arena, true, assertions), BoolExpr::False).then_some(
+        BoolSimplificationRefutationCertificate {
+            assertion: first,
+            combined_assertions: true,
+        },
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -93,6 +112,16 @@ fn simplify_nary(arena: &TermArena, is_and: bool, args: &[TermId]) -> BoolExpr {
             };
         }
     }
+    if is_and {
+        for item in &set {
+            if let BoolExpr::Not(inner) = item
+                && let BoolExpr::And(items) = &**inner
+                && items.iter().all(|conjunct| set.contains(conjunct))
+            {
+                return BoolExpr::False;
+            }
+        }
+    }
 
     let items: Vec<_> = set.into_iter().collect();
     match items.as_slice() {
@@ -129,6 +158,7 @@ mod tests {
         let cert = bool_simplification_refutation(&arena, &[assertion])
             .expect("not (p or not p) simplifies to false");
         assert_eq!(cert.assertion, assertion);
+        assert!(!cert.combined_assertions);
     }
 
     #[test]
@@ -140,5 +170,21 @@ mod tests {
         let tautology = arena.or(p, not_p).unwrap();
 
         assert!(bool_simplification_refutation(&arena, &[tautology]).is_none());
+    }
+
+    #[test]
+    fn recognizes_cross_assertion_negated_conjunction() {
+        let mut arena = TermArena::new();
+        let p_symbol = arena.declare("p", Sort::Bool).unwrap();
+        let q_symbol = arena.declare("q", Sort::Bool).unwrap();
+        let p = arena.var(p_symbol);
+        let q = arena.var(q_symbol);
+        let both = arena.and(p, q).unwrap();
+        let not_both = arena.not(both).unwrap();
+
+        let cert = bool_simplification_refutation(&arena, &[not_both, p, q])
+            .expect("not (p and q), p, q simplifies to false");
+        assert_eq!(cert.assertion, not_both);
+        assert!(cert.combined_assertions);
     }
 }

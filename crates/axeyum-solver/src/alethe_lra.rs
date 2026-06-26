@@ -1103,6 +1103,13 @@ pub(crate) fn int_atom_to_alethe_pub(arena: &TermArena, t: TermId) -> Option<Ale
     int_atom_to_alethe(arena, t)
 }
 
+/// Crate-internal accessor for [`real_atom_to_alethe`]: lets mixed-theory
+/// certificate builders recognize Boolean-structured real-arithmetic residuals
+/// without duplicating the renderer's fragment test.
+pub(crate) fn real_atom_to_alethe_pub(arena: &TermArena, t: TermId) -> Option<AletheTerm> {
+    real_atom_to_alethe(arena, t)
+}
+
 /// Integer counterpart of [`real_atom_to_alethe`]: converts an IR linear-integer
 /// **comparison atom** to its Alethe term, or `None` if it is not a recognised
 /// comparison over linear integer operands.

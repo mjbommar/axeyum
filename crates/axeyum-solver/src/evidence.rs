@@ -80,6 +80,7 @@ use crate::sat_bv_backend::SatBvBackend;
 use crate::set_cardinality::SetCardinalityRefutationCertificate;
 use crate::term_identity::TermIdentityRefutationCertificate;
 use crate::trust::{TrustId, TrustStep};
+use crate::uf_arith::UfArithCongruenceCertificate;
 use crate::ufbv_finite::{BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate};
 
 /// Version of the executable semantics (the `axeyum-ir` ground evaluator) the
@@ -375,6 +376,10 @@ pub enum Evidence {
     /// checker enumerates satisfying Boolean assignments to equality atoms and
     /// re-runs congruence closure on each induced equality/disequality core.
     UnsatBoolEufExhaustive(BoolEufExhaustiveCertificate),
+    /// Unsatisfiable (`QF_UFLIA`): congruence over mixed uninterpreted sorts
+    /// derives arithmetic equalities, then checked arithmetic DPLL refutes the
+    /// retained Boolean-structured linear-arithmetic residual.
+    UnsatUfArithCongruence(UfArithCongruenceCertificate),
     /// Unsatisfiable (`QF_DT`): datatype structural axioms
     /// (acyclicity/distinctness/injectivity/exhaustiveness) refute either the top-level
     /// conjunction directly or every branch of a top-level datatype disjunction.
@@ -583,6 +588,7 @@ impl Evidence {
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatBoolEufExhaustive(_)
+            | Evidence::UnsatUfArithCongruence(_)
             | Evidence::UnsatDatatypeStructural(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
             | Evidence::UnsatNraEvenPower(_)
@@ -635,6 +641,7 @@ impl Evidence {
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
                 | Evidence::UnsatBoolUfExhaustive(_)
                 | Evidence::UnsatBoolEufExhaustive(_)
+                | Evidence::UnsatUfArithCongruence(_)
                 | Evidence::UnsatDatatypeStructural(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
                 | Evidence::UnsatArrayAxiom(_)
@@ -667,6 +674,9 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatBoolEufExhaustive(cert) => {
             check_bool_euf_exhaustive_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatUfArithCongruence(cert) => {
+            check_uf_arith_congruence_evidence(arena, assertions, cert)
         }
         Evidence::UnsatDatatypeStructural(cert) => {
             check_datatype_structural_evidence(arena, assertions, cert)
@@ -743,6 +753,15 @@ fn check_bool_euf_exhaustive_evidence(
     cert: &BoolEufExhaustiveCertificate,
 ) -> bool {
     crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_uf_arith_congruence_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &UfArithCongruenceCertificate,
+) -> bool {
+    crate::uf_arith::uf_arith_congruence_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -1332,6 +1351,13 @@ fn direct_pre_solve_structural_report(
             trusted_steps: Vec::new(),
         });
     }
+    if let Some(cert) = crate::uf_arith::uf_arith_congruence_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatUfArithCongruence(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
     if let Some(cert) =
         crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions)
     {
@@ -1864,6 +1890,9 @@ fn direct_structural_unsat_evidence(
     if let Some(cert) = crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions) {
         return Some((Evidence::UnsatBoolEufExhaustive(cert), Vec::new()));
     }
+    if let Some(cert) = crate::uf_arith::uf_arith_congruence_refutation(arena, assertions) {
+        return Some((Evidence::UnsatUfArithCongruence(cert), Vec::new()));
+    }
     if let Some(cert) =
         crate::datatype_acyclicity::datatype_structural_refutation(arena, assertions)
     {
@@ -2308,6 +2337,7 @@ pub fn prove(
         | Evidence::UnsatFiniteDomainPigeonhole(_)
         | Evidence::UnsatBoolUfExhaustive(_)
         | Evidence::UnsatBoolEufExhaustive(_)
+        | Evidence::UnsatUfArithCongruence(_)
         | Evidence::UnsatDatatypeStructural(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)
         | Evidence::UnsatArrayAxiom(_)
