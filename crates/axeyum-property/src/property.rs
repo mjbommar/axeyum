@@ -97,9 +97,11 @@ pub enum Lifted {
 /// `Arbitrary` analogue) and how to lift a counterexample's [`Lifted`] leaves
 /// back into a concrete value of itself.
 ///
-/// Implemented for the scalar handles ([`Bv`], [`Int`], [`Bool`]) and tuples of
-/// them up to arity 3. The associated [`Symbolic::Concrete`] is the type a
-/// `Counterexample` carries (e.g. `(u64, u64)` for `(Bv<64>, Bv<64>)`).
+/// Implemented for the scalar handles ([`Bv`], [`Int`], [`Bool`]), the
+/// [`crate::Bounded`] and [`crate::BvArray`] inputs, tuples up to arity 6, and
+/// any struct via `#[derive(Symbolic)]`. The associated [`Symbolic::Concrete`]
+/// is the type a `Counterexample` carries (e.g. `(u128, u128)` for
+/// `(Bv<64>, Bv<64>)`).
 pub trait Symbolic<'c>: Sized {
     /// The concrete (non-symbolic) value carried by a counterexample.
     type Concrete;
@@ -184,6 +186,9 @@ macro_rules! tuple_symbolic {
 tuple_symbolic!(A);
 tuple_symbolic!(A, B);
 tuple_symbolic!(A, B, C);
+tuple_symbolic!(A, B, C, D);
+tuple_symbolic!(A, B, C, D, E);
+tuple_symbolic!(A, B, C, D, E, F);
 
 /// The result of a [`Forall::check`].
 ///

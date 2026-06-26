@@ -4,6 +4,31 @@ Live tracker for the bounded-property SDK (App B). See [PLAN.md](PLAN.md).
 
 ## Current focus
 
+- **2026-06-26 — v1+v2 landed.** The derive macro, `Bounded`, fixed `BvArray`,
+  and the counterexample→`#[test]` reproduction layer are implemented and green
+  (`cargo test -p axeyum-property -p axeyum-property-derive -p axeyum-consumer-bench`;
+  clippy pedantic `-D warnings`, fmt, and `cargo doc -D warnings` clean). New
+  public surface:
+  - `#[derive(Symbolic)]` (new `axeyum-property-derive` crate, re-exported) for
+    structs / tuple-structs of any arity — generates a lifetime-free
+    `<Name>Concrete` companion carrying the counterexample (the field
+    `Symbolic::Concrete` is referenced through `Symbolic<'static>` so the value
+    outlives the `Ctx` borrow). Tuple impls also widened to arity 6.
+  - `Bounded<const LO: i128, const HI: i128>` — a range-constrained `Int` that
+    auto-emits `LO <= x <= HI` via a new `Ctx` auto-assume channel drained by
+    `forall` (no manual precondition). `.value()` / `Deref` expose the `Int`.
+  - `BvArray<const EW: u32, const N: usize>` — fixed-length symbolic BV array over
+    `Sort::Array` (index width 32): static `get(i)`, symbolic `select(idx)`
+    (auto in-bounds guard `idx <u N`), functional `store`; counterexample lifts
+    to `[u128; N]`.
+  - `reproduce` module — `Witness` trait, `WitnessBinding`, `Reproduction`,
+    `render_reproduction_test(..)`; renders a runnable `#[test]` from a
+    counterexample. App-agnostic (EVM calldata / verify fn-args both consume it).
+  - Scoreboard widened 17→**28 cases**, **DISAGREE = 0**, Lean-cert coverage up
+    **8.3% → 25.0%** (5/20 proved) by adding QF_BV comparison theorems in the
+    reconstructable conjunct shape (`bv4-{ult,ule,slt}-*`, the derived XOR
+    identity).
+
 - **2026-06-25 — v0 landed.** The full v0 SDK is implemented and green
   (`cargo test -p axeyum-property`: 5 integration tests + 2 doc tests + 1
   `compile_fail` width-safety doc test; clippy `-D warnings` and `cargo doc
@@ -15,13 +40,18 @@ Live tracker for the bounded-property SDK (App B). See [PLAN.md](PLAN.md).
   asserted to genuinely wrap). A 4th proves a 2-bit comparison theorem that
   **carries a real standalone Lean module**.
 
-## Next actions (v1)
-1. `#[derive(Symbolic)]` for structs/tuples beyond arity 3; `Bounded<T,LO,HI>`
-   newtype that emits its range `assume` automatically.
-2. Counterexample → runnable `#[test]` codegen layer (shared with A/C).
-3. The construction-known graduated property corpus + `SCOREBOARD.md`
-   (proved-rate, fraction of `Proved` carrying a verified Lean cert, CE-found
-   rate; DISAGREE = 0).
+## Next actions (v2 remainder / consumer-side)
+1. **Wire the reproduce layer into A/C**: have `axeyum-evm` and `axeyum-verify`
+   build a `Witness` over their counterexample and emit a reproduction `#[test]`
+   (the SDK piece is done; the per-app glue is theirs).
+2. **UF inputs** (`v2`): a typed uninterpreted-function handle (`Sort::Func`)
+   over the IR's declared funcs, so a property can range over an abstract `f`.
+3. **Richer cert surfacing** (`v2`): expose the proof fragment / theory on
+   `Certificate` so the scoreboard can break Lean coverage down by fragment.
+4. **Push Lean coverage further**: the LIA/`Bounded` and array `should-prove`
+   rows still emit no Lean module (capped by the reconstructable fragment, U1/U4).
+   When the upstream reconstructor flattens internally / widens LIA, drop the
+   client-side `flatten_conjuncts` dance and re-measure.
 
 ## Capability gaps filed (solver-agent notes)
 - **`QF_BV` Lean reconstruction is shape-sensitive.** `prove_unsat_to_lean_module`

@@ -71,12 +71,17 @@ fn expand(input: &DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         lift_inits,
     } = collect_fields(input, &data.fields, vis, lt)?;
 
-    // Generic param lists. `bound` adds the `: Symbolic<#lt>` trait bound on type
-    // params; `def` keeps the const/type *definition* form (`const N: usize`)
-    // vs. the *use* form (`N`). The concrete companion re-uses the input's
-    // lifetime (its `Concrete` field types are written through `Symbolic<#lt>`),
-    // with a `PhantomData<&#lt ()>` marker so the lifetime is actually used.
-    let generics = |def: bool, bound: bool| {
+    // Generic param lists. `lt_prefix` prepends the struct lifetime (only the
+    // *impl* and Self type carry `'c`; the concrete companion is lifetime-free,
+    // its field types referencing `Symbolic<'static>::Concrete`). `bound` adds
+    // the `: Symbolic<#lt>` trait bound; `def` keeps the const definition form
+    // (`const N: usize`) vs. the use form (`N`).
+    let generics = |lt_prefix: bool, def: bool, bound: bool| {
+        let lts = if lt_prefix {
+            quote! { #lt, }
+        } else {
+            quote! {}
+        };
         let tps = type_params.iter().map(|p| {
             let id = &p.ident;
             if bound {
@@ -94,27 +99,34 @@ fn expand(input: &DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 quote! { #id }
             }
         });
-        quote! { #lt, #(#tps,)* #(#cps,)* }
+        quote! { #lts #(#tps,)* #(#cps,)* }
     };
-    let concrete_generics = generics(true, false);
-    let concrete_use_generics = generics(false, false);
-    let impl_generics = generics(true, true);
-    let self_use_generics = generics(false, false);
-    let marker_ty = quote! { ::core::marker::PhantomData<& #lt ()> };
+    // Concrete companion: lifetime-free (no `'c`), so its values outlive `Ctx`.
+    // It only has generics if the input carries type/const params; otherwise the
+    // angle brackets are omitted entirely.
+    let has_concrete_generics = !type_params.is_empty() || !const_params.is_empty();
+    let (concrete_def_generics, concrete_use_generics) = if has_concrete_generics {
+        let def = generics(false, true, false);
+        let used = generics(false, false, false);
+        (quote! { < #def > }, quote! { < #used > })
+    } else {
+        (quote! {}, quote! {})
+    };
+    // Impl + Self type: carry `'c`.
+    let impl_generics = generics(true, true, true);
+    let self_use_generics = generics(true, false, false);
 
     let concrete_struct = if is_named {
         quote! {
             #[derive(Debug, Clone, PartialEq)]
-            #vis struct #concrete_name < #concrete_generics > {
+            #vis struct #concrete_name #concrete_def_generics {
                 #(#concrete_field_defs,)*
-                #[doc(hidden)]
-                pub __axeyum_marker: #marker_ty,
             }
         }
     } else {
         quote! {
             #[derive(Debug, Clone, PartialEq)]
-            #vis struct #concrete_name < #concrete_generics > ( #(#concrete_field_defs,)* #[doc(hidden)] pub #marker_ty );
+            #vis struct #concrete_name #concrete_def_generics ( #(#concrete_field_defs,)* );
         }
     };
 
@@ -124,16 +136,16 @@ fn expand(input: &DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         quote! { Self( #(#fresh_inits,)* ) }
     };
     let lift_body = if is_named {
-        quote! { #concrete_name { #(#lift_inits,)* __axeyum_marker: ::core::marker::PhantomData } }
+        quote! { #concrete_name { #(#lift_inits,)* } }
     } else {
-        quote! { #concrete_name( #(#lift_inits,)* ::core::marker::PhantomData ) }
+        quote! { #concrete_name( #(#lift_inits,)* ) }
     };
 
     Ok(quote! {
         #concrete_struct
 
         impl < #impl_generics > ::axeyum_property::Symbolic<#lt> for #name < #self_use_generics > {
-            type Concrete = #concrete_name < #concrete_use_generics >;
+            type Concrete = #concrete_name #concrete_use_generics;
 
             fn fresh(ctx: & #lt ::axeyum_property::Ctx, slots: &mut ::std::vec::Vec<::axeyum_property::Slot>) -> Self {
                 #fresh_body
@@ -144,6 +156,49 @@ fn expand(input: &DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             }
         }
     })
+}
+
+/// Rewrites every occurrence of the lifetime `lt` (the struct's `'c`) to
+/// `'static` inside `ty`'s token stream. Used to express a field's
+/// lifetime-free `Symbolic::Concrete` (the associated type is the same for all
+/// `'c`, so substituting `'static` is sound and yields a `'static`-free type).
+fn subst_lifetime_to_static(ty: &syn::Type, lt: &Lifetime) -> proc_macro2::TokenStream {
+    use quote::ToTokens;
+    subst_lifetime_tokens(ty.to_token_stream(), &lt.ident)
+}
+
+fn subst_lifetime_tokens(
+    stream: proc_macro2::TokenStream,
+    target: &proc_macro2::Ident,
+) -> proc_macro2::TokenStream {
+    use proc_macro2::{TokenStream, TokenTree};
+    let mut out = TokenStream::new();
+    let mut iter = stream.into_iter().peekable();
+    while let Some(tt) = iter.next() {
+        match tt {
+            // A lifetime is two tokens: `'` (Punct, joint) then the ident. When
+            // the ident matches the struct lifetime, swap it for `static`.
+            TokenTree::Punct(ref p) if p.as_char() == '\'' => {
+                if let Some(TokenTree::Ident(id)) = iter.peek() {
+                    if id == target {
+                        out.extend(std::iter::once(tt));
+                        out.extend(quote::quote! { static });
+                        iter.next();
+                        continue;
+                    }
+                }
+                out.extend(std::iter::once(tt));
+            }
+            TokenTree::Group(g) => {
+                let inner = subst_lifetime_tokens(g.stream(), target);
+                let mut new_group = proc_macro2::Group::new(g.delimiter(), inner);
+                new_group.set_span(g.span());
+                out.extend(std::iter::once(TokenTree::Group(new_group)));
+            }
+            other => out.extend(std::iter::once(other)),
+        }
+    }
+    out
 }
 
 /// The per-field token fragments, in declaration order: the concrete-struct
@@ -183,7 +238,13 @@ fn collect_fields(
         lift_inits: Vec::new(),
     };
     for (ident, ty) in &field_iter {
-        let concrete_ty = quote! { <#ty as ::axeyum_property::Symbolic<#lt>>::Concrete };
+        // The concrete companion struct must be lifetime-free (a counterexample
+        // value outlives the `Ctx` borrow). The field's `Symbolic::Concrete` is
+        // the same for every `'c`, so we reference it with the struct lifetime
+        // rewritten to `'static` — yielding a `'static`-free concrete type, not
+        // one parameterised by `'c`.
+        let ty_static = subst_lifetime_to_static(ty, lt);
+        let concrete_ty = quote! { <#ty_static as ::axeyum_property::Symbolic<'static>>::Concrete };
         let fresh = quote! { <#ty as ::axeyum_property::Symbolic<#lt>>::fresh(ctx, slots) };
         let lift = quote! { <#ty as ::axeyum_property::Symbolic<#lt>>::lift(leaves) };
         if let Some(id) = ident {

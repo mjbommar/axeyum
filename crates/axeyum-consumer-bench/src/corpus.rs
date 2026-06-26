@@ -11,9 +11,18 @@
 
 use std::fmt;
 
-use axeyum_property::{Bv, Ctx, Int, Outcome, SolverError, property};
+use axeyum_property::{Bounded, Bv, BvArray, Ctx, Int, Outcome, SolverError, Symbolic, property};
 
 use crate::harness::{RunOutcome, Verdict};
+
+/// A derived 3-field struct input (exercises `#[derive(Symbolic)]` beyond the
+/// arity-3 *tuple* ceiling — and lifts a counterexample into `Triple3Concrete`).
+#[derive(Symbolic, Clone, Copy)]
+struct Triple3<'c> {
+    a: Bv<'c, 8>,
+    b: Bv<'c, 8>,
+    c: Bv<'c, 8>,
+}
 
 /// The construction-known true status of a corpus property.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -348,6 +357,155 @@ pub fn corpus() -> Vec<Case> {
                         .certificate(true)
                         .forall::<(Bv<8>, Bv<8>)>(ctx)
                         .check(|(a, b)| (a - b).ule(a))
+                })
+            },
+        },
+        // ---- v1: #[derive(Symbolic)] (structs beyond arity-3 tuples) ----
+        Case {
+            name: "derive-triple-xor-rearrange",
+            description: "derive(Symbolic) Triple3: (a^b)^c == a^(b^c) (XOR assoc), 8-bit",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<Triple3>(ctx)
+                        .check(|t| ((t.a ^ t.b) ^ t.c).equals(t.a ^ (t.b ^ t.c)))
+                })
+            },
+        },
+        Case {
+            name: "derive-triple-sum-zero-unguarded",
+            description: "derive(Symbolic) Triple3: a+b+c == 0 (no guard) — false, typed CE",
+            status: Status::ShouldFindCounterexample,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<Triple3>(ctx)
+                        .check(|t| (t.a + t.b + t.c).equals(Bv::lit(ctx, 0)))
+                })
+            },
+        },
+        // ---- v1: Bounded<LO, HI> (auto-emitted range assume, no manual pre) ----
+        Case {
+            name: "bounded-abs-nonneg",
+            description: "Bounded<-1000,1000>: |x| >= 0 (range assume emitted automatically)",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<Bounded<-1000, 1000>>(ctx)
+                        .check(|x| x.value().abs().ge(Int::lit(ctx, 0)))
+                })
+            },
+        },
+        Case {
+            name: "bounded-succ-gt-self",
+            description: "Bounded<0,100>: x + 1 > x (Sort::Int, no overflow)",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<Bounded<0, 100>>(ctx)
+                        .check(|x| (x.value() + Int::lit(ctx, 1)).gt(x.value()))
+                })
+            },
+        },
+        Case {
+            name: "bounded-off-by-one",
+            description: "Bounded<0,10>: x < 10 — false at the auto-assumed boundary x=10",
+            status: Status::ShouldFindCounterexample,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<Bounded<0, 10>>(ctx)
+                        .check(|x| x.value().lt(Int::lit(ctx, 10)))
+                })
+            },
+        },
+        // ---- v2: fixed BvArray<EW, N> (Sort::Array) + in-bounds indexing ----
+        Case {
+            name: "array-store-select-roundtrip",
+            description: "BvArray<8,4>: select(store(arr,i,v),i) == v (read-over-write)",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<(BvArray<8, 4>, Bv<32>, Bv<8>)>(ctx)
+                        .check(|(arr, i, v)| arr.store(i, v).select(i).equals(v))
+                })
+            },
+        },
+        Case {
+            name: "array-store-other-unchanged",
+            description: "BvArray<8,4>: i!=j => select(store(arr,i,v),j) == select(arr,j)",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<(BvArray<8, 4>, Bv<32>, Bv<32>, Bv<8>)>(ctx)
+                        .assuming(|(_arr, i, j, _v)| i.equals(j).negate())
+                        .check(|(arr, i, j, v)| arr.store(i, v).select(j).equals(arr.select(j)))
+                })
+            },
+        },
+        Case {
+            name: "array-elem0-eq-elem1-unguarded",
+            description: "BvArray<8,4>: arr[0] == arr[1] (no guard) — false, lifts to [u128;4]",
+            status: Status::ShouldFindCounterexample,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<BvArray<8, 4>>(ctx)
+                        .check(|arr| arr.get(0).equals(arr.get(1)))
+                })
+            },
+        },
+        // ---- Lean-cert frontier: QF_BV comparison theorems in the
+        // reconstructable shape (separate top-level conjuncts) ----
+        Case {
+            name: "bv4-ult-not-symmetric",
+            description: "Bv<4>: not(a <u b and b <u a) — emits a Lean module",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<(Bv<4>, Bv<4>)>(ctx)
+                        .check(|(a, b)| (a.ult(b) & b.ult(a)).negate())
+                })
+            },
+        },
+        Case {
+            name: "bv4-ule-ult-exclusive",
+            description: "Bv<4>: not(a <=u b and b <u a) — emits a Lean module",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<(Bv<4>, Bv<4>)>(ctx)
+                        .check(|(a, b)| (a.ule(b) & b.ult(a)).negate())
+                })
+            },
+        },
+        Case {
+            name: "bv4-slt-not-symmetric",
+            description: "Bv<4>: not(a <s b and b <s a) (signed) — emits a Lean module",
+            status: Status::ShouldProve,
+            run: || {
+                check(|ctx| {
+                    property()
+                        .certificate(true)
+                        .forall::<(Bv<4>, Bv<4>)>(ctx)
+                        .check(|(a, b)| (a.slt(b) & b.slt(a)).negate())
                 })
             },
         },

@@ -13,12 +13,12 @@
 
 | metric | value |
 | --- | --- |
-| cases | 17 |
-| proved | 12 (70.6%) |
-| counterexample | 5 (29.4%) |
+| cases | 28 |
+| proved | 20 (71.4%) |
+| counterexample | 8 (28.6%) |
 | unknown | 0 (0.0%) |
-| cert re-verified (of proved) | 12/12 |
-| **Lean-cert coverage** (verified Lean module / proved) | 1/12 (8.3%) |
+| cert re-verified (of proved) | 20/20 |
+| **Lean-cert coverage** (verified Lean module / proved) | 5/20 (25.0%) |
 | **DISAGREE** (hard soundness floor) | 0 |
 
 **DISAGREE = 0** — no axeyum verdict contradicts a construction-known status.
@@ -44,6 +44,17 @@
 | `bv8-mul-no-overflow-unguarded` | should-find-ce | counterexample | yes | - | - |
 | `int-add-pos-stays-pos` | should-find-ce | counterexample | yes | - | - |
 | `bv8-sub-no-borrow-unguarded` | should-find-ce | counterexample | yes | - | - |
+| `derive-triple-xor-rearrange` | should-prove | proved | yes | yes | yes |
+| `derive-triple-sum-zero-unguarded` | should-find-ce | counterexample | yes | - | - |
+| `bounded-abs-nonneg` | should-prove | proved | yes | yes | no |
+| `bounded-succ-gt-self` | should-prove | proved | yes | yes | no |
+| `bounded-off-by-one` | should-find-ce | counterexample | yes | - | - |
+| `array-store-select-roundtrip` | should-prove | proved | yes | yes | no |
+| `array-store-other-unchanged` | should-prove | proved | yes | yes | no |
+| `array-elem0-eq-elem1-unguarded` | should-find-ce | counterexample | yes | - | - |
+| `bv4-ult-not-symmetric` | should-prove | proved | yes | yes | yes |
+| `bv4-ule-ult-exclusive` | should-prove | proved | yes | yes | yes |
+| `bv4-slt-not-symmetric` | should-prove | proved | yes | yes | yes |
 
 ### Notes
 
