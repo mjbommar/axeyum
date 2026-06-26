@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 656 decided, 604 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 657 decided, 605 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **656 decided**,
-   **604 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **657 decided**,
+   **605 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -246,6 +246,13 @@ against competitor source, are now binding:
    **QF_AUFLIA 5/7 decided**, both with **unsupported=0** and **DISAGREE=0**.
    Remaining blockers: QF_ALIA `ios_np_sf`/`constarr3` lazy-extensionality replay
    incompletes, and QF_AUFLIA `bug330`/`bug337` scalar-search timeouts.
+   **QF_ALIA CONST-ARRAY STORE-CHAIN REFUTER LANDED (2026-06-26):**
+   finite write chains over different constant-array defaults on the infinite
+   `Int` index sort now produce a small rechecked unsat certificate. This closes
+   the cvc5 `constarr3` row and refreshes QF_ALIA to **5/6 decided (83.3%)**,
+   **unknown=1**, **unsupported=0**, **DISAGREE=0**, with PAR-2 mean **3.333 s**.
+   The only remaining QF_ALIA blocker is `ios_np_sf`, a store-chain/readback
+   contradiction that still needs arithmetic-backed index disequality reasoning.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

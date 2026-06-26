@@ -345,3 +345,49 @@ fn two_store_same_target_declines_when_one_branch_remains_possible() {
         CheckResult::Unsat => panic!("one remaining array-split branch should not refute"),
     }
 }
+
+#[test]
+fn const_array_store_chain_default_mismatch_refutes_constarr3() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress1__constarr3.smt2"
+    ))
+    .unwrap();
+
+    let result = check_auto(
+        &mut script.arena,
+        &script.assertions,
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert_eq!(result, CheckResult::Unsat);
+}
+
+#[test]
+fn const_array_store_chain_same_default_is_not_refuted() {
+    let mut script = parse_script(
+        r"
+        (set-logic QF_ALIA)
+        (declare-const all1 (Array Int Int))
+        (declare-const all2 (Array Int Int))
+        (declare-const aa (Array Int Int))
+        (declare-const bb (Array Int Int))
+        (declare-const i Int)
+        (declare-const j Int)
+        (assert (= all1 ((as const (Array Int Int)) 1)))
+        (assert (= aa (store all1 i 0)))
+        (assert (= all2 ((as const (Array Int Int)) 1)))
+        (assert (= bb (store all2 j 0)))
+        (assert (= aa bb))
+        (check-sat)
+    ",
+    )
+    .unwrap();
+
+    let result = check_auto(
+        &mut script.arena,
+        &script.assertions,
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert_ne!(result, CheckResult::Unsat);
+}

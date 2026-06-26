@@ -11,8 +11,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use axeyum_ir::{
-    ArrayValue, Assignment, FuncValue, GenericArrayValue, Op, Sort, SymbolId, TermArena, TermId,
-    TermNode, Value, eval, well_founded_default,
+    ArraySortKey, ArrayValue, Assignment, FuncValue, GenericArrayValue, Op, Sort, SymbolId,
+    TermArena, TermId, TermNode, Value, eval, well_founded_default,
 };
 use axeyum_rewrite::{ArrayElimError, ArrayElimination, eliminate_arrays};
 
@@ -495,6 +495,243 @@ pub fn check_qf_auflia_lazy_row(
 ) -> Result<CheckResult, SolverError> {
     let mut backend = UfliaDpllBackend;
     check_qf_abv_lazy_row(&mut backend, arena, assertions, config)
+}
+
+/// A checked refutation for finite write chains over two different constant
+/// arrays on an infinite (`Int`) index sort.
+///
+/// If `A = store(...((as const) d1)...)` and
+/// `B = store(...((as const) d2)...)` with `d1 != d2`, then `A = B` is
+/// impossible over `Int`: finitely many stores can affect only finitely many
+/// indices, so some index outside both write sets still reads `d1` from `A` and
+/// `d2` from `B`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstArrayDefaultMismatchCertificate {
+    /// The top-level equality assertion that forces the two arrays equal.
+    pub equality: TermId,
+    /// Left array after resolving top-level array definitions.
+    pub lhs_array: TermId,
+    /// Right array after resolving top-level array definitions.
+    pub rhs_array: TermId,
+    /// Left constant-array default value.
+    pub lhs_default: TermId,
+    /// Right constant-array default value.
+    pub rhs_default: TermId,
+    /// Number of finite stores above the left constant-array base.
+    pub lhs_writes: usize,
+    /// Number of finite stores above the right constant-array base.
+    pub rhs_writes: usize,
+}
+
+impl ConstArrayDefaultMismatchCertificate {
+    /// Re-derives the certificate from the original assertions.
+    #[must_use]
+    pub fn recheck(&self, arena: &TermArena, assertions: &[TermId]) -> bool {
+        const_array_default_mismatch_refutation(arena, assertions).as_ref() == Some(self)
+    }
+}
+
+/// Returns a certificate for the constant-array finite-write mismatch described
+/// by [`ConstArrayDefaultMismatchCertificate`], if present.
+#[must_use]
+pub fn const_array_default_mismatch_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<ConstArrayDefaultMismatchCertificate> {
+    const_array_default_mismatch_refutation_within(arena, assertions, None)
+}
+
+pub fn const_array_default_mismatch_refutation_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<ConstArrayDefaultMismatchCertificate> {
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        if past_deadline(deadline) {
+            return None;
+        }
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+    }
+
+    let defs = collect_array_symbol_definitions(arena, &conjuncts);
+    for equality in conjuncts {
+        if past_deadline(deadline) {
+            return None;
+        }
+        let Some((lhs, rhs)) = array_equality(arena, equality) else {
+            continue;
+        };
+        let lhs_array = resolve_array_definition(arena, lhs, &defs);
+        let rhs_array = resolve_array_definition(arena, rhs, &defs);
+        let Some(lhs_chain) = const_store_chain(arena, lhs_array, deadline) else {
+            continue;
+        };
+        let Some(rhs_chain) = const_store_chain(arena, rhs_array, deadline) else {
+            continue;
+        };
+        if lhs_chain.index != ArraySortKey::Int
+            || rhs_chain.index != ArraySortKey::Int
+            || arena.sort_of(lhs_array) != arena.sort_of(rhs_array)
+        {
+            continue;
+        }
+        if ground_constants_differ(arena, lhs_chain.default, rhs_chain.default) {
+            return Some(ConstArrayDefaultMismatchCertificate {
+                equality,
+                lhs_array,
+                rhs_array,
+                lhs_default: lhs_chain.default,
+                rhs_default: rhs_chain.default,
+                lhs_writes: lhs_chain.writes,
+                rhs_writes: rhs_chain.writes,
+            });
+        }
+    }
+    None
+}
+
+#[derive(Clone, Copy)]
+struct ConstStoreChain {
+    index: ArraySortKey,
+    default: TermId,
+    writes: usize,
+}
+
+fn collect_array_symbol_definitions(
+    arena: &TermArena,
+    conjuncts: &[TermId],
+) -> HashMap<SymbolId, Option<TermId>> {
+    let mut defs = HashMap::new();
+    for &conjunct in conjuncts {
+        let Some((lhs, rhs)) = array_equality(arena, conjunct) else {
+            continue;
+        };
+        collect_array_symbol_definition_side(arena, &mut defs, lhs, rhs);
+        collect_array_symbol_definition_side(arena, &mut defs, rhs, lhs);
+    }
+    defs
+}
+
+fn collect_array_symbol_definition_side(
+    arena: &TermArena,
+    defs: &mut HashMap<SymbolId, Option<TermId>>,
+    lhs: TermId,
+    rhs: TermId,
+) {
+    let TermNode::Symbol(symbol) = arena.node(lhs) else {
+        return;
+    };
+    if !matches!(arena.sort_of(lhs), Sort::Array { .. }) || arena.sort_of(lhs) != arena.sort_of(rhs)
+    {
+        return;
+    }
+    if matches!(arena.node(rhs), TermNode::Symbol(_)) {
+        return;
+    }
+    match defs.get_mut(symbol) {
+        Some(slot) if *slot == Some(rhs) => {}
+        Some(slot) => *slot = None,
+        None => {
+            defs.insert(*symbol, Some(rhs));
+        }
+    }
+}
+
+fn resolve_array_definition(
+    arena: &TermArena,
+    mut term: TermId,
+    defs: &HashMap<SymbolId, Option<TermId>>,
+) -> TermId {
+    let mut seen = HashSet::new();
+    loop {
+        let TermNode::Symbol(symbol) = arena.node(term) else {
+            return term;
+        };
+        if !seen.insert(*symbol) {
+            return term;
+        }
+        match defs.get(symbol).copied().flatten() {
+            Some(next) => term = next,
+            None => return term,
+        }
+    }
+}
+
+fn array_equality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    let [lhs, rhs] = &**args else {
+        return None;
+    };
+    if matches!(arena.sort_of(*lhs), Sort::Array { .. })
+        && arena.sort_of(*lhs) == arena.sort_of(*rhs)
+    {
+        Some((*lhs, *rhs))
+    } else {
+        None
+    }
+}
+
+fn const_store_chain(
+    arena: &TermArena,
+    term: TermId,
+    deadline: Option<Instant>,
+) -> Option<ConstStoreChain> {
+    if past_deadline(deadline) {
+        return None;
+    }
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::ConstArray { index },
+            args,
+        } => {
+            let [default] = &**args else {
+                return None;
+            };
+            Some(ConstStoreChain {
+                index: *index,
+                default: *default,
+                writes: 0,
+            })
+        }
+        TermNode::App {
+            op: Op::Store,
+            args,
+        } => {
+            let [base, _idx, _value] = &**args else {
+                return None;
+            };
+            let mut chain = const_store_chain(arena, *base, deadline)?;
+            chain.writes = chain.writes.checked_add(1)?;
+            Some(chain)
+        }
+        _ => None,
+    }
+}
+
+fn ground_constants_differ(arena: &TermArena, lhs: TermId, rhs: TermId) -> bool {
+    if lhs == rhs || arena.sort_of(lhs) != arena.sort_of(rhs) {
+        return false;
+    }
+    match (arena.node(lhs), arena.node(rhs)) {
+        (TermNode::BoolConst(a), TermNode::BoolConst(b)) => a != b,
+        (
+            TermNode::BvConst {
+                width: wa,
+                value: va,
+            },
+            TermNode::BvConst {
+                width: wb,
+                value: vb,
+            },
+        ) => wa == wb && va != vb,
+        (TermNode::WideBvConst(a), TermNode::WideBvConst(b)) => a != b,
+        (TermNode::IntConst(a), TermNode::IntConst(b)) => a != b,
+        (TermNode::RealConst(a), TermNode::RealConst(b)) => a != b,
+        _ => false,
+    }
 }
 
 /// Sound UNSAT refuter for the Stump-Barrett-Dill-Levitt store disjunction:
@@ -2592,7 +2829,8 @@ pub fn certify_array_elim_unsat(
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {
     use super::{
-        check_qf_abv_lazy, check_with_array_elimination, prove_unsat_by_symmetric_swap_chain,
+        check_qf_abv_lazy, check_with_array_elimination, const_array_default_mismatch_refutation,
+        prove_unsat_by_symmetric_swap_chain,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -2710,6 +2948,23 @@ mod tests {
         assert!(
             prove_unsat_by_symmetric_swap_chain(&script.arena, &script.assertions),
             "expected the structural swap-chain refuter to close the real cvc5 regression"
+        );
+    }
+
+    #[test]
+    fn const_array_default_mismatch_certificate_rechecks_constarr3() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress1__constarr3.smt2"
+        ))
+        .unwrap();
+
+        let cert = const_array_default_mismatch_refutation(&script.arena, &script.assertions)
+            .expect("constarr3 has finite writes over different constant defaults");
+        assert_eq!(cert.lhs_writes, 1);
+        assert_eq!(cert.rhs_writes, 1);
+        assert!(
+            cert.recheck(&script.arena, &script.assertions),
+            "certificate must rederive from the original assertions"
         );
     }
 
