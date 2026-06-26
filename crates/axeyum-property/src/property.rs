@@ -30,18 +30,53 @@ pub struct Slot {
     kind: SlotKind,
 }
 
+impl Slot {
+    /// Crate-internal: a scalar BV / Int / Bool leaf slot.
+    pub(crate) fn bv(sym: SymbolId) -> Self {
+        Self {
+            sym,
+            kind: SlotKind::Bv,
+        }
+    }
+    pub(crate) fn int(sym: SymbolId) -> Self {
+        Self {
+            sym,
+            kind: SlotKind::Int,
+        }
+    }
+    pub(crate) fn bool(sym: SymbolId) -> Self {
+        Self {
+            sym,
+            kind: SlotKind::Bool,
+        }
+    }
+    /// Crate-internal: a fixed-length BV-array leaf slot (`len` logical elements).
+    pub(crate) fn array(sym: SymbolId, len: usize) -> Self {
+        Self {
+            sym,
+            kind: SlotKind::Array { len },
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 enum SlotKind {
     Bv,
     Int,
     Bool,
+    /// A fixed-length BV array: read entries `0..len` out of the model into a
+    /// `Vec<u128>` (one per logical element).
+    Array {
+        /// Number of logical elements to read back.
+        len: usize,
+    },
 }
 
 /// The lifted, concrete value of a single symbolic input, decoded from a model.
 ///
 /// This is the leaf the [`Symbolic::lift`] reconstruction is built from; users
 /// receive a fully-typed `T` (e.g. a tuple of these), not this enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Lifted {
     /// A bit-vector input as `(width, value)`.
     Bv {
@@ -54,6 +89,8 @@ pub enum Lifted {
     Int(i128),
     /// A Boolean input.
     Bool(bool),
+    /// A fixed-length BV array, read back as its logical elements `0..len`.
+    Array(Vec<u128>),
 }
 
 /// A symbolic input type: knows how to declare fresh solver symbols (the
@@ -82,10 +119,7 @@ impl<'c, const W: u32> Symbolic<'c> for Bv<'c, W> {
 
     fn fresh(ctx: &'c Ctx, slots: &mut Vec<Slot>) -> Self {
         let (sym, term) = ctx.declare_bv(W);
-        slots.push(Slot {
-            sym,
-            kind: SlotKind::Bv,
-        });
+        slots.push(Slot::bv(sym));
         Bv::wrap(ctx, term)
     }
 
@@ -102,10 +136,7 @@ impl<'c> Symbolic<'c> for Int<'c> {
 
     fn fresh(ctx: &'c Ctx, slots: &mut Vec<Slot>) -> Self {
         let (sym, term) = ctx.declare_int();
-        slots.push(Slot {
-            sym,
-            kind: SlotKind::Int,
-        });
+        slots.push(Slot::int(sym));
         Int::wrap(ctx, term)
     }
 
@@ -122,10 +153,7 @@ impl<'c> Symbolic<'c> for Bool<'c> {
 
     fn fresh(ctx: &'c Ctx, slots: &mut Vec<Slot>) -> Self {
         let (sym, term) = ctx.declare_bool();
-        slots.push(Slot {
-            sym,
-            kind: SlotKind::Bool,
-        });
+        slots.push(Slot::bool(sym));
         Bool::wrap(ctx, term)
     }
 
@@ -283,11 +311,15 @@ impl PropertyBuilder {
     pub fn forall<'c, T: Symbolic<'c>>(self, ctx: &'c Ctx) -> Forall<'c, T> {
         let mut slots = Vec::new();
         let inputs = T::fresh(ctx, &mut slots);
+        // `Bounded` / array inputs register their range / in-bounds guards during
+        // `fresh`; drain them here so they become hypotheses automatically — the
+        // user never writes those preconditions by hand.
+        let hypotheses = ctx.take_auto_assumes();
         Forall {
             ctx,
             inputs,
             slots,
-            hypotheses: Vec::new(),
+            hypotheses,
             builder: self,
             _marker: PhantomData,
         }
@@ -444,5 +476,15 @@ fn lift_slot(model: &axeyum_solver::Model, slot: Slot) -> Lifted {
         },
         SlotKind::Int => Lifted::Int(value.as_ref().and_then(Value::as_int).unwrap_or(0)),
         SlotKind::Bool => Lifted::Bool(value.as_ref().and_then(Value::as_bool).unwrap_or(false)),
+        SlotKind::Array { len } => {
+            // Read logical elements `0..len` from the model's array value. A
+            // don't-care array (unpinned) decodes to all-zeros of the right
+            // length — any concrete array witnesses the counterexample.
+            let elems = match value.as_ref().and_then(Value::as_array) {
+                Some(arr) => (0..len as u128).map(|i| arr.select(i)).collect(),
+                None => vec![0u128; len],
+            };
+            Lifted::Array(elems)
+        }
     }
 }

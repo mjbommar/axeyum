@@ -15,6 +15,7 @@ members = [
     "crates/axeyum-smtlib",
     "crates/axeyum-solver",
     "crates/axeyum-property",
+    "crates/axeyum-property-derive",
     "crates/axeyum-consumer-bench",
     "crates/axeyum-evm",
     "crates/axeyum-verify",

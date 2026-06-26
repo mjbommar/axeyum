@@ -21,6 +21,11 @@ use axeyum_ir::{SymbolId, TermArena, TermId};
 pub struct Ctx {
     arena: RefCell<TermArena>,
     next_id: Cell<u64>,
+    /// Range/index constraints a [`crate::Symbolic::fresh`] implementation emits
+    /// for itself (e.g. `Bounded`'s range, an array index's in-bounds guard).
+    /// Drained into the property's hypotheses by `forall`, so the user never
+    /// writes those preconditions by hand.
+    auto_assumes: RefCell<Vec<TermId>>,
 }
 
 impl Ctx {
@@ -30,7 +35,20 @@ impl Ctx {
         Self {
             arena: RefCell::new(TermArena::new()),
             next_id: Cell::new(0),
+            auto_assumes: RefCell::new(Vec::new()),
         }
+    }
+
+    /// Records a Boolean constraint that a `Symbolic::fresh` wants conjoined into
+    /// the property's hypotheses automatically (the `Bounded` / array-index
+    /// auto-assume channel). Drained by [`Ctx::take_auto_assumes`].
+    pub(crate) fn push_auto_assume(&self, term: TermId) {
+        self.auto_assumes.borrow_mut().push(term);
+    }
+
+    /// Drains and returns all pending auto-assume constraints (in push order).
+    pub(crate) fn take_auto_assumes(&self) -> Vec<TermId> {
+        std::mem::take(&mut self.auto_assumes.borrow_mut())
     }
 
     /// A process-stable, monotonically increasing suffix for auto-named symbols
@@ -73,6 +91,18 @@ impl Ctx {
         let sym = arena
             .declare(&name, axeyum_ir::Sort::Bool)
             .expect("fresh Boolean declaration is well-formed");
+        let term = arena.var(sym);
+        (sym, term)
+    }
+
+    /// Declares a fresh, uniquely-named BV array symbol mapping
+    /// `BitVec(index) -> BitVec(element)` and returns its `(SymbolId, TermId)`.
+    pub(crate) fn declare_array(&self, index: u32, element: u32) -> (SymbolId, TermId) {
+        let name = format!("arr{index}x{element}!{}", self.fresh_suffix());
+        let mut arena = self.arena.borrow_mut();
+        let sym = arena
+            .declare(&name, axeyum_ir::Sort::Array { index, element })
+            .expect("fresh array declaration is well-formed");
         let term = arena.var(sym);
         (sym, term)
     }

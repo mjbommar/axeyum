@@ -35,13 +35,28 @@
 //! ```
 #![forbid(unsafe_code)]
 
+mod array;
+mod bounded;
 mod ctx;
 mod handle;
 mod property;
+mod reproduce;
 
+pub use array::BvArray;
+pub use bounded::Bounded;
 pub use ctx::Ctx;
 pub use handle::{Bool, Bv, Int};
 pub use property::{Certificate, Forall, Lifted, Outcome, PropertyBuilder, Slot, Symbolic};
+pub use reproduce::{Reproduction, Witness, WitnessBinding, render_reproduction_test};
+
+/// `#[derive(Symbolic)]` — declare a fresh symbolic value per struct field and
+/// lift a model back into a typed concrete struct. See [`Symbolic`].
+///
+/// Lifts the arity-3 tuple ceiling: any struct of `Symbolic` fields becomes a
+/// property input type, with a generated `<Name>Concrete` carrying the
+/// counterexample. The struct must have exactly one lifetime parameter (the
+/// [`Ctx`] borrow).
+pub use axeyum_property_derive::Symbolic;
 
 // Re-export the solver types that appear in the public surface so consumers need
 // not depend on `axeyum-solver` directly for them.

@@ -125,7 +125,17 @@ name = "axeyum-property"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "axeyum-property-derive",
  "axeyum-solver",
+]
+
+[[package]]
+name = "axeyum-property-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

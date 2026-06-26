@@ -14,6 +14,7 @@ publish = false
 [dependencies]
 axeyum-ir.workspace = true
 axeyum-solver = { path = "../axeyum-solver" }
+axeyum-property-derive = { path = "../axeyum-property-derive" }
 
 [lints]
 workspace = true
