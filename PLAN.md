@@ -466,6 +466,14 @@ against competitor source, are now binding:
    pins the policy that once a candidate exposes any violated congruence pair,
    every currently equal-argument pair in that candidate is batched, including
    pairs whose result values already agree.
+   **IMPLICATION FLATTENING REJECTED (2026-06-26):**
+   flattening arithmetic-guarded UF implications such as
+   `((a <= b) ∧ (b <= a)) => result_eq` into flat disjunctions was measured and
+   rejected. Although logically equivalent and smaller in auxiliary Boolean
+   variables, it changed SAT search shape enough that both generated QF_UFLIA
+   1 s rows lost the first UF candidate (**0** candidates, **0** UF lemmas).
+   The code now documents why the implication shape is intentionally preserved;
+   the retained baseline stays **1** candidate / **6** UF lemmas at 1 s.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

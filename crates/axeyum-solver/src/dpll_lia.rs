@@ -2359,6 +2359,10 @@ impl ArithAbstractor {
             Some(true) => Ok(arena.bool_const(true)),
             Some(false) => Self::negate_abstracted(arena, a),
             None if a == b => Ok(arena.bool_const(true)),
+            // Keep the implication shape instead of flattening `(a1 ∧ a2) => b`
+            // to `¬a1 ∨ ¬a2 ∨ b`: the flatter form is logically equivalent, but
+            // on the generated QF_UFLIA overbound rows it loses the first 1 s UF
+            // candidate by changing SAT search shape.
             None => Ok(arena.implies(a, b)?),
         }
     }
