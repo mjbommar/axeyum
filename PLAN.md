@@ -1998,8 +1998,10 @@ not a feature checklist — and the next phase is depth + evidence, not more see
   bound before adding a feature that can blow up.
 - Every `sat` replay-checks; every new `unsat` route gets an independent checker
   or an explicit, ledgered trust note.
-- **Build caps:** `CARGO_BUILD_JOBS=4` / `-j4`. Default 16-way parallelism and
-  high-`--jobs` benches OOM-kill this host. **Run test/build/bench under the 64 GiB
+- **Build caps:** use `CARGO_BUILD_JOBS=2` and `-j1` for solver/bench work on
+  this host; `CARGO_BUILD_JOBS=4` / `-j4` is an upper cap, not the default.
+  Default 16-way parallelism and high-`--jobs` benches OOM-kill this host.
+  **Run test/build/bench under the 64 GiB
   memory cap** — `scripts/mem-run.sh <cmd>` (or `just test-guarded`) applies a
   `ulimit -v` so a runaway allocation aborts *that process* instead of OOM-killing
   the host. Override the cap with `MEM_LIMIT_GB=N`.

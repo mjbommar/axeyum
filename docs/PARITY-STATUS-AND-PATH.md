@@ -485,6 +485,14 @@ a named mechanism.**
    direct PBLS-array hook; it is a replay-gated branch-schedule/model
    constructor for the queue-lock transition shape, SAT relevance in the large
    scalar skeleton, or finite UF-table/model search for `bug330`.
+   **Lazy-extensionality telemetry landed later 2026-06-26:** the same `bug337`
+   row now reports a concrete refinement state at timeout: **round=2**,
+   **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+   **cong_lemmas=6973**, **diff_skolems=146**, and
+   **working_assertions=7127**. The blocker is therefore materialized-site and
+   congruence explosion before a replayable model, not an opaque scalar timeout.
+   Next work should be SAT relevance / site admission / queue-lock model
+   construction, not broader timeout or local-search knobs.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

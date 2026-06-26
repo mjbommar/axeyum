@@ -2871,6 +2871,47 @@ fn ext_unknown(detail: String) -> CheckResult {
     })
 }
 
+#[derive(Clone, Copy)]
+struct ExtProgress<'a> {
+    round: usize,
+    ctx: &'a RowCtx,
+    row_lemmas: usize,
+    cong_lemmas: usize,
+    diff_skolems: usize,
+    working_assertions: usize,
+}
+
+impl ExtProgress<'_> {
+    fn fields(self) -> String {
+        format!(
+            "round={}, sites={}, array_eq_atoms={}, row_lemmas={}, cong_lemmas={}, \
+             diff_skolems={}, working_assertions={}",
+            self.round,
+            self.ctx.sites.len(),
+            self.ctx.eq_atoms.len(),
+            self.row_lemmas,
+            self.cong_lemmas,
+            self.diff_skolems,
+            self.working_assertions
+        )
+    }
+}
+
+fn ext_unknown_with_progress(detail: &str, progress: ExtProgress<'_>) -> CheckResult {
+    ext_unknown(format!("{detail} ({})", progress.fields()))
+}
+
+fn ext_contextual_unknown(
+    context: &str,
+    progress: ExtProgress<'_>,
+    reason: &UnknownReason,
+) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: reason.kind,
+        detail: format!("{context} ({}): {}", progress.fields(), reason.detail),
+    })
+}
+
 /// Decides a `QF_ABV` query carrying a **true array (dis)equality** — an array
 /// equality `a = b` (or its negation) between two array terms *neither* of which
 /// is an inlinable variable definition — via **lazy extensionality** (CEGAR):
@@ -2985,20 +3026,32 @@ fn ext_cegar_loop<B: SolverBackend>(
 
     for round in 0..MAX_ROW_ROUNDS {
         if past_deadline(deadline) {
-            return Ok(ext_unknown(
-                "lazy-extensionality deadline exceeded before refinement converged".to_owned(),
+            return Ok(ext_unknown_with_progress(
+                "lazy-extensionality deadline exceeded before refinement converged",
+                ExtProgress {
+                    round,
+                    ctx,
+                    row_lemmas: added_row.len(),
+                    cong_lemmas: added_cong.len(),
+                    diff_skolems,
+                    working_assertions: working.len(),
+                },
             ));
         }
         let round_config = config_with_remaining_deadline(config, deadline);
         let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => {
-                return Ok(contextual_unknown(
+                return Ok(ext_contextual_unknown(
                     "lazy-extensionality scalar backend declined",
-                    round,
-                    ctx.sites.len(),
-                    added_row.len(),
-                    added_cong.len(),
+                    ExtProgress {
+                        round,
+                        ctx,
+                        row_lemmas: added_row.len(),
+                        cong_lemmas: added_cong.len(),
+                        diff_skolems,
+                        working_assertions: working.len(),
+                    },
                     &reason,
                 ));
             }
@@ -3027,9 +3080,17 @@ fn ext_cegar_loop<B: SolverBackend>(
         }
     }
 
-    Ok(ext_unknown(format!(
-        "lazy-extensionality refinement did not converge within {MAX_ROW_ROUNDS} rounds"
-    )))
+    Ok(ext_unknown_with_progress(
+        &format!("lazy-extensionality refinement did not converge within {MAX_ROW_ROUNDS} rounds"),
+        ExtProgress {
+            round: MAX_ROW_ROUNDS,
+            ctx,
+            row_lemmas: added_row.len(),
+            cong_lemmas: added_cong.len(),
+            diff_skolems,
+            working_assertions: working.len(),
+        },
+    ))
 }
 
 /// Adds every ROW / read-over-read-congruence lemma the candidate violates,

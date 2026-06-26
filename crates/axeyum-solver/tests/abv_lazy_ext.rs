@@ -11,6 +11,8 @@
 // `abv_lazy_row.rs` test modules.
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
+use std::time::Duration;
+
 use axeyum_ir::{TermArena, TermId, Value, eval};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
@@ -185,6 +187,53 @@ fn extensionality_eq_then_read_sat_replays() {
         panic!("expected SAT (i=j,v=w is a model), got {result:?}");
     };
     assert_replays(&model, &arena, &originals);
+}
+
+#[test]
+fn lazy_ext_timeout_reports_refinement_counters() {
+    // The structural equality between two wide-index store terms forces the lazy
+    // extensionality path (not variable-definition ROW). With an already-expired
+    // timeout it should return a telemetry-rich decline before solving.
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 16, 8).unwrap();
+    let b = arena.array_var("b", 16, 8).unwrap();
+    let i = arena.bv_var("i", 16).unwrap();
+    let v = arena.bv_var("v", 8).unwrap();
+    let w = arena.bv_var("w", 8).unwrap();
+    let lhs = arena.store(a, i, v).unwrap();
+    let rhs = arena.store(b, i, w).unwrap();
+    let eq = arena.eq(lhs, rhs).unwrap();
+    let originals = [eq];
+
+    let mut backend = SatBvBackend::new();
+    let config = SolverConfig::default().with_timeout(Duration::ZERO);
+    let result = check_qf_abv_lazy_row(&mut backend, &mut arena, &originals, &config).unwrap();
+    let CheckResult::Unknown(reason) = result else {
+        panic!("expected lazy-ext timeout unknown, got {result:?}");
+    };
+
+    assert!(
+        reason
+            .detail
+            .contains("lazy-extensionality deadline exceeded before refinement converged"),
+        "unexpected unknown detail: {}",
+        reason.detail
+    );
+    for field in [
+        "round=0",
+        "sites=",
+        "array_eq_atoms=1",
+        "row_lemmas=0",
+        "cong_lemmas=0",
+        "diff_skolems=0",
+        "working_assertions=",
+    ] {
+        assert!(
+            reason.detail.contains(field),
+            "missing `{field}` in unknown detail: {}",
+            reason.detail
+        );
+    }
 }
 
 #[test]
