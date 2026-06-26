@@ -6,6 +6,28 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA `bug337` direct PBLS-array probe rejected.**
+  After the QF_AX closure, the next measured frontier is still QF_AUFLIA
+  `bug330`/`bug337`. I tested a replay-gated direct local-search path on the
+  pure Int-array `bug337` queue-lock row: admitting `(Array Int Int)` variables
+  into PBLS, defaulting arrays, adding direct `select(a,i)=v` store repairs, and
+  trying a 5 s pre-array-route probe. The diagnostic probe flattened the file to
+  237 conjuncts but still timed out (`Unknown`, 1791 flips in 5 s). A temporary
+  5 s scalar-abstraction local-search budget also failed: it only moved the
+  route to a lazy-extensionality deadline after roughly 15.6 s, still `unknown`.
+  No solver code was kept or committed from this experiment. **Next:** do not
+  repeat a generic direct PBLS-array hook for `bug337`; the practical AUFLIA
+  paths are a replay-gated branch-schedule/model constructor for the queue-lock
+  transition shape, SAT relevance in the large scalar skeleton, or finite
+  UF-table/model search for `bug330`.
+  Diagnostics before revert:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test int_array_sort debug_bug337_array_local_search_probe -j1 -- --ignored --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+  Verification on the retained tree passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver -j1`;
+  `git diff --check`.
+
 - **Session 2026-06-26 — QF_AX declared-sort SAT rows closed.**
   Routed pure declared-sort QF_AX arrays through the existing lazy
   ROW/extensionality CEGAR with the replaying EUF e-graph as the scalar

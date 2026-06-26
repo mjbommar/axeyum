@@ -318,6 +318,17 @@ against competitor source, are now binding:
    5/5 (100.0%)**, with **mismatches=0**, **audit_errors=0**, and
    **timeouts=0**. QF_AX is closed for this small cvc5 slice; next array work is
    AUFLIA scalar-search depth and broader neutral QF_AX/non-BV-array corpora.
+   **AUFLIA `bug337` DIRECT PBLS-ARRAY PROBE REJECTED (2026-06-26):**
+   a replay-gated experiment admitted `(Array Int Int)` variables into PBLS,
+   defaulted arrays, added direct `select(a,i)=v` store repairs, and tried a 5 s
+   pure Int-array local-search probe before the array route. It flattened
+   `bug337` to 237 conjuncts but still timed out (`Unknown`, 1791 flips in 5 s).
+   A temporary 5 s scalar-abstraction local-search budget also failed, merely
+   moving the route to a lazy-extensionality deadline after roughly 15.6 s. No
+   solver change was retained. The next useful AUFLIA move is a replay-gated
+   branch-schedule/model constructor for the queue-lock transition shape, SAT
+   relevance in the large scalar skeleton, or finite UF-table/model search for
+   `bug330` — not a generic direct PBLS-array hook.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

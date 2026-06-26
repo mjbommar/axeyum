@@ -473,6 +473,17 @@ a named mechanism.**
    **0.004 s**, and the exact audit is **8/8 dominant**, Lean unsat **5/5**.
    QF_AX is closed for this small cvc5 slice; broader neutral QF_AX/non-BV-array
    corpora remain the honest breadth test.
+   **AUFLIA `bug337` direct PBLS-array probe rejected later 2026-06-26:** a
+   replay-gated experiment admitted `(Array Int Int)` variables into PBLS,
+   defaulted arrays, added direct `select(a,i)=v` store repairs, and tried a 5 s
+   pure Int-array local-search probe before the array route. It flattened
+   `bug337` to 237 conjuncts but still timed out (`Unknown`, 1791 flips in 5 s).
+   A temporary 5 s scalar-abstraction local-search budget also failed, merely
+   moving the route to a lazy-extensionality deadline after roughly 15.6 s. No
+   solver change was retained. The next useful AUFLIA move is not a generic
+   direct PBLS-array hook; it is a replay-gated branch-schedule/model
+   constructor for the queue-lock transition shape, SAT relevance in the large
+   scalar skeleton, or finite UF-table/model search for `bug330`.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
