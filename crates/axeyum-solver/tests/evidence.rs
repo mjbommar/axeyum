@@ -404,6 +404,54 @@ fn qf_uf_boolean_euf_rows_use_checked_exhaustive_evidence() {
 }
 
 #[test]
+fn qf_uf_overbound_rows_use_checked_online_euf_evidence() {
+    for (tag, input) in [
+        (
+            "cnf_abc",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress0__uf__cnf_abc.smt2"
+            ),
+        ),
+        (
+            "proof00",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress1__proof00.smt2"
+            ),
+        ),
+        (
+            "macro_res_exp",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress1__proofs__macro-res-exp-crowding-lit-inside-unit.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UF overbound row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: produce evidence failed: {error}"));
+        let Evidence::UnsatBoolEufOnline(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected online Boolean-EUF evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert!(
+            cert.atoms > 16,
+            "{tag}: expected large Boolean-EUF skeleton"
+        );
+        assert!(report.evidence.is_certified(), "{tag}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: online Boolean-EUF certificate should be checked directly"
+        );
+    }
+}
+
+#[test]
 fn qf_uf_bug303_uses_checked_uf_arith_congruence_evidence() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2"

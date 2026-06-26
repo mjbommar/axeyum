@@ -51,7 +51,7 @@ use crate::array_write_chain::AlignedWriteChainCommutationCertificate;
 use crate::array_xor_swap::{TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate};
 use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast, solve};
 use crate::backend::{CheckResult, SolverBackend, SolverConfig, SolverError, UnknownReason};
-use crate::bool_euf::BoolEufExhaustiveCertificate;
+use crate::bool_euf::{BoolEufExhaustiveCertificate, BoolEufOnlineCertificate};
 use crate::bool_simplify::BoolSimplificationRefutationCertificate;
 use crate::bv_defined_enum::BvDefinedEnumRefutationCertificate;
 use crate::bv_forall_nonconstant::BvForallNonconstantRefutationCertificate;
@@ -376,6 +376,10 @@ pub enum Evidence {
     /// checker enumerates satisfying Boolean assignments to equality atoms and
     /// re-runs congruence closure on each induced equality/disequality core.
     UnsatBoolEufExhaustive(BoolEufExhaustiveCertificate),
+    /// Unsatisfiable (`QF_UF`): a larger Boolean-structured EUF refutation. The
+    /// checker re-runs the deterministic online EUF DPLL(T) refuter over the
+    /// original assertions and accepts only if it returns `unsat`.
+    UnsatBoolEufOnline(BoolEufOnlineCertificate),
     /// Unsatisfiable (`QF_UFLIA`): congruence over mixed uninterpreted sorts
     /// derives arithmetic equalities, then checked arithmetic DPLL refutes the
     /// retained Boolean-structured linear-arithmetic residual.
@@ -588,6 +592,7 @@ impl Evidence {
             Evidence::UnsatFiniteDomainPigeonhole(_)
             | Evidence::UnsatBoolUfExhaustive(_)
             | Evidence::UnsatBoolEufExhaustive(_)
+            | Evidence::UnsatBoolEufOnline(_)
             | Evidence::UnsatUfArithCongruence(_)
             | Evidence::UnsatDatatypeStructural(_)
             | Evidence::UnsatFiniteArrayExtensionality(_)
@@ -641,6 +646,7 @@ impl Evidence {
                 | Evidence::UnsatFiniteDomainPigeonhole(_)
                 | Evidence::UnsatBoolUfExhaustive(_)
                 | Evidence::UnsatBoolEufExhaustive(_)
+                | Evidence::UnsatBoolEufOnline(_)
                 | Evidence::UnsatUfArithCongruence(_)
                 | Evidence::UnsatDatatypeStructural(_)
                 | Evidence::UnsatFiniteArrayExtensionality(_)
@@ -674,6 +680,9 @@ fn check_direct_structural_evidence(
         }
         Evidence::UnsatBoolEufExhaustive(cert) => {
             check_bool_euf_exhaustive_evidence(arena, assertions, cert)
+        }
+        Evidence::UnsatBoolEufOnline(cert) => {
+            check_bool_euf_online_evidence(arena, assertions, *cert)
         }
         Evidence::UnsatUfArithCongruence(cert) => {
             check_uf_arith_congruence_evidence(arena, assertions, cert)
@@ -754,6 +763,15 @@ fn check_bool_euf_exhaustive_evidence(
 ) -> bool {
     crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_bool_euf_online_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: BoolEufOnlineCertificate,
+) -> bool {
+    crate::bool_euf::bool_euf_online_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == cert)
 }
 
 fn check_uf_arith_congruence_evidence(
@@ -1351,6 +1369,13 @@ fn direct_pre_solve_structural_report(
             trusted_steps: Vec::new(),
         });
     }
+    if let Some(cert) = crate::bool_euf::bool_euf_online_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatBoolEufOnline(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
     if let Some(cert) = crate::uf_arith::uf_arith_congruence_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatUfArithCongruence(cert),
@@ -1894,6 +1919,9 @@ fn direct_structural_unsat_evidence(
     if let Some(cert) = crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions) {
         return Some((Evidence::UnsatBoolEufExhaustive(cert), Vec::new()));
     }
+    if let Some(cert) = crate::bool_euf::bool_euf_online_refutation(arena, assertions) {
+        return Some((Evidence::UnsatBoolEufOnline(cert), Vec::new()));
+    }
     if let Some(cert) = crate::uf_arith::uf_arith_congruence_refutation(arena, assertions) {
         return Some((Evidence::UnsatUfArithCongruence(cert), Vec::new()));
     }
@@ -2341,6 +2369,7 @@ pub fn prove(
         | Evidence::UnsatFiniteDomainPigeonhole(_)
         | Evidence::UnsatBoolUfExhaustive(_)
         | Evidence::UnsatBoolEufExhaustive(_)
+        | Evidence::UnsatBoolEufOnline(_)
         | Evidence::UnsatUfArithCongruence(_)
         | Evidence::UnsatDatatypeStructural(_)
         | Evidence::UnsatFiniteArrayExtensionality(_)

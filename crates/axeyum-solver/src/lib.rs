@@ -188,7 +188,10 @@ pub use bmc::{
     bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
     prove_safety_k_induction,
 };
-pub use bool_euf::{BoolEufExhaustiveCertificate, bool_euf_exhaustive_refutation};
+pub use bool_euf::{
+    BoolEufExhaustiveCertificate, BoolEufOnlineCertificate, bool_euf_exhaustive_refutation,
+    bool_euf_online_refutation,
+};
 pub use bool_simplify::{BoolSimplificationRefutationCertificate, bool_simplification_refutation};
 pub use bv_forall_nonconstant::{
     BvForallNonconstantKind, BvForallNonconstantRefutationCertificate,

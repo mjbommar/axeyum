@@ -66,6 +66,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
         Evidence::UnsatBoolUfExhaustive(_) => "bool-uf-exhaustive-unsat",
         Evidence::UnsatBoolEufExhaustive(_) => "bool-euf-exhaustive-unsat",
+        Evidence::UnsatBoolEufOnline(_) => "bool-euf-online-unsat",
         Evidence::UnsatUfArithCongruence(_) => "uf-arith-congruence-unsat",
         Evidence::UnsatDatatypeStructural(_) => "datatype-structural-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",

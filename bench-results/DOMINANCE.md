@@ -15,7 +15,7 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 - 35 measured division rows, 992 files, 648 decided, 597 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
 - 17 rows are decide-strong (Decide% >= 80). 13 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
-- Complete committed dominance audits with exact audited `dominant%(D)`: 19. Remaining rows are readiness or partial-audit entries.
+- Complete committed dominance audits with exact audited `dominant%(D)`: 20. Remaining rows are readiness or partial-audit entries.
 
 ## Audit Harness
 
@@ -46,6 +46,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_LRA | `qf-lra-cvc5-regress-clean` | 9 | 100% (9/9) | 100% (3/3) | none | `bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json` |
 | QF_NIA | `qf-nia-synthetic-graduated` | 32 | 100% (32/32) | 100% (16/16) | none | `bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json` |
 | QF_NRA | `qf-nra-synthetic-graduated` | 30 | 100% (30/30) | 100% (16/16) | none | `bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json` |
+| QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 4 | 100% (4/4) | 100% (3/3) | none | `bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json` |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 44 | 100% (44/44) | 100% (15/15) | none | `bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 100% (2/2) | 100% (1/1) | none | `bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 100% (4/4) | 100% (2/2) | none | `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` |
@@ -91,7 +92,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 59 | 44% | mid | 0 | not run | - | - | proof route missing | decider/front-end work first; proof lane later |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | mid | 0 | not run | - | - | proof route missing | decider/front-end work first; proof lane later |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 15 | 30% | weak | 0 | not run | - | - | proof route missing | migrate strings to solver StrTerm API before proof investment |
-| QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | mid | 0 | not run | - | - | remeasure then audit | remeasure after first-class uninterpreted sorts, then run Lean audit |
+| QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | mid | 0 | complete | 100% (4/4) | 100% (3/3) | dominant on audited row | remeasure after first-class uninterpreted sorts, then run Lean audit |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | mid | 0 | not run | - | - | remeasure then audit | remeasure after first-class uninterpreted sorts, then run Lean audit |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | mid | 0 | complete | 100% (44/44) | 100% (15/15) | dominant on audited row | remeasure after first-class uninterpreted sorts, then run Lean audit |
 | QF_UFBV | `qf-ufbv-bitwuzla-regress-clean` | 2 | 2 | 100% | strong | 0 | complete | 100% (2/2) | 100% (1/1) | dominant on audited row | audit whether measured unsats avoid BV mul/rem/shift holes |

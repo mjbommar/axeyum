@@ -13,6 +13,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 
+use crate::backend::CheckResult;
+
 const MAX_ATOMS: usize = 16;
 
 /// A self-checking refutation of a Boolean-structured pure-EUF formula.
@@ -24,6 +26,19 @@ pub struct BoolEufExhaustiveCertificate {
     /// congruence. `0` means the equality-atom skeleton is already
     /// propositionally inconsistent.
     pub cases: u64,
+}
+
+/// A self-checking refutation of a larger Boolean-structured pure-EUF formula.
+///
+/// The checker re-runs the online EUF DPLL(T) refuter over the original
+/// assertions and accepts only if it deterministically returns `unsat`. This is
+/// wider than [`BoolEufExhaustiveCertificate`]: it avoids enumerating every
+/// equality-atom assignment, while still rejecting anything outside the pure-EUF
+/// Boolean skeleton the online checker can encode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoolEufOnlineCertificate {
+    /// Equality atoms collected from the original Boolean skeleton.
+    pub atoms: usize,
 }
 
 /// Returns a certificate when every satisfying Boolean assignment to the EUF
@@ -63,6 +78,30 @@ pub fn bool_euf_exhaustive_refutation(
         }
     }
     Some(BoolEufExhaustiveCertificate { atoms, cases })
+}
+
+/// Returns a certificate when the online EUF DPLL(T) checker refutes the
+/// Boolean-structured pure-EUF formula.
+#[must_use]
+pub fn bool_euf_online_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<BoolEufOnlineCertificate> {
+    if assertions.is_empty() {
+        return None;
+    }
+    let mut atoms = BTreeSet::new();
+    for &assertion in assertions {
+        collect_bool_euf_atoms(arena, assertion, &mut atoms)?;
+    }
+    if atoms.is_empty() {
+        return None;
+    }
+    let mut scratch = arena.clone();
+    match crate::euf_egraph::solve_qf_uf_online(&mut scratch, assertions) {
+        CheckResult::Unsat => Some(BoolEufOnlineCertificate { atoms: atoms.len() }),
+        CheckResult::Sat(_) | CheckResult::Unknown(_) => None,
+    }
 }
 
 fn collect_bool_euf_atoms(
@@ -219,7 +258,7 @@ fn assignment_refuted_by_congruence(
 mod tests {
     use axeyum_smtlib::parse_script;
 
-    use super::bool_euf_exhaustive_refutation;
+    use super::{MAX_ATOMS, bool_euf_exhaustive_refutation, bool_euf_online_refutation};
 
     #[test]
     fn recognizes_negated_implication_congruence() {
@@ -280,5 +319,16 @@ mod tests {
         ))
         .expect("parse bug303");
         assert!(bool_euf_exhaustive_refutation(&script.arena, &script.assertions).is_none());
+    }
+
+    #[test]
+    fn online_refutes_overbound_cnf_abc() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress0__uf__cnf_abc.smt2"
+        ))
+        .expect("parse overbound cnf_abc");
+        let cert = bool_euf_online_refutation(&script.arena, &script.assertions)
+            .expect("online EUF refutes cnf_abc");
+        assert!(cert.atoms > MAX_ATOMS);
     }
 }

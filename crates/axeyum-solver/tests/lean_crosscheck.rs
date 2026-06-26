@@ -706,6 +706,44 @@ fn qf_uf_boolean_euf_rows_check_in_real_lean() {
     }
 }
 
+/// `QF_UF` overbound finite-model rows are too large for the bounded exhaustive
+/// Boolean-EUF checker, but the online EUF DPLL(T) checker refutes their
+/// Boolean equality skeletons and the Lean wrapper re-runs that checker.
+#[test]
+fn qf_uf_overbound_online_euf_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_uf_overbound_cnf_abc_online_euf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress0__uf__cnf_abc.smt2"
+            ),
+        ),
+        (
+            "qf_uf_overbound_proof00_online_euf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress1__proof00.smt2"
+            ),
+        ),
+        (
+            "qf_uf_overbound_macro_res_online_euf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-overbound/cli__regress1__proofs__macro-res-exp-crowding-lit-inside-unit.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("overbound Boolean-EUF row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::BoolEufOnline, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: online Boolean-EUF module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `QF_UFLIA`: `bug303` needs congruence over the declared `list` carrier before
 /// the integer contradiction is visible.
 #[test]

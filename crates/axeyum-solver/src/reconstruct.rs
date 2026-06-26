@@ -1282,6 +1282,9 @@ pub enum ProofFragment {
     /// An exhaustive Boolean-skeleton refutation whose every skeleton model is
     /// rejected by EUF congruence closure.
     BoolEufExhaustive,
+    /// A Boolean-structured EUF refutation checked by the online EUF DPLL(T)
+    /// loop.
+    BoolEufOnline,
     /// A mixed UF+linear-arithmetic refutation: congruence derives arithmetic
     /// equalities, then arithmetic DPLL refutes the retained residual.
     UfArithCongruence,
@@ -1793,6 +1796,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::BoolUfExhaustive
     } else if crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions).is_some() {
         ProofFragment::BoolEufExhaustive
+    } else if crate::bool_euf::bool_euf_online_refutation(arena, assertions).is_some() {
+        ProofFragment::BoolEufOnline
     } else if crate::uf_arith::uf_arith_congruence_refutation(arena, assertions).is_some() {
         ProofFragment::UfArithCongruence
     } else if has_func && has_bv {
@@ -2560,6 +2565,34 @@ fn reconstruct_bool_euf_exhaustive_to_lean_module(
     let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
     let refuter_prop = ctx.mk_not(prop);
     let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_euf_exhaustive")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+fn reconstruct_bool_euf_online_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::bool_euf::bool_euf_online_refutation(arena, assertions).ok_or_else(|| {
+        ReconstructError::MalformedStep {
+            rule: "bool_euf_online".to_owned(),
+            detail: "expected an online Boolean-EUF refutation".to_owned(),
+        }
+    })?;
+    if cert.atoms == 0 {
+        return Err(ReconstructError::MalformedStep {
+            rule: "bool_euf_online".to_owned(),
+            detail: "online Boolean-EUF certificate carried no equality atoms".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("bool_euf_online_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_euf_online")?;
     let proof = ctx.kernel.app(refuter, asserted);
     require_infers_false(&mut ctx, proof)?;
     Ok(render_ctx_module(&mut ctx, proof))
@@ -3393,6 +3426,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::FiniteDomainPigeonhole
         | ProofFragment::BoolUfExhaustive
         | ProofFragment::BoolEufExhaustive
+        | ProofFragment::BoolEufOnline
         | ProofFragment::UfArithCongruence
         | ProofFragment::DatatypeStructural
         | ProofFragment::FiniteDomainEnum
@@ -3490,6 +3524,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::BoolEufExhaustive => {
             reconstruct_bool_euf_exhaustive_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::BoolEufOnline => {
+            reconstruct_bool_euf_online_to_lean_module(arena, assertions)?
         }
         ProofFragment::UfArithCongruence => {
             reconstruct_uf_arith_congruence_to_lean_module(arena, assertions)?

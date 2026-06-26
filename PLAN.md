@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **648 decided**,
-   **597 oracle-compared**, **DISAGREE = 0**, with **19 complete exact audit rows**
+   **597 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -205,6 +205,18 @@ against competitor source, are now binding:
    exact row is now **44/44 dominant (100.0%)**, **Lean unsat 15/15 (100.0%)**,
    with **mismatches=0**, **audit_errors=0**, **timeouts=0**, and no remaining
    evidence gaps.
+   **QF_UF OVERBOUND EXACT AUDIT INGESTED (2026-06-26):**
+   the refreshed overbound declared-sort QF_UF row now has a complete committed
+   dominance audit for its decided slice. The new online Boolean-EUF certificate
+   handles the three overbound UNSAT stressors whose equality skeletons exceed
+   the exhaustive Boolean-EUF case bound: the checker re-runs the deterministic
+   online EUF DPLL(T) refuter on the original assertions, rejects non-pure-EUF
+   shapes, and carries no trust steps. This closes `uf/cnf_abc`, `proof00`, and
+   `proofs/macro-res-exp-crowding-lit-inside-unit`; the row is now
+   **4/4 dominant (100.0%)**, **Lean unsat 3/3 (100.0%)**, with
+   **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The underlying
+   decide-rate row remains **4/6 decided**; this closes certification for the
+   currently decided slice, not the two undecided instances.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances
