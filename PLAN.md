@@ -398,6 +398,22 @@ against competitor source, are now binding:
    `lazy UF+arithmetic` convergence. The next blocker is UF CEGAR convergence
    and relevance after several candidate models, not dead-branch arithmetic
    churn.
+   **SUPPORT-PATH DIAGNOSTICS LANDED (2026-06-26):**
+   lazy arithmetic DPLL budget `unknown` details now report deterministic
+   support-path counters (`support_attempts`, support conflict batches,
+   support-model replay failures, and full-assignment fallbacks). Two candidate
+   pruning experiments were measured and rejected: full raw Ackermann pre-seeding
+   inflated the post-CEGAR arithmetic skeleton, and raw pre-abstraction
+   Boolean/bound folding slightly shrank the initial skeleton but reduced 10 s
+   UF CEGAR progress. The retained diagnostic change preserves the support-first
+   baseline: 1 s rows still show **461 atoms**, **642** bound lemmas, **21**
+   lazy-LIA rounds, and **29** blocking lemmas, now with
+   **support_attempts=21**, **support_conflict_batches=21**, and
+   **full_fallbacks=0**. At 10 s the first row remains **4** UF CEGAR rounds,
+   **3** SAT candidates, **14** learned UF lemmas, then an outer deadline. Next
+   practical lever: incremental/relevance-preserving arithmetic across UF CEGAR
+   rounds, or a measured narrow guarded-congruence preseed; broad preseed and
+   broad simplification are explicitly rejected for these rows.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

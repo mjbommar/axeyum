@@ -390,6 +390,31 @@ impl ArithCoreStats {
     }
 }
 
+#[derive(Default)]
+struct ArithSupportStats {
+    attempts: usize,
+    unavailable: usize,
+    conflict_batches: usize,
+    model_attempts: usize,
+    replay_failures: usize,
+    full_fallbacks: usize,
+}
+
+impl ArithSupportStats {
+    fn summary(&self) -> String {
+        format!(
+            "support_attempts={}, support_unavailable={}, support_conflict_batches={}, \
+             support_model_attempts={}, support_replay_failures={}, full_fallbacks={}",
+            self.attempts,
+            self.unavailable,
+            self.conflict_batches,
+            self.model_attempts,
+            self.replay_failures,
+            self.full_fallbacks
+        )
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn run_arith_dpll(
     arena: &mut TermArena,
@@ -415,6 +440,7 @@ fn run_arith_dpll(
         .map(|(_, lemma)| lemma.clone())
         .collect();
     let mut core_stats = ArithCoreStats::default();
+    let mut support_stats = ArithSupportStats::default();
 
     // Wall-clock deadline (graceful `Unknown`, never an unbounded hang — the
     // standing hard rule). The lazy-SMT loop can need up to `MAX_DPLL_ROUNDS`
@@ -432,11 +458,12 @@ fn run_arith_dpll(
                     kind: UnknownKind::ResourceLimit,
                     detail: format!(
                         "lazy linear arithmetic exhausted the configured timeout after {round} \
-                         rounds (atoms={}, bound_lemmas={}, blocking_lemmas={}, {})",
+                         rounds (atoms={}, bound_lemmas={}, blocking_lemmas={}, {}, {})",
                         ctx.atoms.len(),
                         initial_lemmas.len(),
                         blocking.len(),
-                        core_stats.summary()
+                        core_stats.summary(),
+                        support_stats.summary()
                     ),
                 }),
                 skeleton,
@@ -459,11 +486,12 @@ fn run_arith_dpll(
                         kind: reason.kind,
                         detail: format!(
                             "lazy linear arithmetic SAT skeleton declined after round {round} \
-                             (atoms={}, bound_lemmas={}, blocking_lemmas={}, {}): {}",
+                             (atoms={}, bound_lemmas={}, blocking_lemmas={}, {}, {}): {}",
                             ctx.atoms.len(),
                             initial_lemmas.len(),
                             blocking.len(),
                             core_stats.summary(),
+                            support_stats.summary(),
                             reason.detail
                         ),
                     }),
@@ -495,6 +523,7 @@ fn run_arith_dpll(
         // atoms sitting in dead branches of generated selector ladders; those
         // irrelevant choices need not be theory-consistent for a real model.
         if let Some(support) = justified_theory_indices(arena, &ctx, &skeleton, &propositional) {
+            support_stats.attempts += 1;
             let int_conflicts = theory_conflicts_for_indices(
                 arena,
                 &ctx,
@@ -504,6 +533,7 @@ fn run_arith_dpll(
                 check_with_lia_opaque_apps,
             )?;
             if !int_conflicts.is_empty() {
+                support_stats.conflict_batches += 1;
                 let mut learn = ArithLearnState {
                     prop_solver: &mut prop_solver,
                     blocking: &mut blocking,
@@ -522,6 +552,7 @@ fn run_arith_dpll(
                 check_with_lra,
             )?;
             if !real_conflicts.is_empty() {
+                support_stats.conflict_batches += 1;
                 let mut learn = ArithLearnState {
                     prop_solver: &mut prop_solver,
                     blocking: &mut blocking,
@@ -532,6 +563,7 @@ fn run_arith_dpll(
                 continue;
             }
             if !ctx.has_opaque_int_apps(arena) {
+                support_stats.model_attempts += 1;
                 if let Some(result) =
                     try_finish_sat(arena, assertions, &ctx, &propositional, &lits, &support)?
                 {
@@ -541,11 +573,15 @@ fn run_arith_dpll(
                         lemmas,
                     });
                 }
+                support_stats.replay_failures += 1;
             }
+        } else {
+            support_stats.unavailable += 1;
         }
 
         // If the support path did not produce a replaying model, fall back to
         // the traditional full-assignment theory check.
+        support_stats.full_fallbacks += 1;
         let int_conflicts =
             theory_conflicts(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?;
         if !int_conflicts.is_empty() {
@@ -2871,6 +2907,23 @@ mod tests {
             .unwrap(),
             Some(CheckResult::Sat(_))
         ));
+    }
+
+    #[test]
+    fn lia_budget_unknown_reports_support_stats() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let ge = arena.int_ge(xv, zero).unwrap();
+        let config = SolverConfig::default().with_timeout(Duration::ZERO);
+
+        let run = run_arith_dpll(&mut arena, &[ge], &config).unwrap();
+        let CheckResult::Unknown(reason) = run.result else {
+            panic!("expected a timeout unknown");
+        };
+        assert!(reason.detail.contains("support_attempts=0"));
+        assert!(reason.detail.contains("full_fallbacks=0"));
     }
 
     #[test]
