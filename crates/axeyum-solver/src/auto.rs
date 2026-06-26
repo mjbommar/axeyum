@@ -1774,6 +1774,12 @@ fn dispatch_array_unsat_refuters(
     {
         return Ok(Some(CheckResult::Unsat));
     }
+    if let Some(cert) =
+        crate::abv::store_chain_readback_refutation_within(arena, assertions, deadline)
+        && cert.recheck(arena, assertions)
+    {
+        return Ok(Some(CheckResult::Unsat));
+    }
     if crate::abv::prove_unsat_by_two_store_same_target_split_within(arena, assertions, deadline)? {
         return Ok(Some(CheckResult::Unsat));
     }

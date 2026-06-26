@@ -363,6 +363,22 @@ fn const_array_store_chain_default_mismatch_refutes_constarr3() {
 }
 
 #[test]
+fn store_chain_readback_refutes_ios_np_sf() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__proofs__ios_np_sf.smt2"
+    ))
+    .unwrap();
+
+    let result = check_auto(
+        &mut script.arena,
+        &script.assertions,
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert_eq!(result, CheckResult::Unsat);
+}
+
+#[test]
 fn const_array_store_chain_same_default_is_not_refuted() {
     let mut script = parse_script(
         r"

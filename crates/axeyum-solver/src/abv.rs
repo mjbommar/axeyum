@@ -591,6 +591,577 @@ pub fn const_array_default_mismatch_refutation_within(
     None
 }
 
+/// Which side of an array equality contains the visible store write used by a
+/// [`StoreChainReadbackCertificate`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StoreChainSide {
+    /// The selected visible write is on the equality's left-hand side.
+    Left,
+    /// The selected visible write is on the equality's right-hand side.
+    Right,
+}
+
+/// A checked refutation for finite store-chain readback over `Array Int Int`.
+///
+/// If two store chains over the same base array are asserted equal, a visible
+/// write `(store ... i v)` on one side forces the opposite side to read `v` at
+/// `i`. When arithmetic aliases prove that `i` is distinct from every write
+/// index on the opposite chain, the opposite read is exactly `(select base i)`;
+/// an asserted disequality between `v` and that base read is therefore
+/// impossible.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoreChainReadbackCertificate {
+    /// The top-level equality assertion connecting the two store chains.
+    pub equality: TermId,
+    /// Left array after resolving top-level array definitions.
+    pub lhs_array: TermId,
+    /// Right array after resolving top-level array definitions.
+    pub rhs_array: TermId,
+    /// Shared base array under both store chains.
+    pub base_array: TermId,
+    /// Side containing the visible write.
+    pub write_side: StoreChainSide,
+    /// Index of the visible write.
+    pub write_index: TermId,
+    /// Value written at [`Self::write_index`].
+    pub write_value: TermId,
+    /// The asserted-disequal term that resolves to `select(base_array, write_index)`.
+    pub read_value: TermId,
+    /// Number of stores above the left shared base.
+    pub lhs_writes: usize,
+    /// Number of stores above the right shared base.
+    pub rhs_writes: usize,
+}
+
+impl StoreChainReadbackCertificate {
+    /// Re-derives the certificate from the original assertions.
+    #[must_use]
+    pub fn recheck(&self, arena: &TermArena, assertions: &[TermId]) -> bool {
+        store_chain_readback_refutation(arena, assertions).as_ref() == Some(self)
+    }
+}
+
+/// Returns a certificate for the finite store-chain readback contradiction
+/// described by [`StoreChainReadbackCertificate`], if present.
+#[must_use]
+pub fn store_chain_readback_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<StoreChainReadbackCertificate> {
+    store_chain_readback_refutation_within(arena, assertions, None)
+}
+
+pub fn store_chain_readback_refutation_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<StoreChainReadbackCertificate> {
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        if past_deadline(deadline) {
+            return None;
+        }
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+    }
+
+    let array_defs = collect_array_symbol_definitions(arena, &conjuncts);
+    let scalar_defs = collect_int_symbol_definitions(arena, &conjuncts);
+    let disequalities = collect_int_disequalities(arena, &conjuncts);
+    if disequalities.is_empty() {
+        return None;
+    }
+
+    for &equality in &conjuncts {
+        if past_deadline(deadline) {
+            return None;
+        }
+        let Some((lhs, rhs)) = array_equality(arena, equality) else {
+            continue;
+        };
+        let lhs_array = resolve_array_definition(arena, lhs, &array_defs);
+        let rhs_array = resolve_array_definition(arena, rhs, &array_defs);
+        if !is_int_to_int_array(arena, lhs_array) || !is_int_to_int_array(arena, rhs_array) {
+            continue;
+        }
+        let Some(lhs_chain) = store_chain(arena, lhs_array, &array_defs, deadline) else {
+            continue;
+        };
+        let Some(rhs_chain) = store_chain(arena, rhs_array, &array_defs, deadline) else {
+            continue;
+        };
+        if lhs_chain.base != rhs_chain.base
+            || (lhs_chain.writes.is_empty() && rhs_chain.writes.is_empty())
+        {
+            continue;
+        }
+        if let Some(cert) = store_chain_readback_side(
+            arena,
+            &array_defs,
+            &scalar_defs,
+            &disequalities,
+            equality,
+            lhs_array,
+            rhs_array,
+            &lhs_chain,
+            &rhs_chain,
+            StoreChainSide::Left,
+            deadline,
+        ) {
+            return Some(cert);
+        }
+        if let Some(cert) = store_chain_readback_side(
+            arena,
+            &array_defs,
+            &scalar_defs,
+            &disequalities,
+            equality,
+            lhs_array,
+            rhs_array,
+            &rhs_chain,
+            &lhs_chain,
+            StoreChainSide::Right,
+            deadline,
+        ) {
+            return Some(cert);
+        }
+    }
+    None
+}
+
+#[allow(clippy::too_many_arguments)]
+fn store_chain_readback_side(
+    arena: &TermArena,
+    array_defs: &HashMap<SymbolId, Option<TermId>>,
+    scalar_defs: &IntSymbolDefs,
+    disequalities: &[(TermId, TermId)],
+    equality: TermId,
+    lhs_array: TermId,
+    rhs_array: TermId,
+    write_chain: &StoreChain,
+    read_chain: &StoreChain,
+    write_side: StoreChainSide,
+    deadline: Option<Instant>,
+) -> Option<StoreChainReadbackCertificate> {
+    for (pos, write) in write_chain.writes.iter().enumerate() {
+        if past_deadline(deadline) {
+            return None;
+        }
+        if !write_is_visible(arena, scalar_defs, &write_chain.writes, pos) {
+            continue;
+        }
+        if !read_index_untouched(arena, scalar_defs, write.index, &read_chain.writes) {
+            continue;
+        }
+        let Some(read_value) = disequal_base_read(
+            arena,
+            array_defs,
+            scalar_defs,
+            disequalities,
+            write.value,
+            write_chain.base,
+            write.index,
+        ) else {
+            continue;
+        };
+        return Some(StoreChainReadbackCertificate {
+            equality,
+            lhs_array,
+            rhs_array,
+            base_array: write_chain.base,
+            write_side,
+            write_index: write.index,
+            write_value: write.value,
+            read_value,
+            lhs_writes: if write_side == StoreChainSide::Left {
+                write_chain.writes.len()
+            } else {
+                read_chain.writes.len()
+            },
+            rhs_writes: if write_side == StoreChainSide::Left {
+                read_chain.writes.len()
+            } else {
+                write_chain.writes.len()
+            },
+        });
+    }
+    None
+}
+
+#[derive(Clone, Copy)]
+struct StoreWrite {
+    index: TermId,
+    value: TermId,
+}
+
+#[derive(Clone)]
+struct StoreChain {
+    base: TermId,
+    writes: Vec<StoreWrite>,
+}
+
+fn store_chain(
+    arena: &TermArena,
+    term: TermId,
+    defs: &HashMap<SymbolId, Option<TermId>>,
+    deadline: Option<Instant>,
+) -> Option<StoreChain> {
+    if past_deadline(deadline) {
+        return None;
+    }
+    let term = resolve_array_definition(arena, term, defs);
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::Store,
+            args,
+        } => {
+            let [base, index, value] = &**args else {
+                return None;
+            };
+            let mut chain = store_chain(arena, *base, defs, deadline)?;
+            chain.writes.push(StoreWrite {
+                index: *index,
+                value: *value,
+            });
+            Some(chain)
+        }
+        _ if matches!(arena.sort_of(term), Sort::Array { .. }) => Some(StoreChain {
+            base: term,
+            writes: Vec::new(),
+        }),
+        _ => None,
+    }
+}
+
+fn is_int_to_int_array(arena: &TermArena, term: TermId) -> bool {
+    matches!(
+        arena.sort_of(term),
+        Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Int,
+        }
+    )
+}
+
+type IntSymbolDefs = HashMap<SymbolId, Option<(TermId, TermId)>>;
+
+fn collect_int_symbol_definitions(arena: &TermArena, conjuncts: &[TermId]) -> IntSymbolDefs {
+    let mut defs = HashMap::new();
+    for &conjunct in conjuncts {
+        let TermNode::App { op: Op::Eq, args } = arena.node(conjunct) else {
+            continue;
+        };
+        let [lhs, rhs] = &**args else {
+            continue;
+        };
+        collect_int_symbol_definition_side(arena, &mut defs, *lhs, *rhs);
+        collect_int_symbol_definition_side(arena, &mut defs, *rhs, *lhs);
+    }
+    defs
+}
+
+fn collect_int_symbol_definition_side(
+    arena: &TermArena,
+    defs: &mut IntSymbolDefs,
+    lhs: TermId,
+    rhs: TermId,
+) {
+    let TermNode::Symbol(symbol) = arena.node(lhs) else {
+        return;
+    };
+    if arena.sort_of(lhs) != Sort::Int || arena.sort_of(rhs) != Sort::Int {
+        return;
+    }
+    if matches!(arena.node(rhs), TermNode::Symbol(_)) {
+        return;
+    }
+    match defs.get_mut(symbol) {
+        Some(slot) if *slot == Some((lhs, rhs)) => {}
+        Some(slot) => *slot = None,
+        None => {
+            defs.insert(*symbol, Some((lhs, rhs)));
+        }
+    }
+}
+
+fn resolve_scalar_definition(arena: &TermArena, mut term: TermId, defs: &IntSymbolDefs) -> TermId {
+    let mut seen = HashSet::new();
+    loop {
+        let TermNode::Symbol(symbol) = arena.node(term) else {
+            return term;
+        };
+        if !seen.insert(*symbol) {
+            return term;
+        }
+        match defs.get(symbol).copied().flatten() {
+            Some((_symbol_term, body)) => term = body,
+            None => return term,
+        }
+    }
+}
+
+fn collect_int_disequalities(arena: &TermArena, conjuncts: &[TermId]) -> Vec<(TermId, TermId)> {
+    conjuncts
+        .iter()
+        .filter_map(|&term| int_disequality(arena, term))
+        .collect()
+}
+
+fn int_disequality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [eq] = &**args else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::Eq,
+        args: eq_args,
+    } = arena.node(*eq)
+    else {
+        return None;
+    };
+    let [lhs, rhs] = &**eq_args else {
+        return None;
+    };
+    if arena.sort_of(*lhs) == Sort::Int && arena.sort_of(*rhs) == Sort::Int {
+        Some((*lhs, *rhs))
+    } else {
+        None
+    }
+}
+
+fn write_is_visible(
+    arena: &TermArena,
+    scalar_defs: &IntSymbolDefs,
+    writes: &[StoreWrite],
+    pos: usize,
+) -> bool {
+    let index = writes[pos].index;
+    writes[(pos + 1)..]
+        .iter()
+        .all(|later| affine_distinct(arena, scalar_defs, index, later.index))
+}
+
+fn read_index_untouched(
+    arena: &TermArena,
+    scalar_defs: &IntSymbolDefs,
+    index: TermId,
+    writes: &[StoreWrite],
+) -> bool {
+    writes
+        .iter()
+        .all(|write| affine_distinct(arena, scalar_defs, index, write.index))
+}
+
+fn disequal_base_read(
+    arena: &TermArena,
+    array_defs: &HashMap<SymbolId, Option<TermId>>,
+    scalar_defs: &IntSymbolDefs,
+    disequalities: &[(TermId, TermId)],
+    value: TermId,
+    base: TermId,
+    index: TermId,
+) -> Option<TermId> {
+    for &(lhs, rhs) in disequalities {
+        if scalar_terms_equal(arena, scalar_defs, value, lhs)
+            && term_is_base_read(arena, array_defs, scalar_defs, rhs, base, index)
+        {
+            return Some(rhs);
+        }
+        if scalar_terms_equal(arena, scalar_defs, value, rhs)
+            && term_is_base_read(arena, array_defs, scalar_defs, lhs, base, index)
+        {
+            return Some(lhs);
+        }
+    }
+    None
+}
+
+fn scalar_terms_equal(
+    arena: &TermArena,
+    scalar_defs: &IntSymbolDefs,
+    lhs: TermId,
+    rhs: TermId,
+) -> bool {
+    lhs == rhs
+        || resolve_scalar_definition(arena, lhs, scalar_defs) == rhs
+        || lhs == resolve_scalar_definition(arena, rhs, scalar_defs)
+        || resolve_scalar_definition(arena, lhs, scalar_defs)
+            == resolve_scalar_definition(arena, rhs, scalar_defs)
+}
+
+fn term_is_base_read(
+    arena: &TermArena,
+    array_defs: &HashMap<SymbolId, Option<TermId>>,
+    scalar_defs: &IntSymbolDefs,
+    term: TermId,
+    base: TermId,
+    index: TermId,
+) -> bool {
+    let term = resolve_scalar_definition(arena, term, scalar_defs);
+    let Some((array, read_index)) = select_parts(arena, term) else {
+        return false;
+    };
+    resolve_array_definition(arena, array, array_defs) == base
+        && affine_equal(arena, scalar_defs, read_index, index)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct UnitAffine {
+    base: Option<SymbolId>,
+    coeff: i8,
+    offset: i128,
+}
+
+impl UnitAffine {
+    fn constant(offset: i128) -> Self {
+        Self {
+            base: None,
+            coeff: 0,
+            offset,
+        }
+    }
+
+    fn var(symbol: SymbolId) -> Self {
+        Self {
+            base: Some(symbol),
+            coeff: 1,
+            offset: 0,
+        }
+    }
+
+    fn neg(self) -> Option<Self> {
+        Some(Self {
+            base: self.base,
+            coeff: self.coeff.checked_neg()?,
+            offset: self.offset.checked_neg()?,
+        })
+    }
+
+    fn add(self, rhs: Self) -> Option<Self> {
+        let offset = self.offset.checked_add(rhs.offset)?;
+        match (self.base, rhs.base) {
+            (None, None) => Some(Self::constant(offset)),
+            (Some(_), None) => Some(Self { offset, ..self }),
+            (None, Some(_)) => Some(Self { offset, ..rhs }),
+            (Some(a), Some(b)) if a == b => {
+                let coeff = self.coeff.checked_add(rhs.coeff)?;
+                if !(-1..=1).contains(&coeff) {
+                    return None;
+                }
+                Some(if coeff == 0 {
+                    Self::constant(offset)
+                } else {
+                    Self {
+                        base: Some(a),
+                        coeff,
+                        offset,
+                    }
+                })
+            }
+            (Some(_), Some(_)) => None,
+        }
+    }
+
+    fn sub(self, rhs: Self) -> Option<Self> {
+        self.add(rhs.neg()?)
+    }
+}
+
+fn affine_equal(arena: &TermArena, scalar_defs: &IntSymbolDefs, lhs: TermId, rhs: TermId) -> bool {
+    lhs == rhs
+        || matches!(
+            (
+                affine_index(arena, scalar_defs, lhs),
+                affine_index(arena, scalar_defs, rhs)
+            ),
+            (Some(a), Some(b)) if a == b
+        )
+}
+
+fn affine_distinct(
+    arena: &TermArena,
+    scalar_defs: &IntSymbolDefs,
+    lhs: TermId,
+    rhs: TermId,
+) -> bool {
+    matches!(
+        (
+            affine_index(arena, scalar_defs, lhs),
+            affine_index(arena, scalar_defs, rhs)
+        ),
+        (Some(a), Some(b)) if a.base == b.base && a.coeff == b.coeff && a.offset != b.offset
+    )
+}
+
+fn affine_index(
+    arena: &TermArena,
+    scalar_defs: &IntSymbolDefs,
+    term: TermId,
+) -> Option<UnitAffine> {
+    let mut seen = HashSet::new();
+    affine_index_rec(arena, scalar_defs, term, &mut seen)
+}
+
+fn affine_index_rec(
+    arena: &TermArena,
+    scalar_defs: &IntSymbolDefs,
+    term: TermId,
+    seen: &mut HashSet<SymbolId>,
+) -> Option<UnitAffine> {
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(UnitAffine::constant(*value)),
+        TermNode::Symbol(symbol) if arena.sort_of(term) == Sort::Int => {
+            if let Some(Some((_symbol_term, body))) = scalar_defs.get(symbol) {
+                if !seen.insert(*symbol) {
+                    return None;
+                }
+                let result = affine_index_rec(arena, scalar_defs, *body, seen);
+                seen.remove(symbol);
+                result
+            } else {
+                Some(UnitAffine::var(*symbol))
+            }
+        }
+        TermNode::App { op, args } => match op {
+            Op::IntNeg => {
+                let [arg] = &**args else {
+                    return None;
+                };
+                affine_index_rec(arena, scalar_defs, *arg, seen)?.neg()
+            }
+            Op::IntAdd => {
+                let [lhs, rhs] = &**args else {
+                    return None;
+                };
+                affine_index_rec(arena, scalar_defs, *lhs, seen)?.add(affine_index_rec(
+                    arena,
+                    scalar_defs,
+                    *rhs,
+                    seen,
+                )?)
+            }
+            Op::IntSub => {
+                let [lhs, rhs] = &**args else {
+                    return None;
+                };
+                affine_index_rec(arena, scalar_defs, *lhs, seen)?.sub(affine_index_rec(
+                    arena,
+                    scalar_defs,
+                    *rhs,
+                    seen,
+                )?)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 #[derive(Clone, Copy)]
 struct ConstStoreChain {
     index: ArraySortKey,
@@ -2829,8 +3400,9 @@ pub fn certify_array_elim_unsat(
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {
     use super::{
-        check_qf_abv_lazy, check_with_array_elimination, const_array_default_mismatch_refutation,
-        prove_unsat_by_symmetric_swap_chain,
+        StoreChainSide, check_qf_abv_lazy, check_with_array_elimination,
+        const_array_default_mismatch_refutation, prove_unsat_by_symmetric_swap_chain,
+        store_chain_readback_refutation,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -2962,6 +3534,24 @@ mod tests {
             .expect("constarr3 has finite writes over different constant defaults");
         assert_eq!(cert.lhs_writes, 1);
         assert_eq!(cert.rhs_writes, 1);
+        assert!(
+            cert.recheck(&script.arena, &script.assertions),
+            "certificate must rederive from the original assertions"
+        );
+    }
+
+    #[test]
+    fn store_chain_readback_certificate_rechecks_ios_np_sf() {
+        let script = parse_script(include_str!(
+            "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__proofs__ios_np_sf.smt2"
+        ))
+        .unwrap();
+
+        let cert = store_chain_readback_refutation(&script.arena, &script.assertions)
+            .expect("ios_np_sf has a finite store-chain readback contradiction");
+        assert_eq!(cert.write_side, StoreChainSide::Left);
+        assert_eq!(cert.lhs_writes, 3);
+        assert_eq!(cert.rhs_writes, 3);
         assert!(
             cert.recheck(&script.arena, &script.assertions),
             "certificate must rederive from the original assertions"

@@ -22,7 +22,7 @@ the decidable fragments, honest `unknown` elsewhere; **Lean parity** = every
 ## 2. Where we actually stand (the honest top-down)
 
 **The single most important fact: across ~24 logic fragments measured head-to-head
-vs Z3 4.13.3 — 992 files, 657 decided, 605 oracle-compared — DISAGREE = 0. Zero
+vs Z3 4.13.3 — 992 files, 658 decided, 606 oracle-compared — DISAGREE = 0. Zero
 wrong sat/unsat, anywhere.** Soundness is the settled foundation. The gap to
 Z3/cvc5 is **decide-rate and depth, never correctness.**
 
@@ -30,19 +30,18 @@ Z3/cvc5 is **decide-rate and depth, never correctness.**
 
 The capability frontier (decide% per division) partitions cleanly:
 
-- **Strong / competitive (≥80%):** QF_ABV 88%, QF_AUFBV 93%, QF_DT 100%, QF_FP 100%, QF_UFBV
-  100%, QF_UFFF 100%, QF_FF 80%, QF_LIA 91%, QF_NIA-synthetic 100%,
-  QF_NRA-synthetic 91%, quantified-BV 69–80%, QF_SEQ 79%, QF_BVFP 88%,
-  QF_LRA 82%.
+- **Strong / competitive (≥80%):** QF_ABV 88%, QF_ALIA 100%, QF_AUFBV 93%,
+  QF_DT 100%, QF_FP 100%, QF_UFBV 100%, QF_UFFF 100%, QF_FF 80%,
+  QF_LIA 91%, QF_NIA-synthetic 100%, QF_NRA-synthetic 91%,
+  quantified-BV 69–80%, QF_SEQ 79%, QF_BVFP 88%, QF_LRA 82%.
 - **Mid (40–75%):** QF_UF 54–67% after the first-class carrier-sort remeasurement
-  and the 2026-06-26 SMT-LIB div/mod underspecification guard, QF_ALIA 83%,
-  QF_AUFLIA 71%, QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%,
-  QF_UFLIA 50–83%.
+  and the 2026-06-26 SMT-LIB div/mod underspecification guard, QF_AUFLIA 71%,
+  QF_NIA 54%, QF_S 44%, QF_AUFBV-cvc5 56%, QF_UFLIA 50–83%.
 - **Weak / open (<40%) — the real frontier:** QF_SLIA 30% (bounded-string length
   wall), QF_NRA-cvc5 24% (high-degree nonlinear), QF_AX 38%,
-  **quantified-LIA/UF over infinite domains 0%**. Int-indexed arrays have moved
-  into the mid band for QF_ALIA/QF_AUFLIA after the generic Bool/linear-Int
-  array route, but still have concrete replay/search blockers.
+  **quantified-LIA/UF over infinite domains 0%**. Int-indexed arrays now have a
+  complete QF_ALIA cvc5 slice, but AUFLIA still has concrete scalar-search
+  blockers and QF_AX remains broad/open.
 - **QF_BV:** measured at parity with Z3 on the hard public p4dfa slice (both
   hard-capped) — see PLAN's lazy-bitblasting findings.
 
@@ -82,7 +81,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 657 decided, 605 oracle-compared, DISAGREE=0**, with **20 complete
+  992 files, 658 decided, 606 oracle-compared, DISAGREE=0**, with **20 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
@@ -182,7 +181,7 @@ a named mechanism.**
 ### Tier A — decide-rate keystones (the biggest capability gaps). Mostly the
 **deciders/IR**, actively advanced by the parallel agent's `axeyum-ir`/`axeyum-rewrite`/CAD work.
 
-1. **Int-indexed arrays** (QF_ALIA 83%, QF_AUFLIA 71%, QF_AX 38%). The first IR blocker is
+1. **Int-indexed arrays** (QF_ALIA 100%, QF_AUFLIA 71%, QF_AX 38%). The first IR blocker is
    **partially lifted (2026-06-25):** `Sort::Array` now carries sort-valued
    index/element metadata (`ArraySortKey`) instead of BV widths only; SMT-LIB
    parses/writes free `(Array Int Int)` terms, and congruence-UNSAT over
@@ -418,11 +417,20 @@ a named mechanism.**
    chains over different constant-array defaults now produce a rechecked unsat
    certificate on the infinite `Int` index sort. This closes `constarr3` and
    refreshes QF_ALIA to **5/6 decided (83%)**, **unsupported=0**,
-   **DISAGREE=0**. The remaining QF_ALIA blocker is `ios_np_sf`, whose proof
-   needs store-chain/readback reasoning plus arithmetic-backed index
-   disequality; AUFLIA remains blocked on `bug330`/`bug337` scalar search.
-   Then extend from the current Bool/linear-Int array slice to broader non-BV
-   component sorts.
+   **DISAGREE=0**. The remaining QF_ALIA blocker at that point was
+   `ios_np_sf`, whose proof needed store-chain/readback reasoning plus
+   arithmetic-backed index disequality; AUFLIA remained blocked on
+   `bug330`/`bug337` scalar search.
+   **QF_ALIA store-chain readback landed later 2026-06-26:** finite
+   store-chain equality over a shared `(Array Int Int)` base now has a rechecked
+   readback certificate. Unit-affine Int aliases prove the selected index is
+   distinct from every opposite-chain write index, so equality forces the
+   opposite side to read the shared base at that index; an asserted disequality
+   against that read refutes the query. This closes `ios_np_sf` and refreshes
+   QF_ALIA to **6/6 decided (100%)**, **unknown=0**, **unsupported=0**,
+   **oracle-compared=5/6**, **DISAGREE=0**. The remaining Int-array solve work
+   is AUFLIA `bug330`/`bug337` scalar-search depth, QF_AX breadth, and then
+   broader non-BV component sorts; QF_ALIA's next step is evidence/Lean audit.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
