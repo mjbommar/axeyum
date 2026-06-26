@@ -190,11 +190,14 @@ against competitor source, are now binding:
    rows with no Int/Real content, closing the `parser/as` and `ite4` audit
    errors. A follow-up set-cardinality pass added a checked lowered
    `set.card`→BV-popcount certificate, closing both the `sets/card` bit-blast
-   trust-hole row and the `sets/card-6` evidence timeout. The exact row is now
-   **39/44 dominant (88.6%)**, **Lean unsat 10/14 (71.4%)**, with
+   trust-hole row and the `sets/card-6` evidence timeout. A follow-up
+   Boolean-EUF pass added a checked equality-skeleton refutation bridge for
+   pure-UF rows whose contradiction is hidden behind `not =>`, CNF, or Boolean
+   `ite`, closing `simple-uf`, `uf/cnf-and-neg`, and `uf/cnf-ite`. The exact row
+   is now **42/44 dominant (95.5%)**, **Lean unsat 13/14 (92.9%)**, with
    **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Remaining QF_UF
-   blockers are now named audit gaps: Boolean-normalization proof bridges for
-   CNF-shaped pure-UF rows and one nonlinear-extension `unknown`.
+   blockers are now two named audit gaps: mixed UF+arithmetic `bug303` and one
+   nonlinear-extension `unknown`.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

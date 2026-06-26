@@ -649,6 +649,43 @@ fn qf_uf_sets_cardinality_checks_in_real_lean() {
     lean_accepts("qf_uf_sets_cardinality", &source);
 }
 
+/// `QF_UF`: Boolean structure around EUF atoms is discharged by enumerating the
+/// equality-atom skeleton and checking every skeleton model with congruence.
+#[test]
+fn qf_uf_boolean_euf_rows_check_in_real_lean() {
+    for (tag, input) in [
+        (
+            "qf_uf_simple_uf_bool_euf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__simple-uf.smt2"
+            ),
+        ),
+        (
+            "qf_uf_cnf_and_neg_bool_euf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-and-neg.smt2"
+            ),
+        ),
+        (
+            "qf_uf_cnf_ite_bool_euf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-ite.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("Boolean-EUF row parses");
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|error| panic!("{tag}: reconstructs: {error}"));
+        assert_eq!(fragment, ProofFragment::BoolEufExhaustive, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: Boolean-EUF module must not use sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
+}
+
 /// `QF_UF`: `parallel-let` reduces to a declared-carrier equality conflict
 /// without any `Apply` node. It is still EUF, not ground BV.
 #[test]

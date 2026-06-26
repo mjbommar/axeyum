@@ -6,6 +6,43 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UF Boolean-EUF audit gaps closed.**
+  Added a checked Boolean-structured EUF refutation bridge for pure
+  uninterpreted-sort formulas whose contradiction is hidden behind Boolean
+  syntax. The checker abstracts EUF equality atoms, enumerates every satisfying
+  Boolean skeleton assignment, and requires each induced equality/disequality
+  core to be refuted by the existing congruence checker; mixed arithmetic/BV
+  shapes are rejected. This certifies `simple-uf`, `uf/cnf-and-neg`, and
+  `uf/cnf-ite` as `bool-euf-exhaustive-unsat` /
+  `ProofFragment::BoolEufExhaustive`, with no trust steps and Lean-checked
+  wrappers. The exact QF_UF bounded declared-sort audit is refreshed at
+  **42/44 dominant (95.5%)**, **Lean unsat 13/14 (92.9%)**,
+  **mismatches=0**, **audit_errors=0**, **timeouts=0**,
+  **evidence_checked=44/44**, and **evidence_certified=42/44**. Remaining
+  QF_UF blockers are now `bug303` (mixed UF+arithmetic, still
+  `bare-unsat`) and `issue3970-nl-ext-purify` (checked `unknown` against a
+  baseline `unsat`). **Next:** decide whether `bug303` needs a small
+  arithmetic/purification certificate, then decide whether the nonlinear
+  extension row should get an explicit arithmetic certificate or stay an honest
+  frontier.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib bool_euf -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_boolean_euf_rows_use_checked_exhaustive_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_boolean_euf_rows_check_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__simple-uf.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-and-neg.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-ite.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-26 — QF_UF set-cardinality audit timeout closed.**
   Added a checked lowered finite-set cardinality refutation for the SMT-LIB
   `set.card`→BV-popcount encoding. The checker recognizes popcount lower/upper

@@ -123,6 +123,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatBoundedIntBlast(_) => "bounded-int-blast-unsat",
         Evidence::UnsatFiniteDomainPigeonhole(_) => "finite-domain-pigeonhole-unsat",
         Evidence::UnsatBoolUfExhaustive(_) => "bool-uf-exhaustive-unsat",
+        Evidence::UnsatBoolEufExhaustive(_) => "bool-euf-exhaustive-unsat",
         Evidence::UnsatDatatypeStructural(_) => "datatype-structural-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",
         Evidence::UnsatArrayAxiom(_) => "array-axiom-unsat",

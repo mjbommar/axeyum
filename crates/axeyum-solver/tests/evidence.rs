@@ -356,6 +356,54 @@ fn qf_uf_set_cardinality_rows_use_checked_cardinality_evidence() {
 }
 
 #[test]
+fn qf_uf_boolean_euf_rows_use_checked_exhaustive_evidence() {
+    for (tag, input, expected_atoms) in [
+        (
+            "simple-uf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__simple-uf.smt2"
+            ),
+            2,
+        ),
+        (
+            "cnf-and-neg",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-and-neg.smt2"
+            ),
+            4,
+        ),
+        (
+            "cnf-ite",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-ite.smt2"
+            ),
+            8,
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UF Boolean-EUF row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: produce evidence failed: {error}"));
+        let Evidence::UnsatBoolEufExhaustive(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected Boolean-EUF exhaustive evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert_eq!(cert.atoms.len(), expected_atoms, "{tag}");
+        assert!(report.evidence.is_certified(), "{tag}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: Boolean-EUF certificate should be checked directly"
+        );
+    }
+}
+
+#[test]
 fn qf_dt_cvc5_slice_uses_checked_datatype_structural_evidence() {
     for (tag, input, min_branches) in [
         (
