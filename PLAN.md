@@ -242,6 +242,16 @@ against competitor source, are now binding:
    generated formulas, it did not certify the overbound rows within the 10 s
    budget. The next useful move there is a deeper arithmetic/UF Boolean-skeleton
    reduction, not another shallow equality-propagation seed.
+   **QF_UFLIA OVERBOUND EQUALITY PROPAGATION PROBE RETAINED (2026-06-26):**
+   the online LIA theory now soundly propagates integer equality atoms from
+   LP-infeasible strict branches (`eq=true`) or an LP-infeasible equality branch
+   (`eq=false`), with direct unit coverage. This is a narrow DPLL(T) prune, not a
+   row closure: both overbound files still time out in the same 873-atom lazy-LIA
+   skeleton with 1433 upfront bound lemmas. A broader static-bound experiment that
+   included complement bounds and removed the large-atom implication guard was
+   rejected because it inflated upfront lemmas to 5484 without deciding either
+   row. Next work should instrument lazy UF+LIA CEGAR iterations and attack SAT
+   relevance / Boolean-skeleton reduction, not add more shallow bound seeding.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

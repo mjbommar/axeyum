@@ -6,6 +6,37 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UFLIA overbound equality-propagation probe retained.**
+  Revisited the two parent `qf-uflia-cvc5-regress-clean-overbound` timeout rows
+  after the restart. The retained solver change is deliberately narrow:
+  `LiaTheory::propagate` now handles integer equality atoms by LP-relaxation
+  probes, propagating `x = y` only when both strict branches `x < y` and `y < x`
+  are infeasible, and propagating `x != y` only when `asserted ∧ x = y` is
+  infeasible. This is a local DPLL(T) pruning improvement with asserted-only
+  reasons; it is **not** a row closure. Direct tests now cover equality-true
+  propagation from paired bounds and equality-false propagation from an
+  incompatible bound.
+
+  I also tested widening the scalar DPLL upfront integer-bound lemmas to include
+  complement bounds and to remove the large-atom guard. That experiment was
+  rejected before commit: it raised the target rows from 1433 to 5484 upfront
+  bound lemmas, still timed out, and risked slowing the broad scalar path.
+  Current diagnostics on the retained tree leave both overbound rows `unknown`:
+  `uflia-error0` times out after 403 lazy-LIA rounds over 873 atoms, and
+  `error0` times out after 405 rounds / `rustsat-batsat` timeout, both with
+  1433 upfront bound lemmas. **Next:** stop spending on shallow static-bound
+  seeding for these rows; instrument the lazy UF+LIA CEGAR loop and attack SAT
+  relevance / Boolean-skeleton reduction in the 873-atom mixed core.
+  Verification passed:
+  `cargo fmt --all`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib equality_atom_ -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test uflia_online interface_equality_forces_euf_contradiction_unsat -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 10000`;
+  `git diff --check`.
+
 - **Session 2026-06-26 — QF_UFLIA parent dominance audit ingested.**
   Audited the committed parent `qf-uflia-cvc5-regress-clean` baseline over its
   six decided instances. The parent row is now **6/6 dominant (100.0%)** with
@@ -4132,6 +4163,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **QF_UFLIA overbound equality propagation retained.**
+  Added conservative online LIA propagation for integer equality atoms:
+  equality-true needs both strict disequality branches LP-infeasible, and
+  equality-false needs the equality branch LP-infeasible. The two QF_UFLIA
+  overbound rows remain `unknown` at 10 s, so this is recorded as pruning, not a
+  decide-rate win. The broader upfront complement-bound lemma widening was
+  tested and rejected because it inflated initial lemmas without closing either
+  row.
 
 - **2026-06-26** — **QF_UFLIA parent dominance audit ingested.**
   Committed the exact dominance audit for the parent

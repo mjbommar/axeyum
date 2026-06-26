@@ -39,11 +39,13 @@
 //!   asks [`crate::lra::lp_relaxation_feasibility`]; an `Infeasible` relaxation
 //!   *over the reals* implies the integer system is infeasible too (integer
 //!   solutions are a subset of real ones), so the atom is **entailed over ℤ** —
-//!   emitted as a [`TheoryProp`] whose `reason` is the **asserted-only** core. An
-//!   LP-`Feasible` probe is inconclusive about ℤ → skip (no fabricated
-//!   propagation). The relaxation skips integer tightening / Gomory cuts /
-//!   branch-and-bound, so it stays far cheaper than the per-`assert` integer
-//!   feasibility decision.
+//!   emitted as a [`TheoryProp`] whose `reason` is the **asserted-only** core.
+//!   Equality atoms use the same conservative probe style: equality is propagated
+//!   true only when both strict disequality branches are LP-infeasible, and false
+//!   only when asserting the equality is LP-infeasible. An LP-`Feasible` probe is
+//!   inconclusive about ℤ → skip (no fabricated propagation). The relaxation
+//!   skips integer tightening / Gomory cuts / branch-and-bound, so it stays far
+//!   cheaper than the per-`assert` integer feasibility decision.
 //!
 //! [`check_qf_lia_online`] wires [`LiaTheory`] into a self-contained `DPLL(T)`
 //! search over the Boolean skeleton (the same shape as
@@ -246,12 +248,13 @@ impl LiaTheory {
     /// relaxation is infeasible *over the reals*, the integer system is infeasible
     /// too (integer points ⊆ real points), so the atom is **entailed over ℤ** at the
     /// tested polarity — emit a [`TheoryProp`] whose `reason` is the **asserted-only**
-    /// (and deletion-minimized) core. An LP-`Feasible` probe is inconclusive about ℤ,
-    /// and an `Unknown` (overflow / outside the fragment / backstop) probe declines:
-    /// either way nothing is emitted — a sound under-approximation that **never**
-    /// fabricates a propagation. Equality atoms are skipped (their negation is a
-    /// disjunction the conjunctive relaxation cannot represent — the same restriction
-    /// [`TheorySolver::assert`] makes).
+    /// (and deletion-minimized) core. Equality atoms are handled with two conservative
+    /// probes: `eq=false` is propagated when `asserted ∧ eq` is LP-infeasible, and
+    /// `eq=true` is propagated only when both strict branches `lhs < rhs` and
+    /// `rhs < lhs` are LP-infeasible under the asserted set. An LP-`Feasible` probe is
+    /// inconclusive about ℤ, and an `Unknown` (overflow / outside the fragment /
+    /// backstop) probe declines: either way nothing is emitted — a sound
+    /// under-approximation that **never** fabricates a propagation.
     #[must_use]
     pub fn propagate(&self) -> Vec<TheoryProp> {
         let asserted = self.live_lits();
@@ -260,26 +263,97 @@ impl LiaTheory {
             if self.assigned.get(atom).copied().flatten().is_some() {
                 continue; // already decided by the search
             }
-            if !matches!(self.kinds[atom], AtomKind::Order) {
-                continue; // equality-false is a disjunction; unsupported is a no-op
-            }
-            // Probe ¬atom (atom false): LP-infeasible ⇒ atom entailed true.
-            if let Some(reason) = self.probe_entails(&asserted, atom, false) {
-                out.push(TheoryProp {
-                    lit: TheoryLit { atom, value: true },
-                    reason,
-                });
-                continue;
-            }
-            // Probe atom (atom true): LP-infeasible ⇒ ¬atom entailed.
-            if let Some(reason) = self.probe_entails(&asserted, atom, true) {
-                out.push(TheoryProp {
-                    lit: TheoryLit { atom, value: false },
-                    reason,
-                });
+            match self.kinds[atom] {
+                AtomKind::Order => {
+                    // Probe ¬atom (atom false): LP-infeasible ⇒ atom entailed true.
+                    if let Some(reason) = self.probe_entails(&asserted, atom, false) {
+                        out.push(TheoryProp {
+                            lit: TheoryLit { atom, value: true },
+                            reason,
+                        });
+                        continue;
+                    }
+                    // Probe atom (atom true): LP-infeasible ⇒ ¬atom entailed.
+                    if let Some(reason) = self.probe_entails(&asserted, atom, true) {
+                        out.push(TheoryProp {
+                            lit: TheoryLit { atom, value: false },
+                            reason,
+                        });
+                    }
+                }
+                AtomKind::Equality => {
+                    if let Some(reason) = self.probe_equality_true(&asserted, atom) {
+                        out.push(TheoryProp {
+                            lit: TheoryLit { atom, value: true },
+                            reason,
+                        });
+                        continue;
+                    }
+                    // `asserted ∧ eq` LP-infeasible ⇒ equality is false. This probe uses
+                    // the ordinary equality-true live term, which the conjunctive LIA
+                    // checker already supports.
+                    if let Some(reason) = self.probe_entails(&asserted, atom, true) {
+                        out.push(TheoryProp {
+                            lit: TheoryLit { atom, value: false },
+                            reason,
+                        });
+                    }
+                }
+                AtomKind::Unsupported => {}
             }
         }
         out
+    }
+
+    /// Equality-true propagation. For integer linear terms, `lhs = rhs` follows from
+    /// the asserted set when both strict branches `lhs < rhs` and `rhs < lhs` are
+    /// infeasible. Each branch is checked independently by the LP relaxation; the union
+    /// of the two asserted-only reasons is therefore a sound reason for equality.
+    fn probe_equality_true(&self, asserted: &[TheoryLit], atom: usize) -> Option<Vec<TheoryLit>> {
+        if !self.probe_equality_branch_lp_infeasible(asserted, atom, false) {
+            return None;
+        }
+        let left_reason = self.minimize_equality_branch_reason(asserted, atom, false);
+        if !self.probe_equality_branch_lp_infeasible(asserted, atom, true) {
+            return None;
+        }
+        let right_reason = self.minimize_equality_branch_reason(asserted, atom, true);
+
+        let mut seen = HashSet::new();
+        let mut reason = Vec::new();
+        for lit in left_reason.into_iter().chain(right_reason) {
+            if seen.insert((lit.atom, lit.value)) {
+                reason.push(lit);
+            }
+        }
+        if reason.is_empty() {
+            None
+        } else {
+            Some(reason)
+        }
+    }
+
+    /// Appends one strict disequality branch for an integer equality atom to the
+    /// provided scratch arena. `reverse=false` builds `lhs < rhs`; `reverse=true`
+    /// builds `rhs < lhs`.
+    fn strict_equality_branch(
+        &self,
+        arena: &mut TermArena,
+        atom: usize,
+        reverse: bool,
+    ) -> Option<TermId> {
+        let eq = self.atom_terms[atom];
+        let TermNode::App { op: Op::Eq, args } = self.arena.node(eq) else {
+            return None;
+        };
+        if args.len() != 2 || !is_int(&self.arena, args[0]) || !is_int(&self.arena, args[1]) {
+            return None;
+        }
+        if reverse {
+            arena.int_lt(args[1], args[0]).ok()
+        } else {
+            arena.int_lt(args[0], args[1]).ok()
+        }
     }
 
     /// Tests whether the live asserted set plus `atom` at `probe_value` is
@@ -321,6 +395,28 @@ impl LiaTheory {
         )
     }
 
+    /// Same LP-infeasibility probe as [`Self::probe_lp_infeasible`], but for one
+    /// temporary strict equality branch that is not a registered atom variable.
+    fn probe_equality_branch_lp_infeasible(
+        &self,
+        asserted: &[TheoryLit],
+        atom: usize,
+        reverse: bool,
+    ) -> bool {
+        let Some((arena, mut terms)) = self.live_terms(asserted) else {
+            return false;
+        };
+        let mut arena = arena;
+        let Some(extra) = self.strict_equality_branch(&mut arena, atom, reverse) else {
+            return false;
+        };
+        terms.push(extra);
+        matches!(
+            lp_relaxation_feasibility(&arena, &terms),
+            LpRelaxation::Infeasible
+        )
+    }
+
     /// Deletion-minimizes the asserted-only reason behind an entailment: greedily
     /// drops asserted literals while `kept ∧ probe` stays LP-infeasible. The result
     /// is a sound (minimal-by-deletion) core — every retained subset is re-checked
@@ -352,6 +448,42 @@ impl LiaTheory {
         // propagation, but the caller already confirmed LP-infeasibility *with* the
         // probe; an empty reason here means the probe alone refutes, which the
         // unassigned-atom guard rules out — keep the full set, sound and coarse).
+        if core.is_empty() {
+            asserted.to_vec()
+        } else {
+            core
+        }
+    }
+
+    /// Deletion-minimizes an asserted-only reason for one temporary equality branch.
+    /// Every retained subset is rechecked by
+    /// [`Self::probe_equality_branch_lp_infeasible`], so the returned reason remains
+    /// a sound explanation for the propagation.
+    fn minimize_equality_branch_reason(
+        &self,
+        asserted: &[TheoryLit],
+        atom: usize,
+        reverse: bool,
+    ) -> Vec<TheoryLit> {
+        let mut keep: Vec<bool> = vec![true; asserted.len()];
+        for drop_idx in 0..asserted.len() {
+            keep[drop_idx] = false;
+            let subset: Vec<TheoryLit> = asserted
+                .iter()
+                .zip(&keep)
+                .filter_map(|(&lit, &k)| k.then_some(lit))
+                .collect();
+            if self.probe_equality_branch_lp_infeasible(&subset, atom, reverse) {
+                // Still entailed without this literal — drop it.
+            } else {
+                keep[drop_idx] = true;
+            }
+        }
+        let core: Vec<TheoryLit> = asserted
+            .iter()
+            .zip(&keep)
+            .filter_map(|(&lit, &k)| k.then_some(lit))
+            .collect();
         if core.is_empty() {
             asserted.to_vec()
         } else {
@@ -966,6 +1098,78 @@ mod tests {
         assert!(theory.tracks(0) && theory.tracks(1));
         assert!(theory.assert(0, true).is_ok());
         assert!(theory.assert(1, true).is_err(), "x=3 and x<2 infeasible");
+    }
+
+    #[test]
+    fn equality_atom_true_propagates_from_paired_bounds() {
+        // x >= 3 and x <= 3 entail x = 3. Both strict disequality branches are
+        // LP-infeasible, so the online theory solver may propagate equality true.
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let three = iconst(&mut arena, 3);
+        let ge = arena.int_ge(x, three).expect("x>=3");
+        let le = arena.int_le(x, three).expect("x<=3");
+        let eq = arena.eq(x, three).expect("x=3");
+
+        let mut theory = LiaTheory::new(&arena, &[ge, le, eq]);
+        assert!(theory.assert(0, true).is_ok());
+        assert!(theory.assert(1, true).is_ok());
+
+        let props = theory.propagate();
+        let prop = props
+            .iter()
+            .find(|prop| {
+                prop.lit
+                    == (TheoryLit {
+                        atom: 2,
+                        value: true,
+                    })
+            })
+            .expect("x=3 should propagate true");
+        assert!(
+            prop.reason.iter().all(|lit| matches!(
+                *lit,
+                TheoryLit {
+                    atom: 0 | 1,
+                    value: true
+                }
+            )),
+            "equality propagation reason must use only asserted bounds"
+        );
+    }
+
+    #[test]
+    fn equality_atom_false_propagates_from_incompatible_bound() {
+        // x < 3 excludes x = 3. The equality-true branch is LP-infeasible, so
+        // the online theory solver may propagate equality false.
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let three = iconst(&mut arena, 3);
+        let lt = arena.int_lt(x, three).expect("x<3");
+        let eq = arena.eq(x, three).expect("x=3");
+
+        let mut theory = LiaTheory::new(&arena, &[lt, eq]);
+        assert!(theory.assert(0, true).is_ok());
+
+        let props = theory.propagate();
+        let prop = props
+            .iter()
+            .find(|prop| {
+                prop.lit
+                    == (TheoryLit {
+                        atom: 1,
+                        value: false,
+                    })
+            })
+            .expect("x=3 should propagate false");
+        assert_eq!(
+            prop.reason,
+            vec![TheoryLit {
+                atom: 0,
+                value: true,
+            }],
+            "equality-false reason must be the asserted incompatible bound"
+        );
     }
 
     #[test]
