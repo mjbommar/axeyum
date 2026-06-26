@@ -474,6 +474,16 @@ against competitor source, are now binding:
    1 s rows lost the first UF candidate (**0** candidates, **0** UF lemmas).
    The code now documents why the implication shape is intentionally preserved;
    the retained baseline stays **1** candidate / **6** UF lemmas at 1 s.
+   **INTEGER-BOUND THEORY TAUTOLOGY FOLD LANDED (2026-06-26):**
+   the LIA abstractor now folds simple integer-bound contradictions and
+   tautologies before allocating Boolean atom props, e.g.
+   `x >= 8 ∧ x <= 6` → `false` and
+   `not (x >= 8) ∨ not (x <= 6)` → `true`. This reuses the same simple Int
+   order-bound interpretation as the certified bound mutex/implication lemmas
+   and does not flatten UF implication guards. The generated QF_UFLIA rows
+   remain `unknown`, but the 1 s frontier is preserved and the 10 s first row
+   now reaches **24** learned UF lemmas before timing out in the warm arithmetic
+   state.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

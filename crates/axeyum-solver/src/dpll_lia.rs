@@ -2108,11 +2108,21 @@ fn simple_int_literal_bounds(
         Op::IntLe => false,
         _ => return Vec::new(),
     };
-    let left_const = int_const_value(arena, args[0]);
-    let right_const = int_const_value(arena, args[1]);
+    simple_int_bounds_for_order(arena, atom_idx, args[0], args[1], strict)
+}
+
+fn simple_int_bounds_for_order(
+    arena: &TermArena,
+    atom_idx: usize,
+    left: TermId,
+    right: TermId,
+    strict: bool,
+) -> Vec<SimpleIntBound> {
+    let left_const = int_const_value(arena, left);
+    let right_const = int_const_value(arena, right);
     match (left_const, right_const) {
-        (None, Some(c)) => bounds_for_expr_le_const(atom_idx, args[0], c, strict),
-        (Some(c), None) => bounds_for_const_le_expr(atom_idx, args[1], c, strict),
+        (None, Some(c)) => bounds_for_expr_le_const(atom_idx, left, c, strict),
+        (Some(c), None) => bounds_for_const_le_expr(atom_idx, right, c, strict),
         _ => Vec::new(),
     }
 }
@@ -2200,6 +2210,82 @@ fn conflicting_bounds<'a>(
         (b, a)
     };
     (lower.value > upper.value).then_some((lower, upper))
+}
+
+fn int_bound_and_is_contradiction(arena: &TermArena, terms: &[TermId]) -> bool {
+    let mut flat = Vec::new();
+    for &term in terms {
+        flatten_bool_and(arena, term, &mut flat);
+    }
+    let bounds = flat
+        .iter()
+        .flat_map(|&term| int_bounds_for_bool_literal(arena, term, true))
+        .collect::<Vec<_>>();
+    int_bounds_have_conflict(&bounds)
+}
+
+fn int_bound_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
+    let mut flat = Vec::new();
+    for &term in terms {
+        flatten_bool_or(arena, term, &mut flat);
+    }
+    let bounds = flat
+        .iter()
+        .flat_map(|&term| int_bounds_for_bool_literal(arena, term, false))
+        .collect::<Vec<_>>();
+    int_bounds_have_conflict(&bounds)
+}
+
+fn int_bounds_have_conflict(bounds: &[SimpleIntBound]) -> bool {
+    for i in 0..bounds.len() {
+        for j in (i + 1)..bounds.len() {
+            if conflicting_bounds(&bounds[i], &bounds[j]).is_some() {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn int_bounds_for_bool_literal(
+    arena: &TermArena,
+    term: TermId,
+    truth: bool,
+) -> Vec<SimpleIntBound> {
+    if let Some(inner) = bool_not_child(arena, term) {
+        return int_bounds_for_bool_literal(arena, inner, !truth);
+    }
+
+    let TermNode::App { op, args } = arena.node(term) else {
+        return Vec::new();
+    };
+    let Some((left, right, strict)) = canonical_int_order(args, *op, arena) else {
+        return Vec::new();
+    };
+    simple_int_bounds_for_order(arena, term.index(), left, right, strict)
+        .into_iter()
+        .filter(|bound| bound.truth == truth)
+        .collect()
+}
+
+fn canonical_int_order(
+    args: &[TermId],
+    op: Op,
+    arena: &TermArena,
+) -> Option<(TermId, TermId, bool)> {
+    if args.len() != 2 {
+        return None;
+    }
+    match op {
+        Op::IntLe => Some((args[0], args[1], false)),
+        Op::IntLt => Some((args[0], args[1], true)),
+        Op::IntGe => Some((args[1], args[0], false)),
+        Op::IntGt => Some((args[1], args[0], true)),
+        _ => None,
+    }
+    .filter(|(left, right, _strict)| {
+        arena.sort_of(*left) == Sort::Int && arena.sort_of(*right) == Sort::Int
+    })
 }
 
 /// One abstracted arithmetic order atom: its fresh proposition, the atom term,
@@ -2298,6 +2384,9 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         args: &[TermId],
     ) -> Result<TermId, SolverError> {
+        if int_bound_and_is_contradiction(arena, args) {
+            return Ok(arena.bool_const(false));
+        }
         let mut terms = Vec::with_capacity(args.len());
         for &arg in args {
             let term = self.abstract_term(arena, arg)?;
@@ -2314,6 +2403,9 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         args: &[TermId],
     ) -> Result<TermId, SolverError> {
+        if int_bound_or_is_tautology(arena, args) {
+            return Ok(arena.bool_const(true));
+        }
         let mut terms = Vec::with_capacity(args.len());
         for &arg in args {
             let term = self.abstract_term(arena, arg)?;
@@ -2899,6 +2991,50 @@ mod tests {
     }
 
     #[test]
+    fn abstractor_folds_integer_bound_or_tautology_before_atoms() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let six = arena.int_const(6);
+        let eight = arena.int_const(8);
+        let x_ge_eight = arena.int_ge(xv, eight).unwrap();
+        let x_le_six = arena.int_le(xv, six).unwrap();
+        let not_ge = arena.not(x_ge_eight).unwrap();
+        let not_le = arena.not(x_le_six).unwrap();
+        let clause = arena.or(not_ge, not_le).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let folded = ctx.abstract_term(&mut arena, clause).unwrap();
+
+        assert!(matches!(arena.node(folded), TermNode::BoolConst(true)));
+        assert!(
+            ctx.atoms.is_empty(),
+            "pre-abstraction theory tautologies should not allocate dead atoms"
+        );
+    }
+
+    #[test]
+    fn abstractor_folds_integer_bound_and_contradiction_before_atoms() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let six = arena.int_const(6);
+        let eight = arena.int_const(8);
+        let x_ge_eight = arena.int_ge(xv, eight).unwrap();
+        let x_le_six = arena.int_le(xv, six).unwrap();
+        let both = arena.and(x_ge_eight, x_le_six).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let folded = ctx.abstract_term(&mut arena, both).unwrap();
+
+        assert!(matches!(arena.node(folded), TermNode::BoolConst(false)));
+        assert!(
+            ctx.atoms.is_empty(),
+            "pre-abstraction theory contradictions should not allocate dead atoms"
+        );
+    }
+
+    #[test]
     fn upfront_integer_bound_mutex_lemmas_are_certified() {
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::Int).unwrap();
@@ -3039,14 +3175,19 @@ mod tests {
     fn justified_support_ignores_dead_or_branch_conflict() {
         let mut arena = TermArena::new();
         let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
         let xv = arena.var(x);
+        let yv = arena.var(y);
         let zero = arena.int_const(0);
         let one = arena.int_const(1);
         let two = arena.int_const(2);
         let x_le_zero = arena.int_le(xv, zero).unwrap();
         let x_ge_two = arena.int_ge(xv, two).unwrap();
-        let x_le_one = arena.int_le(xv, one).unwrap();
-        let dead_conflict = arena.and(x_ge_two, x_le_one).unwrap();
+        let y_ge_zero = arena.int_ge(yv, zero).unwrap();
+        let x_plus_y = arena.int_add(xv, yv).unwrap();
+        let x_plus_y_le_one = arena.int_le(x_plus_y, one).unwrap();
+        let dead_tail = arena.and(y_ge_zero, x_plus_y_le_one).unwrap();
+        let dead_conflict = arena.and(x_ge_two, dead_tail).unwrap();
         let assertion = arena.or(x_le_zero, dead_conflict).unwrap();
 
         let mut ctx = ArithAbstractor::default();
