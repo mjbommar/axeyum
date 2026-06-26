@@ -116,6 +116,7 @@ mod reconstruct;
 mod records;
 pub mod route_trace;
 mod sat_bv_backend;
+mod set_cardinality;
 mod skolem_alethe;
 mod smtlib;
 mod solver;
@@ -344,6 +345,7 @@ pub use reconstruct::{
 pub use records::{RecordError, RecordSort};
 pub use route_trace::{DeclineReason, RouteAttempt, RouteOutcome, RouteTrace, Verdict};
 pub use sat_bv_backend::SatBvBackend;
+pub use set_cardinality::{SetCardinalityRefutationCertificate, set_cardinality_refutation};
 pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
 pub use smtlib::{
     SmtLibOutcome, optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib,

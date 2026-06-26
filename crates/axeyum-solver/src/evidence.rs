@@ -76,6 +76,7 @@ use crate::quant_finite_cert::{
     prove_finite_int_quant_unsat_uf_alethe,
 };
 use crate::sat_bv_backend::SatBvBackend;
+use crate::set_cardinality::SetCardinalityRefutationCertificate;
 use crate::term_identity::TermIdentityRefutationCertificate;
 use crate::trust::{TrustId, TrustStep};
 use crate::ufbv_finite::{BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate};
@@ -300,6 +301,11 @@ pub enum Evidence {
     /// a disequality or a one-step pure-BV contradiction. The checker re-scans
     /// the original query and recomputes the certificate before accepting.
     UnsatBvUfLocal(BvUfLocalRefutationCertificate),
+    /// Unsatisfiable: lowered finite-set cardinality constraints refute by
+    /// popcount monotonicity, subset facts, and safe union/intersection upper
+    /// bounds. The checker re-scans the original lowered BV assertions and
+    /// re-matches the conflicting bounds before accepting.
+    UnsatSetCardinality(SetCardinalityRefutationCertificate),
     /// Unsatisfiable (`QF_LRA`): a Farkas refutation over the exact-rational
     /// constraints, whose [`FarkasCertificate::verify`] is the evidence.
     UnsatFarkas(FarkasCertificate),
@@ -577,6 +583,7 @@ impl Evidence {
             | Evidence::UnsatBvDefinedEnum(_)
             | Evidence::UnsatBvForallNonconstant(_)
             | Evidence::UnsatBvUfLocal(_)
+            | Evidence::UnsatSetCardinality(_)
             | Evidence::UnsatArrayAxiom(_)
             | Evidence::UnsatTermIdentity(_)
             | Evidence::UnsatBoolSimplification(_)
@@ -611,6 +618,7 @@ impl Evidence {
                 | Evidence::UnsatBvDefinedEnum(_)
                 | Evidence::UnsatBvForallNonconstant(_)
                 | Evidence::UnsatBvUfLocal(_)
+                | Evidence::UnsatSetCardinality(_)
                 | Evidence::UnsatFarkas(_)
                 | Evidence::UnsatLraDpll(_)
                 | Evidence::UnsatArithDpll(_)
@@ -664,6 +672,9 @@ fn check_direct_structural_evidence(
             check_bv_forall_nonconstant_evidence(arena, assertions, cert)
         }
         Evidence::UnsatBvUfLocal(cert) => check_bv_uf_local_evidence(arena, assertions, cert),
+        Evidence::UnsatSetCardinality(cert) => {
+            check_set_cardinality_evidence(arena, assertions, cert)
+        }
         Evidence::UnsatArrayAxiom(cert) => check_array_axiom_evidence(arena, assertions, cert),
         Evidence::UnsatTermIdentity(cert) => check_term_identity_evidence(arena, assertions, cert),
         Evidence::UnsatBoolSimplification(cert) => {
@@ -767,6 +778,15 @@ fn check_bv_uf_local_evidence(
     cert: &BvUfLocalRefutationCertificate,
 ) -> bool {
     crate::bv_uf_local::bv_uf_local_refutation(arena, assertions)
+        .is_some_and(|fresh| fresh == *cert)
+}
+
+fn check_set_cardinality_evidence(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &SetCardinalityRefutationCertificate,
+) -> bool {
+    crate::set_cardinality::set_cardinality_refutation(arena, assertions)
         .is_some_and(|fresh| fresh == *cert)
 }
 
@@ -915,11 +935,13 @@ fn check_diophantine_evidence(
 ///
 /// 1. **term-level enumeration** (≤20 total symbol bits) — trusts only the
 ///    evaluator, the strongest;
-/// 2. **Alethe bitblast→CNF→resolution proof** ([`Evidence::UnsatAletheProof`])
+/// 2. **direct structural BV certificates**, including lowered finite-set
+///    cardinality contradictions;
+/// 3. **Alethe bitblast→CNF→resolution proof** ([`Evidence::UnsatAletheProof`])
 ///    when the instance is in the driver's fragment — `check_alethe` re-derives
 ///    the bit-blast itself, so all of bit-blast/Tseitin/SAT-refutation are
 ///    certified this run;
-/// 3. **plain DRAT** ([`Evidence::Unsat`]) otherwise — Tseitin + the SAT
+/// 4. **plain DRAT** ([`Evidence::Unsat`]) otherwise — Tseitin + the SAT
 ///    refutation are DRAT-checked, but the bit-blast is trusted, not certified.
 ///
 /// # Errors
@@ -933,6 +955,13 @@ pub fn produce_qf_bv_evidence(
 ) -> Result<EvidenceReport, SolverError> {
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
+    if let Some(cert) = crate::set_cardinality::set_cardinality_refutation(arena, assertions) {
+        return Ok(EvidenceReport {
+            evidence: Evidence::UnsatSetCardinality(cert),
+            provenance,
+            trusted_steps: Vec::new(),
+        });
+    }
     if let Some(cert) = crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions) {
         return Ok(EvidenceReport {
             evidence: Evidence::UnsatBvDefinedEnum(cert),
@@ -1298,6 +1327,13 @@ fn direct_pre_solve_structural_report(
     if let Some(cert) = crate::bv_uf_local::bv_uf_local_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatBvUfLocal(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    if let Some(cert) = crate::set_cardinality::set_cardinality_refutation(arena, assertions) {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatSetCardinality(cert),
             provenance: provenance.clone(),
             trusted_steps: Vec::new(),
         });
@@ -1812,6 +1848,9 @@ fn direct_structural_unsat_evidence(
     if let Some(cert) = crate::bv_uf_local::bv_uf_local_refutation(arena, assertions) {
         return Some((Evidence::UnsatBvUfLocal(cert), Vec::new()));
     }
+    if let Some(cert) = crate::set_cardinality::set_cardinality_refutation(arena, assertions) {
+        return Some((Evidence::UnsatSetCardinality(cert), Vec::new()));
+    }
     if let Some(cert) = crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions) {
         return Some((Evidence::UnsatBvDefinedEnum(cert), Vec::new()));
     }
@@ -2229,6 +2268,7 @@ pub fn prove(
         | Evidence::UnsatBvDefinedEnum(_)
         | Evidence::UnsatBvForallNonconstant(_)
         | Evidence::UnsatBvUfLocal(_)
+        | Evidence::UnsatSetCardinality(_)
         | Evidence::UnsatFarkas(_)
         | Evidence::UnsatLraDpll(_)
         | Evidence::UnsatArithDpll(_)

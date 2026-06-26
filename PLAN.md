@@ -188,12 +188,13 @@ against competitor source, are now binding:
    This closes the `parallel-let` Lean gap. A follow-up SAT evidence pass made
    the arithmetic/Diophantine optional evidence prepasses decline declared-sort
    rows with no Int/Real content, closing the `parser/as` and `ite4` audit
-   errors. The exact row is now **37/44 dominant (84.1%)**,
-   **Lean unsat 8/14 (57.1%)**, with **mismatches=0**, **audit_errors=0**, and
-   **timeouts=1**. Remaining QF_UF blockers are now named audit gaps:
-   Boolean-normalization proof bridges for CNF-shaped pure-UF rows, one set/card
-   bit-blast trust hole, one nonlinear-extension `unknown`, and one
-   check-evidence timeout.
+   errors. A follow-up set-cardinality pass added a checked lowered
+   `set.card`→BV-popcount certificate, closing both the `sets/card` bit-blast
+   trust-hole row and the `sets/card-6` evidence timeout. The exact row is now
+   **39/44 dominant (88.6%)**, **Lean unsat 10/14 (71.4%)**, with
+   **mismatches=0**, **audit_errors=0**, and **timeouts=0**. Remaining QF_UF
+   blockers are now named audit gaps: Boolean-normalization proof bridges for
+   CNF-shaped pure-UF rows and one nonlinear-extension `unknown`.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

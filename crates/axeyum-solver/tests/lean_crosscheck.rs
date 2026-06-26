@@ -629,6 +629,26 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean() {
     lean_accepts("qf_ufbv_fun1_bool_uf_exhaustive", &source);
 }
 
+/// `QF_UF` with finite sets: the frontend lowers `set.card` to BV popcounts.
+/// `sets/card-6` is refuted by `C ⊆ A ∪ B`, `|C| ≥ 5`, `|A| ≤ 2`, and
+/// `|B| ≤ 2`, so the certificate avoids the slower reduced-CNF proof route.
+#[test]
+fn qf_uf_sets_cardinality_checks_in_real_lean() {
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__sets__card-6.smt2"
+    ))
+    .expect("sets/card-6 row parses");
+    let assertions = script.assertions.clone();
+    let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+        .expect("set-cardinality row reconstructs");
+    assert_eq!(fragment, ProofFragment::SetCardinality);
+    assert!(
+        !source.contains("sorryAx"),
+        "set-cardinality module must not use sorryAx:\n{source}"
+    );
+    lean_accepts("qf_uf_sets_cardinality", &source);
+}
+
 /// `QF_UF`: `parallel-let` reduces to a declared-carrier equality conflict
 /// without any `Apply` node. It is still EUF, not ground BV.
 #[test]

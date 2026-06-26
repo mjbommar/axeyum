@@ -91,7 +91,7 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
   QF_FF/cvc5 `100% (24/24)`, QF_FP/bitwuzla `100% (16/16)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
   `100% (32/32)`, QF_NRA synthetic `100% (30/30)`, QF_UF/cvc5 bounded
-  declared-sort `84% (37/44)` with Lean unsat `57% (8/14)`,
+  declared-sort `89% (39/44)` with Lean unsat `71% (10/14)`,
   QF_UFBV/cvc5 `100% (4/4)`,
   QF_UFBV/bitwuzla `100% (2/2)`, QF_UFFF/cvc5 `100% (8/8)`, QF_UFLIA curated
   `100% (2/2)`, and QF_UFLIA bounded `100% (5/5)`. QF_ABV/QF_AUFBV no longer

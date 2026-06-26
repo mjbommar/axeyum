@@ -316,6 +316,46 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_unsat_carries_certificate() {
 }
 
 #[test]
+fn qf_uf_set_cardinality_rows_use_checked_cardinality_evidence() {
+    for (tag, input) in [
+        (
+            "sets-card",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__sets__card.smt2"
+            ),
+        ),
+        (
+            "sets-card-6",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__sets__card-6.smt2"
+            ),
+        ),
+    ] {
+        let mut script = parse_script(input).expect("QF_UF set-cardinality row parses");
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|error| panic!("{tag}: produce evidence failed: {error}"));
+        let Evidence::UnsatSetCardinality(cert) = &report.evidence else {
+            panic!(
+                "{tag}: expected set-cardinality evidence, got {:?}",
+                report.evidence
+            );
+        };
+        assert_eq!(cert.lower_bound, 5, "{tag}");
+        assert_eq!(cert.upper_bound, 4, "{tag}");
+        assert!(report.evidence.is_certified(), "{tag}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{tag}"
+        );
+        assert!(
+            report.trusted_steps.is_empty(),
+            "{tag}: cardinality certificate should be checked directly"
+        );
+    }
+}
+
+#[test]
 fn qf_dt_cvc5_slice_uses_checked_datatype_structural_evidence() {
     for (tag, input, min_branches) in [
         (

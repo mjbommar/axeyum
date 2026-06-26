@@ -113,6 +113,7 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatBvDefinedEnum(_) => "bv-defined-enum-unsat",
         Evidence::UnsatBvForallNonconstant(_) => "bv-forall-nonconstant-unsat",
         Evidence::UnsatBvUfLocal(_) => "bv-uf-local-unsat",
+        Evidence::UnsatSetCardinality(_) => "set-cardinality-unsat",
         Evidence::UnsatFarkas(_) => "farkas-unsat",
         Evidence::UnsatLraDpll(_) => "lra-dpll-unsat",
         Evidence::UnsatArithDpll(_) => "arith-dpll-unsat",

@@ -1292,6 +1292,9 @@ pub enum ProofFragment {
     /// A ground Bool/BV refutation by exhaustive enumeration after checked
     /// top-level definitions and finite-domain restrictions.
     BvDefinedEnum,
+    /// A lowered finite-set cardinality contradiction over BV popcounts and
+    /// subset/union monotonicity.
+    SetCardinality,
     /// A universal BV equality whose left side is a checked non-constant
     /// expression of the quantified variable.
     BvForallNonconstant,
@@ -1665,6 +1668,8 @@ fn finite_domain_enum_certifies(arena: &TermArena, assertions: &[TermId]) -> boo
 fn scan_ground_bv_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFragment {
     if assertions.is_empty() {
         ProofFragment::Unsupported
+    } else if crate::set_cardinality::set_cardinality_refutation(arena, assertions).is_some() {
+        ProofFragment::SetCardinality
     } else if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_some() {
         ProofFragment::BvDefinedEnum
     } else if term_level_enum_certifies(arena, assertions) {
@@ -1733,6 +1738,8 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::DatatypeStructural
     } else if has_datatype {
         ProofFragment::Datatype
+    } else if crate::set_cardinality::set_cardinality_refutation(arena, assertions).is_some() {
+        ProofFragment::SetCardinality
     } else if crate::bv_defined_enum::bv_defined_enum_refutation(arena, assertions).is_some() {
         ProofFragment::BvDefinedEnum
     } else if reflexive_disequality_assertion(arena, assertions).is_some() {
@@ -2641,6 +2648,28 @@ fn reconstruct_bv_defined_enum_to_lean_module(
     Ok(render_ctx_module(&mut ctx, proof))
 }
 
+fn reconstruct_set_cardinality_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    if crate::set_cardinality::set_cardinality_refutation(arena, assertions).is_none() {
+        return Err(ReconstructError::MalformedStep {
+            rule: "set_cardinality".to_owned(),
+            detail: "set-cardinality certificate failed".to_owned(),
+        });
+    }
+
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const("set_cardinality_assertions");
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, "set_cardinality")?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_bv_forall_nonconstant_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3247,6 +3276,7 @@ pub fn prove_unsat_to_lean_module(
     Ok((fragment, source))
 }
 
+#[allow(clippy::too_many_lines)]
 fn reconstruct_proof_fragment_to_lean_module(
     fragment: ProofFragment,
     arena: &mut TermArena,
@@ -3298,6 +3328,7 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::FiniteDomainEnum
         | ProofFragment::TermLevelEnum
         | ProofFragment::BvDefinedEnum
+        | ProofFragment::SetCardinality
         | ProofFragment::BvForallNonconstant
         | ProofFragment::BvUfLocal
         | ProofFragment::ArrayAxiom
@@ -3398,6 +3429,9 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::BvDefinedEnum => {
             reconstruct_bv_defined_enum_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::SetCardinality => {
+            reconstruct_set_cardinality_to_lean_module(arena, assertions)?
         }
         ProofFragment::BvForallNonconstant => {
             reconstruct_bv_forall_nonconstant_to_lean_module(arena, assertions)?

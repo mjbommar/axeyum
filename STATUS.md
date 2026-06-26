@@ -6,6 +6,42 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UF set-cardinality audit timeout closed.**
+  Added a checked lowered finite-set cardinality refutation for the SMT-LIB
+  `set.card`→BV-popcount encoding. The checker recognizes popcount lower/upper
+  bounds, subset facts, and safe union/intersection cardinality upper bounds;
+  it certifies both `sets/card` and `sets/card-6` directly as
+  `set-cardinality-unsat` / `ProofFragment::SetCardinality`, with no DRAT
+  reduction and no trust holes. The `sets/card-6` evidence timeout is gone, and
+  the previous `sets/card` bit-blast trust-hole row is now Lean-checked. The
+  exact QF_UF bounded declared-sort audit is refreshed at **39/44 dominant
+  (88.6%)**, **Lean unsat 10/14 (71.4%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=44/44**, and
+  **evidence_certified=39/44**. Remaining QF_UF blockers are the four
+  `bare-unsat` pure-UF/Boolean-normalization rows (`bug303`, `simple-uf`,
+  `uf/cnf-and-neg`, `uf/cnf-ite`) and the nonlinear-extension row
+  `issue3970-nl-ext-purify`, whose evidence route still returns checked
+  `unknown` against a baseline `unsat`. **Next:** add the sound Boolean
+  proof bridge for the `bare-unsat` pure-UF rows, then decide whether the
+  nonlinear-extension row needs an explicit arithmetic/purification certificate
+  or should stay an honest frontier.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib set_cardinality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test evidence qf_uf_set_cardinality_rows_use_checked_cardinality_evidence -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_sets_cardinality_checks_in_real_lean -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__sets__card-6.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__sets__card.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 44 bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-solver --lib -j1`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib --all-features -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-bench --examples -j1 -- -D warnings`;
+  `python3 -m py_compile scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-26 — QF_UF SAT evidence audit errors closed.**
   Closed the two QF_UF bounded declared-sort SAT evidence audit errors. The
   Diophantine and arithmetic-DPLL optional evidence prepasses now decline
