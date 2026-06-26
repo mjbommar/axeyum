@@ -176,6 +176,7 @@ pub(crate) const MAX_LAZY_DEPTH: u64 = 65_536;
 /// skeleton does not first have to discover the obvious equal-argument pairs by
 /// producing a candidate model.
 const MAX_PRESEEDED_FUNCTION_CONSISTENCY_LEMMAS: usize = 256;
+const MAX_POST_CANDIDATE_SIBLING_LEMMAS: usize = 1;
 
 /// Whether an over-eager-bound instance is *also* beyond the secondary
 /// (pathological-input) bounds for the lazy route — in which case even the lazy
@@ -682,7 +683,7 @@ where
         // Collect every newly-relevant pair before mutating the arena, so the
         // `assignment` borrow does not collide with the IR builders.
         let mut equal_arg_lemmas: Vec<(usize, usize)> = Vec::new();
-        let mut round_violations = 0usize;
+        let mut violated_lemmas: Vec<(usize, usize)> = Vec::new();
         for (_func, members) in &groups {
             for a in 0..members.len() {
                 for b in (a + 1)..members.len() {
@@ -702,18 +703,22 @@ where
                         equal_arg_lemmas.push((i, j));
                         if results_differ(&assignment, *fresh_i, *fresh_j) {
                             stats.violated_pairs += 1;
-                            round_violations += 1;
+                            violated_lemmas.push((i, j));
                         }
                     }
                 }
             }
         }
 
-        let new_lemmas = if round_violations == 0 {
-            Vec::new()
-        } else {
-            equal_arg_lemmas
-        };
+        let new_lemmas = candidate_function_consistency_lemmas(
+            arena,
+            &applications,
+            &groups,
+            &added,
+            equal_arg_lemmas,
+            &violated_lemmas,
+            &mut stats,
+        );
 
         if new_lemmas.is_empty() {
             // Model is functionally consistent: project, replay, and return.
@@ -741,6 +746,39 @@ where
     }
 }
 
+fn candidate_function_consistency_lemmas(
+    arena: &TermArena,
+    applications: &[(FuncId, Vec<TermId>, SymbolId)],
+    groups: &[(FuncId, Vec<usize>)],
+    added: &HashSet<(usize, usize)>,
+    equal_arg_lemmas: Vec<(usize, usize)>,
+    violated_lemmas: &[(usize, usize)],
+    stats: &mut FunctionConsistencyStats,
+) -> Vec<(usize, usize)> {
+    if violated_lemmas.is_empty() {
+        return Vec::new();
+    }
+
+    let mut queued = HashSet::new();
+    let mut lemmas = Vec::new();
+    for pair in equal_arg_lemmas {
+        if queued.insert(pair) {
+            lemmas.push(pair);
+        }
+    }
+    let sibling_lemmas = post_candidate_unary_int_sibling_lemmas(
+        arena,
+        applications,
+        groups,
+        violated_lemmas,
+        added,
+        &mut queued,
+    );
+    stats.sibling_lemmas += sibling_lemmas.len();
+    lemmas.extend(sibling_lemmas);
+    lemmas
+}
+
 #[derive(Debug, Clone)]
 struct FunctionConsistencyStats {
     applications: usize,
@@ -752,6 +790,7 @@ struct FunctionConsistencyStats {
     equal_arg_pairs: usize,
     violated_pairs: usize,
     preseeded_lemmas: usize,
+    sibling_lemmas: usize,
     lemmas_added: usize,
     last_new_lemmas: usize,
 }
@@ -775,6 +814,7 @@ impl FunctionConsistencyStats {
             equal_arg_pairs: 0,
             violated_pairs: 0,
             preseeded_lemmas: 0,
+            sibling_lemmas: 0,
             lemmas_added: 0,
             last_new_lemmas: 0,
         }
@@ -784,7 +824,7 @@ impl FunctionConsistencyStats {
         format!(
             "applications={}, function_groups={}, potential_pairs={}, solve_rounds={}, \
              sat_candidates={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
-             preseeded_lemmas={}, lemmas_added={}, last_new_lemmas={}",
+             preseeded_lemmas={}, sibling_lemmas={}, lemmas_added={}, last_new_lemmas={}",
             self.applications,
             self.function_groups,
             self.potential_pairs,
@@ -794,6 +834,7 @@ impl FunctionConsistencyStats {
             self.equal_arg_pairs,
             self.violated_pairs,
             self.preseeded_lemmas,
+            self.sibling_lemmas,
             self.lemmas_added,
             self.last_new_lemmas
         )
@@ -952,6 +993,83 @@ fn preseed_function_consistency_lemmas(
         }
     }
     Ok(count)
+}
+
+fn post_candidate_unary_int_sibling_lemmas(
+    arena: &TermArena,
+    applications: &[(FuncId, Vec<TermId>, SymbolId)],
+    groups: &[(FuncId, Vec<usize>)],
+    violated: &[(usize, usize)],
+    added: &HashSet<(usize, usize)>,
+    queued: &mut HashSet<(usize, usize)>,
+) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    for &(i, j) in violated {
+        let Some(dynamic_idx) = unary_int_dynamic_app_for_pair(arena, applications, i, j) else {
+            continue;
+        };
+        let Some((_, members)) = groups
+            .iter()
+            .find(|(_func, members)| members.contains(&dynamic_idx))
+        else {
+            continue;
+        };
+        for &sibling_idx in members {
+            if sibling_idx == dynamic_idx
+                || !is_unary_int_const_app(arena, &applications[sibling_idx])
+            {
+                continue;
+            }
+            let pair = normalized_pair(dynamic_idx, sibling_idx);
+            if added.contains(&pair) || !queued.insert(pair) {
+                continue;
+            }
+            out.push(pair);
+            if out.len() >= MAX_POST_CANDIDATE_SIBLING_LEMMAS {
+                return out;
+            }
+        }
+    }
+    out
+}
+
+fn unary_int_dynamic_app_for_pair(
+    arena: &TermArena,
+    applications: &[(FuncId, Vec<TermId>, SymbolId)],
+    lhs_idx: usize,
+    rhs_idx: usize,
+) -> Option<usize> {
+    let lhs = applications.get(lhs_idx)?;
+    let rhs = applications.get(rhs_idx)?;
+    if lhs.1.len() != 1 || rhs.1.len() != 1 {
+        return None;
+    }
+    let lhs_arg = lhs.1[0];
+    let rhs_arg = rhs.1[0];
+    if arena.sort_of(lhs_arg) != Sort::Int || arena.sort_of(rhs_arg) != Sort::Int {
+        return None;
+    }
+    match (
+        int_const(arena, lhs_arg).is_some(),
+        int_const(arena, rhs_arg).is_some(),
+    ) {
+        (false, true) => Some(lhs_idx),
+        (true, false) => Some(rhs_idx),
+        _ => None,
+    }
+}
+
+fn is_unary_int_const_app(
+    arena: &TermArena,
+    application: &(FuncId, Vec<TermId>, SymbolId),
+) -> bool {
+    application.1.len() == 1
+        && arena.sort_of(application.1[0]) == Sort::Int
+        && int_const(arena, application.1[0]).is_some()
+}
+
+fn normalized_pair(lhs: usize, rhs: usize) -> (usize, usize) {
+    if lhs <= rhs { (lhs, rhs) } else { (rhs, lhs) }
 }
 
 fn fixed_int_assignment_from_top_level_assertions(
@@ -1922,6 +2040,63 @@ mod tests {
         assert!(reason.detail.contains("sat_candidates=1"));
         assert!(reason.detail.contains("equal_arg_pairs=2"));
         assert!(reason.detail.contains("violated_pairs=1"));
+        assert!(reason.detail.contains("lemmas_added=2"));
+        assert!(reason.detail.contains("last_new_lemmas=2"));
+    }
+
+    #[test]
+    fn lazy_function_consistency_schedules_unary_int_siblings_after_violation() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let x = arena.var(x_sym);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let fx = arena.apply(f, &[x]).unwrap();
+        let f0 = arena.apply(f, &[zero]).unwrap();
+        let f1 = arena.apply(f, &[one]).unwrap();
+        let f2 = arena.apply(f, &[two]).unwrap();
+        let dynamic_pair = arena.eq(fx, f1).unwrap();
+        let const_pair = arena.eq(f0, f2).unwrap();
+        let assertion = arena.and(dynamic_pair, const_pair).unwrap();
+
+        let mut calls = 0usize;
+        let result = super::check_with_function_consistency(&mut arena, &[assertion], |a, _q| {
+            calls += 1;
+            if calls == 1 {
+                let mut model = Model::new();
+                model.set(x_sym, Value::Int(1));
+
+                let mut fresh = a
+                    .symbols()
+                    .filter_map(|(symbol, name, sort)| {
+                        (name.starts_with("!fn_app_") && sort == Sort::Int)
+                            .then_some((name.to_owned(), symbol))
+                    })
+                    .collect::<Vec<_>>();
+                fresh.sort_by(|lhs, rhs| lhs.0.cmp(&rhs.0));
+                assert_eq!(fresh.len(), 4);
+                for ((_, symbol), value) in fresh.into_iter().zip([0, 7, 1, 7]) {
+                    model.set(symbol, Value::Int(value));
+                }
+                Ok(CheckResult::Sat(model))
+            } else {
+                Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: "stop after sibling scheduling".to_string(),
+                }))
+            }
+        })
+        .unwrap();
+
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected wrapped unknown, got {result:?}");
+        };
+        assert!(reason.detail.contains("sat_candidates=1"));
+        assert!(reason.detail.contains("equal_arg_pairs=1"));
+        assert!(reason.detail.contains("violated_pairs=1"));
+        assert!(reason.detail.contains("sibling_lemmas=1"));
         assert!(reason.detail.contains("lemmas_added=2"));
         assert!(reason.detail.contains("last_new_lemmas=2"));
     }

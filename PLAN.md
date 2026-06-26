@@ -621,6 +621,27 @@ against competitor source, are now binding:
    **blocking_lemmas=300**. Next practical work is still UF/LIA convergence:
    relevance after several candidates, model-guided UF-pair scheduling, or the
    stronger online interface-equality loop.
+   **POST-CANDIDATE UF SIBLING SCHEDULING LANDED (2026-06-26):**
+   lazy function-consistency CEGAR now records `sibling_lemmas` and, after a
+   real violated candidate pair, schedules at most **one** additional valid
+   Ackermann lemma between the same unary-Int dynamic application and a sibling
+   constant application in that function group. This is deliberately
+   post-candidate, not another preseed: the rejected broad preseed hurt the first
+   arithmetic solve, while this only fires after the row has already identified
+   a relevant violated UF application. Wider caps were measured and rejected:
+   cap **16** dropped the 10 s hard row to **3** UF rounds / **2** candidates,
+   and cap **4** to **4** rounds / **3** candidates. The committed cap **1**
+   preserves the frontier.
+
+   On `cli__regress2__uflia-error0.smt2`, the 1 s run remains `unknown` but
+   preserves **2** UF rounds, **1** candidate, **282** pair checks, **5**
+   violations, and now reports **sibling_lemmas=1**, **lemmas_added=7**. At
+   10 s the row remains `unknown` but preserves **6** UF rounds and **5**
+   candidates, reports **sibling_lemmas=5**, **lemmas_added=27**, and slightly
+   lowers warm arithmetic pressure to **total_rounds=280**,
+   **blocking_lemmas=295**, **core_src_affine=45**, and **core_src_lp=204**.
+   The remaining blocker is still convergence/search after several UF
+   candidates, not missing bulk Ackermann constraints.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
