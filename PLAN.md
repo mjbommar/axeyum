@@ -1770,6 +1770,16 @@ against competitor source, are now binding:
      `[1 -> 2]`, `[2 -> 1]`. Next useful work is a multi-literal branch-schedule
      / store-chain projection for the queue-lock branch, not more one-literal
      local repair.
+     **MULTI-LITERAL BRANCH SCHEDULE REPAIR LANDED (2026-06-26):** the selected
+     false branch term is now retained, and replay projection can try a bounded
+     branch-local schedule repair on a copy of the assignment: direct scalar
+     equalities first, then equality-shaped array/store literals, keeping the copy
+     only if that branch's false-literal count decreases. This removes the
+     generated branch disjunction as `bug337`'s first replay blocker. The 10 s
+     probe now reaches direct equality ordinal 185 / term 2957,
+     `x_361 = x_22`, with values 1 vs 0, after 207 projection repair changes.
+     Next useful work is replay-gated scalar equality projection for generated
+     non-branch equalities, with direction chosen from branch/readback support.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

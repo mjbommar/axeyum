@@ -6,6 +6,40 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA multi-literal branch schedule repair.**
+  Replay-only branch repair now carries the selected best branch term and can
+  try a bounded multi-literal projection on a copy of the candidate assignment.
+  The schedule pass handles direct scalar equalities first, then equality-shaped
+  array/store literals, and keeps the copy only if the selected branch's false
+  literal count decreases. Store repairs preserve target arrays when possible;
+  when the target cannot equal `store(base,i,v)` under the current index/value,
+  the schedule pass can instead assign the target to the computed store and
+  align target readbacks. The older one-literal repair keeps its prior
+  convergence behavior so asserted select demands are not erased too early.
+
+  This still does **not** close `bug337`, but it removes the generated branch
+  disjunction as the first replay blocker. The 10 s probe remains at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair now reports
+  **select_repair_candidates=1386**, **select_repair_array_changes=17**,
+  **select_repair_symbol_changes=132**, **branch_repair_candidates=58**,
+  **branch_repair_symbol_changes=58**, and **projection_repair_changes=207**.
+  The first false conjunct is now a direct equality **ordinal 185**, term
+  **2957**, `x_361 = x_22`, with values **1** vs **0**. Next useful work is a
+  replay-gated scalar equality projection pass for non-branch generated
+  equalities, with direction chosen by branch/readback support where available.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_multi_literal_branch_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_single_false_branch_symbol_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_supported_branch_array_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_prefers_asserted_select_equalities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_best_false_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA branch array-equality repair.**
   Replay-only branch repair now handles a single false direct array equality by
   copying the side with stronger projected readback evidence into the weaker
@@ -5236,7 +5270,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P2.1 | BV lazy blasting + word-level slicing + BV theory-checker | WIP — **destination-2 lever measured & scoped** (commits beee599/9846349, `docs/research/05-algorithms/lazy-bitblasting-p21-findings.md`). KEY FACT: lazy abstraction-refinement bit-blasting (`solve_lazy_bv_abstraction`, ADR-0019) is **built but NOT wired into default `solve()`/bench** — so the "~2-3/113 public QF_BV" picture is the *eager* mountain-builder. Measured (`tests/lazy_bv_curated_measure.rs`): lazy decides **incidental-heavy-op** cases with 0 multiplier blasts (`x=1∧x=2∧r=p·q` → unsat ~0ms, 0 refined), cracks `calypto_9` (sat, 2 ops refined), is a safe no-op when `ops=0` (public files), no shortcut on essential multiplier-equivalence. Next (coordinate on shared bench): lazy-bv bench backend → measure public 113 (DISAGREE=0) → opt-in `SolverConfig::lazy_bv` strategy → default-on ADR after net benefit. The highest-ROI perf move is wiring+measuring a built CEGAR bit-blaster, not a new algorithm |
-| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Lazy ROW/extensionality `unknown` details now report refinement counters and attempt replay-gated last-candidate SAT salvage before budget declines. The AUFLIA `bug337` probe still times out at round 2 with 4096 sites, 150 array-equality atoms, 6973 congruence lemmas, and 146 diff-skolems; grouped replay projection plus branch store-base/readback and direct array-equality repair now moves the first false generated branch to ordinal 233 / term 10144, best branch 0, two false literals, first `x_17 = store(x_2, x_15, 2)` with incompatible projected store-chain entries. Remaining: multi-literal branch-schedule/store-chain projection for this queue-lock transition shape, **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays, and func_interp model polish |
+| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Lazy ROW/extensionality `unknown` details now report refinement counters and attempt replay-gated last-candidate SAT salvage before budget declines. The AUFLIA `bug337` probe still times out at round 2 with 4096 sites, 150 array-equality atoms, 6973 congruence lemmas, and 146 diff-skolems; grouped replay projection plus branch store-base/readback, direct array-equality, and bounded multi-literal branch-schedule repair now moves the first false replay point out of generated branch disjunctions to direct scalar equality ordinal 185 / term 2957, `x_361 = x_22`, values 1 vs 0. Remaining: replay-gated scalar equality projection for generated non-branch equalities, **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays, and func_interp model polish |
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **multi-equation Diophantine infeasibility** (`prove_lia_unsat_by_diophantine`, commit 96f07a3): a conjunction of integer equalities that is rational-feasible but **integer-infeasible** is UNSAT — fraction-free Hermite-style integer Gaussian elimination reports a contradiction row (`0=c` or per-row `gcd ∤ rhs`), deciding the case B&B can't terminate on for unbounded vars and the single-equation GCD misses (e.g. `x+y=0 ∧ x−y=1 → 2x=1`). **Strictly generalizes & replaced** the single-equation `prove_lia_unsat_by_gcd` in dispatch (no regression). Sound (only integer-preserving row ops; `checked_*` → "not refuted" on overflow, never a wrong unsat; SAT systems never refuted, negative-tested). 11+2 tests. Remaining: Gomory/cube cuts; inequality-integrated cuts |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). **Sum-of-squares lemmas landed (2026-06-18)** — `sos_lemmas`: for a pair `a,b` with `a·a`/`b·b`/`a·b` all abstracted, add `(a±b)² ≥ 0` over the result vars (sound), restoring the cross-product correlation independent abstraction drops, so **`a²+b² ≥ 2ab` / AM–GM₂ is now PROVED** (the Spivak SOS-frontier test promoted prompt-`Unknown`→`Unsat`; negative test confirms `a²+b²=2ab` stays sat). 26 NRA + 5 Spivak tests. Remaining: higher-degree / multi-var SOS (Bernoulli, general Cauchy–Schwarz) + nlsat/CAD for completeness |

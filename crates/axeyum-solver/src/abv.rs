@@ -3170,6 +3170,7 @@ fn collect_positive_disjuncts(arena: &TermArena, term: TermId, out: &mut Vec<Ter
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplayOrFailure {
     branch_count: usize,
+    best_branch_term: TermId,
     best_branch_ordinal: usize,
     best_branch_false_literals: usize,
     best_branch_total_literals: usize,
@@ -3222,6 +3223,7 @@ fn replay_failed_or_details(
         }
         let candidate = ReplayOrFailure {
             branch_count: branches.len(),
+            best_branch_term: branch,
             best_branch_ordinal: branch_ordinal,
             best_branch_false_literals: false_literals,
             best_branch_total_literals: literals.len(),
@@ -3266,6 +3268,27 @@ fn direct_symbol_equality_repair_target(
         (None, Some(symbol)) => Some((symbol, args[0])),
         // Direct symbol-to-symbol equalities are better handled by the scalar
         // model; choosing a direction here can perturb unrelated equalities.
+        _ => None,
+    }
+}
+
+fn direct_scalar_equality_repair_target(
+    arena: &TermArena,
+    term: TermId,
+) -> Option<(SymbolId, TermId)> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    match (
+        direct_value_symbol(arena, args[0]),
+        direct_value_symbol(arena, args[1]),
+    ) {
+        (Some(symbol), Some(_) | None) if !matches!(arena.symbol(symbol).1, Sort::Array { .. }) => {
+            Some((symbol, args[1]))
+        }
+        (None, Some(symbol)) if !matches!(arena.symbol(symbol).1, Sort::Array { .. }) => {
+            Some((symbol, args[0]))
+        }
         _ => None,
     }
 }
@@ -3337,10 +3360,16 @@ fn default_value_for_symbol(arena: &TermArena, symbol: SymbolId) -> Result<Value
     })
 }
 
-fn store_base_repair_target(
-    arena: &TermArena,
-    term: TermId,
-) -> Option<(SymbolId, TermId, TermId, TermId)> {
+#[derive(Clone, Copy)]
+struct StoreBaseRepairTarget {
+    target_symbol: SymbolId,
+    base_symbol: SymbolId,
+    target_array: TermId,
+    index_term: TermId,
+    element_term: TermId,
+}
+
+fn store_base_repair_target(arena: &TermArena, term: TermId) -> Option<StoreBaseRepairTarget> {
     let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
         return None;
     };
@@ -3352,8 +3381,8 @@ fn store_base_repair_side(
     arena: &TermArena,
     target_array: TermId,
     store_term: TermId,
-) -> Option<(SymbolId, TermId, TermId, TermId)> {
-    direct_array_symbol(arena, target_array).and_then(|_| {
+) -> Option<StoreBaseRepairTarget> {
+    direct_array_symbol(arena, target_array).and_then(|target| {
         let TermNode::App {
             op: Op::Store,
             args,
@@ -3362,8 +3391,221 @@ fn store_base_repair_side(
             return None;
         };
         let base = direct_array_symbol(arena, args[0])?;
-        Some((base, target_array, args[1], args[2]))
+        Some(StoreBaseRepairTarget {
+            target_symbol: target,
+            base_symbol: base,
+            target_array,
+            index_term: args[1],
+            element_term: args[2],
+        })
     })
+}
+
+fn branch_false_literal_count(
+    arena: &TermArena,
+    branch: TermId,
+    assignment: &Assignment,
+) -> Result<usize, SolverError> {
+    let mut literals = Vec::new();
+    collect_positive_conjuncts(arena, branch, &mut literals);
+    let mut false_literals = 0;
+    for literal in literals {
+        match eval(arena, literal, assignment) {
+            Ok(Value::Bool(true)) => {}
+            Ok(Value::Bool(false)) => false_literals += 1,
+            Ok(value) => {
+                return Err(SolverError::Backend(format!(
+                    "lazy-ext branch repair: literal #{} evaluated to non-Boolean {value}",
+                    literal.index()
+                )));
+            }
+            Err(error) => {
+                return Err(SolverError::Backend(format!(
+                    "lazy-ext branch repair: literal #{} failed evaluation: {error}",
+                    literal.index()
+                )));
+            }
+        }
+    }
+    Ok(false_literals)
+}
+
+fn repair_projected_store_base_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    target: StoreBaseRepairTarget,
+    align_target_readbacks: bool,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
+    let target_value = eval(arena, target.target_array, projected).map_err(ir)?;
+    let index = eval(arena, target.index_term, projected).map_err(ir)?;
+    let element = eval(arena, target.element_term, projected).map_err(ir)?;
+    stats.branch_candidates += 1;
+    let mut changed = false;
+    if store_value(&target_value, index.clone(), element.clone())? == target_value {
+        let current_base = projected
+            .get(target.base_symbol)
+            .unwrap_or(default_value_for_symbol(arena, target.base_symbol)?);
+        let current_store_cell = select_value(&current_base, &index)?;
+        let repaired_base = store_value(&target_value, index, current_store_cell)?;
+        if store_projected_symbol_value(arena, projected, target.base_symbol, repaired_base)? {
+            stats.branch_symbol_changes += 1;
+            changed = true;
+        }
+        let readback_changes =
+            align_direct_select_symbols_for_array(arena, originals, projected, target.base_symbol)?;
+        stats.symbol_changes += readback_changes;
+        return Ok(changed || readback_changes > 0);
+    }
+
+    let current_base = projected
+        .get(target.base_symbol)
+        .unwrap_or(default_value_for_symbol(arena, target.base_symbol)?);
+    let repaired_target = store_value(&current_base, index, element)?;
+    if store_projected_symbol_value(arena, projected, target.target_symbol, repaired_target)? {
+        stats.branch_symbol_changes += 1;
+        changed = true;
+    }
+    let readback_changes = if align_target_readbacks {
+        align_direct_select_symbols_for_array(arena, originals, projected, target.target_symbol)?
+    } else {
+        0
+    };
+    stats.symbol_changes += readback_changes;
+    Ok(changed || readback_changes > 0)
+}
+
+fn repair_projected_array_equality_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    lhs_symbol: SymbolId,
+    rhs_symbol: SymbolId,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let lhs_value = projected
+        .get(lhs_symbol)
+        .unwrap_or(default_value_for_symbol(arena, lhs_symbol)?);
+    let rhs_value = projected
+        .get(rhs_symbol)
+        .unwrap_or(default_value_for_symbol(arena, rhs_symbol)?);
+    if lhs_value == rhs_value {
+        return Ok(false);
+    }
+    let lhs_key = array_equality_repair_key(arena, originals, projected, lhs_symbol, &lhs_value)?;
+    let rhs_key = array_equality_repair_key(arena, originals, projected, rhs_symbol, &rhs_value)?;
+    let repair = match lhs_key.cmp(&rhs_key) {
+        std::cmp::Ordering::Greater => Some((rhs_symbol, lhs_value)),
+        std::cmp::Ordering::Less => Some((lhs_symbol, rhs_value)),
+        std::cmp::Ordering::Equal => None,
+    };
+    let Some((target_symbol, value)) = repair else {
+        return Ok(false);
+    };
+    stats.branch_candidates += 1;
+    let mut changed = false;
+    if store_projected_symbol_value(arena, projected, target_symbol, value)? {
+        stats.branch_symbol_changes += 1;
+        changed = true;
+    }
+    let readback_changes =
+        align_direct_select_symbols_for_array(arena, originals, projected, target_symbol)?;
+    stats.symbol_changes += readback_changes;
+    Ok(changed || readback_changes > 0)
+}
+
+fn repair_projected_branch_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    literal: TermId,
+    projected: &mut Assignment,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
+    if let Some(target) = store_base_repair_target(arena, literal) {
+        return repair_projected_store_base_literal(
+            arena, originals, projected, target, true, stats,
+        );
+    }
+    if let Some((lhs_symbol, rhs_symbol)) = direct_array_equality_repair_target(arena, literal) {
+        return repair_projected_array_equality_literal(
+            arena, originals, projected, lhs_symbol, rhs_symbol, stats,
+        );
+    }
+    let Some((symbol, value_term)) = direct_symbol_equality_repair_target(arena, literal) else {
+        return Ok(false);
+    };
+    stats.branch_candidates += 1;
+    let value = eval(arena, value_term, projected).map_err(ir)?;
+    if store_projected_symbol_value(arena, projected, symbol, value)? {
+        stats.branch_symbol_changes += 1;
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+fn repair_projected_branch_schedule(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
+    let initial_false = branch_false_literal_count(arena, branch, projected)?;
+    if !(2..=8).contains(&initial_false) {
+        return Ok(None);
+    }
+
+    let mut trial = projected.clone();
+    let mut stats = ProjectionRepairStats::default();
+    let mut changed = false;
+    let mut literals = Vec::new();
+    collect_positive_conjuncts(arena, branch, &mut literals);
+
+    for _ in 0..=2 {
+        let mut pass_changes = 0;
+        for &literal in &literals {
+            if eval(arena, literal, &trial).map_err(ir)? == Value::Bool(true) {
+                continue;
+            }
+            let Some((symbol, value_term)) = direct_scalar_equality_repair_target(arena, literal)
+            else {
+                continue;
+            };
+            stats.branch_candidates += 1;
+            let value = eval(arena, value_term, &trial).map_err(ir)?;
+            if store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+                stats.branch_symbol_changes += 1;
+                pass_changes += 1;
+                changed = true;
+            }
+        }
+        if pass_changes == 0 {
+            break;
+        }
+    }
+
+    for &literal in &literals {
+        if eval(arena, literal, &trial).map_err(ir)? == Value::Bool(true) {
+            continue;
+        }
+        if repair_projected_branch_literal(arena, originals, literal, &mut trial, &mut stats)? {
+            changed = true;
+        }
+    }
+
+    let final_false = branch_false_literal_count(arena, branch, &trial)?;
+    if changed && final_false < initial_false {
+        *projected = trial;
+        Ok(Some(stats))
+    } else {
+        Ok(None)
+    }
 }
 
 fn repair_projected_branch_disjunctions(
@@ -3388,71 +3630,35 @@ fn repair_projected_branch_disjunctions(
             let Some(or_failure) = replay_failed_or_details(arena, conjunct, projected)? else {
                 continue;
             };
+            if let Some(schedule_stats) = repair_projected_branch_schedule(
+                arena,
+                originals,
+                or_failure.best_branch_term,
+                projected,
+            )? {
+                stats.absorb(schedule_stats);
+                continue;
+            }
             if or_failure.best_branch_false_literals != 1 {
                 continue;
             }
             let Some(false_literal) = or_failure.best_branch_first_false_term else {
                 continue;
             };
-            if let Some((base_symbol, target_array, index_term, element_term)) =
-                store_base_repair_target(arena, false_literal)
-            {
-                let target = eval(arena, target_array, projected).map_err(ir)?;
-                let index = eval(arena, index_term, projected).map_err(ir)?;
-                let element = eval(arena, element_term, projected).map_err(ir)?;
-                if store_value(&target, index.clone(), element)? == target {
-                    stats.branch_candidates += 1;
-                    let current_base = projected
-                        .get(base_symbol)
-                        .unwrap_or(default_value_for_symbol(arena, base_symbol)?);
-                    let current_store_cell = select_value(&current_base, &index)?;
-                    let repaired_base = store_value(&target, index, current_store_cell)?;
-                    if store_projected_symbol_value(arena, projected, base_symbol, repaired_base)? {
-                        stats.branch_symbol_changes += 1;
-                    }
-                    stats.symbol_changes += align_direct_select_symbols_for_array(
-                        arena,
-                        originals,
-                        projected,
-                        base_symbol,
-                    )?;
+            if let Some(target) = store_base_repair_target(arena, false_literal) {
+                if repair_projected_store_base_literal(
+                    arena, originals, projected, target, false, &mut stats,
+                )? {
                     continue;
                 }
             }
             if let Some((lhs_symbol, rhs_symbol)) =
                 direct_array_equality_repair_target(arena, false_literal)
             {
-                let lhs_value = projected
-                    .get(lhs_symbol)
-                    .unwrap_or(default_value_for_symbol(arena, lhs_symbol)?);
-                let rhs_value = projected
-                    .get(rhs_symbol)
-                    .unwrap_or(default_value_for_symbol(arena, rhs_symbol)?);
-                if lhs_value != rhs_value {
-                    let lhs_key = array_equality_repair_key(
-                        arena, originals, projected, lhs_symbol, &lhs_value,
-                    )?;
-                    let rhs_key = array_equality_repair_key(
-                        arena, originals, projected, rhs_symbol, &rhs_value,
-                    )?;
-                    let repair = match lhs_key.cmp(&rhs_key) {
-                        std::cmp::Ordering::Greater => Some((rhs_symbol, lhs_value)),
-                        std::cmp::Ordering::Less => Some((lhs_symbol, rhs_value)),
-                        std::cmp::Ordering::Equal => None,
-                    };
-                    if let Some((target_symbol, value)) = repair {
-                        stats.branch_candidates += 1;
-                        if store_projected_symbol_value(arena, projected, target_symbol, value)? {
-                            stats.branch_symbol_changes += 1;
-                        }
-                        stats.symbol_changes += align_direct_select_symbols_for_array(
-                            arena,
-                            originals,
-                            projected,
-                            target_symbol,
-                        )?;
-                        continue;
-                    }
+                if repair_projected_array_equality_literal(
+                    arena, originals, projected, lhs_symbol, rhs_symbol, &mut stats,
+                )? {
+                    continue;
                 }
             }
             let Some((symbol, value_term)) =
@@ -5010,6 +5216,87 @@ mod tests {
             project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
         else {
             panic!("expected branch array-equality repair to replay");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(
+            assignment.get(*z_symbol),
+            Some(Value::Bv { width: 8, value: 9 })
+        );
+        for &original in &originals {
+            assert_eq!(
+                eval(&arena, original, &assignment).unwrap(),
+                Value::Bool(true)
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_ext_projection_repairs_multi_literal_branch_schedule() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let j = arena.bv_var("j", 4).unwrap();
+        let v = arena.bv_var("v", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let r = arena.bool_var("r").unwrap();
+        let s = arena.bool_var("s").unwrap();
+
+        let i_eq_j = arena.eq(i, j).unwrap();
+        let stored = arena.store(a, i, v).unwrap();
+        let b_eq_store = arena.eq(b, stored).unwrap();
+        let wanted_branch = arena.and(i_eq_j, b_eq_store).unwrap();
+        let r_and_s = arena.and(r, s).unwrap();
+        let noisy_alt = arena.and(q, r_and_s).expect("alternate branch");
+        let branch_assertion = arena.or(wanted_branch, noisy_alt).unwrap();
+        let read_a_j = arena.select(a, j).unwrap();
+        let y_eq_a_read = arena.eq(y, read_a_j).unwrap();
+        let read_b_j = arena.select(b, j).unwrap();
+        let z_eq_b_read = arena.eq(z, read_b_j).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut ctx = RowCtx::default();
+        ctx.sites.push(RowSite {
+            fresh: *y_symbol,
+            index: j,
+            kind: RowKind::Var { array: *a_symbol },
+        });
+
+        let mut candidate = Assignment::new();
+        for (symbol, name, sort) in arena.symbols() {
+            match name {
+                "i" => candidate.set(symbol, Value::Bv { width: 4, value: 0 }),
+                "j" => candidate.set(symbol, Value::Bv { width: 4, value: 1 }),
+                "v" => candidate.set(symbol, Value::Bv { width: 8, value: 9 }),
+                "y" => candidate.set(symbol, Value::Bv { width: 8, value: 5 }),
+                "z" => candidate.set(symbol, Value::Bv { width: 8, value: 0 }),
+                "q" | "r" | "s" => candidate.set(symbol, Value::Bool(false)),
+                _ if sort == Sort::BitVec(4) => {
+                    candidate.set(symbol, Value::Bv { width: 4, value: 0 });
+                }
+                _ if sort == Sort::BitVec(8) => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+                }
+                _ => {}
+            }
+        }
+
+        let originals = [branch_assertion, y_eq_a_read, z_eq_b_read];
+        let ExtReplay::Sat(model) =
+            project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
+        else {
+            panic!("expected multi-literal branch repair to replay");
         };
         let assignment = model.to_assignment();
         assert_eq!(

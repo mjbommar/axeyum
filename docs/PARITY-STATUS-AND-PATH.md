@@ -544,6 +544,17 @@ a named mechanism.**
    `x_17` carrying `[0 -> 1]`, `[1 -> 3]`, `[2 -> 3]` and the RHS store carrying
    incompatible `[1 -> 2]`, `[2 -> 1]`. The next AUFLIA move is a multi-literal
    branch-schedule/store-chain projection for this queue-lock branch.
+   **Multi-literal branch schedule repair landed later 2026-06-26:** the selected
+   false branch term is now retained, and replay projection can try a bounded
+   branch-local schedule repair on a copy of the assignment: direct scalar
+   equalities first, then equality-shaped array/store literals, keeping the copy
+   only if that branch's false-literal count decreases. This removes the
+   generated branch disjunction as `bug337`'s first replay blocker. The 10 s
+   probe now reaches direct equality ordinal **185**, term **2957**,
+   `x_361 = x_22`, with values **1** vs **0**, after **207** projection repair
+   changes. The next AUFLIA move is replay-gated scalar equality projection for
+   generated non-branch equalities, with direction chosen from branch/readback
+   support.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
