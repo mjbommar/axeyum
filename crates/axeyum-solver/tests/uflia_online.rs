@@ -104,6 +104,77 @@ fn boolean_equality_over_lia_atoms_is_encoded_as_boolean_structure() {
 }
 
 #[test]
+fn opaque_int_app_order_conflict_is_lia_unsat() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let zero = iconst(&mut arena, 0);
+    let one = iconst(&mut arena, 1);
+    let fx_le_zero = arena.int_le(fx, zero).unwrap();
+    let fx_ge_one = arena.int_ge(fx, one).unwrap();
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &[fx_le_zero, fx_ge_one], &config).unwrap();
+    assert_eq!(
+        online,
+        CheckResult::Unsat,
+        "Int-valued UF applications in order atoms should be opaque LIA variables for UNSAT"
+    );
+}
+
+#[test]
+fn opaque_int_app_equality_only_sat_still_replays() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let one = iconst(&mut arena, 1);
+    let fx_eq_one = arena.eq(fx, one).unwrap();
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &[fx_eq_one], &config).unwrap();
+    assert_eq!(
+        verdict(&online),
+        Some(true),
+        "pure EUF equality over an Int UF result should not be forced through opaque LIA"
+    );
+    model_replays(&arena, &[fx_eq_one], &online);
+}
+
+#[test]
+fn large_opaque_int_app_online_skeleton_declines_before_search() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::Int], Sort::Int)
+        .expect("declare f");
+    let x = ivar(&mut arena, "x");
+    let mut assertions = Vec::new();
+    for i in 0..129 {
+        let offset = iconst(&mut arena, i);
+        let arg = arena.int_add(x, offset).unwrap();
+        let app = arena.apply(f, &[arg]).unwrap();
+        let bound = iconst(&mut arena, i + 1);
+        assertions.push(arena.int_le(app, bound).unwrap());
+    }
+
+    let config = SolverConfig::default().with_timeout(Duration::from_millis(1));
+    let online = check_qf_uflia_online(&mut arena, &assertions, &config).unwrap();
+    assert!(
+        matches!(
+            &online,
+            CheckResult::Unknown(reason)
+                if reason.detail.contains("too many theory atoms for opaque-app online UFLIA")
+        ),
+        "large opaque-app online skeleton should decline before search, got {online:?}"
+    );
+}
+
+#[test]
 fn interface_equality_forces_euf_contradiction_unsat() {
     // f(x) != f(y)  AND  x <= y  AND  y <= x.
     // LIA forces x = y; EUF then needs f(x) = f(y) by congruence, contradicting the

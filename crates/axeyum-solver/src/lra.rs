@@ -1301,6 +1301,18 @@ pub(crate) fn lp_relaxation_feasibility(arena: &TermArena, assertions: &[TermId]
     lp_relaxation_feasibility_with_options(arena, assertions, false)
 }
 
+/// The same real-relaxation feasibility probe as [`lp_relaxation_feasibility`],
+/// but treating integer-valued uninterpreted-function applications as fresh
+/// opaque integer variables. Returning [`LpRelaxation::Infeasible`] is sound for
+/// the original UFLIA problem because the abstraction is a relaxation; feasible
+/// remains inconclusive.
+pub(crate) fn lp_relaxation_feasibility_opaque_apps(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> LpRelaxation {
+    lp_relaxation_feasibility_with_options(arena, assertions, true)
+}
+
 fn lp_relaxation_feasibility_with_options(
     arena: &TermArena,
     assertions: &[TermId],

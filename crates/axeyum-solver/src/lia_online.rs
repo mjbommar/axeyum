@@ -72,7 +72,10 @@ use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
-use crate::lra::{LpRelaxation, check_with_lia_simplex, lp_relaxation_feasibility};
+use crate::lra::{
+    LpRelaxation, check_with_lia_opaque_apps, check_with_lia_simplex, lp_relaxation_feasibility,
+    lp_relaxation_feasibility_opaque_apps,
+};
 use crate::lra_online::{Dpll, Lit};
 use crate::model::Model;
 
@@ -141,6 +144,12 @@ pub struct LiaTheory {
     /// under-approximation and avoids probing hundreds of unassigned atoms against
     /// a thousand-literal live set.
     skip_entailment_propagation: bool,
+    /// Treat integer-valued uninterpreted-function applications as opaque integer
+    /// variables inside LIA atoms. This is used only by UFLIA combination: it is
+    /// sound for infeasibility/conflict learning because the abstraction relaxes
+    /// the original problem. Satisfiable opaque abstractions still do not produce
+    /// a model through [`integer_model`](Self::integer_model).
+    allow_opaque_apps: bool,
 }
 
 /// Outcome of an incremental integer-feasibility check over the asserted atoms.
@@ -163,6 +172,20 @@ impl LiaTheory {
     /// aligned with the caller's atom numbering.
     #[must_use]
     pub fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
+        Self::new_with_options(arena, atom_terms, false)
+    }
+
+    /// Builds an online `LIA` theory that treats Int-sorted UF applications as
+    /// opaque integer variables. This is an UNSAT-oriented UFLIA combination hook:
+    /// opaque-app infeasibility and LP propagation are sound, but satisfiable
+    /// opaque abstractions remain model-incomplete and therefore replay as
+    /// `Unknown` at the combined layer.
+    #[must_use]
+    pub(crate) fn new_with_opaque_apps(arena: &TermArena, atom_terms: &[TermId]) -> Self {
+        Self::new_with_options(arena, atom_terms, true)
+    }
+
+    fn new_with_options(arena: &TermArena, atom_terms: &[TermId], allow_opaque_apps: bool) -> Self {
         let kinds: Vec<AtomKind> = atom_terms.iter().map(|&t| classify(arena, t)).collect();
         let count = atom_terms.len();
         Self {
@@ -174,6 +197,7 @@ impl LiaTheory {
             arena: arena.clone(),
             defer_feasibility_until_propagate: false,
             skip_entailment_propagation: false,
+            allow_opaque_apps,
         }
     }
 
@@ -274,13 +298,29 @@ impl LiaTheory {
         let Some((arena, terms)) = self.live_terms(&lits) else {
             return Feasibility::Unknown;
         };
-        match check_with_lia_simplex(&arena, &terms) {
+        match self.check_terms(&arena, &terms) {
             Ok(CheckResult::Sat(_)) => Feasibility::Sat,
             Ok(CheckResult::Unknown(_)) | Err(_) => Feasibility::Unknown,
             Ok(CheckResult::Unsat) if minimize => {
-                Feasibility::Unsat(minimize_core(&arena, &lits, &terms))
+                Feasibility::Unsat(minimize_core(&arena, &lits, &terms, self.allow_opaque_apps))
             }
             Ok(CheckResult::Unsat) => Feasibility::Unsat(lits),
+        }
+    }
+
+    fn check_terms(&self, arena: &TermArena, terms: &[TermId]) -> Result<CheckResult, SolverError> {
+        if self.allow_opaque_apps {
+            check_with_lia_opaque_apps(arena, terms)
+        } else {
+            check_with_lia_simplex(arena, terms)
+        }
+    }
+
+    fn lp_relaxation(&self, arena: &TermArena, terms: &[TermId]) -> LpRelaxation {
+        if self.allow_opaque_apps {
+            lp_relaxation_feasibility_opaque_apps(arena, terms)
+        } else {
+            lp_relaxation_feasibility(arena, terms)
         }
     }
 
@@ -468,10 +508,7 @@ impl LiaTheory {
         let Some((arena, terms)) = self.live_terms(&lits) else {
             return false;
         };
-        matches!(
-            lp_relaxation_feasibility(&arena, &terms),
-            LpRelaxation::Infeasible
-        )
+        matches!(self.lp_relaxation(&arena, &terms), LpRelaxation::Infeasible)
     }
 
     /// Same LP-infeasibility probe as [`Self::probe_lp_infeasible`], but for one
@@ -490,10 +527,7 @@ impl LiaTheory {
             return false;
         };
         terms.push(extra);
-        matches!(
-            lp_relaxation_feasibility(&arena, &terms),
-            LpRelaxation::Infeasible
-        )
+        matches!(self.lp_relaxation(&arena, &terms), LpRelaxation::Infeasible)
     }
 
     /// Deletion-minimizes the asserted-only reason behind an entailment: greedily
@@ -638,7 +672,12 @@ fn classify(arena: &TermArena, term: TermId) -> AtomKind {
 /// (minimal-by-deletion) conflict core — a wrong `unsat` is impossible because
 /// every returned subset is re-checked `unsat`. `terms[i]` is the
 /// polarity-applied term for `lits[i]` in `arena`.
-fn minimize_core(arena: &TermArena, lits: &[TheoryLit], terms: &[TermId]) -> Vec<TheoryLit> {
+fn minimize_core(
+    arena: &TermArena,
+    lits: &[TheoryLit],
+    terms: &[TermId],
+    allow_opaque_apps: bool,
+) -> Vec<TheoryLit> {
     // Start from the full asserted set; try removing each literal in turn.
     let mut keep: Vec<bool> = vec![true; lits.len()];
     for drop_idx in 0..lits.len() {
@@ -648,11 +687,12 @@ fn minimize_core(arena: &TermArena, lits: &[TheoryLit], terms: &[TermId]) -> Vec
             .zip(&keep)
             .filter_map(|(&t, &k)| k.then_some(t))
             .collect();
-        let still_unsat = subset.len() < terms.len()
-            && matches!(
-                check_with_lia_simplex(arena, &subset),
-                Ok(CheckResult::Unsat)
-            );
+        let verdict = if allow_opaque_apps {
+            check_with_lia_opaque_apps(arena, &subset)
+        } else {
+            check_with_lia_simplex(arena, &subset)
+        };
+        let still_unsat = subset.len() < terms.len() && matches!(verdict, Ok(CheckResult::Unsat));
         if !still_unsat {
             // Dropping this literal lost (or could not confirm) the refutation —
             // keep it.
@@ -975,7 +1015,7 @@ fn theory_model(theory: &LiaTheory) -> Option<Model> {
         // assertions are tautological at this leaf, so an empty model suffices).
         return Some(Model::new());
     }
-    match check_with_lia_simplex(&arena, &terms) {
+    match theory.check_terms(&arena, &terms) {
         Ok(CheckResult::Sat(model)) => Some(model),
         _ => None,
     }

@@ -103,6 +103,13 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// decides whether that scalar abstraction is tractable.
 const MAX_BOOLEAN_ATOMS: usize = 512;
 
+/// Opaque Int-UF applications make each online LIA feasibility/probe call use the
+/// heavier opaque-app arithmetic abstraction. That path is sound, but it is not
+/// yet deadline-aware during combined-state construction and theory assertion, so
+/// keep the online slice bounded and let larger generated rows use the production
+/// lazy UFLIA route.
+const MAX_OPAQUE_BOOLEAN_ATOMS: usize = 128;
+
 /// Hard ceiling on Tseitin clauses produced for the Boolean skeleton; above it the
 /// layer declines rather than build an unbounded encoding.
 const MAX_BOOLEAN_CLAUSES: usize = 200_000;
@@ -175,6 +182,17 @@ pub fn check_qf_uflia_online(
     if conjunctive {
         if literals.is_empty() {
             return Ok(decline("no UFLIA literals for the online combination path"));
+        }
+        if literals.len() > MAX_OPAQUE_BOOLEAN_ATOMS
+            && literals
+                .iter()
+                .any(|lit| is_opaque_lia_order_atom(arena, lit.atom))
+        {
+            return Ok(decline(format!(
+                "too many theory atoms for opaque-app online UFLIA: {} > {}",
+                literals.len(),
+                MAX_OPAQUE_BOOLEAN_ATOMS
+            )));
         }
         return Ok(decide_conjunction(arena, &literals));
     }
@@ -290,7 +308,7 @@ pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) ->
         });
     }
 
-    let mut lia = LiaTheory::new(arena, &lia_atom_terms);
+    let mut lia = LiaTheory::new_with_opaque_apps(arena, &lia_atom_terms);
     for (index, lit) in part.lia.iter().enumerate() {
         if lia.assert(index, lit.value).is_err() {
             return CheckResult::Unsat;
@@ -688,7 +706,9 @@ pub(crate) fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Parti
                 op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
                 args,
             } => {
-                if !is_linear_int(arena, args[0]) || !is_linear_int(arena, args[1]) {
+                if !is_linear_int_or_opaque(arena, args[0])
+                    || !is_linear_int_or_opaque(arena, args[1])
+                {
                     return None;
                 }
                 lia.push(lit);
@@ -734,12 +754,26 @@ fn is_uflia_theory_atom(arena: &TermArena, term: TermId) -> bool {
         TermNode::App {
             op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
             args,
-        } => is_linear_int(arena, args[0]) && is_linear_int(arena, args[1]),
+        } => is_linear_int_or_opaque(arena, args[0]) && is_linear_int_or_opaque(arena, args[1]),
         TermNode::App { op: Op::Eq, args } => {
             let (a, b) = (args[0], args[1]);
             let int = arena.sort_of(a) == Sort::Int;
             let has_uf = mentions_uf(arena, a) || mentions_uf(arena, b);
             int || has_uf
+        }
+        _ => false,
+    }
+}
+
+fn is_opaque_lia_order_atom(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
+            args,
+        } => {
+            is_linear_int_or_opaque(arena, args[0])
+                && is_linear_int_or_opaque(arena, args[1])
+                && (!is_linear_int(arena, args[0]) || !is_linear_int(arena, args[1]))
         }
         _ => false,
     }
@@ -775,21 +809,86 @@ fn is_linear_int(arena: &TermArena, term: TermId) -> bool {
         TermNode::App {
             op: Op::IntAdd | Op::IntSub,
             args,
-        } => is_linear_int(arena, args[0]) && is_linear_int(arena, args[1]),
+        } => !args.is_empty() && args.iter().all(|&arg| is_linear_int(arena, arg)),
         TermNode::App {
             op: Op::IntMul,
             args,
-        } => {
-            (is_int_const(arena, args[0]) && is_linear_int(arena, args[1]))
-                || (is_int_const(arena, args[1]) && is_linear_int(arena, args[0]))
-        }
+        } => linear_product(arena, args, is_linear_int),
         _ => false,
     }
 }
 
-/// Whether `term` is an integer constant.
-fn is_int_const(arena: &TermArena, term: TermId) -> bool {
-    matches!(arena.node(term), TermNode::IntConst(_))
+fn linear_product(
+    arena: &TermArena,
+    args: &[TermId],
+    linear: fn(&TermArena, TermId) -> bool,
+) -> bool {
+    let mut nonconstant = 0usize;
+    for &arg in args {
+        if is_int_constant_expr(arena, arg) {
+            continue;
+        }
+        if !linear(arena, arg) {
+            return false;
+        }
+        nonconstant += 1;
+        if nonconstant > 1 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Whether `term` is linear integer arithmetic when Int-sorted UF applications are
+/// treated as fresh opaque integer variables. The online UFLIA path uses this only for
+/// conflict/UNSAT reasoning; satisfiable opaque abstractions still require a separate
+/// model-lifting path and therefore degrade to `Unknown` rather than `Sat`.
+fn is_linear_int_or_opaque(arena: &TermArena, term: TermId) -> bool {
+    if arena.sort_of(term) != Sort::Int {
+        return false;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(_)
+        | TermNode::Symbol(_)
+        | TermNode::App {
+            op: Op::Apply(_), ..
+        } => true,
+        TermNode::App {
+            op: Op::IntNeg,
+            args,
+        } => is_linear_int_or_opaque(arena, args[0]),
+        TermNode::App {
+            op: Op::IntAdd | Op::IntSub,
+            args,
+        } => !args.is_empty() && args.iter().all(|&arg| is_linear_int_or_opaque(arena, arg)),
+        TermNode::App {
+            op: Op::IntMul,
+            args,
+        } => linear_product(arena, args, is_linear_int_or_opaque),
+        _ => false,
+    }
+}
+
+/// Whether `term` is an integer constant expression, so it can be a scalar factor
+/// in a linear product. This mirrors the arithmetic collector's ability to
+/// linearize parsed forms such as `(- 1)` before deciding whether a product is
+/// constant-scaled.
+fn is_int_constant_expr(arena: &TermArena, term: TermId) -> bool {
+    if arena.sort_of(term) != Sort::Int {
+        return false;
+    }
+    match arena.node(term) {
+        TermNode::IntConst(_) => true,
+        TermNode::App {
+            op: Op::IntNeg,
+            args,
+        } => args.len() == 1 && is_int_constant_expr(arena, args[0]),
+        TermNode::App {
+            op: Op::IntAdd | Op::IntSub | Op::IntMul,
+            args,
+        } => !args.is_empty() && args.iter().all(|&arg| is_int_constant_expr(arena, arg)),
+        _ => false,
+    }
 }
 
 /// Whether `term` is an integer-sorted uninterpreted-function application.
@@ -1275,6 +1374,17 @@ fn check_qf_uflia_boolean(
             MAX_BOOLEAN_ATOMS
         ));
     }
+    if atom_terms.len() > MAX_OPAQUE_BOOLEAN_ATOMS
+        && atom_terms
+            .iter()
+            .any(|&atom| is_opaque_lia_order_atom(arena, atom))
+    {
+        return decline(format!(
+            "too many theory atoms for opaque-app online UFLIA: {} > {}",
+            atom_terms.len(),
+            MAX_OPAQUE_BOOLEAN_ATOMS
+        ));
+    }
 
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
     // the original `atom_count`. If it cannot be built, fall back to the enumerative layer.
@@ -1569,6 +1679,17 @@ fn check_qf_uflia_boolean_enumerative(
             "too many theory atoms for the online combination boolean layer: {} > {}",
             atom_terms.len(),
             MAX_BOOLEAN_ATOMS
+        ));
+    }
+    if atom_terms.len() > MAX_OPAQUE_BOOLEAN_ATOMS
+        && atom_terms
+            .iter()
+            .any(|&atom| is_opaque_lia_order_atom(arena, atom))
+    {
+        return decline(format!(
+            "too many theory atoms for opaque-app online UFLIA: {} > {}",
+            atom_terms.len(),
+            MAX_OPAQUE_BOOLEAN_ATOMS
         ));
     }
 
@@ -2061,8 +2182,9 @@ impl BoolEncoder {
             }
             _ => {
                 self.record_unsupported(format!(
-                    "non-Boolean term with sort {:?}",
-                    arena.sort_of(t)
+                    "non-Boolean term with sort {:?}: {:?}",
+                    arena.sort_of(t),
+                    arena.node(t)
                 ));
                 return None;
             }
@@ -2078,6 +2200,20 @@ impl BoolEncoder {
         args: &[TermId],
         clauses: &mut Vec<Vec<BoolLit>>,
     ) -> Option<usize> {
+        let supported = matches!(
+            op,
+            Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolImplies | Op::BoolXor | Op::Ite
+        ) || (op == Op::Eq
+            && args
+                .first()
+                .is_some_and(|&arg| arena.sort_of(arg) == Sort::Bool));
+        if !supported {
+            self.record_unsupported(format!(
+                "unsupported Boolean op {op:?} with {} args",
+                args.len()
+            ));
+            return None;
+        }
         let lits: Vec<BoolLit> = args
             .iter()
             .map(|&a| {

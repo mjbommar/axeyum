@@ -516,6 +516,23 @@ against competitor source, are now binding:
    same useful UF frontier. The next combined-theory slice is online LIA support
    for opaque integer UF apps, or continued reduction of LP-core-producing lazy
    branches.
+   **BOUNDED OPAQUE-APP ONLINE UFLIA ORDER SUPPORT LANDED (2026-06-26):**
+   the online UFLIA route now admits Int order atoms whose linear terms contain
+   Int-sorted UF applications by treating those applications as opaque integer
+   LIA variables. This is an UNSAT/conflict/propagation hook only: satisfiable
+   opaque abstractions still lack model lifting and therefore replay as
+   `Unknown`, while pure equality-only Int UF rows still stay on the EUF path
+   and can return replay-checked `Sat`. Direct hard-row probes moved from the
+   previous `non-Boolean term with sort Int` boundary to a deliberate guard:
+   both generated overbound rows now decline quickly with
+   `too many theory atoms for opaque-app online UFLIA: 485 > 128`. That guard is
+   load-bearing; before it, the hard direct probe ran for more than **90 s**
+   despite a 1 s timeout because opaque-app combined-state/theory assertion is
+   not deadline-aware. The production lazy route is preserved but not improved:
+   the 1 s frontier remains **2** UF rounds, **1** candidate, **282** pair
+   checks, **6** equal-argument pairs, **5** violations, and **6** learned UF
+   lemmas. Next practical work is deadline-aware opaque-app online assertion
+   plus model lifting, or reducing LP-core-producing lazy branches.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

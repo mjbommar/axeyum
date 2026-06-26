@@ -152,7 +152,7 @@ impl CombinedTheoryLia {
         // LIA literals — the same state the cold core constructs.
         let warm = matches!(&self.cache, Some(c) if c.layout == layout);
         if !warm {
-            let mut theory = LiaTheory::new(arena, &layout);
+            let mut theory = LiaTheory::new_with_opaque_apps(arena, &layout);
             for (index, lit) in part.lia.iter().enumerate() {
                 if theory.assert(index, lit.value).is_err() {
                     // A base conflict is the cold core's immediate `Unsat`. Do not cache a
@@ -237,7 +237,7 @@ impl CombinedTheoryLia {
         asserted: &[Literal],
         out: &mut Vec<TheoryProp>,
     ) {
-        let mut lia = LiaTheory::new(arena, &self.atom_terms);
+        let mut lia = LiaTheory::new_with_opaque_apps(arena, &self.atom_terms);
         for lit in asserted {
             let var = self.atom_var[&lit.atom];
             if lia.assert(var, lit.value).is_err() {
@@ -570,7 +570,7 @@ impl CombinedIncrementalLia {
 
         let routes = build_routes(&part, &original_atoms, &combined, &pairs);
         let euf = EufTheory::new(arena, &combined);
-        let lia = LiaTheory::new(arena, &combined);
+        let lia = LiaTheory::new_with_opaque_apps(arena, &combined);
         let n = combined.len();
         Some(Self {
             euf,
