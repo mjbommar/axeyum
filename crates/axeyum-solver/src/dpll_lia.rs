@@ -434,10 +434,15 @@ struct ArithCoreStats {
     min_len: usize,
     max_len: usize,
     last_len: usize,
+    bound_count: usize,
+    diff_count: usize,
+    lp_count: usize,
+    minimized_count: usize,
+    large_count: usize,
 }
 
 impl ArithCoreStats {
-    fn record(&mut self, len: usize) {
+    fn record(&mut self, source: ArithCoreSource, len: usize) {
         self.count += 1;
         self.total_len += len;
         self.last_len = len;
@@ -447,6 +452,13 @@ impl ArithCoreStats {
             self.min_len.min(len)
         };
         self.max_len = self.max_len.max(len);
+        match source {
+            ArithCoreSource::Bound => self.bound_count += 1,
+            ArithCoreSource::Difference => self.diff_count += 1,
+            ArithCoreSource::LpRelaxation => self.lp_count += 1,
+            ArithCoreSource::Minimized => self.minimized_count += 1,
+            ArithCoreSource::Large => self.large_count += 1,
+        }
     }
 
     fn summary(&self) -> String {
@@ -455,13 +467,40 @@ impl ArithCoreStats {
         }
         let avg_tenths = self.total_len.saturating_mul(10) / self.count;
         format!(
-            "core_len_last={}, core_len_min={}, core_len_max={}, core_len_avg={}.{}",
+            "core_len_last={}, core_len_min={}, core_len_max={}, core_len_avg={}.{}, \
+             core_src_bound={}, core_src_diff={}, core_src_lp={}, core_src_minimized={}, \
+             core_src_large={}",
             self.last_len,
             self.min_len,
             self.max_len,
             avg_tenths / 10,
-            avg_tenths % 10
+            avg_tenths % 10,
+            self.bound_count,
+            self.diff_count,
+            self.lp_count,
+            self.minimized_count,
+            self.large_count
         )
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ArithCoreSource {
+    Bound,
+    Difference,
+    LpRelaxation,
+    Minimized,
+    Large,
+}
+
+struct ArithConflictCore {
+    indices: Vec<usize>,
+    source: ArithCoreSource,
+}
+
+impl ArithConflictCore {
+    fn new(source: ArithCoreSource, indices: Vec<usize>) -> Self {
+        Self { indices, source }
     }
 }
 
@@ -840,13 +879,17 @@ fn record_conflict_batch(
     ctx: &ArithAbstractor,
     truths: &[bool],
     lits: &[TermId],
-    conflicts: &[Vec<usize>],
+    conflicts: &[ArithConflictCore],
     learn: &mut ArithLearnState<'_>,
 ) -> Result<(), SolverError> {
     for conflict in conflicts {
-        learn.core_stats.record(conflict.len());
-        learn.lemmas.push(record_lemma(ctx, truths, lits, conflict));
-        let clause = block_clause(arena, &ctx.atoms, truths, conflict)?;
+        learn
+            .core_stats
+            .record(conflict.source, conflict.indices.len());
+        learn
+            .lemmas
+            .push(record_lemma(ctx, truths, lits, &conflict.indices));
+        let clause = block_clause(arena, &ctx.atoms, truths, &conflict.indices)?;
         learn.prop_solver.assert(arena, clause)?;
         learn.blocking.push(clause);
     }
@@ -862,7 +905,7 @@ fn theory_conflicts(
     lits: &[TermId],
     theory: Theory,
     oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
-) -> Result<Vec<Vec<usize>>, SolverError> {
+) -> Result<Vec<ArithConflictCore>, SolverError> {
     let indices: Vec<usize> = (0..ctx.atoms.len())
         .filter(|&i| ctx.atoms[i].theory == theory)
         .collect();
@@ -876,7 +919,7 @@ fn theory_conflicts_for_indices(
     indices: &[usize],
     theory: Theory,
     oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
-) -> Result<Vec<Vec<usize>>, SolverError> {
+) -> Result<Vec<ArithConflictCore>, SolverError> {
     let indices: Vec<usize> = indices
         .iter()
         .copied()
@@ -892,19 +935,34 @@ fn theory_conflicts_for_indices(
     if theory == Theory::Int {
         let bound_cores = cheap_int_bound_conflict_cores(arena, ctx, lits, &indices);
         if !bound_cores.is_empty() {
-            return Ok(bound_cores);
+            return Ok(bound_cores
+                .into_iter()
+                .map(|core| ArithConflictCore::new(ArithCoreSource::Bound, core))
+                .collect());
         }
         if let Some(core) = cheap_int_difference_conflict_core(arena, ctx, lits, &indices) {
-            return Ok(vec![core]);
+            return Ok(vec![ArithConflictCore::new(
+                ArithCoreSource::Difference,
+                core,
+            )]);
         }
         if let Some(core) = lp_relaxation_conflict_core(arena, lits, &indices)? {
-            return Ok(vec![core]);
+            return Ok(vec![ArithConflictCore::new(
+                ArithCoreSource::LpRelaxation,
+                core,
+            )]);
         }
     }
     if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS {
-        return Ok(vec![indices]);
+        return Ok(vec![ArithConflictCore::new(
+            ArithCoreSource::Large,
+            indices,
+        )]);
     }
-    Ok(vec![minimize_core(arena, &indices, lits, oracle)?])
+    Ok(vec![ArithConflictCore::new(
+        ArithCoreSource::Minimized,
+        minimize_core(arena, &indices, lits, oracle)?,
+    )])
 }
 
 /// Extracts an LP-relaxation Farkas-supported core from the integer side of a
@@ -3262,6 +3320,24 @@ mod tests {
         };
         assert!(reason.detail.contains("support_attempts=0"));
         assert!(reason.detail.contains("full_fallbacks=0"));
+    }
+
+    #[test]
+    fn arith_core_stats_report_source_counts() {
+        let mut stats = ArithCoreStats::default();
+        stats.record(ArithCoreSource::Bound, 2);
+        stats.record(ArithCoreSource::LpRelaxation, 5);
+        stats.record(ArithCoreSource::Large, 20);
+
+        let summary = stats.summary();
+        assert!(summary.contains("core_len_last=20"));
+        assert!(summary.contains("core_len_min=2"));
+        assert!(summary.contains("core_len_max=20"));
+        assert!(summary.contains("core_src_bound=1"));
+        assert!(summary.contains("core_src_diff=0"));
+        assert!(summary.contains("core_src_lp=1"));
+        assert!(summary.contains("core_src_minimized=0"));
+        assert!(summary.contains("core_src_large=1"));
     }
 
     #[test]

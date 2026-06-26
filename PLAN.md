@@ -484,6 +484,14 @@ against competitor source, are now binding:
    remain `unknown`, but the 1 s frontier is preserved and the 10 s first row
    now reaches **24** learned UF lemmas before timing out in the warm arithmetic
    state.
+   **ARITHMETIC CORE-SOURCE DIAGNOSTICS LANDED (2026-06-26):**
+   lazy arithmetic DPLL budget `unknown`s now report dynamic core-source counts
+   (`bound`, `diff`, `lp`, `minimized`, `large`) alongside core lengths. On the
+   generated QF_UFLIA 10 s hard row the late warm arithmetic timeout is dominated
+   by LP-relaxation cores (**core_src_lp=276**) with no deletion-minimized or
+   large-cutoff cores. The next lever is therefore LP-core relevance/shrinking
+   or preventing the SAT skeleton from feeding so many LP-core-producing
+   branches, not core minimization.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
