@@ -2897,19 +2897,68 @@ impl ExtProgress<'_> {
     }
 }
 
-fn ext_unknown_with_progress(detail: &str, progress: ExtProgress<'_>) -> CheckResult {
-    ext_unknown(format!("{detail} ({})", progress.fields()))
+fn ext_unknown_with_progress_note(
+    detail: &str,
+    progress: ExtProgress<'_>,
+    note: Option<String>,
+) -> CheckResult {
+    let fields = match note {
+        Some(note) => format!("{}, {note}", progress.fields()),
+        None => progress.fields(),
+    };
+    ext_unknown(format!("{detail} ({fields})"))
 }
 
-fn ext_contextual_unknown(
+fn ext_contextual_unknown_note(
     context: &str,
     progress: ExtProgress<'_>,
     reason: &UnknownReason,
+    note: Option<String>,
 ) -> CheckResult {
+    let fields = match note {
+        Some(note) => format!("{}, {note}", progress.fields()),
+        None => progress.fields(),
+    };
     CheckResult::Unknown(UnknownReason {
         kind: reason.kind,
-        detail: format!("{context} ({}): {}", progress.fields(), reason.detail),
+        detail: format!("{context} ({fields}): {}", reason.detail),
     })
+}
+
+enum LastExtReplay {
+    Sat(Model),
+    Failed { ordinal: usize, term: TermId },
+    Error,
+    Missing,
+}
+
+impl LastExtReplay {
+    fn note(&self) -> Option<String> {
+        match self {
+            LastExtReplay::Failed { ordinal, term } => Some(format!(
+                "last_candidate_replay=false(assertion_ordinal={ordinal}, term={})",
+                term.index()
+            )),
+            LastExtReplay::Error => Some("last_candidate_replay=error".to_owned()),
+            LastExtReplay::Sat(_) | LastExtReplay::Missing => None,
+        }
+    }
+}
+
+fn replay_last_ext_candidate(
+    arena: &TermArena,
+    ctx: &RowCtx,
+    originals: &[TermId],
+    assignment: Option<&Assignment>,
+) -> LastExtReplay {
+    let Some(assignment) = assignment else {
+        return LastExtReplay::Missing;
+    };
+    match project_replay_ext_candidate(arena, ctx, originals, assignment) {
+        Ok(ExtReplay::Sat(model)) => LastExtReplay::Sat(model),
+        Ok(ExtReplay::Failed { ordinal, term }) => LastExtReplay::Failed { ordinal, term },
+        Err(_) => LastExtReplay::Error,
+    }
 }
 
 /// Decides a `QF_ABV` query carrying a **true array (dis)equality** — an array
@@ -3023,10 +3072,16 @@ fn ext_cegar_loop<B: SolverBackend>(
     let mut added_row: HashSet<usize> = HashSet::new();
     let mut added_cong: HashSet<(usize, usize)> = HashSet::new();
     let mut diff_skolems = 0usize;
+    let mut last_candidate: Option<Assignment> = None;
 
     for round in 0..MAX_ROW_ROUNDS {
         if past_deadline(deadline) {
-            return Ok(ext_unknown_with_progress(
+            let replay = replay_last_ext_candidate(arena, ctx, originals, last_candidate.as_ref());
+            let replay_note = match replay {
+                LastExtReplay::Sat(model) => return Ok(CheckResult::Sat(model)),
+                other => other.note(),
+            };
+            return Ok(ext_unknown_with_progress_note(
                 "lazy-extensionality deadline exceeded before refinement converged",
                 ExtProgress {
                     round,
@@ -3036,13 +3091,20 @@ fn ext_cegar_loop<B: SolverBackend>(
                     diff_skolems,
                     working_assertions: working.len(),
                 },
+                replay_note,
             ));
         }
         let round_config = config_with_remaining_deadline(config, deadline);
         let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => {
-                return Ok(ext_contextual_unknown(
+                let replay =
+                    replay_last_ext_candidate(arena, ctx, originals, last_candidate.as_ref());
+                let replay_note = match replay {
+                    LastExtReplay::Sat(model) => return Ok(CheckResult::Sat(model)),
+                    other => other.note(),
+                };
+                return Ok(ext_contextual_unknown_note(
                     "lazy-extensionality scalar backend declined",
                     ExtProgress {
                         round,
@@ -3053,10 +3115,12 @@ fn ext_cegar_loop<B: SolverBackend>(
                         working_assertions: working.len(),
                     },
                     &reason,
+                    replay_note,
                 ));
             }
             CheckResult::Sat(model) => complete_assignment(arena, &model.to_assignment()),
         };
+        last_candidate = Some(assignment.clone());
 
         let mut progressed = false;
 
@@ -3080,7 +3144,12 @@ fn ext_cegar_loop<B: SolverBackend>(
         }
     }
 
-    Ok(ext_unknown_with_progress(
+    let replay = replay_last_ext_candidate(arena, ctx, originals, last_candidate.as_ref());
+    let replay_note = match replay {
+        LastExtReplay::Sat(model) => return Ok(CheckResult::Sat(model)),
+        other => other.note(),
+    };
+    Ok(ext_unknown_with_progress_note(
         &format!("lazy-extensionality refinement did not converge within {MAX_ROW_ROUNDS} rounds"),
         ExtProgress {
             round: MAX_ROW_ROUNDS,
@@ -3090,6 +3159,7 @@ fn ext_cegar_loop<B: SolverBackend>(
             diff_skolems,
             working_assertions: working.len(),
         },
+        replay_note,
     ))
 }
 
@@ -3336,12 +3406,33 @@ fn refine_diff_skolem(
 /// read sites), replays it against the `originals` with the ground evaluator —
 /// re-deriving the array (dis)equalities extensionally — and returns it only if it
 /// genuinely satisfies every original assertion, else `unknown`.
+enum ExtReplay {
+    Sat(Model),
+    Failed { ordinal: usize, term: TermId },
+}
+
 fn project_replay_ext(
     arena: &TermArena,
     ctx: &RowCtx,
     originals: &[TermId],
     assignment: &Assignment,
 ) -> Result<CheckResult, SolverError> {
+    match project_replay_ext_candidate(arena, ctx, originals, assignment)? {
+        ExtReplay::Sat(model) => Ok(CheckResult::Sat(model)),
+        ExtReplay::Failed { ordinal, term } => Ok(ext_unknown(format!(
+            "lazy-extensionality candidate failed replay: assertion #{} evaluated to \
+             false (top-level ordinal {ordinal}, incomplete on this shape)",
+            term.index()
+        ))),
+    }
+}
+
+fn project_replay_ext_candidate(
+    arena: &TermArena,
+    ctx: &RowCtx,
+    originals: &[TermId],
+    assignment: &Assignment,
+) -> Result<ExtReplay, SolverError> {
     // Reconstruct array variables from the base-variable read sites only.
     let arrays = collect_base_array_entries(arena, ctx, assignment, "lazy-ext projection failed")?;
     let mut projected = complete_assignment(arena, assignment);
@@ -3352,15 +3443,14 @@ fn project_replay_ext(
     // Replay against the ORIGINAL assertions, re-deriving every array (dis)equality
     // extensionally from the reconstructed arrays. Accept only a genuine model;
     // a replay miss (reconstruction underdetermined this shape) declines.
-    for &assertion in originals {
+    for (ordinal, &assertion) in originals.iter().enumerate() {
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => {
-                return Ok(ext_unknown(format!(
-                    "lazy-extensionality candidate failed replay: assertion #{} evaluated to \
-                     false (incomplete on this shape)",
-                    assertion.index()
-                )));
+                return Ok(ExtReplay::Failed {
+                    ordinal,
+                    term: assertion,
+                });
             }
             Ok(value) => {
                 return Err(SolverError::Backend(format!(
@@ -3392,7 +3482,7 @@ fn project_replay_ext(
     for (func, value) in projected.functions() {
         out.set_function(func, value.clone());
     }
-    Ok(CheckResult::Sat(out))
+    Ok(ExtReplay::Sat(out))
 }
 
 // ===========================================================================
@@ -3733,13 +3823,14 @@ pub fn certify_array_elim_unsat(
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests {
     use super::{
-        StoreChainSide, check_qf_abv_lazy, check_with_array_elimination,
+        LastExtReplay, RowCtx, StoreChainSide, check_qf_abv_lazy, check_with_array_elimination,
         const_array_default_mismatch_refutation, cross_store_array_disequality_refutation,
-        prove_unsat_by_symmetric_swap_chain, store_chain_readback_refutation,
+        prove_unsat_by_symmetric_swap_chain, replay_last_ext_candidate,
+        store_chain_readback_refutation,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
-    use axeyum_ir::{TermArena, Value, eval};
+    use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
     use axeyum_smtlib::parse_script;
 
     #[test]
@@ -3795,6 +3886,79 @@ mod tests {
                 Value::Bool(true),
                 "original assertion must replay to true"
             );
+        }
+    }
+
+    #[test]
+    fn lazy_ext_last_candidate_replay_accepts_only_real_models() {
+        // The timeout/unknown shortcut is sound only because it rebuilds a model
+        // and evaluates the original assertions. This pins the positive path:
+        // even if refinement is incomplete, a candidate that replays is a real
+        // SAT model.
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 16, 8).unwrap();
+        let b = arena.array_var("b", 16, 8).unwrap();
+        let c = arena.array_var("c", 16, 8).unwrap();
+        let i = arena.bv_var("i", 16).unwrap();
+        let j = arena.bv_var("j", 16).unwrap();
+        let k = arena.bv_var("k", 16).unwrap();
+        let v = arena.bv_var("v", 8).unwrap();
+        let p = arena.bool_var("p").unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+
+        let lhs = arena.store(a, i, v).unwrap();
+        let rhs = arena.store(b, i, v).unwrap();
+        let array_eq = arena.eq(lhs, rhs).unwrap();
+        let cj = arena.select(c, j).unwrap();
+        let ck = arena.select(c, k).unwrap();
+        let cj_zero = arena.eq(cj, zero).unwrap();
+        let ck_zero = arena.eq(ck, zero).unwrap();
+        let loose_j = arena.or(cj_zero, p).unwrap();
+        let loose_k = arena.or(ck_zero, p).unwrap();
+        let originals = [array_eq, loose_j, loose_k];
+
+        let mut ctx = RowCtx::default();
+        for &assertion in &originals {
+            ctx.abstract_with_array_eq(&mut arena, assertion)
+                .unwrap()
+                .expect("lazy-ext abstraction");
+        }
+
+        let mut candidate = Assignment::new();
+        let mut row_value = 1u128;
+        for (symbol, name, sort) in arena.symbols() {
+            if name.starts_with("!ext_eq_") || name == "p" {
+                candidate.set(symbol, Value::Bool(true));
+            } else if name.starts_with("!row_sel_") {
+                candidate.set(
+                    symbol,
+                    Value::Bv {
+                        width: 8,
+                        value: row_value,
+                    },
+                );
+                row_value ^= 1;
+            } else if sort == Sort::BitVec(16) {
+                candidate.set(
+                    symbol,
+                    Value::Bv {
+                        width: 16,
+                        value: 0,
+                    },
+                );
+            } else if sort == Sort::BitVec(8) {
+                candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+            }
+        }
+
+        let LastExtReplay::Sat(model) =
+            replay_last_ext_candidate(&arena, &ctx, &originals, Some(&candidate))
+        else {
+            panic!("expected replay helper to accept the candidate");
+        };
+        let assignment = model.to_assignment();
+        for &t in &originals {
+            assert_eq!(eval(&arena, t, &assignment).unwrap(), Value::Bool(true));
         }
     }
 
