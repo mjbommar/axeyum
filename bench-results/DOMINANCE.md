@@ -12,7 +12,7 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 
 ## Headline
 
-- 35 measured division rows, 992 files, 648 decided, 597 oracle-compared.
+- 35 measured division rows, 992 files, 649 decided, 598 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
 - 17 rows are decide-strong (Decide% >= 80). 13 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
 - Complete committed dominance audits with exact audited `dominant%(D)`: 20. Remaining rows are readiness or partial-audit entries.
@@ -52,7 +52,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 100% (4/4) | 100% (2/2) | none | `bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json` |
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 100% (8/8) | 100% (6/6) | none | `bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json` |
 | QF_UFLIA | `qf-uflia-curated-named` | 2 | 100% (2/2) | 100% (2/2) | none | `bench-results/dominance/qf-uflia-curated-named-dominance-audit.json` |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 5 | 100% (5/5) | 100% (1/1) | none | `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json` |
 
 ## First Audit Queue
 
@@ -99,7 +99,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | QF_UFBV | `qf-ufbv-cvc5-regress-clean` | 4 | 4 | 100% | strong | 0 | complete | 100% (4/4) | 100% (2/2) | dominant on audited row | audit whether measured unsats avoid BV mul/rem/shift holes |
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 8 | 100% | strong | 0 | complete | 100% (8/8) | 100% (6/6) | dominant on audited row | broaden UFFF audits beyond the cvc5 finite-field+UF slice |
 | QF_UFLIA | `qf-uflia-curated-named` | 2 | 2 | 100% | strong | 0 | complete | 100% (2/2) | 100% (2/2) | dominant on audited row | audit UFLIA unsats by integer-fragment route and UF congruence shape |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 6 | 5 | 83% | strong | 0 | complete | 100% (5/5) | 100% (1/1) | dominant on audited row | audit UFLIA unsats by integer-fragment route and UF congruence shape |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (2/2) | dominant on audited row | audit UFLIA unsats by integer-fragment route and UF congruence shape |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean` | 8 | 4 | 50% | mid | 0 | not run | - | - | grow decide + classify certs | audit UFLIA unsats by integer-fragment route and UF congruence shape |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | weak | 0 | not run | - | - | decider first | audit UFLIA unsats by integer-fragment route and UF congruence shape |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | weak | 0 | not run | - | - | proof route missing | decider/model-finding work first |

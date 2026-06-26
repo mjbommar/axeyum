@@ -8,7 +8,33 @@
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
       "dominant_candidate": true,
-      "elapsed_ms": 547.358787,
+      "elapsed_ms": 26.371734,
+      "evidence_certified": true,
+      "evidence_checked": true,
+      "evidence_kind": "uf-arith-congruence-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2",
+      "lean_checked": true,
+      "lean_error": null,
+      "lean_fragment": "UfArithCongruence",
+      "lean_module_bytes": 579,
+      "phase_timings_ms": {
+        "check_evidence": 7.297411,
+        "lean_reconstruction": 10.674383,
+        "parse_evidence": 0.33894300000000005,
+        "parse_lean": 0.158073,
+        "produce_evidence": 7.862279999999999,
+        "read": 0.015045000000000001
+      },
+      "trust_holes": [],
+      "trust_steps": []
+    },
+    {
+      "audit_outcome": "unsat",
+      "audit_phase": "complete",
+      "baseline_matches_audit": true,
+      "baseline_outcome": "unsat",
+      "dominant_candidate": true,
+      "elapsed_ms": 525.311191,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "arith-dpll-unsat",
@@ -18,12 +44,12 @@
       "lean_fragment": "ArithDpll",
       "lean_module_bytes": 579,
       "phase_timings_ms": {
-        "check_evidence": 105.690778,
-        "lean_reconstruction": 325.62483100000003,
-        "parse_evidence": 0.532342,
-        "parse_lean": 0.215949,
-        "produce_evidence": 115.25124100000001,
-        "read": 0.01654
+        "check_evidence": 101.616953,
+        "lean_reconstruction": 311.387341,
+        "parse_evidence": 0.423941,
+        "parse_lean": 0.238311,
+        "produce_evidence": 111.605291,
+        "read": 0.013179
       },
       "trust_holes": [],
       "trust_steps": []
@@ -34,7 +60,7 @@
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 1.514529,
+      "elapsed_ms": 1.603453,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -44,12 +70,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.010553,
+        "check_evidence": 0.009904999999999999,
         "lean_reconstruction": null,
-        "parse_evidence": 0.176548,
+        "parse_evidence": 0.157328,
         "parse_lean": null,
-        "produce_evidence": 1.3027710000000001,
-        "read": 0.016464
+        "produce_evidence": 1.408266,
+        "read": 0.018653
       },
       "trust_holes": [],
       "trust_steps": []
@@ -60,7 +86,7 @@
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 0.450301,
+      "elapsed_ms": 0.501142,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -70,12 +96,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.014759999999999999,
+        "check_evidence": 0.013777999999999999,
         "lean_reconstruction": null,
-        "parse_evidence": 0.128161,
+        "parse_evidence": 0.12606499999999998,
         "parse_lean": null,
-        "produce_evidence": 0.28363299999999997,
-        "read": 0.014739
+        "produce_evidence": 0.338008,
+        "read": 0.01528
       },
       "trust_holes": [],
       "trust_steps": []
@@ -86,7 +112,7 @@
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 2.329668,
+      "elapsed_ms": 2.3639870000000003,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -96,12 +122,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.019989,
+        "check_evidence": 0.019321,
         "lean_reconstruction": null,
-        "parse_evidence": 0.12636599999999998,
+        "parse_evidence": 0.11757000000000001,
         "parse_lean": null,
-        "produce_evidence": 2.1519690000000002,
-        "read": 0.012537000000000001
+        "produce_evidence": 2.207382,
+        "read": 0.011539
       },
       "trust_holes": [],
       "trust_steps": []
@@ -112,7 +138,7 @@
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
       "dominant_candidate": true,
-      "elapsed_ms": 2.4547470000000002,
+      "elapsed_ms": 2.443676,
       "evidence_certified": true,
       "evidence_checked": true,
       "evidence_kind": "sat-model",
@@ -122,32 +148,32 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.021214,
+        "check_evidence": 0.019157,
         "lean_reconstruction": null,
-        "parse_evidence": 0.119018,
+        "parse_evidence": 0.108697,
         "parse_lean": null,
-        "produce_evidence": 2.291939,
-        "read": 0.012025
+        "produce_evidence": 2.29421,
+        "read": 0.013285
       },
       "trust_holes": [],
       "trust_steps": []
     }
   ],
-  "limit": 5,
+  "limit": 6,
   "logic": "QF_UFLIA",
   "slice": "qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json",
   "summary": {
     "audit_errors": 0,
-    "audited_decided": 5,
-    "audited_unsat": 1,
-    "baseline_decided": 5,
+    "audited_decided": 6,
+    "audited_unsat": 2,
+    "baseline_decided": 6,
     "baseline_mismatches": 0,
-    "dominant_candidates": 5,
+    "dominant_candidates": 6,
     "dominant_pct_audited": 100.0,
-    "evidence_certified": 5,
-    "evidence_checked": 5,
+    "evidence_certified": 6,
+    "evidence_checked": 6,
     "instances": 6,
-    "lean_checked_unsat": 1,
+    "lean_checked_unsat": 2,
     "lean_unsat_pct": 100.0,
     "timeouts": 0
   },

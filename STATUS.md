@@ -6,6 +6,32 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — QF_UFLIA bounded row remeasured to full coverage.**
+  Refreshed the stale bounded declared-sort QF_UFLIA baseline after the current
+  mixed UF+arithmetic congruence route already decided its last gap,
+  `bug303`, as `unsat`. The Z3-compared baseline is now **6/6 decided
+  (100.0%)**, **DISAGREE=0**, **oracle-compared=6/6**, and PAR-2 mean
+  **0.002 s**. The exact dominance audit is refreshed at **6/6 dominant
+  (100.0%)**, **Lean unsat 2/2 (100.0%)**, **mismatches=0**,
+  **audit_errors=0**, **timeouts=0**, **evidence_checked=6/6**, and
+  **evidence_certified=6/6**. `bench-results/SCOREBOARD.md` and
+  `bench-results/DOMINANCE.md` now report **649 decided** and
+  **598 oracle-compared** overall. **Next:** continue from measurement-backed
+  decide gaps rather than proof-auditing already dominant rows; the nearby
+  frontiers remain QF_UFLIA unbounded/overbound, QF_ALIA/AUFLIA arrays, and
+  QF_UF overbound's two undecided instances.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2 10000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --features z3 -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-bounded --timeout-ms 10000 --backend solver --compare-z3 --jobs 4 --out bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example audit_dominance -- bench-results/baselines/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json 30000 6 bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json`;
+  `python3 scripts/gen-scoreboard.py`;
+  `python3 scripts/gen-dominance-scoreboard.py`;
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo check -p axeyum-bench --examples -j1`;
+  `python3 -m py_compile scripts/gen-scoreboard.py scripts/gen-dominance-scoreboard.py`;
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-26 — QF_UF overbound dominance audit closed.**
   Added a checked online Boolean-EUF certificate for large pure-EUF Boolean
   skeletons that exceed the exhaustive equality-atom case bound. The certificate
@@ -3793,9 +3819,16 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | TODO |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 648 decided, 597 oracle-compared, DISAGREE=0, and 20 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **5/5** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 649 decided, 598 oracle-compared, DISAGREE=0, and 20 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_AUFBV **41/41**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, and QF_UFLIA bounded **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **QF_UFLIA bounded row remeasured to full dominance.**
+  Refreshed the bounded declared-sort QF_UFLIA baseline and exact dominance
+  audit after the current mixed UF+arithmetic route already decides `bug303`.
+  The row is now **6/6 decided**, **DISAGREE=0**, **6/6 dominant**, and Lean
+  unsat **2/2**. Regenerated scoreboards now report **649 decided** and
+  **598 oracle-compared** overall.
 
 - **2026-06-26** — **Exact QF_UF overbound dominance row closed.**
   Added a checked online Boolean-EUF certificate and Lean route for large

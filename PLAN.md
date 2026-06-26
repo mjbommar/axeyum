@@ -74,7 +74,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 648 decided, 597 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, 992 files, 649 decided, 598 oracle-compared, DISAGREE = 0**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -168,8 +168,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **648 decided**,
-   **597 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
+   coverage. Current report: **35 rows**, **992 files**, **649 decided**,
+   **598 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -217,6 +217,14 @@ against competitor source, are now binding:
    **mismatches=0**, **audit_errors=0**, and **timeouts=0**. The underlying
    decide-rate row remains **4/6 decided**; this closes certification for the
    currently decided slice, not the two undecided instances.
+   **QF_UFLIA BOUNDED REMEASURE + AUDIT REFRESH LANDED (2026-06-26):**
+   the bounded declared-sort QF_UFLIA baseline was stale after the mixed
+   UF+arithmetic congruence route landed. Re-running the committed Z3 comparison
+   now decides `bug303` as `unsat`, agrees with Z3, and moves the row from
+   **5/6** to **6/6 decided (100.0%)** with **DISAGREE=0** and PAR-2 mean
+   **0.002 s**. The exact dominance audit is refreshed at **6/6 dominant
+   (100.0%)**, **Lean unsat 2/2 (100.0%)**, with **mismatches=0**,
+   **audit_errors=0**, and **timeouts=0**.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances
