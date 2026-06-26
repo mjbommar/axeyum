@@ -98,9 +98,9 @@ PROOF_ROUTES: dict[str, ProofRoute] = {
         "classify array unsats by ROW/congruence vs general ArrayElim",
     ),
     "QF_ALIA": ProofRoute(
-        "Int-array ROW/congruence route is emerging",
+        "checked Int-array ROW/readback refuters plus scalar-array replay",
         "partial",
-        "refresh baselines after generic arrays, then add per-instance evidence audit",
+        "move solve frontier to AUFLIA scalar search and QF_AX witnessed extensionality",
     ),
     "QF_AUFBV": ProofRoute(
         "array+UF/BV certificates exist for narrow ROW/congruence subcases",

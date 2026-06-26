@@ -15,7 +15,7 @@ The current benchmark JSONs record decide-rate, disagreement, and PAR-2, but the
 - 35 measured division rows, 992 files, 658 decided, 606 oracle-compared.
 - 35/35 rows have DISAGREE = 0; any nonzero row must preempt dominance work.
 - 18 rows are decide-strong (Decide% >= 80). 14 have a current Lean route worth auditing now; the others need proof-route work before dominance measurement is meaningful.
-- Complete committed dominance audits with exact audited `dominant%(D)`: 20. Remaining rows are readiness or partial-audit entries.
+- Complete committed dominance audits with exact audited `dominant%(D)`: 21. Remaining rows are readiness or partial-audit entries.
 
 ## Audit Harness
 
@@ -36,6 +36,7 @@ Complete audit rows have one audit record for every baseline-decided instance in
 | BV | `bv-bitwuzla-regress-clean-quantified` | 4 | 100% (4/4) | 100% (3/3) | none | `bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json` |
 | BV | `bv-cvc5-regress-clean-quantified` | 37 | 100% (37/37) | 100% (8/8) | none | `bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json` |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 169 | 100% (169/169) | 100% (85/85) | none | `bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json` |
+| QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 100% (6/6) | 100% (5/5) | none | `bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json` |
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 41 | 100% (41/41) | 100% (20/20) | none | `bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json` |
 | QF_BV | `qf-bv-curated-bvred` | 6 | 100% (6/6) | 100% (2/2) | none | `bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json` |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean` | 7 | 100% (7/7) | 100% (3/3) | none | `bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json` |
@@ -60,7 +61,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 
 | Division | Slice | Files | Decide% | DISAGREE | PAR-2 (s) | Lean route | Audit task |
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
-| QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 100% | 0 | 0.000 | Int-array ROW/congruence route is emerging | refresh baselines after generic arrays, then add per-instance evidence audit |
+| - | - | 0 | - | - | - | - | - |
 
 ## All Rows
 
@@ -72,7 +73,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 | BV | `bv-cvc5-regress-clean-quantified` | 54 | 37 | 69% | mid | 0 | complete | 100% (37/37) | 100% (8/8) | dominant on audited row | audit quantified-BV rows with per-instance Lean reconstruction |
 | LIA | `lia-cvc5-regress-clean-quantified` | 12 | 0 | 0% | weak | 0 | not run | - | - | decider first | separate guarded finite-Int unsats from unsupported infinite-domain cases |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | strong | 0 | complete | 100% (169/169) | 100% (85/85) | dominant on audited row | classify array unsats by ROW/congruence vs general ArrayElim |
-| QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 6 | 100% | strong | 0 | not run | - | - | audit now | refresh baselines after generic arrays, then add per-instance evidence audit |
+| QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 6 | 100% | strong | 0 | complete | 100% (6/6) | 100% (5/5) | dominant on audited row | move solve frontier to AUFLIA scalar search and QF_AX witnessed extensionality |
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean` | 44 | 41 | 93% | strong | 0 | complete | 100% (41/41) | 100% (20/20) | dominant on audited row | split direct ROW/congruence wins from general array elimination |
 | QF_AUFBV | `qf-aufbv-cvc5-regress-clean` | 9 | 5 | 56% | mid | 0 | not run | - | - | grow decide + classify certs | split direct ROW/congruence wins from general array elimination |
 | QF_AUFLIA | `qf-auflia-cvc5-regress-clean` | 7 | 5 | 71% | mid | 0 | not run | - | - | grow decide + classify certs | finish decide frontier before spending cert budget beyond narrow refuters |
@@ -112,7 +113,7 @@ These rows are the best immediate candidates: they are already decide-strong and
 
 ## Next Generator Step
 
-Run and commit more `bench-results/dominance/*.json` audit artifacts for the remaining `audit now` rows. Each complete artifact automatically promotes its row from readiness status to exact audited `dominant%(D)`.
+The first `audit now` queue is clear. The next dominance movement comes from reducing the concrete proof/evidence gaps reported above, then regenerating the affected exact audit artifacts.
 
 ## Provenance
 

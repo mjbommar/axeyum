@@ -1618,6 +1618,7 @@ fn produce_evidence_certifies_finite_array_extensionality_unsat() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn produce_evidence_certifies_small_array_axiom_unsats() {
     let cases = [
         (
@@ -2120,6 +2121,42 @@ fn produce_evidence_certifies_array_bv_abstraction_unsat() {
         report.trusted_steps.is_empty(),
         "BV-abstraction evidence carries no outer reduction trust holes"
     );
+}
+
+#[test]
+fn produce_evidence_certifies_qf_alia_store_chain_unsats() {
+    let cases = [
+        (
+            "constarr3",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress1__constarr3.smt2"
+            ),
+        ),
+        (
+            "ios_np_sf",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__proofs__ios_np_sf.smt2"
+            ),
+        ),
+    ];
+
+    for (name, smt2) in cases {
+        let mut script = parse_script(smt2).unwrap_or_else(|err| panic!("{name} parses: {err}"));
+        let assertions = script.assertions.clone();
+        let report = produce_evidence(&mut script.arena, &assertions, &config())
+            .unwrap_or_else(|err| panic!("{name} decides: {err}"));
+        match (name, &report.evidence) {
+            ("constarr3", Evidence::UnsatConstArrayDefaultMismatch(_))
+            | ("ios_np_sf", Evidence::UnsatStoreChainReadback(_)) => {}
+            (_, other) => panic!("{name}: unexpected evidence: {other:?}"),
+        }
+        assert!(report.evidence.is_certified(), "{name}");
+        assert!(
+            report.evidence.check(&script.arena, &assertions).unwrap(),
+            "{name}"
+        );
+        assert!(report.trusted_steps.is_empty(), "{name}");
+    }
 }
 
 #[test]

@@ -1311,6 +1311,10 @@ pub enum ProofFragment {
     BvUfLocal,
     /// A direct negation of a checked array axiom schema.
     ArrayAxiom,
+    /// A finite-write constant-array default mismatch over an infinite Int index.
+    ConstArrayDefaultMismatch,
+    /// A finite store-chain readback contradiction over `(Array Int Int)`.
+    StoreChainReadback,
     /// A finite BV-index array extensionality refutation.
     FiniteArrayExtensionality,
     /// A certified-unsat scalar BV abstraction of an array query.
@@ -1759,6 +1763,10 @@ pub fn scan_proof_fragment(arena: &TermArena, assertions: &[TermId]) -> ProofFra
         ProofFragment::BoolSimplification
     } else if crate::array_axiom::array_axiom_refutation(arena, assertions).is_some() {
         ProofFragment::ArrayAxiom
+    } else if crate::abv::const_array_default_mismatch_refutation(arena, assertions).is_some() {
+        ProofFragment::ConstArrayDefaultMismatch
+    } else if crate::abv::store_chain_readback_refutation(arena, assertions).is_some() {
+        ProofFragment::StoreChainReadback
     } else if crate::array_finite::finite_array_extensionality_refutation(arena, assertions)
         .is_some()
     {
@@ -3038,6 +3046,67 @@ fn array_axiom_term_expr(ctx: &mut ReconstructCtx, term: TermId) -> ExprId {
     ctx.kernel.const_(name, vec![])
 }
 
+fn reconstruct_const_array_default_mismatch_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::abv::const_array_default_mismatch_refutation(arena, assertions).ok_or_else(
+        || ReconstructError::MalformedStep {
+            rule: "const_array_default_mismatch".to_owned(),
+            detail: "expected a checked const-array default mismatch refutation".to_owned(),
+        },
+    )?;
+    if !cert.recheck(arena, assertions) {
+        return Err(ReconstructError::MalformedStep {
+            rule: "const_array_default_mismatch".to_owned(),
+            detail: "const-array default mismatch certificate did not recheck".to_owned(),
+        });
+    }
+
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "const_array_default_mismatch_assertions",
+        "const_array_default_mismatch",
+    )
+}
+
+fn reconstruct_store_chain_readback_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    let cert = crate::abv::store_chain_readback_refutation(arena, assertions).ok_or_else(|| {
+        ReconstructError::MalformedStep {
+            rule: "store_chain_readback".to_owned(),
+            detail: "expected a checked store-chain readback refutation".to_owned(),
+        }
+    })?;
+    if !cert.recheck(arena, assertions) {
+        return Err(ReconstructError::MalformedStep {
+            rule: "store_chain_readback".to_owned(),
+            detail: "store-chain readback certificate did not recheck".to_owned(),
+        });
+    }
+
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "store_chain_readback_assertions",
+        "store_chain_readback",
+    )
+}
+
+fn reconstruct_checked_structural_certificate_to_lean_module(
+    prop_stem: &str,
+    refuter_role: &str,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const(prop_stem);
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, refuter_role)?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
 fn reconstruct_bv_abstraction_to_lean_module(
     arena: &TermArena,
     assertions: &[TermId],
@@ -3436,6 +3505,8 @@ fn reconstruct_proof_fragment_to_lean_module(
         | ProofFragment::BvForallNonconstant
         | ProofFragment::BvUfLocal
         | ProofFragment::ArrayAxiom
+        | ProofFragment::ConstArrayDefaultMismatch
+        | ProofFragment::StoreChainReadback
         | ProofFragment::FiniteArrayExtensionality
         | ProofFragment::BvAbstraction
         | ProofFragment::TwoByteMemcpy
@@ -3551,6 +3622,12 @@ fn reconstruct_direct_structural_fragment_to_lean_module(
         }
         ProofFragment::BvUfLocal => reconstruct_bv_uf_local_to_lean_module(arena, assertions)?,
         ProofFragment::ArrayAxiom => reconstruct_array_axiom_to_lean_module(arena, assertions)?,
+        ProofFragment::ConstArrayDefaultMismatch => {
+            reconstruct_const_array_default_mismatch_to_lean_module(arena, assertions)?
+        }
+        ProofFragment::StoreChainReadback => {
+            reconstruct_store_chain_readback_to_lean_module(arena, assertions)?
+        }
         ProofFragment::FiniteArrayExtensionality => {
             reconstruct_finite_array_extensionality_to_lean_module(arena, assertions)?
         }

@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **658 decided**,
-   **606 oracle-compared**, **DISAGREE = 0**, with **20 complete exact audit rows**
+   **606 oracle-compared**, **DISAGREE = 0**, with **21 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -263,8 +263,17 @@ against competitor source, are now binding:
    `ios_np_sf` and refreshes QF_ALIA to **6/6 decided (100.0%)**,
    **unknown=0**, **unsupported=0**, **oracle-compared=5/6**, **DISAGREE=0**,
    with PAR-2 mean **0.000 s**. The nearby Int-array solve frontier is now
-   QF_AUFLIA `bug330`/`bug337` scalar-search depth and QF_AX breadth; QF_ALIA's
-   next work is evidence/Lean audit, not decide coverage on this slice.
+   QF_AUFLIA `bug330`/`bug337` scalar-search depth and QF_AX breadth.
+   **QF_ALIA EXACT DOMINANCE AUDIT INGESTED (2026-06-26):**
+   QF_ALIA's cvc5 clean slice now has a committed complete dominance audit. The
+   two QF_ALIA-specific unsats above are exported as checked
+   `const-array-default-mismatch-unsat` and `store-chain-readback-unsat`
+   evidence, reconstruct through `ConstArrayDefaultMismatch` and
+   `StoreChainReadback`, and real Lean accepts both generated modules with no
+   `sorryAx`. The row is **6/6 dominant (100.0%)**, **Lean unsat 5/5
+   (100.0%)**, with **mismatches=0**, **audit_errors=0**, and **timeouts=0**.
+   The first audit queue is now clear; QF_ALIA's next work is broader
+   Int-array generalization, not deciding or certifying this slice.
    **AUDIT HARNESS LANDED (2026-06-25):**
    `cargo run --release -p axeyum-bench --example audit_dominance -- <baseline.json>
    [timeout_ms] [limit] [out.json]` now re-runs baseline-decided instances

@@ -81,11 +81,12 @@ proof (the in-tree `check_drat`, RUP+RAT) + the bit-blast faithfulness miter. On
 - **`bench-results/DOMINANCE.md`** (`python3 scripts/gen-dominance-scoreboard.py`) —
   the conservative Pareto-dominance view: measured decide/PAR-2 rows plus exact
   results for committed per-instance audits. It currently reports **35 rows,
-  992 files, 658 decided, 606 oracle-compared, DISAGREE=0**, with **20 complete
+  992 files, 658 decided, 606 oracle-compared, DISAGREE=0**, with **21 complete
   exact audit rows** and no remaining first-queue audit rows. Exact committed
   rows now include BV/bitwuzla quantified `100% (4/4)`, BV/cvc5 quantified
   `100% (37/37)`, QF_ABV/cvc5+bitwuzla
-  `100% (169/169)`, QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
+  `100% (169/169)`, QF_ALIA/cvc5 `100% (6/6)`,
+  QF_AUFBV/bitwuzla `100% (41/41)`, QF_BV/bvred `100% (6/6)`,
   QF_BVFP/bitwuzla `100% (7/7)`, QF_DT/cvc5 `100% (3/3)`,
   QF_FF/cvc5 `100% (24/24)`, QF_FP/bitwuzla `100% (16/16)`,
   QF_LIA/cvc5 `100% (10/10)`, QF_LRA/cvc5 `100% (9/9)`, QF_NIA synthetic
@@ -430,7 +431,13 @@ a named mechanism.**
    QF_ALIA to **6/6 decided (100%)**, **unknown=0**, **unsupported=0**,
    **oracle-compared=5/6**, **DISAGREE=0**. The remaining Int-array solve work
    is AUFLIA `bug330`/`bug337` scalar-search depth, QF_AX breadth, and then
-   broader non-BV component sorts; QF_ALIA's next step is evidence/Lean audit.
+   broader non-BV component sorts.
+   **QF_ALIA exact dominance audit landed later 2026-06-26:** the committed
+   audit now certifies all six baseline-decided QF_ALIA instances as dominant,
+   with Lean unsat **5/5**, no mismatches, no audit errors, and no timeouts. The
+   two QF_ALIA-specific unsats reconstruct through `ConstArrayDefaultMismatch`
+   and `StoreChainReadback`. QF_ALIA is no longer the current decide or
+   certification blocker for this cvc5 slice.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
@@ -485,8 +492,9 @@ answered: 24 fragments are measured vs Z3 with a committed, regenerable scoreboa
 the oracle-free frontier dashboard. The dominance-readiness report now adds the
 proof-route audit queue for the Pareto-dominance strategy, and the
 `audit_dominance` harness supplies the per-instance evidence/Lean fields. Complete
-committed audit artifacts are now ingested for 12 rows across BV, QF_ABV,
-QF_AUFBV, QF_BV, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_UFBV, and QF_UFLIA, so exact
+committed audit artifacts are now ingested for 21 rows across BV, QF_ABV,
+QF_ALIA, QF_AUFBV, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA,
+QF_NIA, QF_NRA, QF_UF, QF_UFBV, QF_UFFF, and QF_UFLIA, so exact
 dominance coverage has replaced readiness labels on the first queue. Measurement
 is **no longer the blocker** for decide-rate or first-queue dominance coverage;
 remaining dominance work is now Lean/proof fixes and evidence-performance fixes

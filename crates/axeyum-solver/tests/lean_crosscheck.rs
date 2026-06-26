@@ -232,7 +232,7 @@ fn cvc5_quantified_bv_inversion_rows_check_in_real_lean() {
     }
 }
 
-/// The QF_UFFF cvc5 row parses finite-field values as small bit-vectors. These
+/// The `QF_UFFF` cvc5 row parses finite-field values as small bit-vectors. These
 /// unsats are certified by deriving local BV equalities, then closing the UF
 /// contradiction by congruence. Reconstruction reruns that checker before
 /// rendering the certificate-wrapper module.
@@ -289,7 +289,7 @@ fn qf_ufff_bv_uf_local_rows_check_in_real_lean() {
     }
 }
 
-/// Ground QF_FF rows that fit the term-level Bool/BV enumeration budget already
+/// Ground `QF_FF` rows that fit the term-level Bool/BV enumeration budget already
 /// have checked evidence; reconstruction must route them through the same
 /// executable certificate instead of falling back to the unsupported DRAT Lean
 /// path.
@@ -322,7 +322,7 @@ fn qf_ff_term_level_enum_rows_check_in_real_lean() {
     }
 }
 
-/// The two remaining QF_FF audit gaps are certified by bounded enumeration after
+/// The two remaining `QF_FF` audit gaps are certified by bounded enumeration after
 /// checked top-level definitions and finite-domain restrictions. This keeps
 /// finite-field algebra/parity rows off the unsupported DRAT Lean path.
 #[test]
@@ -354,7 +354,7 @@ fn qf_ff_bv_defined_enum_gap_rows_check_in_real_lean() {
     }
 }
 
-/// QF_FP rows lower to finite scalar terms with Float values represented as bit
+/// `QF_FP` rows lower to finite scalar terms with Float values represented as bit
 /// patterns. The definition-aware enum route rechecks the original assertions
 /// before rendering the Lean wrapper.
 #[test]
@@ -557,7 +557,7 @@ fn qf_lia_arith_dpll_audit_rows_check_in_real_lean() {
 
 /// `QF_UFLIA`: the `use-name-in-same-command` rows are Boolean-structured
 /// arithmetic proof-step encodings. They reconstruct through the same checked
-/// ArithDPLL wrapper after treating integer-valued UF applications as opaque
+/// `ArithDPLL` wrapper after treating integer-valued UF applications as opaque
 /// arithmetic variables.
 #[test]
 fn qf_uflia_use_name_arith_dpll_rows_check_in_real_lean() {
@@ -1028,6 +1028,7 @@ fn qf_aufbv_finite_array_extensionality_checks_in_real_lean() {
 /// bitwuzla array regression slice. The schema checker supplies the certified
 /// equality and the Lean route closes it against the asserted disequality.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
     let cases = [
         (
@@ -1399,7 +1400,7 @@ fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
 
 /// `QF_AUFBV`: `rw213` is already contradictory after the two array reads are
 /// treated as arbitrary BV values. The Rust certificate re-checks that scalar
-/// abstraction through the QF_BV evidence route, and the Lean module records the
+/// abstraction through the `QF_BV` evidence route, and the Lean module records the
 /// resulting small contradiction witness.
 #[test]
 fn qf_aufbv_bv_abstraction_checks_in_real_lean() {
@@ -1416,6 +1417,39 @@ fn qf_aufbv_bv_abstraction_checks_in_real_lean() {
         "BV-abstraction module must not lean on sorryAx:\n{source}"
     );
     lean_accepts("qf_aufbv_bv_abstraction", &source);
+}
+
+#[test]
+fn qf_alia_store_chain_certificates_check_in_real_lean() {
+    let cases = [
+        (
+            "qf_alia_constarr3",
+            ProofFragment::ConstArrayDefaultMismatch,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress1__constarr3.smt2"
+            ),
+        ),
+        (
+            "qf_alia_ios_np_sf",
+            ProofFragment::StoreChainReadback,
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_ALIA/cvc5-regress-clean/cli__regress0__proofs__ios_np_sf.smt2"
+            ),
+        ),
+    ];
+
+    for (tag, expected, smt2) in cases {
+        let mut script = parse_script(smt2).unwrap_or_else(|err| panic!("{tag} parses: {err}"));
+        let assertions = script.assertions.clone();
+        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
+            .unwrap_or_else(|err| panic!("{tag} reconstructs: {err}"));
+        assert_eq!(fragment, expected, "{tag}");
+        assert!(
+            !source.contains("sorryAx"),
+            "{tag}: QF_ALIA certificate module must not lean on sorryAx:\n{source}"
+        );
+        lean_accepts(tag, &source);
+    }
 }
 
 /// `QF_AUFBV`: generated aligned byte write chains commute when both word

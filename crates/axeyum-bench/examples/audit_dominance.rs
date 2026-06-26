@@ -129,6 +129,8 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatDatatypeStructural(_) => "datatype-structural-unsat",
         Evidence::UnsatFiniteArrayExtensionality(_) => "finite-array-extensionality-unsat",
         Evidence::UnsatArrayAxiom(_) => "array-axiom-unsat",
+        Evidence::UnsatConstArrayDefaultMismatch(_) => "const-array-default-mismatch-unsat",
+        Evidence::UnsatStoreChainReadback(_) => "store-chain-readback-unsat",
         Evidence::UnsatTermIdentity(_) => "term-identity-unsat",
         Evidence::UnsatBoolSimplification(_) => "bool-simplification-unsat",
         Evidence::UnsatBvAbstraction(_) => "bv-abstraction-unsat",
