@@ -30,7 +30,10 @@ use axeyum_cnf::{CnfClause, CnfLit, CnfVar, IncrementalSat, SatError, SatResult}
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::lra::{check_with_lia_opaque_apps, check_with_lia_simplex, check_with_lra};
+use crate::lra::{
+    check_with_lia_opaque_apps, check_with_lia_simplex, check_with_lra,
+    lia_lp_relaxation_unsat_core,
+};
 use crate::model::Model;
 
 const ATOM_PREFIX: &str = "!arith_atom_";
@@ -346,6 +349,44 @@ struct ArithRun {
     lemmas: Vec<Vec<ArithLemmaLiteral>>,
 }
 
+#[derive(Default)]
+struct ArithCoreStats {
+    count: usize,
+    total_len: usize,
+    min_len: usize,
+    max_len: usize,
+    last_len: usize,
+}
+
+impl ArithCoreStats {
+    fn record(&mut self, len: usize) {
+        self.count += 1;
+        self.total_len += len;
+        self.last_len = len;
+        self.min_len = if self.count == 1 {
+            len
+        } else {
+            self.min_len.min(len)
+        };
+        self.max_len = self.max_len.max(len);
+    }
+
+    fn summary(&self) -> String {
+        if self.count == 0 {
+            return "core_lengths=none".to_owned();
+        }
+        let avg_tenths = self.total_len.saturating_mul(10) / self.count;
+        format!(
+            "core_len_last={}, core_len_min={}, core_len_max={}, core_len_avg={}.{}",
+            self.last_len,
+            self.min_len,
+            self.max_len,
+            avg_tenths / 10,
+            avg_tenths % 10
+        )
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn run_arith_dpll(
     arena: &mut TermArena,
@@ -370,6 +411,7 @@ fn run_arith_dpll(
         .iter()
         .map(|(_, lemma)| lemma.clone())
         .collect();
+    let mut core_stats = ArithCoreStats::default();
 
     // Wall-clock deadline (graceful `Unknown`, never an unbounded hang — the
     // standing hard rule). The lazy-SMT loop can need up to `MAX_DPLL_ROUNDS`
@@ -387,10 +429,11 @@ fn run_arith_dpll(
                     kind: UnknownKind::ResourceLimit,
                     detail: format!(
                         "lazy linear arithmetic exhausted the configured timeout after {round} \
-                         rounds (atoms={}, bound_lemmas={}, blocking_lemmas={})",
+                         rounds (atoms={}, bound_lemmas={}, blocking_lemmas={}, {})",
                         ctx.atoms.len(),
                         initial_lemmas.len(),
-                        blocking.len()
+                        blocking.len(),
+                        core_stats.summary()
                     ),
                 }),
                 skeleton,
@@ -413,10 +456,11 @@ fn run_arith_dpll(
                         kind: reason.kind,
                         detail: format!(
                             "lazy linear arithmetic SAT skeleton declined after round {round} \
-                             (atoms={}, bound_lemmas={}, blocking_lemmas={}): {}",
+                             (atoms={}, bound_lemmas={}, blocking_lemmas={}, {}): {}",
                             ctx.atoms.len(),
                             initial_lemmas.len(),
                             blocking.len(),
+                            core_stats.summary(),
                             reason.detail
                         ),
                     }),
@@ -447,6 +491,7 @@ fn run_arith_dpll(
         if let Some(conflict) =
             theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?
         {
+            core_stats.record(conflict.len());
             lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
             let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
             prop_solver.assert(arena, clause)?;
@@ -454,6 +499,7 @@ fn run_arith_dpll(
             continue;
         }
         if let Some(conflict) = theory_conflict(arena, &ctx, &lits, Theory::Real, check_with_lra)? {
+            core_stats.record(conflict.len());
             lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
             let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
             prop_solver.assert(arena, clause)?;
@@ -536,11 +582,33 @@ fn theory_conflict(
         if let Some(core) = cheap_int_difference_conflict_core(arena, ctx, lits, &indices) {
             return Ok(Some(core));
         }
+        if let Some(core) = lp_relaxation_conflict_core(arena, lits, &indices)? {
+            return Ok(Some(core));
+        }
     }
     if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS {
         return Ok(Some(indices));
     }
     Ok(Some(minimize_core(arena, &indices, lits, oracle)?))
+}
+
+/// Extracts an LP-relaxation Farkas-supported core from the integer side of a
+/// theory conflict. The integer oracle has already established the full
+/// conjunction is `unsat`; this helper applies only when the real relaxation is
+/// also infeasible, in which case the returned core is a sound LIA conflict.
+fn lp_relaxation_conflict_core(
+    arena: &TermArena,
+    lits: &[TermId],
+    indices: &[usize],
+) -> Result<Option<Vec<usize>>, SolverError> {
+    let conj: Vec<TermId> = indices.iter().map(|&i| lits[i]).collect();
+    let Some(local_core) = lia_lp_relaxation_unsat_core(arena, &conj, true)? else {
+        return Ok(None);
+    };
+    let mut core: Vec<usize> = local_core.into_iter().map(|local| indices[local]).collect();
+    core.sort_unstable();
+    core.dedup();
+    Ok((!core.is_empty()).then_some(core))
 }
 
 /// Extracts a small conflicting integer-bound core from the current SAT

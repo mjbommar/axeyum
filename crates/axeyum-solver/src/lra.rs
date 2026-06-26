@@ -1129,7 +1129,8 @@ fn lia_simplex_with_options(
     allow_opaque_apps: bool,
 ) -> Result<CheckResult, SolverError> {
     let mut ctx = IntCollector::new(allow_opaque_apps);
-    for &assertion in assertions {
+    for (index, &assertion) in assertions.iter().enumerate() {
+        ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
     }
     // An `i128` overflow while linearizing poisons the collection; degrade to a
@@ -1292,8 +1293,17 @@ pub(crate) enum LpRelaxation {
 /// disequality) atom, or the simplex backstop yields [`LpRelaxation::Unknown`] —
 /// never a wrong `Infeasible`.
 pub(crate) fn lp_relaxation_feasibility(arena: &TermArena, assertions: &[TermId]) -> LpRelaxation {
-    let mut ctx = IntCollector::default();
-    for &assertion in assertions {
+    lp_relaxation_feasibility_with_options(arena, assertions, false)
+}
+
+fn lp_relaxation_feasibility_with_options(
+    arena: &TermArena,
+    assertions: &[TermId],
+    allow_opaque_apps: bool,
+) -> LpRelaxation {
+    let mut ctx = IntCollector::new(allow_opaque_apps);
+    for (index, &assertion) in assertions.iter().enumerate() {
+        ctx.current_origin = index;
         if ctx.collect(arena, assertion, false).is_err() {
             return LpRelaxation::Unknown;
         }
@@ -1310,6 +1320,58 @@ pub(crate) fn lp_relaxation_feasibility(arena: &TermArena, assertions: &[TermId]
         // Iteration backstop without a verdict: stay conservative.
         None => LpRelaxation::Unknown,
     }
+}
+
+/// Returns a sound core of a conjunctive integer system whose LP relaxation is
+/// already infeasible. The core indices refer to `assertions`.
+///
+/// This is deliberately only the relaxation core: if the real relaxation is
+/// feasible but the integer system is infeasible, this returns `Ok(None)` and the
+/// caller must use a full integer procedure. When a core is returned, it is
+/// self-checked by re-running the LP relaxation on the subset, so it can be used
+/// directly as a theory lemma for integer arithmetic.
+pub(crate) fn lia_lp_relaxation_unsat_core(
+    arena: &TermArena,
+    assertions: &[TermId],
+    allow_opaque_apps: bool,
+) -> Result<Option<Vec<usize>>, SolverError> {
+    let mut ctx = IntCollector::new(allow_opaque_apps);
+    for (index, &assertion) in assertions.iter().enumerate() {
+        ctx.current_origin = index;
+        ctx.collect(arena, assertion, false)?;
+    }
+    if ctx.overflow || ctx.trivially_unsat || ctx.constraints.is_empty() {
+        return Ok(None);
+    }
+    let Some(SimplexOutcome::Unsat(multipliers)) =
+        simplex_feasible(&ctx.constraints, ctx.variable_count())
+    else {
+        return Ok(None);
+    };
+
+    let mut core: Vec<usize> = ctx
+        .constraints
+        .iter()
+        .zip(&multipliers)
+        .filter(|(_, multiplier)| !multiplier.is_zero())
+        .map(|(constraint, _)| constraint.origin)
+        .collect();
+    core.sort_unstable();
+    core.dedup();
+    if core.is_empty() {
+        return Ok(None);
+    }
+
+    let subset: Vec<TermId> = core.iter().map(|&i| assertions[i]).collect();
+    if !matches!(
+        lp_relaxation_feasibility_with_options(arena, &subset, allow_opaque_apps),
+        LpRelaxation::Infeasible
+    ) {
+        return Err(SolverError::Backend(
+            "lia LP unsat-core self-check failed: extracted core is feasible".to_owned(),
+        ));
+    }
+    Ok(Some(core))
 }
 
 /// Result of one branch-and-bound subtree.
@@ -1851,6 +1913,7 @@ struct IntCollector {
     allow_opaque_apps: bool,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
+    current_origin: usize,
     /// Set on an `i128` overflow while linearizing; poisons the collection so the
     /// caller degrades to `unknown` (mirrors the LRA [`Collector`]).
     overflow: bool,
@@ -1955,13 +2018,13 @@ impl IntCollector {
                     expr: diff,
                     strict: false,
                     mult: Vec::new(),
-                    origin: 0,
+                    origin: self.current_origin,
                 });
                 self.constraints.push(Constraint {
                     expr: diff_neg,
                     strict: false,
                     mult: Vec::new(),
-                    origin: 0,
+                    origin: self.current_origin,
                 });
                 Ok(())
             }
@@ -1985,7 +2048,7 @@ impl IntCollector {
             expr,
             strict,
             mult: Vec::new(),
-            origin: 0,
+            origin: self.current_origin,
         });
     }
 
@@ -2524,5 +2587,38 @@ mod gomory_internal_tests {
                 LiaBnb::Unknown => "Unknown",
             })
         );
+    }
+
+    #[test]
+    fn lp_relaxation_unsat_core_names_integer_assertions() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").expect("x");
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let ge = arena.int_ge(x, one).expect("x>=1");
+        let le = arena.int_le(x, zero).expect("x<=0");
+
+        let core = lia_lp_relaxation_unsat_core(&arena, &[ge, le], false)
+            .expect("core extraction")
+            .expect("LP-infeasible core");
+        assert_eq!(core, vec![0, 1]);
+    }
+
+    #[test]
+    fn lp_relaxation_unsat_core_allows_opaque_int_apps() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Int], Sort::Int)
+            .expect("declare f");
+        let zero = arena.int_const(0);
+        let app = arena.apply(f, &[zero]).expect("f(0)");
+        let one = arena.int_const(1);
+        let ge = arena.int_ge(app, one).expect("f(0)>=1");
+        let le = arena.int_le(app, zero).expect("f(0)<=0");
+
+        let core = lia_lp_relaxation_unsat_core(&arena, &[ge, le], true)
+            .expect("core extraction")
+            .expect("LP-infeasible opaque core");
+        assert_eq!(core, vec![0, 1]);
     }
 }

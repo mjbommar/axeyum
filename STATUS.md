@@ -6,6 +6,33 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — LIA LP core diagnostics expose small-core search.**
+  Integer linear collection now stamps every generated simplex constraint with
+  its source assertion, and the solver exposes a self-checked
+  `lia_lp_relaxation_unsat_core` helper. The lazy arithmetic DPLL loop tries that
+  Farkas-supported LP-relaxation core before the expensive generic core path and
+  now reports learned theory-core sizes in budget `unknown` details.
+
+  This did not close the two generated QF_UFLIA overbound rows, but it narrowed
+  the diagnosis. At 1 s both rows still route through the single UF-aware
+  abstraction solve and return `unknown` with **873 atoms**, **1433 bound
+  lemmas**, **32 blocking lemmas**, and **core_len_last=2**,
+  **core_len_min=2**, **core_len_max=2**, **core_len_avg=2.0**. The dynamic
+  arithmetic conflicts are already tiny; the next useful work is not core
+  minimization, but SAT/search relevance over many small bound conflicts in the
+  large arithmetic skeleton: assumption-filtered skeleton solving, a cheaper
+  first-model/core-producing loop, or stronger pruning of the generated
+  branch-selector ladders.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lp_relaxation_unsat_core -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_bound_core_uses_current_literal_polarity -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib cheap_integer_difference_core_finds_negative_cycle -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2 1000`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2 1000`;
+  `git diff --check`.
+
 - **Session 2026-06-26 — QF_UFLIA overbound route duplication removed.**
   Large non-array integer UF+arithmetic queries whose Ackermann pair count is
   over the eager bound now skip the generic `lia-dpll` route after Diophantine /
@@ -4308,6 +4335,13 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **LIA LP core diagnostics added.**
+  Integer simplex collection now preserves assertion origins and exposes a
+  self-checked LP-relaxation unsat-core helper. The lazy arithmetic loop tries
+  that core and reports learned core sizes. The QF_UFLIA overbound rows still
+  return `unknown`, but now show every dynamic core is length 2, shifting next
+  work from core minimization to SAT/search relevance in the 873-atom skeleton.
 
 - **2026-06-26** — **QF_UFLIA overbound route duplication removed.**
   Overbound non-array integer UF+arithmetic now skips generic `lia-dpll` after

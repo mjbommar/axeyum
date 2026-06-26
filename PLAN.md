@@ -312,6 +312,19 @@ against competitor source, are now binding:
    about **32** lazy-LIA rounds. The rows remain `unknown`; next work is the
    arithmetic abstraction itself (relevance / assumption filtering or a cheaper
    first-model / UNSAT-core-producing skeleton loop), not more route duplication.
+   **LIA LP CORE DIAGNOSTICS LANDED (2026-06-26):**
+   integer simplex collection now preserves the source assertion for each
+   generated constraint, and the arithmetic solver exposes a self-checked
+   LP-relaxation unsat-core helper from Farkas multipliers. The lazy arithmetic
+   loop tries this relaxation core before the generic minimizer and now reports
+   learned theory-core sizes on budget `unknown`. On both generated QF_UFLIA
+   overbound rows at 1 s the route remains `unknown`, but the timeout now says
+   **873 atoms**, **1433 bound lemmas**, **32 blocking lemmas**, and
+   **core_len_last=min=max=avg=2**. That rules out oversized dynamic arithmetic
+   cores as the immediate blocker. The next lever is SAT/search relevance over
+   many tiny bound conflicts in the generated arithmetic skeleton: assumption
+   filtering, a cheaper first-model/core-producing loop, or branch-selector
+   pruning.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
