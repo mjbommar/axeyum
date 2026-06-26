@@ -499,6 +499,17 @@ a named mechanism.**
    Next work should inspect that branch schedule/support and apply SAT relevance
    / site admission / queue-lock model construction, not broader timeout or
    local-search knobs.
+   **Replay projection repair landed later 2026-06-26:** the final candidate
+   projection now groups asserted direct select equalities by concrete
+   `(array, index)`, repairs the projected array entry, and aligns direct scalar
+   read-result symbols before the existing full replay gate. `bug337` still does
+   not close, but the first replay miss moves past the direct read equality:
+   **154** select-repair candidates, **3** array-entry changes, **2**
+   scalar-symbol changes, then first false flattened conjunct **ordinal 209**,
+   term **3654** — the generated queue-lock transition branch disjunction.
+   `diagnose_evidence` can render generated arena terms by stable term id, so
+   the next AUFLIA work is now specifically replay-guided branch-schedule/model
+   repair for that disjunction.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

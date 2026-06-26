@@ -72,6 +72,19 @@ impl TermArena {
         self.nodes.len()
     }
 
+    /// Returns the term handle at a dense arena index, if it exists.
+    ///
+    /// This is primarily a diagnostic escape hatch for surfaces that report
+    /// stable term indices. It does not validate anything beyond arena bounds:
+    /// the returned handle is valid only for this arena, like every [`TermId`].
+    pub fn term_by_index(&self, index: usize) -> Option<TermId> {
+        if index < self.nodes.len() {
+            Some(TermId(u32::try_from(index).ok()?))
+        } else {
+            None
+        }
+    }
+
     /// Returns `true` if no terms have been interned.
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()

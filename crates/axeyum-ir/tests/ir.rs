@@ -43,6 +43,19 @@ fn identical_construction_yields_identical_ids() {
 }
 
 #[test]
+fn term_by_index_returns_valid_dense_handles() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let one = a.bv_const(8, 1).unwrap();
+    let sum = a.bv_add(x, one).unwrap();
+
+    assert_eq!(a.term_by_index(x.index()), Some(x));
+    assert_eq!(a.term_by_index(one.index()), Some(one));
+    assert_eq!(a.term_by_index(sum.index()), Some(sum));
+    assert_eq!(a.term_by_index(a.len()), None);
+}
+
+#[test]
 fn symbol_redeclaration_same_sort_is_idempotent() {
     let mut a = TermArena::new();
     let s1 = a.declare("x", Sort::BitVec(8)).unwrap();

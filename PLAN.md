@@ -1722,6 +1722,19 @@ against competitor source, are now binding:
      close. The next AUFLIA move should be a real branch-schedule/model
      constructor, finite UF-table reasoning for `bug330`, or SAT relevance in
      the large scalar skeleton.
+     **REPLAY-PROJECTION REPAIR LANDED (2026-06-26):** lazy-extensionality
+     last-candidate projection now groups asserted direct select equalities by
+     concrete `(array, index)`, repairs the projected array entry, and aligns
+     direct scalar read-result symbols before the existing full replay gate.
+     This keeps the SAT-only soundness condition unchanged. On `bug337`, the
+     10 s probe still times out at round 2 with 4096 sites / 150 array-equality
+     atoms / 6973 congruence lemmas / 146 diff-skolems, but replay repair sees
+     154 select candidates, makes 3 array-entry and 2 scalar-symbol changes,
+     and moves the first false flattened conjunct from the direct read equality
+     to ordinal 209 / term 3654: the generated queue-lock transition branch
+     disjunction. `diagnose_evidence` can now render generated arena terms by
+     stable term id. Next useful work is replay-guided branch-schedule/model
+     repair for that disjunction, not more select-equality projection.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

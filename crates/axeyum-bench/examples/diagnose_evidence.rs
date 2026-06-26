@@ -11,15 +11,17 @@
 
 #![allow(clippy::too_many_lines)]
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::check_alethe;
+use axeyum_ir::{TermArena, TermId, TermNode, render};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, Evidence, SolverConfig, UnsatProofOutcome, check_auto_explained,
-    export_qf_aufbv_unsat_proof_within, produce_evidence, prove_qf_abv_unsat_alethe,
-    prove_qf_abv_unsat_alethe_via_elimination, solve,
+    CheckResult, DeclineReason, Evidence, RouteOutcome, RouteTrace, SolverConfig,
+    UnsatProofOutcome, check_auto_explained, export_qf_aufbv_unsat_proof_within, produce_evidence,
+    prove_qf_abv_unsat_alethe, prove_qf_abv_unsat_alethe_via_elimination, solve,
 };
 
 fn elapsed_ms(start: Instant) -> f64 {
@@ -90,6 +92,117 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
     }
 }
 
+fn decline_detail(reason: &DeclineReason) -> Option<&str> {
+    match reason {
+        DeclineReason::Budget(detail) | DeclineReason::VerifierRejected(detail) => Some(detail),
+        DeclineReason::Incomplete(reason) => Some(&reason.detail),
+        DeclineReason::Unsupported | DeclineReason::NotApplicable => None,
+    }
+}
+
+fn extract_named_usize(text: &str, name: &str) -> Option<usize> {
+    let needle = format!("{name}=");
+    let after = text.split_once(&needle)?.1;
+    let digits = after
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect::<String>();
+    digits.parse().ok()
+}
+
+fn find_term_by_index(
+    arena: &TermArena,
+    roots: &[TermId],
+    index: usize,
+) -> Option<(TermId, &'static str)> {
+    let mut visited = BTreeSet::new();
+    let mut stack = roots.to_vec();
+    while let Some(term) = stack.pop() {
+        if !visited.insert(term) {
+            continue;
+        }
+        if term.index() == index {
+            return Some((term, "reachable"));
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    arena.term_by_index(index).map(|term| (term, "arena"))
+}
+
+fn node_label(node: &TermNode) -> String {
+    match node {
+        TermNode::BoolConst(value) => format!("BoolConst({value})"),
+        TermNode::BvConst { width, value } => format!("BvConst(width={width}, value={value})"),
+        TermNode::WideBvConst(value) => format!("WideBvConst(width={})", value.width()),
+        TermNode::IntConst(value) => format!("IntConst({value})"),
+        TermNode::RealConst(value) => format!("RealConst({value})"),
+        TermNode::Symbol(symbol) => format!("Symbol({})", symbol.index()),
+        TermNode::App { op, args } => format!("App({op:?}, arity={})", args.len()),
+    }
+}
+
+fn compact_render(arena: &TermArena, term: TermId) -> String {
+    const LIMIT: usize = 480;
+    let rendered = render(arena, term);
+    if rendered.chars().count() <= LIMIT {
+        rendered
+    } else {
+        let prefix = rendered.chars().take(LIMIT).collect::<String>();
+        format!("{prefix}...")
+    }
+}
+
+fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &RouteTrace) {
+    let mut emitted = BTreeSet::new();
+    for attempt in trace.attempts() {
+        let RouteOutcome::Declined(reason) = &attempt.outcome else {
+            continue;
+        };
+        let Some(detail) = decline_detail(reason) else {
+            continue;
+        };
+        if !detail.contains("last_candidate_replay=false(") {
+            continue;
+        }
+
+        if let (Some(assertion_ordinal), Some(conjunct_ordinal)) = (
+            extract_named_usize(detail, "assertion_ordinal"),
+            extract_named_usize(detail, "failed_conjunct_ordinal"),
+        ) {
+            println!(
+                "  lazy-ext-replay: route={} assertion_ordinal={} failed_conjunct_ordinal={}",
+                attempt.route, assertion_ordinal, conjunct_ordinal
+            );
+        }
+
+        for (label, key) in [
+            ("replay_assertion", "term"),
+            ("failed_conjunct", "failed_conjunct_term"),
+        ] {
+            let Some(index) = extract_named_usize(detail, key) else {
+                continue;
+            };
+            if !emitted.insert((label, index)) {
+                continue;
+            }
+            if let Some((term, source)) = find_term_by_index(arena, assertions, index) {
+                println!(
+                    "  {label}: #{} source={} sort={:?} node={}",
+                    term.index(),
+                    source,
+                    arena.sort_of(term),
+                    node_label(arena.node(term))
+                );
+                println!("    {}", compact_render(arena, term));
+            } else {
+                println!("  {label}: #{index} not reachable from original assertions");
+            }
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file = args.get(1).map_or_else(
@@ -123,6 +236,7 @@ fn main() {
                 for attempt in trace.attempts() {
                     println!("  {attempt}");
                 }
+                print_lazy_replay_terms(&script.arena, &assertions, &trace);
             }
             Err(error) => println!(
                 "check_auto_explained: error {error} {:.3}ms",
