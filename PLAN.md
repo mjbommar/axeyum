@@ -169,7 +169,7 @@ against competitor source, are now binding:
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
    coverage. Current report: **35 rows**, **992 files**, **663 decided**,
-   **611 oracle-compared**, **DISAGREE = 0**, with **22 complete exact audit rows**
+   **611 oracle-compared**, **DISAGREE = 0**, with **23 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
@@ -225,6 +225,12 @@ against competitor source, are now binding:
    **0.002 s**. The exact dominance audit is refreshed at **6/6 dominant
    (100.0%)**, **Lean unsat 2/2 (100.0%)**, with **mismatches=0**,
    **audit_errors=0**, and **timeouts=0**.
+   **QF_UFLIA PARENT EXACT AUDIT INGESTED (2026-06-26):**
+   the parent `qf-uflia-cvc5-regress-clean` row now has a complete committed
+   dominance audit for its six decided instances. The row is **6/6 dominant
+   (100.0%)**, **Lean unsat 2/2 (100.0%)**, with **mismatches=0**,
+   **audit_errors=0**, and **timeouts=0**; the two overbound timeout rows remain
+   decide-rate work, not certification gaps for the decided slice.
    **QF_UFLIA PARENT ROW REMEASURE LANDED (2026-06-26):**
    the parent cvc5-regress-clean QF_UFLIA baseline was still a stale bounded
    snapshot. Re-running it over the actual parent corpus now records
