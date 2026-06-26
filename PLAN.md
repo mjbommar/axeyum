@@ -356,6 +356,19 @@ against competitor source, are now binding:
    abstraction. This rules out missed same-candidate UF consistency as the main
    blocker; the practical next lever remains post-CEGAR arithmetic relevance /
    assumption-core solving.
+   **MODEL-GUIDED BOUND CONFLICT BATCHING LANDED (2026-06-26):**
+   the lazy arithmetic DPLL loop now learns up to 32 independent simple
+   integer-bound conflicts from the same SAT candidate before re-solving, instead
+   of adding one cheap two-bound core per round. This keeps the same certified
+   arithmetic-lemma path while increasing useful conflict density. The two
+   generated QF_UFLIA overbound rows remain `unknown`, but the 1 s diagnostics
+   now report **461 atoms**, **372 bound lemmas**, **29** lazy-LIA rounds, and
+   **238** blocking lemmas (down from **61** one-core rounds). At 10 s the first
+   row still reaches one UF candidate and learns **6** UF consistency lemmas, then
+   times out in the **479-atom** post-CEGAR arithmetic skeleton after **87**
+   lazy-LIA rounds and **296** blocking lemmas. The next practical move is
+   relevance / assumption-core solving or branch-selector pruning in that
+   post-CEGAR arithmetic skeleton, not more individual core extraction.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

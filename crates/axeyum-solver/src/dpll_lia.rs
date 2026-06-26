@@ -44,6 +44,7 @@ const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 512;
 const MAX_MINIMIZED_THEORY_CORE_ATOMS: usize = 128;
 const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
+const MAX_DYNAMIC_BOUND_CONFLICT_BATCH: usize = 32;
 
 /// The arithmetic theory an atom belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -488,22 +489,27 @@ fn run_arith_dpll(
         }
 
         // Theory-check each theory's conjunction independently.
-        if let Some(conflict) =
-            theory_conflict(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?
-        {
-            core_stats.record(conflict.len());
-            lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
-            let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
-            prop_solver.assert(arena, clause)?;
-            blocking.push(clause);
+        let int_conflicts =
+            theory_conflicts(arena, &ctx, &lits, Theory::Int, check_with_lia_opaque_apps)?;
+        if !int_conflicts.is_empty() {
+            let mut learn = ArithLearnState {
+                prop_solver: &mut prop_solver,
+                blocking: &mut blocking,
+                lemmas: &mut lemmas,
+                core_stats: &mut core_stats,
+            };
+            record_conflict_batch(arena, &ctx, &truths, &lits, &int_conflicts, &mut learn)?;
             continue;
         }
-        if let Some(conflict) = theory_conflict(arena, &ctx, &lits, Theory::Real, check_with_lra)? {
-            core_stats.record(conflict.len());
-            lemmas.push(record_lemma(&ctx, &truths, &lits, &conflict));
-            let clause = block_clause(arena, &ctx.atoms, &truths, &conflict)?;
-            prop_solver.assert(arena, clause)?;
-            blocking.push(clause);
+        let real_conflicts = theory_conflicts(arena, &ctx, &lits, Theory::Real, check_with_lra)?;
+        if !real_conflicts.is_empty() {
+            let mut learn = ArithLearnState {
+                prop_solver: &mut prop_solver,
+                blocking: &mut blocking,
+                lemmas: &mut lemmas,
+                core_stats: &mut core_stats,
+            };
+            record_conflict_batch(arena, &ctx, &truths, &lits, &real_conflicts, &mut learn)?;
             continue;
         }
 
@@ -555,41 +561,67 @@ fn record_lemma(
         .collect()
 }
 
-/// Checks one theory's conjunction; on `unsat`, returns the minimized conflict
-/// core as global atom indices. `oracle` is the conjunctive decision procedure
+struct ArithLearnState<'a> {
+    prop_solver: &'a mut BoolSkeletonSolver,
+    blocking: &'a mut Vec<TermId>,
+    lemmas: &'a mut Vec<Vec<ArithLemmaLiteral>>,
+    core_stats: &'a mut ArithCoreStats,
+}
+
+fn record_conflict_batch(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+    truths: &[bool],
+    lits: &[TermId],
+    conflicts: &[Vec<usize>],
+    learn: &mut ArithLearnState<'_>,
+) -> Result<(), SolverError> {
+    for conflict in conflicts {
+        learn.core_stats.record(conflict.len());
+        learn.lemmas.push(record_lemma(ctx, truths, lits, conflict));
+        let clause = block_clause(arena, &ctx.atoms, truths, conflict)?;
+        learn.prop_solver.assert(arena, clause)?;
+        learn.blocking.push(clause);
+    }
+    Ok(())
+}
+
+/// Checks one theory's conjunction; on `unsat`, returns one or more conflict
+/// cores as global atom indices. `oracle` is the conjunctive decision procedure
 /// for the theory.
-fn theory_conflict(
+fn theory_conflicts(
     arena: &TermArena,
     ctx: &ArithAbstractor,
     lits: &[TermId],
     theory: Theory,
     oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
-) -> Result<Option<Vec<usize>>, SolverError> {
+) -> Result<Vec<Vec<usize>>, SolverError> {
     let indices: Vec<usize> = (0..ctx.atoms.len())
         .filter(|&i| ctx.atoms[i].theory == theory)
         .collect();
     if indices.is_empty() {
-        return Ok(None);
+        return Ok(Vec::new());
     }
     let conj: Vec<TermId> = indices.iter().map(|&i| lits[i]).collect();
     if !matches!(oracle(arena, &conj)?, CheckResult::Unsat) {
-        return Ok(None);
+        return Ok(Vec::new());
     }
     if theory == Theory::Int {
-        if let Some(core) = cheap_int_bound_conflict_core(arena, ctx, lits, &indices) {
-            return Ok(Some(core));
+        let bound_cores = cheap_int_bound_conflict_cores(arena, ctx, lits, &indices);
+        if !bound_cores.is_empty() {
+            return Ok(bound_cores);
         }
         if let Some(core) = cheap_int_difference_conflict_core(arena, ctx, lits, &indices) {
-            return Ok(Some(core));
+            return Ok(vec![core]);
         }
         if let Some(core) = lp_relaxation_conflict_core(arena, lits, &indices)? {
-            return Ok(Some(core));
+            return Ok(vec![core]);
         }
     }
     if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS {
-        return Ok(Some(indices));
+        return Ok(vec![indices]);
     }
-    Ok(Some(minimize_core(arena, &indices, lits, oracle)?))
+    Ok(vec![minimize_core(arena, &indices, lits, oracle)?])
 }
 
 /// Extracts an LP-relaxation Farkas-supported core from the integer side of a
@@ -615,15 +647,17 @@ fn lp_relaxation_conflict_core(
 /// assignment. The oracle has already established that the full integer slice is
 /// unsatisfiable; this helper only replaces a large low-relevance core with an
 /// independently checkable two-literal bound conflict when one is obvious.
-fn cheap_int_bound_conflict_core(
+fn cheap_int_bound_conflict_cores(
     arena: &TermArena,
     ctx: &ArithAbstractor,
     lits: &[TermId],
     indices: &[usize],
-) -> Option<Vec<usize>> {
+) -> Vec<Vec<usize>> {
     let mut bounds = Vec::new();
     for &idx in indices {
-        let truth = assigned_atom_truth(arena, &ctx.atoms[idx], lits[idx])?;
+        let Some(truth) = assigned_atom_truth(arena, &ctx.atoms[idx], lits[idx]) else {
+            return Vec::new();
+        };
         bounds.extend(
             simple_int_literal_bounds(arena, idx, &ctx.atoms[idx])
                 .into_iter()
@@ -631,15 +665,28 @@ fn cheap_int_bound_conflict_core(
         );
     }
 
+    let mut conflicts = Vec::new();
+    let mut seen = HashSet::new();
     for i in 0..bounds.len() {
         for j in (i + 1)..bounds.len() {
             let Some((lower, upper)) = conflicting_bounds(&bounds[i], &bounds[j]) else {
                 continue;
             };
-            return Some(vec![lower.atom_idx, upper.atom_idx]);
+            let key = if lower.atom_idx <= upper.atom_idx {
+                (lower.atom_idx, upper.atom_idx)
+            } else {
+                (upper.atom_idx, lower.atom_idx)
+            };
+            if !seen.insert(key) {
+                continue;
+            }
+            conflicts.push(vec![lower.atom_idx, upper.atom_idx]);
+            if conflicts.len() >= MAX_DYNAMIC_BOUND_CONFLICT_BATCH {
+                return conflicts;
+            }
         }
     }
-    None
+    conflicts
 }
 
 fn assigned_atom_truth(arena: &TermArena, atom: &ArithAtom, lit: TermId) -> Option<bool> {
@@ -2402,7 +2449,10 @@ mod tests {
         lits[upper_one_idx] = not_x_le_one;
 
         let indices = vec![upper_zero_idx, upper_one_idx];
-        let mut core = cheap_int_bound_conflict_core(&arena, &ctx, &lits, &indices).unwrap();
+        let mut core = cheap_int_bound_conflict_cores(&arena, &ctx, &lits, &indices)
+            .into_iter()
+            .next()
+            .unwrap();
         core.sort_unstable();
         let mut expected = indices;
         expected.sort_unstable();
@@ -2413,6 +2463,61 @@ mod tests {
             check_with_lia_simplex(&arena, &core_lits).unwrap(),
             CheckResult::Unsat
         ));
+    }
+
+    #[test]
+    fn cheap_integer_bound_cores_batch_independent_conflicts() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_le_zero = arena.int_le(xv, zero).unwrap();
+        let x_le_one = arena.int_le(xv, one).unwrap();
+        let y_le_zero = arena.int_le(yv, zero).unwrap();
+        let y_le_one = arena.int_le(yv, one).unwrap();
+        let x_pair = arena.and(x_le_zero, x_le_one).unwrap();
+        let y_pair = arena.and(y_le_zero, y_le_one).unwrap();
+        let all_atoms = arena.and(x_pair, y_pair).unwrap();
+
+        let mut ctx = ArithAbstractor::default();
+        let _ = ctx.abstract_term(&mut arena, all_atoms).unwrap();
+        let idx = |term| ctx.atoms.iter().position(|atom| atom.term == term).unwrap();
+        let x_le_zero_idx = idx(x_le_zero);
+        let x_le_one_idx = idx(x_le_one);
+        let y_le_zero_idx = idx(y_le_zero);
+        let y_le_one_idx = idx(y_le_one);
+
+        let mut lits: Vec<TermId> = ctx.atoms.iter().map(|atom| atom.term).collect();
+        lits[x_le_one_idx] = arena.not(ctx.atoms[x_le_one_idx].term).unwrap();
+        lits[y_le_one_idx] = arena.not(ctx.atoms[y_le_one_idx].term).unwrap();
+
+        let indices = vec![x_le_zero_idx, x_le_one_idx, y_le_zero_idx, y_le_one_idx];
+        let mut cores = cheap_int_bound_conflict_cores(&arena, &ctx, &lits, &indices);
+        for core in &mut cores {
+            core.sort_unstable();
+        }
+        cores.sort();
+
+        let mut expected = vec![
+            vec![x_le_zero_idx, x_le_one_idx],
+            vec![y_le_zero_idx, y_le_one_idx],
+        ];
+        for core in &mut expected {
+            core.sort_unstable();
+        }
+        expected.sort();
+        assert_eq!(cores, expected);
+
+        for core in cores {
+            let core_lits = core.iter().map(|&idx| lits[idx]).collect::<Vec<_>>();
+            assert!(matches!(
+                check_with_lia_simplex(&arena, &core_lits).unwrap(),
+                CheckResult::Unsat
+            ));
+        }
     }
 
     #[test]
