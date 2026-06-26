@@ -426,6 +426,20 @@ against competitor source, are now binding:
    narrows the next lever further: preserve/reuse arithmetic learning across UF
    CEGAR rounds or make the arithmetic solve incremental under added UF lemmas;
    more upfront congruence seeding is not promising on this row.
+   **REUSABLE ARITHMETIC LEMMAS LANDED (2026-06-26):**
+   lazy UF+arithmetic CEGAR now carries dynamic arithmetic conflict clauses
+   across strengthened UF refinement rounds. The reusable clauses are rebuilt
+   over original arithmetic terms rather than prior `!arith_atom_N` symbols, and
+   static upfront bound lemmas are not carried because they are regenerated per
+   solve. The generated overbound rows remain `unknown`, but the frontier moves:
+   both 1 s target rows now reach **42** support-conflict rounds and **56**
+   reusable arithmetic lemmas, and the 10 s hard row reaches **6** UF CEGAR
+   rounds, **5** SAT candidates, **1359** pair checks, **23** equal-argument
+   pairs, **16** violations, and **23** learned UF lemmas before the outer
+   deadline, carrying **357** reusable arithmetic lemmas by the final timeout.
+   Next practical lever: keep the arithmetic SAT core warm directly or make UF
+   lemma addition incremental inside one combined skeleton; the row still needs
+   convergence/relevance after several candidate models.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

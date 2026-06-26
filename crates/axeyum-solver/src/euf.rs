@@ -18,6 +18,7 @@ use axeyum_rewrite::{FuncElimError, eliminate_functions};
 use crate::backend::{
     CheckResult, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
+use crate::dpll_lia::{ReusableArithLemmas, check_with_arith_dpll_reusing_lemmas};
 use crate::model::Model;
 
 /// Deterministic admission bound on the number of **Ackermann congruence
@@ -518,6 +519,7 @@ pub fn check_with_uf_arithmetic_lazy(
     // gets only the *remaining* budget and an exhausted deadline ends the loop with
     // a graceful `Unknown` — the loop is bounded by `config.timeout`, not a multiple.
     let deadline = config.timeout.map(|t| Instant::now() + t);
+    let mut reusable_arith_lemmas = ReusableArithLemmas::default();
     check_with_function_consistency(arena, assertions, |a, asserts| {
         if let Some(d) = deadline {
             let now = Instant::now();
@@ -532,9 +534,27 @@ pub fn check_with_uf_arithmetic_lazy(
             // Give this round only the remaining budget, so the aggregate loop stays
             // within `config.timeout`.
             let round_config = config.clone().with_timeout(d - now);
-            crate::check_auto(a, asserts, &round_config)
+            match check_with_arith_dpll_reusing_lemmas(
+                a,
+                asserts,
+                &round_config,
+                &mut reusable_arith_lemmas,
+            ) {
+                Ok(result) => Ok(result),
+                Err(SolverError::Unsupported(_)) => crate::check_auto(a, asserts, &round_config),
+                Err(error) => Err(error),
+            }
         } else {
-            crate::check_auto(a, asserts, config)
+            match check_with_arith_dpll_reusing_lemmas(
+                a,
+                asserts,
+                config,
+                &mut reusable_arith_lemmas,
+            ) {
+                Ok(result) => Ok(result),
+                Err(SolverError::Unsupported(_)) => crate::check_auto(a, asserts, config),
+                Err(error) => Err(error),
+            }
         }
     })
 }

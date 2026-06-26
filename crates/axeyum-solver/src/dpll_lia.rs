@@ -350,6 +350,81 @@ struct ArithRun {
     result: CheckResult,
     skeleton: Vec<TermId>,
     lemmas: Vec<Vec<ArithLemmaLiteral>>,
+    initial_lemma_count: usize,
+}
+
+/// Term-level arithmetic theory clauses learned by one lazy-LIA solve and
+/// reusable by a later solve over a strengthened Boolean/UF abstraction.
+#[derive(Default)]
+pub(crate) struct ReusableArithLemmas {
+    clauses: Vec<TermId>,
+    seen: HashSet<TermId>,
+}
+
+impl ReusableArithLemmas {
+    pub(crate) fn len(&self) -> usize {
+        self.clauses.len()
+    }
+
+    fn assertions<'a>(&'a self, assertions: &'a [TermId]) -> Vec<TermId> {
+        let mut combined = Vec::with_capacity(assertions.len() + self.clauses.len());
+        combined.extend_from_slice(assertions);
+        combined.extend(self.clauses.iter().copied());
+        combined
+    }
+
+    fn absorb_dynamic_from_run(
+        &mut self,
+        arena: &mut TermArena,
+        run: &ArithRun,
+    ) -> Result<usize, SolverError> {
+        let mut added = 0usize;
+        for lemma in run.lemmas.iter().skip(run.initial_lemma_count) {
+            let clause = lemma_clause_over_original_terms(arena, lemma)?;
+            if self.seen.insert(clause) {
+                self.clauses.push(clause);
+                added += 1;
+            }
+        }
+        Ok(added)
+    }
+}
+
+/// Decides Boolean-structured linear arithmetic while preserving dynamically
+/// learned theory clauses for callers that repeatedly strengthen the same
+/// abstraction, such as lazy UF congruence CEGAR.
+///
+/// The carried clauses are rebuilt over original arithmetic terms, not private
+/// `!arith_atom_N` symbols, so they remain valid across a fresh abstraction.
+pub(crate) fn check_with_arith_dpll_reusing_lemmas(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    reusable: &mut ReusableArithLemmas,
+) -> Result<CheckResult, SolverError> {
+    if contains_smtlib_unspecified_arith(arena, assertions) {
+        return Err(SolverError::Unsupported(
+            "lazy arithmetic: integer/real division or modulo with a divisor \
+             that may be zero needs an explicit SMT-LIB underspecification encoding"
+                .to_owned(),
+        ));
+    }
+
+    let combined = reusable.assertions(assertions);
+    let previous = reusable.len();
+    let run = run_arith_dpll(arena, &combined, config)?;
+    let newly_reusable = reusable.absorb_dynamic_from_run(arena, &run)?;
+    let mut result = run.result;
+    if let CheckResult::Unknown(reason) = &mut result {
+        reason.detail = format!(
+            "{}; reusable_arith_lemmas={}, new_reusable_arith_lemmas={}",
+            reason.detail,
+            reusable.len(),
+            newly_reusable
+        );
+    }
+    debug_assert!(reusable.len() >= previous);
+    Ok(result)
 }
 
 #[derive(Default)]
@@ -439,6 +514,7 @@ fn run_arith_dpll(
         .iter()
         .map(|(_, lemma)| lemma.clone())
         .collect();
+    let initial_lemma_count = lemmas.len();
     let mut core_stats = ArithCoreStats::default();
     let mut support_stats = ArithSupportStats::default();
 
@@ -468,6 +544,7 @@ fn run_arith_dpll(
                 }),
                 skeleton,
                 lemmas,
+                initial_lemma_count,
             });
         }
         let round_config = config_with_deadline(config, deadline);
@@ -478,6 +555,7 @@ fn run_arith_dpll(
                     result: CheckResult::Unsat,
                     skeleton,
                     lemmas,
+                    initial_lemma_count,
                 });
             }
             CheckResult::Unknown(reason) => {
@@ -497,6 +575,7 @@ fn run_arith_dpll(
                     }),
                     skeleton,
                     lemmas,
+                    initial_lemma_count,
                 });
             }
         };
@@ -571,6 +650,7 @@ fn run_arith_dpll(
                         result,
                         skeleton,
                         lemmas,
+                        initial_lemma_count,
                     });
                 }
                 support_stats.replay_failures += 1;
@@ -617,6 +697,7 @@ fn run_arith_dpll(
                 }),
                 skeleton,
                 lemmas,
+                initial_lemma_count,
             });
         }
         let result = finish_sat(arena, assertions, &ctx, &propositional, &lits)?;
@@ -624,6 +705,7 @@ fn run_arith_dpll(
             result,
             skeleton,
             lemmas,
+            initial_lemma_count,
         });
     }
 
@@ -634,6 +716,7 @@ fn run_arith_dpll(
         }),
         skeleton,
         lemmas,
+        initial_lemma_count,
     })
 }
 
@@ -1715,6 +1798,32 @@ fn block_clause(
         });
     }
     clause.ok_or_else(|| SolverError::Backend("arith dpll: empty conflict clause".to_string()))
+}
+
+fn lemma_clause_over_original_terms(
+    arena: &mut TermArena,
+    lemma: &[ArithLemmaLiteral],
+) -> Result<TermId, SolverError> {
+    let mut clause: Option<TermId> = None;
+    for literal in lemma {
+        let lit = negate_original_arith_literal(arena, literal.literal)?;
+        clause = Some(match clause {
+            None => lit,
+            Some(acc) => arena.or(acc, lit)?,
+        });
+    }
+    clause.ok_or_else(|| SolverError::Backend("arith dpll: empty reusable lemma".to_string()))
+}
+
+fn negate_original_arith_literal(
+    arena: &mut TermArena,
+    literal: TermId,
+) -> Result<TermId, SolverError> {
+    if let Some(inner) = bool_not_child(arena, literal) {
+        Ok(inner)
+    } else {
+        Ok(arena.not(literal)?)
+    }
 }
 
 /// Adds cheap theory lemmas for contradictory simple integer bounds before the
@@ -2924,6 +3033,67 @@ mod tests {
         };
         assert!(reason.detail.contains("support_attempts=0"));
         assert!(reason.detail.contains("full_fallbacks=0"));
+    }
+
+    #[test]
+    fn reusable_arith_lemmas_capture_dynamic_cores() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let z = arena.declare("z", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let zv = arena.var(z);
+        let x_le_y = arena.int_le(xv, yv).unwrap();
+        let y_le_z = arena.int_le(yv, zv).unwrap();
+        let z_lt_x = arena.int_lt(zv, xv).unwrap();
+        let chain = arena.and(x_le_y, y_le_z).unwrap();
+        let assertion = arena.and(chain, z_lt_x).unwrap();
+
+        let mut reusable = ReusableArithLemmas::default();
+        let result = check_with_arith_dpll_reusing_lemmas(
+            &mut arena,
+            &[assertion],
+            &SolverConfig::default(),
+            &mut reusable,
+        )
+        .unwrap();
+
+        assert!(matches!(result, CheckResult::Unsat));
+        assert_eq!(
+            reusable.len(),
+            1,
+            "a dynamic arithmetic conflict should be reusable in later CEGAR rounds"
+        );
+        assert_eq!(reusable.assertions(&[assertion]).len(), 2);
+    }
+
+    #[test]
+    fn reusable_arith_lemmas_skip_regenerated_initial_bounds() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_eq_zero = arena.eq(xv, zero).unwrap();
+        let x_eq_one = arena.eq(xv, one).unwrap();
+        let assertion = arena.and(x_eq_zero, x_eq_one).unwrap();
+
+        let mut reusable = ReusableArithLemmas::default();
+        let result = check_with_arith_dpll_reusing_lemmas(
+            &mut arena,
+            &[assertion],
+            &SolverConfig::default(),
+            &mut reusable,
+        )
+        .unwrap();
+
+        assert!(matches!(result, CheckResult::Unsat));
+        assert_eq!(
+            reusable.len(),
+            0,
+            "static upfront bound lemmas are regenerated per solve and should not be carried"
+        );
     }
 
     #[test]
