@@ -85,6 +85,25 @@ fn boolean_combination_zero_timeout_is_timeout_unknown() {
 }
 
 #[test]
+fn boolean_equality_over_lia_atoms_is_encoded_as_boolean_structure() {
+    let mut arena = TermArena::new();
+    let x = ivar(&mut arena, "x");
+    let zero = iconst(&mut arena, 0);
+    let one = iconst(&mut arena, 1);
+    let x_le_zero = arena.int_le(x, zero).unwrap();
+    let x_ge_one = arena.int_ge(x, one).unwrap();
+    let same_truth = arena.eq(x_le_zero, x_ge_one).unwrap();
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &[same_truth], &config).unwrap();
+    assert_eq!(
+        online,
+        CheckResult::Unsat,
+        "Boolean equality over LIA atoms should be handled by the Boolean layer"
+    );
+}
+
+#[test]
 fn interface_equality_forces_euf_contradiction_unsat() {
     // f(x) != f(y)  AND  x <= y  AND  y <= x.
     // LIA forces x = y; EUF then needs f(x) = f(y) by congruence, contradicting the

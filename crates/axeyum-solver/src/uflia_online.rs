@@ -101,7 +101,7 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// This is deliberately above the current `QF_AUFLIA` fair-slice frontier
 /// (`bug330` has 339 atoms) so the deadline-aware CDCL(T) spine, not admission,
 /// decides whether that scalar abstraction is tractable.
-const MAX_BOOLEAN_ATOMS: usize = 384;
+const MAX_BOOLEAN_ATOMS: usize = 512;
 
 /// Hard ceiling on Tseitin clauses produced for the Boolean skeleton; above it the
 /// layer declines rather than build an unbounded encoding.
@@ -726,13 +726,23 @@ pub(crate) fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Parti
 /// atoms (the fast-path) from a flattened literal that is itself Boolean structure (a
 /// positive `or` / `ite` / Boolean leaf), which the Boolean layer must handle.
 pub(crate) fn is_theory_atom(arena: &TermArena, term: TermId) -> bool {
-    matches!(
-        arena.node(term),
+    is_uflia_theory_atom(arena, term)
+}
+
+fn is_uflia_theory_atom(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
         TermNode::App {
-            op: Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
-            ..
+            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
+            args,
+        } => is_linear_int(arena, args[0]) && is_linear_int(arena, args[1]),
+        TermNode::App { op: Op::Eq, args } => {
+            let (a, b) = (args[0], args[1]);
+            let int = arena.sort_of(a) == Sort::Int;
+            let has_uf = mentions_uf(arena, a) || mentions_uf(arena, b);
+            int || has_uf
         }
-    )
+        _ => false,
+    }
 }
 
 /// The `EUF` assertion terms for the `EUF` literals: a `true` equality literal is its
@@ -1300,7 +1310,10 @@ fn cdclt_combined(
     let mut bool_clauses: Vec<Vec<BoolLit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut bool_clauses) else {
-            return decline("boolean skeleton outside the online combination encoder");
+            return decline(format!(
+                "boolean skeleton outside the online combination encoder: {}",
+                enc.unsupported_detail()
+            ));
         };
         if bool_clauses.len() > MAX_BOOLEAN_CLAUSES {
             return decline("too many clauses for the online combination boolean layer");
@@ -1564,7 +1577,10 @@ fn check_qf_uflia_boolean_enumerative(
     let mut clauses: Vec<Vec<BoolLit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
-            return decline("boolean skeleton outside the online combination encoder");
+            return decline(format!(
+                "boolean skeleton outside the online combination encoder: {}",
+                enc.unsupported_detail()
+            ));
         };
         if clauses.len() > MAX_BOOLEAN_CLAUSES {
             return decline("too many clauses for the online combination boolean layer");
@@ -1936,10 +1952,11 @@ impl BoolSearch<'_> {
                         // The combination could not certify this model either way: a sound
                         // decline (the offline decider may still settle it). We cannot
                         // soundly call the whole query UNSAT, so degrade.
-                        CheckResult::Unknown(_) => {
-                            return decline(
-                                "theory combination inconclusive on a boolean-layer model",
-                            );
+                        CheckResult::Unknown(reason) => {
+                            return decline(format!(
+                                "theory combination inconclusive on a boolean-layer model: {}",
+                                reason.detail
+                            ));
                         }
                     }
                 }
@@ -1962,26 +1979,18 @@ pub(crate) fn collect_uflia_atoms(
     out: &mut Vec<TermId>,
     seen: &mut BTreeSet<TermId>,
 ) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
-            ..
-        } if seen.insert(term) => {
+    if is_uflia_theory_atom(arena, term) {
+        if seen.insert(term) {
             out.push(term);
         }
-        // An already-seen atom (the guard above failed) is skipped; only descend into
-        // genuine Boolean structure.
-        TermNode::App {
-            op: Op::Eq | Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,
-            ..
-        } => {}
-        TermNode::App { args, .. } => {
-            let args = args.clone();
-            for a in args {
-                collect_uflia_atoms(arena, a, out, seen);
-            }
+        return;
+    }
+
+    if let TermNode::App { args, .. } = arena.node(term) {
+        let args = args.clone();
+        for a in args {
+            collect_uflia_atoms(arena, a, out, seen);
         }
-        _ => {}
     }
 }
 
@@ -1992,6 +2001,7 @@ pub(crate) fn collect_uflia_atoms(
 struct BoolEncoder {
     term_var: HashMap<TermId, usize>,
     var_count: usize,
+    unsupported: Option<String>,
 }
 
 impl BoolEncoder {
@@ -2012,6 +2022,7 @@ impl BoolEncoder {
         Self {
             term_var,
             var_count: reserved.max(atom_terms.len()),
+            unsupported: None,
         }
     }
 
@@ -2048,7 +2059,13 @@ impl BoolEncoder {
                 let args = args.clone();
                 self.encode_app(arena, op, &args, clauses)?
             }
-            _ => return None,
+            _ => {
+                self.record_unsupported(format!(
+                    "non-Boolean term with sort {:?}",
+                    arena.sort_of(t)
+                ));
+                return None;
+            }
         };
         self.term_var.insert(t, v);
         Some(v)
@@ -2080,15 +2097,23 @@ impl BoolEncoder {
                 clauses.push(vec![gl.negate(), a.negate()]);
                 clauses.push(vec![gl, *a]);
             }
-            (Op::BoolAnd, [a, b]) => {
-                clauses.push(vec![gl.negate(), *a]);
-                clauses.push(vec![gl.negate(), *b]);
-                clauses.push(vec![a.negate(), b.negate(), gl]);
+            (Op::BoolAnd, children) => {
+                for child in children {
+                    clauses.push(vec![gl.negate(), *child]);
+                }
+                let mut down = Vec::with_capacity(children.len() + 1);
+                down.push(gl);
+                down.extend(children.iter().map(|child| child.negate()));
+                clauses.push(down);
             }
-            (Op::BoolOr, [a, b]) => {
-                clauses.push(vec![gl, a.negate()]);
-                clauses.push(vec![gl, b.negate()]);
-                clauses.push(vec![gl.negate(), *a, *b]);
+            (Op::BoolOr, children) => {
+                for child in children {
+                    clauses.push(vec![gl, child.negate()]);
+                }
+                let mut down = Vec::with_capacity(children.len() + 1);
+                down.push(gl.negate());
+                down.extend(children.iter().copied());
+                clauses.push(down);
             }
             (Op::BoolImplies, [a, b]) => {
                 clauses.push(vec![gl, *a]);
@@ -2101,15 +2126,39 @@ impl BoolEncoder {
                 clauses.push(vec![gl, a.negate(), *b]);
                 clauses.push(vec![gl, *a, b.negate()]);
             }
+            (Op::Eq, [a, b]) if arena.sort_of(args[0]) == Sort::Bool => {
+                clauses.push(vec![*a, *b, gl]);
+                clauses.push(vec![a.negate(), b.negate(), gl]);
+                clauses.push(vec![*a, b.negate(), gl.negate()]);
+                clauses.push(vec![a.negate(), *b, gl.negate()]);
+            }
             (Op::Ite, [c, x, y]) => {
                 clauses.push(vec![c.negate(), x.negate(), gl]);
                 clauses.push(vec![c.negate(), *x, gl.negate()]);
                 clauses.push(vec![*c, y.negate(), gl]);
                 clauses.push(vec![*c, *y, gl.negate()]);
             }
-            _ => return None,
+            _ => {
+                self.record_unsupported(format!(
+                    "unsupported Boolean op {op:?} with {} args",
+                    args.len()
+                ));
+                return None;
+            }
         }
         Some(g)
+    }
+
+    fn record_unsupported(&mut self, detail: String) {
+        if self.unsupported.is_none() {
+            self.unsupported = Some(detail);
+        }
+    }
+
+    fn unsupported_detail(&self) -> &str {
+        self.unsupported
+            .as_deref()
+            .unwrap_or("unsupported Boolean structure")
     }
 }
 

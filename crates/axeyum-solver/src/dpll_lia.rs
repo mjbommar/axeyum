@@ -1753,11 +1753,19 @@ impl BoolSkeletonSolver {
 
     fn encode_and_lits(&mut self, lits: &[BoolCnfLit]) -> Result<BoolCnfLit, SolverError> {
         let mut active = Vec::new();
+        let mut seen = HashSet::new();
         for &lit in lits {
             match lit {
                 BoolCnfLit::Const(false) => return Ok(BoolCnfLit::Const(false)),
                 BoolCnfLit::Const(true) => {}
-                BoolCnfLit::Lit(_) => active.push(lit),
+                BoolCnfLit::Lit(_) => {
+                    if seen.contains(&lit.negated()) {
+                        return Ok(BoolCnfLit::Const(false));
+                    }
+                    if seen.insert(lit) {
+                        active.push(lit);
+                    }
+                }
             }
         }
         match active.as_slice() {
@@ -1779,11 +1787,19 @@ impl BoolSkeletonSolver {
 
     fn encode_or_lits(&mut self, lits: &[BoolCnfLit]) -> Result<BoolCnfLit, SolverError> {
         let mut active = Vec::new();
+        let mut seen = HashSet::new();
         for &lit in lits {
             match lit {
                 BoolCnfLit::Const(true) => return Ok(BoolCnfLit::Const(true)),
                 BoolCnfLit::Const(false) => {}
-                BoolCnfLit::Lit(_) => active.push(lit),
+                BoolCnfLit::Lit(_) => {
+                    if seen.contains(&lit.negated()) {
+                        return Ok(BoolCnfLit::Const(true));
+                    }
+                    if seen.insert(lit) {
+                        active.push(lit);
+                    }
+                }
             }
         }
         match active.as_slice() {
@@ -1897,6 +1913,13 @@ impl BoolSkeletonSolver {
                 BoolCnfLit::Lit(lit) => clause.push(lit),
             }
         }
+        clause.sort_unstable();
+        for pair in clause.windows(2) {
+            if pair[0].var() == pair[1].var() && pair[0].is_negated() != pair[1].is_negated() {
+                return Ok(());
+            }
+        }
+        clause.dedup();
         self.sat
             .add_clause(CnfClause::new(clause))
             .map_err(|error| map_incremental_sat_error(&error))
@@ -3338,6 +3361,39 @@ mod tests {
         assert!(summary.contains("core_src_lp=1"));
         assert!(summary.contains("core_src_minimized=0"));
         assert!(summary.contains("core_src_large=1"));
+    }
+
+    #[test]
+    fn bool_skeleton_simplifies_duplicate_and_complementary_literals() {
+        let mut arena = TermArena::new();
+        let p = arena.bool_var("p").unwrap();
+        let not_p = arena.not(p).unwrap();
+        let tautology = arena.or(p, not_p).unwrap();
+        let duplicate = arena.or(p, p).unwrap();
+        let contradiction = arena.and(p, not_p).unwrap();
+
+        let mut taut_solver = BoolSkeletonSolver::new();
+        taut_solver.assert(&arena, tautology).unwrap();
+        assert_eq!(taut_solver.sat.clause_count(), 0);
+
+        let mut duplicate_solver = BoolSkeletonSolver::new();
+        duplicate_solver.assert(&arena, duplicate).unwrap();
+        assert_eq!(
+            duplicate_solver.sat.clause_count(),
+            1,
+            "duplicate literal disjunction should assert only the single unit"
+        );
+        assert_eq!(duplicate_solver.sat.variable_count(), 1);
+
+        let mut contradiction_solver = BoolSkeletonSolver::new();
+        contradiction_solver.assert(&arena, contradiction).unwrap();
+        assert_eq!(contradiction_solver.sat.clause_count(), 1);
+        assert!(matches!(
+            contradiction_solver
+                .solve(&SolverConfig::default())
+                .unwrap(),
+            CheckResult::Unsat
+        ));
     }
 
     #[test]

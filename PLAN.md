@@ -503,6 +503,19 @@ against competitor source, are now binding:
    **core_len_avg 7.3 -> 6.9**. The row still returns `unknown`; next practical
    lever is reducing LP-core-producing SAT branches or moving to a stronger
    combined UF/LIA interface loop.
+   **ONLINE UFLIA BOOLEAN BOUNDARY DIAGNOSTIC LANDED (2026-06-26):**
+   `uflia_online_probe` now runs the online EUF+LIA route directly on one
+   SMT-LIB file, and the online Boolean layer now distinguishes actual QF_UFLIA
+   theory atoms from Boolean equality/structure, handles n-ary `and`/`or`,
+   encodes Boolean equality as IFF, and reports the first unsupported skeleton
+   detail. On both generated QF_UFLIA overbound rows, the direct online probe
+   now gets past the prior atom-cap/opaque-decline layer and identifies the next
+   blocker precisely: `non-Boolean term with sort Int`, i.e. arithmetic order
+   atoms containing UF applications/opaque integer terms. This is not row
+   closure; production lazy UFLIA remains neutral and still times out after the
+   same useful UF frontier. The next combined-theory slice is online LIA support
+   for opaque integer UF apps, or continued reduction of LP-core-producing lazy
+   branches.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities
