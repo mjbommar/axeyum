@@ -492,6 +492,17 @@ against competitor source, are now binding:
    large-cutoff cores. The next lever is therefore LP-core relevance/shrinking
    or preventing the SAT skeleton from feeding so many LP-core-producing
    branches, not core minimization.
+   **BOUNDED LP-CORE SHRINKING LANDED (2026-06-26):**
+   small LP-relaxation Farkas supports are now deletion-minimized, capped at
+   **24** atoms, by re-running the same LP infeasibility checker used for the
+   final core self-check. Larger supports keep the cheap Farkas-support path.
+   This preserves the short-budget QF_UFLIA frontier (**2** UF rounds, **1**
+   candidate, **6** learned UF lemmas at 1 s) and slightly reduces the 10 s hard
+   row's warm arithmetic pressure: **total_rounds 305 -> 290**,
+   **blocking_lemmas 319 -> 303**, **core_src_lp 276 -> 260**, and
+   **core_len_avg 7.3 -> 6.9**. The row still returns `unknown`; next practical
+   lever is reducing LP-core-producing SAT branches or moving to a stronger
+   combined UF/LIA interface loop.
    **QF_ALIA/AUFLIA ARRAY ROW REFRESH LANDED (2026-06-26):**
    cvc5 `:arrays-exp` `eqrange` now lowers to finite pointwise equality on
    constant Int ranges, and constant-index self-store array equalities

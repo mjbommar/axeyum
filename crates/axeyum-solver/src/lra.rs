@@ -58,6 +58,11 @@ fn gcd_i128(a: i128, b: i128) -> i128 {
 /// tightening) so the gcd/`⌊⌋` arithmetic below cannot overflow `i128`.
 const TIGHTEN_COEFF_LIMIT: i128 = 1 << 62;
 
+/// Deletion-minimize only small LP-relaxation cores. The lazy UFLIA hard rows
+/// currently produce LP cores below this bound; larger supports keep the cheap
+/// Farkas-support path instead of paying many extra simplex calls.
+const LP_RELAXATION_CORE_MINIMIZE_LIMIT: usize = 24;
+
 /// Checks a conjunctive `QF_LRA` query by exact-rational Fourier–Motzkin
 /// elimination. The returned [`Model`] assigns each real variable a
 /// [`Value::Real`] and replays against the original assertions.
@@ -1362,6 +1367,8 @@ pub(crate) fn lia_lp_relaxation_unsat_core(
         return Ok(None);
     }
 
+    minimize_lp_relaxation_core(arena, assertions, allow_opaque_apps, &mut core);
+
     let subset: Vec<TermId> = core.iter().map(|&i| assertions[i]).collect();
     if !matches!(
         lp_relaxation_feasibility_with_options(arena, &subset, allow_opaque_apps),
@@ -1372,6 +1379,37 @@ pub(crate) fn lia_lp_relaxation_unsat_core(
         ));
     }
     Ok(Some(core))
+}
+
+fn minimize_lp_relaxation_core(
+    arena: &TermArena,
+    assertions: &[TermId],
+    allow_opaque_apps: bool,
+    core: &mut Vec<usize>,
+) {
+    if core.len() > LP_RELAXATION_CORE_MINIMIZE_LIMIT {
+        return;
+    }
+    let candidates = core.clone();
+    for candidate in candidates {
+        if core.len() <= 1 {
+            break;
+        }
+        let trial: Vec<TermId> = core
+            .iter()
+            .copied()
+            .filter(|&i| i != candidate)
+            .map(|i| assertions[i])
+            .collect();
+        if !trial.is_empty()
+            && matches!(
+                lp_relaxation_feasibility_with_options(arena, &trial, allow_opaque_apps),
+                LpRelaxation::Infeasible
+            )
+        {
+            core.retain(|&i| i != candidate);
+        }
+    }
 }
 
 /// Result of one branch-and-bound subtree.
@@ -2619,6 +2657,23 @@ mod gomory_internal_tests {
         let core = lia_lp_relaxation_unsat_core(&arena, &[ge, le], true)
             .expect("core extraction")
             .expect("LP-infeasible opaque core");
+        assert_eq!(core, vec![0, 1]);
+    }
+
+    #[test]
+    fn lp_relaxation_core_minimizer_removes_redundant_atoms() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").expect("x");
+        let y = arena.int_var("y").expect("y");
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let ge = arena.int_ge(x, one).expect("x>=1");
+        let le = arena.int_le(x, zero).expect("x<=0");
+        let y_ge = arena.int_ge(y, zero).expect("y>=0");
+
+        let assertions = vec![ge, le, y_ge];
+        let mut core = vec![0, 1, 2];
+        minimize_lp_relaxation_core(&arena, &assertions, false, &mut core);
         assert_eq!(core, vec![0, 1]);
     }
 }
