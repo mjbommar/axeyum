@@ -2108,8 +2108,12 @@ against competitor source, are now binding:
      the next shape: repairing scalar equality after the OR-210 branch repair
      restores **total_false=2** but exposes OR **211**, while repairing scalar
      equality after the OR-211 branch repair restores **total_false=2** but
-     exposes OR **210**. The next AUFLIA move is therefore a paired OR-210/OR-211
-     cycle breaker or learned dependency, not greedy single-OR forcing.
+     exposes OR **210**. A second-hop OR diagnostic now closes this as a local
+     cycle: OR **210** -> OR **211** -> OR **210**, and OR **211** -> OR
+     **210** -> OR **211**, each reported as `returns_first_or` after scalar
+     closure. The next AUFLIA move is therefore to derive or learn a constraint
+     that rules out the OR-210/OR-211 toggle family, not greedy single-OR
+     forcing or more local branch enumeration.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

@@ -639,8 +639,11 @@ a named mechanism.**
    term **3408**. Closure-level diagnostics now show the no-progress cycle:
    closing OR **210** and then repairing scalar equality exposes OR **211** at
    **total_false=2**, while closing OR **211** and repairing scalar equality
-   exposes OR **210** at **total_false=2**. The next practical AUFLIA step is a
-   paired OR-210/OR-211 cycle breaker or learned dependency.
+   exposes OR **210** at **total_false=2**. A second-hop OR diagnostic now makes
+   this a closed local cycle: OR **210** -> OR **211** -> OR **210**, and OR
+   **211** -> OR **210** -> OR **211**, each reported as `returns_first_or`
+   after scalar closure. The next practical AUFLIA step is to derive or learn a
+   constraint that rules out the OR-210/OR-211 toggle family.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
