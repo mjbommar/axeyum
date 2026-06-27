@@ -63,6 +63,10 @@ now covers scalar Bool/unsigned-BV/Int-backed inputs and 2-/3-tuples. This gives
 frontends deterministic declaration and concrete model lifting before the
 `#[derive(Symbolic)]` crate exists.
 
+**Status update (2026-06-27, named-field slice):** `Property::symbolic_struct`
+now gives frontends macro-free struct-shaped inputs with stable field names such
+as `transfer.amount`; the later derive macro can lower to the same builder.
+
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted
   surface (NOT MIR).** `crates/axeyum-solver/tests/symbolic_execution.rs` is already

@@ -95,6 +95,70 @@ pub trait Symbolic {
     fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError>;
 }
 
+/// Builder for macro-free symbolic values with named struct fields.
+///
+/// A future `#[derive(Symbolic)]` implementation can lower to this API. Until
+/// then, frontends can build named expression structs without falling back to
+/// tuple field names:
+///
+/// ```
+/// # use axeyum_property::{Bool, Bv, Property, PropertyError};
+/// struct Transfer {
+///     enabled: Bool,
+///     amount: Bv<64>,
+/// }
+///
+/// # fn build() -> Result<Transfer, PropertyError> {
+/// let mut property = Property::new();
+/// let transfer = property.symbolic_struct("transfer", |fields| {
+///     Ok(Transfer {
+///         enabled: fields.field::<bool>("enabled")?,
+///         amount: fields.field::<u64>("amount")?,
+///     })
+/// })?;
+/// # Ok(transfer)
+/// # }
+/// ```
+#[derive(Debug)]
+pub struct SymbolicStruct<'a> {
+    property: &'a mut Property,
+    prefix: String,
+}
+
+impl SymbolicStruct<'_> {
+    /// Declares a named field through [`Symbolic`].
+    ///
+    /// Field names are joined with `.` for Axeyum symbols, so
+    /// `property.symbolic_struct("input", |f| f.field::<u8>("amount"))`
+    /// declares `input.amount`. The counterexample renderer later sanitizes the
+    /// dot to a Rust identifier such as `input_amount`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any underlying declaration fails.
+    pub fn field<T: Symbolic>(&mut self, name: &str) -> Result<T::Expr, PropertyError> {
+        T::symbolic(self.property, &join_symbolic_name(&self.prefix, name))
+    }
+
+    /// Declares a nested named field bundle.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any declaration inside `build` fails.
+    pub fn struct_field<R>(
+        &mut self,
+        name: &str,
+        build: impl FnOnce(&mut SymbolicStruct<'_>) -> Result<R, PropertyError>,
+    ) -> Result<R, PropertyError> {
+        let prefix = join_symbolic_name(&self.prefix, name);
+        let mut fields = SymbolicStruct {
+            property: &mut *self.property,
+            prefix,
+        };
+        build(&mut fields)
+    }
+}
+
 /// One scalar input binding from a replay-checked counterexample model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputBinding {
@@ -356,6 +420,27 @@ impl Property {
         T::symbolic(self, name)
     }
 
+    /// Declares a named symbolic field bundle.
+    ///
+    /// This is the macro-free path for struct-shaped inputs. It keeps the
+    /// declaration and counterexample-objective order exactly as the closure
+    /// requests fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any declaration inside `build` fails.
+    pub fn symbolic_struct<R>(
+        &mut self,
+        name: &str,
+        build: impl FnOnce(&mut SymbolicStruct<'_>) -> Result<R, PropertyError>,
+    ) -> Result<R, PropertyError> {
+        let mut fields = SymbolicStruct {
+            property: self,
+            prefix: name.to_owned(),
+        };
+        build(&mut fields)
+    }
+
     /// Creates a Boolean constant.
     pub fn bool_const(&mut self, value: bool) -> Bool {
         Bool {
@@ -610,6 +695,15 @@ fn rust_uint_type(width: u32) -> &'static str {
         17..=32 => "u32",
         33..=64 => "u64",
         _ => "u128",
+    }
+}
+
+fn join_symbolic_name(prefix: &str, field: &str) -> String {
+    match (prefix.is_empty(), field.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => field.to_owned(),
+        (false, true) => prefix.to_owned(),
+        (false, false) => format!("{prefix}.{field}"),
     }
 }
 

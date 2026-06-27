@@ -2,6 +2,14 @@
 
 ## Current focus
 
+- **2026-06-27 — Macro-free named-field symbolic structs landed.**
+  `Property::symbolic_struct("name", |fields| ...)` now lets SDK users build
+  struct-shaped input bundles with deterministic Axeyum names such as
+  `transfer.amount` before a proc-macro derive exists. `SymbolicStruct::field`
+  composes the existing scalar/tuple `Symbolic` implementations, and
+  `struct_field` supports nested named bundles. Counterexample rendering
+  sanitizes those names into stable Rust identifiers such as `transfer_amount`.
+
 - **2026-06-27 — Scalar and tuple `Symbolic` trait landed.**
   `Symbolic` is now the macro-free typed input path for the SDK:
   `Property::symbolic::<T>("name")` declares values, and
@@ -41,8 +49,8 @@
 
 1. Add ergonomic expression construction without compromising fallible builder
    errors.
-2. Add `Symbolic` derive support for structs and decide signed fixed-width Rust
-   integer policy.
+2. Add `Symbolic` derive support over `symbolic_struct` and decide signed
+   fixed-width Rust integer policy.
 3. Extend counterexample-to-`#[test]` output for structured inputs and
    frontend-specific replay bodies.
 4. Add a graduated SDK property corpus and scoreboard gate.

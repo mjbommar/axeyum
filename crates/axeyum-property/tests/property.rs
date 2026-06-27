@@ -1,7 +1,7 @@
 //! Integration tests for the typed property SDK.
 
 use axeyum_ir::Value;
-use axeyum_property::Property;
+use axeyum_property::{Bool, Bv, Property};
 use axeyum_solver::{Model, ProofOutcome};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -161,6 +161,72 @@ fn symbolic_trait_composes_tuple_inputs_in_deterministic_order() -> TestResult {
             "let input_1: u8 = 0x2a_u8; // BV8\n",
             "let input_2: i128 = -7_i128;\n",
         )
+    );
+    Ok(())
+}
+
+#[test]
+fn symbolic_struct_builder_uses_named_fields_in_counterexample_order() -> TestResult {
+    #[derive(Debug, Clone, Copy)]
+    struct TransferExpr {
+        enabled: Bool,
+        amount: Bv<16>,
+        balance: Bv<16>,
+    }
+
+    let mut property = Property::new();
+    let transfer = property.symbolic_struct("transfer", |fields| {
+        Ok(TransferExpr {
+            enabled: fields.field::<bool>("enabled")?,
+            amount: fields.field::<u16>("amount")?,
+            balance: fields.field::<u16>("balance")?,
+        })
+    })?;
+
+    let goal = transfer.amount.ule(&mut property, transfer.balance)?;
+    let outcome = property.prove_minimized(goal)?;
+    let ProofOutcome::Disproved(model) = outcome else {
+        panic!("expected a minimized counterexample, got {outcome:?}");
+    };
+
+    assert_eq!(
+        property.concrete::<bool>(&transfer.enabled, &model)?,
+        Some(false)
+    );
+    assert_eq!(property.concrete::<u16>(&transfer.amount, &model)?, Some(1));
+    assert_eq!(
+        property.concrete::<u16>(&transfer.balance, &model)?,
+        Some(0)
+    );
+
+    let counterexample = property.counterexample(&model)?;
+    assert_eq!(
+        counterexample.render_rust_let_bindings()?,
+        concat!(
+            "let transfer_enabled: bool = false;\n",
+            "let transfer_amount: u16 = 0x0001_u16; // BV16\n",
+            "let transfer_balance: u16 = 0x0000_u16; // BV16\n",
+        )
+    );
+    Ok(())
+}
+
+#[test]
+fn symbolic_struct_builder_supports_nested_field_names() -> TestResult {
+    let mut property = Property::new();
+    let fee = property.symbolic_struct("transfer", |fields| {
+        fields.struct_field("limits", |limits| limits.field::<u8>("fee"))
+    })?;
+
+    let mut model = Model::new();
+    model.set(fee.symbol().unwrap(), Value::Bv { width: 8, value: 3 });
+
+    assert_eq!(property.concrete::<u8>(&fee, &model)?, Some(3));
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        "let transfer_limits_fee: u8 = 0x03_u8; // BV8\n"
     );
     Ok(())
 }
