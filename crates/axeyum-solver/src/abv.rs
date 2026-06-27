@@ -5042,6 +5042,33 @@ fn repair_projected_branch_schedule(
     }
 }
 
+fn repair_projected_branch_schedule_with_scalar_closure_guard(
+    arena: &TermArena,
+    originals: &[TermId],
+    disjunction: TermId,
+    branch: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    let baseline_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut trial = projected.clone();
+    let Some(stats) = repair_projected_branch_schedule(arena, originals, branch, &mut trial)?
+    else {
+        return Ok(None);
+    };
+    if scalar_closure_rejects_branch_candidate(
+        arena,
+        originals,
+        disjunction,
+        branch,
+        baseline_false,
+        &trial,
+    )? {
+        return Ok(None);
+    }
+    *projected = trial;
+    Ok(Some(stats))
+}
+
 fn repair_projected_scalar_equalities(
     arena: &TermArena,
     originals: &[TermId],
@@ -5184,12 +5211,15 @@ fn repair_projected_branch_disjunctions(
             let Some(or_failure) = replay_failed_or_details(arena, conjunct, projected)? else {
                 continue;
             };
-            if let Some(schedule_stats) = repair_projected_branch_schedule(
-                arena,
-                originals,
-                or_failure.best_branch_term,
-                projected,
-            )? {
+            if let Some(schedule_stats) =
+                repair_projected_branch_schedule_with_scalar_closure_guard(
+                    arena,
+                    originals,
+                    conjunct,
+                    or_failure.best_branch_term,
+                    projected,
+                )?
+            {
                 stats.absorb(schedule_stats);
                 continue;
             }
@@ -8371,9 +8401,13 @@ fn repair_projected_replay_failure(
         return Ok(Some(choice_stats));
     }
 
-    if let Some(schedule_stats) =
-        repair_projected_branch_schedule(arena, originals, or_failure.best_branch_term, projected)?
-    {
+    if let Some(schedule_stats) = repair_projected_branch_schedule_with_scalar_closure_guard(
+        arena,
+        originals,
+        failure.conjunct_term,
+        or_failure.best_branch_term,
+        projected,
+    )? {
         return Ok(Some(schedule_stats));
     }
 
@@ -9472,7 +9506,8 @@ mod tests {
         project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
         repair_projected_branch_as_candidate,
         repair_projected_branch_best_candidate_with_scalar_closure_guard,
-        repair_projected_branch_scalar_choice_candidate, repair_projected_replay_branch_beam,
+        repair_projected_branch_disjunctions, repair_projected_branch_scalar_choice_candidate,
+        repair_projected_branch_schedule, repair_projected_replay_branch_beam,
         repair_projected_replay_branch_choice, repair_projected_replay_branch_pair_choice,
         repair_projected_replay_branch_select_cycle, repair_projected_replay_failure,
         replay_failure_with_branch_candidate_diagnostics, replay_last_ext_candidate, select_value,
@@ -10505,6 +10540,59 @@ mod tests {
             guarded.is_none(),
             "closure returns to the same OR without replay improvement"
         );
+        assert_eq!(projected.get(*x_symbol), Some(Value::Int(0)));
+        assert_eq!(projected.get(*y_symbol), Some(Value::Int(1)));
+        assert_eq!(projected.get(*z_symbol), Some(Value::Int(2)));
+    }
+
+    #[test]
+    fn lazy_ext_branch_schedule_rejects_scalar_closure_loop() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let z = arena.int_var("z").unwrap();
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let false_term = arena.bool_const(false);
+        let y_eq_x = arena.eq(y, x).unwrap();
+        let z_eq_x = arena.eq(z, x).unwrap();
+        let branch = arena.and(y_eq_x, z_eq_x).unwrap();
+        let disjunction = arena.or(branch, false_term).unwrap();
+        let y_eq_one = arena.eq(y, one).unwrap();
+        let z_eq_two = arena.eq(z, two).unwrap();
+        let rest = arena.and(y_eq_one, z_eq_two).unwrap();
+        let assertion = arena.and(disjunction, rest).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(*x_symbol, Value::Int(0));
+        projected.set(*y_symbol, Value::Int(1));
+        projected.set(*z_symbol, Value::Int(2));
+        let originals = [assertion];
+
+        let mut raw_schedule = projected.clone();
+        let raw_stats =
+            repair_projected_branch_schedule(&arena, &originals, branch, &mut raw_schedule)
+                .unwrap()
+                .expect("expected raw schedule to force the branch");
+        assert!(raw_stats.branch_symbol_changes >= 2, "{raw_stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &raw_schedule).unwrap(),
+            2
+        );
+
+        let guarded_stats =
+            repair_projected_branch_disjunctions(&arena, &originals, &mut projected).unwrap();
+        assert_eq!(guarded_stats.changes(), 0, "{guarded_stats:?}");
         assert_eq!(projected.get(*x_symbol), Some(Value::Int(0)));
         assert_eq!(projected.get(*y_symbol), Some(Value::Int(1)));
         assert_eq!(projected.get(*z_symbol), Some(Value::Int(2)));

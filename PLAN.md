@@ -2069,6 +2069,16 @@ against competitor source, are now binding:
      `followup_or236_branch0_branch`. The next AUFLIA move is learning/refining
      the missing scalar/array constraint that explains the OR-236 family, not
      raw OR branch forcing.
+     **SCALAR-CLOSURE SCHEDULE GUARD LANDED (2026-06-27):** the same
+     returned-OR guard now wraps general multi-literal branch schedule repairs,
+     including the projection repair pass and targeted replay repair. This
+     blocks an earlier raw branch-forcing route that could set several scalar
+     symbols, make a branch locally true, then let scalar closure return to the
+     same OR with no full replay improvement. On `bug337`, the row is still
+     `unknown`, but the measured diagnostic now completes normally in about
+     **55 s** instead of exiting through the 180 s timeout wrapper after about
+     **89 s**; projection repair changes drop from **587** to **565**. The next
+     AUFLIA move remains a real scalar/array refinement for the OR-236 family.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
