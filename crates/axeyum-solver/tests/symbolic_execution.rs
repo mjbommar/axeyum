@@ -890,6 +890,65 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
 }
 
 #[test]
+fn tiny_bv_assembly_imports_register_equality_branch() {
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            add r2 r0 r1
+            xor r3 r0 r1
+            beq r2 r3 equal done
+            equal: win
+            done: lose
+        ",
+    )
+    .unwrap();
+
+    assert_eq!(
+        program.code()[2],
+        TinyBvInsn::BranchRegEq {
+            a: 2,
+            b: 3,
+            then_pc: 3,
+            else_pc: 4,
+        }
+    );
+
+    let reach = program
+        .reach_label_checked(
+            &mut arena,
+            "reg_branch_input",
+            "equal",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(reach.status(), TinyBvReachabilityStatus::Reachable);
+    let hit = reach
+        .outcome
+        .verified
+        .first()
+        .expect("register equality branch should have a reachable witness");
+    let trace = program.concrete_trace(&hit.witness);
+    assert_eq!(trace.outcome, TinyBvConcreteOutcome::Win);
+    assert_eq!(
+        trace.steps.iter().map(|step| step.pc).collect::<Vec<_>>(),
+        vec![0, 1, 2, 3]
+    );
+    let [x, y] = hit.witness.inputs[..] else {
+        panic!("test program has exactly two input words");
+    };
+    assert_eq!((x + y) & MASK, (x ^ y) & MASK);
+}
+
+#[test]
 fn tiny_bv_assembly_reports_parse_and_validation_errors() {
     let parse_err =
         TinyBvProgram::from_assembly(WIDTH, REG_COUNT, INPUT_COUNT, MAX_STEPS, "add r0 r1")
@@ -919,6 +978,23 @@ fn tiny_bv_assembly_reports_parse_and_validation_errors() {
     assert!(
         validation_err.contains("instruction 0 references register 4"),
         "validation error should come from the shared program validator: {validation_err}"
+    );
+
+    let branch_reg_validation_err = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            beq r0 r4 ok ok
+            ok: win
+        ",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        branch_reg_validation_err.contains("instruction 0 references register 4"),
+        "register branch validation should come from the shared validator: {branch_reg_validation_err}"
     );
 
     let duplicate_label_err = TinyBvProgram::from_assembly(

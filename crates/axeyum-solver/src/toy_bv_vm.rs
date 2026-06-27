@@ -89,6 +89,17 @@ pub enum TinyBvInsn {
         /// Program counter to use when the equality is false.
         else_pc: usize,
     },
+    /// Branch on equality between two registers.
+    BranchRegEq {
+        /// Left register being tested.
+        a: usize,
+        /// Right register being tested.
+        b: usize,
+        /// Program counter to use when the equality is true.
+        then_pc: usize,
+        /// Program counter to use when the equality is false.
+        else_pc: usize,
+    },
     /// Target block reported as a successful reachability hit.
     Win,
     /// Terminal non-target block.
@@ -335,7 +346,7 @@ impl TinyBvProgram {
     /// - `add|sub|mul|xor rD rA rB`
     /// - `load rD rADDR`
     /// - `store rADDR rSRC`
-    /// - `beq rREG VALUE THEN ELSE`
+    /// - `beq rREG VALUE|rOTHER THEN ELSE`
     /// - `win`
     /// - `lose`
     ///
@@ -643,74 +654,81 @@ impl TinyBvProgram {
                 instruction,
                 regs_before: regs.clone(),
             });
-            match instruction {
-                TinyBvInsn::Const { dst, value } => {
-                    regs[dst] = self.normalize(value);
-                    pc += 1;
-                }
-                TinyBvInsn::Add { dst, a, b } => {
-                    regs[dst] = self.normalize(regs[a].wrapping_add(regs[b]));
-                    pc += 1;
-                }
-                TinyBvInsn::Sub { dst, a, b } => {
-                    regs[dst] = self.normalize(regs[a].wrapping_sub(regs[b]));
-                    pc += 1;
-                }
-                TinyBvInsn::Mul { dst, a, b } => {
-                    regs[dst] = self.normalize(regs[a].wrapping_mul(regs[b]));
-                    pc += 1;
-                }
-                TinyBvInsn::Xor { dst, a, b } => {
-                    regs[dst] = self.normalize(regs[a] ^ regs[b]);
-                    pc += 1;
-                }
-                TinyBvInsn::Load { dst, addr } => {
-                    regs[dst] = *memory.get(&regs[addr]).unwrap_or(&0);
-                    pc += 1;
-                }
-                TinyBvInsn::Store { addr, src } => {
-                    memory.insert(regs[addr], regs[src]);
-                    pc += 1;
-                }
-                TinyBvInsn::BranchEq {
-                    reg,
-                    value,
-                    then_pc,
-                    else_pc,
-                } => {
-                    pc = if regs[reg] == self.normalize(value) {
-                        then_pc
-                    } else {
-                        else_pc
-                    };
-                }
-                TinyBvInsn::Win => {
-                    return TinyBvConcreteTrace {
-                        steps,
-                        outcome: TinyBvConcreteOutcome::Win,
-                        final_pc: Some(pc),
-                        final_regs: regs,
-                        final_memory: memory.into_iter().collect(),
-                    };
-                }
-                TinyBvInsn::Lose => {
-                    return TinyBvConcreteTrace {
-                        steps,
-                        outcome: TinyBvConcreteOutcome::Lose,
-                        final_pc: Some(pc),
-                        final_regs: regs,
-                        final_memory: memory.into_iter().collect(),
-                    };
-                }
+            if let Some(outcome) =
+                self.execute_concrete_instruction(instruction, &mut regs, &mut memory, &mut pc)
+            {
+                return finish_concrete_trace(steps, outcome, Some(pc), regs, memory);
             }
         }
-        TinyBvConcreteTrace {
+        finish_concrete_trace(
             steps,
-            outcome: TinyBvConcreteOutcome::OutOfFuel,
-            final_pc: self.code.get(pc).map(|_| pc),
-            final_regs: regs,
-            final_memory: memory.into_iter().collect(),
+            TinyBvConcreteOutcome::OutOfFuel,
+            self.code.get(pc).map(|_| pc),
+            regs,
+            memory,
+        )
+    }
+
+    fn execute_concrete_instruction(
+        &self,
+        instruction: TinyBvInsn,
+        regs: &mut [u128],
+        memory: &mut BTreeMap<u128, u128>,
+        pc: &mut usize,
+    ) -> Option<TinyBvConcreteOutcome> {
+        match instruction {
+            TinyBvInsn::Const { dst, value } => {
+                regs[dst] = self.normalize(value);
+                *pc += 1;
+            }
+            TinyBvInsn::Add { dst, a, b } => {
+                regs[dst] = self.normalize(regs[a].wrapping_add(regs[b]));
+                *pc += 1;
+            }
+            TinyBvInsn::Sub { dst, a, b } => {
+                regs[dst] = self.normalize(regs[a].wrapping_sub(regs[b]));
+                *pc += 1;
+            }
+            TinyBvInsn::Mul { dst, a, b } => {
+                regs[dst] = self.normalize(regs[a].wrapping_mul(regs[b]));
+                *pc += 1;
+            }
+            TinyBvInsn::Xor { dst, a, b } => {
+                regs[dst] = self.normalize(regs[a] ^ regs[b]);
+                *pc += 1;
+            }
+            TinyBvInsn::Load { dst, addr } => {
+                regs[dst] = *memory.get(&regs[addr]).unwrap_or(&0);
+                *pc += 1;
+            }
+            TinyBvInsn::Store { addr, src } => {
+                memory.insert(regs[addr], regs[src]);
+                *pc += 1;
+            }
+            TinyBvInsn::BranchEq {
+                reg,
+                value,
+                then_pc,
+                else_pc,
+            } => {
+                *pc = if regs[reg] == self.normalize(value) {
+                    then_pc
+                } else {
+                    else_pc
+                };
+            }
+            TinyBvInsn::BranchRegEq {
+                a,
+                b,
+                then_pc,
+                else_pc,
+            } => {
+                *pc = if regs[a] == regs[b] { then_pc } else { else_pc };
+            }
+            TinyBvInsn::Win => return Some(TinyBvConcreteOutcome::Win),
+            TinyBvInsn::Lose => return Some(TinyBvConcreteOutcome::Lose),
         }
+        None
     }
 
     /// Replays a concrete witness under this program's concrete semantics.
@@ -806,17 +824,20 @@ impl TinyBvProgram {
             } => {
                 let value_term = arena.bv_const(self.width, self.normalize(value))?;
                 let condition = arena.eq(state.regs[reg], value_term)?;
-                let mut if_true = state.clone();
-                if_true.pc = then_pc;
-                if_true.fuel = next_fuel;
-                let mut if_false = state;
-                if_false.pc = else_pc;
-                if_false.fuel = next_fuel;
-                Ok(CfgStep::Branch {
-                    condition,
-                    if_true,
-                    if_false,
-                })
+                Ok(symbolic_branch(
+                    condition, state, next_fuel, then_pc, else_pc,
+                ))
+            }
+            TinyBvInsn::BranchRegEq {
+                a,
+                b,
+                then_pc,
+                else_pc,
+            } => {
+                let condition = arena.eq(state.regs[a], state.regs[b])?;
+                Ok(symbolic_branch(
+                    condition, state, next_fuel, then_pc, else_pc,
+                ))
             }
             TinyBvInsn::Win => Ok(CfgStep::Target(state)),
             TinyBvInsn::Lose => Ok(CfgStep::Stop),
@@ -888,6 +909,42 @@ impl TinyBvProgram {
     }
 }
 
+fn finish_concrete_trace(
+    steps: Vec<TinyBvConcreteStep>,
+    outcome: TinyBvConcreteOutcome,
+    final_pc: Option<usize>,
+    regs: Vec<u128>,
+    memory: BTreeMap<u128, u128>,
+) -> TinyBvConcreteTrace {
+    TinyBvConcreteTrace {
+        steps,
+        outcome,
+        final_pc,
+        final_regs: regs,
+        final_memory: memory.into_iter().collect(),
+    }
+}
+
+fn symbolic_branch(
+    condition: TermId,
+    state: TinyBvState,
+    next_fuel: usize,
+    then_pc: usize,
+    else_pc: usize,
+) -> CfgStep<TinyBvState> {
+    let mut if_true = state.clone();
+    if_true.pc = then_pc;
+    if_true.fuel = next_fuel;
+    let mut if_false = state;
+    if_false.pc = else_pc;
+    if_false.fuel = next_fuel;
+    CfgStep::Branch {
+        condition,
+        if_true,
+        if_false,
+    }
+}
+
 fn validate_code(code: &[TinyBvInsn], reg_count: usize) -> Result<(), SolverError> {
     for (pc, insn) in code.iter().enumerate() {
         match *insn {
@@ -915,6 +972,17 @@ fn validate_code(code: &[TinyBvInsn], reg_count: usize) -> Result<(), SolverErro
                 ..
             } => {
                 validate_reg(pc, reg, reg_count)?;
+                validate_pc(pc, then_pc, code.len())?;
+                validate_pc(pc, else_pc, code.len())?;
+            }
+            TinyBvInsn::BranchRegEq {
+                a,
+                b,
+                then_pc,
+                else_pc,
+            } => {
+                validate_reg(pc, a, reg_count)?;
+                validate_reg(pc, b, reg_count)?;
                 validate_pc(pc, then_pc, code.len())?;
                 validate_pc(pc, else_pc, code.len())?;
             }
@@ -1054,16 +1122,13 @@ fn parse_tiny_bv_instruction(
             _ => Err(tiny_bv_arity_error(line_no, "store", "rADDR rSRC")),
         },
         "beq" | "brancheq" => match args {
-            [reg, value, then_pc, else_pc] => Ok(TinyBvInsn::BranchEq {
-                reg: parse_register(line_no, reg)?,
-                value: parse_u128_literal(line_no, "branch constant", value)?,
-                then_pc: parse_pc_target(line_no, "then target", then_pc, labels)?,
-                else_pc: parse_pc_target(line_no, "else target", else_pc, labels)?,
-            }),
+            [reg, value_or_reg, then_pc, else_pc] => {
+                parse_branch_eq_instruction(line_no, reg, value_or_reg, then_pc, else_pc, labels)
+            }
             _ => Err(tiny_bv_arity_error(
                 line_no,
                 "beq",
-                "rREG VALUE THEN_PC ELSE_PC",
+                "rREG VALUE|rOTHER THEN ELSE",
             )),
         },
         "win" => parse_no_args(line_no, "win", args, TinyBvInsn::Win),
@@ -1072,6 +1137,34 @@ fn parse_tiny_bv_instruction(
             line_no,
             format!("unknown opcode `{other}`"),
         )),
+    }
+}
+
+fn parse_branch_eq_instruction(
+    line_no: usize,
+    reg: &str,
+    value_or_reg: &str,
+    then_pc: &str,
+    else_pc: &str,
+    labels: &BTreeMap<String, (usize, usize)>,
+) -> Result<TinyBvInsn, SolverError> {
+    let reg = parse_register(line_no, reg)?;
+    let then_pc = parse_pc_target(line_no, "then target", then_pc, labels)?;
+    let else_pc = parse_pc_target(line_no, "else target", else_pc, labels)?;
+    if value_or_reg.starts_with('r') {
+        Ok(TinyBvInsn::BranchRegEq {
+            a: reg,
+            b: parse_register(line_no, value_or_reg)?,
+            then_pc,
+            else_pc,
+        })
+    } else {
+        Ok(TinyBvInsn::BranchEq {
+            reg,
+            value: parse_u128_literal(line_no, "branch constant", value_or_reg)?,
+            then_pc,
+            else_pc,
+        })
     }
 }
 
