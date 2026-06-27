@@ -1126,6 +1126,74 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         )),
         Some((3, 4, TinyBvCfgEdgeKind::BranchTrue))
     );
+    let mut coverage_arena = TermArena::new();
+    let coverage = program
+        .test_cases_for_basic_blocks_checked(
+            &mut coverage_arena,
+            "asm_block_suite_input",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(coverage.target_count(), 3);
+    assert_eq!(coverage.covered_target_count(), 3);
+    assert_eq!(coverage.generated_test_count(), 3);
+    assert_eq!(coverage.unreachable_target_count(), 0);
+    assert_eq!(coverage.unknown_target_count(), 0);
+    assert!(coverage.is_complete());
+    assert_eq!(
+        coverage
+            .targets
+            .iter()
+            .map(|target| (
+                target.target_pc,
+                target.target_labels.clone(),
+                target.status(),
+                target.test_cases.len()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            (
+                0,
+                vec!["entry".to_owned()],
+                TinyBvReachabilityStatus::Reachable,
+                1
+            ),
+            (
+                4,
+                vec!["win_block".to_owned()],
+                TinyBvReachabilityStatus::Reachable,
+                1
+            ),
+            (
+                5,
+                vec!["lose_block".to_owned()],
+                TinyBvReachabilityStatus::Reachable,
+                1
+            ),
+        ]
+    );
+    let lose_target = coverage
+        .targets
+        .iter()
+        .find(|target| target.target_pc == 5)
+        .expect("coverage suite should target lose block");
+    assert_eq!(
+        lose_target.test_cases[0].report.trace.outcome,
+        TinyBvConcreteOutcome::Lose
+    );
+    assert!(lose_target.test_cases[0].report.trace.reaches_pc(5));
+    assert_eq!(
+        lose_target.test_cases[0]
+            .report
+            .edge_steps
+            .last()
+            .map(|step| (step.edge.from, step.edge.to, step.edge.kind)),
+        Some((3, 5, TinyBvCfgEdgeKind::BranchFalse))
+    );
 
     let lose_witness = TinyBvWitness { inputs: vec![0, 0] };
     let lose_trace = program.concrete_trace(&lose_witness);

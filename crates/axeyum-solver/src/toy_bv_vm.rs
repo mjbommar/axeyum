@@ -325,6 +325,57 @@ impl TinyBvTestGenerationReport {
     }
 }
 
+/// Replay-checked test-generation coverage report for all targeted blocks.
+#[derive(Debug, Clone)]
+pub struct TinyBvCoverageReport {
+    /// Per-target test generation reports, in deterministic target order.
+    pub targets: Vec<TinyBvTestGenerationReport>,
+}
+
+impl TinyBvCoverageReport {
+    /// Number of targeted program points.
+    pub fn target_count(&self) -> usize {
+        self.targets.len()
+    }
+
+    /// Number of targets with at least one replay-checked concrete test case.
+    pub fn covered_target_count(&self) -> usize {
+        self.targets
+            .iter()
+            .filter(|target| target.has_test_cases())
+            .count()
+    }
+
+    /// Number of generated replay-checked concrete test cases.
+    pub fn generated_test_count(&self) -> usize {
+        self.targets
+            .iter()
+            .map(|target| target.test_cases.len())
+            .sum()
+    }
+
+    /// Number of targets proven unreachable within the configured bound.
+    pub fn unreachable_target_count(&self) -> usize {
+        self.targets
+            .iter()
+            .filter(|target| target.status() == TinyBvReachabilityStatus::Unreachable)
+            .count()
+    }
+
+    /// Number of targets with inconclusive bounded reachability results.
+    pub fn unknown_target_count(&self) -> usize {
+        self.targets
+            .iter()
+            .filter(|target| target.status() == TinyBvReachabilityStatus::Unknown)
+            .count()
+    }
+
+    /// Whether every target is either covered or bounded-unreachable.
+    pub fn is_complete(&self) -> bool {
+        self.covered_target_count() + self.unreachable_target_count() == self.target_count()
+    }
+}
+
 /// Checked symbolic-execution result for the tiny BV frontend.
 pub type TinyBvExploreOutcome = CfgCheckedOutcome<TinyBvState, TinyBvWitness>;
 
@@ -1050,6 +1101,36 @@ impl TinyBvProgram {
     ) -> Result<TinyBvTestGenerationReport, SolverError> {
         let target_pc = self.resolve_label_pc(label)?;
         self.test_cases_for_pc_checked(arena, input_prefix, target_pc, config)
+    }
+
+    /// Generates replay-checked concrete test cases for every basic-block
+    /// entry.
+    ///
+    /// Targets are the `start_pc` values returned by [`Self::basic_blocks`],
+    /// preserving deterministic program-counter order. Each target is queried
+    /// through [`Self::test_cases_for_pc_checked`], so the coverage report
+    /// preserves per-target bounded reachability diagnostics instead of hiding
+    /// unknown, truncated, or mismatch cases.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from any per-target checked reachability query.
+    pub fn test_cases_for_basic_blocks_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvCoverageReport, SolverError> {
+        let mut targets = Vec::new();
+        for block in self.basic_blocks() {
+            targets.push(self.test_cases_for_pc_checked(
+                arena,
+                input_prefix,
+                block.start_pc,
+                config,
+            )?);
+        }
+        Ok(TinyBvCoverageReport { targets })
     }
 
     /// Checks bounded safety for a forbidden program counter.

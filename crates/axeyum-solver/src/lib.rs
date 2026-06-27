@@ -376,10 +376,10 @@ pub use theory_combination::{
 };
 pub use toy_bv_vm::{
     TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome, TinyBvConcreteStep,
-    TinyBvConcreteTrace, TinyBvExploreOutcome, TinyBvInsn, TinyBvProgram, TinyBvReachabilityReport,
-    TinyBvReachabilityStatus, TinyBvSafetyReport, TinyBvSafetyStatus, TinyBvState, TinyBvTestCase,
-    TinyBvTestGenerationReport, TinyBvTraceBlockStep, TinyBvTraceEdgeStep, TinyBvTraceReport,
-    TinyBvTraceSourceStep, TinyBvWitness,
+    TinyBvConcreteTrace, TinyBvCoverageReport, TinyBvExploreOutcome, TinyBvInsn, TinyBvProgram,
+    TinyBvReachabilityReport, TinyBvReachabilityStatus, TinyBvSafetyReport, TinyBvSafetyStatus,
+    TinyBvState, TinyBvTestCase, TinyBvTestGenerationReport, TinyBvTraceBlockStep,
+    TinyBvTraceEdgeStep, TinyBvTraceReport, TinyBvTraceSourceStep, TinyBvWitness,
 };
 pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
 pub use uf_arith::{UfArithCongruenceCertificate, uf_arith_congruence_refutation};
