@@ -170,10 +170,12 @@ impl IncrementalBvSolver {
     /// Simplifies the small memory fragment that is safe to encode on the warm
     /// BV path today.
     ///
-    /// This is deliberately narrow: it only folds syntactic read-over-write
-    /// identities of the form `select(store(a, i, v), i)` to `v`, recursively
-    /// through ordinary wrappers. It does not instantiate general array
-    /// extensionality, distinct-index read-over-write cases, or UF lemmas.
+    /// This is deliberately narrow: it folds syntactic read-over-write
+    /// identities of the form `select(store(a, i, v), i)` to `v`, and skips a
+    /// store at a literal-distinct index (`select(store(a, c1, v), c2)` to
+    /// `select(a, c2)` when `c1 != c2` is known from constants), recursively
+    /// through ordinary wrappers. It does not instantiate symbolic
+    /// distinct-index read-over-write cases, array extensionality, or UF lemmas.
     #[must_use]
     pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
         let mut memo = HashMap::new();
@@ -406,9 +408,9 @@ impl IncrementalBvSolver {
     /// Checks one-shot assumptions after applying the same narrow warm-safe
     /// memory simplification used by [`Self::assert_simplifying_memory`].
     ///
-    /// This lets branch/fork queries over syntactic same-index read-over-write
-    /// conditions stay on the warm BV path. The original assumptions are still
-    /// replayed against any returned model and reported in any assumption core.
+    /// This lets branch/fork queries over the narrow warm read-over-write slice
+    /// stay on the warm BV path. The original assumptions are still replayed
+    /// against any returned model and reported in any assumption core.
     ///
     /// # Errors
     ///
@@ -803,35 +805,73 @@ fn simplify_memory_for_warm_assertion_inner(
     } else {
         arena.rebuild_with_args(term, &simplified_args)
     };
-    let simplified = collapse_same_index_read_over_write(arena, rebuilt).unwrap_or(rebuilt);
+    let simplified = match collapse_read_over_write(arena, rebuilt) {
+        Some(collapsed) if collapsed != rebuilt => {
+            simplify_memory_for_warm_assertion_inner(arena, collapsed, memo)
+        }
+        _ => rebuilt,
+    };
     memo.insert(term, simplified);
     simplified
 }
 
-fn collapse_same_index_read_over_write(arena: &TermArena, term: TermId) -> Option<TermId> {
-    let TermNode::App {
-        op: Op::Select,
-        args,
-        ..
-    } = arena.node(term)
-    else {
-        return None;
+fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    let (array, read_index) = match arena.node(term) {
+        TermNode::App {
+            op: Op::Select,
+            args,
+            ..
+        } => {
+            let [array, read_index] = args.as_ref() else {
+                return None;
+            };
+            (*array, *read_index)
+        }
+        _ => return None,
     };
-    let [array, read_index] = args.as_ref() else {
-        return None;
+    let (base, write_index, value) = match arena.node(array) {
+        TermNode::App {
+            op: Op::Store,
+            args,
+            ..
+        } => {
+            let [base, write_index, value] = args.as_ref() else {
+                return None;
+            };
+            (*base, *write_index, *value)
+        }
+        _ => return None,
     };
-    let TermNode::App {
-        op: Op::Store,
-        args: store_args,
-        ..
-    } = arena.node(*array)
-    else {
-        return None;
-    };
-    let [_base, write_index, value] = store_args.as_ref() else {
-        return None;
-    };
-    (write_index == read_index).then_some(*value)
+    if write_index == read_index {
+        return Some(value);
+    }
+    if known_literal_distinct(arena, write_index, read_index) {
+        return arena.select(base, read_index).ok();
+    }
+    None
+}
+
+fn known_literal_distinct(arena: &TermArena, left: TermId, right: TermId) -> bool {
+    if arena.sort_of(left) != arena.sort_of(right) {
+        return false;
+    }
+    match (arena.node(left), arena.node(right)) {
+        (TermNode::BoolConst(a), TermNode::BoolConst(b)) => a != b,
+        (
+            TermNode::BvConst {
+                width: left_width,
+                value: left_value,
+            },
+            TermNode::BvConst {
+                width: right_width,
+                value: right_value,
+            },
+        ) => left_width == right_width && left_value != right_value,
+        (TermNode::WideBvConst(a), TermNode::WideBvConst(b)) => a != b,
+        (TermNode::IntConst(a), TermNode::IntConst(b)) => a != b,
+        (TermNode::RealConst(a), TermNode::RealConst(b)) => a != b,
+        _ => false,
+    }
 }
 
 fn original_assumptions(assumptions: &[OneShotAssumption]) -> Vec<TermId> {

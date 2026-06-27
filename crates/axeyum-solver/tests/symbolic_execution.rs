@@ -2121,6 +2121,134 @@ fn branch_simplifies_same_index_memory_condition_on_warm_path() {
     );
 }
 
+#[test]
+fn warm_assumption_simplifies_constant_distinct_read_over_write_chain() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "warm_assume_const_miss_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let hit_value_sym = arena
+        .declare("warm_assume_const_miss_hit", Sort::BitVec(8))
+        .unwrap();
+    let miss_value_sym = arena
+        .declare("warm_assume_const_miss_miss", Sort::BitVec(8))
+        .unwrap();
+    let hit_value = arena.var(hit_value_sym);
+    let miss_value = arena.var(miss_value_sym);
+    let hit_index = arena.bv_const(8, 3).unwrap();
+    let miss_index = arena.bv_const(8, 4).unwrap();
+    let target = arena.bv_const(8, 0x33).unwrap();
+    let hit_eq_target = arena.eq(hit_value, target).unwrap();
+    let inner = arena.store(mem_v, hit_index, hit_value).unwrap();
+    let outer = arena.store(inner, miss_index, miss_value).unwrap();
+    let loaded = arena.select(outer, hit_index).unwrap();
+    let cond = arena.eq(loaded, target).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, hit_eq_target).unwrap();
+    assert!(
+        solver.check_assuming(&arena, &[cond]).is_err(),
+        "the ordinary warm assumption route should still refuse raw array terms"
+    );
+
+    match solver
+        .check_assuming_simplifying_memory(&mut arena, &[cond])
+        .unwrap()
+    {
+        CheckResult::Sat(model) => assert_eq!(
+            model.get(hit_value_sym),
+            Some(Value::Bv {
+                width: 8,
+                value: 0x33
+            })
+        ),
+        other => panic!("expected warm constant-miss assumption sat, got {other:?}"),
+    }
+    assert_eq!(
+        solver
+            .check_assuming_simplifying_memory(&mut arena, &[not_cond])
+            .unwrap(),
+        CheckResult::Unsat,
+        "the literal-distinct miss should expose the inner same-index read-back"
+    );
+    match solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[not_cond])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => assert_eq!(core, vec![not_cond]),
+        other => panic!("expected warm constant-miss assumption core, got {other:?}"),
+    }
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "one-shot constant-miss ROW assumptions should not persist as deferred theory assertions"
+    );
+}
+
+#[test]
+fn branch_simplifies_constant_distinct_read_over_write_chain_on_warm_path() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "branch_const_miss_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let hit_value_sym = arena
+        .declare("branch_const_miss_hit", Sort::BitVec(8))
+        .unwrap();
+    let miss_value_sym = arena
+        .declare("branch_const_miss_miss", Sort::BitVec(8))
+        .unwrap();
+    let hit_value = arena.var(hit_value_sym);
+    let miss_value = arena.var(miss_value_sym);
+    let hit_index = arena.bv_const(8, 5).unwrap();
+    let miss_index = arena.bv_const(8, 6).unwrap();
+    let target = arena.bv_const(8, 0x44).unwrap();
+    let hit_eq_target = arena.eq(hit_value, target).unwrap();
+    let inner = arena.store(mem_v, hit_index, hit_value).unwrap();
+    let outer = arena.store(inner, miss_index, miss_value).unwrap();
+    let loaded = arena.select(outer, hit_index).unwrap();
+    let cond = arena.eq(loaded, target).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(
+        executor
+            .assume(&arena, hit_eq_target)
+            .unwrap()
+            .is_feasible()
+    );
+    let branch = executor.branch(&mut arena, cond).unwrap();
+    assert!(
+        branch.if_true.is_feasible(),
+        "literal-distinct miss should leave the feasible inner read-back branch"
+    );
+    assert!(
+        branch.if_false.is_infeasible(),
+        "negated inner read-back equality should be pruned on the warm path"
+    );
+    assert_eq!(
+        executor.path_condition(),
+        &[hit_eq_target],
+        "branch queries must remain one-shot and not commit either direction"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should still work after a constant-miss branch query"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.
