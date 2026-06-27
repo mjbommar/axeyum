@@ -38,7 +38,8 @@
   symbolic bundles, signed fixed-width Rust integer lifting/minimization,
   minimized scalar counterexamples, Rust test skeletons, and direct aggregate
   initializer snippets. The first app-level corpus gate is committed in
-  [`property/SCOREBOARD.md`](property/SCOREBOARD.md).
+  [`property/SCOREBOARD.md`](property/SCOREBOARD.md), backed by generated
+  [`property/corpus.json`](property/corpus.json).
 - `axeyum-wasm` — `solve_smtlib_json` (client-side, the delivery substrate).
 
 A frontend's job: lower a program/property → axeyum IR terms → call the above →
@@ -72,5 +73,5 @@ in-flight change). This track:
   apps + first-pass leverage×tractability×moat×demand ranking.
 - (iteration 2) per-candidate SOTA research notes.
 - (iteration 3) `decision.md` — the final 3-5 picks + rationale.
-- [`property/`](property/) — bounded-property SDK plan/status/scoreboard.
+- [`property/`](property/) — bounded-property SDK plan/status/scoreboard/JSON.
 - per-app subdirectories, each with its own `PLAN.md` + `STATUS.md`.

@@ -1,0 +1,521 @@
+use std::fmt::Write as _;
+
+use axeyum_property::{Bool, Bv, LeanStatus, ProofOutcomeSummary, Property};
+use axeyum_solver::ProofOutcome;
+
+const LAST_UPDATED: &str = "2026-06-27";
+
+type CorpusResult<T> = Result<T, Box<dyn std::error::Error>>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExpectedOutcome {
+    Proved,
+    Disproved,
+}
+
+#[derive(Debug)]
+pub(crate) struct CorpusCaseReport {
+    id: &'static str,
+    tier: &'static str,
+    workflow: &'static str,
+    expected: ExpectedOutcome,
+    actual: ProofOutcomeSummary,
+    checks: &'static str,
+    baseline_analogue: &'static str,
+    lean_required: bool,
+    lean_available: bool,
+}
+
+impl CorpusCaseReport {
+    fn assert_matches(&self) {
+        match (self.expected, &self.actual) {
+            (ExpectedOutcome::Proved, ProofOutcomeSummary::Proved)
+            | (ExpectedOutcome::Disproved, ProofOutcomeSummary::Disproved) => {}
+            _ => panic!(
+                "{} ({}) expected {}, got {}",
+                self.id,
+                self.tier,
+                self.expected.label(),
+                outcome_label(&self.actual)
+            ),
+        }
+        if self.lean_required {
+            assert!(
+                self.lean_available,
+                "{} ({}) expected a Lean module",
+                self.id, self.tier
+            );
+        }
+    }
+}
+
+impl ExpectedOutcome {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Proved => "proved",
+            Self::Disproved => "disproved",
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub(crate) struct CorpusTotals {
+    cases: usize,
+    proved: usize,
+    disproved: usize,
+    unknown: usize,
+    mismatches: usize,
+    lean_required: usize,
+    lean_required_available: usize,
+}
+
+pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
+    Ok(vec![
+        bv_reflexive_proof()?,
+        int_assumption_proof()?,
+        unsigned_bv_counterexample_minimized()?,
+        signed_bv_counterexample_minimized()?,
+        aggregate_counterexample_rendered()?,
+    ])
+}
+
+pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
+    for report in reports {
+        report.assert_matches();
+    }
+}
+
+pub(crate) fn expected_totals() -> CorpusTotals {
+    CorpusTotals {
+        cases: 5,
+        proved: 2,
+        disproved: 3,
+        unknown: 0,
+        mismatches: 0,
+        lean_required: 1,
+        lean_required_available: 1,
+    }
+}
+
+pub(crate) fn tally(reports: &[CorpusCaseReport]) -> CorpusTotals {
+    let mut totals = CorpusTotals {
+        cases: reports.len(),
+        ..CorpusTotals::default()
+    };
+    for report in reports {
+        match report.actual {
+            ProofOutcomeSummary::Proved => totals.proved += 1,
+            ProofOutcomeSummary::Disproved => totals.disproved += 1,
+            ProofOutcomeSummary::Unknown { .. } => totals.unknown += 1,
+        }
+        if report.expected.label() != outcome_label(&report.actual) {
+            totals.mismatches += 1;
+        }
+        if report.lean_required {
+            totals.lean_required += 1;
+            if report.lean_available {
+                totals.lean_required_available += 1;
+            }
+        }
+    }
+    totals
+}
+
+pub(crate) fn render_json(reports: &[CorpusCaseReport]) -> String {
+    let totals = tally(reports);
+    let mut out = String::new();
+    writeln!(&mut out, "{{").expect("write string");
+    writeln!(&mut out, "  \"last_updated\": \"{LAST_UPDATED}\",").expect("write string");
+    writeln!(
+        &mut out,
+        "  \"generated_by\": \"cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json\","
+    )
+    .expect("write string");
+    write_json_summary(&mut out, &totals);
+    writeln!(&mut out, "  \"cases\": [").expect("write string");
+    for (index, report) in reports.iter().enumerate() {
+        write_json_case(&mut out, report, index + 1 == reports.len());
+    }
+    writeln!(&mut out, "  ]").expect("write string");
+    writeln!(&mut out, "}}").expect("write string");
+    out
+}
+
+pub(crate) fn render_markdown(reports: &[CorpusCaseReport]) -> String {
+    let totals = tally(reports);
+    let mut out = String::new();
+    writeln!(&mut out, "# axeyum-property SCOREBOARD\n").expect("write string");
+    writeln!(&mut out, "> **Auto-generated. Do not edit by hand.**").expect("write string");
+    writeln!(
+        &mut out,
+        "> Regenerate with `cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown docs/consumer-track/property/SCOREBOARD.md`.\n"
+    )
+    .expect("write string");
+    writeln!(&mut out, "Last updated: {LAST_UPDATED}.\n").expect("write string");
+    write_markdown_intro(&mut out);
+    write_markdown_summary(&mut out, &totals);
+    write_markdown_cases(&mut out, reports);
+    write_markdown_next_gates(&mut out);
+    out
+}
+
+fn write_json_summary(out: &mut String, totals: &CorpusTotals) {
+    writeln!(&mut *out, "  \"summary\": {{").expect("write string");
+    writeln!(&mut *out, "    \"cases\": {},", totals.cases).expect("write string");
+    writeln!(&mut *out, "    \"proved\": {},", totals.proved).expect("write string");
+    writeln!(&mut *out, "    \"disproved\": {},", totals.disproved).expect("write string");
+    writeln!(&mut *out, "    \"unknown\": {},", totals.unknown).expect("write string");
+    writeln!(&mut *out, "    \"mismatches\": {},", totals.mismatches).expect("write string");
+    writeln!(&mut *out, "    \"disagree\": {},", totals.mismatches).expect("write string");
+    writeln!(
+        &mut *out,
+        "    \"lean_required\": {},",
+        totals.lean_required
+    )
+    .expect("write string");
+    writeln!(
+        &mut *out,
+        "    \"lean_required_available\": {}",
+        totals.lean_required_available
+    )
+    .expect("write string");
+    writeln!(&mut *out, "  }},").expect("write string");
+}
+
+fn write_json_case(out: &mut String, report: &CorpusCaseReport, is_last: bool) {
+    writeln!(&mut *out, "    {{").expect("write string");
+    json_field(out, "id", report.id, true);
+    json_field(out, "tier", report.tier, true);
+    json_field(out, "workflow", report.workflow, true);
+    json_field(out, "expected", report.expected.label(), true);
+    json_field(out, "actual", outcome_label(&report.actual), true);
+    json_field(out, "checks", report.checks, true);
+    json_field(out, "baseline_analogue", report.baseline_analogue, true);
+    writeln!(
+        &mut *out,
+        "      \"lean_required\": {},",
+        report.lean_required
+    )
+    .expect("write string");
+    writeln!(
+        &mut *out,
+        "      \"lean_available\": {}",
+        report.lean_available
+    )
+    .expect("write string");
+    let suffix = if is_last { "" } else { "," };
+    writeln!(&mut *out, "    }}{suffix}").expect("write string");
+}
+
+fn write_markdown_intro(out: &mut String) {
+    out.push_str("This is the committed graduated SDK corpus gate for\n");
+    out.push_str(
+        "`axeyum-property`. It is not yet a broad external-vs-SOTA benchmark; it is the\n",
+    );
+    out.push_str(
+        "app-level honesty gate that prevents SDK claims from living only in ad hoc unit\n",
+    );
+    out.push_str(
+        "tests. External proptest/Kani-style comparison remains the next PROP.6 step.\n\n",
+    );
+    out.push_str("## Commands\n\n");
+    out.push_str("```sh\n");
+    out.push_str(
+        "CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture\n",
+    );
+    out.push_str("cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json\n");
+    out.push_str("cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown docs/consumer-track/property/SCOREBOARD.md\n");
+    out.push_str("```\n\n");
+    out.push_str("Machine-readable artifact: [`corpus.json`](corpus.json).\n\n");
+}
+
+fn write_markdown_summary(out: &mut String, totals: &CorpusTotals) {
+    out.push_str("## Summary\n\n");
+    out.push_str("| metric | value |\n|---|---:|\n");
+    writeln!(&mut *out, "| corpus cases | {} |", totals.cases).expect("write string");
+    writeln!(&mut *out, "| proved | {} |", totals.proved).expect("write string");
+    writeln!(&mut *out, "| disproved | {} |", totals.disproved).expect("write string");
+    writeln!(&mut *out, "| unknown | {} |", totals.unknown).expect("write string");
+    writeln!(
+        &mut *out,
+        "| mismatches / DISAGREE | {} |",
+        totals.mismatches
+    )
+    .expect("write string");
+    writeln!(
+        &mut *out,
+        "| Lean-required cases | {} |",
+        totals.lean_required
+    )
+    .expect("write string");
+    writeln!(
+        &mut *out,
+        "| Lean-required available | {} |",
+        totals.lean_required_available
+    )
+    .expect("write string");
+    out.push('\n');
+}
+
+fn write_markdown_cases(out: &mut String, reports: &[CorpusCaseReport]) {
+    out.push_str("## Cases\n\n");
+    out.push_str("| id | tier | workflow | expected | checks | baseline analogue |\n");
+    out.push_str("|---|---|---|---|---|---|\n");
+    for report in reports {
+        writeln!(
+            &mut *out,
+            "| `{}` | {} | {} | {} | {} | {} |",
+            report.id,
+            report.tier,
+            report.workflow,
+            report.expected.label(),
+            report.checks,
+            report.baseline_analogue
+        )
+        .expect("write string");
+    }
+    out.push('\n');
+}
+
+fn write_markdown_next_gates(out: &mut String) {
+    out.push_str("## Next Gates\n\n");
+    out.push_str("1. Add a baseline runner that compares the same property shapes against\n");
+    out.push_str("   proptest-style random/shrunk witnesses and Kani-style bounded assertions.\n");
+    out.push_str(
+        "2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,\n",
+    );
+    out.push_str("   assumptions, and certificate fragments.\n");
+    out.push_str("3. Keep `corpus.json` and this scoreboard generated from the shared corpus\n");
+    out.push_str("   module instead of hand-edited.\n");
+}
+
+fn json_field(out: &mut String, key: &str, value: &str, comma: bool) {
+    let suffix = if comma { "," } else { "" };
+    writeln!(
+        &mut *out,
+        "      \"{}\": \"{}\"{}",
+        json_escape(key),
+        json_escape(value),
+        suffix
+    )
+    .expect("write string");
+}
+
+fn json_escape(value: &str) -> String {
+    let mut out = String::new();
+    for ch in value.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            ch if ch.is_control() => {
+                write!(&mut out, "\\u{:04x}", ch as u32).expect("write string");
+            }
+            ch => out.push(ch),
+        }
+    }
+    out
+}
+
+fn outcome_label(outcome: &ProofOutcomeSummary) -> &'static str {
+    match outcome {
+        ProofOutcomeSummary::Proved => "proved",
+        ProofOutcomeSummary::Disproved => "disproved",
+        ProofOutcomeSummary::Unknown { .. } => "unknown",
+    }
+}
+
+fn bv_reflexive_proof() -> CorpusResult<CorpusCaseReport> {
+    let mut property = Property::new();
+    let x = property.bv::<8>("x")?;
+    let goal = x.equals(&mut property, x)?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+    let summary = certificate.summary();
+    assert!(matches!(summary.outcome, ProofOutcomeSummary::Proved));
+    let evidence = summary
+        .evidence
+        .as_ref()
+        .expect("proved corpus case should summarize checked evidence");
+    assert!(evidence.kind.starts_with("unsat-"));
+    assert_eq!(evidence.assertion_count, 1);
+    assert_eq!(summary.lean.status, LeanStatus::Available);
+    let lean_available = summary.lean.status == LeanStatus::Available;
+
+    Ok(CorpusCaseReport {
+        id: "sdk-bv-reflexive-proof",
+        tier: "P0",
+        workflow: "certificate success over fixed-width BV",
+        expected: ExpectedOutcome::Proved,
+        actual: summary.outcome,
+        checks: "checked evidence kind starts with `unsat-`; assertion count is stable; standalone Lean module is available",
+        baseline_analogue: "z3.rs/Kani assertion proof",
+        lean_required: true,
+        lean_available,
+    })
+}
+
+fn int_assumption_proof() -> CorpusResult<CorpusCaseReport> {
+    let mut property = Property::new();
+    let x = property.int("x")?;
+    let three = property.int_const(3);
+    let four = property.int_const(4);
+    let pre = x.le(&mut property, three)?;
+    property.assume(pre);
+    let goal = x.le(&mut property, four)?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+    let summary = certificate.summary();
+    assert!(matches!(summary.outcome, ProofOutcomeSummary::Proved));
+    assert!(
+        summary.evidence.is_some(),
+        "proved int corpus case should expose checked evidence"
+    );
+    let lean_available = summary.lean.status == LeanStatus::Available;
+
+    Ok(CorpusCaseReport {
+        id: "sdk-int-assumption-proof",
+        tier: "P1",
+        workflow: "integer implication under an SDK assumption",
+        expected: ExpectedOutcome::Proved,
+        actual: summary.outcome,
+        checks: "checked evidence is present through `ProofCertificate::summary()`",
+        baseline_analogue: "Kani precondition/assertion proof",
+        lean_required: false,
+        lean_available,
+    })
+}
+
+fn unsigned_bv_counterexample_minimized() -> CorpusResult<CorpusCaseReport> {
+    let mut property = Property::new();
+    let x = property.symbolic::<u8>("x")?;
+    let five = property.bv_const::<8>(5)?;
+    let goal = x.ule(&mut property, five)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a minimized counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    assert_eq!(property.concrete::<u8>(&x, model)?, Some(6));
+    assert_eq!(
+        property.counterexample(model)?.render_rust_let_bindings()?,
+        "let x: u8 = 0x06_u8; // BV8\n"
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-u8-minimized-counterexample",
+        tier: "P0",
+        workflow: "unsigned small failing input",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "minimized `u8` witness is `6`; Rust scalar replay binding renders deterministically",
+        baseline_analogue: "proptest-style shrinking",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn signed_bv_counterexample_minimized() -> CorpusResult<CorpusCaseReport> {
+    let mut property = Property::new();
+    let delta = property.symbolic::<i8>("delta")?;
+    let neg_three = property.bv_const::<8>(0xfd)?;
+    let two = property.bv_const::<8>(2)?;
+    let lower = delta.sge(&mut property, neg_three)?;
+    let upper = delta.sle(&mut property, two)?;
+    property.assume(lower);
+    property.assume(upper);
+    let goal = property.bool_const(false);
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a signed minimized counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    assert_eq!(property.concrete::<i8>(&delta, model)?, Some(-3));
+    assert_eq!(
+        property.counterexample(model)?.render_rust_let_bindings()?,
+        "let delta: i8 = -3_i8; // BV8 two's-complement\n"
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-i8-signed-minimized-counterexample",
+        tier: "P1",
+        workflow: "signed fixed-width input order",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "minimized signed witness is `-3`; two's-complement Rust binding preserves signed intent",
+        baseline_analogue: "Kani/proptest signed integer witness",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn aggregate_counterexample_rendered() -> CorpusResult<CorpusCaseReport> {
+    #[derive(Debug, Clone, Copy)]
+    struct TransferExpr {
+        enabled: Bool,
+        amount: Bv<16>,
+        balance: Bv<16>,
+    }
+
+    let mut property = Property::new();
+    let transfer = property.symbolic_struct("transfer", |fields| {
+        Ok(TransferExpr {
+            enabled: fields.field::<bool>("enabled")?,
+            amount: fields.field::<u16>("amount")?,
+            balance: fields.field::<u16>("balance")?,
+        })
+    })?;
+    let goal = transfer.amount.ule(&mut property, transfer.balance)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected an aggregate counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    assert_eq!(
+        property.concrete::<bool>(&transfer.enabled, model)?,
+        Some(false)
+    );
+    assert_eq!(property.concrete::<u16>(&transfer.amount, model)?, Some(1));
+    assert_eq!(property.concrete::<u16>(&transfer.balance, model)?, Some(0));
+    assert_eq!(
+        property
+            .counterexample(model)?
+            .render_rust_named_struct_let("transfer", "TransferInput", "transfer")?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    balance: transfer_balance,\n",
+            "};\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-aggregate-counterexample-render",
+        tier: "P1",
+        workflow: "struct-shaped symbolic input",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders",
+        baseline_analogue: "Kani struct harness / proptest `Arbitrary` struct",
+        lean_required: false,
+        lean_available: false,
+    })
+}

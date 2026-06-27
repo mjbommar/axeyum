@@ -2,6 +2,16 @@
 
 ## Current focus
 
+- **2026-06-27 — Generated corpus artifacts landed.**
+  The PROP.6 corpus is now shared by the integration test and the generator
+  example instead of duplicated in docs. `tests/support/corpus_cases.rs`
+  executes the five SDK workflows, `tests/corpus.rs` checks the live results
+  against committed JSON and Markdown snapshots, and
+  `examples/property_corpus_scoreboard.rs` regenerates both
+  `docs/consumer-track/property/corpus.json` and `SCOREBOARD.md`. This closes
+  the generated-artifact gap for the first SDK gate; external proptest/Kani-style
+  baselines and broader corpus coverage remain open.
+
 - **2026-06-27 — Graduated SDK corpus scoreboard first slice landed.**
   `crates/axeyum-property/tests/corpus.rs` is now the committed PROP.6 app-level
   corpus gate, with a matching `SCOREBOARD.md`. The gate covers five graduated
@@ -125,6 +135,10 @@
 - `cargo fmt --all --check`
 - `git diff --check`
 - `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`
+- `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`
+- `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`
+- `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`
+- `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`
 - `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`
 - `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`
 - `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`
@@ -137,4 +151,4 @@
 2. Extend counterexample-to-`#[test]` output for frontend-specific replay
    bodies and nested/domain aggregate shapes.
 3. Broaden the SDK property corpus and add the external proptest/Kani-style
-   baseline comparison plus generated scoreboard artifacts.
+   baseline comparison.

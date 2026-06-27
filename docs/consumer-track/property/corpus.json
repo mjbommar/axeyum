@@ -1,0 +1,71 @@
+{
+  "last_updated": "2026-06-27",
+  "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
+  "summary": {
+    "cases": 5,
+    "proved": 2,
+    "disproved": 3,
+    "unknown": 0,
+    "mismatches": 0,
+    "disagree": 0,
+    "lean_required": 1,
+    "lean_required_available": 1
+  },
+  "cases": [
+    {
+      "id": "sdk-bv-reflexive-proof",
+      "tier": "P0",
+      "workflow": "certificate success over fixed-width BV",
+      "expected": "proved",
+      "actual": "proved",
+      "checks": "checked evidence kind starts with `unsat-`; assertion count is stable; standalone Lean module is available",
+      "baseline_analogue": "z3.rs/Kani assertion proof",
+      "lean_required": true,
+      "lean_available": true
+    },
+    {
+      "id": "sdk-int-assumption-proof",
+      "tier": "P1",
+      "workflow": "integer implication under an SDK assumption",
+      "expected": "proved",
+      "actual": "proved",
+      "checks": "checked evidence is present through `ProofCertificate::summary()`",
+      "baseline_analogue": "Kani precondition/assertion proof",
+      "lean_required": false,
+      "lean_available": true
+    },
+    {
+      "id": "sdk-u8-minimized-counterexample",
+      "tier": "P0",
+      "workflow": "unsigned small failing input",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "minimized `u8` witness is `6`; Rust scalar replay binding renders deterministically",
+      "baseline_analogue": "proptest-style shrinking",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-i8-signed-minimized-counterexample",
+      "tier": "P1",
+      "workflow": "signed fixed-width input order",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "minimized signed witness is `-3`; two's-complement Rust binding preserves signed intent",
+      "baseline_analogue": "Kani/proptest signed integer witness",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-aggregate-counterexample-render",
+      "tier": "P1",
+      "workflow": "struct-shaped symbolic input",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders",
+      "baseline_analogue": "Kani struct harness / proptest `Arbitrary` struct",
+      "lean_required": false,
+      "lean_available": false
+    }
+  ]
+}
