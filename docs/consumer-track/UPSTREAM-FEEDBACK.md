@@ -55,10 +55,10 @@ Last reconciled with `main`: 2026-06-27.
   reducible symbolic-address read-over-write over store chains: the warm solver
   encodes the simplified BV term while retaining the original memory term for
   replay and assumption-core reporting. A first retained select-congruence slice
-  also landed for plain reads over BV-index/BV-element array symbols:
-  `select(a,i)` is abstracted to an internal warm BV variable, same-array reads
-  get scoped congruence lemmas, and SAT models are projected back into concrete
-  array entries before replay. A scalar UF-app sibling now handles Bool/BV
+  also landed for plain reads over BV-indexed array symbols whose elements are
+  Bool or BitVec: `select(a,i)` is abstracted to an internal warm scalar
+  variable, same-array reads get scoped congruence lemmas, and SAT models are
+  projected back into concrete array entries before replay. A scalar UF-app sibling now handles Bool/BV
   applications: `f(args)` is abstracted to an internal warm variable,
   same-function applications get scoped congruence lemmas, and SAT models are
   projected back into concrete `FuncValue` entries before replay.
@@ -66,9 +66,9 @@ Last reconciled with `main`: 2026-06-27.
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
   `SymbolicExecutor::branch` now preflights simplified fork conditions against
-  the retained select/UF abstraction coverage too, so plain BV-array-symbol
-  reads and scalar Bool/BV UF calls stay on warm one-shot assumptions instead
-  of jumping straight to the dispatcher.
+  the retained select/UF abstraction coverage too, so plain BV-indexed
+  Bool/BV array-symbol reads and scalar Bool/BV UF calls stay on warm one-shot
+  assumptions instead of jumping straight to the dispatcher.
   Default CFG exploration now uses that auto route too; `memory_aware=true`
   remains the explicit force-dispatch setting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
@@ -77,7 +77,7 @@ Last reconciled with `main`: 2026-06-27.
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
-  reads, plain symbolic-base BV-array loads, scalar Bool/BV UF calls,
+  reads, plain symbolic-base Bool/BV array loads, scalar Bool/BV UF calls,
   helper-level load branches, reducible CFG memory branches, and fork queries,
   but general array/UF work still rebuilds through the dispatcher instead of
   retaining warm learned clauses.

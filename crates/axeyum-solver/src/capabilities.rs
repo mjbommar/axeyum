@@ -885,8 +885,8 @@ pub const CAPABILITIES: &[Capability] = &[
                   misses, constant-array reads, and reducible array-valued ite reads can stay \
                   warm; reducible symbolic-address conditional ROW over store chains can also \
                   stay warm with original-term replay/core reporting; select reads over \
-                  BV-array symbols abstract to retained warm BV variables with scoped \
-                  select-congruence lemmas and replay-projected array models; scalar Bool/BV \
+                  BV-indexed Bool/BV array symbols abstract to retained warm scalar variables \
+                  with scoped select-congruence lemmas and replay-projected array models; scalar Bool/BV \
                   uninterpreted-function applications abstract to retained warm variables with \
                   scoped congruence lemmas and replay-projected function interpretations; warm \
                   lazy arrays/UF = ADR-0030 future work)",

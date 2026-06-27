@@ -18,8 +18,8 @@
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
 use axeyum_ir::{
-    ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, IrError, Op, Sort, SymbolId,
-    TermArena, TermId, TermNode, Value, eval, well_founded_default,
+    ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
+    SymbolId, TermArena, TermId, TermNode, Value, eval, well_founded_default,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -81,7 +81,7 @@ struct Frame {
     /// here and decided by [`IncrementalBvSolver::check_with_memory`] via the
     /// full dispatcher. Warm lazy theory incrementality is ADR-0030 future work.
     deferred_assertions: Vec<TermId>,
-    /// Array reads abstracted into warm BV symbols for this frame's encoded
+    /// Array reads abstracted into warm scalar symbols for this frame's encoded
     /// assertions. These drive model projection before original-term replay.
     warm_array_selects: Vec<TermId>,
     /// Uninterpreted-function applications abstracted into warm scalar symbols.
@@ -105,7 +105,8 @@ struct WarmArraySelect {
     value_symbol: SymbolId,
     value_term: TermId,
     index_width: u32,
-    element_width: u32,
+    element: ArraySortKey,
+    element_sort: Sort,
 }
 
 #[derive(Debug)]
@@ -832,13 +833,16 @@ impl IncrementalBvSolver {
         };
         let Sort::Array {
             index: ArraySortKey::BitVec(index_width),
-            element: ArraySortKey::BitVec(element_width),
+            element,
         } = arena.sort_of(*array)
         else {
             return None;
         };
-        if arena.sort_of(*index) != Sort::BitVec(index_width)
-            || arena.sort_of(term) != Sort::BitVec(element_width)
+        if !is_warm_array_element_sort(element) {
+            return None;
+        }
+        let element_sort = element.to_sort();
+        if arena.sort_of(*index) != Sort::BitVec(index_width) || arena.sort_of(term) != element_sort
         {
             return None;
         }
@@ -848,7 +852,8 @@ impl IncrementalBvSolver {
             value_symbol: *array_symbol,
             value_term: term,
             index_width,
-            element_width,
+            element,
+            element_sort,
         })
     }
 
@@ -864,7 +869,7 @@ impl IncrementalBvSolver {
         let base_name = format!("!axeyum_warm_select_{}", term.index());
         let name = fresh_internal_symbol_name(arena, &base_name);
         let value_symbol = arena
-            .declare(&name, Sort::BitVec(select.element_width))
+            .declare(&name, select.element_sort)
             .map_err(|error| map_ir_error(&error))?;
         let value_term = arena.var(value_symbol);
         self.internal_symbols.insert(value_symbol);
@@ -1230,61 +1235,19 @@ impl IncrementalBvSolver {
             let Some(select) = self.warm_array_selects.get(&select_term).copied() else {
                 continue;
             };
-            let select_value = match assignment
-                .get(select.value_symbol)
-                .or_else(|| well_founded_default(arena, Sort::BitVec(select.element_width)))
-            {
-                Some(Value::Bv { width, value }) if width == select.element_width => value,
-                Some(value) => {
-                    return Err(UnknownReason {
-                        kind: UnknownKind::Other,
-                        detail: format!(
-                            "warm array select abstraction #{} had non-BV value {value}",
-                            select_term.index()
-                        ),
-                    });
-                }
-                None => {
-                    return Err(UnknownReason {
-                        kind: UnknownKind::Other,
-                        detail: format!(
-                            "warm array select abstraction #{} had no default value",
-                            select_term.index()
-                        ),
-                    });
-                }
-            };
+            let select_value =
+                warm_array_select_abstraction_value(arena, assignment, select_term, select)?;
             let model_assignment =
                 assignment_with_internal(arena, model, assignment, &self.internal_symbols);
-            let index_value = match eval(arena, select.index, &model_assignment) {
-                Ok(Value::Bv { width, value }) if width == select.index_width => value,
-                Ok(value) => {
-                    return Err(UnknownReason {
-                        kind: UnknownKind::Other,
-                        detail: format!(
-                            "warm array select index #{} evaluated to non-matching value {value}",
-                            select.index.index()
-                        ),
-                    });
-                }
-                Err(error) => {
-                    return Err(UnknownReason {
-                        kind: UnknownKind::Other,
-                        detail: format!(
-                            "warm array select index #{} could not be evaluated: {error}",
-                            select.index.index()
-                        ),
-                    });
-                }
-            };
-            let array = match model.get(select.array_symbol) {
-                Some(Value::Array(array)) => array,
-                _ => ArrayValue::constant(select.index_width, select.element_width, 0),
-            };
-            model.set(
-                select.array_symbol,
-                Value::Array(array.store(index_value, select_value)),
-            );
+            let index_bits = warm_array_select_index_bits(arena, &model_assignment, select)?;
+            let array_value = warm_array_select_projected_array(
+                select_term,
+                select,
+                &select_value,
+                index_bits,
+                model,
+            )?;
+            model.set(select.array_symbol, array_value);
         }
         Ok(())
     }
@@ -1592,6 +1555,10 @@ fn is_warm_scalar_sort(sort: Sort) -> bool {
     matches!(sort, Sort::Bool | Sort::BitVec(1..=128))
 }
 
+fn is_warm_array_element_sort(sort: ArraySortKey) -> bool {
+    matches!(sort, ArraySortKey::Bool | ArraySortKey::BitVec(_))
+}
+
 fn warm_abstraction_covers_term(
     arena: &TermArena,
     term: TermId,
@@ -1671,13 +1638,14 @@ fn supported_warm_array_select_shape(arena: &TermArena, term: TermId) -> bool {
     };
     let Sort::Array {
         index: ArraySortKey::BitVec(index_width),
-        element: ArraySortKey::BitVec(element_width),
+        element,
     } = arena.sort_of(*array)
     else {
         return false;
     };
-    arena.sort_of(*index) == Sort::BitVec(index_width)
-        && arena.sort_of(term) == Sort::BitVec(element_width)
+    is_warm_array_element_sort(element)
+        && arena.sort_of(*index) == Sort::BitVec(index_width)
+        && arena.sort_of(term) == element.to_sort()
 }
 
 fn supported_warm_uf_app_shape(arena: &TermArena, term: TermId) -> bool {
@@ -1735,6 +1703,162 @@ fn conjunction_of_equalities(
         });
     }
     Ok(conjunct)
+}
+
+fn warm_array_select_abstraction_value(
+    arena: &TermArena,
+    assignment: &Assignment,
+    select_term: TermId,
+    select: WarmArraySelect,
+) -> Result<Value, UnknownReason> {
+    let value = assignment
+        .get(select.value_symbol)
+        .or_else(|| well_founded_default(arena, select.element_sort))
+        .ok_or_else(|| UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm array select abstraction #{} had no default value",
+                select_term.index()
+            ),
+        })?;
+    if value.sort() != select.element_sort {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm array select abstraction #{} had value sort {}, expected {}",
+                select_term.index(),
+                value.sort(),
+                select.element_sort
+            ),
+        });
+    }
+    Ok(value)
+}
+
+fn warm_array_select_index_bits(
+    arena: &TermArena,
+    assignment: &Assignment,
+    select: WarmArraySelect,
+) -> Result<u128, UnknownReason> {
+    match eval(arena, select.index, assignment) {
+        Ok(Value::Bv { width, value }) if width == select.index_width => Ok(value),
+        Ok(value) => Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm array select index #{} evaluated to non-matching value {value}",
+                select.index.index()
+            ),
+        }),
+        Err(error) => Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm array select index #{} could not be evaluated: {error}",
+                select.index.index()
+            ),
+        }),
+    }
+}
+
+fn warm_array_select_projected_array(
+    select_term: TermId,
+    select: WarmArraySelect,
+    select_value: &Value,
+    index_bits: u128,
+    model: &Model,
+) -> Result<Value, UnknownReason> {
+    match select.element {
+        ArraySortKey::BitVec(_) => {
+            project_warm_bv_array_select(select_term, select, select_value, index_bits, model)
+        }
+        ArraySortKey::Bool => {
+            project_warm_bool_array_select(select_term, select, select_value, index_bits, model)
+        }
+        other => Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!("unsupported warm array element sort {other}"),
+        }),
+    }
+}
+
+fn project_warm_bv_array_select(
+    select_term: TermId,
+    select: WarmArraySelect,
+    select_value: &Value,
+    index_bits: u128,
+    model: &Model,
+) -> Result<Value, UnknownReason> {
+    let ArraySortKey::BitVec(element_width) = select.element else {
+        unreachable!("caller checked BV element sort")
+    };
+    let (width, value) = match select_value {
+        Value::Bv { width, value } => (*width, *value),
+        _ => {
+            return Err(UnknownReason {
+                kind: UnknownKind::Other,
+                detail: format!(
+                    "warm BV-array select abstraction #{} had non-BV value",
+                    select_term.index()
+                ),
+            });
+        }
+    };
+    if width != element_width {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm BV-array select abstraction #{} had width {width}, expected {element_width}",
+                select_term.index()
+            ),
+        });
+    }
+    let array = match model.get(select.array_symbol) {
+        Some(Value::Array(array))
+            if array.index_width() == select.index_width
+                && array.element_width() == element_width =>
+        {
+            array
+        }
+        _ => ArrayValue::constant(select.index_width, element_width, 0),
+    };
+    Ok(Value::Array(array.store(index_bits, value)))
+}
+
+fn project_warm_bool_array_select(
+    select_term: TermId,
+    select: WarmArraySelect,
+    select_value: &Value,
+    index_bits: u128,
+    model: &Model,
+) -> Result<Value, UnknownReason> {
+    if !matches!(select_value, Value::Bool(_)) {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm Bool-array select abstraction #{} had non-Bool value",
+                select_term.index()
+            ),
+        });
+    }
+    let index_value = Value::Bv {
+        width: select.index_width,
+        value: index_bits,
+    };
+    let array = match model.get(select.array_symbol) {
+        Some(Value::GenericArray(array))
+            if array.index_sort() == ArraySortKey::BitVec(select.index_width)
+                && array.element_sort() == ArraySortKey::Bool =>
+        {
+            array
+        }
+        _ => GenericArrayValue::constant(
+            ArraySortKey::BitVec(select.index_width),
+            ArraySortKey::Bool,
+            Value::Bool(false),
+        ),
+    };
+    Ok(Value::GenericArray(
+        array.store(index_value, select_value.clone()),
+    ))
 }
 
 fn assignment_with_internal(

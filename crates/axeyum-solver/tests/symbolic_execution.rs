@@ -2018,6 +2018,63 @@ fn warm_assert_abstracts_select_over_array_symbol() {
 }
 
 #[test]
+fn warm_assert_abstracts_bool_select_over_array_symbol() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_bool_select_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::Bool,
+            },
+        )
+        .unwrap();
+    let idx_sym = arena
+        .declare("warm_bool_select_idx", Sort::BitVec(8))
+        .unwrap();
+    let mem = arena.var(mem_sym);
+    let idx = arena.var(idx_sym);
+    let assertion = arena.select(mem, idx).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .expect("select over a BV-indexed Bool array symbol should abstract to a warm Bool term");
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the encoded Bool-select abstraction should be array-free"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "Bool-select abstraction should avoid the one-shot memory dispatcher"
+    );
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("warm Bool-select abstraction should be satisfiable");
+    };
+    assert_eq!(
+        eval(&arena, assertion, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected Bool-array model must replay the original select assertion"
+    );
+    assert!(
+        matches!(
+            model.get(mem_sym),
+            Some(Value::GenericArray(array))
+                if array.index_sort() == ArraySortKey::BitVec(8)
+                    && array.element_sort() == ArraySortKey::Bool
+        ),
+        "Bool-valued array projection should use the generic array model path"
+    );
+    assert!(
+        model
+            .iter()
+            .all(|(symbol, _)| !arena.symbol(symbol).0.starts_with("!axeyum_warm_select_")),
+        "internal select abstraction symbols must not leak into public models"
+    );
+}
+
+#[test]
 fn warm_array_select_congruence_refutes_equal_index_conflict() {
     let mut arena = TermArena::new();
     let mem_sym = arena
@@ -2055,6 +2112,49 @@ fn warm_array_select_congruence_refutes_equal_index_conflict() {
     assert!(
         !solver.has_deferred_theory_assertions(),
         "select-congruence conflicts should stay on the warm path"
+    );
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
+fn warm_bool_array_select_congruence_refutes_equal_index_conflict() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_bool_congruence_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::Bool,
+            },
+        )
+        .unwrap();
+    let i_sym = arena
+        .declare("warm_bool_congruence_i", Sort::BitVec(8))
+        .unwrap();
+    let j_sym = arena
+        .declare("warm_bool_congruence_j", Sort::BitVec(8))
+        .unwrap();
+    let mem = arena.var(mem_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let read_i = arena.select(mem, i).unwrap();
+    let read_j = arena.select(mem, j).unwrap();
+    let not_read_j = arena.not(read_j).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, read_i)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_index)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, not_read_j)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "Bool-select congruence conflicts should stay on the warm path"
     );
     assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
 }

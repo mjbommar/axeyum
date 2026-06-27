@@ -6,16 +6,41 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-27 — Warm Bool-array select-congruence admission.**
+  The retained warm array-select abstraction now covers BV-indexed arrays whose
+  element sort is Bool as well as BitVec. Bool-array reads are abstracted to
+  internal warm Bool variables, same-array reads share the existing scoped
+  select-congruence lemmas, and SAT models project back through
+  `GenericArrayValue` before original-term replay. This keeps predicate/set-like
+  symbolic-base reads on the warm route for committed assertions and one-shot
+  branch assumptions without broadening the boundary: non-BV indices,
+  non-Bool/BV elements, surviving stores, extensionality, and full retained
+  lazy-array theory-clause reuse remain open. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_assert_abstracts_bool_select_over_array_symbol -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution warm_bool_array_select_congruence_refutes_equal_index_conflict -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_bool_array_select_auto_stays_warm -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test symbolic_execution -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test incremental -j1 -- --nocapture`;
+  `UPDATE_CAPABILITY_MATRIX=1 CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test capabilities -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --no-deps -j1`;
+  `./scripts/check-links.sh`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
+
 - **Session 2026-06-27 — Warm branch routing recognizes retained select/UF slices.**
   `SymbolicExecutor::branch` now uses a pure retained-abstraction preflight
   instead of treating every post-simplification `select` or `Apply` as
-  dispatcher-only. One-shot branch queries over plain BV-array-symbol reads and
-  scalar Bool/BV UF applications now encode warm assumptions, scoped congruence
-  lemmas, and replay projections through the same retained abstraction route as
-  `assume_auto`, while unsupported array/UF shapes still fall back to the
-  memory/theory dispatcher. Focused regressions assert both true/false branch
-  feasibility, warm CNF growth, and no deferred-theory persistence for BV-array
-  select and scalar UF branch conditions. Verification passed:
+  dispatcher-only. One-shot branch queries over plain BV-indexed Bool/BV
+  array-symbol reads and scalar Bool/BV UF applications now encode warm
+  assumptions, scoped congruence lemmas, and replay projections through the same
+  retained abstraction route as `assume_auto`, while unsupported array/UF shapes
+  still fall back to the memory/theory dispatcher. Focused regressions assert
+  both true/false branch feasibility, warm CNF growth, and no deferred-theory
+  persistence for Bool/BV array-select and scalar UF branch conditions.
+  Verification passed:
   `cargo fmt --all --check`;
   `git diff --check`;
   `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib symexec::tests::branch_over_scalar_uf_auto_stays_warm -j1 -- --nocapture`;
@@ -50,18 +75,19 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   `./scripts/check-links.sh`;
   `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib -j1 -- --nocapture`.
 
-- **Session 2026-06-27 — Warm BV-array select-congruence admission.**
+- **Session 2026-06-27 — Warm BV-valued array select-congruence admission.**
   `IncrementalBvSolver::assert_simplifying_memory` and the simplifying one-shot
-  assumption path now keep plain reads over BV-index/BV-element array symbols on
-  the warm solver: `select(a, i)` is abstracted to a retained internal BV
+  assumption path now keep plain reads over BV-indexed, BV-valued array symbols
+  on the warm solver: `select(a, i)` is abstracted to a retained internal BV
   variable, same-array read pairs receive selector-scoped congruence lemmas, and
   SAT models are projected back into concrete array entries before original-term
   replay. This moves symbolic-base helper loads and symbolic-address ROW tails
   whose remaining base read is a memory symbol out of the one-shot dispatcher.
   Internal abstraction symbols are filtered from public models; assumption cores
   still report only user assumptions. This advances U6/P4.1, but does not close
-  it: arbitrary array terms, extensionality, generic arrays, surviving stores,
-  UF congruence, and full retained lazy-array/UF theory-clause reuse remain open.
+  it: arbitrary array terms, extensionality, non-scalar array component sorts,
+  surviving stores, UF congruence, and full retained lazy-array/UF theory-clause
+  reuse remain open.
   Verification passed:
   `cargo fmt --all --check`;
   `git diff --check`;
@@ -8313,21 +8339,28 @@ plan is built and committed on the current branch:
 ### Track 4 — Use Cases & Frontend
 | Phase | Title | Status |
 |---|---|---|
-| P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | WIP — committed assertions over arrays/UFs are now scoped as deferred theory assertions and decided by `check_with_memory` through the full pure-Rust dispatcher; one-shot branch assumptions over arrays/UFs are supported by `check_assuming_with_memory` / `check_assuming_core_with_memory`, with a coarse-but-sound full-assumption core on UNSAT. `IncrementalBvSolver` exposes deferred-theory introspection and now admits a narrow warm-safe memory slice: same-index hits collapse to the stored value, literal-distinct index misses skip the unrelated store so concrete-address store chains can expose inner same-index read-backs, constant-array reads collapse to the default value, reads over array-valued `ite`s distribute to scalar branch reads, and undecided symbolic-address ROW expands to a scalar `ite` that stays warm when the base read reduces away. Plain `select(a,i)` reads over BV-index/BV-element array symbols now abstract to retained warm BV variables with scoped same-array select-congruence lemmas and replay-projected array models, covering symbolic-base helper loads and ROW tails whose remaining base read is a memory symbol. Scalar Bool/BV uninterpreted-function applications now abstract to retained warm variables with scoped same-function congruence lemmas and replay-projected `FuncValue` entries, covering keccak-style scalar UF branch constraints. Committed assertions and one-shot assumptions encode the simplified/abstracted pure-BV term while retaining the original memory/UF term for replay and, for assumptions, original-term core reporting. `SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate calls plus auto route-selection helpers, `assume_auto` and `branch` use the warm memory simplifier/abstraction before deciding whether the one-shot dispatcher is needed, and `SymbolicMemory` provides typed load/store helpers plus compact read-specific write-log helpers over array-backed memory states that skip literal-distinct writes, elide exact-hit guards, and preserve later symbolic aliases. This is a consumer-facing one-shot fallback plus a narrow warm memory/select-congruence/UF-congruence admission, not the final warm lazy-array/UF incremental engine: remaining deferred theory checks rebuild through `check_auto`, while the warm BV path still refuses active deferred theories rather than silently ignoring them. Remaining: true warm lazy arrays/UF with learned theory clauses, path-condition CFG/import frontends, and deeper memory model helpers |
-| P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads, reducible symbolic-address ROW over store chains, plain symbolic-base BV-array loads via retained select-congruence abstraction, scalar Bool/BV UF applications via retained congruence abstraction, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
+| P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | WIP — committed assertions over arrays/UFs are now scoped as deferred theory assertions and decided by `check_with_memory` through the full pure-Rust dispatcher; one-shot branch assumptions over arrays/UFs are supported by `check_assuming_with_memory` / `check_assuming_core_with_memory`, with a coarse-but-sound full-assumption core on UNSAT. `IncrementalBvSolver` exposes deferred-theory introspection and now admits a narrow warm-safe memory slice: same-index hits collapse to the stored value, literal-distinct index misses skip the unrelated store so concrete-address store chains can expose inner same-index read-backs, constant-array reads collapse to the default value, reads over array-valued `ite`s distribute to scalar branch reads, and undecided symbolic-address ROW expands to a scalar `ite` that stays warm when the base read reduces away. Plain `select(a,i)` reads over BV-indexed array symbols whose elements are Bool or BitVec now abstract to retained warm scalar variables with scoped same-array select-congruence lemmas and replay-projected array models, covering symbolic-base helper loads, predicate/set reads, and ROW tails whose remaining base read is a memory symbol. Scalar Bool/BV uninterpreted-function applications now abstract to retained warm variables with scoped same-function congruence lemmas and replay-projected `FuncValue` entries, covering keccak-style scalar UF branch constraints. Committed assertions and one-shot assumptions encode the simplified/abstracted pure-BV term while retaining the original memory/UF term for replay and, for assumptions, original-term core reporting. `SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate calls plus auto route-selection helpers, `assume_auto` and `branch` use the warm memory simplifier/abstraction before deciding whether the one-shot dispatcher is needed, and `SymbolicMemory` provides typed load/store helpers plus compact read-specific write-log helpers over array-backed memory states that skip literal-distinct writes, elide exact-hit guards, and preserve later symbolic aliases. This is a consumer-facing one-shot fallback plus a narrow warm memory/select-congruence/UF-congruence admission, not the final warm lazy-array/UF incremental engine: remaining deferred theory checks rebuild through `check_auto`, while the warm BV path still refuses active deferred theories rather than silently ignoring them. Remaining: true warm lazy arrays/UF with learned theory clauses, path-condition CFG/import frontends, and deeper memory model helpers |
+| P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads, reducible symbolic-address ROW over store chains, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction, scalar Bool/BV UF applications via retained congruence abstraction, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
 
+- **2026-06-27** — **Warm Bool-array select-congruence admission.**
+  Extended retained warm array-select abstraction from BV-valued arrays to
+  BV-indexed Bool-valued arrays. Bool reads now become internal warm Bool
+  variables, same-array congruence lemmas remain scoped, and replay projection
+  writes touched entries through `GenericArrayValue`, keeping predicate/set-like
+  symbolic-base reads warm for committed assertions and one-shot branches.
+
 - **2026-06-27** — **Warm branch routing recognizes retained select/UF slices.**
   `SymbolicExecutor::branch` now preflights simplified fork conditions against
   the retained select/UF abstraction coverage before falling back to the memory
-  dispatcher. One-shot fork queries over plain BV-array-symbol reads and scalar
-  Bool/BV UF apps now encode warm assumptions, scoped congruence lemmas, and
-  replay projections instead of conservatively rebuilding through
-  `check_with_memory`.
+  dispatcher. One-shot fork queries over plain BV-indexed Bool/BV array-symbol
+  reads and scalar Bool/BV UF apps now encode warm assumptions, scoped
+  congruence lemmas, and replay projections instead of conservatively rebuilding
+  through `check_with_memory`.
 
 - **2026-06-27** — **Warm scalar UF congruence admission.**
   Added retained warm abstraction for scalar Bool/BV UF applications in the
@@ -8337,12 +8370,13 @@ plan is built and committed on the current branch:
   keccak-style scalar UF branch constraints warm for committed assertions and
   one-shot assumptions; full lazy arrays/UF remain U6/P4.1 work.
 
-- **2026-06-27** — **Warm BV-array select-congruence admission.**
+- **2026-06-27** — **Warm BV-valued array select-congruence admission.**
   Added a first retained warm array-read abstraction for the incremental memory
-  path: BV-array-symbol reads become internal BV variables, same-array select
-  pairs get scoped congruence lemmas, and SAT models are projected back to array
-  entries before original-term replay. Symbolic-base helper loads and reducible
-  ROW tails can now stay warm; full lazy arrays/UF remain U6/P4.1 work.
+  path: BV-indexed, BV-valued array-symbol reads become internal BV variables,
+  same-array select pairs get scoped congruence lemmas, and SAT models are
+  projected back to array entries before original-term replay. Symbolic-base
+  helper loads and reducible ROW tails can now stay warm; full lazy arrays/UF
+  remain U6/P4.1 work.
 
 - **2026-06-27** — **BV Pareto robustness and signed mixed-direction coverage.**
   Hardened `optimize_bv_pareto` so malformed/out-of-fragment objective values

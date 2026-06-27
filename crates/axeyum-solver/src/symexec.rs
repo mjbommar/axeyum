@@ -1439,6 +1439,49 @@ mod tests {
     }
 
     #[test]
+    fn branch_over_bool_array_select_auto_stays_warm() {
+        let mut arena = TermArena::new();
+        let mem_sym = arena
+            .declare(
+                "branch_warm_bool_select_mem",
+                Sort::Array {
+                    index: ArraySortKey::BitVec(8),
+                    element: ArraySortKey::Bool,
+                },
+            )
+            .unwrap();
+        let idx = arena.bv_var("branch_warm_bool_select_idx", 8).unwrap();
+        let mem = arena.var(mem_sym);
+        let cond = arena.select(mem, idx).unwrap();
+
+        let mut exec = SymbolicExecutor::new();
+        let clauses_before = exec.solver.encoded_clause_count();
+        let branch = exec
+            .branch(&mut arena, cond)
+            .expect("branch should auto-route a Bool-array select condition");
+        let clauses_after = exec.solver.encoded_clause_count();
+
+        assert!(
+            branch.if_true.is_feasible(),
+            "Bool-array select branch then-direction should be feasible, got {:?}",
+            branch.if_true
+        );
+        assert!(
+            branch.if_false.is_feasible(),
+            "Bool-array select branch else-direction should be feasible, got {:?}",
+            branch.if_false
+        );
+        assert!(
+            clauses_after > clauses_before,
+            "Bool-array select branch should encode warm one-shot assumptions instead of using the dispatcher"
+        );
+        assert!(
+            !exec.solver.has_deferred_theory_assertions(),
+            "one-shot Bool-select branch queries must not persist as deferred theory assertions"
+        );
+    }
+
+    #[test]
     fn infeasible_nested_branch_is_pruned() {
         // Symbolic program: if (x > 10) { if (x < 5) { BUG } }. The inner branch
         // (x > 10 ∧ x < 5) is infeasible and must be reported as a dead path.
