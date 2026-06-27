@@ -2025,6 +2025,18 @@ against competitor source, are now binding:
      Therefore the next AUFLIA move is an OR-236-specific diagnostic for both
      false branch literals and their scalar side effects, not another generic
      scalar-direction heuristic.
+     **OR-236 SCALAR SIDE-EFFECT DIAGNOSTICS LANDED (2026-06-26):** replay OR
+     notes now include bounded false-literal details for the selected best
+     branch plus simulated direct scalar choices and their replay side effects.
+     On `bug337`, OR 236 branch 0 is now explicit: false scalar term **12950**
+     (`510 = 2609`, values **3 vs 1**) can be locally repaired by setting
+     symbol **460** from term **510** to **3**, but the next blocker becomes
+     term **2611** (`2609 = 2610`, **3 vs 1**) with **branch_false=1** and
+     **total_false=2**. The sibling false scalar term **12951** (`510 = 2613`,
+     **3 vs 2**) symmetrically drives blocker **2615** (`2613 = 2614`,
+     **3 vs 2**) with the same counts. The next AUFLIA move is a paired
+     repair/diagnostic over those sibling scalar chains, or a proof that this
+     late OR-236 branch must be handled by a stronger combined repair.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
