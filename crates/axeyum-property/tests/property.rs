@@ -33,6 +33,25 @@ fn ergonomic_equals_aliases_and_boolean_folds_stay_fallible() -> TestResult {
     let conjunction = property.all([bv_reflexive, bv_ordered, int_reflexive, bool_reflexive])?;
     assert_eq!(property.arena().sort_of(conjunction.term()), Sort::Bool);
 
+    let one = property.bv_const::<8>(1)?;
+    let x_plus_one = property.bv_add(x, one)?;
+    let x_plus_one_again = x.add(&mut property, one)?;
+    let bv_aliases_agree = property.bv_equals(x_plus_one, x_plus_one_again)?;
+    let int_zero = property.int_const(0);
+    let n_plus_zero = property.int_add(n, int_zero)?;
+    let int_alias_identity = property.int_equals(n_plus_zero, n)?;
+    let bool_alias_identity = property.bool_implies(flag, flag)?;
+    let not_flag = property.bool_not(flag)?;
+    let excluded_middle = property.bool_or(flag, not_flag)?;
+    let alias_goal = property.all([
+        bv_aliases_agree,
+        int_alias_identity,
+        bool_alias_identity,
+        excluded_middle,
+    ])?;
+    let alias_outcome = property.prove(alias_goal)?;
+    assert!(matches!(alias_outcome, ProofOutcome::Proved(_)));
+
     let empty_all = property.all(std::iter::empty::<Bool>())?;
     let empty_any = property.any(std::iter::empty::<Bool>())?;
     assert_eq!(property.arena().sort_of(empty_all.term()), Sort::Bool);

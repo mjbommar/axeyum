@@ -73,6 +73,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
     Ok(vec![
         bv_reflexive_proof()?,
         int_assumption_proof()?,
+        expression_builder_aliases_proved()?,
         unsigned_bv_counterexample_minimized()?,
         signed_bv_counterexample_minimized()?,
         aggregate_counterexample_rendered()?,
@@ -92,8 +93,8 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 10,
-        proved: 3,
+        cases: 11,
+        proved: 4,
         disproved: 7,
         unknown: 0,
         mismatches: 0,
@@ -391,6 +392,43 @@ fn int_assumption_proof() -> CorpusResult<CorpusCaseReport> {
         actual: summary.outcome,
         checks: "checked evidence is present through `ProofCertificate::summary()`",
         baseline_analogue: "Kani precondition/assertion proof",
+        lean_required: false,
+        lean_available,
+    })
+}
+
+fn expression_builder_aliases_proved() -> CorpusResult<CorpusCaseReport> {
+    let mut property = Property::new();
+    let x = property.bv::<8>("x")?;
+    let n = property.int("n")?;
+    let flag = property.bool("flag")?;
+
+    let bv_zero = property.bv_const::<8>(0)?;
+    let x_plus_zero = property.bv_add(x, bv_zero)?;
+    let bv_identity = property.bv_equals(x_plus_zero, x)?;
+    let int_zero = property.int_const(0);
+    let n_plus_zero = property.int_add(n, int_zero)?;
+    let int_identity = property.int_equals(n_plus_zero, n)?;
+    let bool_identity = property.bool_implies(flag, flag)?;
+    let goal = property.all([bv_identity, int_identity, bool_identity])?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+    let summary = certificate.summary();
+    assert!(matches!(summary.outcome, ProofOutcomeSummary::Proved));
+    assert!(
+        summary.evidence.is_some(),
+        "builder-alias proof should expose checked evidence"
+    );
+    let lean_available = summary.lean.status == LeanStatus::Available;
+
+    Ok(CorpusCaseReport {
+        id: "sdk-expression-builder-alias-proof",
+        tier: "P1",
+        workflow: "fallible property-owned expression builders",
+        expected: ExpectedOutcome::Proved,
+        actual: summary.outcome,
+        checks: "`Property::bv_add` / `bv_equals` / `int_add` / `int_equals` / `bool_implies` build a proved mixed Bool/BV/Int identity with checked evidence",
+        baseline_analogue: "Kani assertion builder / z3.rs context-owned term builder",
         lean_required: false,
         lean_available,
     })

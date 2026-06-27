@@ -48,9 +48,10 @@ crates that consume `axeyum-solver` as a black box.
 committed on `main`. It provides typed `Bool`, `Bv<W>`, and `Int` handles,
 assumptions, proof and minimized-counterexample calls over the existing
 evidence APIs, typed scalar model lifting, and unsigned BV overflow helper
-predicates. Remaining v0 polish is ergonomic syntax/operator traits, nested or
-frontend-specific counterexample replay bodies, and best-effort Lean-module
-packaging in the SDK certificate surface.
+predicates. Follow-up slices have since added certificate packaging, expression
+aliases/folds, and replay fixture helpers; remaining v0 polish is operator-trait
+or richer chaining ergonomics, broader frontend-specific replay bodies, and
+broader baseline measurement.
 
 **Status update (2026-06-27, follow-up):** native scalar counterexample-to-test
 rendering is now in the crate. Disproving models become deterministic
@@ -90,15 +91,16 @@ Rust signed integer intent instead of falling back to unsigned BV order.
 
 **Status update (2026-06-27, measurement slice):** the first committed
 graduated SDK corpus, generated `property/SCOREBOARD.md`, and machine-readable
-`property/corpus.json` are in place. The gate covers ten workflows (BV proof +
-Lean-required certificate, Int assumption proof, unsigned minimized witness,
-signed minimized witness, struct-shaped witness, overflow witness, and derived
-struct lifting, plus explicit nested aggregate replay with prelude/setup-aware
-generated tests, helper-rendered `Result<bool, _>` replay assertions, and
-deterministic `#[cfg(test)]` module assembly plus multi-case fixture file
-assembly, plus deterministic executable baseline comparisons for one minimized
-BV counterexample and one proved BV assertion) with 3 proved, 7 disproved,
-0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. Broader external
+`property/corpus.json` are in place. The gate covers eleven workflows (BV proof
++ Lean-required certificate, Int assumption proof, a mixed Bool/BV/Int
+expression-builder alias proof, unsigned minimized witness, signed minimized
+witness, struct-shaped witness, overflow witness, and derived struct lifting,
+plus explicit nested aggregate replay with prelude/setup-aware generated tests,
+helper-rendered `Result<bool, _>` replay assertions, and deterministic
+`#[cfg(test)]` module assembly plus multi-case fixture file assembly, plus
+deterministic executable baseline comparisons for one minimized BV
+counterexample and one proved BV assertion) with 4 proved, 7 disproved, 0
+unknown, DISAGREE=0, and 1/1 Lean-required coverage. Broader external
 proptest/Kani-style comparison remains the next measurement step.
 
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5

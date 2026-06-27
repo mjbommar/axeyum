@@ -2,8 +2,8 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 10,
-    "proved": 3,
+    "cases": 11,
+    "proved": 4,
     "disproved": 7,
     "unknown": 0,
     "mismatches": 0,
@@ -33,6 +33,17 @@
       "baseline_analogue": "Kani precondition/assertion proof",
       "lean_required": false,
       "lean_available": true
+    },
+    {
+      "id": "sdk-expression-builder-alias-proof",
+      "tier": "P1",
+      "workflow": "fallible property-owned expression builders",
+      "expected": "proved",
+      "actual": "proved",
+      "checks": "`Property::bv_add` / `bv_equals` / `int_add` / `int_equals` / `bool_implies` build a proved mixed Bool/BV/Int identity with checked evidence",
+      "baseline_analogue": "Kani assertion builder / z3.rs context-owned term builder",
+      "lean_required": false,
+      "lean_available": false
     },
     {
       "id": "sdk-u8-minimized-counterexample",

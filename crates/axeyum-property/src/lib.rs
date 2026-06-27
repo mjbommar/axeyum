@@ -1457,6 +1457,274 @@ impl Property {
         Ok(acc.unwrap_or_else(|| self.bool_const(false)))
     }
 
+    /// Builder-style Boolean negation.
+    ///
+    /// This is equivalent to [`Bool::not`] but keeps the arena owner first in
+    /// call sites that prefer `property.bool_not(x)?`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bool_not(&mut self, condition: Bool) -> Result<Bool, PropertyError> {
+        condition.not(self)
+    }
+
+    /// Builder-style Boolean conjunction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bool_and(&mut self, lhs: Bool, rhs: Bool) -> Result<Bool, PropertyError> {
+        lhs.and(self, rhs)
+    }
+
+    /// Builder-style Boolean disjunction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bool_or(&mut self, lhs: Bool, rhs: Bool) -> Result<Bool, PropertyError> {
+        lhs.or(self, rhs)
+    }
+
+    /// Builder-style Boolean implication.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bool_implies(&mut self, lhs: Bool, rhs: Bool) -> Result<Bool, PropertyError> {
+        lhs.implies(self, rhs)
+    }
+
+    /// Builder-style Boolean equality.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bool_equals(&mut self, lhs: Bool, rhs: Bool) -> Result<Bool, PropertyError> {
+        lhs.equals(self, rhs)
+    }
+
+    /// Builder-style BV wrapping addition.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_add<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        lhs.add(self, rhs)
+    }
+
+    /// Builder-style BV wrapping subtraction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_sub<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        lhs.sub(self, rhs)
+    }
+
+    /// Builder-style BV wrapping multiplication.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_mul<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        lhs.mul(self, rhs)
+    }
+
+    /// Builder-style BV bitwise negation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_not<const W: u32>(&mut self, value: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        value.not(self)
+    }
+
+    /// Builder-style BV bitwise conjunction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_and<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        lhs.and(self, rhs)
+    }
+
+    /// Builder-style BV bitwise disjunction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_or<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        lhs.or(self, rhs)
+    }
+
+    /// Builder-style BV bitwise exclusive-or.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_xor<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bv<W>, PropertyError> {
+        lhs.xor(self, rhs)
+    }
+
+    /// Builder-style BV equality.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_equals<const W: u32>(
+        &mut self,
+        lhs: Bv<W>,
+        rhs: Bv<W>,
+    ) -> Result<Bool, PropertyError> {
+        lhs.equals(self, rhs)
+    }
+
+    /// Builder-style unsigned BV less-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_ult<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.ult(self, rhs)
+    }
+
+    /// Builder-style unsigned BV less-or-equal comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_ule<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.ule(self, rhs)
+    }
+
+    /// Builder-style unsigned BV greater-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_ugt<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.ugt(self, rhs)
+    }
+
+    /// Builder-style unsigned BV greater-or-equal comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_uge<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.uge(self, rhs)
+    }
+
+    /// Builder-style signed BV less-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_slt<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.slt(self, rhs)
+    }
+
+    /// Builder-style signed BV less-or-equal comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_sle<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.sle(self, rhs)
+    }
+
+    /// Builder-style signed BV greater-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_sgt<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.sgt(self, rhs)
+    }
+
+    /// Builder-style signed BV greater-or-equal comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn bv_sge<const W: u32>(&mut self, lhs: Bv<W>, rhs: Bv<W>) -> Result<Bool, PropertyError> {
+        lhs.sge(self, rhs)
+    }
+
+    /// Builder-style Int addition.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_add(&mut self, lhs: Int, rhs: Int) -> Result<Int, PropertyError> {
+        lhs.add(self, rhs)
+    }
+
+    /// Builder-style Int subtraction.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_sub(&mut self, lhs: Int, rhs: Int) -> Result<Int, PropertyError> {
+        lhs.sub(self, rhs)
+    }
+
+    /// Builder-style Int multiplication.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_mul(&mut self, lhs: Int, rhs: Int) -> Result<Int, PropertyError> {
+        lhs.mul(self, rhs)
+    }
+
+    /// Builder-style Int equality.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_equals(&mut self, lhs: Int, rhs: Int) -> Result<Bool, PropertyError> {
+        lhs.equals(self, rhs)
+    }
+
+    /// Builder-style Int less-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_lt(&mut self, lhs: Int, rhs: Int) -> Result<Bool, PropertyError> {
+        lhs.lt(self, rhs)
+    }
+
+    /// Builder-style Int less-or-equal comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_le(&mut self, lhs: Int, rhs: Int) -> Result<Bool, PropertyError> {
+        lhs.le(self, rhs)
+    }
+
+    /// Builder-style Int greater-than comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_gt(&mut self, lhs: Int, rhs: Int) -> Result<Bool, PropertyError> {
+        lhs.gt(self, rhs)
+    }
+
+    /// Builder-style Int greater-or-equal comparison.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn int_ge(&mut self, lhs: Int, rhs: Int) -> Result<Bool, PropertyError> {
+        lhs.ge(self, rhs)
+    }
+
     /// The current hypotheses as raw terms.
     #[must_use]
     pub fn hypotheses(&self) -> &[TermId] {

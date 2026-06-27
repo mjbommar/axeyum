@@ -25,8 +25,8 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 
 | metric | value |
 |---|---:|
-| corpus cases | 10 |
-| proved | 3 |
+| corpus cases | 11 |
+| proved | 4 |
 | disproved | 7 |
 | unknown | 0 |
 | mismatches / DISAGREE | 0 |
@@ -39,6 +39,7 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 |---|---|---|---|---|---|
 | `sdk-bv-reflexive-proof` | P0 | certificate success over fixed-width BV | proved | checked evidence kind starts with `unsat-`; assertion count is stable; standalone Lean module is available | z3.rs/Kani assertion proof |
 | `sdk-int-assumption-proof` | P1 | integer implication under an SDK assumption | proved | checked evidence is present through `ProofCertificate::summary()` | Kani precondition/assertion proof |
+| `sdk-expression-builder-alias-proof` | P1 | fallible property-owned expression builders | proved | `Property::bv_add` / `bv_equals` / `int_add` / `int_equals` / `bool_implies` build a proved mixed Bool/BV/Int identity with checked evidence | Kani assertion builder / z3.rs context-owned term builder |
 | `sdk-u8-minimized-counterexample` | P0 | unsigned small failing input | disproved | minimized `u8` witness is `6`; Rust scalar replay binding renders deterministically | proptest-style shrinking |
 | `sdk-i8-signed-minimized-counterexample` | P1 | signed fixed-width input order | disproved | minimized signed witness is `-3`; two's-complement Rust binding preserves signed intent | Kani/proptest signed integer witness |
 | `sdk-aggregate-counterexample-render` | P1 | struct-shaped symbolic input | disproved | minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |

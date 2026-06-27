@@ -36,11 +36,12 @@
 - `axeyum-property` — typed Bool / BV / Int prove-or-counterexample SDK over the
   evidence APIs, with `Symbolic` scalar/tuple inputs, named-field and derived
   symbolic bundles, signed fixed-width Rust integer lifting/minimization,
-  minimized scalar counterexamples, Rust test skeletons, and direct aggregate
-  initializer snippets plus explicit caller-owned nested aggregate field
-  composition, prelude/setup-aware test skeletons, and helper-rendered
-  Boolean/Result replay adapters with deterministic `#[cfg(test)]` module
-  assembly plus deterministic multi-case fixture file assembly. The first
+  context-owned expression builder aliases, minimized scalar counterexamples,
+  Rust test skeletons, and direct aggregate initializer snippets plus explicit
+  caller-owned nested aggregate field composition, prelude/setup-aware test
+  skeletons, and helper-rendered Boolean/Result replay adapters with
+  deterministic `#[cfg(test)]` module assembly plus deterministic multi-case
+  fixture file assembly. The first
   app-level corpus gate, including deterministic executable baseline
   comparisons for proved and disproved outcomes, is committed in
   [`property/SCOREBOARD.md`](property/SCOREBOARD.md), backed by generated

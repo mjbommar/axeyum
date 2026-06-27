@@ -16,9 +16,10 @@ underneath `#[derive(axeyum_property::Symbolic)]`, so frontends can choose
 either explicit builder code or a derive when their input shape is a Rust struct.
 
 Expression construction stays fallible and arena-backed: typed handles expose
-explicit builder methods such as `add`, `ule`, and `equals`, while
-`Property::all` / `Property::any` fold Boolean conditions without hiding
-construction errors.
+explicit builder methods such as `add`, `ule`, and `equals`; `Property` also
+exposes context-owned aliases such as `bv_add`, `int_le`, and `bool_implies`
+for builder-style call sites. `Property::all` / `Property::any` fold Boolean
+conditions without hiding construction errors.
 
 Proof calls can also be packaged as `ProofCertificate`: the ordinary
 `ProofOutcome` still carries the checked Axeyum `EvidenceReport`, and proved
