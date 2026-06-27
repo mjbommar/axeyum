@@ -2334,18 +2334,21 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
 *App A — `axeyum-evm` (Phase 3):*
 1. **Multi-tx invariants** — a call sequence with persistent storage between txs.
    The keystone; sliced for soundness (each slice gated DISAGREE=0):
-   - **A1.1** a 2-tx DFS driver: on a normal halt (`STOP`/`RETURN`) with txs
-     remaining, re-enter at pc 0 with **fresh per-tx calldata**, **persisting
-     storage** but **resetting stack/memory** (EVM tx semantics). *Path:*
-     `symbolic.rs` `run_from`/`walk` + per-tx calldata in `SymEnv`.
-   - **A1.2** **multi-tx concrete replay** in `concrete.rs` (run the witness tx
-     sequence, storage persisting) — the DISAGREE=0 oracle for cross-tx bugs.
-   - **A1.3** a multi-tx `Finding` (a `Vec` of per-tx calldata witnesses) +
-     `analyze_sequence` entry point; a worked *init-then-trigger* bug + a
-     multi-tx safe case on the scoreboard. *Exit:* both decided, DISAGREE=0.
+   - **A1.1** — ✅ DONE (`4159cd3`) — `max_txs` DFS driver: on a normal halt with
+     txs remaining, advance to the next tx with **fresh per-tx calldata**,
+     **persisting storage** but **resetting stack/memory**. Multi-tx safe proofs
+     work; a multi-tx-only revert is reached soundly (reported `Unknown` until a
+     validated witness exists, never a wrong verdict). Default `max_txs=1`
+     preserves all single-tx behavior.
+   - **A1.2** — ✅ DONE (`e0751c4`) — `concrete::run_sequence` (persistent storage
+     across txs) is the multi-tx oracle; `revalidate` replays the sequence.
+   - **A1.3** — ✅ DONE (`e0751c4`) — `lift_witness` lifts the full per-tx input
+     sequence; `Finding.prior_txs`; the cross-tx *init-then-revert* bug is now
+     *reported* with a replay-validated 2-tx witness, and the scoreboard has a
+     Multi-transaction section (bug-found + safe-proved), DISAGREE=0 over 8 cases.
    - Note: `bounded_model_check_with_memory` needs a full `TransitionSystem`
-     encoding of a whole-contract step — heavier than the DFS re-entry above; the
-     DFS slice is the tractable first route.
+     encoding of a whole-contract step — heavier than the DFS re-entry used here.
+   **A1 keystone COMPLETE.** Next A-item: **A2 `CALL`/`DELEGATECALL` modeling**.
 2. **`CALL`/`DELEGATECALL`/`CREATE`/`EXTCODE*` modeling** (havoc return + touched
    storage) so dispatched contracts explore further before `Unknown`. *Exit:*
    fewer `InconclusiveDueToUnknown` rows on a dispatched-call corpus case.

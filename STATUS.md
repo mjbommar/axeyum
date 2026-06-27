@@ -65,9 +65,16 @@ the win requires a true **incremental lazy-array** engine, not the one-shot
 dispatcher; until then `ite`-fold rightly stays the EVM default. This is the
 data-driven answer the special-case-vs-general question wanted.
 
+**A1 multi-tx keystone — DONE** (`4159cd3`, `e0751c4`). `axeyum-evm` now explores
+**transaction sequences** with persistent storage (memory/stack reset per tx,
+fresh per-tx calldata): a bug reachable only across calls (init-then-revert) is
+*reported* with a replay-validated multi-tx witness, validated by a
+persistent-storage concrete-replay oracle (`concrete::run_sequence`); the
+scoreboard has a Multi-transaction section, DISAGREE=0 over 8 cases. This is core
+angr/unicorn-class stateful analysis. Default `max_txs=1` preserves single-tx.
+
 **Next.** Forward backlog in [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main):
-A1 multi-tx invariants (persistent storage across a call sequence), then A2
-CALL/DELEGATECALL modeling; C4 general CFG→`TransitionSystem` lowering.
+A2 CALL/DELEGATECALL modeling; C4 general CFG→`TransitionSystem` lowering (verify).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
