@@ -29,11 +29,25 @@ engine work finally carries a number.
 **Increment status.**
 | ID | Increment | Status |
 |----|-----------|--------|
-| I0 | Record plan in PLAN/STATUS; reconcile consumer-track docs | `WIP` |
-| I1 | Port `axeyum-evm` (+ workspace member) | `TODO` |
-| I2 | Port `axeyum-verify` + `-macros` (rebind `Witness`) | `TODO` |
-| I3 | Port `axeyum-consumer-bench` + **EVM/symexec capability scoreboard** | `TODO` |
-| I4 | Warm-array path in EVM + measure vs `ite`-fold; reconcile `UPSTREAM-FEEDBACK` (U6/U7 partial) | `TODO` |
+| I0 | Record plan in PLAN/STATUS; reconcile consumer-track docs | `DONE` (79193f2) |
+| I1 | Port `axeyum-evm` (+ workspace member; folded `reproduce` into property) | `DONE` (3a22101) |
+| I2 | Port `axeyum-verify` + `-macros` (own `Witness` enum; direct syn deps) | `DONE` (19d11b4) |
+| I3 | **EVM/symexec capability scoreboard** (6/6 decided, DISAGREE=0, 5 shapes) | `DONE` (c840cab) |
+| I4a | Reconcile `UPSTREAM-FEEDBACK` — U6 now measured by the scoreboard | `DONE` |
+| I4b | Rewire EVM to `main`'s warm-array path; measure warm vs `ite`-fold (depth/CNF/time) | `TODO` (follow-up) |
+
+**Landed.** All three apps (`axeyum-evm`, `axeyum-verify`+`-macros`) build on
+`main`, pass `cargo test` + `clippy -D warnings`, and hold **DISAGREE = 0**.
+`main`'s `axeyum-property` is the single canonical SDK (the `reproduce` layer was
+folded in additively for the apps). The warm-incremental symbolic-execution
+engine now carries a committed number via `evm/SCOREBOARD.md`.
+`axeyum-consumer-bench` was deliberately **not** ported (its corpus is coupled to
+the retired branch property API and duplicates `main`'s `property/SCOREBOARD`).
+
+**Next (I4b).** Make the EVM memory model optionally use `main`'s warm
+`SymbolicExecutor` array path instead of the frontend `ite`-fold, and extend the
+capability scoreboard with a warm-vs-`ite`-fold column (ite depth / CNF size /
+solve time) so the U6 special-case-vs-general decision is data-driven.
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds

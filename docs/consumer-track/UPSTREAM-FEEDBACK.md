@@ -44,6 +44,15 @@ Last reconciled with `main`: 2026-06-27.
 ### U6 - high - solver/symexec - true warm incremental arrays/UFs remain open
 
 - **Status:** partial.
+- **Consumer measurement (2026-06-27):** the warm memory work below is now
+  *measured* end-to-end by the EVM/symexec capability scoreboard
+  ([`evm/SCOREBOARD.md`](evm/SCOREBOARD.md), `cargo run -p axeyum-evm --example
+  measure_evm`): a construction-known corpus decides 6/6 (incl. symbolic-storage
+  and keccak-mapping rows) at DISAGREE=0. This scoreboard is the intended
+  arbiter of *special-case folding vs the general warm array/UF theory* — grow
+  the corpus with the memory shapes real contracts exercise, and let the
+  unknown/fallback rows (not an open-ended fold list) drive which general
+  capability is worth building next.
 - **What:** the original consumer pain was that `SymbolicExecutor`'s warm path
   refused active array/UF assertions and `Op::Apply` was unsupported by the
   bit-blaster. A usable one-shot route has landed: deferred array/UF assertions
