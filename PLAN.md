@@ -2261,12 +2261,12 @@ unknowns, witness gaps, mismatches, or truncation. The same tiny target now has
 concrete replay using the same zero-default map and memory-bearing paths routed
 through the memory-aware solver path. Concrete replay now also returns a
 machine-usable trace: executed PCs/instructions, register snapshots, final
-registers, final explicit memory cells, and terminal outcome. P4.2 still needs
-`TinyBvProgram::from_assembly` now gives that toy target a small imported text
-format (`const`, arithmetic, `load`/`store`, `beq`, `win`/`lose`) with
-line-numbered parse errors and the same shared validator as hand-built programs.
-P4.2 still needs richer byte-level/binary frontend work, unbounded/certified
-safety, and eventual warm lazy theory reuse.
+registers, final explicit memory cells, and terminal outcome.
+`TinyBvProgram::from_assembly` gives that toy target a small imported text
+format (`const`, arithmetic, `load`/`store`, `beq`, `win`/`lose`) with labels for
+branch targets, line-numbered parse errors, and the same shared validator as
+hand-built programs. P4.2 still needs richer byte-level/binary frontend work,
+unbounded/certified safety, and eventual warm lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

@@ -333,13 +333,14 @@ impl TinyBvProgram {
     /// - `add|sub|mul|xor rD rA rB`
     /// - `load rD rADDR`
     /// - `store rADDR rSRC`
-    /// - `beq rREG VALUE THEN_PC ELSE_PC`
+    /// - `beq rREG VALUE THEN ELSE`
     /// - `win`
     /// - `lose`
     ///
     /// Registers must be written as `r0`, `r1`, etc. Values and branch targets
-    /// accept decimal or `0x` hexadecimal notation. Blank lines and text after
-    /// `#` or `;` are ignored.
+    /// accept decimal or `0x` hexadecimal notation. Branch targets may also be
+    /// labels declared as `name:` on their own line or before an instruction
+    /// (`name: win`). Blank lines and text after `#` or `;` are ignored.
     ///
     /// # Errors
     ///
@@ -887,13 +888,30 @@ fn validate_pc(pc: usize, target: usize, code_len: usize) -> Result<(), SolverEr
 }
 
 fn parse_tiny_bv_assembly(text: &str) -> Result<Vec<TinyBvInsn>, SolverError> {
-    let mut code = Vec::new();
+    let mut labels = BTreeMap::new();
+    let mut lines = Vec::new();
     for (line_index, raw_line) in text.lines().enumerate() {
         let line_no = line_index + 1;
         let Some(line) = clean_assembly_line(raw_line) else {
             continue;
         };
-        code.push(parse_tiny_bv_instruction(line_no, line)?);
+        let (label, instruction) = split_assembly_label(line_no, line)?;
+        if let Some(label) = label {
+            if let Some((_, first_line)) = labels.insert(label.to_owned(), (lines.len(), line_no)) {
+                return Err(tiny_bv_parse_error(
+                    line_no,
+                    format!("duplicate label `{label}` first declared on line {first_line}"),
+                ));
+            }
+        }
+        if let Some(instruction) = instruction {
+            lines.push((line_no, instruction));
+        }
+    }
+
+    let mut code = Vec::with_capacity(lines.len());
+    for (line_no, line) in lines {
+        code.push(parse_tiny_bv_instruction(line_no, line, &labels)?);
     }
     Ok(code)
 }
@@ -909,7 +927,29 @@ fn clean_assembly_line(raw_line: &str) -> Option<&str> {
     (!trimmed.is_empty()).then_some(trimmed)
 }
 
-fn parse_tiny_bv_instruction(line_no: usize, line: &str) -> Result<TinyBvInsn, SolverError> {
+fn split_assembly_label(
+    line_no: usize,
+    line: &str,
+) -> Result<(Option<&str>, Option<&str>), SolverError> {
+    let Some((label, rest)) = line.split_once(':') else {
+        return Ok((None, Some(line)));
+    };
+    if label.split_whitespace().count() != 1 {
+        return Ok((None, Some(line)));
+    }
+    validate_label(line_no, label)?;
+    let instruction = rest.trim();
+    Ok((
+        Some(label),
+        (!instruction.is_empty()).then_some(instruction),
+    ))
+}
+
+fn parse_tiny_bv_instruction(
+    line_no: usize,
+    line: &str,
+    labels: &BTreeMap<String, (usize, usize)>,
+) -> Result<TinyBvInsn, SolverError> {
     let tokens = line
         .split(|ch: char| ch.is_ascii_whitespace() || ch == ',')
         .filter(|token| !token.is_empty())
@@ -945,8 +985,8 @@ fn parse_tiny_bv_instruction(line_no: usize, line: &str) -> Result<TinyBvInsn, S
             [reg, value, then_pc, else_pc] => Ok(TinyBvInsn::BranchEq {
                 reg: parse_register(line_no, reg)?,
                 value: parse_u128_literal(line_no, "branch constant", value)?,
-                then_pc: parse_usize_literal(line_no, "then pc", then_pc)?,
-                else_pc: parse_usize_literal(line_no, "else pc", else_pc)?,
+                then_pc: parse_pc_target(line_no, "then target", then_pc, labels)?,
+                else_pc: parse_pc_target(line_no, "else target", else_pc, labels)?,
             }),
             _ => Err(tiny_bv_arity_error(
                 line_no,
@@ -961,6 +1001,33 @@ fn parse_tiny_bv_instruction(line_no: usize, line: &str) -> Result<TinyBvInsn, S
             format!("unknown opcode `{other}`"),
         )),
     }
+}
+
+fn validate_label(line_no: usize, label: &str) -> Result<(), SolverError> {
+    let mut chars = label.chars();
+    let Some(first) = chars.next() else {
+        return Err(tiny_bv_parse_error(line_no, "empty label"));
+    };
+    if !(first == '_' || first == '.' || first.is_ascii_alphabetic()) {
+        return Err(tiny_bv_parse_error(
+            line_no,
+            format!("invalid label `{label}`: labels must start with ASCII letter, `_`, or `.`"),
+        ));
+    }
+    if chars.all(is_label_tail_char) {
+        Ok(())
+    } else {
+        Err(tiny_bv_parse_error(
+            line_no,
+            format!(
+                "invalid label `{label}`: labels may contain only ASCII letters, digits, `_`, `.`, or `$`"
+            ),
+        ))
+    }
+}
+
+fn is_label_tail_char(ch: char) -> bool {
+    ch == '_' || ch == '.' || ch == '$' || ch.is_ascii_alphanumeric()
 }
 
 fn parse_three_register_instruction(
@@ -1009,6 +1076,29 @@ fn parse_register(line_no: usize, token: &str) -> Result<usize, SolverError> {
     index
         .parse::<usize>()
         .map_err(|_| tiny_bv_parse_error(line_no, format!("invalid register index `{index}`")))
+}
+
+fn parse_pc_target(
+    line_no: usize,
+    name: &str,
+    token: &str,
+    labels: &BTreeMap<String, (usize, usize)>,
+) -> Result<usize, SolverError> {
+    if is_numeric_literal(token) {
+        parse_usize_literal(line_no, name, token)
+    } else {
+        labels
+            .get(token)
+            .map(|(pc, _)| *pc)
+            .ok_or_else(|| tiny_bv_parse_error(line_no, format!("unknown {name} label `{token}`")))
+    }
+}
+
+fn is_numeric_literal(token: &str) -> bool {
+    token
+        .chars()
+        .next()
+        .is_some_and(|first| first.is_ascii_digit())
 }
 
 fn parse_usize_literal(line_no: usize, name: &str, token: &str) -> Result<usize, SolverError> {

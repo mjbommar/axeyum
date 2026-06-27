@@ -805,11 +805,13 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         MAX_STEPS,
         "
             # raw frontend text: input r0 is stored, loaded, and checked
+            entry:
             const r2 0x10
             store r2 r0
             load r3 r2
-            beq r3 0xcafe 4 5
-            win
+            beq r3 0xcafe win_block lose_block
+            win_block: win
+            lose_block:
             lose
         ",
     )
@@ -896,6 +898,41 @@ fn tiny_bv_assembly_reports_parse_and_validation_errors() {
     assert!(
         validation_err.contains("instruction 0 references register 4"),
         "validation error should come from the shared program validator: {validation_err}"
+    );
+
+    let duplicate_label_err = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            again: win
+            again: lose
+        ",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        duplicate_label_err.contains("duplicate label `again`"),
+        "duplicate labels should be rejected: {duplicate_label_err}"
+    );
+
+    let missing_label_err = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            beq r0 0 ok missing
+            ok: win
+            lose
+        ",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        missing_label_err.contains("unknown else target label `missing`"),
+        "branch labels should resolve before validation: {missing_label_err}"
     );
 }
 
