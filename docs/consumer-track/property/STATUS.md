@@ -2,11 +2,22 @@
 
 ## Current focus
 
+- **2026-06-27 — Corpus broadened to overflow and derive workflows.**
+  The PROP.6 corpus now covers seven generated SDK workflows instead of five.
+  The new rows exercise the typed `uadd_overflows` helper with a minimized
+  `(x=1,y=255)` witness and `#[derive(Symbolic)]` concrete struct lifting for a
+  `TransferInput` counterexample. `tests/support/corpus_cases.rs` remains the
+  shared source for the integration test, committed JSON, and generated
+  Markdown snapshot. Current totals are 7 cases, 2 proved, 5 disproved, 0
+  unknown, 0 mismatches / DISAGREE, and 1/1 Lean-required case available.
+  External proptest/Kani-style baselines and broader corpus coverage remain
+  open.
+
 - **2026-06-27 — Generated corpus artifacts landed.**
   The PROP.6 corpus is now shared by the integration test and the generator
   example instead of duplicated in docs. `tests/support/corpus_cases.rs`
-  executes the five SDK workflows, `tests/corpus.rs` checks the live results
-  against committed JSON and Markdown snapshots, and
+  executes the SDK workflows, `tests/corpus.rs` checks the live results against
+  committed JSON and Markdown snapshots, and
   `examples/property_corpus_scoreboard.rs` regenerates both
   `docs/consumer-track/property/corpus.json` and `SCOREBOARD.md`. This closes
   the generated-artifact gap for the first SDK gate; external proptest/Kani-style
@@ -14,14 +25,16 @@
 
 - **2026-06-27 — Graduated SDK corpus scoreboard first slice landed.**
   `crates/axeyum-property/tests/corpus.rs` is now the committed PROP.6 app-level
-  corpus gate, with a matching `SCOREBOARD.md`. The gate covers five graduated
-  SDK workflows: BV proof with checked evidence and a required Lean module,
+  corpus gate, with a matching `SCOREBOARD.md`. The initial slice covered five
+  graduated SDK workflows: BV proof with checked evidence and a required Lean
+  module,
   integer implication under assumptions, unsigned minimized counterexamples,
   signed two's-complement minimized counterexamples, and struct-shaped
-  counterexample rendering. Current totals are 5 cases, 2 proved, 3 disproved,
-  0 unknown, 0 mismatches / DISAGREE, and 1/1 Lean-required case available.
-  External proptest/Kani-style baselines are still the next measurement step,
-  so this is a first gate rather than a full SOTA comparison.
+  counterexample rendering. The generated gate above has since broadened this
+  to 7 cases, 2 proved, 5 disproved, 0 unknown, 0 mismatches / DISAGREE, and
+  1/1 Lean-required case available. External proptest/Kani-style baselines are
+  still the next measurement step, so this is a first gate rather than a full
+  SOTA comparison.
 
 - **2026-06-27 — Certificate summary surface landed.**
   `ProofCertificate::summary()` now gives frontends a compact owned view over a
@@ -150,5 +163,5 @@
    builder syntax that still makes fallible term construction visible.
 2. Extend counterexample-to-`#[test]` output for frontend-specific replay
    bodies and nested/domain aggregate shapes.
-3. Broaden the SDK property corpus and add the external proptest/Kani-style
-   baseline comparison.
+3. Keep broadening the SDK property corpus around nested/domain aggregates and
+   add the external proptest/Kani-style baseline comparison.

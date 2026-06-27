@@ -2,9 +2,9 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 5,
+    "cases": 7,
     "proved": 2,
-    "disproved": 3,
+    "disproved": 5,
     "unknown": 0,
     "mismatches": 0,
     "disagree": 0,
@@ -63,6 +63,28 @@
       "expected": "disproved",
       "actual": "disproved",
       "checks": "minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders",
+      "baseline_analogue": "Kani struct harness / proptest `Arbitrary` struct",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-u8-uadd-overflow-helper-witness",
+      "tier": "P1",
+      "workflow": "unsigned overflow helper witness",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "minimized `u8` overflow witness is `(x = 1, y = 255)`; replay bindings render deterministically",
+      "baseline_analogue": "Kani arithmetic-overflow check / Rust verifier overflow assertion",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-derived-struct-counterexample-lift",
+      "tier": "P1",
+      "workflow": "`derive(Symbolic)` struct witness",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders",
       "baseline_analogue": "Kani struct harness / proptest `Arbitrary` struct",
       "lean_required": false,
       "lean_available": false

@@ -76,6 +76,8 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         unsigned_bv_counterexample_minimized()?,
         signed_bv_counterexample_minimized()?,
         aggregate_counterexample_rendered()?,
+        overflow_helper_counterexample_minimized()?,
+        derive_symbolic_counterexample_lifted()?,
     ])
 }
 
@@ -87,9 +89,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 5,
+        cases: 7,
         proved: 2,
-        disproved: 3,
+        disproved: 5,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -514,6 +516,100 @@ fn aggregate_counterexample_rendered() -> CorpusResult<CorpusCaseReport> {
         expected: ExpectedOutcome::Disproved,
         actual: summary.outcome,
         checks: "minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders",
+        baseline_analogue: "Kani struct harness / proptest `Arbitrary` struct",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn overflow_helper_counterexample_minimized() -> CorpusResult<CorpusCaseReport> {
+    let mut property = Property::new();
+    let x = property.symbolic::<u8>("x")?;
+    let y = property.symbolic::<u8>("y")?;
+    let overflow = x.uadd_overflows(&mut property, y)?;
+    let no_overflow = overflow.not(&mut property)?;
+
+    let certificate = property.prove_minimized_with_certificate(no_overflow)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected an overflow counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    assert_eq!(property.concrete::<u8>(&x, model)?, Some(1));
+    assert_eq!(property.concrete::<u8>(&y, model)?, Some(u8::MAX));
+    assert_eq!(
+        property.counterexample(model)?.render_rust_let_bindings()?,
+        concat!(
+            "let x: u8 = 0x01_u8; // BV8\n",
+            "let y: u8 = 0xff_u8; // BV8\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-u8-uadd-overflow-helper-witness",
+        tier: "P1",
+        workflow: "unsigned overflow helper witness",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "minimized `u8` overflow witness is `(x = 1, y = 255)`; replay bindings render deterministically",
+        baseline_analogue: "Kani arithmetic-overflow check / Rust verifier overflow assertion",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn derive_symbolic_counterexample_lifted() -> CorpusResult<CorpusCaseReport> {
+    #[derive(Debug, Clone, PartialEq, Eq, axeyum_property::Symbolic)]
+    struct TransferInput {
+        enabled: bool,
+        amount: u16,
+        balance: u16,
+    }
+
+    let mut property = Property::new();
+    let transfer = property.symbolic::<TransferInput>("transfer")?;
+    let goal = transfer.amount.ule(&mut property, transfer.balance)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a derived-struct counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    assert_eq!(
+        property.concrete::<TransferInput>(&transfer, model)?,
+        Some(TransferInput {
+            enabled: false,
+            amount: 1,
+            balance: 0,
+        })
+    );
+    assert_eq!(
+        property
+            .counterexample(model)?
+            .render_rust_named_struct_let("transfer", "TransferInput", "transfer")?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    balance: transfer_balance,\n",
+            "};\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-derived-struct-counterexample-lift",
+        tier: "P1",
+        workflow: "`derive(Symbolic)` struct witness",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders",
         baseline_analogue: "Kani struct harness / proptest `Arbitrary` struct",
         lean_required: false,
         lean_available: false,

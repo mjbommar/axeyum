@@ -24,9 +24,9 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 
 | metric | value |
 |---|---:|
-| corpus cases | 5 |
+| corpus cases | 7 |
 | proved | 2 |
-| disproved | 3 |
+| disproved | 5 |
 | unknown | 0 |
 | mismatches / DISAGREE | 0 |
 | Lean-required cases | 1 |
@@ -41,6 +41,8 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 | `sdk-u8-minimized-counterexample` | P0 | unsigned small failing input | disproved | minimized `u8` witness is `6`; Rust scalar replay binding renders deterministically | proptest-style shrinking |
 | `sdk-i8-signed-minimized-counterexample` | P1 | signed fixed-width input order | disproved | minimized signed witness is `-3`; two's-complement Rust binding preserves signed intent | Kani/proptest signed integer witness |
 | `sdk-aggregate-counterexample-render` | P1 | struct-shaped symbolic input | disproved | minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
+| `sdk-u8-uadd-overflow-helper-witness` | P1 | unsigned overflow helper witness | disproved | minimized `u8` overflow witness is `(x = 1, y = 255)`; replay bindings render deterministically | Kani arithmetic-overflow check / Rust verifier overflow assertion |
+| `sdk-derived-struct-counterexample-lift` | P1 | `derive(Symbolic)` struct witness | disproved | derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
 
 ## Next Gates
 
