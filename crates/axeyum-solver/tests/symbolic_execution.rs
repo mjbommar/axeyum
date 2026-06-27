@@ -3960,6 +3960,152 @@ fn warm_bv_readback_arithmetic_identities_drop_constant_wrappers() {
 }
 
 #[test]
+fn warm_bv_readback_comparison_identities_drop_constant_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bv_compare_value", Sort::BitVec(8))
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 34).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let ones = arena.bv_const(8, 0xff).unwrap();
+    let target = arena.bv_const(8, 0x7e).unwrap();
+    let true_value = arena.bool_const(true);
+    let false_value = arena.bool_const(false);
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let unsigned_strict_self = arena.bv_ult(loaded, loaded).unwrap();
+    let unsigned_strict_self_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, unsigned_strict_self);
+    assert_eq!(
+        unsigned_strict_self_result, false_value,
+        "unsigned readback less-than itself should simplify to false"
+    );
+
+    let unsigned_reflexive_bound = arena.bv_ule(loaded, loaded).unwrap();
+    let unsigned_reflexive_bound_result = IncrementalBvSolver::simplify_memory_for_warm_assertion(
+        &mut arena,
+        unsigned_reflexive_bound,
+    );
+    assert_eq!(
+        unsigned_reflexive_bound_result, true_value,
+        "unsigned readback less-or-equal itself should simplify to true"
+    );
+
+    let signed_strict_self = arena.bv_sgt(loaded, loaded).unwrap();
+    let signed_strict_self_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, signed_strict_self);
+    assert_eq!(
+        signed_strict_self_result, false_value,
+        "signed readback greater-than itself should simplify to false"
+    );
+
+    let signed_reflexive_bound = arena.bv_sge(loaded, loaded).unwrap();
+    let signed_reflexive_bound_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, signed_reflexive_bound);
+    assert_eq!(
+        signed_reflexive_bound_result, true_value,
+        "signed readback greater-or-equal itself should simplify to true"
+    );
+
+    let ult_zero = arena.bv_ult(loaded, zero).unwrap();
+    let ult_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, ult_zero);
+    assert_eq!(
+        ult_zero_result, false_value,
+        "unsigned readback less-than zero should simplify to false"
+    );
+
+    let ule_ones = arena.bv_ule(loaded, ones).unwrap();
+    let ule_ones_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, ule_ones);
+    assert_eq!(
+        ule_ones_result, true_value,
+        "unsigned readback less-or-equal all-ones should simplify to true"
+    );
+
+    let ugt_ones = arena.bv_ugt(loaded, ones).unwrap();
+    let ugt_ones_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, ugt_ones);
+    assert_eq!(
+        ugt_ones_result, false_value,
+        "unsigned readback greater-than all-ones should simplify to false"
+    );
+
+    let uge_zero = arena.bv_uge(loaded, zero).unwrap();
+    let uge_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, uge_zero);
+    assert_eq!(
+        uge_zero_result, true_value,
+        "unsigned readback greater-or-equal zero should simplify to true"
+    );
+
+    let zero_ule_loaded = arena.bv_ule(zero, loaded).unwrap();
+    let zero_ule_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, zero_ule_loaded);
+    assert_eq!(
+        zero_ule_result, true_value,
+        "zero less-or-equal readback should simplify to true"
+    );
+
+    let ones_uge_loaded = arena.bv_uge(ones, loaded).unwrap();
+    let ones_uge_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, ones_uge_loaded);
+    assert_eq!(
+        ones_uge_result, true_value,
+        "all-ones greater-or-equal readback should simplify to true"
+    );
+
+    let value_eq_target = arena.eq(value, target).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, value_eq_target).unwrap();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, uge_zero)
+        .unwrap();
+    assert_eq!(
+        encoded, true_value,
+        "unsigned lower-bound readback should simplify to warm true"
+    );
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "BV comparison readback cleanup should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "BV comparison readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(value_sym),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 0x7e
+                })
+            );
+            assert_eq!(
+                eval(&arena, uge_zero, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original BV comparison memory assertion"
+            );
+        }
+        other => panic!("expected BV comparison readback assertion sat, got {other:?}"),
+    }
+
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, ult_zero)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a BV readback cannot be unsigned-less-than zero"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

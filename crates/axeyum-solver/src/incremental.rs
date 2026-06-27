@@ -1486,7 +1486,15 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
         | Op::BvMul
         | Op::BvAnd
         | Op::BvOr
-        | Op::BvXor => collapse_trivial_bv(arena, op, &args),
+        | Op::BvXor
+        | Op::BvUlt
+        | Op::BvUle
+        | Op::BvUgt
+        | Op::BvUge
+        | Op::BvSlt
+        | Op::BvSle
+        | Op::BvSgt
+        | Op::BvSge => collapse_trivial_bv(arena, op, &args),
         _ => None,
     }
 }
@@ -1567,7 +1575,20 @@ fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option
                 _ => unreachable!("outer match restricts BV unary ops"),
             }
         }
-        Op::BvAdd | Op::BvSub | Op::BvMul | Op::BvAnd | Op::BvOr | Op::BvXor => {
+        Op::BvAdd
+        | Op::BvSub
+        | Op::BvMul
+        | Op::BvAnd
+        | Op::BvOr
+        | Op::BvXor
+        | Op::BvUlt
+        | Op::BvUle
+        | Op::BvUgt
+        | Op::BvUge
+        | Op::BvSlt
+        | Op::BvSle
+        | Op::BvSgt
+        | Op::BvSge => {
             let [left, right] = args else {
                 return None;
             };
@@ -1578,6 +1599,14 @@ fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option
                 Op::BvAnd => collapse_bv_and(arena, *left, *right),
                 Op::BvOr => collapse_bv_or(arena, *left, *right),
                 Op::BvXor => collapse_bv_xor(arena, *left, *right),
+                Op::BvUlt
+                | Op::BvUle
+                | Op::BvUgt
+                | Op::BvUge
+                | Op::BvSlt
+                | Op::BvSle
+                | Op::BvSgt
+                | Op::BvSge => collapse_bv_comparison(arena, op, *left, *right),
                 _ => unreachable!("outer match restricts BV binary ops"),
             }
         }
@@ -1851,6 +1880,40 @@ fn collapse_bv_xor(arena: &mut TermArena, left: TermId, right: TermId) -> Option
         return Some(left);
     }
     None
+}
+
+fn collapse_bv_comparison(
+    arena: &mut TermArena,
+    op: Op,
+    left: TermId,
+    right: TermId,
+) -> Option<TermId> {
+    let sort = arena.sort_of(left);
+    if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
+        return None;
+    }
+    if left == right {
+        return match op {
+            Op::BvUlt | Op::BvUgt | Op::BvSlt | Op::BvSgt => Some(arena.bool_const(false)),
+            Op::BvUle | Op::BvUge | Op::BvSle | Op::BvSge => Some(arena.bool_const(true)),
+            _ => None,
+        };
+    }
+    match op {
+        Op::BvUlt if bv_const_is_zero(arena, right) || bv_const_is_ones(arena, left) => {
+            Some(arena.bool_const(false))
+        }
+        Op::BvUle if bv_const_is_zero(arena, left) || bv_const_is_ones(arena, right) => {
+            Some(arena.bool_const(true))
+        }
+        Op::BvUgt if bv_const_is_zero(arena, left) || bv_const_is_ones(arena, right) => {
+            Some(arena.bool_const(false))
+        }
+        Op::BvUge if bv_const_is_zero(arena, right) || bv_const_is_ones(arena, left) => {
+            Some(arena.bool_const(true))
+        }
+        _ => None,
+    }
 }
 
 fn are_bv_negations(arena: &TermArena, left: TermId, right: TermId) -> bool {
