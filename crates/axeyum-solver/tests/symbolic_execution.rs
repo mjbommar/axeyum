@@ -3069,6 +3069,155 @@ fn symbolic_memory_helper_routes_load_branches_through_memory_executor() {
 }
 
 #[test]
+fn symbolic_memory_helper_keeps_reducible_load_assume_warm() {
+    let mut arena = TermArena::new();
+    let write_index_sym = arena
+        .declare("helper_warm_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("helper_warm_read_i", Sort::BitVec(8))
+        .unwrap();
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let base = arena.const_array(8, zero).unwrap();
+    let mut memory = SymbolicMemory::from_array(&arena, base).unwrap();
+    memory.store(&mut arena, write_index, one).unwrap();
+    let hit = arena.eq(write_index, read_index).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(executor.assume(&arena, hit).unwrap().is_feasible());
+    assert!(
+        memory
+            .assume_load_eq(&mut executor, &mut arena, read_index, one)
+            .unwrap()
+            .is_feasible(),
+        "reducible helper load equality should stay feasible"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should work after helper auto-simplifies memory"
+    );
+    assert!(
+        executor.model(&arena).unwrap().is_some(),
+        "ordinary warm model should work after helper auto-simplifies memory"
+    );
+}
+
+#[test]
+fn symbolic_memory_helper_keeps_reducible_load_branch_warm() {
+    let mut arena = TermArena::new();
+    let write_index_sym = arena
+        .declare("helper_branch_warm_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("helper_branch_warm_read_i", Sort::BitVec(8))
+        .unwrap();
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let base = arena.const_array(8, zero).unwrap();
+    let mut memory = SymbolicMemory::from_array(&arena, base).unwrap();
+    memory.store(&mut arena, write_index, one).unwrap();
+    let hit = arena.eq(write_index, read_index).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(executor.assume(&arena, hit).unwrap().is_feasible());
+    let branch = memory
+        .branch_load_eq(&mut executor, &mut arena, read_index, one)
+        .unwrap();
+    assert!(branch.if_true.is_feasible());
+    assert!(branch.if_false.is_infeasible());
+    assert_eq!(
+        executor.path_condition(),
+        &[hit],
+        "helper branch queries should remain one-shot"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should still work after helper branch"
+    );
+}
+
+#[test]
+fn symbolic_memory_write_log_helpers_use_warm_route_when_reducible() {
+    let mut arena = TermArena::new();
+    let read_index_sym = arena
+        .declare("helper_log_warm_read_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index = arena.var(read_index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let base = arena.const_array(8, zero).unwrap();
+    let memory = SymbolicMemory::from_array(&arena, base).unwrap();
+    let writes = [SymbolicMemoryWrite::new(read_index, one)];
+
+    let mut branch_executor = SymbolicExecutor::new();
+    let branch = memory
+        .branch_load_eq_with_write_log(&mut branch_executor, &mut arena, read_index, &writes, one)
+        .unwrap();
+    assert!(branch.if_true.is_feasible());
+    assert!(branch.if_false.is_infeasible());
+    assert!(
+        branch_executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should work after one-shot write-log branch"
+    );
+
+    let mut assume_executor = SymbolicExecutor::new();
+    assert!(
+        memory
+            .assume_load_eq_with_write_log(
+                &mut assume_executor,
+                &mut arena,
+                read_index,
+                &writes,
+                one
+            )
+            .unwrap()
+            .is_feasible()
+    );
+    assert!(
+        assume_executor.model(&arena).unwrap().is_some(),
+        "ordinary warm model should work after write-log helper auto-simplifies"
+    );
+}
+
+#[test]
+fn symbolic_memory_helper_defers_unreduced_symbolic_base() {
+    let mut arena = TermArena::new();
+    let read_index_sym = arena
+        .declare("helper_deferred_read_i", Sort::BitVec(8))
+        .unwrap();
+    let value_sym = arena
+        .declare("helper_deferred_value", Sort::BitVec(8))
+        .unwrap();
+    let read_index = arena.var(read_index_sym);
+    let value = arena.var(value_sym);
+    let memory = SymbolicMemory::declare_bv(&mut arena, "helper_deferred_mem", 8, 8).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(
+        memory
+            .assume_load_eq(&mut executor, &mut arena, read_index, value)
+            .unwrap()
+            .is_feasible(),
+        "unreduced symbolic-base memory is still feasible through auto fallback"
+    );
+    match executor.status(&arena).unwrap() {
+        PathStatus::Unknown(_) => {}
+        other => {
+            panic!("ordinary warm status should report Unknown for deferred memory, got {other:?}")
+        }
+    }
+    assert!(
+        executor.status_auto(&mut arena).unwrap().is_feasible(),
+        "auto status should route the deferred assertion through the memory solver"
+    );
+}
+
+#[test]
 fn symbolic_memory_write_log_drops_shadowed_concrete_indices() {
     let mut arena = TermArena::new();
     let memory = SymbolicMemory::declare_bv(&mut arena, "log_mem", 8, 8).unwrap();

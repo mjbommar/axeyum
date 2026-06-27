@@ -54,15 +54,18 @@ Last reconciled with `main`: 2026-06-27.
   constant-array reads, reads over simple array-valued `ite` state merges, and
   reducible symbolic-address read-over-write over store chains: the warm solver
   encodes the simplified BV term while retaining the original memory term for
-  replay and assumption-core reporting.
+  replay and assumption-core reporting. `SymbolicMemory` load-equality helpers
+  now use the same automatic warm/memory route, so frontend helper calls benefit
+  from the warm slice without losing fallback on unreduced memory.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
   are central for EVM and verifier frontends. The one-shot fallback removes a
   frontend footgun and lets consumers keep arrays/UFs in path conditions, and
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
-  reads, and fork queries, but general array/UF work still rebuilds through the
-  dispatcher instead of retaining warm learned clauses.
+  reads, helper-level load branches, and fork queries, but general array/UF work
+  still rebuilds through the dispatcher instead of retaining warm learned
+  clauses.
 - **Ask:** finish the ADR-0030 half: a true warm lazy-array/UF incremental route
   with retained theory clauses / learned lemmas / push-pop reuse. Until that
   exists, document the one-shot fallback as sound but not the final performance

@@ -39,8 +39,8 @@
 //!
 //! [`SymbolicMemory`] is the companion frontend helper for memory-bearing paths:
 //! it owns the current SMT array term, builds `select`/`store` terms, and routes
-//! load-equality feasibility through the memory-aware executor APIs. It is a thin
-//! term-building layer, not the final warm lazy-array engine.
+//! load-equality feasibility through the executor's automatic warm/memory route.
+//! It is a thin term-building layer, not the final warm lazy-array engine.
 
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId};
 
@@ -106,9 +106,10 @@ impl Branch {
 /// This is the small frontend-facing memory abstraction needed by CFG symbolic
 /// executors: `load` builds `select(mem, addr)`, `store` advances the current
 /// memory term to `store(mem, addr, value)`, and the convenience branch/assume
-/// helpers ask [`SymbolicExecutor`] through its memory-aware path. It deliberately
-/// does not claim warm lazy-array incrementality; the solver route is still the
-/// one-shot full dispatcher behind [`SymbolicExecutor::branch_with_memory`] and
+/// helpers ask [`SymbolicExecutor`] through its automatic warm/memory path. It
+/// deliberately does not claim warm lazy-array incrementality; unreduced
+/// array/UF terms still route to the one-shot full dispatcher behind
+/// [`SymbolicExecutor::branch_with_memory`] and
 /// [`SymbolicExecutor::assume_with_memory`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SymbolicMemory {
@@ -337,7 +338,7 @@ impl SymbolicMemory {
     }
 
     /// Commits a compact write-log load equality to `executor` and checks it
-    /// through the memory-aware route.
+    /// through the automatic warm/memory route.
     ///
     /// # Errors
     ///
@@ -351,11 +352,11 @@ impl SymbolicMemory {
         expected: TermId,
     ) -> Result<PathStatus, SolverError> {
         let cond = self.load_eq_with_write_log(arena, read_index, writes, expected)?;
-        executor.assume_with_memory(arena, cond)
+        executor.assume_auto(arena, cond)
     }
 
     /// Branches on a compact write-log load equality without committing either
-    /// direction to `executor`.
+    /// direction to `executor`, using the automatic warm/memory route.
     ///
     /// # Errors
     ///
@@ -369,7 +370,7 @@ impl SymbolicMemory {
         expected: TermId,
     ) -> Result<Branch, SolverError> {
         let cond = self.load_eq_with_write_log(arena, read_index, writes, expected)?;
-        executor.branch_with_memory(arena, cond)
+        executor.branch(arena, cond)
     }
 
     /// Builds the Boolean term `select(current_memory, index) = expected`.
@@ -388,7 +389,7 @@ impl SymbolicMemory {
     }
 
     /// Commits `select(current_memory, index) = expected` to `executor` and
-    /// checks feasibility through the memory-aware solver route.
+    /// checks feasibility through the automatic warm/memory route.
     ///
     /// # Errors
     ///
@@ -401,12 +402,12 @@ impl SymbolicMemory {
         expected: TermId,
     ) -> Result<PathStatus, SolverError> {
         let cond = self.load_eq(arena, index, expected)?;
-        executor.assume_with_memory(arena, cond)
+        executor.assume_auto(arena, cond)
     }
 
     /// Checks the feasibility of both directions of
     /// `select(current_memory, index) = expected`, without committing either
-    /// direction to `executor`.
+    /// direction to `executor`, using the automatic warm/memory route.
     ///
     /// # Errors
     ///
@@ -419,7 +420,7 @@ impl SymbolicMemory {
         expected: TermId,
     ) -> Result<Branch, SolverError> {
         let cond = self.load_eq(arena, index, expected)?;
-        executor.branch_with_memory(arena, cond)
+        executor.branch(arena, cond)
     }
 
     fn check_write_sorts(
