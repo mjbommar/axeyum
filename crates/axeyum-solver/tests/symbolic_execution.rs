@@ -943,6 +943,23 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
             },
         ]
     );
+    assert_eq!(
+        program.basic_block_containing_pc(2).map(|block| (
+            block.start_pc,
+            block.end_pc,
+            block.source_lines
+        )),
+        Some((0, 4, vec![Some(4), Some(5), Some(6), Some(7)]))
+    );
+    assert_eq!(
+        program.basic_block_containing_pc(4).map(|block| (
+            block.start_pc,
+            block.end_pc,
+            block.labels
+        )),
+        Some((4, 5, vec!["win_block".to_owned()]))
+    );
+    assert_eq!(program.basic_block_containing_pc(99), None);
 
     let reach = program
         .reach_label_checked(
@@ -1002,6 +1019,24 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         }
     );
     assert_eq!(source_steps[0].regs_before[0], hit.witness.inputs[0]);
+    let trace_blocks = program.trace_basic_blocks(&trace);
+    assert_eq!(
+        trace_blocks
+            .iter()
+            .map(|step| (
+                step.block.start_pc,
+                step.block.end_pc,
+                step.executed_pcs.clone()
+            ))
+            .collect::<Vec<_>>(),
+        vec![(0, 4, vec![0, 1, 2, 3]), (4, 5, vec![4])]
+    );
+    assert_eq!(trace_blocks[0].block.labels, vec!["entry".to_owned()]);
+    assert_eq!(
+        trace_blocks[0].block.source_lines,
+        vec![Some(4), Some(5), Some(6), Some(7)]
+    );
+    assert_eq!(trace_blocks[1].block.labels, vec!["win_block".to_owned()]);
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
     assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
@@ -1104,6 +1139,18 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
             },
         ]
     );
+    assert_eq!(
+        program
+            .basic_block_containing_pc(2)
+            .map(|block| (block.start_pc, block.end_pc)),
+        Some((0, 3))
+    );
+    assert_eq!(
+        program
+            .basic_block_containing_pc(3)
+            .map(|block| (block.start_pc, block.labels)),
+        Some((3, vec!["equal".to_owned()]))
+    );
 
     let reach = program
         .reach_label_checked(
@@ -1142,6 +1189,18 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
             (2, Some(4), Vec::<String>::new()),
             (3, Some(5), vec!["equal".to_owned()]),
         ]
+    );
+    assert_eq!(
+        program
+            .trace_basic_blocks(&trace)
+            .iter()
+            .map(|step| (
+                step.block.start_pc,
+                step.block.end_pc,
+                step.executed_pcs.clone()
+            ))
+            .collect::<Vec<_>>(),
+        vec![(0, 3, vec![0, 1, 2]), (3, 4, vec![3])]
     );
     let [x, y] = hit.witness.inputs[..] else {
         panic!("test program has exactly two input words");

@@ -158,6 +158,15 @@ pub struct TinyBvBasicBlock {
     pub outgoing: Vec<TinyBvCfgEdge>,
 }
 
+/// Block-aware view of a contiguous concrete replay segment.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvTraceBlockStep {
+    /// Static basic block that contains the executed PCs.
+    pub block: TinyBvBasicBlock,
+    /// Executed instruction PCs in this contiguous visit to `block`.
+    pub executed_pcs: Vec<usize>,
+}
+
 /// Symbolic frontend state for [`TinyBvProgram`] exploration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TinyBvState {
@@ -519,6 +528,44 @@ impl TinyBvProgram {
                 }
             })
             .collect()
+    }
+
+    /// Static basic block containing `pc`.
+    pub fn basic_block_containing_pc(&self, pc: usize) -> Option<TinyBvBasicBlock> {
+        self.basic_blocks()
+            .into_iter()
+            .find(|block| (block.start_pc..block.end_pc).contains(&pc))
+    }
+
+    /// Groups a concrete instruction trace into contiguous static basic-block
+    /// visits.
+    ///
+    /// Consecutive executed PCs in the same block are compressed into one row.
+    /// If execution leaves and later re-enters the same block, that re-entry is
+    /// reported as a new row. Public traces can be constructed manually; any
+    /// step whose PC does not belong to this program is ignored.
+    pub fn trace_basic_blocks(&self, trace: &TinyBvConcreteTrace) -> Vec<TinyBvTraceBlockStep> {
+        let blocks = self.basic_blocks();
+        let mut path: Vec<TinyBvTraceBlockStep> = Vec::new();
+        for step in &trace.steps {
+            let Some(block) = blocks
+                .iter()
+                .find(|block| (block.start_pc..block.end_pc).contains(&step.pc))
+            else {
+                continue;
+            };
+            if let Some(last) = path.last_mut()
+                && last.block.start_pc == block.start_pc
+            {
+                last.executed_pcs.push(step.pc);
+            } else {
+                path.push(TinyBvTraceBlockStep {
+                    block: block.clone(),
+                    executed_pcs: vec![step.pc],
+                });
+            }
+        }
+        path
     }
 
     /// Label-to-program-counter map imported from assembly.
