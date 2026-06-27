@@ -564,3 +564,51 @@ fn pareto_bv_front() {
     points.sort();
     assert_eq!(points, vec![vec![1, 3], vec![2, 2], vec![3, 1]]);
 }
+
+/// Signed/min mixed BV Pareto: maximize signed x while minimizing signed y,
+/// constrained to -2 <= x <= y <= 2. The nondominated front is the diagonal:
+/// improving x forces y to worsen.
+#[test]
+fn pareto_bv_signed_mixed_direction_front() {
+    let mut arena = TermArena::new();
+    let x = arena.bv_var("sx", 4).unwrap();
+    let y = arena.bv_var("sy", 4).unwrap();
+    let neg_two = arena.bv_const(4, 0b1110).unwrap();
+    let two = arena.bv_const(4, 0b0010).unwrap();
+    let x_lower = arena.bv_sge(x, neg_two).unwrap();
+    let x_upper = arena.bv_sle(x, two).unwrap();
+    let y_lower = arena.bv_sge(y, neg_two).unwrap();
+    let y_upper = arena.bv_sle(y, two).unwrap();
+    let x_le_y = arena.bv_sle(x, y).unwrap();
+    let objs = [
+        BvLexObjective {
+            objective: x,
+            signed: true,
+            maximize: true,
+        },
+        BvLexObjective {
+            objective: y,
+            signed: true,
+            maximize: false,
+        },
+    ];
+    let ParetoOutcome::Complete(mut points) = optimize_bv_pareto(
+        &mut arena,
+        &[x_lower, x_upper, y_lower, y_upper, x_le_y],
+        &objs,
+    )
+    .unwrap() else {
+        panic!("expected a complete signed/mixed BV Pareto front");
+    };
+    points.sort();
+    assert_eq!(
+        points,
+        vec![
+            vec![-2, -2],
+            vec![-1, -1],
+            vec![0, 0],
+            vec![1, 1],
+            vec![2, 2]
+        ]
+    );
+}

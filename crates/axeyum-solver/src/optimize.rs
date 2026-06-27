@@ -833,8 +833,9 @@ fn pareto_bv_probe(
     objectives: &[BvLexObjective],
     config: &SolverConfig,
 ) -> Result<MultiProbe, SolverError> {
-    match check_auto(arena, constraints, config)? {
-        CheckResult::Sat(model) => {
+    let result = check_auto(arena, constraints, config);
+    match result {
+        Ok(CheckResult::Sat(model)) => {
             let assignment = model.to_assignment();
             let mut vals = Vec::with_capacity(objectives.len());
             for obj in objectives {
@@ -847,16 +848,20 @@ fn pareto_bv_probe(
                         })?
                     }),
                     other => {
-                        return Err(SolverError::Unsupported(format!(
-                            "pareto BV objective is not a bit-vector value (got {other:?})"
-                        )));
+                        return Ok(MultiProbe::Unknown(UnknownReason {
+                            kind: UnknownKind::Incomplete,
+                            detail: format!(
+                                "pareto BV objective is not a bit-vector value (got {other:?})"
+                            ),
+                        }));
                     }
                 }
             }
             Ok(MultiProbe::Sat(vals))
         }
-        CheckResult::Unsat => Ok(MultiProbe::Unsat),
-        CheckResult::Unknown(reason) => Ok(MultiProbe::Unknown(reason)),
+        Ok(CheckResult::Unsat) => Ok(MultiProbe::Unsat),
+        Ok(CheckResult::Unknown(reason)) => Ok(MultiProbe::Unknown(reason)),
+        Err(err) => Ok(MultiProbe::Unknown(probe_unsupported_to_unknown(err)?)),
     }
 }
 

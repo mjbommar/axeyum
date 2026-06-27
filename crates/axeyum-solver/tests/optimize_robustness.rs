@@ -19,8 +19,8 @@ use std::time::{Duration, Instant};
 
 use axeyum_ir::{Sort, TermArena, TermId};
 use axeyum_solver::{
-    LexObjective, OptOutcome, ParetoOutcome, SolverConfig, maximize_lia, minimize_lia,
-    optimize_lia_pareto_with_config,
+    BvLexObjective, LexObjective, OptOutcome, ParetoOutcome, SolverConfig, maximize_lia,
+    minimize_lia, optimize_bv_pareto, optimize_lia_pareto_with_config,
 };
 
 fn int_var(arena: &mut TermArena, name: &str) -> TermId {
@@ -137,6 +137,28 @@ fn d_minimize_bv2nat_is_unknown_not_err() {
     if let OptOutcome::Optimal(v) = outcome {
         assert_eq!(v, 0, "if bv2nat(b) is decided, its minimum is 0");
     }
+}
+
+#[test]
+fn d_bv_pareto_non_bv_objective_is_unknown_not_err() {
+    // A caller bug or frontend mismatch can pass an Int term through the BV
+    // Pareto API. This should be a graceful Unknown, matching LIA Pareto's
+    // out-of-fragment behavior, not a hard solver error.
+    let mut arena = TermArena::new();
+    let x = int_var(&mut arena, "not_bv_obj");
+    let zero = arena.int_const(0);
+    let pin = arena.eq(x, zero).unwrap();
+    let objectives = [BvLexObjective {
+        objective: x,
+        signed: false,
+        maximize: true,
+    }];
+
+    let outcome = optimize_bv_pareto(&mut arena, &[pin], &objectives).expect("must not return Err");
+    assert!(
+        matches!(outcome, ParetoOutcome::Unknown { .. }),
+        "expected a graceful Unknown for a non-BV Pareto objective, got {outcome:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------

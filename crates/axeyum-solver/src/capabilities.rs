@@ -865,7 +865,8 @@ pub const CAPABILITIES: &[Capability] = &[
                   arithmetic cores)",
         assurance: Assurance::Experimental,
         evidence: "each optimum/Pareto point certified by the underlying decision procedure \
-                   per step (a confirmed-unsat domination query); deterministic point/push caps",
+                   per step (a confirmed-unsat domination query); deterministic point/push caps; \
+                   out-of-fragment objectives degrade to Unknown instead of hard solver errors",
         reference: "ADR-0027",
     },
     Capability {
