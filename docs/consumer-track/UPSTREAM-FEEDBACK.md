@@ -97,9 +97,12 @@ Last reconciled with `main`: 2026-06-27.
   zero masks, zero ORs/XORs, self-XORs, and double `bvnot` before warm encoding.
   They now drop common modular arithmetic wrappers too, including add/sub zero,
   self-subtraction, zero-minus-readback, additive inverse pairs, multiply by
-  zero/one, and double `bvneg`; division/remainder wrappers remain outside this
-  cleanup until zero-divisor guards are explicit. Loaded-value bounds checks
-  also shed reflexive comparisons and unsigned endpoint facts such as
+  zero/one, and double `bvneg`. Exact division/remainder wrappers now collapse
+  for SMT-LIB-total cases too: unsigned division by zero, division by one, zero
+  divided by a syntactically nonzero divisor, remainder/modulo by zero or one,
+  and self-remainder/self-modulo; signed division by zero and nontrivial
+  variable divisors remain ordinary BV terms. Loaded-value bounds checks also
+  shed reflexive comparisons and unsigned endpoint facts such as
   `load <u 0`, `0 <=u load`, `load <=u all_ones`, and `load >=u 0`.
   Whole-width extracts and zero-bit `zero_extend` / `sign_extend` wrappers
   around readbacks now collapse too, while partial slices and positive-width
@@ -127,7 +130,7 @@ Last reconciled with `main`: 2026-06-27.
   reads with same-index shadowed-store pruning, conditional read/write-index
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
   equality/connective/xor/implication cleanup,
-  BV bitwise/arithmetic/comparison/slice-extension/shift readback cleanup,
+  BV bitwise/arithmetic/div-rem/comparison/slice-extension/shift readback cleanup,
   branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
@@ -154,6 +157,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm Bool xor/implication cleanup" /
   "Warm BV bitwise readback cleanup" /
   "Warm BV arithmetic readback cleanup" /
+  "Warm BV div/rem readback cleanup" /
   "Warm BV comparison readback cleanup" /
   "Warm BV slice/extension readback cleanup" /
   "Warm BV shift readback cleanup" /

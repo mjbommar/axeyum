@@ -4305,6 +4305,132 @@ fn warm_bv_readback_shift_identities_drop_wrappers() {
 }
 
 #[test]
+fn warm_bv_readback_div_rem_identities_drop_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bv_div_rem_value", Sort::BitVec(8))
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 67).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let ones = arena.bv_const(8, 0xff).unwrap();
+    let target = arena.bv_const(8, 0x73).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let unsigned_div_one = arena.bv_udiv(loaded, one).unwrap();
+    let unsigned_div_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, unsigned_div_one);
+    assert_eq!(
+        unsigned_div_result, value,
+        "unsigned division by one around readback should simplify to the stored BV"
+    );
+
+    let signed_div_one = arena.bv_sdiv(loaded, one).unwrap();
+    let signed_div_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, signed_div_one);
+    assert_eq!(
+        signed_div_result, value,
+        "signed division by one around readback should simplify to the stored BV"
+    );
+
+    let unsigned_div_zero = arena.bv_udiv(loaded, zero).unwrap();
+    let unsigned_div_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, unsigned_div_zero);
+    assert_eq!(
+        unsigned_div_zero_result, ones,
+        "SMT-LIB unsigned division by zero should simplify to all ones"
+    );
+
+    let unsigned_rem_one = arena.bv_urem(loaded, one).unwrap();
+    let unsigned_rem_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, unsigned_rem_one);
+    assert_eq!(
+        unsigned_rem_result, zero,
+        "unsigned remainder by one around readback should simplify to zero"
+    );
+
+    let signed_rem_one = arena.bv_srem(loaded, one).unwrap();
+    let signed_rem_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, signed_rem_one);
+    assert_eq!(
+        signed_rem_result, zero,
+        "signed remainder by one around readback should simplify to zero"
+    );
+
+    let signed_mod_one = arena.bv_smod(loaded, one).unwrap();
+    let signed_mod_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, signed_mod_one);
+    assert_eq!(
+        signed_mod_result, zero,
+        "signed modulo by one around readback should simplify to zero"
+    );
+
+    let unsigned_rem_zero_divisor = arena.bv_urem(loaded, zero).unwrap();
+    let rem_zero_divisor_result = IncrementalBvSolver::simplify_memory_for_warm_assertion(
+        &mut arena,
+        unsigned_rem_zero_divisor,
+    );
+    assert_eq!(
+        rem_zero_divisor_result, value,
+        "SMT-LIB unsigned remainder by zero should return the readback"
+    );
+
+    let unsigned_rem_self = arena.bv_urem(loaded, loaded).unwrap();
+    let rem_self_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, unsigned_rem_self);
+    assert_eq!(
+        rem_self_result, zero,
+        "readback remainder itself should simplify to zero, including the zero case"
+    );
+
+    let div_eq_target = arena.eq(unsigned_div_one, target).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, div_eq_target)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "BV div/rem readback cleanup should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "BV div/rem readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(value_sym),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 0x73
+                })
+            );
+            assert_eq!(
+                eval(&arena, div_eq_target, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original BV division memory assertion"
+            );
+        }
+        other => panic!("expected BV div/rem readback assertion sat, got {other:?}"),
+    }
+
+    let rem_self_is_zero = arena.eq(unsigned_rem_self, zero).unwrap();
+    let rem_self_nonzero = arena.not(rem_self_is_zero).unwrap();
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, rem_self_nonzero)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a readback remainder itself cannot be nonzero"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

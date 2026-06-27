@@ -1484,6 +1484,11 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
         | Op::BvAdd
         | Op::BvSub
         | Op::BvMul
+        | Op::BvUdiv
+        | Op::BvUrem
+        | Op::BvSdiv
+        | Op::BvSrem
+        | Op::BvSmod
         | Op::BvAnd
         | Op::BvOr
         | Op::BvXor
@@ -1586,6 +1591,11 @@ fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option
         Op::BvAdd
         | Op::BvSub
         | Op::BvMul
+        | Op::BvUdiv
+        | Op::BvUrem
+        | Op::BvSdiv
+        | Op::BvSrem
+        | Op::BvSmod
         | Op::BvAnd
         | Op::BvOr
         | Op::BvXor
@@ -1607,6 +1617,9 @@ fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option
                 Op::BvAdd => collapse_bv_add(arena, *left, *right),
                 Op::BvSub => collapse_bv_sub(arena, *left, *right),
                 Op::BvMul => collapse_bv_mul(arena, *left, *right),
+                Op::BvUdiv | Op::BvUrem | Op::BvSdiv | Op::BvSrem | Op::BvSmod => {
+                    collapse_bv_div_rem(arena, op, *left, *right)
+                }
                 Op::BvAnd => collapse_bv_and(arena, *left, *right),
                 Op::BvOr => collapse_bv_or(arena, *left, *right),
                 Op::BvXor => collapse_bv_xor(arena, *left, *right),
@@ -1848,6 +1861,51 @@ fn collapse_bv_mul(arena: &mut TermArena, left: TermId, right: TermId) -> Option
     None
 }
 
+fn collapse_bv_div_rem(
+    arena: &mut TermArena,
+    op: Op,
+    left: TermId,
+    right: TermId,
+) -> Option<TermId> {
+    let sort = arena.sort_of(left);
+    if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
+        return None;
+    }
+    match op {
+        Op::BvUdiv => {
+            if bv_const_is_zero(arena, right) {
+                return bv_ones_for_sort(arena, sort);
+            }
+            if bv_const_is_one(arena, right) {
+                return Some(left);
+            }
+            if bv_const_is_zero(arena, left) && bv_const_is_nonzero(arena, right) {
+                return bv_zero_for_sort(arena, sort);
+            }
+            None
+        }
+        Op::BvSdiv => {
+            if bv_const_is_one(arena, right) {
+                return Some(left);
+            }
+            if bv_const_is_zero(arena, left) && bv_const_is_nonzero(arena, right) {
+                return bv_zero_for_sort(arena, sort);
+            }
+            None
+        }
+        Op::BvUrem | Op::BvSrem | Op::BvSmod => {
+            if left == right || bv_const_is_one(arena, right) || bv_const_is_zero(arena, left) {
+                return bv_zero_for_sort(arena, sort);
+            }
+            if bv_const_is_zero(arena, right) {
+                return Some(left);
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 fn collapse_bv_and(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
     let sort = arena.sort_of(left);
     if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
@@ -1988,6 +2046,14 @@ fn bv_const_is_one(arena: &TermArena, term: TermId) -> bool {
     match arena.node(term) {
         TermNode::BvConst { value, .. } => *value == 1,
         TermNode::WideBvConst(value) => *value == WideUint::from_u128(1, value.width()),
+        _ => false,
+    }
+}
+
+fn bv_const_is_nonzero(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::BvConst { value, .. } => *value != 0,
+        TermNode::WideBvConst(value) => !value.is_zero(),
         _ => false,
     }
 }
