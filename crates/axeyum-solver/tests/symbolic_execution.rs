@@ -3256,6 +3256,7 @@ fn warm_array_ite_same_readback_drops_merge_guard() {
 
     let simplified =
         IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_value);
+    assert_bool_const(&arena, simplified, true);
     assert_eq!(
         count_ite_nodes(&arena, simplified),
         0,
@@ -3285,6 +3286,24 @@ fn warm_array_ite_same_readback_drops_merge_guard() {
         eval(&arena, loaded_eq_value, &model.to_assignment()).unwrap(),
         Value::Bool(true),
         "model replay must validate the original branch-merged memory assertion"
+    );
+
+    let loaded_ne_value = arena.not(loaded_eq_value).unwrap();
+    let simplified_negated =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_ne_value);
+    assert_bool_const(&arena, simplified_negated, false);
+    let mut impossible = IncrementalBvSolver::new();
+    let encoded = impossible
+        .assert_simplifying_memory(&mut arena, loaded_ne_value)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "negated same-readback array-ite should simplify to a pure warm contradiction"
+    );
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a branch-merged same-readback memory assertion cannot be false"
     );
 }
 
@@ -4308,4 +4327,13 @@ fn term_contains(arena: &TermArena, root: TermId, needle: TermId) -> bool {
         }
     }
     false
+}
+
+fn assert_bool_const(arena: &TermArena, term: TermId, expected: bool) {
+    assert_eq!(
+        arena.node(term),
+        &TermNode::BoolConst(expected),
+        "expected term #{} to simplify to BoolConst({expected})",
+        term.index()
+    );
 }

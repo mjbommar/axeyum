@@ -54,9 +54,9 @@ Last reconciled with `main`: 2026-06-27.
   constant-array reads, reads over simple array-valued `ite` state merges, and
   reducible symbolic-address read-over-write over store chains, including
   same-index shadowed-store pruning before ROW expansion and trivial scalar
-  `ite` collapse after branch reads simplify: the warm solver encodes the
-  simplified BV term while retaining the original memory term for replay and
-  assumption-core reporting. A first retained select-congruence slice
+  `ite` / reflexive-equality collapse after branch reads simplify: the warm
+  solver encodes the simplified BV term while retaining the original memory term
+  for replay and assumption-core reporting. A first retained select-congruence slice
   also landed for plain reads over BV-indexed array symbols whose elements are
   Bool or BitVec, including wide/BV256 index or element values:
   `select(a,i)` is abstracted to an internal warm scalar variable, same-array
@@ -75,7 +75,8 @@ Last reconciled with `main`: 2026-06-27.
   dead old values or duplicate equality guards in the warm encoding. It also
   collapses trivial scalar `ite`s exposed by memory rewrites, so branch-merged
   reads whose branches simplify to the same value do not keep an irrelevant
-  merge condition.
+  merge condition; the resulting `v = v` tautology or `not true` contradiction
+  is folded before warm encoding.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -93,11 +94,12 @@ Last reconciled with `main`: 2026-06-27.
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, branch-merged reads whose
-  selected branches reduce to the same scalar value, plain symbolic-base Bool/BV
-  array loads, wide/BV256 storage-style base loads, scalar Bool/BV UF calls,
-  wide/BV256 keccak-style UF calls, helper-level load branches, reducible CFG
-  memory branches, and fork queries, but general array/UF work still rebuilds
-  through the dispatcher instead of retaining warm learned clauses.
+  selected branches reduce to the same scalar value plus the reflexive
+  equality/negation cleanup exposed by that reduction, plain symbolic-base
+  Bool/BV array loads, wide/BV256 storage-style base loads, scalar Bool/BV UF
+  calls, wide/BV256 keccak-style UF calls, helper-level load branches, reducible
+  CFG memory branches, and fork queries, but general array/UF work still
+  rebuilds through the dispatcher instead of retaining warm learned clauses.
 - **Ask:** finish the ADR-0030 half: a true warm lazy-array/UF incremental route
   with retained theory clauses / learned lemmas / push-pop reuse. Until that
   exists, document the one-shot fallback as sound but not the final performance
@@ -108,6 +110,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm constant-array read admission" / "Warm array-ITE read admission" /
   "Warm symbolic ROW conditional admission" / "Warm ROW same-index shadow
   pruning" / "Warm array-ITE same-readback guard pruning" /
+  "Warm reflexive memory tautology pruning" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /

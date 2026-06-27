@@ -1456,7 +1456,7 @@ fn simplify_memory_for_warm_assertion_inner(
     } else {
         arena.rebuild_with_args(term, &simplified_args)
     };
-    let simplified = match collapse_trivial_ite(arena, rebuilt)
+    let simplified = match collapse_trivial_warm_term(arena, rebuilt)
         .or_else(|| collapse_read_over_write(arena, rebuilt))
     {
         Some(collapsed) if collapsed != rebuilt => {
@@ -1468,19 +1468,40 @@ fn simplify_memory_for_warm_assertion_inner(
     simplified
 }
 
-fn collapse_trivial_ite(arena: &TermArena, term: TermId) -> Option<TermId> {
-    let TermNode::App { op: Op::Ite, args } = arena.node(term) else {
-        return None;
+fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    let (op, args) = match arena.node(term) {
+        TermNode::App { op, args } => (*op, args.to_vec()),
+        _ => return None,
     };
-    let [condition, then_term, else_term] = args.as_ref() else {
-        return None;
-    };
-    match arena.node(*condition) {
-        TermNode::BoolConst(true) => return Some(*then_term),
-        TermNode::BoolConst(false) => return Some(*else_term),
-        _ => {}
+    match op {
+        Op::Ite => {
+            let [condition, then_term, else_term] = args.as_slice() else {
+                return None;
+            };
+            match arena.node(*condition) {
+                TermNode::BoolConst(true) => return Some(*then_term),
+                TermNode::BoolConst(false) => return Some(*else_term),
+                _ => {}
+            }
+            (*then_term == *else_term).then_some(*then_term)
+        }
+        Op::Eq => {
+            let [left, right] = args.as_slice() else {
+                return None;
+            };
+            (left == right).then(|| arena.bool_const(true))
+        }
+        Op::BoolNot => {
+            let [arg] = args.as_slice() else {
+                return None;
+            };
+            match arena.node(*arg) {
+                TermNode::BoolConst(value) => Some(arena.bool_const(!value)),
+                _ => None,
+            }
+        }
+        _ => None,
     }
-    (*then_term == *else_term).then_some(*then_term)
 }
 
 fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermId> {
