@@ -41,6 +41,8 @@ flowchart TD
 
 Multi-agent sessions should use the
 [worktree collaboration protocol](contributor-guide/multi-agent-worktrees.md).
+Potential educational, ontology, law/rules, and downstream sibling projects are
+tracked in [Sibling Project Notes](sibling-projects.md).
 
 ## The honest current state
 

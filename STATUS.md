@@ -55,6 +55,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Sibling project notes documented.** Added
+  [`docs/sibling-projects.md`](docs/sibling-projects.md) with the ranked top-30
+  sibling project ideas, family taxonomy, inside-vs-separate-repo guidance,
+  law/rules reasoning notes, and recommended first incubators
+  (`SMT Fragment Atlas`, `Proof Certificate Cookbook`, and
+  `Rules-as-Code Verification Lab`). Linked it from `PLAN.md`, the docs hub,
+  and the mdBook summary.
+
 - **Multi-agent worktree protocol documented.** Added
   [`docs/contributor-guide/multi-agent-worktrees.md`](docs/contributor-guide/multi-agent-worktrees.md)
   as the standing note for side-by-side agent work: separate worktrees, topic
@@ -8801,6 +8809,16 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-27** — **Sibling project notes documented.**
+  Added `docs/sibling-projects.md` as the incubation note for educational
+  content, taxonomy/ontology artifacts, complementary libraries, downstream
+  verification apps, and law/rules reasoning projects. The note ranks the top
+  30 ideas, groups them into families, records inside-vs-separate-repo guidance,
+  calls out rules-as-code/legal-policy reasoning tasks, and recommends the first
+  three incubators: SMT Fragment Atlas, Proof Certificate Cookbook, and
+  Rules-as-Code Verification Lab. Linked it from `PLAN.md`, `docs/README.md`,
+  and `docs/SUMMARY.md`.
 
 - **2026-06-27** — **Multi-agent worktree protocol documented.**
   Added `docs/contributor-guide/multi-agent-worktrees.md` with the recommended

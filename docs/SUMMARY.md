@@ -2,6 +2,8 @@
 
 [Documentation Hub](README.md)
 
+[Sibling Project Notes](sibling-projects.md)
+
 # Learn
 
 - [Learn: from scratch](learn/README.md)

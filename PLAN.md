@@ -15,6 +15,9 @@ session state.
 When multiple agents or humans are active, use separate topic-branch worktrees
 and one `main` integration owner. The standing protocol lives in
 [`docs/contributor-guide/multi-agent-worktrees.md`](docs/contributor-guide/multi-agent-worktrees.md).
+Potential sibling/incubator projects around education, ontology artifacts,
+rules/law reasoning, and downstream verification apps are tracked in
+[`docs/sibling-projects.md`](docs/sibling-projects.md).
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 
