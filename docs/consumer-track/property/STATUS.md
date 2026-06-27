@@ -2,6 +2,16 @@
 
 ## Current focus
 
+- **2026-06-27 — Native scalar counterexample-to-test rendering landed.**
+  `Property::counterexample` and `counterexample_from_outcome` now extract a
+  deterministic `Counterexample` over SDK-declared symbols from a model or
+  disproved proof outcome. `InputBinding` records the Axeyum symbol, original
+  name, sanitized Rust identifier, declared sort, and value. The renderer emits
+  Rust `let` bindings and complete `#[test]` skeletons for Bool, Int, and
+  BV<=128 values, while explicitly rejecting arrays, Reals, datatypes,
+  uninterpreted carriers, and wide BV values until a frontend supplies a domain
+  representation.
+
 - **2026-06-27 — v0 typed proof slice landed.**
   `crates/axeyum-property` is now a workspace crate. It provides typed
   `Bool`, `Bv<W>`, and `Int` handles over `TermArena`, assumptions, default and
@@ -23,5 +33,6 @@
 1. Add ergonomic expression construction without compromising fallible builder
    errors.
 2. Add `Symbolic` and derive support for structs.
-3. Add counterexample-to-`#[test]` output.
+3. Extend counterexample-to-`#[test]` output for structured inputs and
+   frontend-specific replay bodies.
 4. Add a graduated SDK property corpus and scoreboard gate.

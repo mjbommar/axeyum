@@ -22,6 +22,14 @@ pub enum PropertyError {
         /// The value found in the model.
         value: Value,
     },
+    /// A model value cannot be rendered as a native Rust literal by this SDK
+    /// layer.
+    UnsupportedRustLiteral {
+        /// The original Axeyum symbol name.
+        name: String,
+        /// The value that could not be rendered.
+        value: Value,
+    },
 }
 
 impl core::fmt::Display for PropertyError {
@@ -34,6 +42,12 @@ impl core::fmt::Display for PropertyError {
                 "model value for symbol #{} has the wrong sort: {value:?}",
                 symbol.index()
             ),
+            PropertyError::UnsupportedRustLiteral { name, value } => {
+                write!(
+                    f,
+                    "cannot render counterexample input `{name}` with value {value:?} as a native Rust literal"
+                )
+            }
         }
     }
 }
@@ -49,6 +63,152 @@ impl From<IrError> for PropertyError {
 impl From<SolverError> for PropertyError {
     fn from(error: SolverError) -> Self {
         Self::Solver(error)
+    }
+}
+
+/// One scalar input binding from a replay-checked counterexample model.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InputBinding {
+    symbol: SymbolId,
+    name: String,
+    rust_ident: String,
+    sort: Sort,
+    value: Value,
+}
+
+impl InputBinding {
+    /// The Axeyum symbol ID.
+    #[must_use]
+    pub fn symbol(&self) -> SymbolId {
+        self.symbol
+    }
+
+    /// The original Axeyum symbol name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// A deterministic Rust-safe identifier derived from [`Self::name`].
+    #[must_use]
+    pub fn rust_ident(&self) -> &str {
+        &self.rust_ident
+    }
+
+    /// The declared sort.
+    #[must_use]
+    pub fn sort(&self) -> Sort {
+        self.sort
+    }
+
+    /// The model value.
+    #[must_use]
+    pub fn value(&self) -> &Value {
+        &self.value
+    }
+
+    /// Renders this binding as a Rust `let` statement.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] for values outside the
+    /// native scalar surface: Bool, Int, and BV widths up to 128 bits.
+    pub fn render_rust_let(&self) -> Result<String, PropertyError> {
+        match &self.value {
+            Value::Bool(value) => Ok(format!("let {}: bool = {value};", self.rust_ident)),
+            Value::Int(value) => Ok(format!(
+                "let {}: i128 = {};",
+                self.rust_ident,
+                render_i128_literal(*value)
+            )),
+            Value::Bv { width, value } => Ok(format!(
+                "let {}: {} = {}; // BV{}",
+                self.rust_ident,
+                rust_uint_type(*width),
+                render_uint_literal(*width, *value),
+                width
+            )),
+            Value::WideBv(_)
+            | Value::Array(_)
+            | Value::GenericArray(_)
+            | Value::Real(_)
+            | Value::RealAlgebraic(_)
+            | Value::Datatype { .. }
+            | Value::Uninterpreted { .. } => Err(PropertyError::UnsupportedRustLiteral {
+                name: self.name.clone(),
+                value: self.value.clone(),
+            }),
+        }
+    }
+}
+
+/// A deterministic view of a disproving model over SDK-declared inputs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Counterexample {
+    bindings: Vec<InputBinding>,
+}
+
+impl Counterexample {
+    /// Creates a counterexample from already-normalized bindings.
+    #[must_use]
+    pub fn new(bindings: Vec<InputBinding>) -> Self {
+        Self { bindings }
+    }
+
+    /// The input bindings in SDK declaration order.
+    #[must_use]
+    pub fn bindings(&self) -> &[InputBinding] {
+        &self.bindings
+    }
+
+    /// Renders all bindings as Rust `let` statements.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_let_bindings(&self) -> Result<String, PropertyError> {
+        let mut out = String::new();
+        for binding in &self.bindings {
+            out.push_str(&binding.render_rust_let()?);
+            out.push('\n');
+        }
+        Ok(out)
+    }
+
+    /// Renders a complete Rust `#[test]` skeleton.
+    ///
+    /// `body` is inserted after the generated input bindings and should contain
+    /// the caller's domain replay/assertion code. This function intentionally
+    /// does not invent replay semantics; it only makes the model values
+    /// reproducible in Rust syntax.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_test(&self, test_name: &str, body: &str) -> Result<String, PropertyError> {
+        let mut out = String::new();
+        out.push_str("#[test]\n");
+        out.push_str("fn ");
+        out.push_str(&sanitize_rust_ident(test_name));
+        out.push_str("() {\n");
+        for binding in &self.bindings {
+            out.push_str("    ");
+            out.push_str(&binding.render_rust_let()?);
+            out.push('\n');
+        }
+        for line in body.lines() {
+            if line.is_empty() {
+                out.push('\n');
+            } else {
+                out.push_str("    ");
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+        out.push_str("}\n");
+        Ok(out)
     }
 }
 
@@ -235,6 +395,55 @@ impl Property {
         )?)
     }
 
+    /// Extracts a deterministic counterexample view from a model.
+    ///
+    /// Only symbols declared through this SDK are included, and they are emitted
+    /// in declaration order. Missing symbols are skipped; present values are
+    /// checked against the arena declaration before being returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::ModelSortMismatch`] if a model value does not
+    /// match the symbol's declared sort.
+    pub fn counterexample(&self, model: &Model) -> Result<Counterexample, PropertyError> {
+        let mut used_idents = Vec::new();
+        let mut bindings = Vec::new();
+        for &symbol in &self.counterexample_symbols {
+            let Some(value) = model.get(symbol) else {
+                continue;
+            };
+            let (name, sort) = self.arena.symbol(symbol);
+            if value.sort() != sort {
+                return Err(PropertyError::ModelSortMismatch { symbol, value });
+            }
+            let rust_ident = unique_rust_ident(name, &mut used_idents);
+            bindings.push(InputBinding {
+                symbol,
+                name: name.to_owned(),
+                rust_ident,
+                sort,
+                value,
+            });
+        }
+        Ok(Counterexample::new(bindings))
+    }
+
+    /// Extracts a counterexample when `outcome` is disproved.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::ModelSortMismatch`] if a model value does not
+    /// match the symbol's declared sort.
+    pub fn counterexample_from_outcome(
+        &self,
+        outcome: &ProofOutcome,
+    ) -> Result<Option<Counterexample>, PropertyError> {
+        match outcome {
+            ProofOutcome::Disproved(model) => Ok(Some(self.counterexample(model)?)),
+            ProofOutcome::Proved(_) | ProofOutcome::Unknown(_) => Ok(None),
+        }
+    }
+
     fn track_symbol(&mut self, symbol: SymbolId) {
         if !self.counterexample_symbols.contains(&symbol) {
             self.counterexample_symbols.push(symbol);
@@ -326,6 +535,122 @@ impl Bool {
     fn expr(term: TermId) -> Self {
         Self { term, symbol: None }
     }
+}
+
+fn render_i128_literal(value: i128) -> String {
+    if value == i128::MIN {
+        "i128::MIN".to_owned()
+    } else {
+        format!("{value}_i128")
+    }
+}
+
+fn render_uint_literal(width: u32, value: u128) -> String {
+    let ty = rust_uint_type(width);
+    let digits = usize::try_from(width.max(1).div_ceil(4)).expect("width fits usize");
+    format!("0x{value:0>digits$x}_{ty}")
+}
+
+fn rust_uint_type(width: u32) -> &'static str {
+    match width {
+        0..=8 => "u8",
+        9..=16 => "u16",
+        17..=32 => "u32",
+        33..=64 => "u64",
+        _ => "u128",
+    }
+}
+
+fn unique_rust_ident(name: &str, used: &mut Vec<String>) -> String {
+    let base = sanitize_rust_ident(name);
+    if !used.iter().any(|existing| existing == &base) {
+        used.push(base.clone());
+        return base;
+    }
+    for i in 1.. {
+        let candidate = format!("{base}_{i}");
+        if !used.iter().any(|existing| existing == &candidate) {
+            used.push(candidate.clone());
+            return candidate;
+        }
+    }
+    unreachable!("unbounded suffix search always finds a fresh identifier")
+}
+
+fn sanitize_rust_ident(name: &str) -> String {
+    let mut out = String::new();
+    for (i, ch) in name.chars().enumerate() {
+        let ok = ch == '_' || ch.is_ascii_alphanumeric();
+        let ch = if ok { ch } else { '_' };
+        if i == 0 && !(ch == '_' || ch.is_ascii_alphabetic()) {
+            out.push('_');
+        }
+        out.push(ch);
+    }
+    if out.is_empty() || out == "_" {
+        out.clear();
+        out.push_str("input");
+    }
+    if is_rust_keyword(&out) {
+        out.push('_');
+    }
+    out
+}
+
+fn is_rust_keyword(ident: &str) -> bool {
+    matches!(
+        ident,
+        "as" | "break"
+            | "const"
+            | "continue"
+            | "crate"
+            | "else"
+            | "enum"
+            | "extern"
+            | "false"
+            | "fn"
+            | "for"
+            | "if"
+            | "impl"
+            | "in"
+            | "let"
+            | "loop"
+            | "match"
+            | "mod"
+            | "move"
+            | "mut"
+            | "pub"
+            | "ref"
+            | "return"
+            | "self"
+            | "Self"
+            | "static"
+            | "struct"
+            | "super"
+            | "trait"
+            | "true"
+            | "type"
+            | "unsafe"
+            | "use"
+            | "where"
+            | "while"
+            | "async"
+            | "await"
+            | "dyn"
+            | "abstract"
+            | "become"
+            | "box"
+            | "do"
+            | "final"
+            | "macro"
+            | "override"
+            | "priv"
+            | "typeof"
+            | "unsized"
+            | "virtual"
+            | "yield"
+            | "try"
+    )
 }
 
 /// Typed bit-vector expression handle.

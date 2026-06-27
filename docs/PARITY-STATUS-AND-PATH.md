@@ -761,7 +761,10 @@ The first bounded-property SDK crate now consumes that surface directly:
 `TermArena`, proof calls through the checked evidence APIs, minimized scalar
 countermodel lifting, and reusable typed unsigned-BV overflow predicates. This
 is the first committed consumer-track app slice; it is intentionally thin and
-does not add solver logic.
+does not add solver logic. It now also exposes deterministic native-scalar
+counterexample rendering: replay-checked Bool, Int, and BV<=128 input values can
+be emitted as Rust let-bindings or a `#[test]` skeleton with caller-provided
+domain replay code, while unsupported richer values decline explicitly.
 
 ## 4. Reflection on PLAN.md
 

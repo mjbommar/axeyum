@@ -24,6 +24,8 @@ The committed v0 slice is intentionally thin and additive:
 - proof calls delegate to `axeyum_solver::{prove, prove_minimized}`;
 - scalar model lifting reads values from `Model`;
 - typed unsigned BV overflow predicates expose the core overflow builders.
+- `Counterexample` / `InputBinding` render native scalar model values as Rust
+  let-bindings or a `#[test]` skeleton with caller-provided replay code.
 
 ## Tasks
 | id | task | exit |
@@ -31,7 +33,7 @@ The committed v0 slice is intentionally thin and additive:
 | PROP.1 | Typed scalar proof SDK | DONE — Bool/BV/Int handles, assumptions, proof/minimized proof calls, scalar model lifting, overflow predicates |
 | PROP.2 | Ergonomic expression syntax | TODO — operator traits or a small builder style that does not hide fallible construction |
 | PROP.3 | `Symbolic` trait and derive | TODO — structs become typed symbolic inputs with deterministic field/objective order |
-| PROP.4 | Counterexample-to-test layer | TODO — produce runnable `#[test]` snippets from typed disproving models |
+| PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons; richer structured/domain replay remains |
 | PROP.5 | Lean certificate surface | TODO — expose `EvidenceReport` plus best-effort standalone Lean module when available |
 | PROP.6 | SDK measurement gate | TODO — committed graduated corpus and scoreboard vs proptest/Kani-style baselines, DISAGREE=0 |
 
@@ -41,3 +43,5 @@ The committed v0 slice is intentionally thin and additive:
   `Unsupported`, never a fake proof or fake minimum.
 - Model lifting must stay replay-backed by the solver outcome; no independent
   interpretation of solver results.
+- Test rendering may provide inputs and a skeleton, but domain replay code must
+  still come from the caller/frontend.

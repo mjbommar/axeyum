@@ -69,5 +69,6 @@ over a proven core.
   `main`.
 - Task 44 (build): continue **B (`axeyum-property` v0)** from the committed
   typed Bool/BV/Int proof slice: add ergonomic operator traits or a typed
-  `Symbolic` derive, then add the counterexample-to-`#[test]` layer and the
-  SDK scoreboard gate before moving to D, A, C.
+  `Symbolic` derive, extend the native-scalar counterexample-to-`#[test]`
+  layer to structured/domain replay, and add the SDK scoreboard gate before
+  moving to D, A, C.

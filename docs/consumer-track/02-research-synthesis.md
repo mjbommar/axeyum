@@ -52,6 +52,12 @@ predicates. Remaining v0 polish is ergonomic syntax/operator traits,
 `Symbolic`/derive support for structs, structured counterexample-to-test output,
 and best-effort Lean-module packaging in the SDK certificate surface.
 
+**Status update (2026-06-27, follow-up):** native scalar counterexample-to-test
+rendering is now in the crate. Disproving models become deterministic
+`Counterexample` bindings over declared SDK inputs and can render Bool, Int, and
+BV<=128 values as Rust let-bindings or a `#[test]` skeleton. Structured/domain
+replay remains caller/frontend-owned.
+
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted
   surface (NOT MIR).** `crates/axeyum-solver/tests/symbolic_execution.rs` is already
