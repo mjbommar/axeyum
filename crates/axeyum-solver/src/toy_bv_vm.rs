@@ -167,6 +167,21 @@ pub struct TinyBvTraceBlockStep {
     pub executed_pcs: Vec<usize>,
 }
 
+/// Source-aware view of one concrete CFG edge taken by replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvTraceEdgeStep {
+    /// Static CFG edge taken between two consecutive replay steps.
+    pub edge: TinyBvCfgEdge,
+    /// One-based source line for `edge.from`, when imported from assembly.
+    pub from_source_line: Option<usize>,
+    /// One-based source line for `edge.to`, when imported from assembly.
+    pub to_source_line: Option<usize>,
+    /// Assembly labels attached to `edge.from`, in deterministic order.
+    pub from_labels: Vec<String>,
+    /// Assembly labels attached to `edge.to`, in deterministic order.
+    pub to_labels: Vec<String>,
+}
+
 /// Symbolic frontend state for [`TinyBvProgram`] exploration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TinyBvState {
@@ -566,6 +581,45 @@ impl TinyBvProgram {
             }
         }
         path
+    }
+
+    /// Derives source-aware CFG edges taken by a concrete replay trace.
+    ///
+    /// The method looks at each pair of consecutive executed PCs and keeps the
+    /// matching static successor edge. Public traces can be constructed
+    /// manually; invalid or cross-program transitions are ignored. If a branch's
+    /// true and false arms both target the same PC, the deterministic
+    /// true-then-false successor order makes the edge ambiguous and the true
+    /// edge is reported.
+    pub fn trace_cfg_edges(&self, trace: &TinyBvConcreteTrace) -> Vec<TinyBvTraceEdgeStep> {
+        trace
+            .steps
+            .windows(2)
+            .filter_map(|steps| {
+                let from_pc = steps[0].pc;
+                let to_pc = steps[1].pc;
+                let edge = self
+                    .successors(from_pc)
+                    .ok()?
+                    .into_iter()
+                    .find(|edge| edge.to == to_pc)?;
+                Some(TinyBvTraceEdgeStep {
+                    edge,
+                    from_source_line: self.source_line(edge.from),
+                    to_source_line: self.source_line(edge.to),
+                    from_labels: self
+                        .labels_at_pc(edge.from)
+                        .into_iter()
+                        .map(ToOwned::to_owned)
+                        .collect(),
+                    to_labels: self
+                        .labels_at_pc(edge.to)
+                        .into_iter()
+                        .map(ToOwned::to_owned)
+                        .collect(),
+                })
+            })
+            .collect()
     }
 
     /// Label-to-program-counter map imported from assembly.

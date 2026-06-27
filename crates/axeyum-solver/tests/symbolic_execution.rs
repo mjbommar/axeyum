@@ -14,6 +14,7 @@ use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
     SymbolicExecutor, SymbolicMemory, TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind,
     TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram, TinyBvReachabilityStatus, TinyBvSafetyStatus,
+    TinyBvWitness,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -1037,9 +1038,53 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         vec![Some(4), Some(5), Some(6), Some(7)]
     );
     assert_eq!(trace_blocks[1].block.labels, vec!["win_block".to_owned()]);
+    let trace_edges = program.trace_cfg_edges(&trace);
+    assert_eq!(
+        trace_edges
+            .iter()
+            .map(|step| (step.edge.from, step.edge.to, step.edge.kind))
+            .collect::<Vec<_>>(),
+        vec![
+            (0, 1, TinyBvCfgEdgeKind::Fallthrough),
+            (1, 2, TinyBvCfgEdgeKind::Fallthrough),
+            (2, 3, TinyBvCfgEdgeKind::Fallthrough),
+            (3, 4, TinyBvCfgEdgeKind::BranchTrue),
+        ]
+    );
+    assert_eq!(trace_edges[0].from_labels, vec!["entry".to_owned()]);
+    assert_eq!(trace_edges[3].from_source_line, Some(7));
+    assert_eq!(trace_edges[3].to_source_line, Some(8));
+    assert_eq!(trace_edges[3].to_labels, vec!["win_block".to_owned()]);
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
     assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
+
+    let lose_trace = program.concrete_trace(&TinyBvWitness { inputs: vec![0, 0] });
+    assert_eq!(lose_trace.outcome, TinyBvConcreteOutcome::Lose);
+    assert_eq!(
+        lose_trace
+            .steps
+            .iter()
+            .map(|step| step.pc)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 5]
+    );
+    let lose_edges = program.trace_cfg_edges(&lose_trace);
+    assert_eq!(
+        lose_edges
+            .iter()
+            .map(|step| (step.edge.from, step.edge.to, step.edge.kind))
+            .collect::<Vec<_>>(),
+        vec![
+            (0, 1, TinyBvCfgEdgeKind::Fallthrough),
+            (1, 2, TinyBvCfgEdgeKind::Fallthrough),
+            (2, 3, TinyBvCfgEdgeKind::Fallthrough),
+            (3, 5, TinyBvCfgEdgeKind::BranchFalse),
+        ]
+    );
+    assert_eq!(lose_edges[3].from_source_line, Some(7));
+    assert_eq!(lose_edges[3].to_source_line, Some(10));
+    assert_eq!(lose_edges[3].to_labels, vec!["lose_block".to_owned()]);
 
     let safety = program
         .check_label_safety_checked(
