@@ -2717,6 +2717,7 @@ fn accepts_standard_output_commands() {
         (assert (= x #x05))
         (check-sat)
         (get-model)
+        (get-option :produce-models)
         (get-assignment)
         (get-unsat-assumptions)
         (get-assertions)
@@ -2735,6 +2736,8 @@ fn records_info_options_and_get_info_queries() {
         (set-info :status sat)
         (set-info :name "tiny")
         (set-option :produce-proofs true)
+        (get-option :produce-proofs)
+        (get-option :produce-models)
         (get-info :name)
         (get-info :status)
         (declare-const x (_ BitVec 8))
@@ -2751,6 +2754,10 @@ fn records_info_options_and_get_info_queries() {
     assert_eq!(
         script.options.get(":produce-proofs").map(String::as_str),
         Some("true")
+    );
+    assert_eq!(
+        script.get_option_keys,
+        vec![":produce-proofs".to_owned(), ":produce-models".to_owned()]
     );
     assert_eq!(
         script.get_info_keys,

@@ -10,7 +10,7 @@ Four **independent** axes per SMT-LIB fragment, so "the parser accepts it" is ne
 
 **parser-accepts** (does `axeyum-smtlib` parse it?):
 - **accepted** — parsed and acted on.
-- **accepted-but-ignored** — parsed but a deliberate no-op (e.g. `set-option`, `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`).
+- **accepted-but-ignored** — parsed but a deliberate no-op in the single-result `solve_smtlib` facade (e.g. `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`); some commands also have explicit helper APIs.
 - **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded strings; arrays restricted to bit-vector index/element; constant-operand-only ops; non-parametric datatypes).
 - **rejected** — deliberately refused (full `reset`, parametric datatypes, the unbounded `String`/`Seq` sort).
 

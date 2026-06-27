@@ -700,6 +700,48 @@ fn get_info_has_defaults_and_unsupported_marker() {
     );
 }
 
+#[test]
+fn get_option_returns_recorded_values_and_defaults() {
+    use axeyum_solver::solve_smtlib_get_option;
+    let text = "\
+(set-logic QF_BV)
+(set-option :produce-models true)
+(set-option :regular-output-channel \"stdout\")
+(get-option :produce-models)
+(get-option :produce-proofs)
+(get-option :regular-output-channel)
+(get-option :not-a-real-option)
+";
+    let options = solve_smtlib_get_option(text, &config())
+        .expect("option helper succeeds")
+        .expect("script requested options");
+    assert_eq!(
+        options,
+        vec![
+            (":produce-models".to_owned(), "true".to_owned()),
+            (":produce-proofs".to_owned(), "false".to_owned()),
+            (
+                ":regular-output-channel".to_owned(),
+                "\"stdout\"".to_owned()
+            ),
+            (":not-a-real-option".to_owned(), "unsupported".to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn get_option_is_none_without_requests() {
+    use axeyum_solver::solve_smtlib_get_option;
+    let text = "\
+(set-logic QF_BV)
+(set-option :produce-models true)
+";
+    assert_eq!(
+        solve_smtlib_get_option(text, &config()).expect("option helper succeeds"),
+        None
+    );
+}
+
 /// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
 #[test]
 fn optimize_integer_objective() {

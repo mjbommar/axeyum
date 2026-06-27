@@ -258,10 +258,12 @@ fn probe_qf_lra_unsat_has_farkas_certificate() {
 
 #[test]
 fn probe_accepted_but_ignored_and_rejected_commands() {
-    // `get-model`, `set-option`, `echo`, `exit` are accepted-but-ignored: a
-    // script using them still parses and decides.
+    // Output commands are accepted by the single-result facade: a script using
+    // them still parses and decides, even when richer command output is served
+    // through explicit helper APIs.
     let ok = solve_smtlib(
         "(set-option :produce-models true)\
+         (get-option :produce-models)\
          (echo \"hi\")\
          (declare-const x (_ BitVec 4))(assert (= x #x1))(check-sat)\
          (get-model)(exit)",

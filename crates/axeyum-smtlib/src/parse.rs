@@ -57,6 +57,8 @@ pub struct Script {
     pub infos: BTreeMap<String, String>,
     /// Script options from `(set-option :key value)`, keyed by `:key`.
     pub options: BTreeMap<String, String>,
+    /// Requested `(get-option :key)` queries, in script order.
+    pub get_option_keys: Vec<String>,
     /// Requested `(get-info :key)` queries, in script order.
     pub get_info_keys: Vec<String>,
     /// Number of `check-sat` commands seen.
@@ -1213,8 +1215,18 @@ fn parse_command<'a>(
             )?;
             script.objectives.push((t, head == "maximize"));
         }
-        // `(get-info k)` records the requested key; `(echo "string")` is accepted
-        // as a well-formed output command and otherwise ignored.
+        // `(get-option k)` and `(get-info k)` record the requested key;
+        // `(echo "string")` is accepted as a well-formed output command and
+        // otherwise ignored.
+        "get-option" => {
+            exact_len(items, 2, head)?;
+            script.get_option_keys.push(
+                sexpr_at(items, 1)?
+                    .atom()
+                    .ok_or_else(|| SmtError::Syntax("get-option key".to_owned()))?
+                    .to_owned(),
+            );
+        }
         "get-info" => {
             exact_len(items, 2, head)?;
             script.get_info_keys.push(

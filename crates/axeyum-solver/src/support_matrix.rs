@@ -37,8 +37,9 @@ use core::fmt::Write as _;
 pub enum ParserStatus {
     /// Parsed and acted on (builds IR / mutates script state).
     Accepted,
-    /// Parsed (and arity-checked) but a deliberate no-op — e.g. `set-option`,
-    /// `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`.
+    /// Parsed (and arity-checked) but a deliberate no-op in the single-result
+    /// `solve_smtlib` facade — e.g. `get-model`, `get-unsat-core`, `get-proof`,
+    /// `echo`, `exit`. Some commands also have explicit helper APIs.
     AcceptedIgnored,
     /// Parsed but only over a bounded/restricted shape (e.g. bounded strings,
     /// arrays restricted to bit-vector index/element sorts, constant-operand-only ops).
@@ -410,8 +411,9 @@ pub fn support_matrix_markdown() -> String {
     out.push_str(
         "**parser-accepts** (does `axeyum-smtlib` parse it?):\n\
          - **accepted** — parsed and acted on.\n\
-         - **accepted-but-ignored** — parsed but a deliberate no-op (e.g. `set-option`, \
-           `get-model`, `get-unsat-core`, `get-proof`, `echo`, `exit`).\n\
+         - **accepted-but-ignored** — parsed but a deliberate no-op in the single-result \
+           `solve_smtlib` facade (e.g. `get-model`, `get-unsat-core`, `get-proof`, \
+           `echo`, `exit`); some commands also have explicit helper APIs.\n\
          - **accepted (bounded)** — parsed only over a bounded/restricted shape (bounded \
            strings; arrays restricted to bit-vector index/element; constant-operand-only ops; \
            non-parametric datatypes).\n\

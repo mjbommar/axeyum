@@ -387,6 +387,63 @@ pub fn solve_smtlib_get_info(
     Ok(Some(values))
 }
 
+/// Answers recorded SMT-LIB `(get-option :key)` queries.
+///
+/// The parser preserves `(set-option :key value)` updates and requested
+/// `(get-option :key)` commands. This helper returns one `(key, value)` row per
+/// request, in script order. Explicitly set options are returned verbatim; common
+/// SMT-LIB options have conservative defaults when the script did not set them.
+/// Unknown options return `unsupported` rather than being silently dropped.
+///
+/// This is a command-surface helper only: not every standard option has full
+/// semantic impact on the solver yet. For example, proof/model-producing helpers
+/// are still explicit Rust APIs, while this function exposes the option state a
+/// driver would observe.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text.
+pub fn solve_smtlib_get_option(
+    input: &str,
+    _config: &SolverConfig,
+) -> Result<Option<Vec<(String, String)>>, SolverError> {
+    let script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    if script.get_option_keys.is_empty() {
+        return Ok(None);
+    }
+
+    let values = script
+        .get_option_keys
+        .iter()
+        .map(|key| {
+            let value = script
+                .options
+                .get(key)
+                .cloned()
+                .or_else(|| smtlib_option_default(key).map(str::to_owned))
+                .unwrap_or_else(|| "unsupported".to_owned());
+            (key.clone(), value)
+        })
+        .collect();
+    Ok(Some(values))
+}
+
+fn smtlib_option_default(key: &str) -> Option<&'static str> {
+    match key {
+        ":diagnostic-output-channel" => Some("\"stderr\""),
+        ":global-declarations"
+        | ":print-success"
+        | ":produce-assignments"
+        | ":produce-models"
+        | ":produce-proofs"
+        | ":produce-unsat-assumptions"
+        | ":produce-unsat-cores" => Some("false"),
+        ":random-seed" | ":reproducible-resource-limit" | ":verbosity" => Some("0"),
+        ":regular-output-channel" => Some("\"stdout\""),
+        _ => None,
+    }
+}
+
 /// Extracts an **unsat core** from an SMT-LIB script (`get-unsat-core`): the
 /// conjunction of all its assertions is decided, and if it is `unsat`, a minimal
 /// unsatisfiable subset is returned, reported as the assertions' `:named` labels
