@@ -89,6 +89,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         kani_style_baseline_proof_comparison()?,
         kani_style_assumption_baseline_proof_comparison()?,
         kani_style_struct_baseline_counterexample_comparison()?,
+        replay_baseline_counterexample_comparison()?,
         derive_symbolic_counterexample_lifted()?,
         explicit_nested_aggregate_replay_rendered()?,
     ])
@@ -102,9 +103,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 13,
+        cases: 14,
         proved: 5,
-        disproved: 8,
+        disproved: 9,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -295,9 +296,11 @@ fn write_markdown_cases(out: &mut String, reports: &[CorpusCaseReport]) {
 
 fn write_markdown_next_gates(out: &mut String) {
     out.push_str("## Next Gates\n\n");
-    out.push_str("1. Broaden the baseline runner across replay-oriented property shapes,\n");
     out.push_str(
-        "   including proptest-style random/shrunk witnesses and Kani-style bounded assertions.\n",
+        "1. Broaden the baseline runner across randomized and external property shapes,\n",
+    );
+    out.push_str(
+        "   including proptest-style random/shrunk witnesses and external Kani-style bounded assertions.\n",
     );
     out.push_str(
         "2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,\n",
@@ -820,6 +823,91 @@ fn kani_style_struct_baseline_counterexample_comparison() -> CorpusResult<Corpus
     })
 }
 
+fn replay_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {
+    let expected = first_transfer_withdraw_failure()
+        .expect("bounded executable baseline should find the first replay failure");
+
+    let mut property = Property::new();
+    let transfer = property.symbolic::<BaselineTransferInput>("transfer")?;
+    let amount_within_balance = property.bv_ule(transfer.amount, transfer.balance)?;
+    let goal = property.bool_implies(transfer.enabled, amount_within_balance)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a replay baseline-comparable counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    let actual = property
+        .concrete::<BaselineTransferInput>(&transfer, model)?
+        .expect("model should bind transfer");
+    assert_eq!(actual, expected);
+    assert_eq!(
+        actual,
+        BaselineTransferInput {
+            enabled: true,
+            amount: 1,
+            balance: 0,
+        }
+    );
+    assert!(transfer_withdraw_replay_fails(actual));
+
+    let counterexample = property.counterexample(model)?;
+    let transfer_init =
+        counterexample.render_rust_named_struct_let("transfer", "TransferInput", "transfer")?;
+    assert_eq!(
+        transfer_init,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    balance: transfer_balance,\n",
+            "};\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_replay_assertion(
+            "transfer failure replay",
+            ["use crate::TransferInput;"],
+            [transfer_init.as_str()],
+            "replay_transfer_failure",
+            ["transfer"],
+        )?,
+        concat!(
+            "use crate::TransferInput;\n",
+            "\n",
+            "#[test]\n",
+            "fn transfer_failure_replay() {\n",
+            "    let transfer_enabled: bool = true;\n",
+            "    let transfer_amount: u8 = 0x01_u8; // BV8\n",
+            "    let transfer_balance: u8 = 0x00_u8; // BV8\n",
+            "    let transfer: TransferInput = TransferInput {\n",
+            "        enabled: transfer_enabled,\n",
+            "        amount: transfer_amount,\n",
+            "        balance: transfer_balance,\n",
+            "    };\n",
+            "    assert!(replay_transfer_failure(transfer));\n",
+            "}\n",
+        )
+    );
+
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-replay-baseline-counterexample-compare",
+        tier: "P1",
+        workflow: "bounded replay baseline comparison for a generated counterexample test",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "generated replay test replays the first executable struct failure `TransferInput { enabled: true, amount: 1, balance: 0 }` through a caller-owned failure predicate",
+        baseline_analogue: "proptest/Kani regression test emitted from a minimized witness",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
 fn first_transfer_withdraw_failure() -> Option<BaselineTransferInput> {
     for enabled in [false, true] {
         for amount in u8::MIN..=u8::MAX {
@@ -840,6 +928,10 @@ fn first_transfer_withdraw_failure() -> Option<BaselineTransferInput> {
 
 fn transfer_withdraw_property(input: BaselineTransferInput) -> bool {
     !input.enabled || input.amount <= input.balance
+}
+
+fn transfer_withdraw_replay_fails(input: BaselineTransferInput) -> bool {
+    !transfer_withdraw_property(input)
 }
 
 fn derive_symbolic_counterexample_lifted() -> CorpusResult<CorpusCaseReport> {

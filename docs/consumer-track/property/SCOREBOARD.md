@@ -25,9 +25,9 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 
 | metric | value |
 |---|---:|
-| corpus cases | 13 |
+| corpus cases | 14 |
 | proved | 5 |
-| disproved | 8 |
+| disproved | 9 |
 | unknown | 0 |
 | mismatches / DISAGREE | 0 |
 | Lean-required cases | 1 |
@@ -48,13 +48,14 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 | `sdk-u8-baseline-proof-compare` | P1 | bounded baseline comparison for a proved assertion | proved | executable baseline finds no `x + y != y + x` failure for `u8`; Axeyum proves the same assertion with checked evidence | Kani exhaustive bounded assertion over the same Rust predicate |
 | `sdk-assumption-baseline-proof-compare` | P1 | bounded baseline comparison under an SDK assumption | proved | executable baseline finds no `x <= 10 && x + 1 > 11` failure for `u8`; Axeyum proves the assumed assertion with checked evidence | Kani precondition/assertion harness over the same Rust predicate |
 | `sdk-struct-baseline-counterexample-compare` | P1 | bounded struct baseline comparison for a minimized witness | disproved | solver-minimized `TransferInput { enabled: true, amount: 1, balance: 0 }` matches the first executable bounded struct failure | Kani struct harness / proptest `Arbitrary` struct over the same predicate |
+| `sdk-replay-baseline-counterexample-compare` | P1 | bounded replay baseline comparison for a generated counterexample test | disproved | generated replay test replays the first executable struct failure `TransferInput { enabled: true, amount: 1, balance: 0 }` through a caller-owned failure predicate | proptest/Kani regression test emitted from a minimized witness |
 | `sdk-derived-struct-counterexample-lift` | P1 | `derive(Symbolic)` struct witness | disproved | derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
 | `sdk-explicit-nested-aggregate-replay` | P1 | caller-owned nested aggregate replay | disproved | generated multi-case fixture file includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order | Rust verifier domain replay body / Kani nested harness struct |
 
 ## Next Gates
 
-1. Broaden the baseline runner across replay-oriented property shapes,
-   including proptest-style random/shrunk witnesses and Kani-style bounded assertions.
+1. Broaden the baseline runner across randomized and external property shapes,
+   including proptest-style random/shrunk witnesses and external Kani-style bounded assertions.
 2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,
    assumptions, and certificate fragments.
 3. Keep `corpus.json` and this scoreboard generated from the shared corpus

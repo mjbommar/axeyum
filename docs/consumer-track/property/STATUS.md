@@ -2,6 +2,28 @@
 
 ## Current focus
 
+- **2026-06-27 — Replay baseline counterexample comparison landed.**
+  The PROP.6 corpus now checks a generated regression-test workflow: an
+  independent bounded Rust scan finds the first failing guarded transfer input,
+  Axeyum minimizes to the same
+  `TransferInput { enabled: true, amount: 1, balance: 0 }`, and the generated
+  replay test feeds that witness into a caller-owned failure predicate. This
+  extends the baseline-backed gate from scalar, struct, proved, and
+  assumption-backed assertions into an emitted counterexample test shape.
+  Totals are now 14 cases, 5 proved, 9 disproved, 0 unknown, DISAGREE=0, and
+  1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
 - **2026-06-27 — Assumption baseline proof comparison landed.**
   The PROP.6 corpus now checks a bounded precondition/assertion workflow: an
   independent Rust scan finds no `x <= 10 && x + 1 > 11` failure for `u8`, and
@@ -316,7 +338,8 @@
 1. Broaden expression construction ergonomics toward operator-trait experiments
    or richer chaining syntax that still makes fallible term construction
    visible.
-2. Broaden the baseline runner across replay-oriented property shapes, including
-   proptest-style random/shrunk witnesses and Kani-style bounded assertions.
+2. Broaden the baseline runner across randomized and external property shapes,
+   including proptest-style random/shrunk witnesses and external Kani-style
+   bounded assertions.
 3. Keep broadening the SDK property corpus across assumptions, structs,
    fixtures, and certificate fragments.
