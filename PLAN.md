@@ -12,6 +12,10 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+When multiple agents or humans are active, use separate topic-branch worktrees
+and one `main` integration owner. The standing protocol lives in
+[`docs/contributor-guide/multi-agent-worktrees.md`](docs/contributor-guide/multi-agent-worktrees.md).
+
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 
 **Diagnosis (evidence-based).** ~150 commits over 24h moved **zero** Z3/cvc5

@@ -39,6 +39,9 @@ flowchart TD
 | **A contributor** | [`contributor-guide/`](contributor-guide/README.md) — the obligations for new public surface |
 | **A maintainer / researcher** | [`internals/`](internals/README.md), [`plan/`](plan/README.md), [`research/`](research/README.md) |
 
+Multi-agent sessions should use the
+[worktree collaboration protocol](contributor-guide/multi-agent-worktrees.md).
+
 ## The honest current state
 
 Axeyum's **north star** is Z3-class solving with Lean-grade checkable evidence.

@@ -12,6 +12,8 @@ non-negotiables now.
 3. [docs/plan/01-dependency-dag.md](../plan/01-dependency-dag.md) — what depends on what.
 4. The foundational DAG before adding operators/encodings/logics:
    [foundational-dag.md](../research/08-planning/foundational-dag.md).
+5. When multiple agents are active, follow the
+   [multi-agent worktree protocol](multi-agent-worktrees.md).
 
 ## Obligations for new public surface
 

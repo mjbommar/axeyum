@@ -22,6 +22,11 @@
   - [Architecture](internals/architecture.md)
   - [How this documentation is built](internals/documentation.md)
 
+# Contributor Guide
+
+- [Contributor Guide](contributor-guide/README.md)
+  - [Multi-agent worktrees](contributor-guide/multi-agent-worktrees.md)
+
 # Interactive
 
 - [WASM solver playground](playground/README.md)

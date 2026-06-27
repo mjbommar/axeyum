@@ -53,6 +53,15 @@ solve time) so the U6 special-case-vs-general decision is data-driven.
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 **DISAGREE = 0**; build/test via `scripts/mem-run.sh` (64 GB cap).
 
+## Process/documentation lane (2026-06-27) — `WIP`
+
+- **Multi-agent worktree protocol documented.** Added
+  [`docs/contributor-guide/multi-agent-worktrees.md`](docs/contributor-guide/multi-agent-worktrees.md)
+  as the standing note for side-by-side agent work: separate worktrees, topic
+  branches, one `main` integration owner, explicit high-conflict file ownership,
+  safe push rules, conflict handling, and cleanup. Linked it from `PLAN.md`,
+  the docs hub, the contributor guide, and the mdBook summary.
+
 ## Current focus
 
 - **Session 2026-06-27 — Warm direct array-equality admission.**
@@ -8792,6 +8801,14 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-27** — **Multi-agent worktree protocol documented.**
+  Added `docs/contributor-guide/multi-agent-worktrees.md` with the recommended
+  hub-and-spoke collaboration model: one worktree per agent/task, topic
+  branches, one `main` integration owner, explicit high-conflict file ownership,
+  safe push rules when a branch already contains someone else's unpushed
+  commits, conflict handling, and cleanup commands. Linked it from `PLAN.md`,
+  `docs/README.md`, `docs/contributor-guide/README.md`, and `docs/SUMMARY.md`.
 
 - **2026-06-27** — **Consumer-track integration lane opened.** Took over the
   diverged consumer track. Recorded the merge plan in
