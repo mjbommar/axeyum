@@ -3363,6 +3363,96 @@ fn direct_scalar_equality_repair_choices(
     }
 }
 
+#[derive(Clone, Copy)]
+enum IntOrderRelation {
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+impl IntOrderRelation {
+    fn negated(self) -> Self {
+        match self {
+            Self::Lt => Self::Ge,
+            Self::Le => Self::Gt,
+            Self::Gt => Self::Le,
+            Self::Ge => Self::Lt,
+        }
+    }
+}
+
+fn int_order_goal(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, IntOrderRelation)> {
+    match arena.node(term) {
+        TermNode::App { op, args } => match op {
+            Op::IntLt => Some((args[0], args[1], IntOrderRelation::Lt)),
+            Op::IntLe => Some((args[0], args[1], IntOrderRelation::Le)),
+            Op::IntGt => Some((args[0], args[1], IntOrderRelation::Gt)),
+            Op::IntGe => Some((args[0], args[1], IntOrderRelation::Ge)),
+            Op::BoolNot => {
+                let (lhs, rhs, relation) = int_order_goal(arena, args[0])?;
+                Some((lhs, rhs, relation.negated()))
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn direct_int_symbol(arena: &TermArena, term: TermId) -> Option<SymbolId> {
+    let symbol = direct_value_symbol(arena, term)?;
+    (arena.symbol(symbol).1 == Sort::Int).then_some(symbol)
+}
+
+fn int_order_left_value(relation: IntOrderRelation, rhs: i128) -> Option<i128> {
+    match relation {
+        IntOrderRelation::Lt => rhs.checked_sub(1),
+        IntOrderRelation::Le | IntOrderRelation::Ge => Some(rhs),
+        IntOrderRelation::Gt => rhs.checked_add(1),
+    }
+}
+
+fn int_order_right_value(relation: IntOrderRelation, lhs: i128) -> Option<i128> {
+    match relation {
+        IntOrderRelation::Lt => lhs.checked_add(1),
+        IntOrderRelation::Le | IntOrderRelation::Ge => Some(lhs),
+        IntOrderRelation::Gt => lhs.checked_sub(1),
+    }
+}
+
+fn int_order_repair_choices(
+    arena: &TermArena,
+    term: TermId,
+    projected: &Assignment,
+) -> Result<Vec<(SymbolId, Value)>, SolverError> {
+    let Some((lhs_term, rhs_term, relation)) = int_order_goal(arena, term) else {
+        return Ok(Vec::new());
+    };
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext order repair failed: {e}"));
+    let lhs = eval(arena, lhs_term, projected).map_err(ir)?;
+    let rhs = eval(arena, rhs_term, projected).map_err(ir)?;
+    let (Value::Int(lhs_value), Value::Int(rhs_value)) = (lhs, rhs) else {
+        return Ok(Vec::new());
+    };
+
+    let mut choices = Vec::new();
+    if let Some(symbol) = direct_int_symbol(arena, lhs_term)
+        && let Some(value) = int_order_left_value(relation, rhs_value)
+    {
+        choices.push((symbol, Value::Int(value)));
+    }
+    if let Some(symbol) = direct_int_symbol(arena, rhs_term)
+        && let Some(value) = int_order_right_value(relation, lhs_value)
+        && !choices.iter().any(|(existing, existing_value)| {
+            *existing == symbol && *existing_value == Value::Int(value)
+        })
+    {
+        choices.push((symbol, Value::Int(value)));
+    }
+    Ok(choices)
+}
+
 fn store_projected_symbol_value(
     arena: &TermArena,
     projected: &mut Assignment,
@@ -4225,6 +4315,86 @@ fn repair_projected_branch_literal_in_branch(
     repair_projected_branch_literal(arena, originals, literal, projected, stats)
 }
 
+fn repair_projected_order_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    literal: TermId,
+    projected: &mut Assignment,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let choices = int_order_repair_choices(arena, literal, projected)?;
+    if choices.is_empty() {
+        return Ok(false);
+    }
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext order repair failed: {e}"));
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut best: Option<(usize, usize, ProjectionRepairStats, Assignment)> = None;
+
+    for (ordinal, (symbol, value)) in choices.into_iter().enumerate() {
+        let mut trial = projected.clone();
+        let mut trial_stats = ProjectionRepairStats {
+            branch_candidates: 1,
+            ..ProjectionRepairStats::default()
+        };
+        if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+            continue;
+        }
+        trial_stats.branch_symbol_changes += 1;
+        if eval(arena, literal, &trial).map_err(ir)? != Value::Bool(true) {
+            continue;
+        }
+        let total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if total_false > current_false {
+            continue;
+        }
+        let replace = best
+            .as_ref()
+            .is_none_or(|(best_total_false, best_ordinal, _, _)| {
+                (total_false, ordinal) < (*best_total_false, *best_ordinal)
+            });
+        if replace {
+            best = Some((total_false, ordinal, trial_stats, trial));
+        }
+    }
+
+    let Some((_, _, best_stats, trial)) = best else {
+        return Ok(false);
+    };
+    *projected = trial;
+    stats.absorb(best_stats);
+    Ok(true)
+}
+
+fn repair_projected_branch_scalar_equality_literal(
+    arena: &TermArena,
+    literal: TermId,
+    projected: &mut Assignment,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let choices = direct_scalar_equality_repair_choices(arena, literal);
+    if choices.is_empty() {
+        return Ok(false);
+    }
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
+    for (symbol, value_term) in choices {
+        let mut trial = projected.clone();
+        let value = eval(arena, value_term, &trial).map_err(ir)?;
+        if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+            continue;
+        }
+        if eval(arena, literal, &trial).map_err(ir)? != Value::Bool(true) {
+            continue;
+        }
+        *projected = trial;
+        stats.branch_candidates += 1;
+        stats.branch_symbol_changes += 1;
+        return Ok(true);
+    }
+    Ok(false)
+}
+
 fn repair_projected_branch_literal(
     arena: &TermArena,
     originals: &[TermId],
@@ -4243,6 +4413,9 @@ fn repair_projected_branch_literal(
         return repair_projected_array_equality_literal(
             arena, originals, projected, lhs_symbol, rhs_symbol, stats,
         );
+    }
+    if repair_projected_order_literal(arena, originals, literal, projected, stats)? {
+        return Ok(true);
     }
     let Some((symbol, value_term)) = direct_symbol_equality_repair_target(arena, literal) else {
         return Ok(false);
@@ -5568,14 +5741,9 @@ fn repair_projected_branch_as_candidate(
             if eval(arena, literal, projected).map_err(ir)? == Value::Bool(true) {
                 continue;
             }
-            let Some((symbol, value_term)) = direct_scalar_equality_repair_target(arena, literal)
-            else {
-                continue;
-            };
-            stats.branch_candidates += 1;
-            let value = eval(arena, value_term, projected).map_err(ir)?;
-            if store_projected_symbol_value(arena, projected, symbol, value)? {
-                stats.branch_symbol_changes += 1;
+            if repair_projected_branch_scalar_equality_literal(
+                arena, literal, projected, &mut stats,
+            )? {
                 pass_changes += 1;
                 changed = true;
             }
@@ -5589,6 +5757,13 @@ fn repair_projected_branch_as_candidate(
         let mut pass_changes = 0;
         for &literal in &literals {
             if eval(arena, literal, projected).map_err(ir)? == Value::Bool(true) {
+                continue;
+            }
+            if repair_projected_branch_scalar_equality_literal(
+                arena, literal, projected, &mut stats,
+            )? {
+                pass_changes += 1;
+                changed = true;
                 continue;
             }
             let before = stats.changes();
@@ -6713,6 +6888,77 @@ mod tests {
         assert_eq!(assignment.get(*q_symbol), Some(Value::Bool(false)));
         assert_eq!(assignment.get(*x_symbol), Some(Value::Int(1)));
         assert_eq!(assignment.get(*y_symbol), Some(Value::Int(2)));
+        assert_eq!(
+            eval(&arena, branch_assertion, &assignment).unwrap(),
+            Value::Bool(true)
+        );
+    }
+
+    #[test]
+    fn lazy_ext_targeted_replay_repairs_order_guarded_branch_choice() {
+        let mut arena = TermArena::new();
+        let q = arena.bool_var("q").unwrap();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let z = arena.int_var("z").unwrap();
+        let x_le_y = arena.int_le(x, y).unwrap();
+        let x_gt_y = arena.not(x_le_y).unwrap();
+        let z_eq_x = arena.eq(z, x).unwrap();
+        let guarded_branch = arena.and(x_gt_y, z_eq_x).unwrap();
+        let branch_assertion = arena.or(q, guarded_branch).unwrap();
+
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut candidate = Assignment::new();
+        candidate.set(*q_symbol, Value::Bool(false));
+        candidate.set(*x_symbol, Value::Int(0));
+        candidate.set(*y_symbol, Value::Int(0));
+        candidate.set(*z_symbol, Value::Int(2));
+
+        let originals = [branch_assertion];
+        let projected = complete_assignment(&arena, &candidate);
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected the branch disjunction to fail before targeted repair");
+        let or_failure = failure
+            .failed_or
+            .as_ref()
+            .expect("expected branch failure details");
+        assert_eq!(or_failure.best_branch_ordinal, 0);
+        assert_eq!(or_failure.best_branch_false_literals, 1);
+
+        let ctx = RowCtx::default();
+        let ExtReplay::Sat(model) =
+            project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
+        else {
+            panic!("expected targeted replay to repair the order-guarded branch");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(assignment.get(*q_symbol), Some(Value::Bool(false)));
+        let Some(Value::Int(x_value)) = assignment.get(*x_symbol) else {
+            panic!("x should have an integer value");
+        };
+        let Some(Value::Int(y_value)) = assignment.get(*y_symbol) else {
+            panic!("y should have an integer value");
+        };
+        assert!(x_value > y_value);
+        assert_eq!(assignment.get(*z_symbol), Some(Value::Int(x_value)));
         assert_eq!(
             eval(&arena, branch_assertion, &assignment).unwrap(),
             Value::Bool(true)

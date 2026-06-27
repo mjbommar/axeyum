@@ -6,6 +6,45 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA order-guarded branch repair.**
+  Targeted lazy-extensionality branch-choice repair can now repair false integer
+  order guards inside a candidate branch. The repair recognizes `IntLt/Le/Gt/Ge`
+  and a single `not` around them, moves one direct integer symbol just enough to
+  satisfy the desired relation, and keeps the local change only if the literal
+  becomes true and the full original replay false count is non-worsening. Branch
+  candidates also now use the scalar equality choice helper before and after
+  store/array/order repairs, so dependent symbol-to-symbol equalities can catch
+  up after an order guard changes one side. A focused regression covers the
+  exact shape: the locally best branch is an unrepairable false Boolean, while a
+  later branch needs `not (x <= y)` plus `z = x`.
+
+  This does **not** move `bug337` yet. The 10 s probe remains at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair counters are unchanged from the
+  prior baseline: **select_repair_candidates=10011**,
+  **select_repair_array_changes=102**, **select_repair_symbol_changes=320**,
+  **branch_repair_candidates=136**, **branch_repair_symbol_changes=165**,
+  **scalar_repair_candidates=24**, **scalar_support_candidates=24**,
+  **scalar_stabilized_trials=0**, **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=611**. The first false conjunct is still generated
+  branch disjunction **ordinal 211**, term **4108**; best branch **3** has
+  **1/6** false literals, term **714**, `x_325 = x_311`. This shows the
+  globally satisfying `x_322 = 2` branch still is not accepted by current
+  branch-choice scoring even after order-guard repair. Next useful work is a
+  branch-candidate diagnostic that reports each branch's post-repair false
+  literals/first blocker, not more blind repair operators.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_order_guarded_branch_choice -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_can_choose_non_best_repairable_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_equality_repairs_target_through_store_definition -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA definition-aware array equality repair.**
   Branch array-equality repair now has a second, definition-aware candidate in
   addition to the prior direct component copy. For a false selected equality
