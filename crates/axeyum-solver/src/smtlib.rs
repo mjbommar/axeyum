@@ -319,6 +319,74 @@ pub fn solve_smtlib_get_assignment(
     }
 }
 
+/// Answers recorded SMT-LIB `(get-info :key)` queries.
+///
+/// The parser preserves `(set-info :key value)` metadata and requested
+/// `(get-info :key)` commands. This helper returns one `(key, value)` row per
+/// request, in script order. Recorded `set-info` values are returned verbatim;
+/// `:name` and `:version` have axeyum defaults when the script did not set them.
+/// `:reason-unknown` is computed only when requested: the single active query is
+/// solved, and the backend's unknown reason is returned if the result is
+/// `unknown`; otherwise it returns the empty SMT-LIB string literal. Unknown
+/// info keys return `unsupported` rather than being silently dropped.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, or any [`SolverError`]
+/// from solving the active query for `:reason-unknown`.
+pub fn solve_smtlib_get_info(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Option<Vec<(String, String)>>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    if script.get_info_keys.is_empty() {
+        return Ok(None);
+    }
+
+    let mut reason_unknown = None;
+    if script
+        .get_info_keys
+        .iter()
+        .any(|key| key == ":reason-unknown")
+    {
+        let query = smtlib_single_query(&script)?;
+        reason_unknown = Some(match solve(&mut script.arena, &query.assertions, config)? {
+            CheckResult::Unknown(reason) if reason.detail.is_empty() => {
+                format!("{:?}", reason.kind)
+            }
+            CheckResult::Unknown(reason) => reason.detail,
+            CheckResult::Sat(_) | CheckResult::Unsat => "\"\"".to_owned(),
+        });
+    }
+
+    let values = script
+        .get_info_keys
+        .iter()
+        .map(|key| {
+            let value = match key.as_str() {
+                ":name" => script
+                    .infos
+                    .get(key)
+                    .cloned()
+                    .unwrap_or_else(|| "\"axeyum\"".to_owned()),
+                ":version" => script
+                    .infos
+                    .get(key)
+                    .cloned()
+                    .unwrap_or_else(|| format!("\"{}\"", env!("CARGO_PKG_VERSION"))),
+                ":reason-unknown" => reason_unknown.clone().unwrap_or_else(|| "\"\"".to_owned()),
+                _ => script
+                    .infos
+                    .get(key)
+                    .cloned()
+                    .unwrap_or_else(|| "unsupported".to_owned()),
+            };
+            (key.clone(), value)
+        })
+        .collect();
+    Ok(Some(values))
+}
+
 /// Extracts an **unsat core** from an SMT-LIB script (`get-unsat-core`): the
 /// conjunction of all its assertions is decided, and if it is `unsat`, a minimal
 /// unsatisfiable subset is returned, reported as the assertions' `:named` labels

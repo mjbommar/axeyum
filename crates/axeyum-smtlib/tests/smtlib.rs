@@ -2728,6 +2728,36 @@ fn accepts_standard_output_commands() {
     assert_eq!(script.assertions.len(), 1);
 }
 
+#[test]
+fn records_info_options_and_get_info_queries() {
+    let text = r#"
+        (set-logic QF_BV)
+        (set-info :status sat)
+        (set-info :name "tiny")
+        (set-option :produce-proofs true)
+        (get-info :name)
+        (get-info :status)
+        (declare-const x (_ BitVec 8))
+        (assert (= x #x05))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("metadata script parses");
+    assert_eq!(script.status.as_deref(), Some("sat"));
+    assert_eq!(script.infos.get(":status").map(String::as_str), Some("sat"));
+    assert_eq!(
+        script.infos.get(":name").map(String::as_str),
+        Some("\"tiny\"")
+    );
+    assert_eq!(
+        script.options.get(":produce-proofs").map(String::as_str),
+        Some("true")
+    );
+    assert_eq!(
+        script.get_info_keys,
+        vec![":name".to_owned(), ":status".to_owned()]
+    );
+}
+
 /// A genuinely-unknown command is still a clean `Unsupported` error (not a panic).
 #[test]
 fn rejects_unknown_command() {

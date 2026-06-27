@@ -651,6 +651,55 @@ fn get_assignment_is_none_without_sat_model() {
     );
 }
 
+#[test]
+fn get_info_returns_recorded_metadata() {
+    use axeyum_solver::solve_smtlib_get_info;
+    let text = "\
+(set-logic QF_BV)
+(set-info :status sat)
+(set-info :name \"tiny\")
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(check-sat)
+(get-info :name)
+(get-info :status)
+";
+    let info = solve_smtlib_get_info(text, &config())
+        .expect("metadata helper succeeds")
+        .expect("script requested info");
+    assert_eq!(
+        info,
+        vec![
+            (":name".to_owned(), "\"tiny\"".to_owned()),
+            (":status".to_owned(), "sat".to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn get_info_has_defaults_and_unsupported_marker() {
+    use axeyum_solver::solve_smtlib_get_info;
+    let text = "\
+(set-logic QF_BV)
+(get-info :name)
+(get-info :version)
+(get-info :not-a-real-key)
+";
+    let info = solve_smtlib_get_info(text, &config())
+        .expect("metadata helper succeeds")
+        .expect("script requested info");
+    assert_eq!(info[0], (":name".to_owned(), "\"axeyum\"".to_owned()));
+    assert_eq!(info[1].0, ":version");
+    assert!(
+        info[1].1.contains(env!("CARGO_PKG_VERSION")),
+        "version should include crate version: {info:?}"
+    );
+    assert_eq!(
+        info[2],
+        (":not-a-real-key".to_owned(), "unsupported".to_owned())
+    );
+}
+
 /// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
 #[test]
 fn optimize_integer_objective() {

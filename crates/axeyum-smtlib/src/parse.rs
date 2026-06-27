@@ -53,6 +53,12 @@ pub struct Script {
     pub logic: Option<String>,
     /// `(set-info :status ...)` value, if present (benchmark ground truth).
     pub status: Option<String>,
+    /// Script metadata from `(set-info :key value)`, keyed by `:key`.
+    pub infos: BTreeMap<String, String>,
+    /// Script options from `(set-option :key value)`, keyed by `:key`.
+    pub options: BTreeMap<String, String>,
+    /// Requested `(get-info :key)` queries, in script order.
+    pub get_info_keys: Vec<String>,
     /// Number of `check-sat` commands seen.
     pub check_sats: u32,
     /// Per-assertion `:named` label (parallel to [`Script::assertions`]; `None`
@@ -1100,6 +1106,20 @@ fn atom(s: &str) -> SExpr {
     SExpr::Atom(s.to_owned())
 }
 
+fn smtlib_metadata_value(value: &SExpr) -> String {
+    match value {
+        SExpr::Atom(atom) => atom.clone(),
+        SExpr::List(items) => {
+            let rendered = items
+                .iter()
+                .map(smtlib_metadata_value)
+                .collect::<Vec<_>>()
+                .join(" ");
+            format!("({rendered})")
+        }
+    }
+}
+
 // A flat dispatch over the SMT-LIB command keywords; one match arm per command.
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 fn parse_command<'a>(
@@ -1126,11 +1146,28 @@ fn parse_command<'a>(
         }
         "set-info" => {
             exact_len(items, 3, head)?;
-            if items.get(1).and_then(SExpr::atom) == Some(":status") {
+            let key = items
+                .get(1)
+                .and_then(SExpr::atom)
+                .ok_or_else(|| SmtError::Syntax("set-info key".to_owned()))?
+                .to_owned();
+            let value = smtlib_metadata_value(sexpr_at(items, 2)?);
+            if key == ":status" {
                 script.status = items.get(2).and_then(SExpr::atom).map(str::to_owned);
             }
+            script.infos.insert(key, value);
         }
-        "set-option" => exact_len(items, 3, head)?,
+        "set-option" => {
+            exact_len(items, 3, head)?;
+            let key = items
+                .get(1)
+                .and_then(SExpr::atom)
+                .ok_or_else(|| SmtError::Syntax("set-option key".to_owned()))?
+                .to_owned();
+            script
+                .options
+                .insert(key, smtlib_metadata_value(sexpr_at(items, 2)?));
+        }
         // Output/query commands: accepted as no-ops at parse time. The core is
         // produced by the solver (`solve_smtlib_unsat_core`), the model by the
         // `sat` result — the parser just records a well-formed script.
@@ -1176,9 +1213,18 @@ fn parse_command<'a>(
             )?;
             script.objectives.push((t, head == "maximize"));
         }
-        // `(get-info k)` and `(echo "string")`: 2-token output/query commands,
-        // accepted (well-formed) and otherwise ignored so full-standard scripts parse.
-        "get-info" | "echo" => exact_len(items, 2, head)?,
+        // `(get-info k)` records the requested key; `(echo "string")` is accepted
+        // as a well-formed output command and otherwise ignored.
+        "get-info" => {
+            exact_len(items, 2, head)?;
+            script.get_info_keys.push(
+                sexpr_at(items, 1)?
+                    .atom()
+                    .ok_or_else(|| SmtError::Syntax("get-info key".to_owned()))?
+                    .to_owned(),
+            );
+        }
+        "echo" => exact_len(items, 2, head)?,
         "get-value" => {
             exact_len(items, 2, head)?;
             let list = items
