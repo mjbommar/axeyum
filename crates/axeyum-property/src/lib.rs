@@ -680,6 +680,52 @@ impl Property {
         self.hypotheses.push(condition.term);
     }
 
+    /// Builds a conjunction over `conditions`.
+    ///
+    /// Empty input returns `true`. This is the builder-style equivalent of
+    /// repeated [`Bool::and`] calls and deliberately keeps term-construction
+    /// errors explicit.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any conjunction term cannot be built.
+    pub fn all(
+        &mut self,
+        conditions: impl IntoIterator<Item = Bool>,
+    ) -> Result<Bool, PropertyError> {
+        let mut acc: Option<Bool> = None;
+        for condition in conditions {
+            acc = Some(match acc {
+                Some(current) => current.and(self, condition)?,
+                None => condition,
+            });
+        }
+        Ok(acc.unwrap_or_else(|| self.bool_const(true)))
+    }
+
+    /// Builds a disjunction over `conditions`.
+    ///
+    /// Empty input returns `false`. This is the builder-style equivalent of
+    /// repeated [`Bool::or`] calls and deliberately keeps term-construction
+    /// errors explicit.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any disjunction term cannot be built.
+    pub fn any(
+        &mut self,
+        conditions: impl IntoIterator<Item = Bool>,
+    ) -> Result<Bool, PropertyError> {
+        let mut acc: Option<Bool> = None;
+        for condition in conditions {
+            acc = Some(match acc {
+                Some(current) => current.or(self, condition)?,
+                None => condition,
+            });
+        }
+        Ok(acc.unwrap_or_else(|| self.bool_const(false)))
+    }
+
     /// The current hypotheses as raw terms.
     #[must_use]
     pub fn hypotheses(&self) -> &[TermId] {
@@ -891,6 +937,17 @@ impl Bool {
     /// Returns [`PropertyError`] if term construction fails.
     pub fn eq(self, property: &mut Property, rhs: Self) -> Result<Self, PropertyError> {
         Ok(Self::expr(property.arena.eq(self.term, rhs.term)?))
+    }
+
+    /// Boolean equality with a name that avoids Rust's trait-method collision.
+    ///
+    /// This is an alias for [`Self::eq`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn equals(self, property: &mut Property, rhs: Self) -> Result<Self, PropertyError> {
+        self.eq(property, rhs)
     }
 
     /// Reads this Boolean variable from a model.
@@ -1393,6 +1450,17 @@ impl<const W: u32> Bv<W> {
         Ok(Bool::expr(property.arena.eq(self.term, rhs.term)?))
     }
 
+    /// Equality comparison with a name that avoids Rust's trait-method collision.
+    ///
+    /// This is an alias for [`Self::eq`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn equals(self, property: &mut Property, rhs: Self) -> Result<Bool, PropertyError> {
+        self.eq(property, rhs)
+    }
+
     /// Unsigned less-than comparison.
     ///
     /// # Errors
@@ -1587,6 +1655,17 @@ impl Int {
     /// Returns [`PropertyError`] if term construction fails.
     pub fn eq(self, property: &mut Property, rhs: Self) -> Result<Bool, PropertyError> {
         Ok(Bool::expr(property.arena.eq(self.term, rhs.term)?))
+    }
+
+    /// Equality comparison with a name that avoids Rust's trait-method collision.
+    ///
+    /// This is an alias for [`Self::eq`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if term construction fails.
+    pub fn equals(self, property: &mut Property, rhs: Self) -> Result<Bool, PropertyError> {
+        self.eq(property, rhs)
     }
 
     /// Less-than comparison.

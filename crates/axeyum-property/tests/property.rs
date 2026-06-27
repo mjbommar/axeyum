@@ -1,6 +1,6 @@
 //! Integration tests for the typed property SDK.
 
-use axeyum_ir::Value;
+use axeyum_ir::{Sort, Value};
 use axeyum_property::{Bool, Bv, Property};
 use axeyum_solver::{Model, ProofOutcome};
 
@@ -13,6 +13,33 @@ fn proves_trivial_bv_identity_with_evidence() -> TestResult {
     let goal = x.eq(&mut property, x)?;
 
     let outcome = property.prove(goal)?;
+    assert!(matches!(outcome, ProofOutcome::Proved(_)));
+    Ok(())
+}
+
+#[test]
+fn ergonomic_equals_aliases_and_boolean_folds_stay_fallible() -> TestResult {
+    let mut property = Property::new();
+    let x = property.bv::<8>("x")?;
+    let y = property.bv::<8>("y")?;
+    let n = property.int("n")?;
+    let flag = property.bool("flag")?;
+
+    let bv_reflexive = x.equals(&mut property, x)?;
+    let bv_ordered = x.ule(&mut property, y)?;
+    let int_reflexive = n.equals(&mut property, n)?;
+    let bool_reflexive = flag.equals(&mut property, flag)?;
+
+    let conjunction = property.all([bv_reflexive, bv_ordered, int_reflexive, bool_reflexive])?;
+    assert_eq!(property.arena().sort_of(conjunction.term()), Sort::Bool);
+
+    let empty_all = property.all(std::iter::empty::<Bool>())?;
+    let empty_any = property.any(std::iter::empty::<Bool>())?;
+    assert_eq!(property.arena().sort_of(empty_all.term()), Sort::Bool);
+    assert_eq!(property.arena().sort_of(empty_any.term()), Sort::Bool);
+
+    let empty_fold_identity = property.any([empty_all, empty_any])?;
+    let outcome = property.prove(empty_fold_identity)?;
     assert!(matches!(outcome, ProofOutcome::Proved(_)));
     Ok(())
 }

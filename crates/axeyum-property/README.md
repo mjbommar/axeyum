@@ -15,6 +15,11 @@ Int. `Property::symbolic_struct` is the macro-free named-field builder
 underneath `#[derive(axeyum_property::Symbolic)]`, so frontends can choose
 either explicit builder code or a derive when their input shape is a Rust struct.
 
+Expression construction stays fallible and arena-backed: typed handles expose
+explicit builder methods such as `add`, `ule`, and `equals`, while
+`Property::all` / `Property::any` fold Boolean conditions without hiding
+construction errors.
+
 Disproving models can be extracted as deterministic `Counterexample` bindings
 and rendered as native Rust scalar `let` bindings or a `#[test]` skeleton with
 caller-provided replay code. Direct named and tuple symbolic bundles can also

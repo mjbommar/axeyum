@@ -2,6 +2,16 @@
 
 ## Current focus
 
+- **2026-06-27 — Expression ergonomics first slice landed.**
+  The typed handles now expose `.equals()` aliases for Bool, BV, and Int
+  equality, avoiding the Rust `Eq::eq` naming friction while preserving the
+  existing fallible `&mut Property` builder contract. `Property::all` and
+  `Property::any` now fold Boolean conditions with SMT identity values for
+  empty input (`true` and `false` respectively), giving frontends a compact way
+  to build conjunctions and disjunctions without introducing an implicit arena
+  or hiding construction errors. Broader operator traits / richer builder syntax
+  remain open.
+
 - **2026-06-27 — Structured Rust counterexample snippets landed.**
   `Counterexample` now renders aggregate Rust bindings for direct symbolic
   input bundles: `render_rust_named_struct_let` emits `Type { field: value_id }`
@@ -82,17 +92,14 @@
 
 - `cargo fmt --all --check`
 - `git diff --check`
-- `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property-macros -j1 -- --nocapture`
 - `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`
-- `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property-macros --all-targets -j1 -- -D warnings`
 - `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`
-- `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property-macros --no-deps -j1`
 - `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`
 
 ## Next actions
 
-1. Add ergonomic expression construction without compromising fallible builder
-   errors.
+1. Broaden expression construction ergonomics, especially operator-trait or
+   builder syntax that still makes fallible term construction visible.
 2. Extend counterexample-to-`#[test]` output for frontend-specific replay
    bodies and nested/domain aggregate shapes.
 3. Add a graduated SDK property corpus and scoreboard gate.
