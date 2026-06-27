@@ -175,6 +175,27 @@ impl SymbolicExecutor {
         Ok(status_of(self.solver.check(arena)?))
     }
 
+    /// Commits `cond` and checks feasibility through the memory/theory-aware
+    /// one-shot dispatcher. Use this when the path condition mentions arrays
+    /// (`select`/`store`) or uninterpreted functions.
+    ///
+    /// The constraint is still scoped by [`enter`](Self::enter) /
+    /// [`backtrack`](Self::backtrack); only the feasibility check falls back from
+    /// the warm BV path to the full dispatcher.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the underlying assert/check.
+    pub fn assume_with_memory(
+        &mut self,
+        arena: &mut TermArena,
+        cond: TermId,
+    ) -> Result<PathStatus, SolverError> {
+        self.solver.assert(arena, cond)?;
+        self.path.push(cond);
+        Ok(status_of(self.solver.check_with_memory(arena)?))
+    }
+
     /// Reports which directions of `cond` the current path can take, **without**
     /// committing to either — the fork query. Use it to decide whether to
     /// explore the then-branch, the else-branch, or both.
@@ -189,6 +210,25 @@ impl SymbolicExecutor {
         Ok(Branch { if_true, if_false })
     }
 
+    /// Memory/theory-aware version of [`Self::branch`]. The branch condition may
+    /// mention arrays or uninterpreted functions; both directions are checked as
+    /// one-shot assumptions and are not retained.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if building `¬cond` or a feasibility check fails.
+    pub fn branch_with_memory(
+        &mut self,
+        arena: &mut TermArena,
+        cond: TermId,
+    ) -> Result<Branch, SolverError> {
+        let not_cond = arena.not(cond)?;
+        let if_true = status_or_unknown(self.solver.check_assuming_with_memory(arena, &[cond]))?;
+        let if_false =
+            status_or_unknown(self.solver.check_assuming_with_memory(arena, &[not_cond]))?;
+        Ok(Branch { if_true, if_false })
+    }
+
     /// Feasibility of the current path condition on its own.
     ///
     /// # Errors
@@ -196,6 +236,16 @@ impl SymbolicExecutor {
     /// Returns [`SolverError`] from the underlying check.
     pub fn status(&mut self, arena: &TermArena) -> Result<PathStatus, SolverError> {
         status_or_unknown(self.solver.check(arena))
+    }
+
+    /// Feasibility of the current path through the memory/theory-aware
+    /// dispatcher. Use when the committed path mentions arrays or UFs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the underlying check.
+    pub fn status_with_memory(&mut self, arena: &mut TermArena) -> Result<PathStatus, SolverError> {
+        status_or_unknown(self.solver.check_with_memory(arena))
     }
 
     /// A concrete assignment satisfying the current path condition — a runnable
@@ -208,6 +258,22 @@ impl SymbolicExecutor {
     /// Returns [`SolverError`] from the underlying check.
     pub fn model(&mut self, arena: &TermArena) -> Result<Option<Model>, SolverError> {
         match self.solver.check(arena)? {
+            CheckResult::Sat(model) => Ok(Some(model)),
+            CheckResult::Unsat | CheckResult::Unknown(_) => Ok(None),
+        }
+    }
+
+    /// A concrete assignment for the current path through the memory/theory-aware
+    /// dispatcher. Use when the committed path mentions arrays or UFs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the underlying check.
+    pub fn model_with_memory(
+        &mut self,
+        arena: &mut TermArena,
+    ) -> Result<Option<Model>, SolverError> {
+        match self.solver.check_with_memory(arena)? {
             CheckResult::Sat(model) => Ok(Some(model)),
             CheckResult::Unsat | CheckResult::Unknown(_) => Ok(None),
         }
@@ -239,6 +305,34 @@ impl SymbolicExecutor {
         self.solver.push()?;
         while inputs.len() < limit {
             match self.solver.check(arena)? {
+                CheckResult::Sat(model) => {
+                    self.solver.block_model(arena, &model, symbols)?;
+                    inputs.push(model);
+                }
+                CheckResult::Unsat | CheckResult::Unknown(_) => break,
+            }
+        }
+        self.solver.pop();
+        Ok(inputs)
+    }
+
+    /// Memory/theory-aware version of [`Self::enumerate_inputs`]. Blocking
+    /// clauses remain warm BV constraints, while each feasibility/model query
+    /// uses the full dispatcher so array/UF path conditions are honored.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the underlying scope, solve, or block step.
+    pub fn enumerate_inputs_with_memory(
+        &mut self,
+        arena: &mut TermArena,
+        symbols: &[SymbolId],
+        limit: usize,
+    ) -> Result<Vec<Model>, SolverError> {
+        let mut inputs = Vec::new();
+        self.solver.push()?;
+        while inputs.len() < limit {
+            match self.solver.check_with_memory(arena)? {
                 CheckResult::Sat(model) => {
                     self.solver.block_model(arena, &model, symbols)?;
                     inputs.push(model);

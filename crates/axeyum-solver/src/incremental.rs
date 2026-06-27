@@ -18,19 +18,19 @@
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
 use axeyum_ir::{
-    Assignment, IrError, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
     well_founded_default,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
-use crate::sat_bv_backend::SatBvBackend;
 
-/// Whether `term` involves arrays (any subterm of `Array` sort — an array
-/// variable, a `store` result, or a `const-array`). Such assertions need the
-/// array-aware [`IncrementalBvSolver::check_with_memory`]; the warm bit-blaster
-/// does not encode arrays.
-fn contains_array(arena: &TermArena, term: TermId) -> bool {
+/// Whether `term` needs the deferred theory path instead of the warm
+/// bit-blaster: arrays (`select`/`store`/array values) or uninterpreted function
+/// applications. Such assertions are kept scoped in the incremental frames and
+/// decided by [`IncrementalBvSolver::check_with_memory`] through the full
+/// pure-Rust dispatcher.
+fn needs_deferred_theory(arena: &TermArena, term: TermId) -> bool {
     let mut stack = vec![term];
     let mut seen = std::collections::HashSet::new();
     while let Some(t) = stack.pop() {
@@ -40,7 +40,10 @@ fn contains_array(arena: &TermArena, term: TermId) -> bool {
         if matches!(arena.sort_of(t), Sort::Array { .. }) {
             return true;
         }
-        if let TermNode::App { args, .. } = arena.node(t) {
+        if let TermNode::App { op, args, .. } = arena.node(t) {
+            if matches!(op, Op::Apply(_)) {
+                return true;
+            }
             stack.extend(args.iter().copied());
         }
     }
@@ -71,11 +74,11 @@ struct Frame {
     selector: Option<CnfVar>,
     /// Array-free assertions, bit-blasted into the warm CNF.
     assertions: Vec<TermId>,
-    /// Assertions involving arrays (`select`/`store`). The warm bit-blaster does
-    /// not encode arrays, so these are deferred and decided by
-    /// [`IncrementalBvSolver::check_with_memory`] via eager array elimination
-    /// (ADR-0010; the warm lazy-array path is ADR-0030 future work).
-    array_assertions: Vec<TermId>,
+    /// Assertions involving arrays or uninterpreted functions. The warm
+    /// bit-blaster does not encode these theory constructs, so they are scoped
+    /// here and decided by [`IncrementalBvSolver::check_with_memory`] via the
+    /// full dispatcher. Warm lazy theory incrementality is ADR-0030 future work.
+    deferred_assertions: Vec<TermId>,
 }
 
 /// A warm, incremental pure-Rust bit-vector solver.
@@ -115,7 +118,7 @@ impl IncrementalBvSolver {
             frames: vec![Frame {
                 selector: None,
                 assertions: Vec::new(),
-                array_assertions: Vec::new(),
+                deferred_assertions: Vec::new(),
             }],
         }
     }
@@ -159,15 +162,15 @@ impl IncrementalBvSolver {
         if arena.sort_of(term) != Sort::Bool {
             return Err(SolverError::NonBooleanAssertion(term));
         }
-        if contains_array(arena, term) {
-            // The warm bit-blaster does not encode arrays; defer this assertion
-            // to `check_with_memory`, which decides it (with all active
-            // assertions) via eager array elimination. Scope is honored: it is
+        if needs_deferred_theory(arena, term) {
+            // The warm bit-blaster does not encode arrays or UFs; defer this
+            // assertion to `check_with_memory`, which decides it with all active
+            // assertions through the full dispatcher. Scope is honored: it is
             // dropped by the matching `pop` with the rest of the frame.
             self.frames
                 .last_mut()
                 .expect("base frame always present")
-                .array_assertions
+                .deferred_assertions
                 .push(term);
             return Ok(());
         }
@@ -210,7 +213,7 @@ impl IncrementalBvSolver {
         self.frames.push(Frame {
             selector: Some(selector),
             assertions: Vec::new(),
-            array_assertions: Vec::new(),
+            deferred_assertions: Vec::new(),
         });
         Ok(())
     }
@@ -227,37 +230,72 @@ impl IncrementalBvSolver {
     }
 
     /// Decides the active assertions **including array/memory** (`select`/`store`)
-    /// — the symbolic-memory capability symbolic execution needs. The first slice
-    /// of ADR-0030: it re-solves all active assertions one-shot via the validated
-    /// eager array elimination (read-over-write + Ackermann, ADR-0010) over the
-    /// pure-Rust BV backend, so it does not yet reuse the warm CNF (warm lazy
-    /// arrays are the follow-up). Requires `&mut` arena because elimination
-    /// introduces terms.
+    /// and uninterpreted-function applications — the symbolic-memory and
+    /// keccak-as-UF capability symbolic execution needs. The first slice of
+    /// ADR-0030: it re-solves all active assertions one-shot via the full
+    /// pure-Rust dispatcher, so it does not yet reuse the warm CNF for deferred
+    /// theory constructs (warm lazy arrays/UF are the follow-up). Requires
+    /// `&mut` arena because theory reductions may introduce terms.
     ///
-    /// Use this instead of [`Self::check`] whenever array assertions are present
-    /// (the warm `check` refuses them rather than ignore them). For array-free
-    /// queries it agrees with `check` (elimination is then a no-op).
+    /// Use this instead of [`Self::check`] whenever array or UF assertions are
+    /// present (the warm `check` refuses them rather than ignore them). For
+    /// array/UF-free queries it agrees with `check`, modulo the one-shot route.
     ///
     /// Soundness is unchanged: a `sat` model is replay-checked against the
     /// original `select`/`store` assertions by the ground evaluator.
     ///
     /// # Errors
     ///
-    /// Returns [`SolverError`] from array elimination or the backend.
+    /// Returns [`SolverError`] from the selected dispatcher route.
     pub fn check_with_memory(&mut self, arena: &mut TermArena) -> Result<CheckResult, SolverError> {
-        let active: Vec<TermId> = self
-            .frames
-            .iter()
-            .flat_map(|frame| {
-                frame
-                    .assertions
-                    .iter()
-                    .chain(frame.array_assertions.iter())
-                    .copied()
-            })
-            .collect();
-        let mut backend = SatBvBackend::new();
-        crate::abv::check_with_array_elimination(&mut backend, arena, &active, &self.config)
+        let active = self.active_assertions();
+        crate::check_auto(arena, &active, &self.config)
+    }
+
+    /// Checks the active assertions together with one-shot assumptions through
+    /// the memory/theory-aware dispatcher. This is the branch-feasibility query
+    /// for symbolic executors whose branch condition mentions arrays or UFs.
+    ///
+    /// Assumptions hold only for this call and are not retained.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::NonBooleanAssertion`] if any assumption is not
+    /// Boolean, or propagates a dispatcher error.
+    pub fn check_assuming_with_memory(
+        &mut self,
+        arena: &mut TermArena,
+        assumptions: &[TermId],
+    ) -> Result<CheckResult, SolverError> {
+        let active = self.active_assertions_with_assumptions(arena, assumptions)?;
+        crate::check_auto(arena, &active, &self.config)
+    }
+
+    /// Like [`Self::check_assuming_with_memory`], but returns a sound assumption
+    /// core on `unsat`.
+    ///
+    /// The one-shot dispatcher does not expose a final-conflict core, so the
+    /// reported core is the full assumption set. This is intentionally coarse but
+    /// sound: active assertions plus all listed assumptions are already
+    /// inconsistent.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::NonBooleanAssertion`] if any assumption is not
+    /// Boolean, or propagates a dispatcher error.
+    pub fn check_assuming_core_with_memory(
+        &mut self,
+        arena: &mut TermArena,
+        assumptions: &[TermId],
+    ) -> Result<AssumptionOutcome, SolverError> {
+        let result = self.check_assuming_with_memory(arena, assumptions)?;
+        Ok(match result {
+            CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
+            CheckResult::Unsat => AssumptionOutcome::Unsat {
+                core: assumptions.to_vec(),
+            },
+            CheckResult::Unknown(reason) => AssumptionOutcome::Unknown(reason),
+        })
     }
 
     /// Checks satisfiability of the currently active assertions.
@@ -389,13 +427,18 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
-        // The warm path does not bit-blast arrays; if any array assertion is
-        // active, refuse rather than silently ignore it (which would risk a wrong
-        // result). Callers use `check_with_memory` for array/memory queries.
-        if self.frames.iter().any(|f| !f.array_assertions.is_empty()) {
+        // The warm path does not bit-blast arrays or UFs; if any deferred theory
+        // assertion is active, refuse rather than silently ignore it (which would
+        // risk a wrong result). Callers use `check_with_memory` for those
+        // queries.
+        if self
+            .frames
+            .iter()
+            .any(|f| !f.deferred_assertions.is_empty())
+        {
             return Err(SolverError::Unsupported(
-                "active array/memory assertions: use check_with_memory (the warm path does not \
-                 bit-blast arrays)"
+                "active array/UF theory assertions: use check_with_memory (the warm path does \
+                 not bit-blast deferred theories)"
                     .to_owned(),
             ));
         }
@@ -406,6 +449,13 @@ impl IncrementalBvSolver {
         for &term in assumptions {
             if arena.sort_of(term) != Sort::Bool {
                 return Err(SolverError::NonBooleanAssertion(term));
+            }
+            if needs_deferred_theory(arena, term) {
+                return Err(SolverError::Unsupported(
+                    "array/UF assumption: use check_assuming_with_memory (the warm path does not \
+                     bit-blast deferred theories)"
+                        .to_owned(),
+                ));
             }
             if let Some((unsupported, op)) = first_unsupported_op(arena, &[term]) {
                 return Err(SolverError::Unsupported(format!(
@@ -537,6 +587,35 @@ impl IncrementalBvSolver {
             }
         }
         Ok(None)
+    }
+
+    fn active_assertions(&self) -> Vec<TermId> {
+        self.frames
+            .iter()
+            .flat_map(|frame| {
+                frame
+                    .assertions
+                    .iter()
+                    .chain(frame.deferred_assertions.iter())
+                    .copied()
+            })
+            .collect()
+    }
+
+    fn active_assertions_with_assumptions(
+        &self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+    ) -> Result<Vec<TermId>, SolverError> {
+        let mut active = self.active_assertions();
+        active.reserve(assumptions.len());
+        for &assumption in assumptions {
+            if arena.sort_of(assumption) != Sort::Bool {
+                return Err(SolverError::NonBooleanAssertion(assumption));
+            }
+            active.push(assumption);
+        }
+        Ok(active)
     }
 }
 

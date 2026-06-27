@@ -10,7 +10,9 @@
 //! supports realistic path exploration.
 
 use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
-use axeyum_solver::{AssumptionOutcome, CheckResult, IncrementalBvSolver};
+use axeyum_solver::{
+    AssumptionOutcome, CheckResult, IncrementalBvSolver, PathStatus, SymbolicExecutor,
+};
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
 /// equality to a constant.
@@ -613,4 +615,149 @@ fn symbolic_memory_reachability_is_sat_and_scoped() {
         solver.check_with_memory(&mut arena).unwrap(),
         CheckResult::Sat(_)
     ));
+}
+
+#[test]
+fn memory_assumption_checks_array_branch_without_persisting() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(8)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(8)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let loaded_eq_v = arena.eq(loaded, v).unwrap();
+    let load_ne_v = arena.not(loaded_eq_v).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, i_eq_j).unwrap();
+
+    assert_eq!(
+        solver
+            .check_assuming_with_memory(&mut arena, &[load_ne_v])
+            .unwrap(),
+        CheckResult::Unsat,
+        "under i=j, select(store(mem,i,v),j) != v is infeasible"
+    );
+    match solver
+        .check_assuming_core_with_memory(&mut arena, &[load_ne_v])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => assert_eq!(core, vec![load_ne_v]),
+        other => panic!("expected assumption-core unsat, got {other:?}"),
+    }
+
+    let CheckResult::Sat(_) = solver.check(&arena).unwrap() else {
+        panic!("array assumption must not persist into the warm BV path");
+    };
+}
+
+#[test]
+fn memory_assumption_checks_uf_branch_without_persisting() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let zero = arena.bv_const(2, 0).unwrap();
+    let premise_output_zero = arena.eq(fa, zero).unwrap();
+    let a_eq_b = arena.eq(a, b).unwrap();
+    let contradictory_output_zero = arena.eq(fb, zero).unwrap();
+    let contradictory_output_nonzero = arena.not(contradictory_output_zero).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, premise_output_zero).unwrap();
+    solver.assert(&arena, a_eq_b).unwrap();
+    assert!(
+        solver.check(&arena).is_err(),
+        "warm BV path must refuse active UF assertions instead of ignoring them"
+    );
+    assert_eq!(
+        solver
+            .check_assuming_with_memory(&mut arena, &[contradictory_output_nonzero])
+            .unwrap(),
+        CheckResult::Unsat,
+        "a=b and f(a)=0 imply f(b)=0 by congruence"
+    );
+    assert!(
+        matches!(
+            solver.check_with_memory(&mut arena).unwrap(),
+            CheckResult::Sat(_)
+        ),
+        "the UF assumption is one-shot and must not persist"
+    );
+}
+
+#[test]
+fn symbolic_executor_branches_on_memory_conditions() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("i", Sort::BitVec(8)).unwrap();
+    let js = arena.declare("j", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("v", Sort::BitVec(8)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let loaded_eq_v = arena.eq(loaded, v).unwrap();
+    let load_ne_v = arena.not(loaded_eq_v).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(
+        executor
+            .assume_with_memory(&mut arena, i_eq_j)
+            .unwrap()
+            .is_feasible()
+    );
+
+    let branch = executor.branch_with_memory(&mut arena, load_ne_v).unwrap();
+    assert!(matches!(branch.if_true, PathStatus::Infeasible));
+    assert!(branch.if_false.is_feasible());
+    assert_eq!(
+        executor.path_condition(),
+        &[i_eq_j],
+        "branch_with_memory must not commit either direction"
+    );
+
+    assert!(
+        executor
+            .assume_with_memory(&mut arena, loaded_eq_v)
+            .unwrap()
+            .is_feasible()
+    );
+    assert!(
+        executor.model_with_memory(&mut arena).unwrap().is_some(),
+        "memory-aware model extraction should replay the committed path"
+    );
 }

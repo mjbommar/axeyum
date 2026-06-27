@@ -878,18 +878,19 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "incremental",
-        feature: "symbolic memory: select/store via check_with_memory (eager elimination; \
-                  warm lazy arrays = ADR-0030 future work)",
+        feature: "symbolic memory and UF fallback: select/store and Op::Apply via \
+                  check_with_memory plus check_assuming_with_memory one-shot branch queries \
+                  (full dispatcher; warm lazy arrays/UF = ADR-0030 future work)",
         assurance: Assurance::Validated,
-        evidence: "eager array elimination (ADR-0010) + model replay; warm path refuses arrays",
+        evidence: "full dispatcher model replay; warm path refuses deferred array/UF theories",
         reference: "ADR-0010/0030",
     },
     Capability {
         area: "symbolic execution",
         feature: "DFS path explorer (SymbolicExecutor): assume / branch fork query / \
-                  enter+backtrack / concrete test-input model / distinct test-suite enumeration \
-                  (all-SAT) / optimize objective over the path condition (min/max, unsigned/signed \
-                  BV + LIA)",
+                  enter+backtrack / concrete test-input model / memory-aware assume/branch/model \
+                  for array/UF path conditions / distinct test-suite enumeration (all-SAT) / \
+                  optimize objective over the path condition (min/max, unsigned/signed BV + LIA)",
         assurance: Assurance::Validated,
         evidence: "models replay-checked vs path condition; optimum certified by the underlying \
                    procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",

@@ -712,6 +712,19 @@ bug-finders (they caught 3 wrong-unsats + the FP `±0` wrong-unsat this session)
 new theories (Strings/Seq/Sets/FF) need adversarial differential fuzzes vs Z3 — a
 **string fuzz is in progress** (this commit's neighbor); extend to FF/Seq/Sets.
 
+### Use-case surface — symbolic execution / memory
+
+The product-facing incremental path now supports one-shot branch feasibility over
+symbolic memory and uninterpreted functions. `IncrementalBvSolver` scopes
+array/UF assertions as deferred theory assertions, `check_with_memory` dispatches
+the active slice through the full pure-Rust solver, and
+`check_assuming_with_memory` handles array/UF assumptions without persisting them.
+`SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate
+methods, covering the immediate angr/KLEE-style path-query need. This is not the
+final warm lazy-array/UF engine: deferred theory checks still rebuild through
+`check_auto`; retained learned theory clauses and native symbolic-memory helpers
+remain Track 4 work.
+
 ## 4. Reflection on PLAN.md
 
 **The 2026-06-23 "MEASURE, don't seed" course-correction was right and is now
