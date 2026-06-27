@@ -40,7 +40,8 @@
   initializer snippets plus explicit caller-owned nested aggregate field
   composition, prelude/setup-aware test skeletons, and helper-rendered
   Boolean/Result replay adapters with deterministic `#[cfg(test)]` module
-  assembly. The first app-level corpus gate is committed in
+  assembly plus deterministic multi-case fixture file assembly. The first
+  app-level corpus gate is committed in
   [`property/SCOREBOARD.md`](property/SCOREBOARD.md), backed by generated
   [`property/corpus.json`](property/corpus.json).
 - `axeyum-wasm` — `solve_smtlib_json` (client-side, the delivery substrate).

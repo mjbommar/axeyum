@@ -878,6 +878,50 @@ impl Counterexample {
         out
     }
 
+    /// Renders a Rust fixture file from caller-owned top-level blocks.
+    ///
+    /// `file_prelude_snippets` are intended for crate attributes, imports, type
+    /// definitions, and shared helpers. `test_item_snippets` are usually
+    /// generated modules from [`Self::render_rust_test_module`] or standalone
+    /// `#[test]` items. Blocks are emitted without indentation and separated by
+    /// one blank line; empty snippets are ignored.
+    pub fn render_rust_test_file<PI, P, TI, T>(
+        file_prelude_snippets: PI,
+        test_item_snippets: TI,
+    ) -> String
+    where
+        PI: IntoIterator<Item = P>,
+        P: AsRef<str>,
+        TI: IntoIterator<Item = T>,
+        T: AsRef<str>,
+    {
+        let mut out = String::new();
+        let mut wrote_block = false;
+        for snippet in file_prelude_snippets {
+            let snippet = snippet.as_ref();
+            if snippet.is_empty() {
+                continue;
+            }
+            if wrote_block {
+                out.push('\n');
+            }
+            push_unindented_block(&mut out, snippet);
+            wrote_block = true;
+        }
+        for snippet in test_item_snippets {
+            let snippet = snippet.as_ref();
+            if snippet.is_empty() {
+                continue;
+            }
+            if wrote_block {
+                out.push('\n');
+            }
+            push_unindented_block(&mut out, snippet);
+            wrote_block = true;
+        }
+        out
+    }
+
     fn direct_fields<'a>(
         &'a self,
         root_name: &str,

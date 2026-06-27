@@ -680,6 +680,7 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
     );
     assert_nested_replay_test_rendering(&counterexample, &transfer_limits, &transfer_init)?;
     assert_nested_replay_module_rendering(&counterexample, &transfer_limits, &transfer_init)?;
+    assert_nested_replay_fixture_file_rendering(&counterexample, &transfer_limits, &transfer_init)?;
     let summary = certificate.summary();
     assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
 
@@ -689,7 +690,7 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
         workflow: "caller-owned nested aggregate replay",
         expected: ExpectedOutcome::Disproved,
         actual: summary.outcome,
-        checks: "generated `#[test]` module includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order",
+        checks: "generated multi-case fixture file includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order",
         baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
         lean_required: false,
         lean_available: false,
@@ -795,5 +796,51 @@ fn assert_nested_replay_module_rendering(
             "}\n",
         )
     );
+    Ok(())
+}
+
+fn assert_nested_replay_fixture_file_rendering(
+    counterexample: &Counterexample,
+    transfer_limits: &str,
+    transfer_init: &str,
+) -> CorpusResult<()> {
+    let test = counterexample.render_rust_test_with_replay_expect_ok_assertion(
+        "nested transfer replay",
+        std::iter::empty::<&str>(),
+        [transfer_limits, transfer_init],
+        "replay_transfer",
+        ["transfer"],
+        "counterexample replay failed",
+    )?;
+    let replay_module = Counterexample::render_rust_test_module(
+        "counterexample module",
+        ["use crate::{TransferInput, TransferLimits};"],
+        [test.as_str()],
+    );
+    let smoke_module = Counterexample::render_rust_test_module(
+        "fixture smoke",
+        std::iter::empty::<&str>(),
+        ["#[test]\nfn fixture_file_smoke() {}\n"],
+    );
+    let file = Counterexample::render_rust_test_file(
+        ["#![allow(dead_code)]"],
+        [replay_module.as_str(), smoke_module.as_str()],
+    );
+    assert!(
+        file.starts_with("#![allow(dead_code)]\n\n#[cfg(test)]\nmod counterexample_module {\n")
+    );
+    assert!(
+        file.contains(
+            "assert!(replay_transfer(transfer).expect(\"counterexample replay failed\"));"
+        )
+    );
+    assert!(file.contains("mod fixture_smoke {\n    #[test]\n    fn fixture_file_smoke() {}\n}"));
+    let replay_index = file
+        .find("mod counterexample_module")
+        .expect("fixture file should include replay module");
+    let smoke_index = file
+        .find("mod fixture_smoke")
+        .expect("fixture file should include smoke module");
+    assert!(replay_index < smoke_index);
     Ok(())
 }

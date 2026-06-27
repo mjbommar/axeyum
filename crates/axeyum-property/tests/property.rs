@@ -227,6 +227,24 @@ fn counterexample_renderer_sanitizes_names_and_builds_test_skeleton() -> TestRes
             "}\n",
         )
     );
+    assert_eq!(
+        Counterexample::render_rust_test_file(
+            ["#![allow(dead_code)]"],
+            [
+                "#[test]\nfn first_case() {}\n",
+                "#[test]\nfn second_case() {}\n"
+            ],
+        ),
+        concat!(
+            "#![allow(dead_code)]\n",
+            "\n",
+            "#[test]\n",
+            "fn first_case() {}\n",
+            "\n",
+            "#[test]\n",
+            "fn second_case() {}\n",
+        )
+    );
     Ok(())
 }
 

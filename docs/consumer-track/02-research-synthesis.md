@@ -95,8 +95,9 @@ Lean-required certificate, Int assumption proof, unsigned minimized witness,
 signed minimized witness, struct-shaped witness, overflow witness, and derived
 struct lifting, plus explicit nested aggregate replay with prelude/setup-aware
 generated tests, helper-rendered `Result<bool, _>` replay assertions, and
-deterministic `#[cfg(test)]` module assembly) with 2 proved, 6 disproved,
-0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+deterministic `#[cfg(test)]` module assembly plus multi-case fixture file
+assembly) with 2 proved, 6 disproved, 0 unknown, DISAGREE=0, and 1/1
+Lean-required coverage. External
 proptest/Kani-style comparison remains the next measurement step.
 
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5

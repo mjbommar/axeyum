@@ -2,6 +2,17 @@
 
 ## Current focus
 
+- **2026-06-27 — Fixture file assembly landed.**
+  `Counterexample::render_rust_test_file` now assembles caller-owned top-level
+  prelude blocks plus multiple generated modules or standalone test items into
+  deterministic multi-case Rust fixture files. The helper deliberately only
+  concatenates caller-owned blocks and generated test/module strings; replay
+  semantics remain frontend-owned. The generated nested aggregate corpus row now
+  checks a complete fixture file with a crate-level prelude, the replay module,
+  a second smoke-test module, nested setup snippets, and a `Result<bool, _>`
+  replay assertion; totals remain 8 cases, 2 proved, 6 disproved, 0 unknown,
+  DISAGREE=0, and 1/1 Lean-required coverage.
+
 - **2026-06-27 — Test module assembly landed.**
   `Counterexample::render_rust_test_module` now wraps caller-owned imports,
   helper functions, fixture code, and generated `#[test]` items in a
@@ -222,7 +233,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output toward multi-case fixture files
-   while keeping domain semantics caller-owned.
+2. Broaden generated fixture files toward external proptest/Kani-style baseline
+   harnesses while keeping domain semantics caller-owned.
 3. Keep broadening the SDK property corpus and add the external
    proptest/Kani-style baseline comparison.
