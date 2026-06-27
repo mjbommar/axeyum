@@ -133,6 +133,42 @@ fn symbolic_trait_declares_and_lifts_scalar_inputs() -> TestResult {
 }
 
 #[test]
+fn symbolic_trait_lifts_signed_fixed_width_inputs() -> TestResult {
+    let mut property = Property::new();
+    let byte = property.symbolic::<i8>("byte")?;
+    let word = property.symbolic::<i16>("word")?;
+
+    let mut model = Model::new();
+    model.set(
+        byte.symbol().unwrap(),
+        Value::Bv {
+            width: 8,
+            value: 0xff,
+        },
+    );
+    model.set(
+        word.symbol().unwrap(),
+        Value::Bv {
+            width: 16,
+            value: 0x8000,
+        },
+    );
+
+    assert_eq!(property.concrete::<i8>(&byte, &model)?, Some(-1));
+    assert_eq!(property.concrete::<i16>(&word, &model)?, Some(i16::MIN));
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        concat!(
+            "let byte: i8 = -1_i8; // BV8 two's-complement\n",
+            "let word: i16 = i16::MIN; // BV16 two's-complement\n",
+        )
+    );
+    Ok(())
+}
+
+#[test]
 fn symbolic_trait_composes_tuple_inputs_in_deterministic_order() -> TestResult {
     let mut property = Property::new();
     let input = property.symbolic::<(bool, u8, i128)>("input")?;
@@ -265,6 +301,59 @@ fn derive_symbolic_supports_named_structs() -> TestResult {
             "let transfer_enabled: bool = false;\n",
             "let transfer_amount: u16 = 0x0001_u16; // BV16\n",
             "let transfer_balance: u16 = 0x0000_u16; // BV16\n",
+        )
+    );
+    Ok(())
+}
+
+#[test]
+fn derive_symbolic_supports_signed_fixed_width_fields() -> TestResult {
+    #[derive(Debug, Clone, PartialEq, Eq, axeyum_property::Symbolic)]
+    struct SignedInput {
+        delta: i32,
+        limit: i64,
+        count: u8,
+    }
+
+    let mut property = Property::new();
+    let input = property.symbolic::<SignedInput>("input")?;
+
+    let mut model = Model::new();
+    model.set(
+        input.delta.symbol().unwrap(),
+        Value::Bv {
+            width: 32,
+            value: 0xffff_fffe,
+        },
+    );
+    model.set(
+        input.limit.symbol().unwrap(),
+        Value::Bv {
+            width: 64,
+            value: 0x7fff_ffff_ffff_fffe,
+        },
+    );
+    model.set(
+        input.count.symbol().unwrap(),
+        Value::Bv { width: 8, value: 4 },
+    );
+
+    assert_eq!(
+        property.concrete::<SignedInput>(&input, &model)?,
+        Some(SignedInput {
+            delta: -2,
+            limit: i64::MAX - 1,
+            count: 4,
+        })
+    );
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        concat!(
+            "let input_delta: i32 = -2_i32; // BV32 two's-complement\n",
+            "let input_limit: i64 = 9223372036854775806_i64; // BV64 two's-complement\n",
+            "let input_count: u8 = 0x04_u8; // BV8\n",
         )
     );
     Ok(())

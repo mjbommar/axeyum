@@ -49,7 +49,7 @@ committed on `main`. It provides typed `Bool`, `Bv<W>`, and `Int` handles,
 assumptions, proof and minimized-counterexample calls over the existing
 evidence APIs, typed scalar model lifting, and unsigned BV overflow helper
 predicates. Remaining v0 polish is ergonomic syntax/operator traits,
-signed fixed-width Rust integer policy for `Symbolic`, structured
+signed-order minimization metadata for signed symbolic BV inputs, structured
 counterexample-to-test output, and best-effort Lean-module packaging in the SDK
 certificate surface.
 
@@ -72,6 +72,10 @@ as `transfer.amount`; the derive macro now lowers to the same builder.
 `#[derive(axeyum_property::Symbolic)]` now supports named, tuple, and unit
 structs over the same builder, including concrete model lifting for the derived
 Rust input type.
+
+**Status update (2026-06-27, signed scalar slice):** `i8`/`i16`/`i32`/`i64`
+now implement `Symbolic` as two's-complement BV terms with signed model lifting
+and signed Rust counterexample literals; `i128` remains mathematical Int.
 
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted

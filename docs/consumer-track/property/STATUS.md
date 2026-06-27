@@ -2,6 +2,18 @@
 
 ## Current focus
 
+- **2026-06-27 — Signed fixed-width `Symbolic` policy landed.**
+  `i8`/`i16`/`i32`/`i64` now implement `Symbolic` as two's-complement
+  `Bv<8>`/`Bv<16>`/`Bv<32>`/`Bv<64>` terms, while `i128` remains mathematical
+  Int. Model lifting sign-extends replay-checked BV values back to Rust signed
+  integers, and counterexample rendering preserves the signed intent for those
+  SDK-declared symbols (`let x: i8 = -1_i8; // BV8 two's-complement`). Raw
+  `Property::bv::<W>` inputs still render as unsigned Rust integers. The
+  remaining optimization gap is signed-order minimization metadata:
+  `prove_minimized` still receives only symbols, so signed BV symbols are
+  minimized by the lower-level unsigned BV objective until that API grows
+  per-objective signedness.
+
 - **2026-06-27 — `#[derive(Symbolic)]` landed.**
   `axeyum-property` now re-exports `#[derive(axeyum_property::Symbolic)]` from
   the new pure-Rust `axeyum-property-macros` crate. The derive supports named,
@@ -25,10 +37,10 @@
   `Property::symbolic::<T>("name")` declares values, and
   `Property::concrete::<T>(&expr, &model)` lifts them from replay-checked
   models. Built-in implementations cover `bool`, unsigned Rust integer widths
-  (`u8` through `u128` as BV8 through BV128), `i128` as Int, unit, and 2-/3-tuples
-  with field names like `input.0`, `input.1`, etc. The follow-up derive entry
-  covers struct derivation; signed fixed-width two's-complement policy is still
-  pending.
+  (`u8` through `u128` as BV8 through BV128), signed Rust integer widths
+  (`i8` through `i64` as two's-complement BV8 through BV64), `i128` as Int, unit,
+  and 2-/3-tuples with field names like `input.0`, `input.1`, etc. The follow-up
+  derive entry covers struct derivation.
 
 - **2026-06-27 — Native scalar counterexample-to-test rendering landed.**
   `Property::counterexample` and `counterexample_from_outcome` now extract a
@@ -63,8 +75,8 @@
 
 1. Add ergonomic expression construction without compromising fallible builder
    errors.
-2. Decide and implement signed fixed-width Rust integer policy for `Symbolic`
-   (`i8`/`i16`/`i32`/`i64` as two's-complement BV or keep them explicit).
+2. Add signed-order objective metadata to counterexample minimization for signed
+   symbolic BV inputs.
 3. Extend counterexample-to-`#[test]` output for structured inputs and
    frontend-specific replay bodies.
 4. Add a graduated SDK property corpus and scoreboard gate.

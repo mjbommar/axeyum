@@ -70,9 +70,9 @@ impl From<SolverError> for PropertyError {
 
 /// Declares a typed symbolic value and lifts it back from a replay-checked model.
 ///
-/// This is the trait that a future derive macro will implement for structs. The
-/// hand-written scalar and tuple implementations here are enough for SDK users
-/// to build deterministic input bundles today without depending on a macro.
+/// Scalar, tuple, and derived-struct implementations let SDK users build
+/// deterministic input bundles while keeping model lifting tied to typed
+/// expression handles.
 pub trait Symbolic {
     /// The expression handle or bundle of handles used while building terms.
     type Expr;
@@ -99,9 +99,8 @@ pub trait Symbolic {
 
 /// Builder for macro-free symbolic values with named struct fields.
 ///
-/// A future `#[derive(Symbolic)]` implementation can lower to this API. Until
-/// then, frontends can build named expression structs without falling back to
-/// tuple field names:
+/// `#[derive(Symbolic)]` lowers named structs to this API. Frontends can also
+/// use it directly when they need explicit control over field construction:
 ///
 /// ```
 /// # use axeyum_property::{Bool, Bv, Property, PropertyError};
@@ -161,6 +160,12 @@ impl SymbolicStruct<'_> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BvLiteralStyle {
+    Unsigned,
+    Signed,
+}
+
 /// One scalar input binding from a replay-checked counterexample model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputBinding {
@@ -169,6 +174,7 @@ pub struct InputBinding {
     rust_ident: String,
     sort: Sort,
     value: Value,
+    bv_literal_style: BvLiteralStyle,
 }
 
 impl InputBinding {
@@ -216,13 +222,22 @@ impl InputBinding {
                 self.rust_ident,
                 render_i128_literal(*value)
             )),
-            Value::Bv { width, value } => Ok(format!(
-                "let {}: {} = {}; // BV{}",
-                self.rust_ident,
-                rust_uint_type(*width),
-                render_uint_literal(*width, *value),
-                width
-            )),
+            Value::Bv { width, value } => match self.bv_literal_style {
+                BvLiteralStyle::Unsigned => Ok(format!(
+                    "let {}: {} = {}; // BV{}",
+                    self.rust_ident,
+                    rust_uint_type(*width),
+                    render_uint_literal(*width, *value),
+                    width
+                )),
+                BvLiteralStyle::Signed => Ok(format!(
+                    "let {}: {} = {}; // BV{} two's-complement",
+                    self.rust_ident,
+                    rust_int_type(*width),
+                    render_signed_bv_literal(*width, *value),
+                    width
+                )),
+            },
             Value::WideBv(_)
             | Value::Array(_)
             | Value::GenericArray(_)
@@ -313,6 +328,7 @@ pub struct Property {
     arena: TermArena,
     hypotheses: Vec<TermId>,
     counterexample_symbols: Vec<SymbolId>,
+    counterexample_bv_literal_styles: Vec<(SymbolId, BvLiteralStyle)>,
     config: SolverConfig,
 }
 
@@ -330,6 +346,7 @@ impl Property {
             arena: TermArena::new(),
             hypotheses: Vec::new(),
             counterexample_symbols: Vec::new(),
+            counterexample_bv_literal_styles: Vec::new(),
             config: SolverConfig::default(),
         }
     }
@@ -388,9 +405,31 @@ impl Property {
     /// Returns [`PropertyError`] if `W` is not a valid bit-vector width or the
     /// symbol name conflicts with an existing declaration.
     pub fn bv<const W: u32>(&mut self, name: &str) -> Result<Bv<W>, PropertyError> {
+        self.bv_with_literal_style(name, BvLiteralStyle::Unsigned)
+    }
+
+    /// Declares a bit-vector input symbol rendered as a signed Rust integer.
+    ///
+    /// The SMT sort is still `BitVec(W)` and all bit-vector operations remain
+    /// explicit on [`Bv`]. This method only records a two's-complement Rust
+    /// literal preference for counterexample rendering.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if `W` is not a valid bit-vector width or the
+    /// symbol name conflicts with an existing declaration.
+    pub fn signed_bv<const W: u32>(&mut self, name: &str) -> Result<Bv<W>, PropertyError> {
+        self.bv_with_literal_style(name, BvLiteralStyle::Signed)
+    }
+
+    fn bv_with_literal_style<const W: u32>(
+        &mut self,
+        name: &str,
+        literal_style: BvLiteralStyle,
+    ) -> Result<Bv<W>, PropertyError> {
         let symbol = self.arena.declare(name, Sort::BitVec(W))?;
         let term = self.arena.var(symbol);
-        self.track_symbol(symbol);
+        self.track_bv_symbol(symbol, literal_style);
         Ok(Bv {
             term,
             symbol: Some(symbol),
@@ -548,6 +587,7 @@ impl Property {
                 rust_ident,
                 sort,
                 value,
+                bv_literal_style: self.bv_literal_style(symbol),
             });
         }
         Ok(Counterexample::new(bindings))
@@ -587,6 +627,27 @@ impl Property {
         if !self.counterexample_symbols.contains(&symbol) {
             self.counterexample_symbols.push(symbol);
         }
+    }
+
+    fn track_bv_symbol(&mut self, symbol: SymbolId, literal_style: BvLiteralStyle) {
+        self.track_symbol(symbol);
+        if let Some((_, existing)) = self
+            .counterexample_bv_literal_styles
+            .iter_mut()
+            .find(|(existing, _)| *existing == symbol)
+        {
+            *existing = literal_style;
+        } else {
+            self.counterexample_bv_literal_styles
+                .push((symbol, literal_style));
+        }
+    }
+
+    fn bv_literal_style(&self, symbol: SymbolId) -> BvLiteralStyle {
+        self.counterexample_bv_literal_styles
+            .iter()
+            .find_map(|(existing, style)| (*existing == symbol).then_some(*style))
+            .unwrap_or(BvLiteralStyle::Unsigned)
     }
 }
 
@@ -690,6 +751,16 @@ fn render_uint_literal(width: u32, value: u128) -> String {
     format!("0x{value:0>digits$x}_{ty}")
 }
 
+fn render_signed_bv_literal(width: u32, value: u128) -> String {
+    let ty = rust_int_type(width);
+    let value = signed_bv_to_i128(width, value);
+    if signed_min_literal(ty).is_some_and(|min| min == value) {
+        format!("{ty}::MIN")
+    } else {
+        format!("{value}_{ty}")
+    }
+}
+
 fn rust_uint_type(width: u32) -> &'static str {
     match width {
         0..=8 => "u8",
@@ -697,6 +768,57 @@ fn rust_uint_type(width: u32) -> &'static str {
         17..=32 => "u32",
         33..=64 => "u64",
         _ => "u128",
+    }
+}
+
+fn rust_int_type(width: u32) -> &'static str {
+    match width {
+        0..=8 => "i8",
+        9..=16 => "i16",
+        17..=32 => "i32",
+        33..=64 => "i64",
+        _ => "i128",
+    }
+}
+
+fn signed_min_literal(ty: &str) -> Option<i128> {
+    match ty {
+        "i8" => Some(i128::from(i8::MIN)),
+        "i16" => Some(i128::from(i16::MIN)),
+        "i32" => Some(i128::from(i32::MIN)),
+        "i64" => Some(i128::from(i64::MIN)),
+        "i128" => Some(i128::MIN),
+        _ => None,
+    }
+}
+
+fn signed_bv_to_i128(width: u32, value: u128) -> i128 {
+    if width == 0 {
+        return 0;
+    }
+    if width >= 128 {
+        return signed_u128_to_i128(value);
+    }
+    let mask = (1u128 << width) - 1;
+    let value = value & mask;
+    let sign_bit = 1u128 << (width - 1);
+    if value & sign_bit == 0 {
+        i128::try_from(value).expect("positive signed BV value fits i128")
+    } else {
+        let magnitude = ((!value) & mask) + 1;
+        -i128::try_from(magnitude).expect("negative signed BV magnitude fits i128")
+    }
+}
+
+fn signed_u128_to_i128(value: u128) -> i128 {
+    if value <= i128::MAX as u128 {
+        return i128::try_from(value).expect("value was checked to fit i128");
+    }
+    let magnitude = (!value).wrapping_add(1);
+    if magnitude == (1u128 << 127) {
+        i128::MIN
+    } else {
+        -i128::try_from(magnitude).expect("negative two's-complement magnitude fits i128")
     }
 }
 
@@ -843,6 +965,37 @@ impl_symbolic_unsigned!(u8, 8);
 impl_symbolic_unsigned!(u16, 16);
 impl_symbolic_unsigned!(u32, 32);
 impl_symbolic_unsigned!(u64, 64);
+
+macro_rules! impl_symbolic_signed_bv {
+    ($ty:ty, $width:literal) => {
+        impl Symbolic for $ty {
+            type Expr = Bv<$width>;
+            type Concrete = $ty;
+
+            fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+                property.signed_bv::<$width>(name)
+            }
+
+            fn concrete(
+                expr: &Self::Expr,
+                model: &Model,
+            ) -> Result<Option<Self::Concrete>, PropertyError> {
+                let Some(value) = expr.value_u128(model)? else {
+                    return Ok(None);
+                };
+                let signed = signed_bv_to_i128($width, value);
+                Ok(Some(<$ty>::try_from(signed).expect(
+                    "model value is sign-extended from the matching signed Rust bit-width",
+                )))
+            }
+        }
+    };
+}
+
+impl_symbolic_signed_bv!(i8, 8);
+impl_symbolic_signed_bv!(i16, 16);
+impl_symbolic_signed_bv!(i32, 32);
+impl_symbolic_signed_bv!(i64, 64);
 
 impl Symbolic for u128 {
     type Expr = Bv<128>;

@@ -6,6 +6,27 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-27 — Signed fixed-width `Symbolic` inputs for the property SDK.**
+  `i8`/`i16`/`i32`/`i64` now implement `Symbolic` as two's-complement
+  `Bv<8>`/`Bv<16>`/`Bv<32>`/`Bv<64>` terms, while `i128` remains mathematical
+  Int. Model lifting sign-extends replay-checked BV values back to Rust signed
+  integers, and `Property` records signed-vs-unsigned BV literal intent so
+  counterexample rendering emits stable signed Rust bindings such as
+  `let byte: i8 = -1_i8; // BV8 two's-complement`. Raw `Property::bv::<W>`
+  inputs still render as unsigned Rust integer literals.
+
+  This closes the PROP.3 signed fixed-width Rust integer policy for declaration,
+  model lifting, derived structs, and native-scalar test rendering without
+  changing solver behavior. The remaining optimization gap is signed-order
+  minimization: `prove_minimized` still passes only symbol IDs to
+  `minimize_model`, so signed BV symbols are optimized in the lower layer's
+  unsigned BV order until that API grows per-objective signedness. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`.
+
 - **Session 2026-06-27 — `#[derive(Symbolic)]` for the property SDK.**
   Added the pure-Rust `axeyum-property-macros` workspace crate and re-exported
   `#[derive(axeyum_property::Symbolic)]` from `axeyum-property`. The derive
@@ -54,14 +75,15 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   typed symbolic value with `Property::symbolic::<T>("name")` and lift concrete
   Rust values from replay-checked models with `Property::concrete::<T>`.
   Implementations cover `bool`, unsigned Rust integers (`u8`/`u16`/`u32`/`u64`/
-  `u128` as BV8/BV16/BV32/BV64/BV128), `i128` as mathematical Int, unit, and
-  2-/3-tuples with deterministic field names (`name.0`, `name.1`, ...).
+  `u128` as BV8/BV16/BV32/BV64/BV128), signed Rust integers
+  (`i8`/`i16`/`i32`/`i64` as two's-complement BV8/BV16/BV32/BV64), `i128` as
+  mathematical Int, unit, and 2-/3-tuples with deterministic field names
+  (`name.0`, `name.1`, ...).
 
   This is the first PROP.3 slice: it gives frontends and tests a macro-free
   typed input bundle path while preserving deterministic declaration/objective
-  order. The follow-up slices add named-field bundles and `#[derive(Symbolic)]`;
-  this scalar slice deliberately avoided mapping signed fixed-width Rust
-  integers until the SDK has an explicit two's-complement signed-BV policy.
+  order. Follow-up slices add named-field bundles, `#[derive(Symbolic)]`, and
+  signed fixed-width Rust integer rendering/minimization policy.
   Verification passed:
   `cargo fmt --all --check`;
   `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
@@ -102,9 +124,10 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
   cover a proved BV identity, an integer implication under assumptions, a
   minimized BV8 counterexample lifted through the typed handle, and the BV256
   overflow helper surface. Remaining SDK work: operator traits/ergonomic
-  syntax, signed fixed-width Rust integer policy for `Symbolic`, richer model
-  lifting, best-effort Lean-module packaging in the returned certificate
-  surface, and the per-app measurement/scoreboard harness. Verification passed:
+  syntax, signed-order objective metadata for signed symbolic BV minimization,
+  richer model lifting, best-effort Lean-module packaging in the returned
+  certificate surface, and the per-app measurement/scoreboard harness.
+  Verification passed:
   `cargo fmt --all --check`;
   `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
   `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
@@ -7508,11 +7531,16 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | WIP — committed assertions over arrays/UFs are now scoped as deferred theory assertions and decided by `check_with_memory` through the full pure-Rust dispatcher; one-shot branch assumptions over arrays/UFs are supported by `check_assuming_with_memory` / `check_assuming_core_with_memory`, with a coarse-but-sound full-assumption core on UNSAT. `IncrementalBvSolver` exposes deferred-theory introspection, `SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate calls plus auto route-selection helpers, and `SymbolicMemory` provides a typed load/store helper over array-backed memory states. This is a consumer-facing one-shot fallback, not the final warm lazy-array/UF incremental engine: deferred theory checks rebuild through `check_auto`, while the warm BV path still refuses active deferred theories rather than silently ignoring them. Remaining: true warm lazy arrays/UF with learned theory clauses, path-condition CFG/import frontends, and deeper memory model helpers |
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, and routes load-equality branch/assume queries through `SymbolicExecutor`'s memory-aware feasibility APIs; `SymbolicExecutor::branch` now auto-promotes array/UF branch conditions to the memory/theory-aware route, and `explore_cfg` auto-promotes branch/assume/status/model queries when the CFG path needs that route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually warm memory reuse from P4.1 |
-| P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and `produce_evidence_minimized` / `prove_minimized` surface that minimizer through property/verification front doors. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, typed BV overflow predicates, deterministic native-scalar counterexample-to-`#[test]` rendering, scalar/tuple/derived-struct `Symbolic` declarations/lifting, and named-field `symbolic_struct` bundles. Remaining: BV Pareto; MILP hardening; broader objective support for minimized counterexamples; property SDK ergonomics (operator traits, signed fixed-width Rust integer policy, structured model lifting beyond native scalars) |
+| P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and `produce_evidence_minimized` / `prove_minimized` surface that minimizer through property/verification front doors. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, typed BV overflow predicates, deterministic native-scalar counterexample-to-`#[test]` rendering, scalar/tuple/derived-struct `Symbolic` declarations/lifting including two's-complement signed fixed-width Rust integers, and named-field `symbolic_struct` bundles. Remaining: BV Pareto; MILP hardening; broader objective support for minimized counterexamples including signed BV objective metadata; property SDK ergonomics (operator traits, structured model lifting beyond native scalars) |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-27** — **Property SDK signed fixed-width `Symbolic` inputs.**
+  Added `Symbolic` implementations for `i8`/`i16`/`i32`/`i64` as
+  two's-complement BV terms, with signed model lifting and signed Rust
+  counterexample literal rendering for SDK-declared signed BV symbols.
 
 - **2026-06-27** — **Property SDK `Symbolic` derive macro.**
   Added the `axeyum-property-macros` proc-macro crate and re-exported
@@ -7523,13 +7551,13 @@ plan is built and committed on the current branch:
 - **2026-06-27** — **Property SDK named-field symbolic bundles.**
   Added `Property::symbolic_struct` and `SymbolicStruct::{field,struct_field}`
   so frontends can build struct-shaped symbolic input bundles with deterministic
-  dotted Axeyum names and stable sanitized counterexample identifiers before
-  the future derive macro exists.
+  dotted Axeyum names and stable sanitized counterexample identifiers.
 
 - **2026-06-27** — **Property SDK scalar/tuple `Symbolic` trait.**
   Added `Symbolic` plus `Property::symbolic` / `Property::concrete` for Bool,
-  unsigned Rust-integer BV inputs, Int-backed `i128`, unit, and 2-/3-tuples with
-  deterministic field naming and model lifting.
+  unsigned Rust-integer BV inputs, signed fixed-width Rust-integer BV inputs,
+  Int-backed `i128`, unit, and 2-/3-tuples with deterministic field naming and
+  model lifting.
 
 - **2026-06-27** — **Property counterexample-to-test rendering.**
   Added `Counterexample` / `InputBinding` in `axeyum-property`, with
