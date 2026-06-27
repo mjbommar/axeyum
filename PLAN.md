@@ -2265,9 +2265,10 @@ registers, final explicit memory cells, and terminal outcome.
 `TinyBvProgram::from_assembly` gives that toy target a small imported text
 format (`const`, arithmetic, `load`/`store`, `beq`, `win`/`lose`) with labels for
 branch targets, register-vs-register equality branches (`beq rA rB ...`),
-line-numbered parse errors, a public label-to-PC map, and label-based
-reachability/safety query wrappers over the existing checked PC queries. P4.2
-still needs richer byte-level/binary frontend work,
+line-numbered parse errors, a public label-to-PC map, a public PC-to-source-line
+map for imported instructions, and label-based reachability/safety query
+wrappers over the existing checked PC queries. P4.2 still needs richer
+byte-level/binary frontend work,
 unbounded/certified safety, and eventual warm lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3

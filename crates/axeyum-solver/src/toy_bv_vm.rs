@@ -115,6 +115,7 @@ pub struct TinyBvProgram {
     max_steps: usize,
     code: Vec<TinyBvInsn>,
     labels: BTreeMap<String, usize>,
+    source_lines: BTreeMap<usize, usize>,
 }
 
 /// Symbolic frontend state for [`TinyBvProgram`] exploration.
@@ -335,6 +336,7 @@ impl TinyBvProgram {
             max_steps,
             code,
             labels: BTreeMap::new(),
+            source_lines: BTreeMap::new(),
         })
     }
 
@@ -366,9 +368,10 @@ impl TinyBvProgram {
         max_steps: usize,
         text: &str,
     ) -> Result<Self, SolverError> {
-        let (code, labels) = parse_tiny_bv_assembly(text)?;
-        let mut program = Self::new(width, reg_count, input_count, max_steps, code)?;
-        program.labels = labels;
+        let parsed = parse_tiny_bv_assembly(text)?;
+        let mut program = Self::new(width, reg_count, input_count, max_steps, parsed.code)?;
+        program.labels = parsed.labels;
+        program.source_lines = parsed.source_lines;
         Ok(program)
     }
 
@@ -408,6 +411,19 @@ impl TinyBvProgram {
     /// Program counter for an assembly label.
     pub fn label_pc(&self, label: &str) -> Option<usize> {
         self.labels.get(label).copied()
+    }
+
+    /// Program-counter-to-source-line map imported from assembly.
+    ///
+    /// Hand-built programs have no source lines. Imported source lines are
+    /// one-based line numbers from the original assembly text.
+    pub fn source_lines(&self) -> &BTreeMap<usize, usize> {
+        &self.source_lines
+    }
+
+    /// One-based assembly source line for a program counter.
+    pub fn source_line(&self, pc: usize) -> Option<usize> {
+        self.source_lines.get(&pc).copied()
     }
 
     /// Whether this program contains memory instructions.
@@ -1012,9 +1028,13 @@ fn validate_pc(pc: usize, target: usize, code_len: usize) -> Result<(), SolverEr
     }
 }
 
-fn parse_tiny_bv_assembly(
-    text: &str,
-) -> Result<(Vec<TinyBvInsn>, BTreeMap<String, usize>), SolverError> {
+struct TinyBvAssembly {
+    code: Vec<TinyBvInsn>,
+    labels: BTreeMap<String, usize>,
+    source_lines: BTreeMap<usize, usize>,
+}
+
+fn parse_tiny_bv_assembly(text: &str) -> Result<TinyBvAssembly, SolverError> {
     let mut labels = BTreeMap::new();
     let mut lines = Vec::new();
     for (line_index, raw_line) in text.lines().enumerate() {
@@ -1045,6 +1065,11 @@ fn parse_tiny_bv_assembly(
         }
     }
 
+    let source_lines = lines
+        .iter()
+        .enumerate()
+        .map(|(pc, (line_no, _))| (pc, *line_no))
+        .collect();
     let mut code = Vec::with_capacity(lines.len());
     for (line_no, line) in lines {
         code.push(parse_tiny_bv_instruction(line_no, line, &labels)?);
@@ -1053,7 +1078,11 @@ fn parse_tiny_bv_assembly(
         .into_iter()
         .map(|(label, (pc, _))| (label, pc))
         .collect();
-    Ok((code, label_pcs))
+    Ok(TinyBvAssembly {
+        code,
+        labels: label_pcs,
+        source_lines,
+    })
 }
 
 fn clean_assembly_line(raw_line: &str) -> Option<&str> {

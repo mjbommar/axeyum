@@ -822,6 +822,11 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(program.label_pc("win_block"), Some(4));
     assert_eq!(program.label_pc("lose_block"), Some(5));
     assert_eq!(program.label_pc("missing"), None);
+    assert_eq!(program.source_lines().len(), program.code().len());
+    assert_eq!(program.source_line(0), Some(4));
+    assert_eq!(program.source_line(4), Some(8));
+    assert_eq!(program.source_line(5), Some(10));
+    assert_eq!(program.source_line(99), None);
     assert_eq!(
         program.code(),
         &[
@@ -868,6 +873,14 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(
         trace.steps.iter().map(|step| step.pc).collect::<Vec<_>>(),
         vec![0, 1, 2, 3, 4]
+    );
+    assert_eq!(
+        trace
+            .steps
+            .iter()
+            .map(|step| program.source_line(step.pc))
+            .collect::<Vec<_>>(),
+        vec![Some(4), Some(5), Some(6), Some(7), Some(8)]
     );
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
@@ -916,6 +929,7 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
             else_pc: 4,
         }
     );
+    assert_eq!(program.source_line(2), Some(4));
 
     let reach = program
         .reach_label_checked(
