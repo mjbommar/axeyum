@@ -647,8 +647,11 @@ a named mechanism.**
    repair and the final single-literal OR fallback. The ungated large-row
    version was measured/rejected after moving `bug337` backward to OR **210**
    and about **72.5 s**, so the large row remains diagnostic-only at term
-   **3408**. The next practical AUFLIA step is to derive or learn a constraint
-   that rules out the large OR-210/OR-211 toggle family.
+   **3408**. The follow-up branch-term diagnostic now identifies the concrete
+   pair: OR **210** branch term **3805** (store-definition branch) and OR
+   **211** branch term **4107** (copy/no-store branch). The next practical
+   AUFLIA step is to derive or learn the consistency/ordering constraint
+   connecting branch **3805** with branch **4107**.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

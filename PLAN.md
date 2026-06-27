@@ -2116,9 +2116,12 @@ against competitor source, are now binding:
      the final single-literal OR fallback. The ungated large-row version was
      measured/rejected after moving `bug337` backward to OR **210** and about
      **72.5 s**, so the large row remains diagnostic-only at term **3408**. The
-     next AUFLIA move is therefore to derive or learn a constraint that rules
-     out the large OR-210/OR-211 toggle family, not greedy single-OR forcing or
-     more local branch enumeration.
+     follow-up branch-term diagnostic now identifies the concrete pair:
+     OR **210** branch term **3805** (store-definition branch) and OR **211**
+     branch term **4107** (copy/no-store branch). The next AUFLIA move is
+     therefore to derive or learn the consistency/ordering constraint connecting
+     branch **3805** with branch **4107**, not greedy single-OR forcing or more
+     local branch enumeration.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

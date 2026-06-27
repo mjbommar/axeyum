@@ -144,12 +144,15 @@ fn node_label(node: &TermNode) -> String {
 }
 
 fn compact_render(arena: &TermArena, term: TermId) -> String {
-    const LIMIT: usize = 480;
+    let limit = std::env::var("AXEYUM_DIAGNOSE_RENDER_LIMIT")
+        .ok()
+        .and_then(|raw| raw.parse::<usize>().ok())
+        .unwrap_or(480);
     let rendered = render(arena, term);
-    if rendered.chars().count() <= LIMIT {
+    if rendered.chars().count() <= limit {
         rendered
     } else {
-        let prefix = rendered.chars().take(LIMIT).collect::<String>();
+        let prefix = rendered.chars().take(limit).collect::<String>();
         format!("{prefix}...")
     }
 }
@@ -180,9 +183,16 @@ fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &Rou
         for (label, key) in [
             ("replay_assertion", "term"),
             ("failed_conjunct", "failed_conjunct_term"),
+            ("best_branch", "failed_or_best_branch_term"),
+            ("followup_branch", "followup_branch_term"),
+            ("followup_next_branch", "followup_next_branch_term"),
             (
                 "best_branch_first_false",
                 "failed_or_best_branch_first_false_term",
+            ),
+            (
+                "global_false_best_branch",
+                "global_false_or_best_branch_term",
             ),
         ] {
             let Some(index) = extract_named_usize(detail, key) else {

@@ -6152,6 +6152,7 @@ struct ReplayScalarFollowupNextOrDiagnostic {
     or_ordinal: usize,
     or_term: TermId,
     branch_ordinal: usize,
+    branch_term: TermId,
     branch_initial_false_literals: usize,
     branch_total_literals: usize,
     status: String,
@@ -6175,6 +6176,7 @@ struct ReplayScalarFollowupOrDiagnostic {
     or_ordinal: usize,
     or_term: TermId,
     branch_ordinal: usize,
+    branch_term: TermId,
     branch_initial_false_literals: usize,
     branch_total_literals: usize,
     status: String,
@@ -6325,12 +6327,14 @@ fn write_scalar_followup_next_or_diagnostic(
     let _ = write!(
         note,
         ",followup_next_or_ordinal={},followup_next_or_term={},\
-         followup_next_branch={},followup_next_branch_false={},\
-         followup_next_branch_literals={},followup_next_status={},\
+         followup_next_branch={},followup_next_branch_term={},\
+         followup_next_branch_false={},followup_next_branch_literals={},\
+         followup_next_status={},\
          followup_next_changes={},followup_next_closure_steps={}",
         next.or_ordinal,
         next.or_term.index(),
         next.branch_ordinal,
+        next.branch_term.index(),
         next.branch_initial_false_literals,
         next.branch_total_literals,
         next.status,
@@ -6419,11 +6423,12 @@ fn write_scalar_followup_or_diagnostic(
     let _ = write!(
         note,
         ",followup_or_ordinal={},followup_or_term={},followup_branch={},\
-         followup_branch_false={},followup_branch_literals={},\
+         followup_branch_term={},followup_branch_false={},followup_branch_literals={},\
          followup_status={},followup_changes={},followup_closure_steps={}",
         followup.or_ordinal,
         followup.or_term.index(),
         followup.branch_ordinal,
+        followup.branch_term.index(),
         followup.branch_initial_false_literals,
         followup.branch_total_literals,
         followup.status,
@@ -6688,10 +6693,12 @@ impl ReplayFailure {
             let _ = write!(
                 note,
                 ", failed_or_branches={}, failed_or_best_branch={}, \
+                 failed_or_best_branch_term={}, \
                  failed_or_best_branch_false_literals={}, \
                  failed_or_best_branch_total_literals={}",
                 or_failure.branch_count,
                 or_failure.best_branch_ordinal,
+                or_failure.best_branch_term.index(),
                 or_failure.best_branch_false_literals,
                 or_failure.best_branch_total_literals
             );
@@ -6854,10 +6861,12 @@ impl ReplayFailure {
                     let _ = write!(
                         note,
                         ",global_false_or_branches={},global_false_or_best_branch={},\
+                         global_false_or_best_branch_term={},\
                          global_false_or_best_branch_false_literals={},\
                          global_false_or_best_branch_total_literals={}",
                         or_failure.branch_count,
                         or_failure.best_branch_ordinal,
+                        or_failure.best_branch_term.index(),
                         or_failure.best_branch_false_literals,
                         or_failure.best_branch_total_literals
                     );
@@ -7569,6 +7578,7 @@ fn replay_scalar_followup_next_or_diagnostic(
             or_ordinal: failure.conjunct_ordinal,
             or_term: failure.conjunct_term,
             branch_ordinal: or_failure.best_branch_ordinal,
+            branch_term: or_failure.best_branch_term,
             branch_initial_false_literals: or_failure.best_branch_false_literals,
             branch_total_literals: or_failure.best_branch_total_literals,
             status: "no_repair".to_owned(),
@@ -7632,6 +7642,7 @@ fn replay_scalar_followup_next_or_diagnostic(
         or_ordinal: failure.conjunct_ordinal,
         or_term: failure.conjunct_term,
         branch_ordinal: or_failure.best_branch_ordinal,
+        branch_term: or_failure.best_branch_term,
         branch_initial_false_literals: or_failure.best_branch_false_literals,
         branch_total_literals: or_failure.best_branch_total_literals,
         status: status.to_owned(),
@@ -7693,6 +7704,7 @@ fn replay_scalar_followup_or_diagnostic(
             or_ordinal: global_failure.conjunct_ordinal,
             or_term: global_failure.conjunct_term,
             branch_ordinal: or_failure.best_branch_ordinal,
+            branch_term: or_failure.best_branch_term,
             branch_initial_false_literals: or_failure.best_branch_false_literals,
             branch_total_literals: or_failure.best_branch_total_literals,
             status: "no_repair".to_owned(),
@@ -7782,6 +7794,7 @@ fn replay_scalar_followup_or_diagnostic(
         or_ordinal: global_failure.conjunct_ordinal,
         or_term: global_failure.conjunct_term,
         branch_ordinal: or_failure.best_branch_ordinal,
+        branch_term: or_failure.best_branch_term,
         branch_initial_false_literals: or_failure.best_branch_false_literals,
         branch_total_literals: or_failure.best_branch_total_literals,
         status: status.to_owned(),
@@ -10754,6 +10767,7 @@ mod tests {
         let note = failure.note();
         assert!(note.contains("failed_or_branches=2"));
         assert!(note.contains("failed_or_best_branch=1"));
+        assert!(note.contains(&format!("failed_or_best_branch_term={}", branch1.index())));
         assert!(note.contains("failed_or_best_branch_false_literals=1"));
         assert!(note.contains("failed_or_best_branch_first_false_term="));
         assert!(note.contains("failed_or_best_branch_first_false_lhs_value=3"));
@@ -11207,6 +11221,7 @@ mod tests {
                 || note.contains("global_false_or_best_branch=1"),
             "{note}"
         );
+        assert!(note.contains("global_false_or_best_branch_term="), "{note}");
         assert!(
             note.contains("global_false_or_best_branch_false_literals=1"),
             "{note}"
@@ -11888,6 +11903,10 @@ mod tests {
             note.contains(&format!("followup_or_term={}", followup_or.index())),
             "{note}"
         );
+        assert!(
+            note.contains(&format!("followup_branch_term={}", z_eq_x.index())),
+            "{note}"
+        );
         assert!(note.contains("followup_status=closes"), "{note}");
         assert!(note.contains("followup_kind=branch"), "{note}");
         assert!(note.contains("followup_final_branch_false=0"), "{note}");
@@ -12012,6 +12031,14 @@ mod tests {
         );
         assert!(
             note.contains(&format!("followup_next_or_term={}", second_or.index())),
+            "{note}"
+        );
+        assert!(
+            note.contains(&format!("followup_branch_term={}", z_eq_x.index())),
+            "{note}"
+        );
+        assert!(
+            note.contains(&format!("followup_next_branch_term={}", z_eq_zero.index())),
             "{note}"
         );
         assert!(
