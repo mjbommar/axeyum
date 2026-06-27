@@ -96,6 +96,17 @@ selector-scoped lemmas over the warm CNF (reusing learned clauses across path
 steps) per the decision above. The eager route makes symbolic memory *usable*
 now; the lazy route makes it *fast* incrementally.
 
+2026-06-27 update: the warm path now has its first retained array-read slice.
+After the narrow syntactic memory simplifier, reads of the form `select(a, i)`
+where `a` is a BV-index/BV-element array symbol and `i` is array-free are
+abstracted to internal warm BV variables. Same-array read pairs get
+selector-scoped congruence lemmas, and SAT models are projected back into
+concrete array entries before original-term replay. This covers symbolic-base
+loads and reducible ROW tails whose remaining base read is a plain memory
+symbol. Full lazy arrays remain deferred: arbitrary array terms, extensionality,
+ROW instantiation beyond the current simplifier, generic arrays, UF congruence,
+and learned theory-clause reuse across the whole array/UF engine are still open.
+
 ## Consequences
 
 - *Easier:* symbolic execution / reachability over memory becomes a warm,

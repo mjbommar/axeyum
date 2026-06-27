@@ -18,8 +18,8 @@
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
 use axeyum_ir::{
-    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
-    well_founded_default,
+    ArraySortKey, ArrayValue, Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode,
+    Value, eval, well_founded_default,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -81,12 +81,34 @@ struct Frame {
     /// here and decided by [`IncrementalBvSolver::check_with_memory`] via the
     /// full dispatcher. Warm lazy theory incrementality is ADR-0030 future work.
     deferred_assertions: Vec<TermId>,
+    /// Array reads abstracted into warm BV symbols for this frame's encoded
+    /// assertions. These drive model projection before original-term replay.
+    warm_array_selects: Vec<TermId>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct OneShotAssumption {
     original: TermId,
     encoded: TermId,
+    warm_array_selects: Vec<TermId>,
+    congruence_lemmas: Vec<TermId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WarmArraySelect {
+    array_symbol: SymbolId,
+    index: TermId,
+    value_symbol: SymbolId,
+    value_term: TermId,
+    index_width: u32,
+    element_width: u32,
+}
+
+#[derive(Debug)]
+struct WarmArrayEncoding {
+    term: TermId,
+    select_terms: Vec<TermId>,
+    congruence_lemmas: Vec<TermId>,
 }
 
 /// A warm, incremental pure-Rust bit-vector solver.
@@ -100,6 +122,8 @@ pub struct IncrementalBvSolver {
     cnf: IncrementalCnf,
     config: SolverConfig,
     frames: Vec<Frame>,
+    warm_array_selects: HashMap<TermId, WarmArraySelect>,
+    internal_symbols: HashSet<SymbolId>,
 }
 
 impl Default for IncrementalBvSolver {
@@ -127,7 +151,10 @@ impl IncrementalBvSolver {
                 selector: None,
                 assertions: Vec::new(),
                 deferred_assertions: Vec::new(),
+                warm_array_selects: Vec::new(),
             }],
+            warm_array_selects: HashMap::new(),
+            internal_symbols: HashSet::new(),
         }
     }
 
@@ -207,8 +234,7 @@ impl IncrementalBvSolver {
             return Err(SolverError::NonBooleanAssertion(term));
         }
         let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
-        self.assert_encoded(arena, term, encoded)?;
-        Ok(encoded)
+        self.assert_encoded_with_warm_array_selects(arena, term, encoded)
     }
 
     /// Bit-blasts `term` and adds it to the current scope.
@@ -285,6 +311,68 @@ impl IncrementalBvSolver {
         Ok(())
     }
 
+    fn assert_encoded_with_warm_array_selects(
+        &mut self,
+        arena: &mut TermArena,
+        original: TermId,
+        encoded: TermId,
+    ) -> Result<TermId, SolverError> {
+        if arena.sort_of(original) != Sort::Bool {
+            return Err(SolverError::NonBooleanAssertion(original));
+        }
+        if arena.sort_of(encoded) != Sort::Bool {
+            return Err(SolverError::Backend(format!(
+                "memory simplification changed Boolean assertion #{} to non-Boolean term #{}",
+                original.index(),
+                encoded.index()
+            )));
+        }
+
+        let existing_selects = self.active_warm_array_select_terms();
+        let encoded = self.abstract_warm_array_selects(arena, encoded, &existing_selects)?;
+        if needs_deferred_theory(arena, encoded.term) {
+            self.frames
+                .last_mut()
+                .expect("base frame always present")
+                .deferred_assertions
+                .push(original);
+            return Ok(encoded.term);
+        }
+
+        let selector = self
+            .frames
+            .last()
+            .expect("base frame always present")
+            .selector;
+        for &lemma in &encoded.congruence_lemmas {
+            self.encode_warm_root(arena, lemma, selector)?;
+        }
+        self.encode_warm_root(arena, encoded.term, selector)?;
+        let frame = self.frames.last_mut().expect("base frame always present");
+        frame.assertions.push(original);
+        frame.warm_array_selects.extend(encoded.select_terms);
+        Ok(encoded.term)
+    }
+
+    fn encode_warm_root(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        selector: Option<CnfVar>,
+    ) -> Result<(), SolverError> {
+        if let Some((unsupported, op)) = first_unsupported_op(arena, &[term]) {
+            return Err(SolverError::Unsupported(format!(
+                "term #{} uses unsupported pure-Rust BV operator {op:?}",
+                unsupported.index()
+            )));
+        }
+        let lowered = self.lowering.lower(arena, term).map_err(map_lower_error)?;
+        let root = lowered.bits()[0];
+        self.cnf
+            .assert_root(self.lowering.aig(), root, selector)
+            .map_err(|error| map_sat_error(&error))
+    }
+
     /// Opens a new scope; assertions added afterwards are removed by the
     /// matching [`Self::pop`].
     ///
@@ -301,6 +389,7 @@ impl IncrementalBvSolver {
             selector: Some(selector),
             assertions: Vec::new(),
             deferred_assertions: Vec::new(),
+            warm_array_selects: Vec::new(),
         });
         Ok(())
     }
@@ -424,7 +513,7 @@ impl IncrementalBvSolver {
         arena: &mut TermArena,
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
-        let assumptions = Self::simplified_one_shot_assumptions(arena, assumptions)?;
+        let assumptions = self.simplified_one_shot_assumptions(arena, assumptions)?;
         Ok(self.solve_with_encoded_extra(arena, &assumptions)?.0)
     }
 
@@ -470,7 +559,7 @@ impl IncrementalBvSolver {
         arena: &mut TermArena,
         assumptions: &[TermId],
     ) -> Result<AssumptionOutcome, SolverError> {
-        let assumptions = Self::simplified_one_shot_assumptions(arena, assumptions)?;
+        let assumptions = self.simplified_one_shot_assumptions(arena, assumptions)?;
         let (result, core) = self.solve_with_encoded_extra(arena, &assumptions)?;
         Ok(match result {
             CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
@@ -543,22 +632,207 @@ impl IncrementalBvSolver {
         self.assert(arena, clause)
     }
 
+    fn active_warm_array_select_terms(&self) -> Vec<TermId> {
+        self.frames
+            .iter()
+            .flat_map(|frame| frame.warm_array_selects.iter().copied())
+            .collect()
+    }
+
+    fn abstract_warm_array_selects(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        existing_selects: &[TermId],
+    ) -> Result<WarmArrayEncoding, SolverError> {
+        let mut memo = HashMap::new();
+        let mut select_terms = Vec::new();
+        let term =
+            self.abstract_warm_array_selects_inner(arena, term, &mut memo, &mut select_terms)?;
+        let mut congruence_lemmas = Vec::new();
+        let mut prior = existing_selects.to_vec();
+        for &select in &select_terms {
+            for &other in &prior {
+                if let Some(lemma) = self.warm_array_congruence_lemma(arena, other, select)? {
+                    congruence_lemmas.push(lemma);
+                }
+            }
+            prior.push(select);
+        }
+        Ok(WarmArrayEncoding {
+            term,
+            select_terms,
+            congruence_lemmas,
+        })
+    }
+
+    fn abstract_warm_array_selects_inner(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        memo: &mut HashMap<TermId, TermId>,
+        select_terms: &mut Vec<TermId>,
+    ) -> Result<TermId, SolverError> {
+        if let Some(&abstracted) = memo.get(&term) {
+            return Ok(abstracted);
+        }
+
+        if let Some(select) = Self::supported_warm_array_select(arena, term)
+            && !needs_deferred_theory(arena, select.index)
+        {
+            let abstracted = self.get_or_create_warm_array_select(arena, term, select)?;
+            if !select_terms.contains(&term) {
+                select_terms.push(term);
+            }
+            memo.insert(term, abstracted.value_term);
+            return Ok(abstracted.value_term);
+        }
+
+        let original_args = if let TermNode::App { args, .. } = arena.node(term) {
+            args.to_vec()
+        } else {
+            memo.insert(term, term);
+            return Ok(term);
+        };
+        let mut changed = false;
+        let mut abstracted_args = Vec::with_capacity(original_args.len());
+        for &arg in &original_args {
+            let abstracted =
+                self.abstract_warm_array_selects_inner(arena, arg, memo, select_terms)?;
+            changed |= abstracted != arg;
+            abstracted_args.push(abstracted);
+        }
+        let abstracted = if changed {
+            arena.rebuild_with_args(term, &abstracted_args)
+        } else {
+            term
+        };
+        memo.insert(term, abstracted);
+        Ok(abstracted)
+    }
+
+    fn supported_warm_array_select(arena: &TermArena, term: TermId) -> Option<WarmArraySelect> {
+        let TermNode::App {
+            op: Op::Select,
+            args,
+            ..
+        } = arena.node(term)
+        else {
+            return None;
+        };
+        let [array, index] = args.as_ref() else {
+            return None;
+        };
+        let TermNode::Symbol(array_symbol) = arena.node(*array) else {
+            return None;
+        };
+        let Sort::Array {
+            index: ArraySortKey::BitVec(index_width),
+            element: ArraySortKey::BitVec(element_width),
+        } = arena.sort_of(*array)
+        else {
+            return None;
+        };
+        if arena.sort_of(*index) != Sort::BitVec(index_width)
+            || arena.sort_of(term) != Sort::BitVec(element_width)
+        {
+            return None;
+        }
+        Some(WarmArraySelect {
+            array_symbol: *array_symbol,
+            index: *index,
+            value_symbol: *array_symbol,
+            value_term: term,
+            index_width,
+            element_width,
+        })
+    }
+
+    fn get_or_create_warm_array_select(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        mut select: WarmArraySelect,
+    ) -> Result<WarmArraySelect, SolverError> {
+        if let Some(existing) = self.warm_array_selects.get(&term).copied() {
+            return Ok(existing);
+        }
+        let base_name = format!("!axeyum_warm_select_{}", term.index());
+        let mut name = base_name.clone();
+        let mut suffix = 0usize;
+        while arena
+            .symbols()
+            .any(|(_symbol, existing, _sort)| existing == name)
+        {
+            suffix += 1;
+            name = format!("{base_name}_{suffix}");
+        }
+        let value_symbol = arena
+            .declare(&name, Sort::BitVec(select.element_width))
+            .map_err(|error| map_ir_error(&error))?;
+        let value_term = arena.var(value_symbol);
+        self.internal_symbols.insert(value_symbol);
+        select.value_symbol = value_symbol;
+        select.value_term = value_term;
+        self.warm_array_selects.insert(term, select);
+        Ok(select)
+    }
+
+    fn warm_array_congruence_lemma(
+        &self,
+        arena: &mut TermArena,
+        left: TermId,
+        right: TermId,
+    ) -> Result<Option<TermId>, SolverError> {
+        if left == right {
+            return Ok(None);
+        }
+        let Some(left) = self.warm_array_selects.get(&left).copied() else {
+            return Ok(None);
+        };
+        let Some(right) = self.warm_array_selects.get(&right).copied() else {
+            return Ok(None);
+        };
+        if left.array_symbol != right.array_symbol {
+            return Ok(None);
+        }
+        let same_index = arena
+            .eq(left.index, right.index)
+            .map_err(|error| map_ir_error(&error))?;
+        let same_value = arena
+            .eq(left.value_term, right.value_term)
+            .map_err(|error| map_ir_error(&error))?;
+        let distinct_index = arena
+            .not(same_index)
+            .map_err(|error| map_ir_error(&error))?;
+        arena
+            .or(distinct_index, same_value)
+            .map(Some)
+            .map_err(|error| map_ir_error(&error))
+    }
+
     fn simplified_one_shot_assumptions(
+        &mut self,
         arena: &mut TermArena,
         assumptions: &[TermId],
     ) -> Result<Vec<OneShotAssumption>, SolverError> {
-        assumptions
-            .iter()
-            .map(|&term| {
-                if arena.sort_of(term) != Sort::Bool {
-                    return Err(SolverError::NonBooleanAssertion(term));
-                }
-                Ok(OneShotAssumption {
-                    original: term,
-                    encoded: Self::simplify_memory_for_warm_assertion(arena, term),
-                })
-            })
-            .collect()
+        let mut active_selects = self.active_warm_array_select_terms();
+        let mut simplified = Vec::with_capacity(assumptions.len());
+        for &term in assumptions {
+            if arena.sort_of(term) != Sort::Bool {
+                return Err(SolverError::NonBooleanAssertion(term));
+            }
+            let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
+            let encoded = self.abstract_warm_array_selects(arena, encoded, &active_selects)?;
+            active_selects.extend(encoded.select_terms.iter().copied());
+            simplified.push(OneShotAssumption {
+                original: term,
+                encoded: encoded.term,
+                warm_array_selects: encoded.select_terms,
+                congruence_lemmas: encoded.congruence_lemmas,
+            });
+        }
+        Ok(simplified)
     }
 
     /// Core solve. Returns the [`CheckResult`] and, on an `unsat` under
@@ -576,31 +850,25 @@ impl IncrementalBvSolver {
             .map(|&term| OneShotAssumption {
                 original: term,
                 encoded: term,
+                warm_array_selects: Vec::new(),
+                congruence_lemmas: Vec::new(),
             })
             .collect::<Vec<_>>();
         self.solve_with_encoded_extra(arena, &assumptions)
     }
 
-    fn solve_with_encoded_extra(
+    fn encode_one_shot_assumptions(
         &mut self,
         arena: &TermArena,
         assumptions: &[OneShotAssumption],
-    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
-        // The warm path does not bit-blast arrays or UFs; if any deferred theory
-        // assertion is active, refuse rather than silently ignore it (which would
-        // risk a wrong result). Callers use `check_with_memory` for those
-        // queries.
-        if self.has_deferred_theory_assertions() {
-            return Err(SolverError::Unsupported(
-                "active array/UF theory assertions: use check_with_memory (the warm path does \
-                 not bit-blast deferred theories)"
-                    .to_owned(),
-            ));
-        }
-        // Encode each one-shot assumption guarded by an ephemeral selector that
-        // is assumed only for this solve, so it does not persist as a hard
-        // constraint after the check returns.
-        let mut ephemeral = Vec::with_capacity(assumptions.len());
+    ) -> Result<(Vec<CnfVar>, Vec<CnfVar>), SolverError> {
+        let lemma_count = assumptions
+            .iter()
+            .map(|assumption| assumption.congruence_lemmas.len())
+            .sum::<usize>();
+        let mut ephemeral = Vec::with_capacity(assumptions.len() + lemma_count);
+        let mut assumption_selectors = Vec::with_capacity(assumptions.len());
+
         for assumption in assumptions {
             if arena.sort_of(assumption.original) != Sort::Bool {
                 return Err(SolverError::NonBooleanAssertion(assumption.original));
@@ -619,26 +887,50 @@ impl IncrementalBvSolver {
                         .to_owned(),
                 ));
             }
-            if let Some((unsupported, op)) = first_unsupported_op(arena, &[assumption.encoded]) {
-                return Err(SolverError::Unsupported(format!(
-                    "term #{} uses unsupported pure-Rust BV operator {op:?}",
-                    unsupported.index()
-                )));
+            for &lemma in &assumption.congruence_lemmas {
+                if needs_deferred_theory(arena, lemma) {
+                    return Err(SolverError::Unsupported(
+                        "array/UF assumption congruence lemma still mentions deferred theory"
+                            .to_owned(),
+                    ));
+                }
+                let selector = self
+                    .cnf
+                    .fresh_selector()
+                    .map_err(|error| map_sat_error(&error))?;
+                self.encode_warm_root(arena, lemma, Some(selector))?;
+                ephemeral.push(selector);
             }
-            let lowered = self
-                .lowering
-                .lower(arena, assumption.encoded)
-                .map_err(map_lower_error)?;
-            let root = lowered.bits()[0];
             let selector = self
                 .cnf
                 .fresh_selector()
                 .map_err(|error| map_sat_error(&error))?;
-            self.cnf
-                .assert_root(self.lowering.aig(), root, Some(selector))
-                .map_err(|error| map_sat_error(&error))?;
+            self.encode_warm_root(arena, assumption.encoded, Some(selector))?;
             ephemeral.push(selector);
+            assumption_selectors.push(selector);
         }
+
+        Ok((ephemeral, assumption_selectors))
+    }
+
+    fn solve_with_encoded_extra(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[OneShotAssumption],
+    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
+        // The warm path does not bit-blast arrays or UFs; if any deferred theory
+        // assertion is active, refuse rather than silently ignore it (which would
+        // risk a wrong result). Callers use `check_with_memory` for those
+        // queries.
+        if self.has_deferred_theory_assertions() {
+            return Err(SolverError::Unsupported(
+                "active array/UF theory assertions: use check_with_memory (the warm path does \
+                 not bit-blast deferred theories)"
+                    .to_owned(),
+            ));
+        }
+        let (ephemeral, assumption_selectors) =
+            self.encode_one_shot_assumptions(arena, assumptions)?;
 
         let mut active = self
             .frames
@@ -661,7 +953,18 @@ impl IncrementalBvSolver {
                     .lowering
                     .assignment_from_aig_values(&node_values)
                     .map_err(map_lower_error)?;
-                let model = complete_model(arena, &reconstructed);
+                let one_shot_selects = assumptions
+                    .iter()
+                    .flat_map(|assumption| assumption.warm_array_selects.iter().copied())
+                    .collect::<Vec<_>>();
+                let model = match self.complete_model_with_warm_arrays(
+                    arena,
+                    &reconstructed,
+                    &one_shot_selects,
+                ) {
+                    Ok(model) => model,
+                    Err(reason) => return Ok((CheckResult::Unknown(reason), Vec::new())),
+                };
                 // Replay is the soundness gate. If the trust-anchor evaluator
                 // cannot evaluate a term (e.g. an arithmetic overflow), the model
                 // is unverifiable: degrade to a graceful `Unknown` rather than
@@ -680,7 +983,10 @@ impl IncrementalBvSolver {
                 // which is always a sound core.
                 let mut core = Vec::new();
                 for lit in &evidence.failed_assumptions {
-                    if let Some(i) = ephemeral.iter().position(|&sel| sel == lit.var()) {
+                    if let Some(i) = assumption_selectors
+                        .iter()
+                        .position(|&sel| sel == lit.var())
+                    {
                         core.push(assumptions[i].original);
                     }
                 }
@@ -704,6 +1010,80 @@ impl IncrementalBvSolver {
                 ))
             }
         }
+    }
+
+    fn complete_model_with_warm_arrays(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        one_shot_selects: &[TermId],
+    ) -> Result<Model, UnknownReason> {
+        let mut model = complete_model_filtered(arena, assignment, &self.internal_symbols);
+        let mut select_terms = self.active_warm_array_select_terms();
+        select_terms.extend_from_slice(one_shot_selects);
+        select_terms.sort_by_key(|term| term.index());
+        select_terms.dedup();
+
+        for select_term in select_terms {
+            let Some(select) = self.warm_array_selects.get(&select_term).copied() else {
+                continue;
+            };
+            let select_value = match assignment
+                .get(select.value_symbol)
+                .or_else(|| well_founded_default(arena, Sort::BitVec(select.element_width)))
+            {
+                Some(Value::Bv { width, value }) if width == select.element_width => value,
+                Some(value) => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm array select abstraction #{} had non-BV value {value}",
+                            select_term.index()
+                        ),
+                    });
+                }
+                None => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm array select abstraction #{} had no default value",
+                            select_term.index()
+                        ),
+                    });
+                }
+            };
+            let model_assignment = model.to_assignment();
+            let index_value = match eval(arena, select.index, &model_assignment) {
+                Ok(Value::Bv { width, value }) if width == select.index_width => value,
+                Ok(value) => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm array select index #{} evaluated to non-matching value {value}",
+                            select.index.index()
+                        ),
+                    });
+                }
+                Err(error) => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm array select index #{} could not be evaluated: {error}",
+                            select.index.index()
+                        ),
+                    });
+                }
+            };
+            let array = match model.get(select.array_symbol) {
+                Some(Value::Array(array)) => array,
+                _ => ArrayValue::constant(select.index_width, select.element_width, 0),
+            };
+            model.set(
+                select.array_symbol,
+                Value::Array(array.store(index_value, select_value)),
+            );
+        }
+        Ok(model)
     }
 
     /// Replays the model against every active assertion plus the one-shot
@@ -929,9 +1309,16 @@ fn original_assumptions(assumptions: &[OneShotAssumption]) -> Vec<TermId> {
         .collect()
 }
 
-fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
+fn complete_model_filtered(
+    arena: &TermArena,
+    assignment: &Assignment,
+    hidden_symbols: &HashSet<SymbolId>,
+) -> Model {
     let mut model = Model::new();
     for (symbol, _name, sort) in arena.symbols() {
+        if hidden_symbols.contains(&symbol) {
+            continue;
+        }
         // Unconstrained symbols get their sort's well-founded default; an
         // uninhabited datatype gets no entry (see the sat-bv backend's twin).
         let value = assignment
@@ -942,6 +1329,10 @@ fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {
         }
     }
     model
+}
+
+fn map_ir_error(error: &IrError) -> SolverError {
+    SolverError::Backend(error.to_string())
 }
 
 fn map_lower_error(error: BitLowerError) -> SolverError {

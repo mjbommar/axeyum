@@ -11,7 +11,7 @@
 
 #![allow(clippy::too_many_lines)] // scenario-style integration tests stay readable as full flows
 
-use axeyum_ir::{ArraySortKey, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
+use axeyum_ir::{ArraySortKey, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
     SymbolicExecutor, SymbolicMemory, SymbolicMemoryWrite, TinyBvBasicBlock, TinyBvCfgEdge,
@@ -1970,6 +1970,204 @@ fn warm_assert_simplifies_same_index_read_over_write() {
 }
 
 #[test]
+fn warm_assert_abstracts_select_over_array_symbol() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_select_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let idx_sym = arena.declare("warm_select_idx", Sort::BitVec(8)).unwrap();
+    let mem = arena.var(mem_sym);
+    let idx = arena.var(idx_sym);
+    let target = arena.bv_const(8, 0x42).unwrap();
+    let loaded = arena.select(mem, idx).unwrap();
+    let assertion = arena.eq(loaded, target).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .expect("select over a BV-array symbol should abstract to a warm BV term");
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the encoded select abstraction should be array-free"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "select abstraction should avoid the one-shot memory dispatcher"
+    );
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("warm select abstraction should be satisfiable");
+    };
+    assert_eq!(
+        eval(&arena, assertion, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected array model must replay the original select assertion"
+    );
+    assert!(
+        model
+            .iter()
+            .all(|(symbol, _)| !arena.symbol(symbol).0.starts_with("!axeyum_warm_select_")),
+        "internal select abstraction symbols must not leak into public models"
+    );
+}
+
+#[test]
+fn warm_array_select_congruence_refutes_equal_index_conflict() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_congruence_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let i_sym = arena.declare("warm_congruence_i", Sort::BitVec(8)).unwrap();
+    let j_sym = arena.declare("warm_congruence_j", Sort::BitVec(8)).unwrap();
+    let mem = arena.var(mem_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let a = arena.bv_const(8, 0xaa).unwrap();
+    let b = arena.bv_const(8, 0xbb).unwrap();
+    let read_i = arena.select(mem, i).unwrap();
+    let read_j = arena.select(mem, j).unwrap();
+    let read_i_is_a = arena.eq(read_i, a).unwrap();
+    let read_j_is_b = arena.eq(read_j, b).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, read_i_is_a)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_index)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, read_j_is_b)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "select-congruence conflicts should stay on the warm path"
+    );
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
+fn warm_array_select_congruence_is_scoped_by_push_pop() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_congruence_scoped_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let i_sym = arena
+        .declare("warm_congruence_scoped_i", Sort::BitVec(8))
+        .unwrap();
+    let j_sym = arena
+        .declare("warm_congruence_scoped_j", Sort::BitVec(8))
+        .unwrap();
+    let mem = arena.var(mem_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let a = arena.bv_const(8, 0x11).unwrap();
+    let b = arena.bv_const(8, 0x22).unwrap();
+    let read_i = arena.select(mem, i).unwrap();
+    let read_j = arena.select(mem, j).unwrap();
+    let read_i_is_a = arena.eq(read_i, a).unwrap();
+    let read_j_is_b = arena.eq(read_j, b).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, read_i_is_a)
+        .unwrap();
+    assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)));
+
+    solver.push().unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_index)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, read_j_is_b)
+        .unwrap();
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+
+    assert!(solver.pop());
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("popping the conflicting select and its scoped congruence lemma should restore sat");
+    };
+    assert_eq!(
+        eval(&arena, read_i_is_a, &model.to_assignment()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+#[test]
+fn warm_assumption_abstracts_select_congruence_without_persisting() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_assume_congruence_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let i_sym = arena
+        .declare("warm_assume_congruence_i", Sort::BitVec(8))
+        .unwrap();
+    let j_sym = arena
+        .declare("warm_assume_congruence_j", Sort::BitVec(8))
+        .unwrap();
+    let mem = arena.var(mem_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let a = arena.bv_const(8, 0x33).unwrap();
+    let b = arena.bv_const(8, 0x44).unwrap();
+    let read_i = arena.select(mem, i).unwrap();
+    let read_j = arena.select(mem, j).unwrap();
+    let read_i_is_a = arena.eq(read_i, a).unwrap();
+    let read_j_is_b = arena.eq(read_j, b).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, read_i_is_a)
+        .unwrap();
+    let outcome = solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[same_index, read_j_is_b])
+        .unwrap();
+    let AssumptionOutcome::Unsat { core } = outcome else {
+        panic!("equal-index conflicting read assumption should be unsat, got {outcome:?}");
+    };
+    assert!(
+        core.iter()
+            .all(|term| [same_index, read_j_is_b].contains(term)),
+        "reported core should name only user assumptions, not internal congruence lemmas"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "one-shot select assumptions should not persist as deferred theory assertions"
+    );
+    assert!(
+        matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)),
+        "one-shot conflicting select assumptions must not persist after the check"
+    );
+}
+
+#[test]
 fn assume_auto_keeps_same_index_memory_condition_on_warm_path() {
     let mut arena = TermArena::new();
     let mem = arena
@@ -2652,7 +2850,7 @@ fn branch_simplifies_symbolic_read_over_write_hit_on_warm_path() {
 }
 
 #[test]
-fn symbolic_read_over_write_with_symbolic_base_stays_deferred() {
+fn symbolic_read_over_write_with_symbolic_base_uses_warm_select_abstraction() {
     let mut arena = TermArena::new();
     let memory_sym = arena
         .declare(
@@ -2683,16 +2881,20 @@ fn symbolic_read_over_write_with_symbolic_base_stays_deferred() {
     let mut solver = IncrementalBvSolver::new();
     let encoded = solver.assert_simplifying_memory(&mut arena, cond).unwrap();
     assert!(
-        IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
-        "conditional ROW over a symbolic base must keep the unreduced base select deferred"
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "conditional ROW over a symbolic base should abstract the remaining base select"
     );
     assert!(
-        solver.has_deferred_theory_assertions(),
-        "general symbolic base arrays should remain on the memory/theory route"
+        !solver.has_deferred_theory_assertions(),
+        "symbolic base reads over BV-array variables should stay on the warm route"
     );
-    assert!(
-        solver.check(&arena).is_err(),
-        "ordinary warm check must refuse active deferred array assertions"
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("warm select abstraction should decide the symbolic-base ROW assertion");
+    };
+    assert_eq!(
+        eval(&arena, cond, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected array model must replay the original symbolic-base ROW assertion"
     );
 }
 
@@ -3270,17 +3472,15 @@ fn symbolic_memory_helper_defers_unreduced_symbolic_base() {
             .assume_load_eq(&mut executor, &mut arena, read_index, value)
             .unwrap()
             .is_feasible(),
-        "unreduced symbolic-base memory is still feasible through auto fallback"
+        "unreduced symbolic-base memory is feasible through warm select abstraction"
     );
-    match executor.status(&arena).unwrap() {
-        PathStatus::Unknown(_) => {}
-        other => {
-            panic!("ordinary warm status should report Unknown for deferred memory, got {other:?}")
-        }
-    }
     assert!(
-        executor.status_auto(&mut arena).unwrap().is_feasible(),
-        "auto status should route the deferred assertion through the memory solver"
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should work after helper-level select abstraction"
+    );
+    assert!(
+        executor.model(&arena).unwrap().is_some(),
+        "ordinary warm model should replay after helper-level select abstraction"
     );
 }
 

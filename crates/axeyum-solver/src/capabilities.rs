@@ -884,12 +884,14 @@ pub const CAPABILITIES: &[Capability] = &[
                   (full dispatcher; syntactic same-index ROW hits, literal-distinct store \
                   misses, constant-array reads, and reducible array-valued ite reads can stay \
                   warm; reducible symbolic-address conditional ROW over store chains can also \
-                  stay warm with original-term replay/core reporting; warm lazy arrays/UF = \
-                  ADR-0030 future work)",
+                  stay warm with original-term replay/core reporting; select reads over \
+                  BV-array symbols abstract to retained warm BV variables with scoped \
+                  select-congruence lemmas and replay-projected array models; warm lazy \
+                  arrays/UF = ADR-0030 future work)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\
-                   symbolic-ROW assertion and branch warm replay; warm path refuses remaining \
-                   deferred array/UF theories",
+                   symbolic-ROW/select-congruence assertion and branch warm replay; warm path \
+                   refuses remaining deferred array/UF theories",
         reference: "ADR-0010/0030",
     },
     Capability {
