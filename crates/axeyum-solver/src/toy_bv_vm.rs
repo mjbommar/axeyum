@@ -7,7 +7,7 @@
 //! through [`SymbolicExecutor`], extract concrete model witnesses, and confirm
 //! those witnesses by independent concrete replay.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
 
@@ -138,6 +138,24 @@ pub struct TinyBvCfgEdge {
     pub to: usize,
     /// Edge classification.
     pub kind: TinyBvCfgEdgeKind,
+}
+
+/// One static basic block in a [`TinyBvProgram`] CFG.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvBasicBlock {
+    /// First program counter in the block.
+    pub start_pc: usize,
+    /// Program counter immediately after the block.
+    pub end_pc: usize,
+    /// Assembly labels attached to `start_pc`, in deterministic label order.
+    pub labels: Vec<String>,
+    /// One source-line entry per instruction in `[start_pc, end_pc)`.
+    ///
+    /// Hand-built programs have no imported source metadata, so these entries
+    /// are `None`.
+    pub source_lines: Vec<Option<usize>>,
+    /// Outgoing CFG edges from the block's final instruction.
+    pub outgoing: Vec<TinyBvCfgEdge>,
 }
 
 /// Symbolic frontend state for [`TinyBvProgram`] exploration.
@@ -470,6 +488,36 @@ impl TinyBvProgram {
             .iter()
             .enumerate()
             .flat_map(|(pc, &instruction)| self.instruction_successors(pc, instruction))
+            .collect()
+    }
+
+    /// Static basic blocks in deterministic program-counter order.
+    ///
+    /// Block leaders are: entry PC 0, assembly labels, branch targets, and the
+    /// instruction after a branch or terminal instruction when it exists. Each
+    /// block covers a contiguous instruction range, carries source/label
+    /// metadata for frontend reporting, and exposes outgoing edges from its
+    /// final instruction.
+    pub fn basic_blocks(&self) -> Vec<TinyBvBasicBlock> {
+        let leaders = self.basic_block_leaders().into_iter().collect::<Vec<_>>();
+        leaders
+            .iter()
+            .enumerate()
+            .map(|(index, &start_pc)| {
+                let end_pc = leaders.get(index + 1).copied().unwrap_or(self.code.len());
+                let outgoing = self.instruction_successors(end_pc - 1, self.code[end_pc - 1]);
+                TinyBvBasicBlock {
+                    start_pc,
+                    end_pc,
+                    labels: self
+                        .labels_at_pc(start_pc)
+                        .into_iter()
+                        .map(ToOwned::to_owned)
+                        .collect(),
+                    source_lines: (start_pc..end_pc).map(|pc| self.source_line(pc)).collect(),
+                    outgoing,
+                }
+            })
             .collect()
     }
 
@@ -1073,6 +1121,40 @@ impl TinyBvProgram {
         } else {
             Vec::new()
         }
+    }
+
+    fn basic_block_leaders(&self) -> BTreeSet<usize> {
+        let mut leaders = BTreeSet::from([0]);
+        leaders.extend(self.labels.values().copied());
+        for (pc, instruction) in self.code.iter().copied().enumerate() {
+            match instruction {
+                TinyBvInsn::BranchEq {
+                    then_pc, else_pc, ..
+                }
+                | TinyBvInsn::BranchRegEq {
+                    then_pc, else_pc, ..
+                } => {
+                    leaders.insert(then_pc);
+                    leaders.insert(else_pc);
+                    if pc + 1 < self.code.len() {
+                        leaders.insert(pc + 1);
+                    }
+                }
+                TinyBvInsn::Win | TinyBvInsn::Lose => {
+                    if pc + 1 < self.code.len() {
+                        leaders.insert(pc + 1);
+                    }
+                }
+                TinyBvInsn::Const { .. }
+                | TinyBvInsn::Add { .. }
+                | TinyBvInsn::Sub { .. }
+                | TinyBvInsn::Mul { .. }
+                | TinyBvInsn::Xor { .. }
+                | TinyBvInsn::Load { .. }
+                | TinyBvInsn::Store { .. } => {}
+            }
+        }
+        leaders
     }
 }
 

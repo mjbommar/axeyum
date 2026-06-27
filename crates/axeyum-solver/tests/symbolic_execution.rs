@@ -12,8 +12,8 @@
 use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
-    SymbolicExecutor, SymbolicMemory, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome,
-    TinyBvInsn, TinyBvProgram, TinyBvReachabilityStatus, TinyBvSafetyStatus,
+    SymbolicExecutor, SymbolicMemory, TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind,
+    TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram, TinyBvReachabilityStatus, TinyBvSafetyStatus,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -906,6 +906,43 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
             },
         ]
     );
+    assert_eq!(
+        program.basic_blocks(),
+        vec![
+            TinyBvBasicBlock {
+                start_pc: 0,
+                end_pc: 4,
+                labels: vec!["entry".to_owned()],
+                source_lines: vec![Some(4), Some(5), Some(6), Some(7)],
+                outgoing: vec![
+                    TinyBvCfgEdge {
+                        from: 3,
+                        to: 4,
+                        kind: TinyBvCfgEdgeKind::BranchTrue,
+                    },
+                    TinyBvCfgEdge {
+                        from: 3,
+                        to: 5,
+                        kind: TinyBvCfgEdgeKind::BranchFalse,
+                    },
+                ],
+            },
+            TinyBvBasicBlock {
+                start_pc: 4,
+                end_pc: 5,
+                labels: vec!["win_block".to_owned()],
+                source_lines: vec![Some(8)],
+                outgoing: Vec::new(),
+            },
+            TinyBvBasicBlock {
+                start_pc: 5,
+                end_pc: 6,
+                labels: vec!["lose_block".to_owned()],
+                source_lines: vec![Some(10)],
+                outgoing: Vec::new(),
+            },
+        ]
+    );
 
     let reach = program
         .reach_label_checked(
@@ -1027,6 +1064,43 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
                 from: 2,
                 to: 4,
                 kind: TinyBvCfgEdgeKind::BranchFalse,
+            },
+        ]
+    );
+    assert_eq!(
+        program.basic_blocks(),
+        vec![
+            TinyBvBasicBlock {
+                start_pc: 0,
+                end_pc: 3,
+                labels: Vec::new(),
+                source_lines: vec![Some(2), Some(3), Some(4)],
+                outgoing: vec![
+                    TinyBvCfgEdge {
+                        from: 2,
+                        to: 3,
+                        kind: TinyBvCfgEdgeKind::BranchTrue,
+                    },
+                    TinyBvCfgEdge {
+                        from: 2,
+                        to: 4,
+                        kind: TinyBvCfgEdgeKind::BranchFalse,
+                    },
+                ],
+            },
+            TinyBvBasicBlock {
+                start_pc: 3,
+                end_pc: 4,
+                labels: vec!["equal".to_owned()],
+                source_lines: vec![Some(5)],
+                outgoing: Vec::new(),
+            },
+            TinyBvBasicBlock {
+                start_pc: 4,
+                end_pc: 5,
+                labels: vec!["done".to_owned()],
+                source_lines: vec![Some(6)],
+                outgoing: Vec::new(),
             },
         ]
     );

@@ -375,7 +375,7 @@ pub use theory_combination::{
     propose_interface_equalities, shared_terms,
 };
 pub use toy_bv_vm::{
-    TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome, TinyBvConcreteStep,
+    TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome, TinyBvConcreteStep,
     TinyBvConcreteTrace, TinyBvExploreOutcome, TinyBvInsn, TinyBvProgram, TinyBvReachabilityReport,
     TinyBvReachabilityStatus, TinyBvSafetyReport, TinyBvSafetyStatus, TinyBvState,
     TinyBvTraceSourceStep, TinyBvWitness,
