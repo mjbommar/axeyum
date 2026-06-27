@@ -632,9 +632,12 @@ a named mechanism.**
    Unguarded targeted scalar replay repair was measured/rejected on the large
    row because it raised the first diagnostic call to **113 s**, hit the 180 s
    wrapper before solve/evidence completed, and still returned to term 3408.
-   The retained scalar replay repair is guarded to small surfaces; the next
-   practical AUFLIA step is composing the term-3408 scalar choice with a bounded
-   OR-210/OR-211 follow-up repair.
+   The retained scalar replay repair is guarded to small surfaces. A bounded
+   scalar+OR follow-up diagnostic now shows the obvious compositions are
+   negative: OR **210** branch **0** and OR **211** branch **3** become locally
+   true but worsen full replay to **total_false=3** and return to scalar equality
+   term **3408**. The next practical AUFLIA step is a coupled scalar/OR repair or
+   learned dependency that preserves term 3408 while reducing full replay.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

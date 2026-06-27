@@ -2100,9 +2100,13 @@ against competitor source, are now binding:
      replay surfaces, but the unguarded large-row version was measured/rejected
      after raising the first diagnostic call to **113 s** and still returning
      to term **3408**; it is therefore guarded off for large generated AUFLIA
-     rows. The next AUFLIA move is a scalar+OR follow-up repair/diagnostic that
-     composes one of those scalar choices with bounded OR-210/OR-211 branch
-     repair without reintroducing the loop.
+     rows. A bounded scalar+OR follow-up diagnostic now composes those exposed
+     ORs with one guarded best-branch repair. On `bug337`, both obvious
+     compositions are negative: OR **210** branch **0** and OR **211** branch
+     **3** become locally true but worsen full replay to **total_false=3** and
+     return to scalar equality term **3408**. The next AUFLIA move is therefore
+     a coupled scalar/OR repair or learned dependency that preserves term
+     **3408** while reducing full replay, not greedy OR-210/OR-211 forcing.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
