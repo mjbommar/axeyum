@@ -615,6 +615,16 @@ a named mechanism.**
    rejected because it regressed to branch **9841** and raised projection churn
    to **1848** changes. The next AUFLIA move is readback/store-chain component
    repair around the `x_325/x_339` transition.
+   **Latest AUFLIA frontier update (2026-06-27):** subsequent replay-guided
+   branch/select, residual OR, and scalar-closure work moved `bug337` through
+   the OR-210/OR-236 oscillation. The retained select-backed scalar repair now
+   treats asserted readbacks as backing constraints: forcing `y = v` with
+   `y = select(a, i)` writes `a[i] := v` and then realigns direct readback
+   symbols. The row remains `unknown`, but the first replay blocker is now
+   scalar equality **term 3408**, `x_383 = x_330`, values **0 vs 1**, after
+   **430** projection repair changes. The next AUFLIA work is scalar equality
+   explanation/repair for that exposed term-3408 family, not more OR-236 branch
+   forcing.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

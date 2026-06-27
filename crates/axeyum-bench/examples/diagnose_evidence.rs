@@ -207,6 +207,37 @@ fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &Rou
     }
 }
 
+fn requested_term_indices() -> Vec<usize> {
+    let Some(raw) = std::env::var_os("AXEYUM_DIAGNOSE_TERMS") else {
+        return Vec::new();
+    };
+    raw.to_string_lossy()
+        .split(',')
+        .filter_map(|part| part.trim().parse::<usize>().ok())
+        .collect()
+}
+
+fn print_requested_terms(arena: &TermArena, assertions: &[TermId], indices: &[usize]) {
+    let mut emitted = BTreeSet::new();
+    for &index in indices {
+        if !emitted.insert(index) {
+            continue;
+        }
+        if let Some((term, source)) = find_term_by_index(arena, assertions, index) {
+            println!(
+                "  requested_term: #{} source={} sort={:?} node={}",
+                term.index(),
+                source,
+                arena.sort_of(term),
+                node_label(arena.node(term))
+            );
+            println!("    {}", compact_render(arena, term));
+        } else {
+            println!("  requested_term: #{index} not present in arena");
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file = args.get(1).map_or_else(
@@ -225,6 +256,7 @@ fn main() {
     let text = std::fs::read_to_string(&file).expect("read SMT-LIB file");
     println!("file: {}", file.display());
     println!("timeout_ms: {timeout_ms}");
+    let requested_terms = requested_term_indices();
 
     if std::env::var_os("AXEYUM_DIAGNOSE_ONLY_EVIDENCE").is_none() {
         let mut script = parse_script(&text).expect("parse SMT-LIB file");
@@ -241,6 +273,7 @@ fn main() {
                     println!("  {attempt}");
                 }
                 print_lazy_replay_terms(&script.arena, &assertions, &trace);
+                print_requested_terms(&script.arena, &assertions, &requested_terms);
             }
             Err(error) => println!(
                 "check_auto_explained: error {error} {:.3}ms",

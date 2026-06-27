@@ -2079,6 +2079,18 @@ against competitor source, are now binding:
      **55 s** instead of exiting through the 180 s timeout wrapper after about
      **89 s**; projection repair changes drop from **587** to **565**. The next
      AUFLIA move remains a real scalar/array refinement for the OR-236 family.
+     **SELECT-BACKED SCALAR REPAIR LANDED (2026-06-27):** scalar equality,
+     direct branch-literal, and multi-literal branch-schedule repairs now use
+     asserted readback equalities as backing constraints. When a repair wants
+     `y = v` and the original assertions contain `y = select(a, i)`, it writes
+     `a[i] := v`, realigns direct select readback symbols, and then stores the
+     scalar value only if still needed. This removes the measured OR-236
+     oscillation on `bug337`: the diagnostic still returns `unknown`, but the
+     first replay blocker moves to scalar equality **term 3408**
+     (`x_383 = x_330`, values **0 vs 1**) after **430** projection repair
+     changes, with `check_auto_explained` / `solve` / `produce_evidence` each
+     around **49.3 s**. The next AUFLIA move is now term-3408 scalar equality
+     explanation/repair, not OR-236 branch forcing.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

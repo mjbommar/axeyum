@@ -2843,6 +2843,22 @@ impl ProjectionRepairStats {
     }
 }
 
+#[derive(Clone, Copy)]
+enum ProjectionSymbolChangeKind {
+    Branch,
+    Scalar,
+}
+
+fn record_projected_symbol_change(
+    stats: &mut ProjectionRepairStats,
+    kind: ProjectionSymbolChangeKind,
+) {
+    match kind {
+        ProjectionSymbolChangeKind::Branch => stats.branch_symbol_changes += 1,
+        ProjectionSymbolChangeKind::Scalar => stats.scalar_symbol_changes += 1,
+    }
+}
+
 fn store_projected_array_entry(
     arena: &TermArena,
     projected: &mut Assignment,
@@ -3079,6 +3095,61 @@ fn align_all_direct_select_symbols(
         }
     }
     Ok(changes)
+}
+
+fn repair_projected_select_backed_symbol_value(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    symbol: SymbolId,
+    value: &Value,
+    stats: &mut ProjectionRepairStats,
+    symbol_change_kind: ProjectionSymbolChangeKind,
+) -> Result<bool, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext select-backed scalar repair failed: {e}"))
+    };
+    let mut changed = false;
+    let mut found_backing = false;
+    let mut touched_arrays = Vec::new();
+    let mut conjuncts = Vec::new();
+    for &assertion in originals {
+        conjuncts.clear();
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+        for &conjunct in &conjuncts {
+            let Some((array, index_term, element_term)) =
+                direct_select_repair_target(arena, conjunct)
+            else {
+                continue;
+            };
+            if direct_value_symbol(arena, element_term) != Some(symbol) {
+                continue;
+            }
+            found_backing = true;
+            let index = eval(arena, index_term, projected).map_err(ir)?;
+            if store_projected_array_entry(arena, projected, array, index, value.clone())? {
+                stats.array_changes += 1;
+                changed = true;
+                if !touched_arrays.contains(&array) {
+                    touched_arrays.push(array);
+                }
+            }
+        }
+    }
+    if !found_backing {
+        return Ok(false);
+    }
+    for array in touched_arrays {
+        let readback_changes =
+            align_direct_select_symbols_for_array(arena, originals, projected, array)?;
+        stats.symbol_changes += readback_changes;
+        changed |= readback_changes > 0;
+    }
+    if store_projected_symbol_value(arena, projected, symbol, value.clone())? {
+        record_projected_symbol_change(stats, symbol_change_kind);
+        changed = true;
+    }
+    Ok(changed)
 }
 
 fn direct_array_equality_repair_target(
@@ -4819,6 +4890,7 @@ fn repair_projected_order_literal(
 
 fn repair_projected_branch_scalar_equality_literal(
     arena: &TermArena,
+    originals: &[TermId],
     literal: TermId,
     projected: &mut Assignment,
     stats: &mut ProjectionRepairStats,
@@ -4831,17 +4903,35 @@ fn repair_projected_branch_scalar_equality_literal(
         |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
     for (symbol, value_term) in choices {
         let mut trial = projected.clone();
+        let mut trial_stats = *stats;
         let value = eval(arena, value_term, &trial).map_err(ir)?;
-        if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
-            continue;
+        trial_stats.branch_candidates += 1;
+        if repair_projected_select_backed_symbol_value(
+            arena,
+            originals,
+            &mut trial,
+            symbol,
+            &value,
+            &mut trial_stats,
+            ProjectionSymbolChangeKind::Branch,
+        )? && eval(arena, literal, &trial).map_err(ir)? == Value::Bool(true)
+        {
+            *projected = trial;
+            *stats = trial_stats;
+            return Ok(true);
         }
-        if eval(arena, literal, &trial).map_err(ir)? != Value::Bool(true) {
-            continue;
+
+        let mut trial = projected.clone();
+        let mut trial_stats = *stats;
+        trial_stats.branch_candidates += 1;
+        if store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+            trial_stats.branch_symbol_changes += 1;
+            if eval(arena, literal, &trial).map_err(ir)? == Value::Bool(true) {
+                *projected = trial;
+                *stats = trial_stats;
+                return Ok(true);
+            }
         }
-        *projected = trial;
-        stats.branch_candidates += 1;
-        stats.branch_symbol_changes += 1;
-        return Ok(true);
     }
     Ok(false)
 }
@@ -4975,6 +5065,17 @@ fn repair_projected_branch_literal(
     };
     stats.branch_candidates += 1;
     let value = eval(arena, value_term, projected).map_err(ir)?;
+    if repair_projected_select_backed_symbol_value(
+        arena,
+        originals,
+        projected,
+        symbol,
+        &value,
+        stats,
+        ProjectionSymbolChangeKind::Branch,
+    )? {
+        return Ok(true);
+    }
     if store_projected_symbol_value(arena, projected, symbol, value)? {
         stats.branch_symbol_changes += 1;
         return Ok(true);
@@ -5011,8 +5112,31 @@ fn repair_projected_branch_schedule(
             else {
                 continue;
             };
-            stats.branch_candidates += 1;
             let value = eval(arena, value_term, &trial).map_err(ir)?;
+            let mut select_trial = trial.clone();
+            let mut select_stats = stats;
+            select_stats.branch_candidates += 1;
+            if repair_projected_select_backed_symbol_value(
+                arena,
+                originals,
+                &mut select_trial,
+                symbol,
+                &value,
+                &mut select_stats,
+                ProjectionSymbolChangeKind::Branch,
+            )? && eval(arena, literal, &select_trial).map_err(ir)? == Value::Bool(true)
+            {
+                pass_changes += select_stats
+                    .changes()
+                    .saturating_sub(stats.changes())
+                    .max(1);
+                stats = select_stats;
+                trial = select_trial;
+                changed = true;
+                continue;
+            }
+
+            stats.branch_candidates += 1;
             if store_projected_symbol_value(arena, &mut trial, symbol, value)? {
                 stats.branch_symbol_changes += 1;
                 pass_changes += 1;
@@ -5108,9 +5232,21 @@ fn repair_projected_scalar_equalities(
                 let mut best: Option<(usize, usize, Assignment, ProjectionRepairStats)> = None;
                 for (symbol, value_term) in choices {
                     let mut trial = projected.clone();
+                    let mut trial_stats = ProjectionRepairStats::default();
                     let value = eval(arena, value_term, &trial).map_err(ir)?;
-                    if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
-                        continue;
+                    if !repair_projected_select_backed_symbol_value(
+                        arena,
+                        originals,
+                        &mut trial,
+                        symbol,
+                        &value,
+                        &mut trial_stats,
+                        ProjectionSymbolChangeKind::Scalar,
+                    )? {
+                        if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+                            continue;
+                        }
+                        trial_stats.scalar_symbol_changes += 1;
                     }
                     let target_support =
                         scalar_select_support_score(arena, originals, projected, symbol)?;
@@ -5122,7 +5258,6 @@ fn repair_projected_scalar_equalities(
                     if support_gain > 0 {
                         stats.scalar_support_candidates += 1;
                     }
-                    let mut trial_stats = ProjectionRepairStats::default();
                     let mut false_count = positive_replay_false_count(arena, originals, &trial)?;
                     if false_count >= current_false && support_gain > 0 {
                         stats.scalar_stabilized_trials += 1;
@@ -5157,7 +5292,6 @@ fn repair_projected_scalar_equalities(
                 }
                 current_false = false_count;
                 stats.absorb(trial_stats);
-                stats.scalar_symbol_changes += 1;
                 repairs += 1;
                 changed_this_pass = true;
             }
@@ -8876,7 +9010,7 @@ fn repair_projected_branch_as_candidate(
                 continue;
             }
             if repair_projected_branch_scalar_equality_literal(
-                arena, literal, projected, &mut stats,
+                arena, originals, literal, projected, &mut stats,
             )? {
                 pass_changes += 1;
                 changed = true;
@@ -8894,7 +9028,7 @@ fn repair_projected_branch_as_candidate(
                 continue;
             }
             if repair_projected_branch_scalar_equality_literal(
-                arena, literal, projected, &mut stats,
+                arena, originals, literal, projected, &mut stats,
             )? {
                 pass_changes += 1;
                 changed = true;
@@ -9510,8 +9644,8 @@ mod tests {
         repair_projected_branch_schedule, repair_projected_replay_branch_beam,
         repair_projected_replay_branch_choice, repair_projected_replay_branch_pair_choice,
         repair_projected_replay_branch_select_cycle, repair_projected_replay_failure,
-        replay_failure_with_branch_candidate_diagnostics, replay_last_ext_candidate, select_value,
-        store_chain_readback_refutation, store_value,
+        repair_projected_scalar_equalities, replay_failure_with_branch_candidate_diagnostics,
+        replay_last_ext_candidate, select_value, store_chain_readback_refutation, store_value,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -10596,6 +10730,137 @@ mod tests {
         assert_eq!(projected.get(*x_symbol), Some(Value::Int(0)));
         assert_eq!(projected.get(*y_symbol), Some(Value::Int(1)));
         assert_eq!(projected.get(*z_symbol), Some(Value::Int(2)));
+    }
+
+    #[test]
+    fn lazy_ext_branch_schedule_repairs_select_backed_scalar_literals() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let three = arena.bv_const(4, 3).unwrap();
+        let one8 = arena.bv_const(8, 1).unwrap();
+        let two8 = arena.bv_const(8, 2).unwrap();
+        let three8 = arena.bv_const(8, 3).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let read_two = arena.select(a, two).unwrap();
+        let read_three = arena.select(a, three).unwrap();
+        let y_eq_read = arena.eq(y, read_two).unwrap();
+        let z_eq_read = arena.eq(z, read_three).unwrap();
+        let three_eq_y = arena.eq(three8, y).unwrap();
+        let three_eq_z = arena.eq(three8, z).unwrap();
+        let branch = arena.and(three_eq_y, three_eq_z).unwrap();
+        let readbacks = arena.and(y_eq_read, z_eq_read).unwrap();
+        let assertion = arena.and(branch, readbacks).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let a_with_two = store_value(
+            &default_a,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let a_with_entries = store_value(
+            &a_with_two,
+            Value::Bv { width: 4, value: 3 },
+            Value::Bv { width: 8, value: 2 },
+        )
+        .unwrap();
+        let mut projected = Assignment::new();
+        projected.set(*a_symbol, a_with_entries);
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 1 });
+        projected.set(*z_symbol, Value::Bv { width: 8, value: 2 });
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            2
+        );
+
+        let stats = repair_projected_branch_schedule(&arena, &originals, branch, &mut projected)
+            .unwrap()
+            .expect("expected select-backed scalar branch repair");
+        assert!(stats.array_changes >= 2, "{stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
+        assert_eq!(
+            eval(&arena, y_eq_read, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            eval(&arena, z_eq_read, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(eval(&arena, branch, &projected).unwrap(), Value::Bool(true));
+        assert_eq!(
+            eval(&arena, one8, &projected).unwrap(),
+            Value::Bv { width: 8, value: 1 }
+        );
+        assert_eq!(
+            eval(&arena, two8, &projected).unwrap(),
+            Value::Bv { width: 8, value: 2 }
+        );
+    }
+
+    #[test]
+    fn lazy_ext_scalar_repair_updates_select_backed_symbol() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let three8 = arena.bv_const(8, 3).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let read = arena.select(a, two).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let y_eq_three = arena.eq(y, three8).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let a_with_two = store_value(
+            &default_a,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let mut projected = Assignment::new();
+        projected.set(*a_symbol, a_with_two);
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 1 });
+        let originals = [y_eq_read, y_eq_three];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+
+        let stats = repair_projected_scalar_equalities(&arena, &originals, &mut projected).unwrap();
+        assert!(stats.array_changes >= 1, "{stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
+        assert_eq!(
+            eval(&arena, y_eq_read, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            eval(&arena, y_eq_three, &projected).unwrap(),
+            Value::Bool(true)
+        );
     }
 
     #[test]
