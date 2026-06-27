@@ -10,6 +10,7 @@ members = [
     "crates/axeyum-query",
     "crates/axeyum-ir",
     "crates/axeyum-lean-kernel",
+    "crates/axeyum-property",
     "crates/axeyum-rewrite",
     "crates/axeyum-scenarios",
     "crates/axeyum-smtlib",

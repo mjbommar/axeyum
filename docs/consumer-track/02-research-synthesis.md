@@ -44,6 +44,14 @@ crates that consume `axeyum-solver` as a black box.
 - **v0:** `Bool + Bv<W> + Int`, scalar counterexample lifting, best-effort Lean cert.
   *The foundation A/C reuse.*
 
+**Status update (2026-06-27):** the first `axeyum-property` crate slice is
+committed on `main`. It provides typed `Bool`, `Bv<W>`, and `Int` handles,
+assumptions, proof and minimized-counterexample calls over the existing
+evidence APIs, typed scalar model lifting, and unsigned BV overflow helper
+predicates. Remaining v0 polish is ergonomic syntax/operator traits,
+`Symbolic`/derive support for structs, structured counterexample-to-test output,
+and best-effort Lean-module packaging in the SDK certificate surface.
+
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted
   surface (NOT MIR).** `crates/axeyum-solver/tests/symbolic_execution.rs` is already
@@ -84,8 +92,14 @@ crates that consume `axeyum-solver` as a black box.
 These are *requests as notes* — the consumer track does **not** reach into the core:
 1. **`bv_*_overflows(a,b,width) -> TermId` reusable helper** (frontend currently
    builds the widened-compare miter; reused by EVM + Rust verifier). *Low.*
+   **Answered for SDK consumers:** `Bv<W>::{uadd,usub,umul}_overflows` now
+   exposes the existing IR predicates through `axeyum-property`; the core
+   `bvumulo` builder also avoids doubled-width multiplication terms.
 2. **First-class minimal-failing-input (counterexample shrinking)** — SDK can do it
    client-side via `SymbolicExecutor`/`minimize_*`, but a core helper would be clean.
+   **Answered for scalar SDK inputs:** `prove_minimized` plus
+   `axeyum-property::Property::prove_minimized` return replay-checked minimized
+   countermodels over declared Bool/BV<=127/Int variables.
 3. **Lean-cert coverage is honest, not universal** (DOMINANCE.md: BV/UFBV strong;
    QF_LIA ~25%, QF_LRA ~0%, QF_NRA ~6%). All apps must surface
    `Proved { lean: Option<..> }` — cert verified in-process always, external `.lean`

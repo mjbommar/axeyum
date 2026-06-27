@@ -33,6 +33,8 @@
   prove_safety_k_induction, certify_safety_k_induction}`.
 - `{horn::solve_horn, prove_safety_imc, prove_safety_pdr*}` — reachability.
 - `evidence::produce_evidence`, `prove_unsat_to_lean_module` — the certificate.
+- `axeyum-property` — typed Bool / BV / Int prove-or-counterexample SDK over the
+  evidence APIs, with minimized scalar counterexamples.
 - `axeyum-wasm` — `solve_smtlib_json` (client-side, the delivery substrate).
 
 A frontend's job: lower a program/property → axeyum IR terms → call the above →
@@ -66,4 +68,5 @@ in-flight change). This track:
   apps + first-pass leverage×tractability×moat×demand ranking.
 - (iteration 2) per-candidate SOTA research notes.
 - (iteration 3) `decision.md` — the final 3-5 picks + rationale.
+- [`property/`](property/) — bounded-property SDK plan/status.
 - per-app subdirectories, each with its own `PLAN.md` + `STATUS.md`.

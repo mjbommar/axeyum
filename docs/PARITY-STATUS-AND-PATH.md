@@ -756,6 +756,13 @@ property/verification callers can request minimized `Evidence::Sat` models or
 minimized `ProofOutcome::Disproved` countermodels directly. Wider BV and richer
 theory values remain explicit unsupported/unknown cases.
 
+The first bounded-property SDK crate now consumes that surface directly:
+`axeyum-property` provides typed `Bool`, `Bv<W>`, and `Int` handles over
+`TermArena`, proof calls through the checked evidence APIs, minimized scalar
+countermodel lifting, and reusable typed unsigned-BV overflow predicates. This
+is the first committed consumer-track app slice; it is intentionally thin and
+does not add solver logic.
+
 ## 4. Reflection on PLAN.md
 
 **The 2026-06-23 "MEASURE, don't seed" course-correction was right and is now

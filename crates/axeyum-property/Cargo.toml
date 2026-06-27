@@ -1,0 +1,24 @@
+[package]
+name = "axeyum-property"
+description = "Typed prove-or-counterexample SDK built on Axeyum evidence and model replay"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+axeyum-solver = { path = "../axeyum-solver" }
+
+[features]
+default = []
+z3 = ["axeyum-solver/z3"]
+z3-static = ["axeyum-solver/z3-static"]
+
+[lints]
+workspace = true

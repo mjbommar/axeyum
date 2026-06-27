@@ -62,7 +62,12 @@ over a proven core.
 - Capability gaps go to the solver agent **as notes** ([02-research-synthesis](02-research-synthesis.md) §"Notes filed"), never as reach-ins.
 
 ## Next actions
-- Task 43 (scaffold): create the `consumer-track` worktree; scaffold the four
-  crates with a `PLAN.md` + `STATUS.md` each (under `docs/consumer-track/<app>/`).
-- Task 44 (build): start with **B (`axeyum-property` v0)** via an opus sub-agent +
-  a per-app task list; gate every increment; then D, A, C.
+- Task 43 (scaffold): **partially landed on `main` for B** —
+  `crates/axeyum-property` plus `docs/consumer-track/property/{PLAN,STATUS}.md`.
+  Remaining scaffold work is D/A/C docs and crates. The earlier isolated-worktree
+  instruction is superseded for this session by the thread rule to stay on
+  `main`.
+- Task 44 (build): continue **B (`axeyum-property` v0)** from the committed
+  typed Bool/BV/Int proof slice: add ergonomic operator traits or a typed
+  `Symbolic` derive, then add the counterexample-to-`#[test]` layer and the
+  SDK scoreboard gate before moving to D, A, C.

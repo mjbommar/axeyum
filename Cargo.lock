@@ -104,6 +104,14 @@ name = "axeyum-lean-kernel"
 version = "0.1.0"
 
 [[package]]
+name = "axeyum-property"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+ "axeyum-solver",
+]
+
+[[package]]
 name = "axeyum-query"
 version = "0.1.0"
 dependencies = [
