@@ -13,6 +13,7 @@ use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
     SymbolicExecutor, SymbolicMemory, TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram,
+    TinyBvReachabilityStatus, TinyBvSafetyStatus,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -596,6 +597,131 @@ fn tiny_bv_program_frontend_lifts_explores_and_replays() {
         assert_eq!((x + y) & MASK, 0x2f2f);
         assert_eq!((x ^ y) & MASK, 0x0f0f);
     }
+}
+
+#[test]
+fn tiny_bv_reachability_reports_pc_witnesses() {
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::new(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        vec![
+            TinyBvInsn::Add { dst: 2, a: 0, b: 1 },
+            TinyBvInsn::Xor { dst: 3, a: 0, b: 1 },
+            TinyBvInsn::BranchEq {
+                reg: 2,
+                value: 0x2f2f,
+                then_pc: 3,
+                else_pc: 5,
+            },
+            TinyBvInsn::BranchEq {
+                reg: 3,
+                value: 0x0f0f,
+                then_pc: 4,
+                else_pc: 5,
+            },
+            TinyBvInsn::Win,
+            TinyBvInsn::Lose,
+        ],
+    )
+    .unwrap();
+
+    let reach = program
+        .reach_pc_checked(
+            &mut arena,
+            "reach_input",
+            4,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(reach.status(), TinyBvReachabilityStatus::Reachable);
+    assert!(reach.is_reachable());
+    assert!(!reach.outcome.verified.is_empty());
+    for hit in &reach.outcome.verified {
+        assert_eq!(hit.state.pc, 4);
+        assert!(program.concrete_reaches_pc(&hit.witness, 4));
+        let [x, y] = hit.witness.inputs[..] else {
+            panic!("test program has exactly two input words");
+        };
+        assert_eq!((x + y) & MASK, 0x2f2f);
+        assert_eq!((x ^ y) & MASK, 0x0f0f);
+    }
+
+    let safety = program
+        .check_pc_safety_checked(
+            &mut arena,
+            "unsafe_input",
+            4,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(safety.status(), TinyBvSafetyStatus::Unsafe);
+    assert!(safety.is_unsafe());
+}
+
+#[test]
+fn tiny_bv_safety_reports_unreachable_when_search_is_exhaustive() {
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::new(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        vec![
+            TinyBvInsn::BranchEq {
+                reg: 0,
+                value: 1,
+                then_pc: 1,
+                else_pc: 4,
+            },
+            TinyBvInsn::BranchEq {
+                reg: 0,
+                value: 2,
+                then_pc: 2,
+                else_pc: 4,
+            },
+            TinyBvInsn::Win,
+            TinyBvInsn::Lose,
+            TinyBvInsn::Lose,
+        ],
+    )
+    .unwrap();
+
+    let safety = program
+        .check_pc_safety_checked(
+            &mut arena,
+            "safe_input",
+            2,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(safety.status(), TinyBvSafetyStatus::Safe);
+    assert!(safety.is_safe());
+    assert_eq!(
+        safety.reachability.status(),
+        TinyBvReachabilityStatus::Unreachable
+    );
+    assert!(safety.reachability.is_unreachable());
+    assert!(safety.reachability.outcome.verified.is_empty());
+    assert!(!safety.reachability.outcome.truncated);
+    assert_eq!(safety.reachability.outcome.unknown_branches, 0);
+    assert_eq!(safety.reachability.outcome.undecided_targets, 0);
 }
 
 #[test]

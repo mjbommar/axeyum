@@ -121,6 +121,102 @@ pub enum TinyBvConcreteOutcome {
 /// Checked symbolic-execution result for the tiny BV frontend.
 pub type TinyBvExploreOutcome = CfgCheckedOutcome<TinyBvState, TinyBvWitness>;
 
+/// Bounded reachability status for a tiny BV program counter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TinyBvReachabilityStatus {
+    /// At least one solver-witnessed path reached the target and concrete replay
+    /// accepted the extracted input.
+    Reachable,
+    /// Exploration exhausted the configured finite search without a target and
+    /// without unknown branches, undecided targets, witness extraction failures,
+    /// concrete mismatches, or truncation.
+    Unreachable,
+    /// The target was not verified reachable, but the search was incomplete or
+    /// produced diagnostics that prevent a sound unreachable claim.
+    Unknown,
+}
+
+/// Bounded reachability report for a tiny BV program counter.
+#[derive(Debug, Clone)]
+pub struct TinyBvReachabilityReport {
+    /// Program counter being queried.
+    pub target_pc: usize,
+    /// Checked CFG exploration result for the target query.
+    pub outcome: TinyBvExploreOutcome,
+}
+
+impl TinyBvReachabilityReport {
+    /// Classifies this bounded reachability report.
+    pub fn status(&self) -> TinyBvReachabilityStatus {
+        if !self.outcome.verified.is_empty() {
+            TinyBvReachabilityStatus::Reachable
+        } else if self.outcome.missing_witnesses.is_empty()
+            && self.outcome.mismatches.is_empty()
+            && self.outcome.unknown_branches == 0
+            && self.outcome.undecided_targets == 0
+            && !self.outcome.truncated
+        {
+            TinyBvReachabilityStatus::Unreachable
+        } else {
+            TinyBvReachabilityStatus::Unknown
+        }
+    }
+
+    /// Whether the target has at least one concrete-replayed witness.
+    pub fn is_reachable(&self) -> bool {
+        self.status() == TinyBvReachabilityStatus::Reachable
+    }
+
+    /// Whether the target was exhaustively ruled out within the configured
+    /// bounds.
+    pub fn is_unreachable(&self) -> bool {
+        self.status() == TinyBvReachabilityStatus::Unreachable
+    }
+}
+
+/// Bounded safety status for a forbidden tiny BV program counter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TinyBvSafetyStatus {
+    /// The forbidden program counter was not reachable within the exhaustive
+    /// bounded search.
+    Safe,
+    /// The forbidden program counter was reached by a concrete-replayed witness.
+    Unsafe,
+    /// The bounded search was incomplete or diagnostically inconclusive.
+    Unknown,
+}
+
+/// Bounded safety report for a forbidden tiny BV program counter.
+#[derive(Debug, Clone)]
+pub struct TinyBvSafetyReport {
+    /// Forbidden program counter.
+    pub forbidden_pc: usize,
+    /// Underlying reachability query for the forbidden counter.
+    pub reachability: TinyBvReachabilityReport,
+}
+
+impl TinyBvSafetyReport {
+    /// Classifies this bounded safety report.
+    pub fn status(&self) -> TinyBvSafetyStatus {
+        match self.reachability.status() {
+            TinyBvReachabilityStatus::Reachable => TinyBvSafetyStatus::Unsafe,
+            TinyBvReachabilityStatus::Unreachable => TinyBvSafetyStatus::Safe,
+            TinyBvReachabilityStatus::Unknown => TinyBvSafetyStatus::Unknown,
+        }
+    }
+
+    /// Whether the forbidden counter is proven unreachable within the configured
+    /// bounds.
+    pub fn is_safe(&self) -> bool {
+        self.status() == TinyBvSafetyStatus::Safe
+    }
+
+    /// Whether the forbidden counter has a concrete-replayed counterexample.
+    pub fn is_unsafe(&self) -> bool {
+        self.status() == TinyBvSafetyStatus::Unsafe
+    }
+}
+
 impl TinyBvProgram {
     /// Creates and validates a tiny bit-vector register program.
     ///
@@ -293,6 +389,69 @@ impl TinyBvProgram {
         )
     }
 
+    /// Checks whether a program counter is reachable and concrete-replays every
+    /// reported witness.
+    ///
+    /// A [`TinyBvReachabilityStatus::Unreachable`] report is bounded: it means
+    /// the configured DFS and this program's `max_steps` fuel exhaustively ruled
+    /// out the target without unknowns, witness failures, concrete mismatches, or
+    /// truncation. It is not an unbounded inductive proof.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `target_pc` is outside the program, or from
+    /// input declaration, symbolic instruction lifting, solver exploration,
+    /// witness extraction, or concrete checking.
+    pub fn reach_pc_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        target_pc: usize,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvReachabilityReport, SolverError> {
+        self.validate_target_pc(target_pc)?;
+        let inputs = self.declare_inputs(arena, input_prefix)?;
+        let initial = self.initial_state(arena, &inputs)?;
+        let mut executor = SymbolicExecutor::new();
+        let outcome = executor.explore_cfg_checked(
+            arena,
+            initial,
+            config,
+            |arena, state| self.symbolic_step_for_pc(arena, state, target_pc),
+            |model, _state| Ok(self.witness_from_model(model, &inputs)),
+            |state, witness| {
+                Ok(state.pc == target_pc && self.concrete_reaches_pc(witness, target_pc))
+            },
+        )?;
+        Ok(TinyBvReachabilityReport { target_pc, outcome })
+    }
+
+    /// Checks bounded safety for a forbidden program counter.
+    ///
+    /// [`TinyBvSafetyStatus::Safe`] means the forbidden counter is unreachable
+    /// under the same bounded/exhaustive conditions as
+    /// [`TinyBvReachabilityStatus::Unreachable`]. [`TinyBvSafetyStatus::Unsafe`]
+    /// carries concrete-replayed counterexamples in
+    /// [`TinyBvSafetyReport::reachability`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] under the same conditions as
+    /// [`Self::reach_pc_checked`].
+    pub fn check_pc_safety_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        forbidden_pc: usize,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvSafetyReport, SolverError> {
+        let reachability = self.reach_pc_checked(arena, input_prefix, forbidden_pc, config)?;
+        Ok(TinyBvSafetyReport {
+            forbidden_pc,
+            reachability,
+        })
+    }
+
     /// Replays a concrete witness under this program's concrete semantics.
     pub fn concrete_run(&self, witness: &TinyBvWitness) -> TinyBvConcreteOutcome {
         if witness.inputs.len() != self.input_count {
@@ -348,6 +507,61 @@ impl TinyBvProgram {
     /// Returns whether a witness concretely reaches [`TinyBvInsn::Win`].
     pub fn concrete_reaches_win(&self, witness: &TinyBvWitness) -> bool {
         self.concrete_run(witness) == TinyBvConcreteOutcome::Win
+    }
+
+    /// Returns whether a witness concretely reaches `target_pc` before
+    /// termination or fuel exhaustion.
+    pub fn concrete_reaches_pc(&self, witness: &TinyBvWitness, target_pc: usize) -> bool {
+        if target_pc >= self.code.len() || witness.inputs.len() != self.input_count {
+            return false;
+        }
+
+        let mut regs = vec![0; self.reg_count];
+        for (reg, value) in regs.iter_mut().zip(witness.inputs.iter()) {
+            *reg = self.normalize(*value);
+        }
+        let mut pc = 0usize;
+        for _ in 0..self.max_steps {
+            if pc == target_pc {
+                return true;
+            }
+            match self.code.get(pc) {
+                Some(TinyBvInsn::Const { dst, value }) => {
+                    regs[*dst] = self.normalize(*value);
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Add { dst, a, b }) => {
+                    regs[*dst] = self.normalize(regs[*a].wrapping_add(regs[*b]));
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Sub { dst, a, b }) => {
+                    regs[*dst] = self.normalize(regs[*a].wrapping_sub(regs[*b]));
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Mul { dst, a, b }) => {
+                    regs[*dst] = self.normalize(regs[*a].wrapping_mul(regs[*b]));
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Xor { dst, a, b }) => {
+                    regs[*dst] = self.normalize(regs[*a] ^ regs[*b]);
+                    pc += 1;
+                }
+                Some(TinyBvInsn::BranchEq {
+                    reg,
+                    value,
+                    then_pc,
+                    else_pc,
+                }) => {
+                    pc = if regs[*reg] == self.normalize(*value) {
+                        *then_pc
+                    } else {
+                        *else_pc
+                    };
+                }
+                Some(TinyBvInsn::Win | TinyBvInsn::Lose) | None => return false,
+            }
+        }
+        false
     }
 
     fn symbolic_step(
@@ -420,11 +634,26 @@ impl TinyBvProgram {
         }
     }
 
+    fn symbolic_step_for_pc(
+        &self,
+        arena: &mut TermArena,
+        state: TinyBvState,
+        target_pc: usize,
+    ) -> Result<CfgStep<TinyBvState>, SolverError> {
+        if state.pc == target_pc {
+            Ok(CfgStep::Target(state))
+        } else {
+            self.symbolic_step(arena, state)
+        }
+    }
+
     fn witness_from_model(&self, model: &Model, inputs: &[SymbolId]) -> Option<TinyBvWitness> {
         let mut values = Vec::with_capacity(inputs.len());
         for &symbol in inputs {
-            let Some(Value::Bv { width, value }) = model.get(symbol) else {
-                return None;
+            let (width, value) = match model.get(symbol) {
+                Some(Value::Bv { width, value }) => (width, value),
+                None => (self.width, 0),
+                Some(_) => return None,
             };
             if width != self.width {
                 return None;
@@ -443,6 +672,17 @@ impl TinyBvProgram {
             u128::MAX
         } else {
             (1u128 << self.width) - 1
+        }
+    }
+
+    fn validate_target_pc(&self, target_pc: usize) -> Result<(), SolverError> {
+        if target_pc < self.code.len() {
+            Ok(())
+        } else {
+            Err(tiny_bv_error(format!(
+                "target pc {target_pc} is outside program length {}",
+                self.code.len()
+            )))
         }
     }
 }
