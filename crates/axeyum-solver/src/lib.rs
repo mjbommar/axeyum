@@ -376,7 +376,8 @@ pub use theory_combination::{
 };
 pub use toy_bv_vm::{
     TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome, TinyBvConcreteStep,
-    TinyBvConcreteTrace, TinyBvCoverageReport, TinyBvExploreOutcome, TinyBvInsn, TinyBvProgram,
+    TinyBvConcreteTrace, TinyBvCoverageReport, TinyBvEdgeCoverageReport,
+    TinyBvEdgeTestGenerationReport, TinyBvExploreOutcome, TinyBvInsn, TinyBvProgram,
     TinyBvReachabilityReport, TinyBvReachabilityStatus, TinyBvSafetyReport, TinyBvSafetyStatus,
     TinyBvState, TinyBvTestCase, TinyBvTestGenerationReport, TinyBvTraceBlockStep,
     TinyBvTraceEdgeStep, TinyBvTraceReport, TinyBvTraceSourceStep, TinyBvWitness,

@@ -2277,7 +2277,8 @@ source-aware concrete trace rows via `trace_source_steps`, a consolidated
 witness replay report via `trace_report`, replay-checked test-case generation
 reports via `test_cases_for_pc_checked` / `test_cases_for_label_checked`, and
 block-coverage test-suite reports via `test_cases_for_basic_blocks_checked`,
-and label-based reachability/safety query wrappers over the existing checked PC
+edge-coverage test-suite reports via `test_cases_for_cfg_edges_checked`, and
+label-based reachability/safety query wrappers over the existing checked PC
 queries. P4.2 still needs richer byte-level/binary frontend work,
 unbounded/certified safety, and eventual warm lazy theory reuse.
 

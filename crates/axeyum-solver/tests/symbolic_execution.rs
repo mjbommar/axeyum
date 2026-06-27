@@ -1207,6 +1207,91 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
             "}\n",
         )
     );
+    let mut edge_suite_arena = TermArena::new();
+    let edge_suite = program
+        .test_cases_for_cfg_edges_checked(
+            &mut edge_suite_arena,
+            "asm_edge_suite_input",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(edge_suite.edge_count(), 5);
+    assert_eq!(edge_suite.covered_edge_count(), 5);
+    assert_eq!(edge_suite.generated_test_count(), 5);
+    assert_eq!(edge_suite.unreachable_edge_count(), 0);
+    assert_eq!(edge_suite.unknown_edge_count(), 0);
+    assert!(edge_suite.is_complete());
+    assert_eq!(
+        edge_suite
+            .edges
+            .iter()
+            .map(|report| (report.edge.from, report.edge.to, report.edge.kind))
+            .collect::<Vec<_>>(),
+        program
+            .cfg_edges()
+            .iter()
+            .map(|edge| (edge.from, edge.to, edge.kind))
+            .collect::<Vec<_>>()
+    );
+    let true_edge_report = edge_suite
+        .edges
+        .iter()
+        .find(|report| {
+            report.edge.from == 3
+                && report.edge.to == 4
+                && report.edge.kind == TinyBvCfgEdgeKind::BranchTrue
+        })
+        .expect("edge suite should target the true branch");
+    assert_eq!(
+        true_edge_report.status(),
+        TinyBvReachabilityStatus::Reachable
+    );
+    assert_eq!(true_edge_report.from_source_line, Some(7));
+    assert_eq!(true_edge_report.to_source_line, Some(8));
+    assert_eq!(true_edge_report.to_labels, vec!["win_block".to_owned()]);
+    assert_eq!(true_edge_report.test_cases.len(), 1);
+    assert_eq!(
+        true_edge_report.test_cases[0].report.trace.outcome,
+        TinyBvConcreteOutcome::Win
+    );
+    assert_eq!(
+        true_edge_report.test_cases[0]
+            .report
+            .edge_steps
+            .last()
+            .map(|step| (step.edge.from, step.edge.to, step.edge.kind)),
+        Some((3, 4, TinyBvCfgEdgeKind::BranchTrue))
+    );
+    let false_edge_report = edge_suite
+        .edges
+        .iter()
+        .find(|report| {
+            report.edge.from == 3
+                && report.edge.to == 5
+                && report.edge.kind == TinyBvCfgEdgeKind::BranchFalse
+        })
+        .expect("edge suite should target the false branch");
+    assert_eq!(
+        false_edge_report.status(),
+        TinyBvReachabilityStatus::Reachable
+    );
+    assert_eq!(false_edge_report.to_labels, vec!["lose_block".to_owned()]);
+    assert_eq!(
+        false_edge_report.test_cases[0].report.trace.outcome,
+        TinyBvConcreteOutcome::Lose
+    );
+    assert_eq!(
+        false_edge_report.test_cases[0]
+            .report
+            .edge_steps
+            .last()
+            .map(|step| (step.edge.from, step.edge.to, step.edge.kind)),
+        Some((3, 5, TinyBvCfgEdgeKind::BranchFalse))
+    );
 
     let lose_witness = TinyBvWitness { inputs: vec![0, 0] };
     let lose_trace = program.concrete_trace(&lose_witness);

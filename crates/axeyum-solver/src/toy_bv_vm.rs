@@ -197,6 +197,12 @@ pub struct TinyBvState {
     pub fuel: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TinyBvEdgeState {
+    state: TinyBvState,
+    last_edge: Option<TinyBvCfgEdge>,
+}
+
 /// Concrete input words extracted from a model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TinyBvWitness {
@@ -373,6 +379,108 @@ impl TinyBvCoverageReport {
     /// Whether every target is either covered or bounded-unreachable.
     pub fn is_complete(&self) -> bool {
         self.covered_target_count() + self.unreachable_target_count() == self.target_count()
+    }
+}
+
+/// Replay-checked test-generation report for one static CFG edge.
+#[derive(Debug, Clone)]
+pub struct TinyBvEdgeTestGenerationReport {
+    /// Static CFG edge being targeted.
+    pub edge: TinyBvCfgEdge,
+    /// One-based source line for `edge.from`, when imported from assembly.
+    pub from_source_line: Option<usize>,
+    /// One-based source line for `edge.to`, when imported from assembly.
+    pub to_source_line: Option<usize>,
+    /// Assembly labels attached to `edge.from`, in deterministic order.
+    pub from_labels: Vec<String>,
+    /// Assembly labels attached to `edge.to`, in deterministic order.
+    pub to_labels: Vec<String>,
+    /// Number of CFG states whose transfer function was evaluated.
+    pub steps: usize,
+    /// Number of branch/assume directions pruned as infeasible.
+    pub pruned_infeasible: usize,
+    /// Number of branch directions explored as maybe-feasible due to `unknown`.
+    pub unknown_branches: usize,
+    /// Number of target states whose final model extraction was undecided.
+    pub undecided_targets: usize,
+    /// Whether exploration stopped at a configured bound.
+    pub truncated: bool,
+    /// Number of symbolic edge hits whose concrete witness could not be lifted.
+    pub missing_witnesses: usize,
+    /// Number of lifted witnesses that failed concrete replay for this edge.
+    pub mismatches: usize,
+    /// Concrete-replayed test cases that exercise `edge`.
+    pub test_cases: Vec<TinyBvTestCase>,
+}
+
+impl TinyBvEdgeTestGenerationReport {
+    /// Classifies the bounded edge-reachability query.
+    pub fn status(&self) -> TinyBvReachabilityStatus {
+        if self.has_test_cases() {
+            TinyBvReachabilityStatus::Reachable
+        } else if self.missing_witnesses == 0
+            && self.mismatches == 0
+            && self.unknown_branches == 0
+            && self.undecided_targets == 0
+            && !self.truncated
+        {
+            TinyBvReachabilityStatus::Unreachable
+        } else {
+            TinyBvReachabilityStatus::Unknown
+        }
+    }
+
+    /// Whether at least one replay-checked concrete test case was generated.
+    pub fn has_test_cases(&self) -> bool {
+        !self.test_cases.is_empty()
+    }
+}
+
+/// Replay-checked test-generation coverage report for static CFG edges.
+#[derive(Debug, Clone)]
+pub struct TinyBvEdgeCoverageReport {
+    /// Per-edge reports, in [`TinyBvProgram::cfg_edges`] order.
+    pub edges: Vec<TinyBvEdgeTestGenerationReport>,
+}
+
+impl TinyBvEdgeCoverageReport {
+    /// Number of targeted static CFG edges.
+    pub fn edge_count(&self) -> usize {
+        self.edges.len()
+    }
+
+    /// Number of edges with at least one replay-checked concrete test case.
+    pub fn covered_edge_count(&self) -> usize {
+        self.edges
+            .iter()
+            .filter(|edge| edge.has_test_cases())
+            .count()
+    }
+
+    /// Number of generated replay-checked concrete test cases.
+    pub fn generated_test_count(&self) -> usize {
+        self.edges.iter().map(|edge| edge.test_cases.len()).sum()
+    }
+
+    /// Number of edges proven unreachable within the configured bound.
+    pub fn unreachable_edge_count(&self) -> usize {
+        self.edges
+            .iter()
+            .filter(|edge| edge.status() == TinyBvReachabilityStatus::Unreachable)
+            .count()
+    }
+
+    /// Number of edges with inconclusive bounded reachability results.
+    pub fn unknown_edge_count(&self) -> usize {
+        self.edges
+            .iter()
+            .filter(|edge| edge.status() == TinyBvReachabilityStatus::Unknown)
+            .count()
+    }
+
+    /// Whether every edge is either covered or bounded-unreachable.
+    pub fn is_complete(&self) -> bool {
+        self.covered_edge_count() + self.unreachable_edge_count() == self.edge_count()
     }
 }
 
@@ -1175,6 +1283,72 @@ impl TinyBvProgram {
         Ok(TinyBvCoverageReport { targets })
     }
 
+    /// Generates replay-checked concrete test cases for one static CFG edge.
+    ///
+    /// The symbolic target is the transition represented by `edge`, not just
+    /// the destination PC. This matters for branch coverage and for programs
+    /// where multiple incoming edges share the same destination. The concrete
+    /// checker replays each generated witness and requires the replayed edge
+    /// path to contain `edge`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if `edge` is not part of this
+    /// program's static CFG, or from input declaration, symbolic lifting,
+    /// exploration, witness extraction, or concrete checking.
+    pub fn test_cases_for_cfg_edge_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        edge: TinyBvCfgEdge,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvEdgeTestGenerationReport, SolverError> {
+        self.validate_cfg_edge(edge)?;
+        let inputs = self.declare_inputs(arena, input_prefix)?;
+        let initial = TinyBvEdgeState {
+            state: self.initial_state(arena, &inputs)?,
+            last_edge: None,
+        };
+        let config = self.effective_config(config);
+        let mut executor = SymbolicExecutor::new();
+        let outcome = executor.explore_cfg_checked(
+            arena,
+            initial,
+            config,
+            |arena, state| self.symbolic_step_for_edge(arena, state, edge),
+            |model, _state| Ok(self.witness_from_model(model, &inputs)),
+            |_state, witness| {
+                Ok(self
+                    .trace_cfg_edges(&self.concrete_trace(witness))
+                    .iter()
+                    .any(|step| step.edge == edge))
+            },
+        )?;
+        Ok(self.edge_test_generation_report(edge, outcome))
+    }
+
+    /// Generates replay-checked concrete test cases for every static CFG edge.
+    ///
+    /// Edges are targeted in [`Self::cfg_edges`] order. Each edge keeps its own
+    /// bounded diagnostics, so infeasible or unknown edges are visible rather
+    /// than collapsed into a single coverage percentage.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from any per-edge checked generation query.
+    pub fn test_cases_for_cfg_edges_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvEdgeCoverageReport, SolverError> {
+        let mut edges = Vec::new();
+        for edge in self.cfg_edges() {
+            edges.push(self.test_cases_for_cfg_edge_checked(arena, input_prefix, edge, config)?);
+        }
+        Ok(TinyBvEdgeCoverageReport { edges })
+    }
+
     /// Checks bounded safety for a forbidden program counter.
     ///
     /// [`TinyBvSafetyStatus::Safe`] means the forbidden counter is unreachable
@@ -1455,6 +1629,66 @@ impl TinyBvProgram {
         }
     }
 
+    fn symbolic_step_for_edge(
+        &self,
+        arena: &mut TermArena,
+        state: TinyBvEdgeState,
+        target_edge: TinyBvCfgEdge,
+    ) -> Result<CfgStep<TinyBvEdgeState>, SolverError> {
+        if state.last_edge == Some(target_edge) {
+            return Ok(CfgStep::Target(state));
+        }
+        let from_pc = state.state.pc;
+        match self.symbolic_step(arena, state.state)? {
+            CfgStep::Continue(next) => Ok(CfgStep::Continue(TinyBvEdgeState {
+                last_edge: self.edge_between(from_pc, next.pc, None),
+                state: next,
+            })),
+            CfgStep::Assume { condition, next } => Ok(CfgStep::Assume {
+                condition,
+                next: TinyBvEdgeState {
+                    last_edge: self.edge_between(from_pc, next.pc, None),
+                    state: next,
+                },
+            }),
+            CfgStep::Branch {
+                condition,
+                if_true,
+                if_false,
+            } => Ok(CfgStep::Branch {
+                condition,
+                if_true: TinyBvEdgeState {
+                    last_edge: self.edge_between(
+                        from_pc,
+                        if_true.pc,
+                        Some(TinyBvCfgEdgeKind::BranchTrue),
+                    ),
+                    state: if_true,
+                },
+                if_false: TinyBvEdgeState {
+                    last_edge: self.edge_between(
+                        from_pc,
+                        if_false.pc,
+                        Some(TinyBvCfgEdgeKind::BranchFalse),
+                    ),
+                    state: if_false,
+                },
+            }),
+            CfgStep::Target(_) | CfgStep::Stop => Ok(CfgStep::Stop),
+        }
+    }
+
+    fn edge_between(
+        &self,
+        from_pc: usize,
+        to_pc: usize,
+        kind: Option<TinyBvCfgEdgeKind>,
+    ) -> Option<TinyBvCfgEdge> {
+        self.successors(from_pc).ok()?.into_iter().find(|edge| {
+            edge.to == to_pc && kind.is_none_or(|expected_kind| edge.kind == expected_kind)
+        })
+    }
+
     fn witness_from_model(&self, model: &Model, inputs: &[SymbolId]) -> Option<TinyBvWitness> {
         let mut values = Vec::with_capacity(inputs.len());
         for &symbol in inputs {
@@ -1494,6 +1728,17 @@ impl TinyBvProgram {
         }
     }
 
+    fn validate_cfg_edge(&self, edge: TinyBvCfgEdge) -> Result<(), SolverError> {
+        if self.cfg_edges().contains(&edge) {
+            Ok(())
+        } else {
+            Err(tiny_bv_error(format!(
+                "edge {} -> {} ({:?}) is not in this program's static CFG",
+                edge.from, edge.to, edge.kind
+            )))
+        }
+    }
+
     fn resolve_label_pc(&self, label: &str) -> Result<usize, SolverError> {
         self.label_pc(label)
             .ok_or_else(|| tiny_bv_error(format!("unknown assembly label `{label}`")))
@@ -1523,6 +1768,55 @@ impl TinyBvProgram {
             target_pc,
             target_labels,
             reachability,
+            test_cases,
+        }
+    }
+
+    fn edge_test_generation_report(
+        &self,
+        edge: TinyBvCfgEdge,
+        outcome: CfgCheckedOutcome<TinyBvEdgeState, TinyBvWitness>,
+    ) -> TinyBvEdgeTestGenerationReport {
+        let CfgCheckedOutcome {
+            verified,
+            missing_witnesses,
+            mismatches,
+            steps,
+            pruned_infeasible,
+            unknown_branches,
+            undecided_targets,
+            truncated,
+        } = outcome;
+        let target_labels = self
+            .labels_at_pc(edge.to)
+            .into_iter()
+            .map(ToOwned::to_owned)
+            .collect::<Vec<_>>();
+        let test_cases = verified
+            .iter()
+            .map(|hit| TinyBvTestCase {
+                target_pc: edge.to,
+                target_labels: target_labels.clone(),
+                report: self.trace_report(&hit.witness),
+            })
+            .collect();
+        TinyBvEdgeTestGenerationReport {
+            edge,
+            from_source_line: self.source_line(edge.from),
+            to_source_line: self.source_line(edge.to),
+            from_labels: self
+                .labels_at_pc(edge.from)
+                .into_iter()
+                .map(ToOwned::to_owned)
+                .collect(),
+            to_labels: target_labels,
+            steps,
+            pruned_infeasible,
+            unknown_branches,
+            undecided_targets,
+            truncated,
+            missing_witnesses: missing_witnesses.len(),
+            mismatches: mismatches.len(),
             test_cases,
         }
     }
