@@ -2,6 +2,17 @@
 
 ## Current focus
 
+- **2026-06-27 — Graduated SDK corpus scoreboard first slice landed.**
+  `crates/axeyum-property/tests/corpus.rs` is now the committed PROP.6 app-level
+  corpus gate, with a matching `SCOREBOARD.md`. The gate covers five graduated
+  SDK workflows: BV proof with checked evidence and a required Lean module,
+  integer implication under assumptions, unsigned minimized counterexamples,
+  signed two's-complement minimized counterexamples, and struct-shaped
+  counterexample rendering. Current totals are 5 cases, 2 proved, 3 disproved,
+  0 unknown, 0 mismatches / DISAGREE, and 1/1 Lean-required case available.
+  External proptest/Kani-style baselines are still the next measurement step,
+  so this is a first gate rather than a full SOTA comparison.
+
 - **2026-06-27 — Certificate summary surface landed.**
   `ProofCertificate::summary()` now gives frontends a compact owned view over a
   proof attempt: proved/disproved/unknown status, stable evidence-kind label,
@@ -113,9 +124,11 @@
 
 - `cargo fmt --all --check`
 - `git diff --check`
+- `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`
 - `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`
 - `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`
 - `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`
+- `./scripts/check-links.sh`
 
 ## Next actions
 
@@ -123,4 +136,5 @@
    builder syntax that still makes fallible term construction visible.
 2. Extend counterexample-to-`#[test]` output for frontend-specific replay
    bodies and nested/domain aggregate shapes.
-3. Add a graduated SDK property corpus and scoreboard gate.
+3. Broaden the SDK property corpus and add the external proptest/Kani-style
+   baseline comparison plus generated scoreboard artifacts.

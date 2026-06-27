@@ -88,6 +88,14 @@ metadata for signed symbolic BV inputs through the solver's
 `prove_minimized_with_objectives` path, so minimized counterexamples preserve
 Rust signed integer intent instead of falling back to unsigned BV order.
 
+**Status update (2026-06-27, measurement slice):** the first committed
+graduated SDK corpus and `property/SCOREBOARD.md` are in place. The gate covers
+five workflows (BV proof + Lean-required certificate, Int assumption proof,
+unsigned minimized witness, signed minimized witness, struct-shaped witness)
+with 2 proved, 3 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required
+coverage. External proptest/Kani-style comparison remains the next measurement
+step.
+
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted
   surface (NOT MIR).** `crates/axeyum-solver/tests/symbolic_execution.rs` is already

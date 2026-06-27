@@ -44,6 +44,9 @@ The committed v0 slice is intentionally thin and additive:
   preserving signed two's-complement Rust integer intent for signed symbolic BV
   inputs; direct named/tuple symbolic bundles can also render aggregate Rust
   initializer statements over those scalar bindings.
+- `tests/corpus.rs` plus `SCOREBOARD.md` provide the first committed graduated
+  SDK corpus gate: 5 cases, 2 proved, 3 disproved, 0 unknown, 0 mismatches, and
+  1/1 Lean-required case available.
 
 ## Tasks
 | id | task | exit |
@@ -53,7 +56,7 @@ The committed v0 slice is intentionally thin and additive:
 | PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms and signed counterexample minimization while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs |
 | PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; direct named/tuple symbolic bundles render Rust aggregate initializer statements; nested/domain replay remains frontend-owned |
 | PROP.5 | Lean certificate surface | WIP — `EvidenceReport` is re-exported, `ProofCertificate` exposes proved evidence, `prove_with_certificate` / `prove_minimized_with_certificate` attach best-effort standalone Lean modules, and `ProofCertificate::summary()` surfaces stable evidence/trust/Lean diagnostics |
-| PROP.6 | SDK measurement gate | TODO — committed graduated corpus and scoreboard vs proptest/Kani-style baselines, DISAGREE=0 |
+| PROP.6 | SDK measurement gate | WIP — first committed graduated corpus and `SCOREBOARD.md` landed with 5 cases, DISAGREE=0, and 1/1 Lean-required coverage; external proptest/Kani-style baseline comparison remains open |
 
 ## Guardrails
 - The crate must remain solver-logic-free: it builds terms and delegates.
