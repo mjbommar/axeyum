@@ -34,4 +34,8 @@ bindings. Nested or domain-specific replay remains caller-owned, but frontends
 can explicitly compose nested aggregate initializers by rendering the inner value
 first, passing a field expression such as `("limits", "transfer_limits")` to
 `render_rust_named_struct_let_with_fields`, and inserting imports plus setup
-snippets before the replay assertion with `render_rust_test_with_prelude`.
+snippets before a caller-owned replay assertion with
+`render_rust_test_with_prelude`. For the common predicate-replay shape,
+`render_rust_replay_assertion` formats `assert!(replay(args...));`, and
+`render_rust_test_with_replay_assertion` wires that body into the generated
+test while leaving the replay function and arguments frontend-owned.

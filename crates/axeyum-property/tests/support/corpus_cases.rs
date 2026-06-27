@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use axeyum_property::{Bool, Bv, LeanStatus, ProofOutcomeSummary, Property};
+use axeyum_property::{Bool, Bv, Counterexample, LeanStatus, ProofOutcomeSummary, Property};
 use axeyum_solver::ProofOutcome;
 
 const LAST_UPDATED: &str = "2026-06-27";
@@ -678,12 +678,39 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
             "};\n",
         )
     );
+    assert_nested_replay_test_rendering(&counterexample, &transfer_limits, &transfer_init)?;
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-explicit-nested-aggregate-replay",
+        tier: "P1",
+        workflow: "caller-owned nested aggregate replay",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered replay assertion in order",
+        baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn assert_nested_replay_test_rendering(
+    counterexample: &Counterexample,
+    transfer_limits: &str,
+    transfer_init: &str,
+) -> CorpusResult<()> {
     assert_eq!(
-        counterexample.render_rust_test_with_prelude(
+        Counterexample::render_rust_replay_assertion("replay_transfer", ["transfer"]),
+        "assert!(replay_transfer(transfer));\n"
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_replay_assertion(
             "nested transfer replay",
             ["use crate::{TransferInput, TransferLimits};"],
-            [transfer_limits.as_str(), transfer_init.as_str()],
-            "assert!(replay_transfer(transfer));",
+            [transfer_limits, transfer_init],
+            "replay_transfer",
+            ["transfer"],
         )?,
         concat!(
             "use crate::{TransferInput, TransferLimits};\n",
@@ -705,18 +732,5 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
             "}\n",
         )
     );
-    let summary = certificate.summary();
-    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
-
-    Ok(CorpusCaseReport {
-        id: "sdk-explicit-nested-aggregate-replay",
-        tier: "P1",
-        workflow: "caller-owned nested aggregate replay",
-        expected: ExpectedOutcome::Disproved,
-        actual: summary.outcome,
-        checks: "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and the replay assertion in order",
-        baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
-        lean_required: false,
-        lean_available: false,
-    })
+    Ok(())
 }

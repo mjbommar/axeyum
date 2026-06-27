@@ -622,6 +622,69 @@ impl Counterexample {
         Ok(out)
     }
 
+    /// Renders the common Rust replay assertion body.
+    ///
+    /// `replay_fn` and `args` are caller-owned Rust expressions. This helper
+    /// intentionally does not validate or interpret them; it only formats the
+    /// repeated `assert!(replay_fn(args...));` shape used by generated
+    /// counterexample tests.
+    pub fn render_rust_replay_assertion<I, A>(replay_fn: &str, args: I) -> String
+    where
+        I: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let mut out = String::new();
+        out.push_str("assert!(");
+        out.push_str(replay_fn);
+        out.push('(');
+        for (index, arg) in args.into_iter().enumerate() {
+            if index > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(arg.as_ref());
+        }
+        out.push_str("));\n");
+        out
+    }
+
+    /// Renders a Rust `#[test]` skeleton whose body is a replay assertion.
+    ///
+    /// This is a convenience wrapper over
+    /// [`Self::render_rust_test_with_prelude`] and
+    /// [`Self::render_rust_replay_assertion`]. Prelude snippets, setup
+    /// snippets, the replay function path, and argument expressions remain
+    /// caller-owned so the SDK still does not invent frontend/domain replay
+    /// semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_test_with_replay_assertion<PI, P, SI, S, AI, A>(
+        &self,
+        test_name: &str,
+        prelude_snippets: PI,
+        setup_snippets: SI,
+        replay_fn: &str,
+        args: AI,
+    ) -> Result<String, PropertyError>
+    where
+        PI: IntoIterator<Item = P>,
+        P: AsRef<str>,
+        SI: IntoIterator<Item = S>,
+        S: AsRef<str>,
+        AI: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let body = Self::render_rust_replay_assertion(replay_fn, args);
+        self.render_rust_test_with_prelude(
+            test_name,
+            prelude_snippets,
+            setup_snippets,
+            body.as_str(),
+        )
+    }
+
     fn direct_fields<'a>(
         &'a self,
         root_name: &str,

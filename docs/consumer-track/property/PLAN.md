@@ -45,7 +45,7 @@ The committed v0 slice is intentionally thin and additive:
   symbolic BV inputs; direct named/tuple symbolic bundles can also render
   aggregate Rust initializer statements over those scalar bindings, and nested
   aggregate replay can compose caller-supplied field expressions explicitly and
-  place prelude/setup snippets before the replay assertion.
+  place prelude/setup snippets before helper-rendered replay assertions.
 - `tests/support/corpus_cases.rs` is the shared graduated SDK corpus. The
   `tests/corpus.rs` gate checks the executed corpus against both committed
   artifacts, and `examples/property_corpus_scoreboard.rs` regenerates
@@ -58,7 +58,7 @@ The committed v0 slice is intentionally thin and additive:
 | PROP.1 | Typed scalar proof SDK | DONE — Bool/BV/Int handles, assumptions, proof/minimized proof calls, scalar model lifting, overflow predicates |
 | PROP.2 | Ergonomic expression syntax | WIP — `.equals()` aliases for Bool/BV/Int and `Property::all` / `Property::any` Boolean folds landed; broader operator traits or richer builder style remains open |
 | PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms and signed counterexample minimization while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs |
-| PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; direct named/tuple symbolic bundles render Rust aggregate initializer statements; explicit nested aggregate field expressions plus prelude/setup snippets let frontends compose caller-owned domain replay shapes before assertions |
+| PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; direct named/tuple symbolic bundles render Rust aggregate initializer statements; explicit nested aggregate field expressions plus prelude/setup snippets and helper-rendered replay assertions let frontends compose caller-owned domain replay shapes before assertions |
 | PROP.5 | Lean certificate surface | WIP — `EvidenceReport` is re-exported, `ProofCertificate` exposes proved evidence, `prove_with_certificate` / `prove_minimized_with_certificate` attach best-effort standalone Lean modules, and `ProofCertificate::summary()` surfaces stable evidence/trust/Lean diagnostics |
 | PROP.6 | SDK measurement gate | WIP — first committed graduated corpus, generated `SCOREBOARD.md`, and machine-readable `corpus.json` landed with 8 cases, DISAGREE=0, and 1/1 Lean-required coverage; external proptest/Kani-style baseline comparison remains open |
 

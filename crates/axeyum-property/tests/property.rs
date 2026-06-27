@@ -629,11 +629,16 @@ fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay(
         )
     );
     assert_eq!(
-        counterexample.render_rust_test_with_prelude(
+        Counterexample::render_rust_replay_assertion("replay_transfer", ["transfer"]),
+        "assert!(replay_transfer(transfer));\n"
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_replay_assertion(
             "nested replay case",
             ["use crate::{TransferInput, TransferLimits};"],
             [transfer_limits.as_str(), transfer_init.as_str()],
-            "assert!(replay_transfer(transfer));",
+            "replay_transfer",
+            ["transfer"],
         )?,
         concat!(
             "use crate::{TransferInput, TransferLimits};\n",

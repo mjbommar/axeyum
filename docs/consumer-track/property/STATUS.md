@@ -2,6 +2,17 @@
 
 ## Current focus
 
+- **2026-06-27 — Replay assertion helper landed.**
+  `Counterexample::render_rust_replay_assertion` now formats the common
+  `assert!(replay_fn(args...));` body for generated counterexample tests, and
+  `render_rust_test_with_replay_assertion` wires that body into the existing
+  caller-owned prelude/setup skeleton. The replay function path and argument
+  expressions remain frontend-owned, so the SDK still does not invent domain
+  semantics. The generated nested aggregate corpus row now checks the complete
+  `#[test]` skeleton through the helper-rendered replay assertion; totals
+  remain 8 cases, 2 proved, 6 disproved, 0 unknown, DISAGREE=0, and 1/1
+  Lean-required coverage.
+
 - **2026-06-27 — Prelude-aware replay tests landed.**
   `Counterexample::render_rust_test_with_prelude` now emits caller-owned
   imports/module prelude, replay-checked scalar bindings, caller-owned setup
@@ -187,7 +198,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output toward frontend-specific replay
-   assertions and helper adapters while keeping domain semantics caller-owned.
+2. Extend counterexample-to-`#[test]` output toward richer replay result
+   adapters while keeping domain semantics caller-owned.
 3. Keep broadening the SDK property corpus and add the external
    proptest/Kani-style baseline comparison.

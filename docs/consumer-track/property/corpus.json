@@ -95,7 +95,7 @@
       "workflow": "caller-owned nested aggregate replay",
       "expected": "disproved",
       "actual": "disproved",
-      "checks": "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and the replay assertion in order",
+      "checks": "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered replay assertion in order",
       "baseline_analogue": "Rust verifier domain replay body / Kani nested harness struct",
       "lean_required": false,
       "lean_available": false
