@@ -1474,88 +1474,98 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
         _ => return None,
     };
     match op {
-        Op::Ite => {
-            let [condition, then_term, else_term] = args.as_slice() else {
-                return None;
-            };
-            match arena.node(*condition) {
-                TermNode::BoolConst(true) => return Some(*then_term),
-                TermNode::BoolConst(false) => return Some(*else_term),
-                _ => {}
-            }
-            if then_term == else_term {
-                return Some(*then_term);
-            }
-            match (arena.node(*then_term), arena.node(*else_term)) {
-                (TermNode::BoolConst(true), TermNode::BoolConst(false)) => Some(*condition),
-                (TermNode::BoolConst(false), TermNode::BoolConst(true)) => {
-                    arena.not(*condition).ok()
-                }
-                _ => None,
-            }
+        Op::Ite => collapse_trivial_ite(arena, &args),
+        Op::Eq => collapse_trivial_eq(arena, &args),
+        Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolXor | Op::BoolImplies => {
+            collapse_trivial_bool(arena, op, &args)
         }
-        Op::Eq => {
-            let [left, right] = args.as_slice() else {
-                return None;
-            };
-            if left == right {
-                return Some(arena.bool_const(true));
-            }
-            if known_literal_distinct(arena, *left, *right) {
-                return Some(arena.bool_const(false));
-            }
-            if arena.sort_of(*left) == Sort::Bool {
-                if let Some(value) = bool_const_value(arena, *left) {
-                    return bool_equality_with_const(arena, *right, value);
-                }
-                if let Some(value) = bool_const_value(arena, *right) {
-                    return bool_equality_with_const(arena, *left, value);
-                }
-            }
-            distribute_eq_over_scalar_ite(arena, *left, *right)
+        Op::BvNot | Op::BvAnd | Op::BvOr | Op::BvXor => collapse_trivial_bv(arena, op, &args),
+        _ => None,
+    }
+}
+
+fn collapse_trivial_ite(arena: &mut TermArena, args: &[TermId]) -> Option<TermId> {
+    let [condition, then_term, else_term] = args else {
+        return None;
+    };
+    match arena.node(*condition) {
+        TermNode::BoolConst(true) => return Some(*then_term),
+        TermNode::BoolConst(false) => return Some(*else_term),
+        _ => {}
+    }
+    if then_term == else_term {
+        return Some(*then_term);
+    }
+    match (arena.node(*then_term), arena.node(*else_term)) {
+        (TermNode::BoolConst(true), TermNode::BoolConst(false)) => Some(*condition),
+        (TermNode::BoolConst(false), TermNode::BoolConst(true)) => arena.not(*condition).ok(),
+        _ => None,
+    }
+}
+
+fn collapse_trivial_eq(arena: &mut TermArena, args: &[TermId]) -> Option<TermId> {
+    let [left, right] = args else {
+        return None;
+    };
+    if left == right {
+        return Some(arena.bool_const(true));
+    }
+    if known_literal_distinct(arena, *left, *right) {
+        return Some(arena.bool_const(false));
+    }
+    if arena.sort_of(*left) == Sort::Bool {
+        if let Some(value) = bool_const_value(arena, *left) {
+            return bool_equality_with_const(arena, *right, value);
         }
+        if let Some(value) = bool_const_value(arena, *right) {
+            return bool_equality_with_const(arena, *left, value);
+        }
+    }
+    distribute_eq_over_scalar_ite(arena, *left, *right)
+}
+
+fn collapse_trivial_bool(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option<TermId> {
+    match op {
         Op::BoolNot => {
-            let [arg] = args.as_slice() else {
+            let [arg] = args else {
                 return None;
             };
-            match arena.node(*arg) {
-                TermNode::BoolConst(value) => Some(arena.bool_const(!value)),
-                TermNode::App {
-                    op: Op::BoolNot,
-                    args,
-                    ..
-                } => {
-                    let [inner] = args.as_ref() else {
-                        return None;
-                    };
-                    Some(*inner)
-                }
-                _ => None,
+            collapse_bool_not(arena, *arg)
+        }
+        Op::BoolAnd | Op::BoolOr | Op::BoolXor | Op::BoolImplies => {
+            let [left, right] = args else {
+                return None;
+            };
+            match op {
+                Op::BoolAnd => collapse_bool_and(arena, *left, *right),
+                Op::BoolOr => collapse_bool_or(arena, *left, *right),
+                Op::BoolXor => collapse_bool_xor(arena, *left, *right),
+                Op::BoolImplies => collapse_bool_implies(arena, *left, *right),
+                _ => unreachable!("outer match restricts Bool binary ops"),
             }
         }
-        Op::BoolAnd => {
-            let [left, right] = args.as_slice() else {
+        _ => None,
+    }
+}
+
+fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option<TermId> {
+    match op {
+        Op::BvNot => {
+            let [arg] = args else {
                 return None;
             };
-            collapse_bool_and(arena, *left, *right)
+            collapse_bv_not(arena, *arg)
         }
-        Op::BoolOr => {
-            let [left, right] = args.as_slice() else {
+        Op::BvAnd | Op::BvOr | Op::BvXor => {
+            let [left, right] = args else {
                 return None;
             };
-            collapse_bool_or(arena, *left, *right)
-        }
-        Op::BoolXor => {
-            let [left, right] = args.as_slice() else {
-                return None;
-            };
-            collapse_bool_xor(arena, *left, *right)
-        }
-        Op::BoolImplies => {
-            let [left, right] = args.as_slice() else {
-                return None;
-            };
-            collapse_bool_implies(arena, *left, *right)
+            match op {
+                Op::BvAnd => collapse_bv_and(arena, *left, *right),
+                Op::BvOr => collapse_bv_or(arena, *left, *right),
+                Op::BvXor => collapse_bv_xor(arena, *left, *right),
+                _ => unreachable!("outer match restricts BV binary ops"),
+            }
         }
         _ => None,
     }
@@ -1573,6 +1583,23 @@ fn bool_equality_with_const(arena: &mut TermArena, term: TermId, constant: bool)
         Some(term)
     } else {
         arena.not(term).ok()
+    }
+}
+
+fn collapse_bool_not(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(arena.bool_const(!value)),
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+            ..
+        } => {
+            let [inner] = args.as_ref() else {
+                return None;
+            };
+            Some(*inner)
+        }
+        _ => None,
     }
 }
 
@@ -1665,6 +1692,124 @@ fn negated_term(arena: &TermArena, term: TermId) -> Option<TermId> {
         return None;
     };
     Some(*inner)
+}
+
+fn collapse_bv_not(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::BvNot,
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [inner] = args.as_ref() else {
+        return None;
+    };
+    matches!(arena.sort_of(*inner), Sort::BitVec(_)).then_some(*inner)
+}
+
+fn collapse_bv_and(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    let sort = arena.sort_of(left);
+    if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
+        return None;
+    }
+    if left == right {
+        return Some(left);
+    }
+    if bv_const_is_zero(arena, left) || bv_const_is_zero(arena, right) {
+        return bv_zero_for_sort(arena, sort);
+    }
+    if bv_const_is_ones(arena, left) {
+        return Some(right);
+    }
+    if bv_const_is_ones(arena, right) {
+        return Some(left);
+    }
+    None
+}
+
+fn collapse_bv_or(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    let sort = arena.sort_of(left);
+    if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
+        return None;
+    }
+    if left == right {
+        return Some(left);
+    }
+    if bv_const_is_ones(arena, left) || bv_const_is_ones(arena, right) {
+        return bv_ones_for_sort(arena, sort);
+    }
+    if bv_const_is_zero(arena, left) {
+        return Some(right);
+    }
+    if bv_const_is_zero(arena, right) {
+        return Some(left);
+    }
+    None
+}
+
+fn collapse_bv_xor(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    let sort = arena.sort_of(left);
+    if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
+        return None;
+    }
+    if left == right {
+        return bv_zero_for_sort(arena, sort);
+    }
+    if bv_const_is_zero(arena, left) {
+        return Some(right);
+    }
+    if bv_const_is_zero(arena, right) {
+        return Some(left);
+    }
+    None
+}
+
+fn bv_const_is_zero(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::BvConst { value, .. } => *value == 0,
+        TermNode::WideBvConst(value) => value.is_zero(),
+        _ => false,
+    }
+}
+
+fn bv_const_is_ones(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::BvConst { width, value } => {
+            let ones = if *width >= 128 {
+                u128::MAX
+            } else {
+                (1u128 << *width) - 1
+            };
+            *value == ones
+        }
+        TermNode::WideBvConst(value) => *value == WideUint::ones(value.width()),
+        _ => false,
+    }
+}
+
+fn bv_zero_for_sort(arena: &mut TermArena, sort: Sort) -> Option<TermId> {
+    let Sort::BitVec(width) = sort else {
+        return None;
+    };
+    arena.bv_const(width, 0).ok()
+}
+
+fn bv_ones_for_sort(arena: &mut TermArena, sort: Sort) -> Option<TermId> {
+    let Sort::BitVec(width) = sort else {
+        return None;
+    };
+    if width > 128 {
+        Some(arena.wide_bv_const(WideUint::ones(width)))
+    } else {
+        let ones = if width == 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        arena.bv_const(width, ones).ok()
+    }
 }
 
 fn distribute_eq_over_scalar_ite(

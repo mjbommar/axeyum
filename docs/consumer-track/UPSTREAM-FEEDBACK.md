@@ -93,6 +93,8 @@ Last reconciled with `main`: 2026-06-27.
   `true => select(store(mem, i, p), i)` drop the connective wrapper; the
   resulting `v = v` tautology, `not true` contradiction, `p and not p`
   contradiction, or `p xor p` contradiction is folded before warm encoding.
+  BV-valued readbacks also drop common bitwise wrappers such as all-ones masks,
+  zero masks, zero ORs/XORs, self-XORs, and double `bvnot` before warm encoding.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -111,7 +113,8 @@ Last reconciled with `main`: 2026-06-27.
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, conditional read/write-index
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
-  equality/connective/xor/implication cleanup, branch-merged reads whose selected branches
+  equality/connective/xor/implication cleanup, BV bitwise readback cleanup,
+  branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
   wide/BV256 storage-style base loads,
@@ -135,6 +138,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm Bool readback equality cleanup" /
   "Warm Bool connective cleanup" /
   "Warm Bool xor/implication cleanup" /
+  "Warm BV bitwise readback cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /

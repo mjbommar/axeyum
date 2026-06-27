@@ -3713,6 +3713,121 @@ fn warm_bool_readback_xor_implies_drop_constant_wrappers() {
 }
 
 #[test]
+fn warm_bv_readback_bitwise_identities_drop_constant_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bv_bitwise_value", Sort::BitVec(8))
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 13).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let ones = arena.bv_const(8, 0xff).unwrap();
+    let target = arena.bv_const(8, 0x5a).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let and_ones = arena.bv_and(loaded, ones).unwrap();
+    let all_ones_mask_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, and_ones);
+    assert_eq!(
+        all_ones_mask_result, value,
+        "readback and all-ones should simplify to the stored BV"
+    );
+
+    let and_zero = arena.bv_and(loaded, zero).unwrap();
+    let zero_mask_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, and_zero);
+    assert_eq!(
+        zero_mask_result, zero,
+        "readback and zero should simplify to zero"
+    );
+
+    let or_zero = arena.bv_or(loaded, zero).unwrap();
+    let or_identity_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, or_zero);
+    assert_eq!(
+        or_identity_result, value,
+        "readback or zero should simplify to the stored BV"
+    );
+
+    let or_ones = arena.bv_or(loaded, ones).unwrap();
+    let or_annihilator_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, or_ones);
+    assert_eq!(
+        or_annihilator_result, ones,
+        "readback or all-ones should simplify to all-ones"
+    );
+
+    let xor_zero = arena.bv_xor(loaded, zero).unwrap();
+    let xor_identity_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, xor_zero);
+    assert_eq!(
+        xor_identity_result, value,
+        "readback xor zero should simplify to the stored BV"
+    );
+
+    let xor_self = arena.bv_xor(loaded, loaded).unwrap();
+    let self_xor_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, xor_self);
+    assert_eq!(
+        self_xor_result, zero,
+        "readback xor itself should simplify to zero"
+    );
+
+    let not_loaded = arena.bv_not(loaded).unwrap();
+    let double_not = arena.bv_not(not_loaded).unwrap();
+    let double_not_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, double_not);
+    assert_eq!(
+        double_not_result, value,
+        "double bitwise negation around readback should simplify to the stored BV"
+    );
+
+    let and_ones_eq_target = arena.eq(and_ones, target).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, and_ones_eq_target)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "BV bitwise readback cleanup should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "BV bitwise readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(value_sym),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 0x5a
+                })
+            );
+            assert_eq!(
+                eval(&arena, and_ones_eq_target, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original BV bitwise memory assertion"
+            );
+        }
+        other => panic!("expected BV bitwise readback assertion sat, got {other:?}"),
+    }
+
+    let xor_self_eq_ones = arena.eq(xor_self, ones).unwrap();
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, xor_self_eq_ones)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a BV readback cannot xor with itself to all-ones"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena
