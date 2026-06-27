@@ -171,11 +171,12 @@ impl IncrementalBvSolver {
     /// BV path today.
     ///
     /// This is deliberately narrow: it folds syntactic read-over-write
-    /// identities of the form `select(store(a, i, v), i)` to `v`, and skips a
-    /// store at a literal-distinct index (`select(store(a, c1, v), c2)` to
-    /// `select(a, c2)` when `c1 != c2` is known from constants), recursively
-    /// through ordinary wrappers. It does not instantiate symbolic
-    /// distinct-index read-over-write cases, array extensionality, or UF lemmas.
+    /// identities of the form `select(store(a, i, v), i)` to `v`, skips a store
+    /// at a literal-distinct index (`select(store(a, c1, v), c2)` to
+    /// `select(a, c2)` when `c1 != c2` is known from constants), and collapses
+    /// reads from constant arrays to their default value. It recurses through
+    /// ordinary wrappers, but does not instantiate symbolic distinct-index
+    /// read-over-write cases, array extensionality, or UF lemmas.
     #[must_use]
     pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
         let mut memo = HashMap::new();
@@ -829,6 +830,9 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         }
         _ => return None,
     };
+    if let Some(value) = const_array_default(arena, array) {
+        return Some(value);
+    }
     let (base, write_index, value) = match arena.node(array) {
         TermNode::App {
             op: Op::Store,
@@ -849,6 +853,21 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         return arena.select(base, read_index).ok();
     }
     None
+}
+
+fn const_array_default(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::ConstArray { .. },
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [value] = args.as_ref() else {
+        return None;
+    };
+    Some(*value)
 }
 
 fn known_literal_distinct(arena: &TermArena, left: TermId, right: TermId) -> bool {

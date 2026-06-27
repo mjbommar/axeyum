@@ -2249,6 +2249,127 @@ fn branch_simplifies_constant_distinct_read_over_write_chain_on_warm_path() {
     );
 }
 
+#[test]
+fn warm_assert_simplifies_constant_array_read() {
+    let mut arena = TermArena::new();
+    let index_sym = arena
+        .declare("warm_assert_const_array_read_i", Sort::BitVec(8))
+        .unwrap();
+    let index = arena.var(index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let loaded = arena.select(memory, index).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut feasible = IncrementalBvSolver::new();
+    let encoded = feasible
+        .assert_simplifying_memory(&mut arena, cond)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "constant-array read assertion should simplify to a pure BV condition"
+    );
+    assert!(
+        !feasible.has_deferred_theory_assertions(),
+        "constant-array read assertion should stay on the warm path"
+    );
+    match feasible.check(&arena).unwrap() {
+        CheckResult::Sat(_) => {}
+        other => panic!("expected warm const-array assertion sat, got {other:?}"),
+    }
+
+    let mut infeasible = IncrementalBvSolver::new();
+    infeasible
+        .assert_simplifying_memory(&mut arena, not_cond)
+        .unwrap();
+    assert_eq!(
+        infeasible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a committed constant-array read disequality should be warm-unsat"
+    );
+}
+
+#[test]
+fn warm_assumption_simplifies_constant_array_read() {
+    let mut arena = TermArena::new();
+    let index_sym = arena
+        .declare("warm_const_array_read_i", Sort::BitVec(8))
+        .unwrap();
+    let index = arena.var(index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let loaded = arena.select(memory, index).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    assert!(
+        solver.check_assuming(&arena, &[cond]).is_err(),
+        "the ordinary warm assumption route should still refuse raw const-array terms"
+    );
+    match solver
+        .check_assuming_simplifying_memory(&mut arena, &[cond])
+        .unwrap()
+    {
+        CheckResult::Sat(_) => {}
+        other => panic!("expected warm const-array assumption sat, got {other:?}"),
+    }
+    assert_eq!(
+        solver
+            .check_assuming_simplifying_memory(&mut arena, &[not_cond])
+            .unwrap(),
+        CheckResult::Unsat,
+        "a constant-array read cannot differ from the default value"
+    );
+    match solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[not_cond])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => assert_eq!(core, vec![not_cond]),
+        other => panic!("expected warm const-array assumption core, got {other:?}"),
+    }
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "one-shot const-array assumptions should not persist as deferred theory assertions"
+    );
+}
+
+#[test]
+fn branch_simplifies_constant_array_store_miss_on_warm_path() {
+    let mut arena = TermArena::new();
+    let miss_value_sym = arena
+        .declare("branch_const_array_miss_value", Sort::BitVec(8))
+        .unwrap();
+    let miss_value = arena.var(miss_value_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let hit_index = arena.bv_const(8, 3).unwrap();
+    let miss_index = arena.bv_const(8, 4).unwrap();
+    let stored = arena.store(memory, miss_index, miss_value).unwrap();
+    let loaded = arena.select(stored, hit_index).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    let branch = executor.branch(&mut arena, cond).unwrap();
+    assert!(
+        branch.if_true.is_feasible(),
+        "zero-initialized memory read after a distinct concrete miss should stay feasible"
+    );
+    assert!(
+        branch.if_false.is_infeasible(),
+        "the negated zero-initialized miss read should be pruned on the warm path"
+    );
+    assert!(
+        executor.path_condition().is_empty(),
+        "branch queries over const-array misses must remain one-shot"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should still work after a const-array miss branch query"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.
