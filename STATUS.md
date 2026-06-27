@@ -6,6 +6,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-27 — Consumer upstream feedback log restored.**
+  `docs/consumer-track/UPSTREAM-FEEDBACK.md` is restored on `main` and
+  reconciled against the current state instead of copying the stale
+  `consumer-track` branch version verbatim. U1, U2, U3, and U5 are now recorded
+  as resolved for their named consumer-facing asks; U4 remains the strategic
+  proof/Lean reconstruction frontier; U6 and U7 remain partial because the
+  one-shot memory/theory fallback has landed but the true warm lazy-array/UF
+  engine is still open. The consumer-track README now links the log.
+  Verification passed:
+  `git diff --check`;
+  `./scripts/check-links.sh`.
+
 - **Session 2026-06-27 — Property SDK expression builder aliases.**
   `axeyum-property` now exposes fallible, context-owned Bool/BV/Int expression
   aliases such as `Property::bool_implies`, `Property::bv_add`,
@@ -7887,6 +7899,13 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-27** — **Consumer upstream feedback log restored.**
+  Restored `docs/consumer-track/UPSTREAM-FEEDBACK.md` on `main`, reconciled its
+  old branch-only U1-U7 entries against current evidence, and linked it from the
+  consumer-track README. The log now separates resolved consumer-facing asks
+  from the still-open warm lazy-array/UF and broader Lean reconstruction
+  frontiers.
 
 - **2026-06-27** — **Property SDK expression builder aliases.**
   Added fallible `Property`-owned Bool/BV/Int expression builder aliases over
