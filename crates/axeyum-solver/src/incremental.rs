@@ -18,8 +18,8 @@
 use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
 use axeyum_ir::{
-    ArraySortKey, ArrayValue, Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode,
-    Value, eval, well_founded_default,
+    ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, IrError, Op, Sort, SymbolId,
+    TermArena, TermId, TermNode, Value, eval, well_founded_default,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -84,6 +84,9 @@ struct Frame {
     /// Array reads abstracted into warm BV symbols for this frame's encoded
     /// assertions. These drive model projection before original-term replay.
     warm_array_selects: Vec<TermId>,
+    /// Uninterpreted-function applications abstracted into warm scalar symbols.
+    /// These drive function-model projection before original-term replay.
+    warm_uf_apps: Vec<TermId>,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +94,7 @@ struct OneShotAssumption {
     original: TermId,
     encoded: TermId,
     warm_array_selects: Vec<TermId>,
+    warm_uf_apps: Vec<TermId>,
     congruence_lemmas: Vec<TermId>,
 }
 
@@ -108,7 +112,17 @@ struct WarmArraySelect {
 struct WarmArrayEncoding {
     term: TermId,
     select_terms: Vec<TermId>,
+    uf_app_terms: Vec<TermId>,
     congruence_lemmas: Vec<TermId>,
+}
+
+#[derive(Debug, Clone)]
+struct WarmUfApp {
+    func: FuncId,
+    args: Vec<TermId>,
+    value_symbol: Option<SymbolId>,
+    value_term: TermId,
+    result_sort: Sort,
 }
 
 /// A warm, incremental pure-Rust bit-vector solver.
@@ -123,6 +137,7 @@ pub struct IncrementalBvSolver {
     config: SolverConfig,
     frames: Vec<Frame>,
     warm_array_selects: HashMap<TermId, WarmArraySelect>,
+    warm_uf_apps: HashMap<TermId, WarmUfApp>,
     internal_symbols: HashSet<SymbolId>,
 }
 
@@ -152,8 +167,10 @@ impl IncrementalBvSolver {
                 assertions: Vec::new(),
                 deferred_assertions: Vec::new(),
                 warm_array_selects: Vec::new(),
+                warm_uf_apps: Vec::new(),
             }],
             warm_array_selects: HashMap::new(),
+            warm_uf_apps: HashMap::new(),
             internal_symbols: HashSet::new(),
         }
     }
@@ -204,21 +221,24 @@ impl IncrementalBvSolver {
     /// from constant arrays to their default value, and distributes reads over
     /// array-valued `ite`. When neither index case is syntactically decided, it
     /// expands read-over-write to a scalar conditional and keeps simplifying the
-    /// else branch; this only stays warm when the resulting term is array-free.
-    /// It recurses through ordinary wrappers, but does not instantiate array
-    /// extensionality or UF lemmas.
+    /// else branch; this only stays warm when the resulting term is array-free
+    /// or reducible by the later retained select/UF abstraction pass. It
+    /// recurses through ordinary wrappers, but does not instantiate array
+    /// extensionality or general UF lemmas.
     #[must_use]
     pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
         let mut memo = HashMap::new();
         simplify_memory_for_warm_assertion_inner(arena, term, &mut memo)
     }
 
-    /// Asserts `term`, first applying the small warm-safe memory simplifier.
+    /// Asserts `term`, first applying the small warm-safe memory simplifier and
+    /// retained scalar select/UF abstraction.
     ///
-    /// When simplification removes all array/UF structure, the simplified term
-    /// is encoded into the warm BV solver while the original term is retained
-    /// for replay. If unsupported array/UF structure remains, the original term
-    /// is scoped as a deferred theory assertion exactly like [`Self::assert`].
+    /// When simplification/abstraction removes all array/UF structure, the pure
+    /// BV term is encoded into the warm BV solver while the original term is
+    /// retained for replay. If unsupported array/UF structure remains, the
+    /// original term is scoped as a deferred theory assertion exactly like
+    /// [`Self::assert`].
     ///
     /// Returns the term actually presented to the warm/deferred classifier.
     ///
@@ -329,7 +349,9 @@ impl IncrementalBvSolver {
         }
 
         let existing_selects = self.active_warm_array_select_terms();
-        let encoded = self.abstract_warm_array_selects(arena, encoded, &existing_selects)?;
+        let existing_uf_apps = self.active_warm_uf_app_terms();
+        let encoded =
+            self.abstract_warm_array_selects(arena, encoded, &existing_selects, &existing_uf_apps)?;
         if needs_deferred_theory(arena, encoded.term) {
             self.frames
                 .last_mut()
@@ -351,6 +373,7 @@ impl IncrementalBvSolver {
         let frame = self.frames.last_mut().expect("base frame always present");
         frame.assertions.push(original);
         frame.warm_array_selects.extend(encoded.select_terms);
+        frame.warm_uf_apps.extend(encoded.uf_app_terms);
         Ok(encoded.term)
     }
 
@@ -390,6 +413,7 @@ impl IncrementalBvSolver {
             assertions: Vec::new(),
             deferred_assertions: Vec::new(),
             warm_array_selects: Vec::new(),
+            warm_uf_apps: Vec::new(),
         });
         Ok(())
     }
@@ -639,16 +663,30 @@ impl IncrementalBvSolver {
             .collect()
     }
 
+    fn active_warm_uf_app_terms(&self) -> Vec<TermId> {
+        self.frames
+            .iter()
+            .flat_map(|frame| frame.warm_uf_apps.iter().copied())
+            .collect()
+    }
+
     fn abstract_warm_array_selects(
         &mut self,
         arena: &mut TermArena,
         term: TermId,
         existing_selects: &[TermId],
+        existing_uf_apps: &[TermId],
     ) -> Result<WarmArrayEncoding, SolverError> {
         let mut memo = HashMap::new();
         let mut select_terms = Vec::new();
-        let term =
-            self.abstract_warm_array_selects_inner(arena, term, &mut memo, &mut select_terms)?;
+        let mut uf_app_terms = Vec::new();
+        let term = self.abstract_warm_array_selects_inner(
+            arena,
+            term,
+            &mut memo,
+            &mut select_terms,
+            &mut uf_app_terms,
+        )?;
         let mut congruence_lemmas = Vec::new();
         let mut prior = existing_selects.to_vec();
         for &select in &select_terms {
@@ -659,9 +697,19 @@ impl IncrementalBvSolver {
             }
             prior.push(select);
         }
+        let mut prior = existing_uf_apps.to_vec();
+        for &app in &uf_app_terms {
+            for &other in &prior {
+                if let Some(lemma) = self.warm_uf_congruence_lemma(arena, other, app)? {
+                    congruence_lemmas.push(lemma);
+                }
+            }
+            prior.push(app);
+        }
         Ok(WarmArrayEncoding {
             term,
             select_terms,
+            uf_app_terms,
             congruence_lemmas,
         })
     }
@@ -672,6 +720,7 @@ impl IncrementalBvSolver {
         term: TermId,
         memo: &mut HashMap<TermId, TermId>,
         select_terms: &mut Vec<TermId>,
+        uf_app_terms: &mut Vec<TermId>,
     ) -> Result<TermId, SolverError> {
         if let Some(&abstracted) = memo.get(&term) {
             return Ok(abstracted);
@@ -688,6 +737,20 @@ impl IncrementalBvSolver {
             return Ok(abstracted.value_term);
         }
 
+        if let Some(app) = Self::supported_warm_uf_app(arena, term)
+            && app
+                .args
+                .iter()
+                .all(|&arg| !needs_deferred_theory(arena, arg))
+        {
+            let abstracted = self.get_or_create_warm_uf_app(arena, term, app)?;
+            if !uf_app_terms.contains(&term) {
+                uf_app_terms.push(term);
+            }
+            memo.insert(term, abstracted.value_term);
+            return Ok(abstracted.value_term);
+        }
+
         let original_args = if let TermNode::App { args, .. } = arena.node(term) {
             args.to_vec()
         } else {
@@ -697,15 +760,42 @@ impl IncrementalBvSolver {
         let mut changed = false;
         let mut abstracted_args = Vec::with_capacity(original_args.len());
         for &arg in &original_args {
-            let abstracted =
-                self.abstract_warm_array_selects_inner(arena, arg, memo, select_terms)?;
+            let abstracted = self.abstract_warm_array_selects_inner(
+                arena,
+                arg,
+                memo,
+                select_terms,
+                uf_app_terms,
+            )?;
             changed |= abstracted != arg;
             abstracted_args.push(abstracted);
         }
-        let abstracted = if changed {
+        let rebuilt = if changed {
             arena.rebuild_with_args(term, &abstracted_args)
         } else {
             term
+        };
+        let abstracted = if let Some(select) = Self::supported_warm_array_select(arena, rebuilt)
+            && !needs_deferred_theory(arena, select.index)
+        {
+            let abstracted = self.get_or_create_warm_array_select(arena, rebuilt, select)?;
+            if !select_terms.contains(&rebuilt) {
+                select_terms.push(rebuilt);
+            }
+            abstracted.value_term
+        } else if let Some(app) = Self::supported_warm_uf_app(arena, rebuilt)
+            && app
+                .args
+                .iter()
+                .all(|&arg| !needs_deferred_theory(arena, arg))
+        {
+            let abstracted = self.get_or_create_warm_uf_app(arena, rebuilt, app)?;
+            if !uf_app_terms.contains(&rebuilt) {
+                uf_app_terms.push(rebuilt);
+            }
+            abstracted.value_term
+        } else {
+            rebuilt
         };
         memo.insert(term, abstracted);
         Ok(abstracted)
@@ -758,15 +848,7 @@ impl IncrementalBvSolver {
             return Ok(existing);
         }
         let base_name = format!("!axeyum_warm_select_{}", term.index());
-        let mut name = base_name.clone();
-        let mut suffix = 0usize;
-        while arena
-            .symbols()
-            .any(|(_symbol, existing, _sort)| existing == name)
-        {
-            suffix += 1;
-            name = format!("{base_name}_{suffix}");
-        }
+        let name = fresh_internal_symbol_name(arena, &base_name);
         let value_symbol = arena
             .declare(&name, Sort::BitVec(select.element_width))
             .map_err(|error| map_ir_error(&error))?;
@@ -811,24 +893,111 @@ impl IncrementalBvSolver {
             .map_err(|error| map_ir_error(&error))
     }
 
+    fn supported_warm_uf_app(arena: &TermArena, term: TermId) -> Option<WarmUfApp> {
+        let TermNode::App {
+            op: Op::Apply(func),
+            args,
+            ..
+        } = arena.node(term)
+        else {
+            return None;
+        };
+        let (_name, params, result_sort) = arena.function(*func);
+        if !is_warm_scalar_sort(result_sort)
+            || args.len() != params.len()
+            || !params.iter().copied().all(is_warm_scalar_sort)
+            || args
+                .iter()
+                .zip(params)
+                .any(|(&arg, &sort)| arena.sort_of(arg) != sort)
+        {
+            return None;
+        }
+        Some(WarmUfApp {
+            func: *func,
+            args: args.to_vec(),
+            value_symbol: None,
+            value_term: term,
+            result_sort,
+        })
+    }
+
+    fn get_or_create_warm_uf_app(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        mut app: WarmUfApp,
+    ) -> Result<WarmUfApp, SolverError> {
+        if let Some(existing) = self.warm_uf_apps.get(&term).cloned() {
+            return Ok(existing);
+        }
+        let base_name = format!("!axeyum_warm_uf_{}", term.index());
+        let name = fresh_internal_symbol_name(arena, &base_name);
+        let value_symbol = arena
+            .declare(&name, app.result_sort)
+            .map_err(|error| map_ir_error(&error))?;
+        let value_term = arena.var(value_symbol);
+        self.internal_symbols.insert(value_symbol);
+        app.value_symbol = Some(value_symbol);
+        app.value_term = value_term;
+        self.warm_uf_apps.insert(term, app.clone());
+        Ok(app)
+    }
+
+    fn warm_uf_congruence_lemma(
+        &self,
+        arena: &mut TermArena,
+        left: TermId,
+        right: TermId,
+    ) -> Result<Option<TermId>, SolverError> {
+        if left == right {
+            return Ok(None);
+        }
+        let Some(left) = self.warm_uf_apps.get(&left) else {
+            return Ok(None);
+        };
+        let Some(right) = self.warm_uf_apps.get(&right) else {
+            return Ok(None);
+        };
+        if left.func != right.func || left.args.len() != right.args.len() {
+            return Ok(None);
+        }
+
+        let same_value = arena
+            .eq(left.value_term, right.value_term)
+            .map_err(|error| map_ir_error(&error))?;
+        let Some(same_args) = conjunction_of_equalities(arena, &left.args, &right.args)? else {
+            return Ok(Some(same_value));
+        };
+        let distinct_args = arena.not(same_args).map_err(|error| map_ir_error(&error))?;
+        arena
+            .or(distinct_args, same_value)
+            .map(Some)
+            .map_err(|error| map_ir_error(&error))
+    }
+
     fn simplified_one_shot_assumptions(
         &mut self,
         arena: &mut TermArena,
         assumptions: &[TermId],
     ) -> Result<Vec<OneShotAssumption>, SolverError> {
         let mut active_selects = self.active_warm_array_select_terms();
+        let mut active_uf_apps = self.active_warm_uf_app_terms();
         let mut simplified = Vec::with_capacity(assumptions.len());
         for &term in assumptions {
             if arena.sort_of(term) != Sort::Bool {
                 return Err(SolverError::NonBooleanAssertion(term));
             }
             let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
-            let encoded = self.abstract_warm_array_selects(arena, encoded, &active_selects)?;
+            let encoded =
+                self.abstract_warm_array_selects(arena, encoded, &active_selects, &active_uf_apps)?;
             active_selects.extend(encoded.select_terms.iter().copied());
+            active_uf_apps.extend(encoded.uf_app_terms.iter().copied());
             simplified.push(OneShotAssumption {
                 original: term,
                 encoded: encoded.term,
                 warm_array_selects: encoded.select_terms,
+                warm_uf_apps: encoded.uf_app_terms,
                 congruence_lemmas: encoded.congruence_lemmas,
             });
         }
@@ -851,6 +1020,7 @@ impl IncrementalBvSolver {
                 original: term,
                 encoded: term,
                 warm_array_selects: Vec::new(),
+                warm_uf_apps: Vec::new(),
                 congruence_lemmas: Vec::new(),
             })
             .collect::<Vec<_>>();
@@ -957,10 +1127,15 @@ impl IncrementalBvSolver {
                     .iter()
                     .flat_map(|assumption| assumption.warm_array_selects.iter().copied())
                     .collect::<Vec<_>>();
-                let model = match self.complete_model_with_warm_arrays(
+                let one_shot_uf_apps = assumptions
+                    .iter()
+                    .flat_map(|assumption| assumption.warm_uf_apps.iter().copied())
+                    .collect::<Vec<_>>();
+                let model = match self.complete_model_with_warm_theories(
                     arena,
                     &reconstructed,
                     &one_shot_selects,
+                    &one_shot_uf_apps,
                 ) {
                     Ok(model) => model,
                     Err(reason) => return Ok((CheckResult::Unknown(reason), Vec::new())),
@@ -1012,13 +1187,26 @@ impl IncrementalBvSolver {
         }
     }
 
-    fn complete_model_with_warm_arrays(
+    fn complete_model_with_warm_theories(
         &self,
         arena: &TermArena,
         assignment: &Assignment,
         one_shot_selects: &[TermId],
+        one_shot_uf_apps: &[TermId],
     ) -> Result<Model, UnknownReason> {
         let mut model = complete_model_filtered(arena, assignment, &self.internal_symbols);
+        self.project_warm_array_selects(arena, assignment, one_shot_selects, &mut model)?;
+        self.project_warm_uf_apps(arena, assignment, one_shot_uf_apps, &mut model)?;
+        Ok(model)
+    }
+
+    fn project_warm_array_selects(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        one_shot_selects: &[TermId],
+        model: &mut Model,
+    ) -> Result<(), UnknownReason> {
         let mut select_terms = self.active_warm_array_select_terms();
         select_terms.extend_from_slice(one_shot_selects);
         select_terms.sort_by_key(|term| term.index());
@@ -1052,7 +1240,8 @@ impl IncrementalBvSolver {
                     });
                 }
             };
-            let model_assignment = model.to_assignment();
+            let model_assignment =
+                assignment_with_internal(arena, model, assignment, &self.internal_symbols);
             let index_value = match eval(arena, select.index, &model_assignment) {
                 Ok(Value::Bv { width, value }) if width == select.index_width => value,
                 Ok(value) => {
@@ -1083,7 +1272,90 @@ impl IncrementalBvSolver {
                 Value::Array(array.store(index_value, select_value)),
             );
         }
-        Ok(model)
+        Ok(())
+    }
+
+    fn project_warm_uf_apps(
+        &self,
+        arena: &TermArena,
+        assignment: &Assignment,
+        one_shot_uf_apps: &[TermId],
+        model: &mut Model,
+    ) -> Result<(), UnknownReason> {
+        let mut app_terms = self.active_warm_uf_app_terms();
+        app_terms.extend_from_slice(one_shot_uf_apps);
+        app_terms.sort_by_key(|term| term.index());
+        app_terms.dedup();
+
+        for app_term in app_terms {
+            let Some(app) = self.warm_uf_apps.get(&app_term) else {
+                continue;
+            };
+            let Some(value_symbol) = app.value_symbol else {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm UF abstraction #{} had no internal value symbol",
+                        app_term.index()
+                    ),
+                });
+            };
+            let result = assignment
+                .get(value_symbol)
+                .or_else(|| well_founded_default(arena, app.result_sort))
+                .ok_or_else(|| UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm UF abstraction #{} had no default value",
+                        app_term.index()
+                    ),
+                })?;
+            if result.sort() != app.result_sort {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm UF abstraction #{} had result value {result} of wrong sort",
+                        app_term.index()
+                    ),
+                });
+            }
+
+            let (_name, params, result_sort) = arena.function(app.func);
+            let model_assignment =
+                assignment_with_internal(arena, model, assignment, &self.internal_symbols);
+            let mut arg_codes = Vec::with_capacity(app.args.len());
+            for (&arg, &sort) in app.args.iter().zip(params) {
+                let value = eval(arena, arg, &model_assignment).map_err(|error| UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: format!(
+                        "warm UF argument #{} for app #{} could not be evaluated: {error}",
+                        arg.index(),
+                        app_term.index()
+                    ),
+                })?;
+                if value.sort() != sort {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm UF argument #{} for app #{} evaluated to {value} of wrong sort",
+                            arg.index(),
+                            app_term.index()
+                        ),
+                    });
+                }
+                arg_codes.push(value.scalar_code());
+            }
+
+            let interpretation = model
+                .function(app.func)
+                .cloned()
+                .unwrap_or_else(|| FuncValue::constant(params.to_vec(), result_sort, 0));
+            model.set_function(
+                app.func,
+                interpretation.define(&arg_codes, result.scalar_code()),
+            );
+        }
+        Ok(())
     }
 
     /// Replays the model against every active assertion plus the one-shot
@@ -1300,6 +1572,67 @@ pub(crate) fn known_literal_distinct(arena: &TermArena, left: TermId, right: Ter
         (TermNode::RealConst(a), TermNode::RealConst(b)) => a != b,
         _ => false,
     }
+}
+
+fn is_warm_scalar_sort(sort: Sort) -> bool {
+    matches!(sort, Sort::Bool | Sort::BitVec(1..=128))
+}
+
+fn fresh_internal_symbol_name(arena: &TermArena, base_name: &str) -> String {
+    let mut name = base_name.to_owned();
+    let mut suffix = 0usize;
+    while arena
+        .symbols()
+        .any(|(_symbol, existing, _sort)| existing == name)
+    {
+        suffix += 1;
+        name = format!("{base_name}_{suffix}");
+    }
+    name
+}
+
+fn conjunction_of_equalities(
+    arena: &mut TermArena,
+    left: &[TermId],
+    right: &[TermId],
+) -> Result<Option<TermId>, SolverError> {
+    if left.len() != right.len() {
+        return Err(SolverError::Backend(format!(
+            "cannot build congruence over mismatched arities {} and {}",
+            left.len(),
+            right.len()
+        )));
+    }
+    let mut conjunct = None;
+    for (&left, &right) in left.iter().zip(right) {
+        let eq = arena
+            .eq(left, right)
+            .map_err(|error| map_ir_error(&error))?;
+        conjunct = Some(match conjunct {
+            None => eq,
+            Some(acc) => arena.and(acc, eq).map_err(|error| map_ir_error(&error))?,
+        });
+    }
+    Ok(conjunct)
+}
+
+fn assignment_with_internal(
+    arena: &TermArena,
+    model: &Model,
+    assignment: &Assignment,
+    internal_symbols: &HashSet<SymbolId>,
+) -> Assignment {
+    let mut merged = model.to_assignment();
+    for &symbol in internal_symbols {
+        let (_name, sort) = arena.symbol(symbol);
+        if let Some(value) = assignment
+            .get(symbol)
+            .or_else(|| well_founded_default(arena, sort))
+        {
+            merged.set(symbol, value);
+        }
+    }
+    merged
 }
 
 fn original_assumptions(assumptions: &[OneShotAssumption]) -> Vec<TermId> {

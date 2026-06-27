@@ -2168,6 +2168,195 @@ fn warm_assumption_abstracts_select_congruence_without_persisting() {
 }
 
 #[test]
+fn warm_assert_abstracts_bv_uf_application() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("warm_uf_f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let x_sym = arena.declare("warm_uf_x", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_sym);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let target = arena.bv_const(8, 0x42).unwrap();
+    let assertion = arena.eq(fx, target).unwrap();
+    assert!(
+        IncrementalBvSolver::term_needs_deferred_theory(&arena, assertion),
+        "the original assertion contains an uninterpreted function application"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .expect("scalar BV UF applications should abstract to warm BV terms");
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the encoded UF abstraction should be UF-free"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "scalar UF abstraction should avoid the one-shot memory dispatcher"
+    );
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("warm UF abstraction should be satisfiable");
+    };
+    assert_eq!(
+        eval(&arena, assertion, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected UF model must replay the original application assertion"
+    );
+    assert!(
+        model.function(f).is_some(),
+        "warm UF application projection should define the touched function point"
+    );
+    assert!(
+        model
+            .iter()
+            .all(|(symbol, _)| !arena.symbol(symbol).0.starts_with("!axeyum_warm_uf_")),
+        "internal UF abstraction symbols must not leak into public models"
+    );
+}
+
+#[test]
+fn warm_uf_congruence_refutes_equal_arg_conflict() {
+    let mut arena = TermArena::new();
+    let func = arena
+        .declare_fun("warm_uf_congruence_f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let x_sym = arena
+        .declare("warm_uf_congruence_x", Sort::BitVec(8))
+        .unwrap();
+    let y_sym = arena
+        .declare("warm_uf_congruence_y", Sort::BitVec(8))
+        .unwrap();
+    let arg_x = arena.var(x_sym);
+    let arg_y = arena.var(y_sym);
+    let fx = arena.apply(func, &[arg_x]).unwrap();
+    let fy = arena.apply(func, &[arg_y]).unwrap();
+    let value_a = arena.bv_const(8, 0xaa).unwrap();
+    let value_b = arena.bv_const(8, 0xbb).unwrap();
+    let fx_is_a = arena.eq(fx, value_a).unwrap();
+    let fy_is_b = arena.eq(fy, value_b).unwrap();
+    let same_arg = arena.eq(arg_x, arg_y).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, fx_is_a)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_arg)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, fy_is_b)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "scalar UF congruence conflicts should stay on the warm path"
+    );
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
+fn warm_uf_congruence_is_scoped_by_push_pop() {
+    let mut arena = TermArena::new();
+    let func = arena
+        .declare_fun(
+            "warm_uf_congruence_scoped_f",
+            &[Sort::BitVec(8)],
+            Sort::BitVec(8),
+        )
+        .unwrap();
+    let x_sym = arena
+        .declare("warm_uf_congruence_scoped_x", Sort::BitVec(8))
+        .unwrap();
+    let y_sym = arena
+        .declare("warm_uf_congruence_scoped_y", Sort::BitVec(8))
+        .unwrap();
+    let arg_x = arena.var(x_sym);
+    let arg_y = arena.var(y_sym);
+    let fx = arena.apply(func, &[arg_x]).unwrap();
+    let fy = arena.apply(func, &[arg_y]).unwrap();
+    let value_a = arena.bv_const(8, 0x11).unwrap();
+    let value_b = arena.bv_const(8, 0x22).unwrap();
+    let fx_is_a = arena.eq(fx, value_a).unwrap();
+    let fy_is_b = arena.eq(fy, value_b).unwrap();
+    let same_arg = arena.eq(arg_x, arg_y).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, fx_is_a)
+        .unwrap();
+    assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)));
+
+    solver.push().unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_arg)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, fy_is_b)
+        .unwrap();
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+
+    assert!(solver.pop());
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("popping the conflicting UF app and its scoped congruence lemma should restore sat");
+    };
+    assert_eq!(
+        eval(&arena, fx_is_a, &model.to_assignment()).unwrap(),
+        Value::Bool(true)
+    );
+}
+
+#[test]
+fn warm_assumption_abstracts_uf_congruence_without_persisting() {
+    let mut arena = TermArena::new();
+    let func = arena
+        .declare_fun(
+            "warm_assume_uf_congruence_f",
+            &[Sort::BitVec(8)],
+            Sort::BitVec(8),
+        )
+        .unwrap();
+    let x_sym = arena
+        .declare("warm_assume_uf_congruence_x", Sort::BitVec(8))
+        .unwrap();
+    let y_sym = arena
+        .declare("warm_assume_uf_congruence_y", Sort::BitVec(8))
+        .unwrap();
+    let arg_x = arena.var(x_sym);
+    let arg_y = arena.var(y_sym);
+    let fx = arena.apply(func, &[arg_x]).unwrap();
+    let fy = arena.apply(func, &[arg_y]).unwrap();
+    let value_a = arena.bv_const(8, 0x33).unwrap();
+    let value_b = arena.bv_const(8, 0x44).unwrap();
+    let fx_is_a = arena.eq(fx, value_a).unwrap();
+    let fy_is_b = arena.eq(fy, value_b).unwrap();
+    let same_arg = arena.eq(arg_x, arg_y).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, fx_is_a)
+        .unwrap();
+    let outcome = solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[same_arg, fy_is_b])
+        .unwrap();
+    let AssumptionOutcome::Unsat { core } = outcome else {
+        panic!("equal-argument conflicting UF assumption should be unsat, got {outcome:?}");
+    };
+    assert!(
+        core.iter().all(|term| [same_arg, fy_is_b].contains(term)),
+        "reported core should name only user assumptions, not internal congruence lemmas"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "one-shot UF assumptions should not persist as deferred theory assertions"
+    );
+    assert!(
+        matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)),
+        "one-shot conflicting UF assumptions must not persist after the check"
+    );
+}
+
+#[test]
 fn assume_auto_keeps_same_index_memory_condition_on_warm_path() {
     let mut arena = TermArena::new();
     let mem = arena

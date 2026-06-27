@@ -58,9 +58,13 @@ Last reconciled with `main`: 2026-06-27.
   also landed for plain reads over BV-index/BV-element array symbols:
   `select(a,i)` is abstracted to an internal warm BV variable, same-array reads
   get scoped congruence lemmas, and SAT models are projected back into concrete
-  array entries before replay. `SymbolicMemory` load-equality helpers now use
-  the same automatic warm/memory route, so frontend helper calls benefit from
-  the warm slice without losing fallback on memory/UF shapes still outside it.
+  array entries before replay. A scalar UF-app sibling now handles Bool/BV
+  applications: `f(args)` is abstracted to an internal warm variable,
+  same-function applications get scoped congruence lemmas, and SAT models are
+  projected back into concrete `FuncValue` entries before replay.
+  `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
+  route, so frontend helper calls benefit from the warm slice without losing
+  fallback on memory/UF shapes still outside it.
   Default CFG exploration now uses that auto route too; `memory_aware=true`
   remains the explicit force-dispatch setting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
@@ -69,10 +73,10 @@ Last reconciled with `main`: 2026-06-27.
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
-  reads, plain symbolic-base BV-array loads, helper-level load branches,
-  reducible CFG memory branches, and fork queries, but general array/UF work
-  still rebuilds through the dispatcher
-  instead of retaining warm learned clauses.
+  reads, plain symbolic-base BV-array loads, scalar Bool/BV UF calls,
+  helper-level load branches, reducible CFG memory branches, and fork queries,
+  but general array/UF work still rebuilds through the dispatcher instead of
+  retaining warm learned clauses.
 - **Ask:** finish the ADR-0030 half: a true warm lazy-array/UF incremental route
   with retained theory clauses / learned lemmas / push-pop reuse. Until that
   exists, document the one-shot fallback as sound but not the final performance
@@ -82,7 +86,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm same-index ROW admission" / "Warm literal ROW chain admission" /
   "Warm constant-array read admission" / "Warm array-ITE read admission" /
   "Warm symbolic ROW conditional admission" / "Warm BV-array select-congruence
-  admission";
+  admission" / "Warm scalar UF congruence admission";
   `docs/plan/track-4-usecases-frontend/P4.1` / `P4.2` notes.
 
 ### U7 - medium - perf/encoding - deep store/read-over-write scaling remains open

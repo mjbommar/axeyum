@@ -886,12 +886,14 @@ pub const CAPABILITIES: &[Capability] = &[
                   warm; reducible symbolic-address conditional ROW over store chains can also \
                   stay warm with original-term replay/core reporting; select reads over \
                   BV-array symbols abstract to retained warm BV variables with scoped \
-                  select-congruence lemmas and replay-projected array models; warm lazy \
-                  arrays/UF = ADR-0030 future work)",
+                  select-congruence lemmas and replay-projected array models; scalar Bool/BV \
+                  uninterpreted-function applications abstract to retained warm variables with \
+                  scoped congruence lemmas and replay-projected function interpretations; warm \
+                  lazy arrays/UF = ADR-0030 future work)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\
-                   symbolic-ROW/select-congruence assertion and branch warm replay; warm path \
-                   refuses remaining deferred array/UF theories",
+                   symbolic-ROW/select-congruence/scalar-UF assertion and branch warm replay; warm \
+                   path refuses remaining deferred array/UF theories",
         reference: "ADR-0010/0030",
     },
     Capability {
@@ -906,8 +908,9 @@ pub const CAPABILITIES: &[Capability] = &[
         assurance: Assurance::Validated,
         evidence: "models replay-checked vs path condition; CFG targets are returned only with \
                    replay-checked models and optionally bucketed by caller-supplied concrete replay; \
-                   memory load helpers and CFG queries stay warm when their reads reduce and route \
-                   through the full dispatcher when unreduced; optimum certified by the underlying \
+                   memory load helpers, scalar UF calls, and CFG queries stay warm when their reads \
+                   reduce or scalar applications abstract, and route through the full dispatcher when \
+                   unreduced; optimum certified by the underlying \
                    procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",
         reference: "ADR-0009/0027",
     },
