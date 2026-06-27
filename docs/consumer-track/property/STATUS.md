@@ -2,6 +2,17 @@
 
 ## Current focus
 
+- **2026-06-27 — Test module assembly landed.**
+  `Counterexample::render_rust_test_module` now wraps caller-owned imports,
+  helper functions, fixture code, and generated `#[test]` items in a
+  deterministic sanitized `#[cfg(test)] mod ...` block. This keeps fixture and
+  domain replay semantics frontend-owned while giving property, verifier, and
+  EVM apps a stable module-level assembly step. The generated nested aggregate
+  corpus row now checks a complete module with caller-owned imports, nested
+  setup snippets, and a `Result<bool, _>` replay assertion; totals remain 8
+  cases, 2 proved, 6 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required
+  coverage.
+
 - **2026-06-27 — Result-returning replay adapters landed.**
   `Counterexample::render_rust_replay_call` now centralizes replay-call
   formatting, and the counterexample-to-test surface covers common
@@ -211,7 +222,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output toward richer fixture/module
-   assembly while keeping domain semantics caller-owned.
+2. Extend counterexample-to-`#[test]` output toward multi-case fixture files
+   while keeping domain semantics caller-owned.
 3. Keep broadening the SDK property corpus and add the external
    proptest/Kani-style baseline comparison.

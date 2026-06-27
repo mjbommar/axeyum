@@ -829,6 +829,55 @@ impl Counterexample {
         )
     }
 
+    /// Renders a `#[cfg(test)]` Rust module around generated test items.
+    ///
+    /// `module_prelude_snippets` and `test_snippets` are caller-owned Rust
+    /// item blocks. This helper only supplies deterministic module framing and
+    /// indentation, so imports, helper functions, domain fixtures, and generated
+    /// `#[test]` items remain under frontend control.
+    pub fn render_rust_test_module<PI, P, TI, T>(
+        module_name: &str,
+        module_prelude_snippets: PI,
+        test_snippets: TI,
+    ) -> String
+    where
+        PI: IntoIterator<Item = P>,
+        P: AsRef<str>,
+        TI: IntoIterator<Item = T>,
+        T: AsRef<str>,
+    {
+        let mut out = String::new();
+        out.push_str("#[cfg(test)]\n");
+        out.push_str("mod ");
+        out.push_str(&sanitize_rust_ident(module_name));
+        out.push_str(" {\n");
+        let mut wrote_block = false;
+        for snippet in module_prelude_snippets {
+            let snippet = snippet.as_ref();
+            if snippet.is_empty() {
+                continue;
+            }
+            if wrote_block {
+                out.push('\n');
+            }
+            push_indented_block(&mut out, snippet);
+            wrote_block = true;
+        }
+        for snippet in test_snippets {
+            let snippet = snippet.as_ref();
+            if snippet.is_empty() {
+                continue;
+            }
+            if wrote_block {
+                out.push('\n');
+            }
+            push_indented_block(&mut out, snippet);
+            wrote_block = true;
+        }
+        out.push_str("}\n");
+        out
+    }
+
     fn direct_fields<'a>(
         &'a self,
         root_name: &str,

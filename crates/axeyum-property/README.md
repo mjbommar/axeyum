@@ -43,3 +43,5 @@ test. Result-returning replay functions are covered by
 `Result<(), E>` and `render_rust_replay_expect_ok_assertion` /
 `render_rust_test_with_replay_expect_ok_assertion` for `Result<bool, E>`, while
 leaving the replay function, arguments, and failure message frontend-owned.
+`render_rust_test_module` wraps caller-owned imports/helpers and generated test
+items in a deterministic `#[cfg(test)]` module for fixture-oriented frontends.

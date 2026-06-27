@@ -678,6 +678,7 @@ fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay(
             "}\n",
         )
     );
+    assert_nested_replay_module_rendering(&counterexample, &transfer_limits, &transfer_init)?;
 
     let duplicate = counterexample
         .render_rust_named_struct_let_with_fields(
@@ -690,6 +691,55 @@ fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay(
     assert!(
         duplicate.to_string().contains("already initialized"),
         "unexpected error: {duplicate}"
+    );
+    Ok(())
+}
+
+fn assert_nested_replay_module_rendering(
+    counterexample: &Counterexample,
+    transfer_limits: &str,
+    transfer_init: &str,
+) -> TestResult {
+    let test = counterexample.render_rust_test_with_replay_assertion(
+        "nested replay case",
+        std::iter::empty::<&str>(),
+        [transfer_limits, transfer_init],
+        "replay_transfer",
+        ["transfer"],
+    )?;
+    assert_eq!(
+        Counterexample::render_rust_test_module(
+            "counterexample module",
+            [
+                "use super::*;",
+                "fn replay_transfer(_: TransferInput) -> bool {\n    true\n}\n",
+            ],
+            [test.as_str()],
+        ),
+        concat!(
+            "#[cfg(test)]\n",
+            "mod counterexample_module {\n",
+            "    use super::*;\n",
+            "\n",
+            "    fn replay_transfer(_: TransferInput) -> bool {\n",
+            "        true\n",
+            "    }\n",
+            "\n",
+            "    #[test]\n",
+            "    fn nested_replay_case() {\n",
+            "        let transfer_enabled: bool = true;\n",
+            "        let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
+            "        let transfer_limits: TransferLimits = TransferLimits {\n",
+            "            fee: transfer_limits_fee,\n",
+            "        };\n",
+            "        let transfer: TransferInput = TransferInput {\n",
+            "            enabled: transfer_enabled,\n",
+            "            limits: transfer_limits,\n",
+            "        };\n",
+            "        assert!(replay_transfer(transfer));\n",
+            "    }\n",
+            "}\n",
+        )
     );
     Ok(())
 }

@@ -679,6 +679,7 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
         )
     );
     assert_nested_replay_test_rendering(&counterexample, &transfer_limits, &transfer_init)?;
+    assert_nested_replay_module_rendering(&counterexample, &transfer_limits, &transfer_init)?;
     let summary = certificate.summary();
     assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
 
@@ -688,7 +689,7 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
         workflow: "caller-owned nested aggregate replay",
         expected: ExpectedOutcome::Disproved,
         actual: summary.outcome,
-        checks: "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order",
+        checks: "generated `#[test]` module includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order",
         baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
         lean_required: false,
         lean_available: false,
@@ -746,6 +747,51 @@ fn assert_nested_replay_test_rendering(
             "        limits: transfer_limits,\n",
             "    };\n",
             "    assert!(replay_transfer(transfer).expect(\"counterexample replay failed\"));\n",
+            "}\n",
+        )
+    );
+    Ok(())
+}
+
+fn assert_nested_replay_module_rendering(
+    counterexample: &Counterexample,
+    transfer_limits: &str,
+    transfer_init: &str,
+) -> CorpusResult<()> {
+    let test = counterexample.render_rust_test_with_replay_expect_ok_assertion(
+        "nested transfer replay",
+        std::iter::empty::<&str>(),
+        [transfer_limits, transfer_init],
+        "replay_transfer",
+        ["transfer"],
+        "counterexample replay failed",
+    )?;
+    assert_eq!(
+        Counterexample::render_rust_test_module(
+            "counterexample module",
+            ["use crate::{TransferInput, TransferLimits};"],
+            [test.as_str()],
+        ),
+        concat!(
+            "#[cfg(test)]\n",
+            "mod counterexample_module {\n",
+            "    use crate::{TransferInput, TransferLimits};\n",
+            "\n",
+            "    #[test]\n",
+            "    fn nested_transfer_replay() {\n",
+            "        let transfer_enabled: bool = false;\n",
+            "        let transfer_amount: u8 = 0x01_u8; // BV8\n",
+            "        let transfer_limits_fee: u8 = 0x00_u8; // BV8\n",
+            "        let transfer_limits: TransferLimits = TransferLimits {\n",
+            "            fee: transfer_limits_fee,\n",
+            "        };\n",
+            "        let transfer: TransferInput = TransferInput {\n",
+            "            enabled: transfer_enabled,\n",
+            "            amount: transfer_amount,\n",
+            "            limits: transfer_limits,\n",
+            "        };\n",
+            "        assert!(replay_transfer(transfer).expect(\"counterexample replay failed\"));\n",
+            "    }\n",
             "}\n",
         )
     );
