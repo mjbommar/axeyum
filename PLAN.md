@@ -2004,6 +2004,17 @@ against competitor source, are now binding:
      `(array default 0 [1 -> 2] [2 -> 1])`. The next AUFLIA move is therefore a
      bounded multi-hop component-array chain repair/diagnostic with explicit
      replay-improvement gating, not a two-OR special case.
+     **BOUNDED RESIDUAL CHAIN REPAIR LANDED (2026-06-26):** on small replay
+     surfaces, the production branch/select-cycle repair now follows up to four
+     generated-OR hops after the same-branch residual store-target repair,
+     records the best strict full-replay improvement, and preserves the original
+     OR + select at every hop. A focused regression clears the two-OR analogue.
+     The large `bug337` diagnostic now shows the chain reaches OR 236 / term
+     13052 at `same_full_replay`, total_false=1; OR 236 best branch 0 has 2/2
+     false literals, first false term 12950 (`3` vs `1`), and blindly repairing
+     that branch worsens to total_false=2 at scalar equality term 2611. The next
+     AUFLIA move is scalar-aware OR-236 handling after the residual chain, not
+     more component-array-only hops.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

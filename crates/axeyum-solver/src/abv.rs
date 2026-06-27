@@ -6325,6 +6325,8 @@ fn replay_branch_select_residual_candidate_from_trial(
     select_stats: ProjectionRepairStats,
     trial: &Assignment,
 ) -> Result<Vec<ReplayBranchSelectCandidateDiagnostic>, SolverError> {
+    const MAX_RESIDUAL_FOLLOWUP_OR_DIAGNOSTIC_HOPS: usize = 4;
+
     let Some(global_failure) =
         first_projected_replay_failure(arena, originals, trial, ProjectionRepairStats::default())?
     else {
@@ -6389,53 +6391,58 @@ fn replay_branch_select_residual_candidate_from_trial(
         &residual_trial,
     )?];
 
-    let Some(followup_failure) = first_projected_replay_failure(
-        arena,
-        originals,
-        &residual_trial,
-        ProjectionRepairStats::default(),
-    )?
-    else {
-        return Ok(diagnostics);
-    };
-    if followup_failure.conjunct_term == branch_disjunction
-        || !matches!(
-            arena.node(followup_failure.conjunct_term),
-            TermNode::App { op: Op::BoolOr, .. }
-        )
-    {
-        return Ok(diagnostics);
-    }
-    let Some(followup_or) = followup_failure.failed_or else {
-        return Ok(diagnostics);
-    };
-    let mut followup_trial = residual_trial.clone();
-    let Some(followup_stats) = repair_projected_branch_as_candidate(
-        arena,
-        originals,
-        followup_or.best_branch_term,
-        &mut followup_trial,
-    )?
-    else {
-        return Ok(diagnostics);
-    };
+    let mut followup_trial = residual_trial;
     let mut followup_select_stats = combined_select_stats;
-    followup_select_stats.absorb(followup_stats);
-    let followup_kind = format!(
-        "{residual_kind}+followup_or{}_branch{}",
-        followup_failure.conjunct_ordinal, followup_or.best_branch_ordinal
-    );
-    diagnostics.push(replay_branch_select_candidate_from_trial(
-        arena,
-        originals,
-        current_false,
-        branch_ordinal,
-        select_failure,
-        &followup_kind,
-        branch_stats,
-        followup_select_stats,
-        &followup_trial,
-    )?);
+    let mut followup_kind = residual_kind;
+    for _ in 0..MAX_RESIDUAL_FOLLOWUP_OR_DIAGNOSTIC_HOPS {
+        let Some(followup_failure) = first_projected_replay_failure(
+            arena,
+            originals,
+            &followup_trial,
+            ProjectionRepairStats::default(),
+        )?
+        else {
+            break;
+        };
+        if followup_failure.conjunct_term == branch_disjunction
+            || !matches!(
+                arena.node(followup_failure.conjunct_term),
+                TermNode::App { op: Op::BoolOr, .. }
+            )
+        {
+            break;
+        }
+        let Some(followup_or) = followup_failure.failed_or else {
+            break;
+        };
+        let mut next_trial = followup_trial.clone();
+        let Some(followup_stats) = repair_projected_branch_as_candidate(
+            arena,
+            originals,
+            followup_or.best_branch_term,
+            &mut next_trial,
+        )?
+        else {
+            break;
+        };
+        followup_select_stats.absorb(followup_stats);
+        followup_kind = format!(
+            "{followup_kind}+followup_or{}_branch{}",
+            followup_failure.conjunct_ordinal, followup_or.best_branch_ordinal
+        );
+        diagnostics.push(replay_branch_select_candidate_from_trial(
+            arena,
+            originals,
+            current_false,
+            branch_ordinal,
+            select_failure,
+            &followup_kind,
+            branch_stats,
+            followup_select_stats,
+            &next_trial,
+        )?);
+        followup_trial = next_trial;
+    }
     Ok(diagnostics)
 }
 
@@ -7098,6 +7105,105 @@ fn branch_select_cycle_choice_is_better(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
+fn repair_projected_replay_branch_select_residual_chain(
+    search: &BranchSelectCycleSearch<'_>,
+    first_ordinal: usize,
+    select_ordinal: usize,
+    select_failure: &ReplayFailure,
+    mut stats: ProjectionRepairStats,
+    mut trial: Assignment,
+    best: &mut Option<BranchSelectCycleRepairChoice>,
+) -> Result<(), SolverError> {
+    const MAX_BRANCH_SELECT_RESIDUAL_CHAIN_HOPS: usize = 4;
+
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!(
+            "lazy-ext branch-select residual repair failed: {e}"
+        ))
+    };
+    for _ in 0..=MAX_BRANCH_SELECT_RESIDUAL_CHAIN_HOPS {
+        if eval(search.arena, search.branch_disjunction, &trial).map_err(ir)? != Value::Bool(true)
+            || eval(search.arena, select_failure.conjunct_term, &trial).map_err(ir)?
+                != Value::Bool(true)
+        {
+            return Ok(());
+        }
+
+        let total_false = positive_replay_false_count(search.arena, search.originals, &trial)?;
+        if total_false < search.current_false
+            && branch_select_cycle_choice_is_better(
+                best.as_ref(),
+                total_false,
+                first_ordinal,
+                select_ordinal,
+                first_ordinal,
+            )
+        {
+            *best = Some((
+                total_false,
+                first_ordinal,
+                select_ordinal,
+                first_ordinal,
+                stats,
+                trial.clone(),
+            ));
+        }
+        if total_false == 0 {
+            return Ok(());
+        }
+
+        let Some(followup_failure) = first_projected_replay_failure(
+            search.arena,
+            search.originals,
+            &trial,
+            ProjectionRepairStats::default(),
+        )?
+        else {
+            return Ok(());
+        };
+        if followup_failure.conjunct_term == search.branch_disjunction
+            || !matches!(
+                search.arena.node(followup_failure.conjunct_term),
+                TermNode::App { op: Op::BoolOr, .. }
+            )
+        {
+            return Ok(());
+        }
+        let Some(followup_or) = followup_failure.failed_or else {
+            return Ok(());
+        };
+
+        let mut followup_trial = trial.clone();
+        let Some(followup_stats) = repair_projected_branch_as_candidate(
+            search.arena,
+            search.originals,
+            followup_or.best_branch_term,
+            &mut followup_trial,
+        )?
+        else {
+            return Ok(());
+        };
+        if eval(
+            search.arena,
+            followup_failure.conjunct_term,
+            &followup_trial,
+        )
+        .map_err(ir)?
+            != Value::Bool(true)
+            || eval(search.arena, search.branch_disjunction, &followup_trial).map_err(ir)?
+                != Value::Bool(true)
+            || eval(search.arena, select_failure.conjunct_term, &followup_trial).map_err(ir)?
+                != Value::Bool(true)
+        {
+            return Ok(());
+        }
+        stats.absorb(followup_stats);
+        trial = followup_trial;
+    }
+    Ok(())
+}
+
 struct BranchSelectCycleSearch<'a> {
     arena: &'a TermArena,
     originals: &'a [TermId],
@@ -7183,26 +7289,15 @@ fn repair_projected_replay_branch_select_cycle_after_select(
             && eval(search.arena, select_failure.conjunct_term, &residual_trial).map_err(ir)?
                 == Value::Bool(true)
         {
-            let total_false =
-                positive_replay_false_count(search.arena, search.originals, &residual_trial)?;
-            if total_false < search.current_false
-                && branch_select_cycle_choice_is_better(
-                    best.as_ref(),
-                    total_false,
-                    first_ordinal,
-                    select_ordinal,
-                    first_ordinal,
-                )
-            {
-                *best = Some((
-                    total_false,
-                    first_ordinal,
-                    select_ordinal,
-                    first_ordinal,
-                    residual_stats,
-                    residual_trial,
-                ));
-            }
+            repair_projected_replay_branch_select_residual_chain(
+                search,
+                first_ordinal,
+                select_ordinal,
+                select_failure,
+                residual_stats,
+                residual_trial,
+                best,
+            )?;
         }
     }
 
@@ -9316,6 +9411,82 @@ mod tests {
         );
         assert!(note.contains("target_true=true"), "{note}");
         assert!(note.contains("total_false=0"), "{note}");
+    }
+
+    #[test]
+    fn lazy_ext_branch_select_cycle_repairs_residual_followup_or_chain() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let c = arena.array_var("c", 4, 8).unwrap();
+        let d = arena.array_var("d", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let two4 = arena.bv_const(4, 2).unwrap();
+        let three4 = arena.bv_const(4, 3).unwrap();
+        let five8 = arena.bv_const(8, 5).unwrap();
+        let seven8 = arena.bv_const(8, 7).unwrap();
+        let false_term = arena.bool_const(false);
+        let i_eq_two = arena.eq(i, two4).unwrap();
+        let store_a_three = arena.store(a, three4, seven8).unwrap();
+        let c_eq_store = arena.eq(c, store_a_three).unwrap();
+        let store_branch = arena.and(i_eq_two, c_eq_store).unwrap();
+        let blocked_branch = arena.and(false_term, false_term).unwrap();
+        let first_or = arena.or(store_branch, blocked_branch).unwrap();
+        let read_a_i = arena.select(a, i).unwrap();
+        let five_eq_read = arena.eq(five8, read_a_i).unwrap();
+        let d_eq_c = arena.eq(d, c).unwrap();
+        let second_or = arena.or(d_eq_c, blocked_branch).unwrap();
+        let first = arena.and(first_or, five_eq_read).unwrap();
+        let assertion = arena.and(first, second_or).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(c_symbol) = arena.node(c) else {
+            panic!("c should be a symbol");
+        };
+        let TermNode::Symbol(d_symbol) = arena.node(d) else {
+            panic!("d should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let default_c = default_value_for_symbol(&arena, *c_symbol).unwrap();
+        let default_d = default_value_for_symbol(&arena, *d_symbol).unwrap();
+        let mut projected = Assignment::new();
+        projected.set(*a_symbol, default_a);
+        projected.set(*c_symbol, default_c);
+        projected.set(*d_symbol, default_d);
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            2
+        );
+        let stats = repair_projected_replay_branch_select_cycle(
+            &arena,
+            &originals,
+            first_or,
+            &mut projected,
+        )
+        .unwrap()
+        .expect("expected residual follow-up OR repair");
+        assert!(stats.branch_symbol_changes >= 3, "{stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
+        assert_eq!(
+            eval(&arena, five_eq_read, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            eval(&arena, c_eq_store, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(eval(&arena, d_eq_c, &projected).unwrap(), Value::Bool(true));
     }
 
     #[test]
