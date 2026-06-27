@@ -413,6 +413,88 @@ fn render_json(rows: &[(&Case, Outcome)], overall: &Tally) -> String {
     out
 }
 
+/// Builds a contract that does `n` concrete-key `SSTORE`s (`storage[i] = i`) then
+/// `SLOAD`s a symbolic calldata key and reverts iff it equals `0xdead`. The
+/// revert is unreachable (every stored value and the cold default are `< 0xdead`),
+/// so both encodings must prove it safe — while reasoning over a store-chain of
+/// depth `n`. This is the read-over-write depth knob the warm-vs-`ite` cost turns
+/// on. `n <= 48` keeps the `JUMPDEST` within a `PUSH1`.
+fn deep_chain_bytecode(n: u8) -> Vec<u8> {
+    let mut code = Vec::new();
+    for i in 0..n {
+        code.extend_from_slice(&[PUSH1, i, PUSH1, i, SSTORE]); // storage[i] = i
+    }
+    let dest = u8::try_from(5 * usize::from(n) + 12).expect("dest fits a PUSH1");
+    code.extend_from_slice(&[PUSH1, 0x00, CALLDATALOAD, SLOAD]); // loaded = storage[calldata[0:32]]
+    code.extend_from_slice(&[PUSH2, 0xde, 0xad, EQ, PUSH1, dest, JUMPI, STOP]);
+    code.extend_from_slice(&[JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT]);
+    code
+}
+
+/// One depth point of the store-chain scaling sweep.
+struct ScaleRow {
+    depth: u8,
+    ite_tag: String,
+    ite_us: u128,
+    warm_tag: String,
+    warm_us: u128,
+    agree: bool,
+}
+
+/// Decide the deep store-chain at increasing depths under both encodings.
+fn scaling_sweep() -> Vec<ScaleRow> {
+    let mut out = Vec::new();
+    for &depth in &[2_u8, 4, 8, 16, 32] {
+        let case = Case {
+            name: "deep-store-chain",
+            shape: Shape::SymbolicStorage,
+            expect: Expect::Safe,
+            bytecode: deep_chain_bytecode(depth),
+        };
+        let t0 = Instant::now();
+        let ite = evaluate_with(&case, MemoryEncoding::IteFold);
+        let ite_us = t0.elapsed().as_micros();
+        let t1 = Instant::now();
+        let warm = evaluate_with(&case, MemoryEncoding::WarmArray);
+        let warm_us = t1.elapsed().as_micros();
+        out.push(ScaleRow {
+            depth,
+            agree: ite.tag() == warm.tag(),
+            ite_tag: ite.tag().to_string(),
+            ite_us,
+            warm_tag: warm.tag().to_string(),
+            warm_us,
+        });
+    }
+    out
+}
+
+fn render_scaling(rows: &[ScaleRow]) -> String {
+    let mut out = String::new();
+    out.push_str("\n## Storage-depth scaling (warm-array vs `ite`-fold)\n\n");
+    out.push_str(
+        "A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a \
+         symbolic key — the read-over-write depth knob. Both encodings prove it \
+         safe at every depth (agreement = soundness); the times show how each \
+         encoding's cost grows with chain depth.\n\n",
+    );
+    out.push_str("| Store-chain depth | `ite`-fold | t µs | warm-array | t µs | agree |\n");
+    out.push_str("|---|---|---|---|---|---|\n");
+    for r in rows {
+        let _ = writeln!(
+            out,
+            "| {} | {} | {} | {} | {} | {} |",
+            r.depth,
+            r.ite_tag,
+            r.ite_us,
+            r.warm_tag,
+            r.warm_us,
+            if r.agree { "yes" } else { "**NO**" },
+        );
+    }
+    out
+}
+
 /// Aggregate per-case outcomes into an overall tally and a per-shape breakdown.
 fn aggregate(rows: &[(&Case, Outcome)]) -> (Tally, Vec<(Shape, Tally)>) {
     let shapes = [
@@ -459,10 +541,22 @@ fn main() -> ExitCode {
         }
     }
 
+    let scale = scaling_sweep();
+    for r in &scale {
+        if !r.agree {
+            eprintln!(
+                "SCALING DISAGREE at depth {}: {} vs {}",
+                r.depth, r.ite_tag, r.warm_tag
+            );
+            overall.disagree += 1;
+        }
+    }
+
     let md = format!(
-        "{}{}",
+        "{}{}{}",
         render_markdown(&rows, &overall, &by_shape),
-        render_compare(&cmp)
+        render_compare(&cmp),
+        render_scaling(&scale),
     );
     let json = render_json(&rows, &overall);
 

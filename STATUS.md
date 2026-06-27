@@ -49,15 +49,24 @@ the retired branch property API and duplicates `main`'s `property/SCOREBOARD`).
 `MemoryEncoding::WarmArray` (`const_array(0)` + `store`/`select`, auto-routed via
 `SymbolicMemory` + `assume_auto`). They are denotation-equivalent: cross-encoding
 agreement holds on every symbolic-storage/keccak row (DISAGREE=0), proving
-`main`'s warm array path handles the EVM's storage patterns. At the corpus's
-*shallow* store depths the two are comparable in wall-clock (roundtrip ~20 ms
-either way); the warm-path advantage is expected only at **deep store-chains**,
-which the corpus does not yet stress. So the next measurement is a deep-chain row
-(forward-backlog A1), and *that* number should drive the U6 general-vs-special
-decision.
+`main`'s warm array path handles the EVM's storage patterns.
+
+**Measured (the store-chain scaling sweep refutes the naive hypothesis).** I
+expected warm-array to *win* at depth; the data says the opposite. On a safe
+contract that `SSTORE`s `n` concrete slots then `SLOAD`s a symbolic key,
+`ite`-fold is consistently faster and the gap **grows** with depth (depth 2:
+1.3 ms vs 1.2 ms ≈ tie; depth 16: 2.1 ms vs 4.9 ms; depth 32: 3.2 ms vs
+14.5 ms), both proving safe (DISAGREE=0). Cause: the current warm path routes a
+`select` over a deep `store`-chain through the **one-shot memory dispatcher**
+(re-processing the chain each check), whereas `ite`-fold stays on the warm
+incremental BV path where concrete-key equality guards constant-fold. So the
+honest conclusion for **U6**: capability has landed but *performance has not* —
+the win requires a true **incremental lazy-array** engine, not the one-shot
+dispatcher; until then `ite`-fold rightly stays the EVM default. This is the
+data-driven answer the special-case-vs-general question wanted.
 
 **Next.** Forward backlog in [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main):
-A1 multi-tx invariants (+ a deep-store-chain warm-vs-`ite` row), then A2
+A1 multi-tx invariants (persistent storage across a call sequence), then A2
 CALL/DELEGATECALL modeling; C4 general CFG→`TransitionSystem` lowering.
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no

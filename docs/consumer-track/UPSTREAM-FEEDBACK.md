@@ -53,6 +53,20 @@ Last reconciled with `main`: 2026-06-27.
   the corpus with the memory shapes real contracts exercise, and let the
   unknown/fallback rows (not an open-ended fold list) drive which general
   capability is worth building next.
+- **Measured perf signal (2026-06-27, I4b):** `axeyum-evm` now decides symbolic
+  storage two ways — frontend `ite`-fold vs real `select`/`store` arrays routed
+  through the warm/memory path (`SymbolicMemory` + `assume_auto`). They agree on
+  every row (DISAGREE=0), but on a store-chain depth sweep the **array path is
+  slower, and the gap grows with depth** (depth 32: `ite`-fold ~3 ms vs
+  warm-array ~14 ms; both prove safe). Root cause: a `select` over a deep
+  `store`-chain falls to the **one-shot memory dispatcher**, which re-processes
+  the chain each check, while `ite`-fold stays on the warm incremental BV path
+  and concrete-key guards constant-fold. **Takeaway for U6:** the missing piece
+  is not more capability but a *truly incremental* lazy-array engine (retained
+  array state across `enter`/`backtrack`, not one-shot re-dispatch); until that
+  exists, the frontend `ite`-fold is the faster encoding for consumer storage and
+  remains the EVM default. Reproduce: `cargo run -p axeyum-evm --example
+  measure_evm` → "Storage-depth scaling" table.
 - **What:** the original consumer pain was that `SymbolicExecutor`'s warm path
   refused active array/UF assertions and `Op::Apply` was unsupported by the
   bit-blaster. A usable one-shot route has landed: deferred array/UF assertions
