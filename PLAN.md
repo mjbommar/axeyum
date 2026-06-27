@@ -2048,6 +2048,17 @@ against competitor source, are now binding:
      The next AUFLIA move is scalar-closure-aware OR-236 branch selection:
      score candidate branches after their local scalar closure, not just by raw
      false-literal count.
+     **SCALAR-CLOSURE BRANCH SCORING LANDED (2026-06-27):** replay OR notes
+     now score candidate branches after branch repair plus bounded scalar
+     closure. On `bug337`, this rules out a simple alternate-branch fix for
+     OR 236: reported branches **0..7** all locally repair to
+     **raw_branch_false=0**, then scalar closure returns replay to OR **236**
+     with **final_branch_false=2** and **final_total_false=1**. The next AUFLIA
+     move is no longer branch choice; it is learning/refining the scalar/array
+     constraint that makes this OR-236 branch family impossible under the
+     current model, or adding a production closure-aware rejection guard so the
+     repair loop does not spend time forcing branches that immediately close
+     back to the same OR.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

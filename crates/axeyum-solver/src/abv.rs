@@ -3243,6 +3243,7 @@ struct ReplayOrFailure {
     best_branch_first_false_eq: Option<ReplayEqFailure>,
     best_branch_false_literal_details: Vec<ReplayBranchFalseLiteralDiagnostic>,
     best_branch_paired_scalar_chain: Option<ReplayScalarChainDiagnostic>,
+    scalar_closure_branch_candidates: Vec<ReplayBranchScalarClosureCandidateDiagnostic>,
 }
 
 fn replay_failed_or_details(
@@ -3311,6 +3312,7 @@ fn replay_failed_or_details(
             },
             best_branch_false_literal_details: false_literal_details,
             best_branch_paired_scalar_chain: None,
+            scalar_closure_branch_candidates: Vec::new(),
         };
         let candidate_key = (
             candidate.best_branch_false_literals,
@@ -3612,10 +3614,150 @@ fn replay_paired_scalar_chain_diagnostic_for_or_failure(
     }))
 }
 
+fn replay_scalar_closure_from_trial(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    assignment: &Assignment,
+) -> Result<(Vec<ReplayScalarChoiceDiagnostic>, Assignment), SolverError> {
+    const MAX_SCALAR_CLOSURE_STEPS: usize = 4;
+
+    let mut trial = assignment.clone();
+    let mut steps = Vec::new();
+    let mut seen = BTreeSet::new();
+    for _ in 0..MAX_SCALAR_CLOSURE_STEPS {
+        let Some(failure) = first_projected_replay_failure(
+            arena,
+            originals,
+            &trial,
+            ProjectionRepairStats::default(),
+        )?
+        else {
+            break;
+        };
+        if !seen.insert(failure.conjunct_ordinal)
+            || direct_scalar_equality_repair_choices(arena, failure.conjunct_term).is_empty()
+        {
+            break;
+        }
+        let Some((diagnostic, next_trial)) = replay_best_scalar_choice_effect_for_literal(
+            arena,
+            originals,
+            branch,
+            &trial,
+            failure.conjunct_term,
+        )?
+        else {
+            break;
+        };
+        steps.push(diagnostic);
+        trial = next_trial;
+    }
+    Ok((steps, trial))
+}
+
+#[allow(clippy::too_many_lines)]
+fn replay_scalar_closure_branch_candidates(
+    arena: &TermArena,
+    originals: &[TermId],
+    assignment: &Assignment,
+    disjunction: TermId,
+    or_failure: &ReplayOrFailure,
+) -> Result<Vec<ReplayBranchScalarClosureCandidateDiagnostic>, SolverError> {
+    const MAX_SCALAR_CLOSURE_BRANCHES: usize = 32;
+    const MAX_SCALAR_CLOSURE_REPORTED_BRANCHES: usize = 8;
+
+    if or_failure.best_branch_false_literals < 2
+        || or_failure.branch_count > MAX_SCALAR_CLOSURE_BRANCHES
+        || or_failure
+            .best_branch_false_literal_details
+            .iter()
+            .all(|detail| {
+                direct_scalar_equality_repair_choices(arena, detail.literal_term).is_empty()
+            })
+    {
+        return Ok(Vec::new());
+    }
+
+    let mut branches = Vec::new();
+    collect_positive_disjuncts(arena, disjunction, &mut branches);
+    let mut diagnostics = Vec::new();
+    for (branch_ordinal, branch) in branches.into_iter().enumerate() {
+        let initial_false = branch_false_literal_count(arena, branch, assignment)?;
+        let mut trial = assignment.clone();
+        let (repair_kind, repair_changes) = if initial_false == 0 {
+            ("already_true".to_owned(), 0)
+        } else if let Some((kind, stats)) =
+            repair_projected_branch_best_candidate(arena, originals, branch, &mut trial)?
+        {
+            (kind.to_owned(), stats.changes())
+        } else {
+            diagnostics.push(ReplayBranchScalarClosureCandidateDiagnostic {
+                branch_ordinal,
+                initial_false_literals: initial_false,
+                repair_kind: "no_repair".to_owned(),
+                repair_changes: 0,
+                raw_branch_false_literals: None,
+                raw_total_false_conjuncts: None,
+                closure_steps: Vec::new(),
+                final_branch_false_literals: None,
+                final_total_false_conjuncts: None,
+                final_global_false_ordinal: None,
+                final_global_false_term: None,
+                final_global_false_eq: None,
+            });
+            continue;
+        };
+
+        let raw_branch_false = branch_false_literal_count(arena, branch, &trial)?;
+        let raw_total_false = positive_replay_false_count(arena, originals, &trial)?;
+        let (closure_steps, closure_trial) =
+            replay_scalar_closure_from_trial(arena, originals, branch, &trial)?;
+        let final_branch_false = branch_false_literal_count(arena, branch, &closure_trial)?;
+        let final_total_false = positive_replay_false_count(arena, originals, &closure_trial)?;
+        let final_failure = first_projected_replay_failure(
+            arena,
+            originals,
+            &closure_trial,
+            ProjectionRepairStats::default(),
+        )?;
+        diagnostics.push(ReplayBranchScalarClosureCandidateDiagnostic {
+            branch_ordinal,
+            initial_false_literals: initial_false,
+            repair_kind,
+            repair_changes,
+            raw_branch_false_literals: Some(raw_branch_false),
+            raw_total_false_conjuncts: Some(raw_total_false),
+            closure_steps,
+            final_branch_false_literals: Some(final_branch_false),
+            final_total_false_conjuncts: Some(final_total_false),
+            final_global_false_ordinal: final_failure
+                .as_ref()
+                .map(|failure| failure.conjunct_ordinal),
+            final_global_false_term: final_failure.as_ref().map(|failure| failure.conjunct_term),
+            final_global_false_eq: final_failure
+                .as_ref()
+                .and_then(|failure| failure.failed_eq.clone()),
+        });
+    }
+
+    diagnostics.sort_by_key(|diagnostic| {
+        (
+            diagnostic.final_total_false_conjuncts.unwrap_or(usize::MAX),
+            diagnostic.final_branch_false_literals.unwrap_or(usize::MAX),
+            diagnostic.initial_false_literals,
+            diagnostic.branch_ordinal,
+        )
+    });
+    diagnostics.truncate(MAX_SCALAR_CLOSURE_REPORTED_BRANCHES);
+    Ok(diagnostics)
+}
+
 fn enrich_replay_or_failure_with_scalar_choices(
     arena: &TermArena,
     originals: &[TermId],
     assignment: &Assignment,
+    disjunction: TermId,
     mut or_failure: ReplayOrFailure,
 ) -> Result<ReplayOrFailure, SolverError> {
     for detail in &mut or_failure.best_branch_false_literal_details {
@@ -3627,6 +3769,13 @@ fn enrich_replay_or_failure_with_scalar_choices(
             detail.literal_term,
         )?;
     }
+    or_failure.scalar_closure_branch_candidates = replay_scalar_closure_branch_candidates(
+        arena,
+        originals,
+        assignment,
+        disjunction,
+        &or_failure,
+    )?;
     or_failure.best_branch_paired_scalar_chain =
         replay_paired_scalar_chain_diagnostic_for_or_failure(
             arena,
@@ -5758,6 +5907,22 @@ struct ReplayScalarChainDiagnostic {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct ReplayBranchScalarClosureCandidateDiagnostic {
+    branch_ordinal: usize,
+    initial_false_literals: usize,
+    repair_kind: String,
+    repair_changes: usize,
+    raw_branch_false_literals: Option<usize>,
+    raw_total_false_conjuncts: Option<usize>,
+    closure_steps: Vec<ReplayScalarChoiceDiagnostic>,
+    final_branch_false_literals: Option<usize>,
+    final_total_false_conjuncts: Option<usize>,
+    final_global_false_ordinal: Option<usize>,
+    final_global_false_term: Option<TermId>,
+    final_global_false_eq: Option<ReplayEqFailure>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplayBranchCandidateDiagnostic {
     branch_ordinal: usize,
     initial_false_literals: usize,
@@ -5962,6 +6127,68 @@ fn write_replay_or_paired_scalar_chain(
     let _ = write!(note, ")");
 }
 
+fn write_replay_or_scalar_closure_branch_candidates(
+    note: &mut String,
+    prefix: &str,
+    or_failure: &ReplayOrFailure,
+) {
+    if or_failure.scalar_closure_branch_candidates.is_empty() {
+        return;
+    }
+    let _ = write!(note, ", {prefix}_scalar_closure_branch_candidates=[");
+    for (idx, candidate) in or_failure
+        .scalar_closure_branch_candidates
+        .iter()
+        .enumerate()
+    {
+        if idx > 0 {
+            let _ = write!(note, "; ");
+        }
+        let _ = write!(
+            note,
+            "#{}:init={},repair={},changes={}",
+            candidate.branch_ordinal,
+            candidate.initial_false_literals,
+            candidate.repair_kind,
+            candidate.repair_changes
+        );
+        if let Some(raw_branch_false) = candidate.raw_branch_false_literals {
+            let _ = write!(note, ",raw_branch_false={raw_branch_false}");
+        }
+        if let Some(raw_total_false) = candidate.raw_total_false_conjuncts {
+            let _ = write!(note, ",raw_total_false={raw_total_false}");
+        }
+        if !candidate.closure_steps.is_empty() {
+            let _ = write!(note, ",closure_steps=");
+            write_scalar_choice_effect_list(note, &candidate.closure_steps);
+        }
+        if let Some(final_branch_false) = candidate.final_branch_false_literals {
+            let _ = write!(note, ",final_branch_false={final_branch_false}");
+        }
+        if let Some(final_total_false) = candidate.final_total_false_conjuncts {
+            let _ = write!(note, ",final_total_false={final_total_false}");
+        }
+        if let Some(ordinal) = candidate.final_global_false_ordinal {
+            let _ = write!(note, ",final_global_false_ordinal={ordinal}");
+        }
+        if let Some(term) = candidate.final_global_false_term {
+            let _ = write!(note, ",final_global_false_term={}", term.index());
+        }
+        if let Some(eq) = &candidate.final_global_false_eq {
+            let _ = write!(
+                note,
+                ",final_global_false_lhs_term={},final_global_false_rhs_term={},\
+                 final_global_false_lhs_value={},final_global_false_rhs_value={}",
+                eq.lhs_term.index(),
+                eq.rhs_term.index(),
+                eq.lhs_value,
+                eq.rhs_value
+            );
+        }
+    }
+    let _ = write!(note, "]");
+}
+
 impl ReplayFailure {
     #[allow(clippy::too_many_lines)]
     fn note(&self) -> String {
@@ -6035,6 +6262,7 @@ impl ReplayFailure {
             }
             write_replay_or_false_literal_details(&mut note, "failed_or", or_failure);
             write_replay_or_paired_scalar_chain(&mut note, "failed_or", or_failure);
+            write_replay_or_scalar_closure_branch_candidates(&mut note, "failed_or", or_failure);
         }
         if !self.select_candidate_diagnostics.is_empty() {
             let _ = write!(note, ", select_candidate_diagnostics=[");
@@ -6199,6 +6427,11 @@ impl ReplayFailure {
                     }
                     write_replay_or_false_literal_details(&mut note, "global_false_or", or_failure);
                     write_replay_or_paired_scalar_chain(&mut note, "global_false_or", or_failure);
+                    write_replay_or_scalar_closure_branch_candidates(
+                        &mut note,
+                        "global_false_or",
+                        or_failure,
+                    );
                 }
             }
             let _ = write!(note, "]");
@@ -6821,7 +7054,15 @@ fn replay_branch_select_candidate_from_trial(
         .and_then(|failure| failure.failed_or.clone())
     {
         Some(enrich_replay_or_failure_with_scalar_choices(
-            arena, originals, trial, or_failure,
+            arena,
+            originals,
+            trial,
+            global_failure
+                .as_ref()
+                .map_or(select_failure.conjunct_term, |failure| {
+                    failure.conjunct_term
+                }),
+            or_failure,
         )?)
     } else {
         None
@@ -7139,7 +7380,11 @@ fn replay_failure_with_branch_candidate_diagnostics(
 ) -> Result<ReplayFailure, SolverError> {
     if let Some(or_failure) = failure.failed_or.take() {
         failure.failed_or = Some(enrich_replay_or_failure_with_scalar_choices(
-            arena, originals, projected, or_failure,
+            arena,
+            originals,
+            projected,
+            failure.conjunct_term,
+            or_failure,
         )?);
     }
     failure.select_candidate_diagnostics =
@@ -10192,6 +10437,14 @@ mod tests {
         );
         assert!(note.contains("branch_steps=["), "{note}");
         assert!(note.contains("followup_steps=[]"), "{note}");
+        assert!(note.contains("final_branch_false=0"), "{note}");
+        assert!(note.contains("final_total_false=0"), "{note}");
+        assert!(
+            note.contains("failed_or_scalar_closure_branch_candidates=["),
+            "{note}"
+        );
+        assert!(note.contains("#0:init=2"), "{note}");
+        assert!(note.contains("raw_branch_false=0"), "{note}");
         assert!(note.contains("final_branch_false=0"), "{note}");
         assert!(note.contains("final_total_false=0"), "{note}");
     }
