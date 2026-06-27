@@ -3308,6 +3308,76 @@ fn warm_array_ite_same_readback_drops_merge_guard() {
 }
 
 #[test]
+fn warm_index_ite_read_distributes_to_row_branches() {
+    let mut arena = TermArena::new();
+    let flag_sym = arena
+        .declare("warm_index_ite_read_flag", Sort::Bool)
+        .unwrap();
+    let flag = arena.var(flag_sym);
+    let idx_three = arena.bv_const(8, 3).unwrap();
+    let idx_four = arena.bv_const(8, 4).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, idx_three, one).unwrap();
+    let read_index = arena.ite(flag, idx_three, idx_four).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let loaded_eq_one = arena.eq(loaded, one).unwrap();
+
+    let simplified =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_one);
+    assert!(
+        !term_contains(&arena, simplified, read_index),
+        "the conditional address should be split before ROW expansion"
+    );
+    assert_eq!(
+        count_ite_nodes(&arena, simplified),
+        1,
+        "the warm encoding should retain only the scalar path choice"
+    );
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, simplified),
+        "conditional-address read should simplify to a pure warm assertion"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, loaded_eq_one)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "assert_simplifying_memory should not defer the split conditional read"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "conditional-address ROW simplification must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(model.get(flag_sym), Some(Value::Bool(true)));
+            assert_eq!(
+                eval(&arena, loaded_eq_one, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original conditional-address read"
+            );
+        }
+        other => panic!("expected warm conditional-address read assertion sat, got {other:?}"),
+    }
+
+    let mut impossible = IncrementalBvSolver::new();
+    let not_flag = arena.not(flag).unwrap();
+    impossible.assert(&arena, not_flag).unwrap();
+    impossible
+        .assert_simplifying_memory(&mut arena, loaded_eq_one)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "the stored value can only be read through the true conditional-address branch"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

@@ -1524,6 +1524,9 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
     if let Some(distributed) = distribute_select_over_array_ite(arena, array, read_index) {
         return Some(distributed);
     }
+    if let Some(distributed) = distribute_select_over_index_ite(arena, array, read_index) {
+        return Some(distributed);
+    }
     let (base, write_index, value) = match arena.node(array) {
         TermNode::App {
             op: Op::Store,
@@ -1547,6 +1550,27 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
     let same_index = arena.eq(write_index, read_index).ok()?;
     let base_read = arena.select(base, read_index).ok()?;
     arena.ite(same_index, value, base_read).ok()
+}
+
+fn distribute_select_over_index_ite(
+    arena: &mut TermArena,
+    array: TermId,
+    read_index: TermId,
+) -> Option<TermId> {
+    let (condition, then_index, else_index) = match arena.node(read_index) {
+        TermNode::App {
+            op: Op::Ite, args, ..
+        } => {
+            let [condition, then_index, else_index] = args.as_ref() else {
+                return None;
+            };
+            (*condition, *then_index, *else_index)
+        }
+        _ => return None,
+    };
+    let then_read = arena.select(array, then_index).ok()?;
+    let else_read = arena.select(array, else_index).ok()?;
+    arena.ite(condition, then_read, else_read).ok()
 }
 
 fn drop_shadowed_stores_at_index(
