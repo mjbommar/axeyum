@@ -38,7 +38,7 @@ use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{AletheCommand, check_alethe, check_drat, parse_dimacs, parse_drat};
-use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval};
+use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode, TermStats, Value, eval};
 
 use crate::abv::{
     ConstArrayDefaultMismatchCertificate, CrossStoreArrayDisequalityCertificate,
@@ -63,6 +63,7 @@ use crate::bv_uf_local::BvUfLocalRefutationCertificate;
 use crate::certify::{
     CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
 };
+use crate::counterexample::ModelMinimizeOutcome;
 use crate::datatype_acyclicity::DatatypeStructuralRefutationCertificate;
 use crate::dpll_lia::{ArithDpllOutcome, ArithDpllRefutation, certify_arith_dpll_unsat};
 use crate::dpll_t::{LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
@@ -1950,6 +1951,44 @@ pub fn produce_evidence(
     })
 }
 
+/// Like [`produce_evidence`], but when the query is satisfiable, optionally
+/// replaces the replay-checked model with a lexicographically minimized
+/// replay-checked model over `symbols`.
+///
+/// This is the evidence-facing "small counterexample" front door for property
+/// and verification consumers. It is strict: if the query is satisfiable but
+/// minimization cannot prove a minimal model, the returned report is
+/// [`Evidence::Unknown`] (or an explicit [`SolverError::Unsupported`] for an
+/// unsupported objective sort) rather than silently returning a non-minimal
+/// model.
+///
+/// # Errors
+///
+/// Returns errors from [`produce_evidence`] or from the model minimizer.
+pub fn produce_evidence_minimized(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    symbols: &[SymbolId],
+    config: &SolverConfig,
+) -> Result<EvidenceReport, SolverError> {
+    let mut report = produce_evidence(arena, assertions, config)?;
+    if symbols.is_empty() || !matches!(report.evidence, Evidence::Sat(_)) {
+        return Ok(report);
+    }
+
+    report.evidence = match crate::minimize_model_with_config(arena, assertions, symbols, config)? {
+        ModelMinimizeOutcome::Minimized(model) => Evidence::Sat(model),
+        ModelMinimizeOutcome::Unknown(reason) => Evidence::Unknown(reason),
+        ModelMinimizeOutcome::Infeasible => {
+            return Err(SolverError::Backend(
+                "produce_evidence_minimized: base query was sat but minimization found unsat"
+                    .to_owned(),
+            ));
+        }
+    };
+    Ok(report)
+}
+
 fn uflia_alethe_evidence_report(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -2516,6 +2555,45 @@ pub fn prove(
             }
             Ok(ProofOutcome::Proved(Box::new(report)))
         }
+    }
+}
+
+/// Like [`prove`], but when the goal is disproved, returns a replay-checked
+/// countermodel that is lexicographically minimized over `symbols`.
+///
+/// This is the proof-facing counterpart of [`produce_evidence_minimized`]. The
+/// default [`prove`] API remains unchanged; callers opt into the stricter
+/// minimization contract when they want a deterministic "small failing input".
+///
+/// If the negated goal is satisfiable but minimization is undecided, the result
+/// is [`ProofOutcome::Unknown`] rather than a non-minimal [`ProofOutcome::Disproved`].
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if a requested objective symbol has an
+/// unsupported sort, or propagates errors from [`prove`] and the minimizer.
+pub fn prove_minimized(
+    arena: &mut TermArena,
+    hypotheses: &[TermId],
+    goal: TermId,
+    symbols: &[SymbolId],
+    config: &SolverConfig,
+) -> Result<ProofOutcome, SolverError> {
+    let outcome = prove(arena, hypotheses, goal, config)?;
+    if symbols.is_empty() || !matches!(outcome, ProofOutcome::Disproved(_)) {
+        return Ok(outcome);
+    }
+
+    let negated_goal = arena.not(goal)?;
+    let mut query: Vec<TermId> = hypotheses.to_vec();
+    query.push(negated_goal);
+
+    match crate::minimize_model_with_config(arena, &query, symbols, config)? {
+        ModelMinimizeOutcome::Minimized(model) => Ok(ProofOutcome::Disproved(model)),
+        ModelMinimizeOutcome::Unknown(reason) => Ok(ProofOutcome::Unknown(reason)),
+        ModelMinimizeOutcome::Infeasible => Err(SolverError::Backend(
+            "prove_minimized: negated goal was sat but minimization found unsat".to_owned(),
+        )),
     }
 }
 

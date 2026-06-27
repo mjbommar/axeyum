@@ -3,8 +3,10 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{TermArena, Value, eval};
-use axeyum_solver::{ProofOutcome, SolverConfig, prove};
+use axeyum_ir::{Sort, TermArena, Value, eval};
+use axeyum_solver::{
+    Evidence, ProofOutcome, SolverConfig, produce_evidence_minimized, prove, prove_minimized,
+};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -80,6 +82,68 @@ fn disproves_a_bitvector_non_theorem() {
         panic!("x == 5 is not a theorem, got {outcome:?}");
     };
     let assignment = model.to_assignment();
+    assert_eq!(eval(&arena, goal, &assignment).unwrap(), Value::Bool(false));
+}
+
+#[test]
+fn produce_evidence_minimized_returns_small_sat_model() {
+    let mut arena = TermArena::new();
+    let flag_s = arena.declare("flag", Sort::Bool).unwrap();
+    let x_s = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let flag = arena.var(flag_s);
+    let x = arena.var(x_s);
+    let seven = arena.bv_const(8, 7).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let x_ge_7 = arena.bv_uge(x, seven).unwrap();
+    let flag_or_x_ge_7 = arena.or(flag, x_ge_7).unwrap();
+    let x_le_10 = arena.bv_ule(x, ten).unwrap();
+
+    let report = produce_evidence_minimized(
+        &mut arena,
+        &[flag_or_x_ge_7, x_le_10],
+        &[flag_s, x_s],
+        &config(),
+    )
+    .unwrap();
+    let Evidence::Sat(model) = &report.evidence else {
+        panic!("expected minimized sat evidence, got {:?}", report.evidence);
+    };
+    assert_eq!(model.get(flag_s), Some(Value::Bool(false)));
+    assert_eq!(model.get(x_s), Some(Value::Bv { width: 8, value: 7 }));
+    assert!(
+        report
+            .evidence
+            .check(&arena, &[flag_or_x_ge_7, x_le_10])
+            .unwrap()
+    );
+}
+
+#[test]
+fn prove_minimized_returns_small_countermodel() {
+    let mut arena = TermArena::new();
+    let x_s = arena.declare("px", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_s);
+    let seven = arena.bv_const(8, 7).unwrap();
+    let nine = arena.bv_const(8, 9).unwrap();
+    let ten = arena.bv_const(8, 10).unwrap();
+    let x_ge_7 = arena.bv_uge(x, seven).unwrap();
+    let x_le_10 = arena.bv_ule(x, ten).unwrap();
+    let goal = arena.eq(x, nine).unwrap();
+
+    let outcome = prove_minimized(&mut arena, &[x_ge_7, x_le_10], goal, &[x_s], &config()).unwrap();
+    let ProofOutcome::Disproved(model) = outcome else {
+        panic!("x in [7,10] should not prove x == 9, got {outcome:?}");
+    };
+    assert_eq!(model.get(x_s), Some(Value::Bv { width: 8, value: 7 }));
+    let assignment = model.to_assignment();
+    assert_eq!(
+        eval(&arena, x_ge_7, &assignment).unwrap(),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        eval(&arena, x_le_10, &assignment).unwrap(),
+        Value::Bool(true)
+    );
     assert_eq!(eval(&arena, goal, &assignment).unwrap(), Value::Bool(false));
 }
 

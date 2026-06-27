@@ -742,8 +742,11 @@ The product-facing counterexample path now also has a shared minimization helper
 re-solve the query under lexicographically optimal pins for selected Bool,
 unsigned-BV (`w <= 127`), and Int symbols, returning a replay-checked minimized
 model. This addresses the first consumer need for "small failing input" UX
-without each frontend reimplementing shrink loops; wider BV and richer theory
-values remain explicit unsupported/unknown cases.
+without each frontend reimplementing shrink loops. The same strict minimizer is
+now surfaced through `produce_evidence_minimized` and `prove_minimized`, so
+property/verification callers can request minimized `Evidence::Sat` models or
+minimized `ProofOutcome::Disproved` countermodels directly. Wider BV and richer
+theory values remain explicit unsupported/unknown cases.
 
 ## 4. Reflection on PLAN.md
 
