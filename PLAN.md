@@ -1826,6 +1826,19 @@ against competitor source, are now binding:
      `(array default 0 [1 -> 2] [2 -> 1])`, after 457 projection repair changes.
      The row remains `unknown`; next useful work is component-level
      store-chain/readback projection for this lower queue-lock branch.
+     **SELECTED CARRY-COMPONENT PROJECTION LANDED (2026-06-26):** targeted replay
+     branch-literal repair now solves direct array equalities as a selected carry
+     component: it gathers adjacent selected/best-branch array equalities touching
+     the failed pair, tries every component member as representative, aligns
+     direct readback symbols, and keeps only branch-improving/full-replay-
+     non-worsening candidates. A narrow targeted direct-select equality repair
+     is covered too, but a direct-select stabilization experiment was rejected
+     because it regressed `bug337` to branch 9841 and raised projection churn to
+     1848 changes. The retained `bug337` 10 s probe moves past branch 9841 /
+     `x_31 = x_17` to direct readback equality ordinal 34 / term 555,
+     `x_388 = select(x_325, x_337)`, values 1 vs 0, after 571 projection repair
+     changes. The row remains `unknown`; next useful work is readback/store-chain
+     component repair around the `x_325/x_339` transition.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

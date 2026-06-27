@@ -3619,6 +3619,147 @@ fn repair_projected_array_equality_literal(
     Ok(changed || readback_changes > 0)
 }
 
+fn selected_array_equality_component(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &Assignment,
+    lhs_symbol: SymbolId,
+    rhs_symbol: SymbolId,
+) -> Result<BTreeSet<SymbolId>, SolverError> {
+    let mut component = BTreeSet::from([lhs_symbol, rhs_symbol]);
+    let mut conjuncts = Vec::new();
+    let mut literals = Vec::new();
+    loop {
+        let before = component.len();
+        for &assertion in originals {
+            conjuncts.clear();
+            collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+            for &conjunct in &conjuncts {
+                let selected_branch =
+                    if matches!(arena.node(conjunct), TermNode::App { op: Op::BoolOr, .. }) {
+                        let Some(or_failure) =
+                            replay_failed_or_details(arena, conjunct, projected)?
+                        else {
+                            continue;
+                        };
+                        if or_failure.best_branch_false_literals > 1 {
+                            continue;
+                        }
+                        or_failure.best_branch_term
+                    } else {
+                        conjunct
+                    };
+                literals.clear();
+                collect_positive_conjuncts(arena, selected_branch, &mut literals);
+                for &literal in &literals {
+                    let Some((lhs, rhs)) = direct_array_equality_repair_target(arena, literal)
+                    else {
+                        continue;
+                    };
+                    if component.contains(&lhs) || component.contains(&rhs) {
+                        component.insert(lhs);
+                        component.insert(rhs);
+                    }
+                }
+            }
+        }
+        if component.len() == before {
+            break;
+        }
+    }
+    Ok(component)
+}
+
+fn repair_projected_array_equality_component_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    projected: &mut Assignment,
+    lhs_symbol: SymbolId,
+    rhs_symbol: SymbolId,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let current_total_false = positive_replay_false_count(arena, originals, projected)?;
+    let current_branch_false = branch_false_literal_count(arena, branch, projected)?;
+    if current_branch_false == 0 {
+        return Ok(false);
+    }
+
+    let component =
+        selected_array_equality_component(arena, originals, projected, lhs_symbol, rhs_symbol)?;
+    let mut best: Option<(usize, usize, usize, ProjectionRepairStats, Assignment)> = None;
+    for (ordinal, &source_symbol) in component.iter().enumerate() {
+        let source_value = projected
+            .get(source_symbol)
+            .unwrap_or(default_value_for_symbol(arena, source_symbol)?);
+        let mut trial = projected.clone();
+        let mut trial_stats = ProjectionRepairStats {
+            branch_candidates: 1,
+            ..ProjectionRepairStats::default()
+        };
+        let mut changed = false;
+        for &target_symbol in &component {
+            if store_projected_symbol_value(arena, &mut trial, target_symbol, source_value.clone())?
+            {
+                trial_stats.branch_symbol_changes += 1;
+                changed = true;
+            }
+        }
+        for &target_symbol in &component {
+            let readback_changes =
+                align_direct_select_symbols_for_array(arena, originals, &mut trial, target_symbol)?;
+            trial_stats.symbol_changes += readback_changes;
+            changed |= readback_changes > 0;
+        }
+        if !changed {
+            continue;
+        }
+
+        let branch_false = branch_false_literal_count(arena, branch, &trial)?;
+        if branch_false >= current_branch_false {
+            continue;
+        }
+        let total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if total_false > current_total_false {
+            continue;
+        }
+        let replace = best.as_ref().is_none_or(
+            |(best_total_false, best_branch_false, best_ordinal, _, _)| {
+                (total_false, branch_false, ordinal)
+                    < (*best_total_false, *best_branch_false, *best_ordinal)
+            },
+        );
+        if replace {
+            best = Some((total_false, branch_false, ordinal, trial_stats, trial));
+        }
+    }
+
+    let Some((_, _, _, best_stats, trial)) = best else {
+        return Ok(false);
+    };
+    *projected = trial;
+    stats.absorb(best_stats);
+    Ok(true)
+}
+
+fn repair_projected_branch_literal_in_branch(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    literal: TermId,
+    projected: &mut Assignment,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    if let Some((lhs_symbol, rhs_symbol)) = direct_array_equality_repair_target(arena, literal)
+        && repair_projected_array_equality_component_literal(
+            arena, originals, branch, projected, lhs_symbol, rhs_symbol, stats,
+        )?
+    {
+        return Ok(true);
+    }
+    repair_projected_branch_literal(arena, originals, literal, projected, stats)
+}
+
 fn repair_projected_branch_literal(
     arena: &TermArena,
     originals: &[TermId],
@@ -4760,12 +4901,54 @@ fn first_projected_replay_failure(
     Ok(None)
 }
 
+fn repair_projected_replay_select_failure(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    failure: &ReplayFailure,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    let Some((array, index_term, element_term)) =
+        direct_select_repair_target(arena, failure.conjunct_term)
+    else {
+        return Ok(None);
+    };
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext select repair failed: {e}"));
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    let index = eval(arena, index_term, projected).map_err(ir)?;
+    let element = eval(arena, element_term, projected).map_err(ir)?;
+    let mut trial = projected.clone();
+    let mut stats = ProjectionRepairStats {
+        candidates: 1,
+        ..ProjectionRepairStats::default()
+    };
+    if !store_projected_array_entry(arena, &mut trial, array, index, element)? {
+        return Ok(None);
+    }
+    stats.array_changes += 1;
+    if eval(arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true) {
+        return Ok(None);
+    }
+    let total_false = positive_replay_false_count(arena, originals, &trial)?;
+    if total_false > current_false {
+        return Ok(None);
+    }
+    *projected = trial;
+    Ok(Some(stats))
+}
+
 fn repair_projected_replay_failure(
     arena: &TermArena,
     originals: &[TermId],
     projected: &mut Assignment,
     failure: &ReplayFailure,
 ) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    if let Some(select_stats) =
+        repair_projected_replay_select_failure(arena, originals, projected, failure)?
+    {
+        return Ok(Some(select_stats));
+    }
+
     let Some(or_failure) = &failure.failed_or else {
         return Ok(None);
     };
@@ -4790,8 +4973,14 @@ fn repair_projected_replay_failure(
     };
 
     let mut stats = ProjectionRepairStats::default();
-    let changed =
-        repair_projected_branch_literal(arena, originals, false_literal, projected, &mut stats)?;
+    let changed = repair_projected_branch_literal_in_branch(
+        arena,
+        originals,
+        or_failure.best_branch_term,
+        false_literal,
+        projected,
+        &mut stats,
+    )?;
     Ok(changed.then_some(stats))
 }
 
@@ -4891,7 +5080,9 @@ fn repair_projected_branch_as_candidate(
                 continue;
             }
             let before = stats.changes();
-            if repair_projected_branch_literal(arena, originals, literal, projected, &mut stats)? {
+            if repair_projected_branch_literal_in_branch(
+                arena, originals, branch, literal, projected, &mut stats,
+            )? {
                 pass_changes += stats.changes().saturating_sub(before).max(1);
                 changed = true;
             }
@@ -5366,9 +5557,10 @@ pub fn certify_array_elim_unsat(
 mod tests {
     use super::{
         ExtReplay, LastExtReplay, ProjectionRepairStats, RowCtx, RowKind, RowSite, StoreChainSide,
-        check_qf_abv_lazy, check_with_array_elimination, complete_assignment,
-        const_array_default_mismatch_refutation, cross_store_array_disequality_refutation,
-        first_false_replay_conjunct, first_projected_replay_failure, project_replay_ext_candidate,
+        array_value_from_entries, check_qf_abv_lazy, check_with_array_elimination,
+        collect_base_array_entries, complete_assignment, const_array_default_mismatch_refutation,
+        cross_store_array_disequality_refutation, first_false_replay_conjunct,
+        first_projected_replay_failure, project_replay_ext_candidate,
         prove_unsat_by_symmetric_swap_chain, repair_projected_replay_failure,
         replay_last_ext_candidate, store_chain_readback_refutation,
     };
@@ -5683,6 +5875,65 @@ mod tests {
     }
 
     #[test]
+    fn lazy_ext_targeted_replay_repairs_direct_select_equality() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let read = arena.select(a, i).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+
+        let mut candidate = Assignment::new();
+        for (symbol, name, sort) in arena.symbols() {
+            match name {
+                "i" => candidate.set(symbol, Value::Bv { width: 4, value: 1 }),
+                "y" => candidate.set(symbol, Value::Bv { width: 8, value: 7 }),
+                _ if sort == Sort::BitVec(4) => {
+                    candidate.set(symbol, Value::Bv { width: 4, value: 0 });
+                }
+                _ if sort == Sort::BitVec(8) => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+                }
+                _ => {}
+            }
+        }
+
+        let originals = [y_eq_read];
+        let mut projected = complete_assignment(&arena, &candidate);
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected the direct select equality to fail before repair");
+
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected targeted select repair to change the projection");
+        assert_eq!(stats.array_changes, 1);
+        assert_eq!(
+            projected.get(*y_symbol),
+            Some(Value::Bv { width: 8, value: 7 })
+        );
+        assert!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .is_none()
+        );
+    }
+
+    #[test]
     fn lazy_ext_targeted_replay_can_choose_non_best_repairable_branch() {
         let mut arena = TermArena::new();
         let q = arena.bool_var("q").unwrap();
@@ -5808,6 +6059,136 @@ mod tests {
         for &original in &originals {
             assert_eq!(
                 eval(&arena, original, &assignment).unwrap(),
+                Value::Bool(true)
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_ext_projection_repairs_selected_array_equality_component() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let c = arena.array_var("c", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let k0 = arena.bv_var("k0", 4).unwrap();
+        let k2 = arena.bv_var("k2", 4).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let p = arena.bool_var("p").unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let two = arena.bv_const(8, 2).unwrap();
+        let c_eq_b = arena.eq(c, b).unwrap();
+        let b_eq_a = arena.eq(b, a).unwrap();
+        let c_branch = arena.or(c_eq_b, p).unwrap();
+        let b_branch = arena.or(b_eq_a, q).unwrap();
+        let read_b_i = arena.select(b, i).unwrap();
+        let y_eq_read_b = arena.eq(y, read_b_i).unwrap();
+        let y_eq_two = arena.eq(y, two).unwrap();
+
+        let a_symbol = match arena.node(a) {
+            TermNode::Symbol(symbol) => *symbol,
+            _ => panic!("a should be a symbol"),
+        };
+        let b_symbol = match arena.node(b) {
+            TermNode::Symbol(symbol) => *symbol,
+            _ => panic!("b should be a symbol"),
+        };
+        let c_symbol = match arena.node(c) {
+            TermNode::Symbol(symbol) => *symbol,
+            _ => panic!("c should be a symbol"),
+        };
+        let y_symbol = match arena.node(y) {
+            TermNode::Symbol(symbol) => *symbol,
+            _ => panic!("y should be a symbol"),
+        };
+
+        let mut ctx = RowCtx::default();
+        let c_at_k0 = ctx.fresh_symbol(&mut arena, Sort::BitVec(8)).unwrap();
+        let c_at_k2 = ctx.fresh_symbol(&mut arena, Sort::BitVec(8)).unwrap();
+        ctx.sites.push(RowSite {
+            fresh: y_symbol,
+            index: i,
+            kind: RowKind::Var { array: b_symbol },
+        });
+        ctx.sites.push(RowSite {
+            fresh: c_at_k0,
+            index: k0,
+            kind: RowKind::Var { array: c_symbol },
+        });
+        ctx.sites.push(RowSite {
+            fresh: c_at_k2,
+            index: k2,
+            kind: RowKind::Var { array: c_symbol },
+        });
+
+        let mut candidate = Assignment::new();
+        for (symbol, name, sort) in arena.symbols() {
+            match name {
+                "i" => candidate.set(symbol, Value::Bv { width: 4, value: 1 }),
+                "k0" => candidate.set(symbol, Value::Bv { width: 4, value: 0 }),
+                "k2" => candidate.set(symbol, Value::Bv { width: 4, value: 2 }),
+                "y" => candidate.set(symbol, Value::Bv { width: 8, value: 2 }),
+                "p" | "q" => candidate.set(symbol, Value::Bool(false)),
+                _ if symbol == c_at_k0 || symbol == c_at_k2 => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 3 });
+                }
+                _ if sort == Sort::BitVec(4) => {
+                    candidate.set(symbol, Value::Bv { width: 4, value: 0 });
+                }
+                _ if sort == Sort::BitVec(8) => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+                }
+                _ => {}
+            }
+        }
+
+        let arrays =
+            collect_base_array_entries(&arena, &ctx, &candidate, "test projection").unwrap();
+        let mut projected = complete_assignment(&arena, &candidate);
+        for (&array, entries) in &arrays {
+            projected.set(
+                array,
+                array_value_from_entries(&arena, array, entries).unwrap(),
+            );
+        }
+
+        let originals = [c_branch, b_branch, y_eq_read_b, y_eq_two];
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected the component carry branch to fail before repair");
+        assert_eq!(failure.conjunct_term, c_branch);
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected component array-equality repair to change the projection");
+        assert!(stats.branch_symbol_changes >= 2);
+        assert!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .is_none()
+        );
+
+        let a_value = projected.get(a_symbol).expect("a value");
+        let b_value = projected.get(b_symbol).expect("b value");
+        let c_value = projected.get(c_symbol).expect("c value");
+        assert_eq!(a_value, b_value);
+        assert_eq!(b_value, c_value);
+        assert_eq!(
+            projected.get(y_symbol),
+            Some(Value::Bv { width: 8, value: 2 })
+        );
+        for &original in &originals {
+            assert_eq!(
+                eval(&arena, original, &projected).unwrap(),
                 Value::Bool(true)
             );
         }

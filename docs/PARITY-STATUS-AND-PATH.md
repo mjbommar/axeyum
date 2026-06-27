@@ -602,6 +602,19 @@ a named mechanism.**
    `(array default 0 [1 -> 2] [2 -> 1])`, after **457** projection repair
    changes. The next AUFLIA move is component-level store-chain/readback
    projection for this lower queue-lock branch.
+   **Selected carry-component projection landed later 2026-06-26:** targeted
+   replay branch-literal repair now treats direct array equality branch literals
+   as selected carry components: adjacent selected/best-branch array equalities
+   touching the failed pair are gathered, every component member is tried as the
+   representative value, direct readbacks are aligned, and only branch-improving
+   full-replay-non-worsening candidates are kept. `bug337` still returns
+   `unknown`, but the 10 s diagnostic moves past branch **9841** /
+   `x_31 = x_17` to direct readback equality ordinal **34**, term **555**,
+   `x_388 = select(x_325, x_337)`, values **1** vs **0**, after **571**
+   projection repair changes. A targeted select-stabilization experiment was
+   rejected because it regressed to branch **9841** and raised projection churn
+   to **1848** changes. The next AUFLIA move is readback/store-chain component
+   repair around the `x_325/x_339` transition.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
