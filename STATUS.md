@@ -6,6 +6,49 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA store-chain readback projection.**
+  Targeted lazy-extensionality replay can now repair a false direct
+  `x = select(a, i)` readback through the currently selected store-chain
+  definition for `a`. Instead of only writing the target array cell, the repair
+  scans selected/best branch literals for `a = store(base, k, v)` or direct
+  array equalities, recursively pushes inherited reads into the base when
+  `i != k`, rebuilds the target store, aligns direct readback symbols, and keeps
+  the best candidate only when the failed readback becomes true and full
+  original replay is non-worsening. The old direct target-cell write remains as
+  a competing fallback. A focused regression pins the motivating shape where
+  directly writing `b[i]` would break a true branch `b = store(a, j, v)`, while
+  writing `a[i]` and rebuilding `b` satisfies both.
+
+  This still does **not** close `bug337`, but it removes the prior direct
+  readback blocker `x_388 = select(x_325, x_337)`. The 10 s probe remains at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection repair now reports
+  **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=320**, **branch_repair_candidates=136**,
+  **branch_repair_symbol_changes=165**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=611**. The first false conjunct is now generated
+  branch disjunction **ordinal 211**, term **4108**; best branch **3** has
+  **1/6** false literals, term **714**, `x_325 = x_311`, with `x_325` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` and `x_311` equal to
+  `(array default 0 [0 -> 1] [1 -> 2] [2 -> 1])`. Next useful work is a
+  replay-gated branch-choice/store-chain equality repair for the `x_325/x_311`
+  transition, not another direct-select write or repair cap increase.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_select_through_store_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_direct_select_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_selected_array_equality_component -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_single_store_branch_literal -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_can_choose_non_best_repairable_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA selected carry-component projection.**
   Targeted lazy-extensionality replay can now repair a false direct array
   equality as a selected carry component instead of a one-edge copy. For a failed
