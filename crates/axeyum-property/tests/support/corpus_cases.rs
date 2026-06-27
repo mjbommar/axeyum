@@ -649,31 +649,57 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
     assert_eq!(property.concrete::<u8>(&transfer.amount, model)?, Some(1));
     assert_eq!(property.concrete::<u8>(&transfer.fee, model)?, Some(0));
     let counterexample = property.counterexample(model)?;
+    let transfer_limits = counterexample.render_rust_named_struct_let(
+        "transfer.limits",
+        "TransferLimits",
+        "transfer_limits",
+    )?;
     assert_eq!(
-        counterexample.render_rust_named_struct_let(
-            "transfer.limits",
-            "TransferLimits",
-            "transfer_limits",
-        )?,
+        transfer_limits,
         concat!(
             "let transfer_limits: TransferLimits = TransferLimits {\n",
             "    fee: transfer_limits_fee,\n",
             "};\n",
         )
     );
+    let transfer_init = counterexample.render_rust_named_struct_let_with_fields(
+        "transfer",
+        "TransferInput",
+        "transfer",
+        [("limits", "transfer_limits")],
+    )?;
     assert_eq!(
-        counterexample.render_rust_named_struct_let_with_fields(
-            "transfer",
-            "TransferInput",
-            "transfer",
-            [("limits", "transfer_limits")],
-        )?,
+        transfer_init,
         concat!(
             "let transfer: TransferInput = TransferInput {\n",
             "    enabled: transfer_enabled,\n",
             "    amount: transfer_amount,\n",
             "    limits: transfer_limits,\n",
             "};\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_setup(
+            "nested transfer replay",
+            [transfer_limits.as_str(), transfer_init.as_str()],
+            "assert!(replay_transfer(transfer));",
+        )?,
+        concat!(
+            "#[test]\n",
+            "fn nested_transfer_replay() {\n",
+            "    let transfer_enabled: bool = false;\n",
+            "    let transfer_amount: u8 = 0x01_u8; // BV8\n",
+            "    let transfer_limits_fee: u8 = 0x00_u8; // BV8\n",
+            "    let transfer_limits: TransferLimits = TransferLimits {\n",
+            "        fee: transfer_limits_fee,\n",
+            "    };\n",
+            "    let transfer: TransferInput = TransferInput {\n",
+            "        enabled: transfer_enabled,\n",
+            "        amount: transfer_amount,\n",
+            "        limits: transfer_limits,\n",
+            "    };\n",
+            "    assert!(replay_transfer(transfer));\n",
+            "}\n",
         )
     );
     let summary = certificate.summary();
@@ -685,7 +711,7 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
         workflow: "caller-owned nested aggregate replay",
         expected: ExpectedOutcome::Disproved,
         actual: summary.outcome,
-        checks: "nested `transfer.limits` initializer renders separately and the caller explicitly plugs it into `TransferInput`",
+        checks: "nested `transfer.limits` initializer renders separately, plugs into `TransferInput`, and appears before the replay assertion in a generated `#[test]`",
         baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
         lean_required: false,
         lean_available: false,

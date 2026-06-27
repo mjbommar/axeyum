@@ -2,6 +2,18 @@
 
 ## Current focus
 
+- **2026-06-27 — Setup-aware replay tests landed.**
+  `Counterexample::render_rust_test_with_setup` now emits replay-checked scalar
+  bindings, then caller-owned setup snippets, then the replay/assertion body.
+  Frontends can render nested/domain aggregate initializers with
+  `render_rust_named_struct_let` /
+  `render_rust_named_struct_let_with_fields` and insert them before assertions
+  without the SDK inventing domain semantics. The generated nested aggregate
+  corpus row now checks the complete `#[test]` skeleton, including setup
+  snippets before `assert!(replay_transfer(transfer))`; totals remain 8 cases,
+  2 proved, 6 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required
+  coverage.
+
 - **2026-06-27 — Explicit nested aggregate replay landed.**
   `Counterexample::render_rust_named_struct_let_with_fields` now lets
   frontends compose caller-owned nested/domain Rust replay shapes without the
@@ -174,7 +186,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output for richer frontend-specific
-   replay bodies around the explicit nested aggregate initializer support.
+2. Extend counterexample-to-`#[test]` output toward frontend-specific replay
+   assertions and imports while keeping domain semantics caller-owned.
 3. Keep broadening the SDK property corpus and add the external
    proptest/Kani-style baseline comparison.

@@ -633,30 +633,54 @@ fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay(
             "let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
         )
     );
+    let transfer_limits = counterexample.render_rust_named_struct_let(
+        "transfer.limits",
+        "TransferLimits",
+        "transfer_limits",
+    )?;
     assert_eq!(
-        counterexample.render_rust_named_struct_let(
-            "transfer.limits",
-            "TransferLimits",
-            "transfer_limits",
-        )?,
+        transfer_limits,
         concat!(
             "let transfer_limits: TransferLimits = TransferLimits {\n",
             "    fee: transfer_limits_fee,\n",
             "};\n",
         )
     );
+    let transfer_init = counterexample.render_rust_named_struct_let_with_fields(
+        "transfer",
+        "TransferInput",
+        "transfer",
+        [(String::from("limits"), String::from("transfer_limits"))],
+    )?;
     assert_eq!(
-        counterexample.render_rust_named_struct_let_with_fields(
-            "transfer",
-            "TransferInput",
-            "transfer",
-            [(String::from("limits"), String::from("transfer_limits"))],
-        )?,
+        transfer_init,
         concat!(
             "let transfer: TransferInput = TransferInput {\n",
             "    enabled: transfer_enabled,\n",
             "    limits: transfer_limits,\n",
             "};\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_setup(
+            "nested replay case",
+            [transfer_limits.as_str(), transfer_init.as_str()],
+            "assert!(replay_transfer(transfer));",
+        )?,
+        concat!(
+            "#[test]\n",
+            "fn nested_replay_case() {\n",
+            "    let transfer_enabled: bool = true;\n",
+            "    let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
+            "    let transfer_limits: TransferLimits = TransferLimits {\n",
+            "        fee: transfer_limits_fee,\n",
+            "    };\n",
+            "    let transfer: TransferInput = TransferInput {\n",
+            "        enabled: transfer_enabled,\n",
+            "        limits: transfer_limits,\n",
+            "    };\n",
+            "    assert!(replay_transfer(transfer));\n",
+            "}\n",
         )
     );
 

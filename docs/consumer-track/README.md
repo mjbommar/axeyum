@@ -38,7 +38,8 @@
   symbolic bundles, signed fixed-width Rust integer lifting/minimization,
   minimized scalar counterexamples, Rust test skeletons, and direct aggregate
   initializer snippets plus explicit caller-owned nested aggregate field
-  composition. The first app-level corpus gate is committed in
+  composition and setup-aware test skeletons. The first app-level corpus gate is
+  committed in
   [`property/SCOREBOARD.md`](property/SCOREBOARD.md), backed by generated
   [`property/corpus.json`](property/corpus.json).
 - `axeyum-wasm` — `solve_smtlib_json` (client-side, the delivery substrate).

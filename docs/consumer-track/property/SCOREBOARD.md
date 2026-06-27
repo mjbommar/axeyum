@@ -43,7 +43,7 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 | `sdk-aggregate-counterexample-render` | P1 | struct-shaped symbolic input | disproved | minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
 | `sdk-u8-uadd-overflow-helper-witness` | P1 | unsigned overflow helper witness | disproved | minimized `u8` overflow witness is `(x = 1, y = 255)`; replay bindings render deterministically | Kani arithmetic-overflow check / Rust verifier overflow assertion |
 | `sdk-derived-struct-counterexample-lift` | P1 | `derive(Symbolic)` struct witness | disproved | derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
-| `sdk-explicit-nested-aggregate-replay` | P1 | caller-owned nested aggregate replay | disproved | nested `transfer.limits` initializer renders separately and the caller explicitly plugs it into `TransferInput` | Rust verifier domain replay body / Kani nested harness struct |
+| `sdk-explicit-nested-aggregate-replay` | P1 | caller-owned nested aggregate replay | disproved | nested `transfer.limits` initializer renders separately, plugs into `TransferInput`, and appears before the replay assertion in a generated `#[test]` | Rust verifier domain replay body / Kani nested harness struct |
 
 ## Next Gates
 

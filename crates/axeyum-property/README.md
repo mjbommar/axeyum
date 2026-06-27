@@ -28,9 +28,10 @@ into stable frontend-facing route, trust-ledger, and Lean reconstruction fields.
 
 Disproving models can be extracted as deterministic `Counterexample` bindings
 and rendered as native Rust scalar `let` bindings or a `#[test]` skeleton with
-caller-provided replay code. Direct named and tuple symbolic bundles can also
-render Rust aggregate initializer statements over those scalar bindings. Nested
-or domain-specific replay remains caller-owned, but frontends can explicitly
-compose nested aggregate initializers by rendering the inner value first and
-passing a field expression such as `("limits", "transfer_limits")` to
-`render_rust_named_struct_let_with_fields`.
+caller-provided setup and replay code. Direct named and tuple symbolic bundles
+can also render Rust aggregate initializer statements over those scalar
+bindings. Nested or domain-specific replay remains caller-owned, but frontends
+can explicitly compose nested aggregate initializers by rendering the inner value
+first, passing a field expression such as `("limits", "transfer_limits")` to
+`render_rust_named_struct_let_with_fields`, and inserting those setup snippets
+before the replay assertion with `render_rust_test_with_setup`.

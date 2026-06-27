@@ -525,6 +525,32 @@ impl Counterexample {
     /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
     /// representable by a native Rust scalar literal.
     pub fn render_rust_test(&self, test_name: &str, body: &str) -> Result<String, PropertyError> {
+        self.render_rust_test_with_setup(test_name, std::iter::empty::<&str>(), body)
+    }
+
+    /// Renders a complete Rust `#[test]` skeleton with caller-owned setup code.
+    ///
+    /// Scalar bindings are emitted first from the replay-checked model.
+    /// `setup_snippets` are then inserted verbatim, one indented block at a
+    /// time, before `body`. This is intended for frontend/domain replay code
+    /// such as aggregate initializers rendered by
+    /// [`Self::render_rust_named_struct_let`] or
+    /// [`Self::render_rust_named_struct_let_with_fields`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_test_with_setup<I, S>(
+        &self,
+        test_name: &str,
+        setup_snippets: I,
+        body: &str,
+    ) -> Result<String, PropertyError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         let mut out = String::new();
         out.push_str("#[test]\n");
         out.push_str("fn ");
@@ -535,15 +561,10 @@ impl Counterexample {
             out.push_str(&binding.render_rust_let()?);
             out.push('\n');
         }
-        for line in body.lines() {
-            if line.is_empty() {
-                out.push('\n');
-            } else {
-                out.push_str("    ");
-                out.push_str(line);
-                out.push('\n');
-            }
+        for snippet in setup_snippets {
+            push_indented_block(&mut out, snippet.as_ref());
         }
+        push_indented_block(&mut out, body);
         out.push_str("}\n");
         Ok(out)
     }
@@ -601,6 +622,18 @@ fn render_named_struct_let(
     }
     out.push_str("};\n");
     out
+}
+
+fn push_indented_block(out: &mut String, block: &str) {
+    for line in block.lines() {
+        if line.is_empty() {
+            out.push('\n');
+        } else {
+            out.push_str("    ");
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
 }
 
 /// A standalone Lean module proving a refuted property query.
