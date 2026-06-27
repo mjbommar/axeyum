@@ -2256,9 +2256,11 @@ to symbolic CFG steps, extracts model witnesses, and independently replays them
 in a concrete emulator. It also exposes bounded program-counter reachability and
 safety wrappers: reachable PCs carry concrete-replayed witnesses, and
 unreachable/safe is reported only after exhaustive bounded exploration with no
-unknowns, witness gaps, mismatches, or truncation. P4.2 still needs richer
-memory-bearing frontend work, unbounded/certified safety, and eventual warm lazy
-theory reuse.
+unknowns, witness gaps, mismatches, or truncation. The same tiny target now has
+`Load`/`Store` instructions over a zero-initialized SMT array memory, with
+concrete replay using the same zero-default map and memory-bearing paths routed
+through the memory-aware solver path. P4.2 still needs richer imported/byte-level
+frontend work, unbounded/certified safety, and eventual warm lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

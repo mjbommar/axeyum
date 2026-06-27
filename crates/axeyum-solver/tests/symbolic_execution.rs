@@ -725,6 +725,115 @@ fn tiny_bv_safety_reports_unreachable_when_search_is_exhaustive() {
 }
 
 #[test]
+fn tiny_bv_memory_store_load_reachability_replays() {
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::new(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        vec![
+            TinyBvInsn::Const {
+                dst: 2,
+                value: 0x0010,
+            },
+            TinyBvInsn::Store { addr: 2, src: 0 },
+            TinyBvInsn::Load { dst: 3, addr: 2 },
+            TinyBvInsn::BranchEq {
+                reg: 3,
+                value: 0xCAFE,
+                then_pc: 4,
+                else_pc: 5,
+            },
+            TinyBvInsn::Win,
+            TinyBvInsn::Lose,
+        ],
+    )
+    .unwrap();
+
+    assert!(program.uses_memory());
+    let reach = program
+        .reach_pc_checked(
+            &mut arena,
+            "mem_reach_input",
+            4,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                // The frontend should route memory-bearing paths through the
+                // memory-aware checker even if the caller leaves this off.
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(reach.status(), TinyBvReachabilityStatus::Reachable);
+    assert!(!reach.outcome.verified.is_empty());
+    for hit in &reach.outcome.verified {
+        assert_eq!(hit.state.pc, 4);
+        assert!(hit.state.memory.is_some());
+        assert_eq!(
+            program.concrete_run(&hit.witness),
+            TinyBvConcreteOutcome::Win
+        );
+        assert!(program.concrete_reaches_pc(&hit.witness, 4));
+        assert_eq!(hit.witness.inputs[0], 0xCAFE);
+    }
+}
+
+#[test]
+fn tiny_bv_memory_safety_uses_read_over_write() {
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::new(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        vec![
+            TinyBvInsn::Const { dst: 1, value: 0 },
+            TinyBvInsn::Const {
+                dst: 2,
+                value: 0x0020,
+            },
+            TinyBvInsn::Store { addr: 2, src: 1 },
+            TinyBvInsn::Load { dst: 3, addr: 2 },
+            TinyBvInsn::BranchEq {
+                reg: 3,
+                value: 0xCAFE,
+                then_pc: 5,
+                else_pc: 6,
+            },
+            TinyBvInsn::Win,
+            TinyBvInsn::Lose,
+        ],
+    )
+    .unwrap();
+
+    let safety = program
+        .check_pc_safety_checked(
+            &mut arena,
+            "mem_safe_input",
+            5,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(safety.status(), TinyBvSafetyStatus::Safe);
+    assert!(safety.is_safe());
+    assert_eq!(
+        safety.reachability.status(),
+        TinyBvReachabilityStatus::Unreachable
+    );
+    assert!(safety.reachability.outcome.mismatches.is_empty());
+    assert!(safety.reachability.outcome.missing_witnesses.is_empty());
+    assert_eq!(safety.reachability.outcome.unknown_branches, 0);
+}
+
+#[test]
 fn arithmetic_keycheck_with_multiplication_and_subtraction() {
     // r0 = in0 * in1; r0 = r0 - 1; win iff r0 == 0x000f (find factors of 0x10).
     let mut arena = TermArena::new();

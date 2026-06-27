@@ -7,11 +7,15 @@
 //! through [`SymbolicExecutor`], extract concrete model witnesses, and confirm
 //! those witnesses by independent concrete replay.
 
+use std::collections::BTreeMap;
+
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
 
 use crate::backend::SolverError;
 use crate::model::Model;
-use crate::symexec::{CfgCheckedOutcome, CfgExploreConfig, CfgStep, SymbolicExecutor};
+use crate::symexec::{
+    CfgCheckedOutcome, CfgExploreConfig, CfgStep, SymbolicExecutor, SymbolicMemory,
+};
 
 /// A fixed-width bit-vector register-machine instruction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +64,20 @@ pub enum TinyBvInsn {
         /// Right input register.
         b: usize,
     },
+    /// Load `memory[regs[addr]]` into `dst`.
+    Load {
+        /// Destination register.
+        dst: usize,
+        /// Register containing the memory address.
+        addr: usize,
+    },
+    /// Store `regs[src]` at `memory[regs[addr]]`.
+    Store {
+        /// Register containing the memory address.
+        addr: usize,
+        /// Register containing the value to store.
+        src: usize,
+    },
     /// Branch on equality between a register and a constant.
     BranchEq {
         /// Register being tested.
@@ -94,6 +112,9 @@ pub struct TinyBvState {
     pub pc: usize,
     /// Current symbolic register terms.
     pub regs: Vec<TermId>,
+    /// Current symbolic memory term, present only when the program contains
+    /// memory instructions.
+    pub memory: Option<SymbolicMemory>,
     /// Remaining symbolic execution fuel.
     pub fuel: usize,
 }
@@ -293,6 +314,13 @@ impl TinyBvProgram {
         &self.code
     }
 
+    /// Whether this program contains memory instructions.
+    pub fn uses_memory(&self) -> bool {
+        self.code
+            .iter()
+            .any(|insn| matches!(insn, TinyBvInsn::Load { .. } | TinyBvInsn::Store { .. }))
+    }
+
     /// Declares this program's symbolic inputs in `arena`.
     ///
     /// Inputs are named `{prefix}{i}` for `i` in `0..input_count`; repeated calls
@@ -353,9 +381,16 @@ impl TinyBvProgram {
         while regs.len() < self.reg_count {
             regs.push(zero);
         }
+        let memory = if self.uses_memory() {
+            let array = arena.const_array(self.width, zero)?;
+            Some(SymbolicMemory::from_array(arena, array)?)
+        } else {
+            None
+        };
         Ok(TinyBvState {
             pc: 0,
             regs,
+            memory,
             fuel: self.max_steps,
         })
     }
@@ -375,6 +410,7 @@ impl TinyBvProgram {
     ) -> Result<TinyBvExploreOutcome, SolverError> {
         let inputs = self.declare_inputs(arena, input_prefix)?;
         let initial = self.initial_state(arena, &inputs)?;
+        let config = self.effective_config(config);
         let mut executor = SymbolicExecutor::new();
         executor.explore_cfg_checked(
             arena,
@@ -412,6 +448,7 @@ impl TinyBvProgram {
         self.validate_target_pc(target_pc)?;
         let inputs = self.declare_inputs(arena, input_prefix)?;
         let initial = self.initial_state(arena, &inputs)?;
+        let config = self.effective_config(config);
         let mut executor = SymbolicExecutor::new();
         let outcome = executor.explore_cfg_checked(
             arena,
@@ -462,6 +499,7 @@ impl TinyBvProgram {
         for (reg, value) in regs.iter_mut().zip(witness.inputs.iter()) {
             *reg = self.normalize(*value);
         }
+        let mut memory = BTreeMap::new();
         let mut pc = 0usize;
         for _ in 0..self.max_steps {
             match self.code.get(pc) {
@@ -483,6 +521,14 @@ impl TinyBvProgram {
                 }
                 Some(TinyBvInsn::Xor { dst, a, b }) => {
                     regs[*dst] = self.normalize(regs[*a] ^ regs[*b]);
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Load { dst, addr }) => {
+                    regs[*dst] = *memory.get(&regs[*addr]).unwrap_or(&0);
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Store { addr, src }) => {
+                    memory.insert(regs[*addr], regs[*src]);
                     pc += 1;
                 }
                 Some(TinyBvInsn::BranchEq {
@@ -520,6 +566,7 @@ impl TinyBvProgram {
         for (reg, value) in regs.iter_mut().zip(witness.inputs.iter()) {
             *reg = self.normalize(*value);
         }
+        let mut memory = BTreeMap::new();
         let mut pc = 0usize;
         for _ in 0..self.max_steps {
             if pc == target_pc {
@@ -544,6 +591,14 @@ impl TinyBvProgram {
                 }
                 Some(TinyBvInsn::Xor { dst, a, b }) => {
                     regs[*dst] = self.normalize(regs[*a] ^ regs[*b]);
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Load { dst, addr }) => {
+                    regs[*dst] = *memory.get(&regs[*addr]).unwrap_or(&0);
+                    pc += 1;
+                }
+                Some(TinyBvInsn::Store { addr, src }) => {
+                    memory.insert(regs[*addr], regs[*src]);
                     pc += 1;
                 }
                 Some(TinyBvInsn::BranchEq {
@@ -605,6 +660,27 @@ impl TinyBvProgram {
             TinyBvInsn::Xor { dst, a, b } => {
                 let mut next = state;
                 next.regs[dst] = arena.bv_xor(next.regs[a], next.regs[b])?;
+                next.pc += 1;
+                next.fuel = next_fuel;
+                Ok(CfgStep::Continue(next))
+            }
+            TinyBvInsn::Load { dst, addr } => {
+                let mut next = state;
+                let memory = next
+                    .memory
+                    .ok_or_else(|| tiny_bv_error("load requires initialized memory"))?;
+                next.regs[dst] = memory.load(arena, next.regs[addr])?;
+                next.pc += 1;
+                next.fuel = next_fuel;
+                Ok(CfgStep::Continue(next))
+            }
+            TinyBvInsn::Store { addr, src } => {
+                let mut next = state;
+                let mut memory = next
+                    .memory
+                    .ok_or_else(|| tiny_bv_error("store requires initialized memory"))?;
+                memory.store(arena, next.regs[addr], next.regs[src])?;
+                next.memory = Some(memory);
                 next.pc += 1;
                 next.fuel = next_fuel;
                 Ok(CfgStep::Continue(next))
@@ -685,6 +761,13 @@ impl TinyBvProgram {
             )))
         }
     }
+
+    fn effective_config(&self, mut config: CfgExploreConfig) -> CfgExploreConfig {
+        if self.uses_memory() {
+            config.memory_aware = true;
+        }
+        config
+    }
 }
 
 fn validate_code(code: &[TinyBvInsn], reg_count: usize) -> Result<(), SolverError> {
@@ -698,6 +781,14 @@ fn validate_code(code: &[TinyBvInsn], reg_count: usize) -> Result<(), SolverErro
                 validate_reg(pc, dst, reg_count)?;
                 validate_reg(pc, a, reg_count)?;
                 validate_reg(pc, b, reg_count)?;
+            }
+            TinyBvInsn::Load { dst, addr } => {
+                validate_reg(pc, dst, reg_count)?;
+                validate_reg(pc, addr, reg_count)?;
+            }
+            TinyBvInsn::Store { addr, src } => {
+                validate_reg(pc, addr, reg_count)?;
+                validate_reg(pc, src, reg_count)?;
             }
             TinyBvInsn::BranchEq {
                 reg,
