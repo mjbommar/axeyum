@@ -5381,6 +5381,7 @@ struct ReplayBranchSelectCandidateDiagnostic {
     first_global_false_ordinal: Option<usize>,
     first_global_false_term: Option<TermId>,
     first_global_false_eq: Option<ReplayEqFailure>,
+    first_global_false_or: Option<ReplayOrFailure>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -5611,6 +5612,38 @@ impl ReplayFailure {
                         eq.lhs_value,
                         eq.rhs_value
                     );
+                }
+                if let Some(or_failure) = &diagnostic.first_global_false_or {
+                    let _ = write!(
+                        note,
+                        ",global_false_or_branches={},global_false_or_best_branch={},\
+                         global_false_or_best_branch_false_literals={},\
+                         global_false_or_best_branch_total_literals={}",
+                        or_failure.branch_count,
+                        or_failure.best_branch_ordinal,
+                        or_failure.best_branch_false_literals,
+                        or_failure.best_branch_total_literals
+                    );
+                    if let Some(term) = or_failure.best_branch_first_false_term {
+                        let _ = write!(
+                            note,
+                            ",global_false_or_best_branch_first_false_term={}",
+                            term.index()
+                        );
+                    }
+                    if let Some(eq) = &or_failure.best_branch_first_false_eq {
+                        let _ = write!(
+                            note,
+                            ",global_false_or_best_branch_first_false_lhs_term={},\
+                             global_false_or_best_branch_first_false_rhs_term={},\
+                             global_false_or_best_branch_first_false_lhs_value={},\
+                             global_false_or_best_branch_first_false_rhs_value={}",
+                            eq.lhs_term.index(),
+                            eq.rhs_term.index(),
+                            eq.lhs_value,
+                            eq.rhs_value
+                        );
+                    }
                 }
             }
             let _ = write!(note, "]");
@@ -6228,6 +6261,9 @@ fn replay_branch_select_candidate_from_trial(
     let total_false = positive_replay_false_count(arena, originals, trial)?;
     let global_failure =
         first_projected_replay_failure(arena, originals, trial, ProjectionRepairStats::default())?;
+    let first_global_false_or = global_failure
+        .as_ref()
+        .and_then(|failure| failure.failed_or.clone());
     Ok(ReplayBranchSelectCandidateDiagnostic {
         branch_ordinal,
         select_ordinal: select_failure.conjunct_ordinal,
@@ -6243,6 +6279,7 @@ fn replay_branch_select_candidate_from_trial(
             .map(|failure| failure.conjunct_ordinal),
         first_global_false_term: global_failure.as_ref().map(|failure| failure.conjunct_term),
         first_global_false_eq: global_failure.and_then(|failure| failure.failed_eq),
+        first_global_false_or,
     })
 }
 
@@ -8808,6 +8845,32 @@ mod tests {
         assert_eq!(
             positive_replay_false_count(&arena, &originals, &projected).unwrap(),
             1
+        );
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected first OR replay failure");
+        let failure = replay_failure_with_branch_candidate_diagnostics(
+            &arena, &originals, &projected, failure,
+        )
+        .unwrap();
+        let note = failure.note();
+        assert!(
+            note.contains("branch_select_candidate_diagnostics=["),
+            "{note}"
+        );
+        assert!(
+            note.contains("global_false_or_best_branch=0")
+                || note.contains("global_false_or_best_branch=1"),
+            "{note}"
+        );
+        assert!(
+            note.contains("global_false_or_best_branch_false_literals=1"),
+            "{note}"
         );
         let stats = repair_projected_replay_branch_select_cycle(
             &arena,

@@ -6,6 +6,40 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA returned-OR branch/select diagnostics.**
+  Branch/select candidate diagnostics now preserve the `ReplayOrFailure` details
+  for the first global blocker after each composed branch+select trial. When a
+  select repair lands back on a generated OR, the note reports that OR's branch
+  count, best branch ordinal, false-literal count, first false literal term, and
+  equality values. The focused branch/select cycle regression now asserts that
+  these returned-OR details are emitted for the small alternate-branch shape.
+
+  This pinpoints the next `bug337` component rather than changing solve
+  behavior. The 10 s route diagnostic remains `unknown` at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, **working_assertions=7127**, first
+  false generated OR **210** / term **3879**, and about **77 s** route time.
+  The new returned-OR fields show that after **branch 0 -> select 34 chain**,
+  the select equality **term 555** is true, full replay is still
+  **total_false=2**, and the next global blocker is again OR **210**. Its best
+  branch is still branch **0**, but now with only **1/8** false literals:
+  **term 580**, `x_339 = store(x_325, x_337, 2)`, with lhs
+  `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])` and rhs
+  `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])`. This rules out more
+  branch-choice work: the next useful repair is specifically preserving the
+  select-34 store-chain readback while repairing branch-0 store definition
+  **term 580** or its component arrays.
+  Verification passed:
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_select_cycle_repair_forces_alternate_or_branch -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `cargo fmt --all --check`;
+  `git diff --check`.
+  Diagnostic emitted the route note above, then the outer timeout cleaned up the
+  non-exiting evidence tail:
+  `CARGO_BUILD_JOBS=2 timeout 180s cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA guarded branch/select cycle repair.**
   Added a bounded branch/select-cycle replay repair for small generated-OR
   replay surfaces. The repair looks for the concrete pattern exposed by the
@@ -5946,7 +5980,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P2.1 | BV lazy blasting + word-level slicing + BV theory-checker | WIP — **destination-2 lever measured & scoped** (commits beee599/9846349, `docs/research/05-algorithms/lazy-bitblasting-p21-findings.md`). KEY FACT: lazy abstraction-refinement bit-blasting (`solve_lazy_bv_abstraction`, ADR-0019) is **built but NOT wired into default `solve()`/bench** — so the "~2-3/113 public QF_BV" picture is the *eager* mountain-builder. Measured (`tests/lazy_bv_curated_measure.rs`): lazy decides **incidental-heavy-op** cases with 0 multiplier blasts (`x=1∧x=2∧r=p·q` → unsat ~0ms, 0 refined), cracks `calypto_9` (sat, 2 ops refined), is a safe no-op when `ops=0` (public files), no shortcut on essential multiplier-equivalence. Next (coordinate on shared bench): lazy-bv bench backend → measure public 113 (DISAGREE=0) → opt-in `SolverConfig::lazy_bv` strategy → default-on ADR after net benefit. The highest-ROI perf move is wiring+measuring a built CEGAR bit-blaster, not a new algorithm |
-| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Lazy ROW/extensionality `unknown` details now report refinement counters and attempt replay-gated last-candidate SAT salvage before budget declines. The AUFLIA `bug337` probe still times out at round 2 with 4096 sites, 150 array-equality atoms, 6973 congruence lemmas, and 146 diff-skolems; the direct-select mixed replay beam moves the first false replay point from direct readback equality ordinal 34 / term 555 to generated OR ordinal 210 / term 3879 under the final strict replay-improvement gate. A generated-OR mixed beam is retained only for small, multi-false replay surfaces after the unguarded large-row attempt regressed `bug337` back to term 555 and doubled wall time. Branch-select diagnostics now show OR 210 branch 0 followed by select 34's store-chain repair makes term 555 true but lands back on OR 210 at total_false=2, while direct select repair worsens to ordinal 35. A small-surface branch/select-cycle repair now handles the alternate-branch version of that pattern, but the large `bug337` attempt was measured/rejected and guarded off after no frontier movement plus route-time growth. Remaining: component-level store-chain / branch-state repair inside the 210 -> 34 -> 210 replay path; **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays; and func_interp model polish |
+| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Lazy ROW/extensionality `unknown` details now report refinement counters and attempt replay-gated last-candidate SAT salvage before budget declines. The AUFLIA `bug337` probe still times out at round 2 with 4096 sites, 150 array-equality atoms, 6973 congruence lemmas, and 146 diff-skolems; the direct-select mixed replay beam moves the first false replay point from direct readback equality ordinal 34 / term 555 to generated OR ordinal 210 / term 3879 under the final strict replay-improvement gate. A generated-OR mixed beam is retained only for small, multi-false replay surfaces after the unguarded large-row attempt regressed `bug337` back to term 555 and doubled wall time. Branch-select diagnostics now show OR 210 branch 0 followed by select 34's store-chain repair makes term 555 true but lands back on OR 210 at total_false=2, while direct select repair worsens to ordinal 35. A small-surface branch/select-cycle repair now handles the alternate-branch version of that pattern, but the large `bug337` attempt was measured/rejected and guarded off after no frontier movement plus route-time growth. Returned-OR diagnostics show the remaining post-select blocker is OR 210 branch 0 with one false literal, store-definition equality term 580 (`x_339 = store(x_325,x_337,2)`). Remaining: preserve select-34 store-chain readback while repairing branch-0 store definition term 580 / component arrays; **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays; and func_interp model polish |
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **multi-equation Diophantine infeasibility** (`prove_lia_unsat_by_diophantine`, commit 96f07a3): a conjunction of integer equalities that is rational-feasible but **integer-infeasible** is UNSAT — fraction-free Hermite-style integer Gaussian elimination reports a contradiction row (`0=c` or per-row `gcd ∤ rhs`), deciding the case B&B can't terminate on for unbounded vars and the single-equation GCD misses (e.g. `x+y=0 ∧ x−y=1 → 2x=1`). **Strictly generalizes & replaced** the single-equation `prove_lia_unsat_by_gcd` in dispatch (no regression). Sound (only integer-preserving row ops; `checked_*` → "not refuted" on overflow, never a wrong unsat; SAT systems never refuted, negative-tested). 11+2 tests. Remaining: Gomory/cube cuts; inequality-integrated cuts |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). **Sum-of-squares lemmas landed (2026-06-18)** — `sos_lemmas`: for a pair `a,b` with `a·a`/`b·b`/`a·b` all abstracted, add `(a±b)² ≥ 0` over the result vars (sound), restoring the cross-product correlation independent abstraction drops, so **`a²+b² ≥ 2ab` / AM–GM₂ is now PROVED** (the Spivak SOS-frontier test promoted prompt-`Unknown`→`Unsat`; negative test confirms `a²+b²=2ab` stays sat). 26 NRA + 5 Spivak tests. Remaining: higher-degree / multi-var SOS (Bernoulli, general Cauchy–Schwarz) + nlsat/CAD for completeness |
@@ -5977,6 +6011,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **AUFLIA returned-OR branch/select diagnostics.**
+  Branch/select diagnostics now carry returned-OR details for the first global
+  blocker after each composed branch+select trial. On `bug337`, this shows that
+  after branch **0** -> select **34** chain repair, OR **210**'s best branch is
+  still branch **0** with exactly **1/8** false literals: **term 580**,
+  `x_339 = store(x_325, x_337, 2)`, with incompatible array values. Next work
+  is preserving the select-34 readback while repairing branch-0 store-definition
+  term **580** / component arrays.
 
 - **2026-06-26** — **AUFLIA guarded branch/select cycle repair.**
   Added a bounded repair for small branch/select cycles: after one OR branch

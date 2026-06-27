@@ -1956,6 +1956,16 @@ against competitor source, are now binding:
      row. The next AUFLIA move is specifically component-level store-chain /
      branch-state repair inside `210 -> 34 -> 210`; simply trying another OR
      branch after the select repair is ruled out for `bug337`.
+     **RETURNED-OR BRANCH/SELECT DIAGNOSTIC LANDED (2026-06-26):**
+     branch/select candidate diagnostics now include OR-local details for the
+     first global blocker after a composed branch+select trial. On `bug337`,
+     branch 0 -> select 34 chain repair returns to OR 210 with best branch 0
+     and exactly one false literal: term 580,
+     `x_339 = store(x_325, x_337, 2)`, with lhs
+     `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])` and rhs
+     `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])`. The next repair target is
+     therefore preserving the select-34 store-chain readback while repairing
+     branch-0 store-definition term 580 / its component arrays.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
