@@ -6148,6 +6148,22 @@ struct ReplaySelectCandidateDiagnostic {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct ReplayScalarCandidateDiagnostic {
+    target_symbol: SymbolId,
+    value_term: TermId,
+    value: String,
+    changed: bool,
+    literal_true: bool,
+    support_gain: usize,
+    repair_changes: usize,
+    status: String,
+    total_false_conjuncts: usize,
+    first_global_false_ordinal: Option<usize>,
+    first_global_false_term: Option<TermId>,
+    first_global_false_eq: Option<ReplayEqFailure>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplayFailure {
     assertion_ordinal: usize,
     assertion_term: TermId,
@@ -6156,6 +6172,7 @@ struct ReplayFailure {
     failed_eq: Option<ReplayEqFailure>,
     failed_or: Option<ReplayOrFailure>,
     select_candidate_diagnostics: Vec<ReplaySelectCandidateDiagnostic>,
+    scalar_candidate_diagnostics: Vec<ReplayScalarCandidateDiagnostic>,
     branch_candidate_diagnostics: Vec<ReplayBranchCandidateDiagnostic>,
     branch_select_candidate_diagnostics: Vec<ReplayBranchSelectCandidateDiagnostic>,
     branch_pair_candidate_diagnostics: Vec<ReplayBranchPairCandidateDiagnostic>,
@@ -6249,6 +6266,54 @@ fn write_scalar_choice_effect_list(note: &mut String, choices: &[ReplayScalarCho
             let _ = write!(note, "|");
         }
         write_scalar_choice_effect(note, idx, choice);
+    }
+    let _ = write!(note, "]");
+}
+
+fn write_scalar_candidate_diagnostics(
+    note: &mut String,
+    diagnostics: &[ReplayScalarCandidateDiagnostic],
+) {
+    if diagnostics.is_empty() {
+        return;
+    }
+    let _ = write!(note, ", scalar_candidate_diagnostics=[");
+    for (idx, diagnostic) in diagnostics.iter().enumerate() {
+        if idx > 0 {
+            let _ = write!(note, "; ");
+        }
+        let _ = write!(
+            note,
+            "#{}:symbol={},value_term={},value={},changed={},literal_true={},\
+             support_gain={},changes={},status={},total_false={}",
+            idx,
+            diagnostic.target_symbol.index(),
+            diagnostic.value_term.index(),
+            diagnostic.value,
+            diagnostic.changed,
+            diagnostic.literal_true,
+            diagnostic.support_gain,
+            diagnostic.repair_changes,
+            diagnostic.status,
+            diagnostic.total_false_conjuncts
+        );
+        if let Some(ordinal) = diagnostic.first_global_false_ordinal {
+            let _ = write!(note, ",global_false_ordinal={ordinal}");
+        }
+        if let Some(term) = diagnostic.first_global_false_term {
+            let _ = write!(note, ",global_false_term={}", term.index());
+        }
+        if let Some(eq) = &diagnostic.first_global_false_eq {
+            let _ = write!(
+                note,
+                ",global_false_lhs_term={},global_false_rhs_term={},\
+                 global_false_lhs_value={},global_false_rhs_value={}",
+                eq.lhs_term.index(),
+                eq.rhs_term.index(),
+                eq.lhs_value,
+                eq.rhs_value
+            );
+        }
     }
     let _ = write!(note, "]");
 }
@@ -6428,6 +6493,7 @@ impl ReplayFailure {
             write_replay_or_paired_scalar_chain(&mut note, "failed_or", or_failure);
             write_replay_or_scalar_closure_branch_candidates(&mut note, "failed_or", or_failure);
         }
+        write_scalar_candidate_diagnostics(&mut note, &self.scalar_candidate_diagnostics);
         if !self.select_candidate_diagnostics.is_empty() {
             let _ = write!(note, ", select_candidate_diagnostics=[");
             for (idx, diagnostic) in self.select_candidate_diagnostics.iter().enumerate() {
@@ -7193,6 +7259,104 @@ fn replay_select_candidate_diagnostics(
     Ok(diagnostics)
 }
 
+fn scalar_candidate_status(
+    changed: bool,
+    total_false: usize,
+    current_false: usize,
+    support_gain: usize,
+) -> String {
+    if !changed {
+        "no_change".to_owned()
+    } else if total_false > current_false {
+        "worse".to_owned()
+    } else if total_false < current_false {
+        "improves".to_owned()
+    } else if support_gain > 0 {
+        "equal_support".to_owned()
+    } else {
+        "same_no_support".to_owned()
+    }
+}
+
+fn replay_scalar_candidate_diagnostics(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &Assignment,
+    failure: &ReplayFailure,
+) -> Result<Vec<ReplayScalarCandidateDiagnostic>, SolverError> {
+    const MAX_SCALAR_CANDIDATE_DIAGNOSTICS: usize = 4;
+
+    let choices = direct_scalar_equality_repair_choices(arena, failure.conjunct_term);
+    if choices.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext scalar candidate diagnostic failed: {e}"))
+    };
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut diagnostics = Vec::new();
+    for (target_symbol, value_term) in choices.into_iter().take(MAX_SCALAR_CANDIDATE_DIAGNOSTICS) {
+        let mut trial = projected.clone();
+        let mut stats = ProjectionRepairStats::default();
+        let value = eval(arena, value_term, &trial).map_err(ir)?;
+        let mut changed = repair_projected_select_backed_symbol_value(
+            arena,
+            originals,
+            &mut trial,
+            target_symbol,
+            &value,
+            &mut stats,
+            ProjectionSymbolChangeKind::Scalar,
+        )?;
+        if !changed
+            && store_projected_symbol_value(arena, &mut trial, target_symbol, value.clone())?
+        {
+            stats.scalar_symbol_changes += 1;
+            changed = true;
+        }
+
+        let target_support =
+            scalar_select_support_score(arena, originals, projected, target_symbol)?;
+        let source_support = direct_value_symbol(arena, value_term).map_or(Ok(0), |source| {
+            scalar_select_support_score(arena, originals, projected, source)
+        })?;
+        let support_gain = source_support.saturating_sub(target_support);
+        let literal_true =
+            eval(arena, failure.conjunct_term, &trial).map_err(ir)? == Value::Bool(true);
+        let mut total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if changed && total_false >= current_false && support_gain > 0 {
+            let stabilize_stats =
+                stabilize_projected_after_scalar_trial(arena, originals, &mut trial)?;
+            stats.absorb(stabilize_stats);
+            total_false = positive_replay_false_count(arena, originals, &trial)?;
+        }
+        let global_failure = first_projected_replay_failure(
+            arena,
+            originals,
+            &trial,
+            ProjectionRepairStats::default(),
+        )?;
+        diagnostics.push(ReplayScalarCandidateDiagnostic {
+            target_symbol,
+            value_term,
+            value: compact_replay_value(&value),
+            changed,
+            literal_true,
+            support_gain,
+            repair_changes: stats.changes(),
+            status: scalar_candidate_status(changed, total_false, current_false, support_gain),
+            total_false_conjuncts: total_false,
+            first_global_false_ordinal: global_failure
+                .as_ref()
+                .map(|failure| failure.conjunct_ordinal),
+            first_global_false_term: global_failure.as_ref().map(|failure| failure.conjunct_term),
+            first_global_false_eq: global_failure.and_then(|failure| failure.failed_eq),
+        });
+    }
+    Ok(diagnostics)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn replay_branch_select_candidate_from_trial(
     arena: &TermArena,
@@ -7555,6 +7719,8 @@ fn replay_failure_with_branch_candidate_diagnostics(
     }
     failure.select_candidate_diagnostics =
         replay_select_candidate_diagnostics(arena, originals, projected, &failure)?;
+    failure.scalar_candidate_diagnostics =
+        replay_scalar_candidate_diagnostics(arena, originals, projected, &failure)?;
     failure.branch_candidate_diagnostics =
         replay_branch_candidate_diagnostics(arena, originals, failure.conjunct_term, projected)?;
     failure.branch_select_candidate_diagnostics = replay_branch_select_candidate_diagnostics(
@@ -8479,6 +8645,91 @@ fn mixed_replay_beam_admits_or_failure(
         && positive_replay_conjunct_count(arena, originals) <= MAX_OR_MIXED_BEAM_CONJUNCTS
 }
 
+fn repair_projected_replay_scalar_failure(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    failure: &ReplayFailure,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    const MAX_SCALAR_REPLAY_REPAIR_CONJUNCTS: usize = 64;
+    const MAX_SCALAR_REPLAY_REPAIR_FALSE: usize = 4;
+
+    let choices = direct_scalar_equality_repair_choices(arena, failure.conjunct_term);
+    if choices.is_empty() {
+        return Ok(None);
+    }
+
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext scalar repair failed: {e}"));
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    if current_false > MAX_SCALAR_REPLAY_REPAIR_FALSE
+        || positive_replay_conjunct_count(arena, originals) > MAX_SCALAR_REPLAY_REPAIR_CONJUNCTS
+    {
+        return Ok(None);
+    }
+    let mut best: Option<(usize, usize, ProjectionRepairStats, Assignment)> = None;
+    for (ordinal, (symbol, value_term)) in choices.into_iter().enumerate() {
+        let mut trial = projected.clone();
+        let mut stats = ProjectionRepairStats {
+            scalar_candidates: 1,
+            ..ProjectionRepairStats::default()
+        };
+        let value = eval(arena, value_term, &trial).map_err(ir)?;
+        let mut changed = repair_projected_select_backed_symbol_value(
+            arena,
+            originals,
+            &mut trial,
+            symbol,
+            &value,
+            &mut stats,
+            ProjectionSymbolChangeKind::Scalar,
+        )?;
+        if !changed && store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+            stats.scalar_symbol_changes += 1;
+            changed = true;
+        }
+        if !changed || eval(arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true)
+        {
+            continue;
+        }
+
+        let target_support = scalar_select_support_score(arena, originals, projected, symbol)?;
+        let source_support = direct_value_symbol(arena, value_term).map_or(Ok(0), |source| {
+            scalar_select_support_score(arena, originals, projected, source)
+        })?;
+        let support_gain = source_support.saturating_sub(target_support);
+        if support_gain > 0 {
+            stats.scalar_support_candidates += 1;
+        }
+        let mut total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if total_false >= current_false && support_gain > 0 {
+            stats.scalar_stabilized_trials += 1;
+            let stabilize_stats =
+                stabilize_projected_after_scalar_trial(arena, originals, &mut trial)?;
+            stats.absorb(stabilize_stats);
+            total_false = positive_replay_false_count(arena, originals, &trial)?;
+        }
+        if total_false >= current_false {
+            continue;
+        }
+
+        let replace = best
+            .as_ref()
+            .is_none_or(|(best_total_false, best_ordinal, _, _)| {
+                (total_false, ordinal) < (*best_total_false, *best_ordinal)
+            });
+        if replace {
+            best = Some((total_false, ordinal, stats, trial));
+        }
+    }
+
+    let Some((_, _, stats, trial)) = best else {
+        return Ok(None);
+    };
+    *projected = trial;
+    Ok(Some(stats))
+}
+
 fn repair_projected_replay_failure(
     arena: &TermArena,
     originals: &[TermId],
@@ -8489,6 +8740,12 @@ fn repair_projected_replay_failure(
         repair_projected_replay_select_failure(arena, originals, projected, failure)?
     {
         return Ok(Some(select_stats));
+    }
+
+    if let Some(scalar_stats) =
+        repair_projected_replay_scalar_failure(arena, originals, projected, failure)?
+    {
+        return Ok(Some(scalar_stats));
     }
 
     let Some(or_failure) = &failure.failed_or else {
@@ -9256,6 +9513,7 @@ fn first_false_replay_conjunct(
                     failed_eq,
                     failed_or,
                     select_candidate_diagnostics: Vec::new(),
+                    scalar_candidate_diagnostics: Vec::new(),
                     branch_candidate_diagnostics: Vec::new(),
                     branch_select_candidate_diagnostics: Vec::new(),
                     branch_pair_candidate_diagnostics: Vec::new(),
@@ -9287,6 +9545,7 @@ fn first_false_replay_conjunct(
         failed_eq: replay_failed_eq_details(arena, assertion, assignment)?,
         failed_or: replay_failed_or_details(arena, assertion, assignment)?,
         select_candidate_diagnostics: Vec::new(),
+        scalar_candidate_diagnostics: Vec::new(),
         branch_candidate_diagnostics: Vec::new(),
         branch_select_candidate_diagnostics: Vec::new(),
         branch_pair_candidate_diagnostics: Vec::new(),
@@ -10860,6 +11119,104 @@ mod tests {
         assert_eq!(
             eval(&arena, y_eq_three, &projected).unwrap(),
             Value::Bool(true)
+        );
+    }
+
+    #[test]
+    fn lazy_ext_replay_failure_reports_scalar_candidate_diagnostics() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let three8 = arena.bv_const(8, 3).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let read = arena.select(a, two).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let y_eq_three = arena.eq(y, three8).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let a_with_two = store_value(
+            &default_a,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let mut projected = Assignment::new();
+        projected.set(*a_symbol, a_with_two);
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 1 });
+        let originals = [y_eq_read, y_eq_three];
+
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected scalar replay failure");
+        assert_eq!(failure.conjunct_term, y_eq_three);
+
+        let enriched = replay_failure_with_branch_candidate_diagnostics(
+            &arena, &originals, &projected, failure,
+        )
+        .unwrap();
+        let note = enriched.note();
+        assert!(note.contains("scalar_candidate_diagnostics=["), "{note}");
+        assert!(note.contains("literal_true=true"), "{note}");
+        assert!(note.contains("status=improves,total_false=0"), "{note}");
+    }
+
+    #[test]
+    fn lazy_ext_targeted_replay_repairs_select_backed_scalar_failure() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let three8 = arena.bv_const(8, 3).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let read = arena.select(a, two).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let y_eq_three = arena.eq(y, three8).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let a_with_two = store_value(
+            &default_a,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let mut projected = Assignment::new();
+        projected.set(*a_symbol, a_with_two);
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 1 });
+        let originals = [y_eq_read, y_eq_three];
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected scalar replay failure");
+
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected targeted scalar repair");
+        assert!(stats.array_changes >= 1, "{stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
         );
     }
 

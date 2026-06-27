@@ -625,6 +625,16 @@ a named mechanism.**
    **430** projection repair changes. The next AUFLIA work is scalar equality
    explanation/repair for that exposed term-3408 family, not more OR-236 branch
    forcing.
+   **Term-3408 scalar-candidate update (2026-06-27):** replay diagnostics now
+   show both scalar directions. `x_383 := x_330` makes term 3408 true and
+   exposes OR **210** / term **3879**; `x_330 := x_383` makes it true and
+   exposes OR **211** / term **4108**; both land at **total_false=2**.
+   Unguarded targeted scalar replay repair was measured/rejected on the large
+   row because it raised the first diagnostic call to **113 s**, hit the 180 s
+   wrapper before solve/evidence completed, and still returned to term 3408.
+   The retained scalar replay repair is guarded to small surfaces; the next
+   practical AUFLIA step is composing the term-3408 scalar choice with a bounded
+   OR-210/OR-211 follow-up repair.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

@@ -2091,6 +2091,18 @@ against competitor source, are now binding:
      changes, with `check_auto_explained` / `solve` / `produce_evidence` each
      around **49.3 s**. The next AUFLIA move is now term-3408 scalar equality
      explanation/repair, not OR-236 branch forcing.
+     **SCALAR-CANDIDATE DIAGNOSTICS LANDED (2026-06-27):** top-level scalar
+     replay failures now report bounded repair candidates using the same
+     select-backed path as production. On `bug337`, term **3408** has two
+     locally productive choices: `x_383 := x_330` exposes OR **210** / term
+     **3879**, and `x_330 := x_383` exposes OR **211** / term **4108**, both
+     with `total_false=2`. A targeted scalar replay repair exists for small
+     replay surfaces, but the unguarded large-row version was measured/rejected
+     after raising the first diagnostic call to **113 s** and still returning
+     to term **3408**; it is therefore guarded off for large generated AUFLIA
+     rows. The next AUFLIA move is a scalar+OR follow-up repair/diagnostic that
+     composes one of those scalar choices with bounded OR-210/OR-211 branch
+     repair without reintroducing the loop.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
