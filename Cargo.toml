@@ -17,6 +17,8 @@ members = [
     "crates/axeyum-scenarios",
     "crates/axeyum-smtlib",
     "crates/axeyum-solver",
+    "crates/axeyum-verify",
+    "crates/axeyum-verify-macros",
 ]
 
 [workspace.package]

@@ -1,0 +1,21 @@
+[package]
+name = "axeyum-verify"
+description = "Bounded Rust verifier on Axeyum: a #[axeyum::verify] proc-macro that symbolically checks a function for panics / integer overflow / unwrap failures / assertion violations, emitting a runnable failing #[test] or a re-checked bounded-verified certificate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+axeyum-solver = { path = "../axeyum-solver" }
+axeyum-property = { path = "../axeyum-property" }
+axeyum-verify-macros = { path = "../axeyum-verify-macros" }
+
+[lints]
+workspace = true
