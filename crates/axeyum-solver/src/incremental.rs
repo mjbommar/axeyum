@@ -22,7 +22,7 @@ use axeyum_ir::{
     SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval, well_founded_default,
 };
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
@@ -87,6 +87,10 @@ struct Frame {
     /// Uninterpreted-function applications abstracted into warm scalar symbols.
     /// These drive function-model projection before original-term replay.
     warm_uf_apps: Vec<TermId>,
+    /// Direct equalities between supported array symbols retained as scoped
+    /// warm theory facts. They generate select-congruence clauses and drive
+    /// equal-array model projection before replay.
+    warm_array_equalities: Vec<WarmArrayEquality>,
 }
 
 #[derive(Debug, Clone)]
@@ -95,6 +99,7 @@ struct OneShotAssumption {
     encoded: TermId,
     warm_array_selects: Vec<TermId>,
     warm_uf_apps: Vec<TermId>,
+    warm_array_equalities: Vec<WarmArrayEquality>,
     congruence_lemmas: Vec<TermId>,
 }
 
@@ -107,6 +112,12 @@ struct WarmArraySelect {
     index_width: u32,
     element: ArraySortKey,
     element_sort: Sort,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct WarmArrayEquality {
+    left: SymbolId,
+    right: SymbolId,
 }
 
 #[derive(Debug)]
@@ -169,6 +180,7 @@ impl IncrementalBvSolver {
                 deferred_assertions: Vec::new(),
                 warm_array_selects: Vec::new(),
                 warm_uf_apps: Vec::new(),
+                warm_array_equalities: Vec::new(),
             }],
             warm_array_selects: HashMap::new(),
             warm_uf_apps: HashMap::new(),
@@ -365,8 +377,24 @@ impl IncrementalBvSolver {
 
         let existing_selects = self.active_warm_array_select_terms();
         let existing_uf_apps = self.active_warm_uf_app_terms();
-        let encoded =
-            self.abstract_warm_array_selects(arena, encoded, &existing_selects, &existing_uf_apps)?;
+        let existing_equalities = self.active_warm_array_equalities();
+        if let Some(equality) = Self::supported_warm_array_equality(arena, encoded) {
+            return self.assert_warm_array_equality(
+                arena,
+                original,
+                encoded,
+                equality,
+                &existing_selects,
+                &existing_equalities,
+            );
+        }
+        let encoded = self.abstract_warm_array_selects(
+            arena,
+            encoded,
+            &existing_selects,
+            &existing_uf_apps,
+            &existing_equalities,
+        )?;
         if needs_deferred_theory(arena, encoded.term) {
             self.frames
                 .last_mut()
@@ -390,6 +418,33 @@ impl IncrementalBvSolver {
         frame.warm_array_selects.extend(encoded.select_terms);
         frame.warm_uf_apps.extend(encoded.uf_app_terms);
         Ok(encoded.term)
+    }
+
+    fn assert_warm_array_equality(
+        &mut self,
+        arena: &mut TermArena,
+        original: TermId,
+        encoded: TermId,
+        equality: WarmArrayEquality,
+        existing_selects: &[TermId],
+        existing_equalities: &[WarmArrayEquality],
+    ) -> Result<TermId, SolverError> {
+        let selector = self
+            .frames
+            .last()
+            .expect("base frame always present")
+            .selector;
+        let mut equalities = existing_equalities.to_vec();
+        equalities.push(equality);
+        for lemma in
+            self.warm_array_congruence_lemmas_for_selects(arena, existing_selects, &equalities)?
+        {
+            self.encode_warm_root(arena, lemma, selector)?;
+        }
+        let frame = self.frames.last_mut().expect("base frame always present");
+        frame.assertions.push(original);
+        frame.warm_array_equalities.push(equality);
+        Ok(encoded)
     }
 
     fn encode_warm_root(
@@ -429,6 +484,7 @@ impl IncrementalBvSolver {
             deferred_assertions: Vec::new(),
             warm_array_selects: Vec::new(),
             warm_uf_apps: Vec::new(),
+            warm_array_equalities: Vec::new(),
         });
         Ok(())
     }
@@ -685,12 +741,20 @@ impl IncrementalBvSolver {
             .collect()
     }
 
+    fn active_warm_array_equalities(&self) -> Vec<WarmArrayEquality> {
+        self.frames
+            .iter()
+            .flat_map(|frame| frame.warm_array_equalities.iter().copied())
+            .collect()
+    }
+
     fn abstract_warm_array_selects(
         &mut self,
         arena: &mut TermArena,
         term: TermId,
         existing_selects: &[TermId],
         existing_uf_apps: &[TermId],
+        existing_equalities: &[WarmArrayEquality],
     ) -> Result<WarmArrayEncoding, SolverError> {
         let mut memo = HashMap::new();
         let mut select_terms = Vec::new();
@@ -706,7 +770,9 @@ impl IncrementalBvSolver {
         let mut prior = existing_selects.to_vec();
         for &select in &select_terms {
             for &other in &prior {
-                if let Some(lemma) = self.warm_array_congruence_lemma(arena, other, select)? {
+                if let Some(lemma) =
+                    self.warm_array_congruence_lemma(arena, other, select, existing_equalities)?
+                {
                     congruence_lemmas.push(lemma);
                 }
             }
@@ -857,6 +923,40 @@ impl IncrementalBvSolver {
         })
     }
 
+    fn supported_warm_array_equality(arena: &TermArena, term: TermId) -> Option<WarmArrayEquality> {
+        let TermNode::App {
+            op: Op::Eq, args, ..
+        } = arena.node(term)
+        else {
+            return None;
+        };
+        let [left, right] = args.as_ref() else {
+            return None;
+        };
+        if left == right {
+            return None;
+        }
+        let TermNode::Symbol(left_symbol) = arena.node(*left) else {
+            return None;
+        };
+        let TermNode::Symbol(right_symbol) = arena.node(*right) else {
+            return None;
+        };
+        let Sort::Array { index, element } = arena.sort_of(*left) else {
+            return None;
+        };
+        if arena.sort_of(*right) != arena.sort_of(*left)
+            || !matches!(index, ArraySortKey::BitVec(_))
+            || !is_warm_array_element_sort(element)
+        {
+            return None;
+        }
+        Some(WarmArrayEquality {
+            left: *left_symbol,
+            right: *right_symbol,
+        })
+    }
+
     fn get_or_create_warm_array_select(
         &mut self,
         arena: &mut TermArena,
@@ -884,6 +984,7 @@ impl IncrementalBvSolver {
         arena: &mut TermArena,
         left: TermId,
         right: TermId,
+        equalities: &[WarmArrayEquality],
     ) -> Result<Option<TermId>, SolverError> {
         if left == right {
             return Ok(None);
@@ -894,7 +995,7 @@ impl IncrementalBvSolver {
         let Some(right) = self.warm_array_selects.get(&right).copied() else {
             return Ok(None);
         };
-        if left.array_symbol != right.array_symbol {
+        if !warm_array_symbols_equal(left.array_symbol, right.array_symbol, equalities) {
             return Ok(None);
         }
         let same_index = arena
@@ -910,6 +1011,25 @@ impl IncrementalBvSolver {
             .or(distinct_index, same_value)
             .map(Some)
             .map_err(|error| map_ir_error(&error))
+    }
+
+    fn warm_array_congruence_lemmas_for_selects(
+        &self,
+        arena: &mut TermArena,
+        selects: &[TermId],
+        equalities: &[WarmArrayEquality],
+    ) -> Result<Vec<TermId>, SolverError> {
+        let mut lemmas = Vec::new();
+        for (i, &left) in selects.iter().enumerate() {
+            for &right in &selects[i + 1..] {
+                if let Some(lemma) =
+                    self.warm_array_congruence_lemma(arena, left, right, equalities)?
+                {
+                    lemmas.push(lemma);
+                }
+            }
+        }
+        Ok(lemmas)
     }
 
     fn supported_warm_uf_app(arena: &TermArena, term: TermId) -> Option<WarmUfApp> {
@@ -1002,14 +1122,39 @@ impl IncrementalBvSolver {
     ) -> Result<Vec<OneShotAssumption>, SolverError> {
         let mut active_selects = self.active_warm_array_select_terms();
         let mut active_uf_apps = self.active_warm_uf_app_terms();
+        let mut active_equalities = self.active_warm_array_equalities();
         let mut simplified = Vec::with_capacity(assumptions.len());
         for &term in assumptions {
             if arena.sort_of(term) != Sort::Bool {
                 return Err(SolverError::NonBooleanAssertion(term));
             }
             let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
-            let encoded =
-                self.abstract_warm_array_selects(arena, encoded, &active_selects, &active_uf_apps)?;
+            if let Some(equality) = Self::supported_warm_array_equality(arena, encoded) {
+                let mut equalities = active_equalities.clone();
+                equalities.push(equality);
+                let congruence_lemmas = self.warm_array_congruence_lemmas_for_selects(
+                    arena,
+                    &active_selects,
+                    &equalities,
+                )?;
+                active_equalities.push(equality);
+                simplified.push(OneShotAssumption {
+                    original: term,
+                    encoded: arena.bool_const(true),
+                    warm_array_selects: Vec::new(),
+                    warm_uf_apps: Vec::new(),
+                    warm_array_equalities: vec![equality],
+                    congruence_lemmas,
+                });
+                continue;
+            }
+            let encoded = self.abstract_warm_array_selects(
+                arena,
+                encoded,
+                &active_selects,
+                &active_uf_apps,
+                &active_equalities,
+            )?;
             active_selects.extend(encoded.select_terms.iter().copied());
             active_uf_apps.extend(encoded.uf_app_terms.iter().copied());
             simplified.push(OneShotAssumption {
@@ -1017,6 +1162,7 @@ impl IncrementalBvSolver {
                 encoded: encoded.term,
                 warm_array_selects: encoded.select_terms,
                 warm_uf_apps: encoded.uf_app_terms,
+                warm_array_equalities: Vec::new(),
                 congruence_lemmas: encoded.congruence_lemmas,
             });
         }
@@ -1040,6 +1186,7 @@ impl IncrementalBvSolver {
                 encoded: term,
                 warm_array_selects: Vec::new(),
                 warm_uf_apps: Vec::new(),
+                warm_array_equalities: Vec::new(),
                 congruence_lemmas: Vec::new(),
             })
             .collect::<Vec<_>>();
@@ -1150,11 +1297,16 @@ impl IncrementalBvSolver {
                     .iter()
                     .flat_map(|assumption| assumption.warm_uf_apps.iter().copied())
                     .collect::<Vec<_>>();
+                let one_shot_array_equalities = assumptions
+                    .iter()
+                    .flat_map(|assumption| assumption.warm_array_equalities.iter().copied())
+                    .collect::<Vec<_>>();
                 let model = match self.complete_model_with_warm_theories(
                     arena,
                     &reconstructed,
                     &one_shot_selects,
                     &one_shot_uf_apps,
+                    &one_shot_array_equalities,
                 ) {
                     Ok(model) => model,
                     Err(reason) => return Ok((CheckResult::Unknown(reason), Vec::new())),
@@ -1212,10 +1364,12 @@ impl IncrementalBvSolver {
         assignment: &Assignment,
         one_shot_selects: &[TermId],
         one_shot_uf_apps: &[TermId],
+        one_shot_array_equalities: &[WarmArrayEquality],
     ) -> Result<Model, UnknownReason> {
         let mut model = complete_model_filtered(arena, assignment, &self.internal_symbols);
         self.project_warm_array_selects(arena, assignment, one_shot_selects, &mut model)?;
         self.project_warm_uf_apps(arena, assignment, one_shot_uf_apps, &mut model)?;
+        self.project_warm_array_equalities(arena, one_shot_array_equalities, &mut model)?;
         Ok(model)
     }
 
@@ -1349,6 +1503,30 @@ impl IncrementalBvSolver {
                 interpretation.define(&arg_codes, result.scalar_code())
             };
             model.set_function(app.func, interpretation);
+        }
+        Ok(())
+    }
+
+    fn project_warm_array_equalities(
+        &self,
+        arena: &TermArena,
+        one_shot_array_equalities: &[WarmArrayEquality],
+        model: &mut Model,
+    ) -> Result<(), UnknownReason> {
+        let mut equalities = self.active_warm_array_equalities();
+        equalities.extend_from_slice(one_shot_array_equalities);
+        if equalities.is_empty() {
+            return Ok(());
+        }
+
+        for group in warm_array_equality_groups(&equalities) {
+            if group.len() < 2 {
+                continue;
+            }
+            let merged = merge_equal_array_group(arena, model, &group)?;
+            for symbol in group {
+                model.set(symbol, merged.clone());
+            }
         }
         Ok(())
     }
@@ -2435,6 +2613,239 @@ fn supported_warm_uf_app_shape(arena: &TermArena, term: TermId) -> bool {
             .iter()
             .zip(params)
             .all(|(&arg, &sort)| arena.sort_of(arg) == sort)
+}
+
+fn warm_array_symbols_equal(
+    left: SymbolId,
+    right: SymbolId,
+    equalities: &[WarmArrayEquality],
+) -> bool {
+    if left == right {
+        return true;
+    }
+    let mut stack = vec![left];
+    let mut seen = HashSet::new();
+    while let Some(symbol) = stack.pop() {
+        if !seen.insert(symbol) {
+            continue;
+        }
+        for equality in equalities {
+            let next = if equality.left == symbol {
+                Some(equality.right)
+            } else if equality.right == symbol {
+                Some(equality.left)
+            } else {
+                None
+            };
+            if let Some(next) = next {
+                if next == right {
+                    return true;
+                }
+                stack.push(next);
+            }
+        }
+    }
+    false
+}
+
+fn warm_array_equality_groups(equalities: &[WarmArrayEquality]) -> Vec<Vec<SymbolId>> {
+    let mut groups: Vec<Vec<SymbolId>> = Vec::new();
+    for equality in equalities {
+        let left_group = groups
+            .iter()
+            .position(|group| group.contains(&equality.left));
+        let right_group = groups
+            .iter()
+            .position(|group| group.contains(&equality.right));
+        match (left_group, right_group) {
+            (Some(left), Some(right)) if left == right => {}
+            (Some(left), Some(right)) => {
+                let (keep, remove) = if left < right {
+                    (left, right)
+                } else {
+                    (right, left)
+                };
+                let removed = groups.remove(remove);
+                for symbol in removed {
+                    if !groups[keep].contains(&symbol) {
+                        groups[keep].push(symbol);
+                    }
+                }
+            }
+            (Some(group), None) => {
+                if !groups[group].contains(&equality.right) {
+                    groups[group].push(equality.right);
+                }
+            }
+            (None, Some(group)) => {
+                if !groups[group].contains(&equality.left) {
+                    groups[group].push(equality.left);
+                }
+            }
+            (None, None) => groups.push(vec![equality.left, equality.right]),
+        }
+    }
+    for group in &mut groups {
+        group.sort();
+        group.dedup();
+    }
+    groups.sort_by_key(|group| group.first().copied());
+    groups
+}
+
+fn merge_equal_array_group(
+    arena: &TermArena,
+    model: &Model,
+    group: &[SymbolId],
+) -> Result<Value, UnknownReason> {
+    let Some(&first) = group.first() else {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: "cannot merge an empty warm array-equality group".to_owned(),
+        });
+    };
+    let (_name, sort) = arena.symbol(first);
+    for &symbol in group {
+        let (_name, other_sort) = arena.symbol(symbol);
+        if other_sort != sort {
+            return Err(UnknownReason {
+                kind: UnknownKind::Other,
+                detail: "warm array equality connected symbols with different sorts".to_owned(),
+            });
+        }
+    }
+    match sort {
+        Sort::Array {
+            index: ArraySortKey::BitVec(index_width),
+            element: ArraySortKey::BitVec(element_width),
+        } if index_width <= 128 && element_width <= 128 => {
+            merge_equal_compact_bv_arrays(index_width, element_width, model, group)
+        }
+        Sort::Array { index, element } => {
+            merge_equal_generic_arrays(arena, index, element, model, group)
+        }
+        other => Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!("warm array equality projected non-array sort {other}"),
+        }),
+    }
+}
+
+fn merge_equal_compact_bv_arrays(
+    index_width: u32,
+    element_width: u32,
+    model: &Model,
+    group: &[SymbolId],
+) -> Result<Value, UnknownReason> {
+    let mut entries = BTreeMap::new();
+    for &symbol in group {
+        let Some(Value::Array(array)) = model.get(symbol) else {
+            continue;
+        };
+        if array.index_width() != index_width || array.element_width() != element_width {
+            return Err(UnknownReason {
+                kind: UnknownKind::Other,
+                detail: "warm equal-array projection saw mismatched compact array sort".to_owned(),
+            });
+        }
+        for (index, value) in array.entries() {
+            match entries.insert(index, value) {
+                Some(existing) if existing != value => {
+                    return Err(UnknownReason {
+                        kind: UnknownKind::Other,
+                        detail: format!(
+                            "warm equal-array projection found conflicting values at index {index}"
+                        ),
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut merged = ArrayValue::constant(index_width, element_width, 0);
+    for (index, value) in entries {
+        merged = merged.store(index, value);
+    }
+    Ok(Value::Array(merged))
+}
+
+fn merge_equal_generic_arrays(
+    arena: &TermArena,
+    index: ArraySortKey,
+    element: ArraySortKey,
+    model: &Model,
+    group: &[SymbolId],
+) -> Result<Value, UnknownReason> {
+    let default = well_founded_default(arena, element.to_sort()).ok_or_else(|| UnknownReason {
+        kind: UnknownKind::Other,
+        detail: format!("warm equal-array projection had no default for element sort {element}"),
+    })?;
+    let mut entries: Vec<(Value, Value)> = Vec::new();
+    for &symbol in group {
+        let Some(value) = model.get(symbol) else {
+            continue;
+        };
+        let array = match value {
+            Value::GenericArray(array)
+                if array.index_sort() == index && array.element_sort() == element =>
+            {
+                array
+            }
+            Value::Array(array)
+                if index == ArraySortKey::BitVec(array.index_width())
+                    && element == ArraySortKey::BitVec(array.element_width()) =>
+            {
+                for (raw_index, raw_value) in array.entries() {
+                    let index_value = Value::Bv {
+                        width: array.index_width(),
+                        value: raw_index,
+                    };
+                    let element_value = Value::Bv {
+                        width: array.element_width(),
+                        value: raw_value,
+                    };
+                    push_equal_generic_array_entry(&mut entries, index_value, element_value)?;
+                }
+                continue;
+            }
+            _ => {
+                return Err(UnknownReason {
+                    kind: UnknownKind::Other,
+                    detail: "warm equal-array projection saw mismatched generic array sort"
+                        .to_owned(),
+                });
+            }
+        };
+        for (entry_index, entry_value) in array.entries() {
+            push_equal_generic_array_entry(&mut entries, entry_index.clone(), entry_value.clone())?;
+        }
+    }
+
+    let mut merged = GenericArrayValue::constant(index, element, default);
+    for (entry_index, entry_value) in entries {
+        merged = merged.store(entry_index, entry_value);
+    }
+    Ok(Value::GenericArray(merged))
+}
+
+fn push_equal_generic_array_entry(
+    entries: &mut Vec<(Value, Value)>,
+    index: Value,
+    value: Value,
+) -> Result<(), UnknownReason> {
+    if let Some((_, existing)) = entries.iter().find(|(seen, _)| *seen == index) {
+        if *existing != value {
+            return Err(UnknownReason {
+                kind: UnknownKind::Other,
+                detail: format!(
+                    "warm equal-array projection found conflicting values at index {index}"
+                ),
+            });
+        }
+        return Ok(());
+    }
+    entries.push((index, value));
+    Ok(())
 }
 
 fn fresh_internal_symbol_name(arena: &TermArena, base_name: &str) -> String {

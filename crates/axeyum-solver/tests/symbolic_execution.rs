@@ -2276,6 +2276,196 @@ fn warm_bool_array_select_congruence_refutes_equal_index_conflict() {
 }
 
 #[test]
+fn warm_array_equality_refutes_cross_array_equal_index_conflict() {
+    let mut arena = TermArena::new();
+    let left_sym = arena
+        .declare(
+            "warm_array_eq_left",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let right_sym = arena
+        .declare(
+            "warm_array_eq_right",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let i_sym = arena.declare("warm_array_eq_i", Sort::BitVec(8)).unwrap();
+    let j_sym = arena.declare("warm_array_eq_j", Sort::BitVec(8)).unwrap();
+    let left = arena.var(left_sym);
+    let right = arena.var(right_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let a = arena.bv_const(8, 0xaa).unwrap();
+    let b = arena.bv_const(8, 0xbb).unwrap();
+    let arrays_equal = arena.eq(left, right).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+    let left_read = arena.select(left, i).unwrap();
+    let right_read = arena.select(right, j).unwrap();
+    let left_is_a = arena.eq(left_read, a).unwrap();
+    let right_is_b = arena.eq(right_read, b).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, left_is_a)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, right_is_b)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, arrays_equal)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_index)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "direct equal-array select conflicts should stay on the warm path"
+    );
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
+fn warm_array_equality_projects_equal_arrays_for_sat_replay() {
+    let mut arena = TermArena::new();
+    let left_sym = arena
+        .declare(
+            "warm_array_eq_sat_left",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let right_sym = arena
+        .declare(
+            "warm_array_eq_sat_right",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let idx_sym = arena
+        .declare("warm_array_eq_sat_idx", Sort::BitVec(8))
+        .unwrap();
+    let left = arena.var(left_sym);
+    let right = arena.var(right_sym);
+    let idx = arena.var(idx_sym);
+    let target = arena.bv_const(8, 0x42).unwrap();
+    let arrays_equal = arena.eq(left, right).unwrap();
+    let left_read = arena.select(left, idx).unwrap();
+    let left_is_target = arena.eq(left_read, target).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, arrays_equal)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, left_is_target)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "direct array equality should be retained as a warm theory fact"
+    );
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("equal arrays with one constrained read should be satisfiable");
+    };
+    assert_eq!(
+        eval(&arena, arrays_equal, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "equal-array projection must replay the original array equality"
+    );
+    assert_eq!(
+        eval(&arena, left_is_target, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "merged equal-array model must preserve the constrained read"
+    );
+    assert_eq!(
+        model.get(left_sym),
+        model.get(right_sym),
+        "the public model should assign equal arrays the same projected value"
+    );
+}
+
+#[test]
+fn warm_array_equality_assumption_refutes_cross_array_conflict_without_persisting() {
+    let mut arena = TermArena::new();
+    let left_sym = arena
+        .declare(
+            "warm_assume_array_eq_left",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let right_sym = arena
+        .declare(
+            "warm_assume_array_eq_right",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let i_sym = arena
+        .declare("warm_assume_array_eq_i", Sort::BitVec(8))
+        .unwrap();
+    let j_sym = arena
+        .declare("warm_assume_array_eq_j", Sort::BitVec(8))
+        .unwrap();
+    let left = arena.var(left_sym);
+    let right = arena.var(right_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let a = arena.bv_const(8, 0x33).unwrap();
+    let b = arena.bv_const(8, 0x44).unwrap();
+    let arrays_equal = arena.eq(left, right).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+    let left_read = arena.select(left, i).unwrap();
+    let right_read = arena.select(right, j).unwrap();
+    let left_is_a = arena.eq(left_read, a).unwrap();
+    let right_is_b = arena.eq(right_read, b).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, left_is_a)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, right_is_b)
+        .unwrap();
+    assert!(matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)));
+
+    let outcome = solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[arrays_equal, same_index])
+        .unwrap();
+    let AssumptionOutcome::Unsat { core } = outcome else {
+        panic!("array equality plus equal indices should refute conflicting reads");
+    };
+    assert!(
+        core.iter()
+            .all(|term| [arrays_equal, same_index].contains(term)),
+        "reported core should name only user assumptions, not internal equal-array lemmas"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "one-shot array equality assumptions should not persist as deferred theory assertions"
+    );
+    assert!(
+        matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)),
+        "one-shot equal-array conflict must not persist after the check"
+    );
+}
+
+#[test]
 fn warm_array_select_congruence_is_scoped_by_push_pop() {
     let mut arena = TermArena::new();
     let mem_sym = arena

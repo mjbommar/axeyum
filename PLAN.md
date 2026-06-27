@@ -2270,7 +2270,11 @@ zero-initialized or otherwise reducible store chains.
 Plain `select(a, i)` reads over BV-index/BV-element array symbols now abstract to
 retained warm BV variables with scoped same-array select-congruence lemmas and
 replay-projected array models, so symbolic-base helper loads and ROW tails whose
-base read is a memory symbol no longer need the dispatcher. Scalar Bool/BV
+base read is a memory symbol no longer need the dispatcher. Direct equality
+between supported array symbols is also retained as a scoped warm theory fact:
+equal-array classes generate cross-array select-congruence lemmas for committed
+assertions and one-shot branch assumptions, and SAT models merge equal arrays
+before replay. Scalar Bool/BV
 uninterpreted-function applications now get the same retained warm treatment:
 `f(args)` is abstracted to an internal warm variable, same-function applications
 receive scoped congruence lemmas, and SAT models project touched `FuncValue`
@@ -2292,8 +2296,9 @@ uses the same automatic warm/memory route as direct executor calls, so reducible
 or select-abstractable CFG memory branches stay warm before falling back. This
 is still a one-shot fallback for deferred theories beyond the narrow same-index /
 literal-distinct / const-array / array-`ite` / reducible conditional-ROW /
-BV-array select-congruence / scalar-UF congruence admission, not final warm lazy
-theory incrementality or a complete lifter/emulator frontend. The
+BV-array select-congruence / direct array-equality / scalar-UF congruence
+admission, not final warm lazy theory incrementality or a complete
+lifter/emulator frontend. The
 checked concrete replay hook now has a reusable tiny-target library surface:
 `TinyBvProgram` validates a fixed-width BV register program, lifts instructions
 to symbolic CFG steps, extracts model witnesses, and independently replays them

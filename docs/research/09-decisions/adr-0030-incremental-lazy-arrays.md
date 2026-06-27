@@ -111,11 +111,14 @@ to a retained warm variable, same-function applications get selector-scoped
 congruence lemmas, and SAT models are projected back into `FuncValue` entries
 before replay. Wide-BV UF signatures, including BV256 keccak-style
 arguments/results, use full-value `FuncValue` entries instead of lossy `u128`
-codes. Full lazy arrays/UF remain deferred: arbitrary array terms,
-extensionality, ROW instantiation beyond the current simplifier, non-BV
-indices, non-Bool/BV element arrays, non-scalar or infinite-domain UF
-applications, and learned theory-clause reuse across the whole array/UF engine
-are still open.
+codes. Direct equality between supported array symbols is also retained as a
+scoped warm theory fact: equal-array classes generate cross-array
+select-congruence lemmas for committed assertions and one-shot assumptions, and
+SAT models merge equal arrays before replay. Full lazy arrays/UF remain
+deferred: arbitrary array terms, general extensionality/disequality witnesses,
+ROW instantiation beyond the current simplifier, non-BV indices, non-Bool/BV
+element arrays, non-scalar or infinite-domain UF applications, and learned
+theory-clause reuse across the whole array/UF engine are still open.
 
 ## Consequences
 

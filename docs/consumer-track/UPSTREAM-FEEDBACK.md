@@ -111,6 +111,12 @@ Last reconciled with `main`: 2026-06-27.
   by any amount returns zero, and all-ones arithmetic-right-shifted by any
   amount remains all ones; nonzero variable shifts and over-shift rewrites stay
   as ordinary BV terms.
+  Direct equality between supported BV-indexed Bool/BV array symbols now stays
+  warm as a scoped theory fact too: equal-array classes generate cross-array
+  select-congruence lemmas for committed assertions and one-shot assumptions,
+  and SAT models merge equal arrays before replay. This keeps direct `a = b`
+  plus equal-index read conflicts on the warm path, while arbitrary array terms
+  and full extensionality still promote.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -131,6 +137,7 @@ Last reconciled with `main`: 2026-06-27.
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
   equality/connective/xor/implication cleanup,
   BV bitwise/arithmetic/div-rem/comparison/slice-extension/shift readback cleanup,
+  direct equal-array symbol facts,
   branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
@@ -163,6 +170,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm BV shift readback cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
+  "Warm direct array-equality admission" /
   "Warm scalar UF congruence admission" /
   "Warm wide-BV scalar UF projection" /
   "Warm branch routing recognizes retained select/UF slices";
