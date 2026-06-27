@@ -3314,19 +3314,72 @@ fn symbolic_memory_write_log_drops_shadowed_concrete_indices() {
         .unwrap();
     assert_eq!(
         count_ite_nodes(&arena, loaded),
-        2,
-        "only the two visible writes should emit read-over-write guards"
+        0,
+        "literal-distinct writes are skipped and the exact read hit needs no guard"
     );
 
     let loaded_eq_new = arena.eq(loaded, new_three).unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, loaded_eq_new),
+        "the read-specific concrete hit should be a pure warm condition"
+    );
     let mut solver = IncrementalBvSolver::new();
     solver.assert(&arena, loaded_eq_new).unwrap();
     assert!(
-        matches!(
-            solver.check_with_memory(&mut arena).unwrap(),
-            CheckResult::Sat(_)
-        ),
+        matches!(solver.check(&arena).unwrap(), CheckResult::Sat(_)),
         "the compact write-log read should replay with the latest concrete write"
+    );
+}
+
+#[test]
+fn symbolic_memory_write_log_skips_literal_distinct_but_keeps_symbolic_aliases() {
+    let mut arena = TermArena::new();
+    let memory = SymbolicMemory::declare_bv(&mut arena, "alias_after_hit_mem", 8, 8).unwrap();
+    let ys = arena.declare("alias_after_hit_y", Sort::BitVec(8)).unwrap();
+    let y = arena.var(ys);
+    let idx_three = arena.bv_const(8, 3).unwrap();
+    let idx_four = arena.bv_const(8, 4).unwrap();
+    let miss_value = arena.bv_const(8, 0x11).unwrap();
+    let hit_value = arena.bv_const(8, 0x33).unwrap();
+    let later_alias_value = arena.bv_const(8, 0x77).unwrap();
+    let writes = [
+        SymbolicMemoryWrite::new(idx_four, miss_value),
+        SymbolicMemoryWrite::new(idx_three, hit_value),
+        SymbolicMemoryWrite::new(y, later_alias_value),
+    ];
+
+    let loaded = memory
+        .load_with_write_log(&mut arena, idx_three, &writes)
+        .unwrap();
+    assert_eq!(
+        count_ite_nodes(&arena, loaded),
+        1,
+        "the concrete miss is skipped, the exact hit is unguarded, and only the later symbolic alias remains guarded"
+    );
+
+    let y_eq_three = arena.eq(y, idx_three).unwrap();
+    let loaded_eq_hit = arena.eq(loaded, hit_value).unwrap();
+    let loaded_eq_later = arena.eq(loaded, later_alias_value).unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, loaded_eq_later),
+        "the read-specific alias chain should not leave a base array select"
+    );
+
+    let mut impossible_hit = IncrementalBvSolver::new();
+    impossible_hit.assert(&arena, y_eq_three).unwrap();
+    impossible_hit.assert(&arena, loaded_eq_hit).unwrap();
+    assert_eq!(
+        impossible_hit.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a later symbolic write aliases the read when y = 3 and shadows the exact hit"
+    );
+
+    let mut possible_later = IncrementalBvSolver::new();
+    possible_later.assert(&arena, y_eq_three).unwrap();
+    possible_later.assert(&arena, loaded_eq_later).unwrap();
+    assert!(
+        matches!(possible_later.check(&arena).unwrap(), CheckResult::Sat(_)),
+        "the later alias value remains feasible on the same path"
     );
 }
 
@@ -3348,19 +3401,23 @@ fn symbolic_memory_write_log_preserves_last_writer_for_symbolic_aliases() {
     let loaded = memory.load_with_write_log(&mut arena, x, &writes).unwrap();
     assert_eq!(
         count_ite_nodes(&arena, loaded),
-        2,
-        "symbolic writes are both retained because their indices may alias"
+        1,
+        "the exact read hit is unguarded while the later symbolic write is retained because it may alias"
     );
 
     let x_eq_y = arena.eq(x, y).unwrap();
     let loaded_eq_old = arena.eq(loaded, old).unwrap();
     let loaded_eq_new = arena.eq(loaded, new).unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, loaded_eq_new),
+        "read-specific symbolic aliasing should stay array-free after an exact hit"
+    );
 
     let mut impossible_old = IncrementalBvSolver::new();
     impossible_old.assert(&arena, x_eq_y).unwrap();
     impossible_old.assert(&arena, loaded_eq_old).unwrap();
     assert_eq!(
-        impossible_old.check_with_memory(&mut arena).unwrap(),
+        impossible_old.check(&arena).unwrap(),
         CheckResult::Unsat,
         "when x = y, the later y-write must shadow the earlier x-write"
     );
@@ -3369,10 +3426,7 @@ fn symbolic_memory_write_log_preserves_last_writer_for_symbolic_aliases() {
     possible_new.assert(&arena, x_eq_y).unwrap();
     possible_new.assert(&arena, loaded_eq_new).unwrap();
     assert!(
-        matches!(
-            possible_new.check_with_memory(&mut arena).unwrap(),
-            CheckResult::Sat(_)
-        ),
+        matches!(possible_new.check(&arena).unwrap(), CheckResult::Sat(_)),
         "the same aliasing path should accept the later write's value"
     );
 }

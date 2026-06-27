@@ -45,7 +45,7 @@
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::incremental::IncrementalBvSolver;
+use crate::incremental::{IncrementalBvSolver, known_literal_distinct};
 use crate::model::Model;
 use crate::optimize::{
     OptOutcome, maximize_bv, maximize_bv_signed, maximize_lia, minimize_bv, minimize_bv_signed,
@@ -123,7 +123,8 @@ pub struct SymbolicMemory {
 /// This is a construction helper for consumers that track memory writes as a
 /// log before deciding whether to materialize an SMT array `store` chain or a
 /// read-specific read-over-write `ite` chain. Later writes shadow earlier writes
-/// at the same syntactic/concrete index.
+/// at the same syntactic/concrete index, and read-specific construction skips
+/// writes whose literal address is known not to alias the read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SymbolicMemoryWrite {
     /// Address/index written.
@@ -290,13 +291,17 @@ impl SymbolicMemory {
     /// read-over-write `ite` chain.
     ///
     /// Writes are first normalized with [`Self::normalized_writes`], so shadowed
-    /// same-index writes do not emit dead equality guards. The emitted term is:
+    /// same-index writes do not emit dead equality guards. Writes at literal
+    /// indices known distinct from `read_index` are skipped, and an exact
+    /// same-index write becomes the current read value without an equality
+    /// guard. The emitted term is:
     ///
     /// `ite(read_index = i_last, v_last, ... select(base, read_index))`
     ///
-    /// with one equality guard per visible write. This is a frontend-side
-    /// scaling helper for deep memory logs while the true warm lazy-array route
-    /// remains in progress; it does not change the solver's theory support.
+    /// with one equality guard per visible write that may alias the read. This
+    /// is a frontend-side scaling helper for deep memory logs while the true
+    /// warm lazy-array route remains in progress; it does not change the
+    /// solver's theory support.
     ///
     /// # Errors
     ///
@@ -312,6 +317,13 @@ impl SymbolicMemory {
         let visible = self.normalized_writes(arena, writes)?;
         let mut loaded = self.load(arena, read_index)?;
         for write in &visible {
+            if known_literal_distinct(arena, read_index, write.index) {
+                continue;
+            }
+            if write.index == read_index {
+                loaded = write.value;
+                continue;
+            }
             let guard = arena.eq(read_index, write.index)?;
             loaded = arena.ite(guard, write.value, loaded)?;
         }

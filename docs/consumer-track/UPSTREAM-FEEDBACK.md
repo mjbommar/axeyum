@@ -87,17 +87,18 @@ Last reconciled with `main`: 2026-06-27.
   read-over-write `ite` chains, with one 256-bit equality guard per prior store.
   The memory-aware solver route lets frontends keep array assertions in path
   conditions, and `SymbolicMemory` now has a write-log helper that drops
-  same-index shadowed writes and emits one deterministic read-over-write `ite`
-  guard per visible write. Deep store-chain scaling is still the array-solver
+  same-index shadowed writes, skips writes at literal-distinct addresses for a
+  specific read, elides exact-hit guards, and emits guards only for remaining
+  writes that may alias. Deep store-chain scaling is still the array-solver
   performance problem unless the warm lazy array path reuses structure and
   instantiates ROW facts on demand.
 - **Why it matters:** EVM paths with many storage writes can still make per-read
   formulas grow linearly or worse if the frontend has to materialize store-chain
   guards.
 - **Ask:** prefer the native lazy-array route from U6. The interim
-  frontend-facing helper exists for syntactic/concrete same-index shadowing;
-  next upstream work is still retained lazy-array/UF theory clauses, not more
-  frontend lowering.
+  frontend-facing helper exists for syntactic/concrete same-index shadowing and
+  read-specific literal-distinct pruning; next upstream work is still retained
+  lazy-array/UF theory clauses, not more frontend lowering.
 - **Source:** `docs/plan/track-2-theories/P2.2-arrays-lazy.md`,
   `docs/plan/track-4-usecases-frontend/P4.1-warm-lazy-memory.md`, and the EVM
   memory notes when that app track is active.

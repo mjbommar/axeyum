@@ -723,7 +723,8 @@ the active slice through the full pure-Rust solver, and
 methods, and `SymbolicMemory` now gives frontends a typed array-backed
 load/store state plus load-equality branch/assume helpers. `SymbolicMemoryWrite`
 and the write-log helpers now also let frontends drop same-index shadowed writes
-and emit one deterministic read-over-write `ite` guard per visible write before
+and build read-specific read-over-write terms that skip literal-distinct writes,
+elide exact-hit guards, and guard only remaining writes that may alias before
 querying the memory-aware route. This covers the immediate angr/KLEE-style
 path-query need and reduces hand-assembled read-over-write boilerplate for
 simple store logs. `SymbolicExecutor::branch` and `explore_cfg` now auto-promote

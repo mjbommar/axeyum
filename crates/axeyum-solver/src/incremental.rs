@@ -899,7 +899,7 @@ fn const_array_default(arena: &TermArena, term: TermId) -> Option<TermId> {
     Some(*value)
 }
 
-fn known_literal_distinct(arena: &TermArena, left: TermId, right: TermId) -> bool {
+pub(crate) fn known_literal_distinct(arena: &TermArena, left: TermId, right: TermId) -> bool {
     if arena.sort_of(left) != arena.sort_of(right) {
         return false;
     }

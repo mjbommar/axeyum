@@ -2267,9 +2267,11 @@ retaining the original memory term for replay and core reporting.
 `SymbolicMemory` also provides a typed frontend
 helper for array-backed `load`/`store`, load-equality branch/assume queries, and
 conservative write-log normalization that drops shadowed same-index writes before
-emitting compact read-over-write `ite` chains; those helper branch/assume calls
-now use the same automatic warm/memory route, so reducible helper queries avoid
-the dispatcher while unreduced memory still falls back soundly.
+emitting compact read-over-write `ite` chains. Read-specific write-log loads now
+skip writes at literal-distinct addresses and elide exact-hit guards while still
+guarding later symbolic aliases; those helper branch/assume calls use the same
+automatic warm/memory route, so reducible helper queries avoid the dispatcher
+while unreduced memory still falls back soundly.
 `explore_cfg` now owns the DFS solver mechanics for frontend-supplied CFG states:
 branch feasibility, scope push/pop, infeasible pruning, unknown-safe traversal,
 and replay-checked target models; with the default `memory_aware=false` it now
