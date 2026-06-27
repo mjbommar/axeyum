@@ -595,6 +595,62 @@ fn get_value_is_none_when_unsat() {
     );
 }
 
+#[test]
+fn get_assignment_reads_named_active_assertions() {
+    use axeyum_solver::solve_smtlib_get_assignment;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (! (= x #x05) :named fixed))
+(assert (! (bvult x #x0a) :named small))
+(check-sat)
+(get-assignment)
+";
+    let assignment = solve_smtlib_get_assignment(text, &config())
+        .expect("decides")
+        .expect("sat query has named assertions");
+    assert_eq!(
+        assignment,
+        vec![("fixed".to_owned(), true), ("small".to_owned(), true)]
+    );
+}
+
+#[test]
+fn get_assignment_uses_scoped_active_names() {
+    use axeyum_solver::solve_smtlib_get_assignment;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(push 1)
+(assert (! (= x #x01) :named stale))
+(pop 1)
+(assert (! (= x #x02) :named active))
+(check-sat)
+(get-assignment)
+";
+    let assignment = solve_smtlib_get_assignment(text, &config())
+        .expect("decides")
+        .expect("sat query has one active named assertion");
+    assert_eq!(assignment, vec![("active".to_owned(), true)]);
+}
+
+#[test]
+fn get_assignment_is_none_without_sat_model() {
+    use axeyum_solver::solve_smtlib_get_assignment;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (! (= x #x01) :named one))
+(assert (! (= x #x02) :named two))
+(check-sat)
+(get-assignment)
+";
+    assert_eq!(
+        solve_smtlib_get_assignment(text, &config()).expect("decides"),
+        None
+    );
+}
+
 /// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
 #[test]
 fn optimize_integer_objective() {

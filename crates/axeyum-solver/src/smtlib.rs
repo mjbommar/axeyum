@@ -14,7 +14,7 @@
 use axeyum_cnf::{check_alethe, write_alethe};
 use std::collections::{BTreeMap, VecDeque};
 
-use axeyum_ir::{Sort, TermArena, TermId};
+use axeyum_ir::{Sort, TermArena, TermId, Value};
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
@@ -268,6 +268,55 @@ pub fn solve_smtlib_get_value(
         values.push(value);
     }
     Ok(Some(values))
+}
+
+/// Evaluates active top-level `:named` assertions for an SMT-LIB
+/// `(get-assignment)` query.
+///
+/// For a `sat` single-query script, this returns `(name, value)` pairs for the
+/// active top-level assertions annotated as `(! t :named name)`, in active
+/// assertion order after honoring `push`/`pop`, `check-sat-assuming`, and
+/// `reset-assertions`. Popped names are not reported. Returns `Ok(None)` when
+/// the script is `unsat`/`unknown` or has no active named assertions. Nested
+/// named subterms are currently aliases for parsing; this helper reports the
+/// top-level assertion assignments used by common SMT-LIB drivers.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, any [`SolverError`]
+/// from [`crate::solve`], or [`SolverError::Backend`] if a named assertion fails
+/// to evaluate under a returned model.
+pub fn solve_smtlib_get_assignment(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Option<Vec<(String, bool)>>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let query = smtlib_single_query(&script)?;
+    let CheckResult::Sat(model) = solve(&mut script.arena, &query.assertions, config)? else {
+        return Ok(None);
+    };
+    let assignment = model.to_assignment();
+    let mut values = Vec::new();
+    for (&term, name) in query.assertions.iter().zip(&query.assertion_names) {
+        let Some(name) = name else {
+            continue;
+        };
+        let value = axeyum_ir::eval(&script.arena, term, &assignment)
+            .map_err(|e| SolverError::Backend(format!("get-assignment evaluation failed: {e}")))?;
+        match value {
+            Value::Bool(value) => values.push((name.clone(), value)),
+            other => {
+                return Err(SolverError::Backend(format!(
+                    "get-assignment named assertion `{name}` evaluated to non-Bool value {other:?}"
+                )));
+            }
+        }
+    }
+    if values.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(values))
+    }
 }
 
 /// Extracts an **unsat core** from an SMT-LIB script (`get-unsat-core`): the
