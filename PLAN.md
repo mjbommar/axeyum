@@ -1813,6 +1813,19 @@ against competitor source, are now binding:
      scalar fallback cycled among branch 3654, equality 3440, and lower branch
      3879. Next useful work is therefore a component-level branch-choice /
      store-chain readback projection for that three-node queue-lock cycle.
+     **REPLAY BRANCH-CHOICE CANDIDATES LANDED (2026-06-26):** targeted replay now
+     tries every positive branch of a failed generated disjunction on a projection
+     copy, rejects full-replay-worsening trials, and chooses deterministically by
+     `(total_false, branch_false, ordinal)`. This is still behind the full
+     original-assertion replay gate. A focused regression covers the case where
+     the reported best branch is an unrepaired Boolean literal and a later branch
+     is repairable. On `bug337`, the 10 s probe moves to generated branch
+     disjunction ordinal 232 / term 9841; best branch 3 has one false literal
+     `x_31 = x_17`, with arrays
+     `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` vs
+     `(array default 0 [1 -> 2] [2 -> 1])`, after 457 projection repair changes.
+     The row remains `unknown`; next useful work is component-level
+     store-chain/readback projection for this lower queue-lock branch.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

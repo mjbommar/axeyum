@@ -589,6 +589,19 @@ a named mechanism.**
    fallback cycled among branch **3654**, equality **3440**, and lower branch
    **3879**. The next AUFLIA move is a component-level branch-choice/store-chain
    readback projection for that three-node queue-lock cycle.
+   **Replay branch-choice candidates landed later 2026-06-26:** targeted replay
+   now tries every positive branch of a failed generated disjunction on a
+   projection copy, rejects full-replay-worsening trials, and chooses
+   deterministically by `(total_false, branch_false, ordinal)`. A focused
+   regression covers the case where the locally best branch is an unrepaired
+   Boolean literal but a later branch is repairable. `bug337` still returns
+   `unknown`, but the 10 s diagnostic moves to generated branch disjunction
+   ordinal **232**, term **9841**; best branch **3** has one false literal,
+   `x_31 = x_17`, with arrays
+   `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` vs
+   `(array default 0 [1 -> 2] [2 -> 1])`, after **457** projection repair
+   changes. The next AUFLIA move is component-level store-chain/readback
+   projection for this lower queue-lock branch.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

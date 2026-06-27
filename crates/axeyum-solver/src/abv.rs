@@ -4770,6 +4770,12 @@ fn repair_projected_replay_failure(
         return Ok(None);
     };
 
+    if let Some(choice_stats) =
+        repair_projected_replay_branch_choice(arena, originals, failure.conjunct_term, projected)?
+    {
+        return Ok(Some(choice_stats));
+    }
+
     if let Some(schedule_stats) =
         repair_projected_branch_schedule(arena, originals, or_failure.best_branch_term, projected)?
     {
@@ -4787,6 +4793,120 @@ fn repair_projected_replay_failure(
     let changed =
         repair_projected_branch_literal(arena, originals, false_literal, projected, &mut stats)?;
     Ok(changed.then_some(stats))
+}
+
+fn repair_projected_replay_branch_choice(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch_disjunction: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    if !matches!(
+        arena.node(branch_disjunction),
+        TermNode::App { op: Op::BoolOr, .. }
+    ) {
+        return Ok(None);
+    }
+
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut branches = Vec::new();
+    collect_positive_disjuncts(arena, branch_disjunction, &mut branches);
+    let mut best: Option<(usize, usize, usize, ProjectionRepairStats, Assignment)> = None;
+
+    for (ordinal, branch) in branches.iter().copied().enumerate() {
+        let mut trial = projected.clone();
+        let Some(stats) =
+            repair_projected_branch_as_candidate(arena, originals, branch, &mut trial)?
+        else {
+            continue;
+        };
+        let total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if total_false > current_false {
+            continue;
+        }
+        let branch_false = branch_false_literal_count(arena, branch, &trial)?;
+        let replace = best.as_ref().is_none_or(
+            |(best_total_false, best_branch_false, best_ordinal, _, _)| {
+                (total_false, branch_false, ordinal)
+                    < (*best_total_false, *best_branch_false, *best_ordinal)
+            },
+        );
+        if replace {
+            best = Some((total_false, branch_false, ordinal, stats, trial));
+        }
+    }
+
+    let Some((_, _, _, stats, trial)) = best else {
+        return Ok(None);
+    };
+    *projected = trial;
+    Ok(Some(stats))
+}
+
+fn repair_projected_branch_as_candidate(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
+    let initial_false = branch_false_literal_count(arena, branch, projected)?;
+    if initial_false == 0 {
+        return Ok(None);
+    }
+
+    let mut stats = ProjectionRepairStats::default();
+    let mut changed = false;
+    let mut literals = Vec::new();
+    collect_positive_conjuncts(arena, branch, &mut literals);
+
+    for _ in 0..=2 {
+        let mut pass_changes = 0;
+        for &literal in &literals {
+            if eval(arena, literal, projected).map_err(ir)? == Value::Bool(true) {
+                continue;
+            }
+            let Some((symbol, value_term)) = direct_scalar_equality_repair_target(arena, literal)
+            else {
+                continue;
+            };
+            stats.branch_candidates += 1;
+            let value = eval(arena, value_term, projected).map_err(ir)?;
+            if store_projected_symbol_value(arena, projected, symbol, value)? {
+                stats.branch_symbol_changes += 1;
+                pass_changes += 1;
+                changed = true;
+            }
+        }
+        if pass_changes == 0 {
+            break;
+        }
+    }
+
+    for _ in 0..=2 {
+        let mut pass_changes = 0;
+        for &literal in &literals {
+            if eval(arena, literal, projected).map_err(ir)? == Value::Bool(true) {
+                continue;
+            }
+            let before = stats.changes();
+            if repair_projected_branch_literal(arena, originals, literal, projected, &mut stats)? {
+                pass_changes += stats.changes().saturating_sub(before).max(1);
+                changed = true;
+            }
+        }
+        if pass_changes == 0 {
+            break;
+        }
+    }
+
+    let final_false = branch_false_literal_count(arena, branch, projected)?;
+    if changed && final_false < initial_false {
+        Ok(Some(stats))
+    } else {
+        Ok(None)
+    }
 }
 
 fn project_replay_ext_candidate(
@@ -5559,6 +5679,68 @@ mod tests {
             )
             .unwrap()
             .is_none()
+        );
+    }
+
+    #[test]
+    fn lazy_ext_targeted_replay_can_choose_non_best_repairable_branch() {
+        let mut arena = TermArena::new();
+        let q = arena.bool_var("q").unwrap();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let x_eq_one = arena.eq(x, one).unwrap();
+        let y_eq_two = arena.eq(y, two).unwrap();
+        let repairable_branch = arena.and(x_eq_one, y_eq_two).unwrap();
+        let branch_assertion = arena.or(q, repairable_branch).unwrap();
+
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+
+        let mut candidate = Assignment::new();
+        candidate.set(*q_symbol, Value::Bool(false));
+        candidate.set(*x_symbol, Value::Int(0));
+        candidate.set(*y_symbol, Value::Int(0));
+
+        let originals = [branch_assertion];
+        let projected = complete_assignment(&arena, &candidate);
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected the branch disjunction to fail before targeted repair");
+        let or_failure = failure
+            .failed_or
+            .as_ref()
+            .expect("expected branch failure details");
+        assert_eq!(or_failure.best_branch_ordinal, 0);
+        assert_eq!(or_failure.best_branch_term, q);
+        assert_eq!(or_failure.best_branch_false_literals, 1);
+
+        let ctx = RowCtx::default();
+        let ExtReplay::Sat(model) =
+            project_replay_ext_candidate(&arena, &ctx, &originals, &candidate).unwrap()
+        else {
+            panic!("expected targeted replay to choose the repairable non-best branch");
+        };
+        let assignment = model.to_assignment();
+        assert_eq!(assignment.get(*q_symbol), Some(Value::Bool(false)));
+        assert_eq!(assignment.get(*x_symbol), Some(Value::Int(1)));
+        assert_eq!(assignment.get(*y_symbol), Some(Value::Int(2)));
+        assert_eq!(
+            eval(&arena, branch_assertion, &assignment).unwrap(),
+            Value::Bool(true)
         );
     }
 
