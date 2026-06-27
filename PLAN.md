@@ -2258,6 +2258,10 @@ expose inner read-backs; reads from constant arrays collapse to the default
 value, covering zero-initialized toy-memory loads before any symbolic write; and
 reads over array-valued `ite`s distribute to scalar branch reads, covering simple
 state-merged memories when both selected branches reduce through that slice.
+Symbolic-address read-over-write now expands to a scalar conditional
+(`select(store(a, i, v), j) -> ite(i = j, v, select(a, j))`) and stays warm when
+the remaining base read reduces away, covering symbolic hits/misses over
+zero-initialized or otherwise reducible store chains.
 Assertions and one-shot branch assumptions encode the simplified BV term while
 retaining the original memory term for replay and core reporting.
 `SymbolicMemory` also provides a typed frontend
@@ -2268,8 +2272,8 @@ emitting compact read-over-write `ite` chains.
 branch feasibility, scope push/pop, infeasible pruning, unknown-safe traversal,
 and replay-checked target models. This is still a one-shot fallback for deferred
 theories beyond the narrow same-index / literal-distinct / const-array /
-array-`ite` memory admission, not final warm lazy theory incrementality or a complete
-lifter/emulator frontend. The
+array-`ite` / reducible conditional-ROW memory admission, not final warm lazy
+theory incrementality or a complete lifter/emulator frontend. The
 checked concrete replay hook now has a reusable tiny-target library surface:
 `TinyBvProgram` validates a fixed-width BV register program, lifts instructions
 to symbolic CFG steps, extracts model witnesses, and independently replays them

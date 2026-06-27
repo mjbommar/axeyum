@@ -2508,6 +2508,194 @@ fn branch_simplifies_select_over_array_ite_on_warm_path() {
     );
 }
 
+#[test]
+fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
+    let mut arena = TermArena::new();
+    let write_index_sym = arena
+        .declare("warm_assert_symbolic_row_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("warm_assert_symbolic_row_read_i", Sort::BitVec(8))
+        .unwrap();
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, write_index, one).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let hit = arena.eq(write_index, read_index).unwrap();
+    let cond = arena.eq(loaded, one).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut feasible = IncrementalBvSolver::new();
+    feasible.assert(&arena, hit).unwrap();
+    let encoded = feasible
+        .assert_simplifying_memory(&mut arena, cond)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "symbolic ROW hit over a const base should simplify to a pure BV ite"
+    );
+    assert!(
+        !feasible.has_deferred_theory_assertions(),
+        "symbolic ROW hit assertion should stay on the warm path"
+    );
+    assert!(
+        matches!(feasible.check(&arena).unwrap(), CheckResult::Sat(_)),
+        "symbolic ROW hit should be feasible"
+    );
+
+    let mut infeasible = IncrementalBvSolver::new();
+    infeasible.assert(&arena, hit).unwrap();
+    infeasible
+        .assert_simplifying_memory(&mut arena, not_cond)
+        .unwrap();
+    assert_eq!(
+        infeasible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "under write_index=read_index, the stored value must be read back"
+    );
+}
+
+#[test]
+fn warm_assumption_simplifies_symbolic_read_over_write_miss_to_ite() {
+    let mut arena = TermArena::new();
+    let write_index_sym = arena
+        .declare("warm_assume_symbolic_row_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("warm_assume_symbolic_row_read_i", Sort::BitVec(8))
+        .unwrap();
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, write_index, one).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let hit = arena.eq(write_index, read_index).unwrap();
+    let miss = arena.not(hit).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, miss).unwrap();
+    assert!(
+        solver.check_assuming(&arena, &[cond]).is_err(),
+        "the ordinary warm assumption route should still refuse raw symbolic ROW terms"
+    );
+    assert!(
+        matches!(
+            solver
+                .check_assuming_simplifying_memory(&mut arena, &[cond])
+                .unwrap(),
+            CheckResult::Sat(_)
+        ),
+        "symbolic ROW miss over a const base should be feasible on the warm path"
+    );
+    assert_eq!(
+        solver
+            .check_assuming_simplifying_memory(&mut arena, &[not_cond])
+            .unwrap(),
+        CheckResult::Unsat,
+        "under write_index!=read_index, the read must see the const-array default"
+    );
+    match solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[not_cond])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => assert_eq!(core, vec![not_cond]),
+        other => panic!("expected warm symbolic ROW assumption core, got {other:?}"),
+    }
+}
+
+#[test]
+fn branch_simplifies_symbolic_read_over_write_hit_on_warm_path() {
+    let mut arena = TermArena::new();
+    let write_index_sym = arena
+        .declare("branch_symbolic_row_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("branch_symbolic_row_read_i", Sort::BitVec(8))
+        .unwrap();
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, write_index, one).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let hit = arena.eq(write_index, read_index).unwrap();
+    let cond = arena.eq(loaded, one).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(executor.assume(&arena, hit).unwrap().is_feasible());
+    let branch = executor.branch(&mut arena, cond).unwrap();
+    assert!(
+        branch.if_true.is_feasible(),
+        "symbolic ROW hit should keep the stored-value branch feasible"
+    );
+    assert!(
+        branch.if_false.is_infeasible(),
+        "symbolic ROW hit should prune the default-value branch"
+    );
+    assert_eq!(
+        executor.path_condition(),
+        &[hit],
+        "symbolic ROW branch queries must remain one-shot"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should still work after a symbolic ROW branch query"
+    );
+}
+
+#[test]
+fn symbolic_read_over_write_with_symbolic_base_stays_deferred() {
+    let mut arena = TermArena::new();
+    let memory_sym = arena
+        .declare(
+            "symbolic_row_base_memory",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let write_index_sym = arena
+        .declare("symbolic_row_base_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("symbolic_row_base_read_i", Sort::BitVec(8))
+        .unwrap();
+    let value_sym = arena
+        .declare("symbolic_row_base_value", Sort::BitVec(8))
+        .unwrap();
+    let memory = arena.var(memory_sym);
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let value = arena.var(value_sym);
+    let stored = arena.store(memory, write_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let cond = arena.eq(loaded, value).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver.assert_simplifying_memory(&mut arena, cond).unwrap();
+    assert!(
+        IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "conditional ROW over a symbolic base must keep the unreduced base select deferred"
+    );
+    assert!(
+        solver.has_deferred_theory_assertions(),
+        "general symbolic base arrays should remain on the memory/theory route"
+    );
+    assert!(
+        solver.check(&arena).is_err(),
+        "ordinary warm check must refuse active deferred array assertions"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.

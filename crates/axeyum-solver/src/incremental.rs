@@ -175,9 +175,11 @@ impl IncrementalBvSolver {
     /// at a literal-distinct index (`select(store(a, c1, v), c2)` to
     /// `select(a, c2)` when `c1 != c2` is known from constants), collapses reads
     /// from constant arrays to their default value, and distributes reads over
-    /// array-valued `ite`. It recurses through ordinary wrappers, but does not
-    /// instantiate symbolic distinct-index read-over-write cases, array
-    /// extensionality, or UF lemmas.
+    /// array-valued `ite`. When neither index case is syntactically decided, it
+    /// expands read-over-write to a scalar conditional and keeps simplifying the
+    /// else branch; this only stays warm when the resulting term is array-free.
+    /// It recurses through ordinary wrappers, but does not instantiate array
+    /// extensionality or UF lemmas.
     #[must_use]
     pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
         let mut memo = HashMap::new();
@@ -856,7 +858,9 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
     if known_literal_distinct(arena, write_index, read_index) {
         return arena.select(base, read_index).ok();
     }
-    None
+    let same_index = arena.eq(write_index, read_index).ok()?;
+    let base_read = arena.select(base, read_index).ok()?;
+    arena.ite(same_index, value, base_read).ok()
 }
 
 fn distribute_select_over_array_ite(

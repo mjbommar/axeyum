@@ -51,17 +51,18 @@ Last reconciled with `main`: 2026-06-27.
   the full solver, and `SymbolicExecutor` / CFG exploration auto-route array/UF
   queries to that memory-aware path. A narrow warm memory slice also landed for
   syntactic same-index hits, literal-distinct concrete-address store misses,
-  constant-array reads, and reads over simple array-valued `ite` state merges:
-  the warm solver encodes the simplified BV term while retaining the original
-  memory term for replay and assumption-core reporting.
+  constant-array reads, reads over simple array-valued `ite` state merges, and
+  reducible symbolic-address read-over-write over store chains: the warm solver
+  encodes the simplified BV term while retaining the original memory term for
+  replay and assumption-core reporting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
   are central for EVM and verifier frontends. The one-shot fallback removes a
   frontend footgun and lets consumers keep arrays/UFs in path conditions, and
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
-  reads, simple branch-merged memory reads, and fork queries, but general
-  array/UF work still rebuilds through the dispatcher instead of retaining warm
-  learned clauses.
+  reads, simple branch-merged memory reads, reducible symbolic-address memory
+  reads, and fork queries, but general array/UF work still rebuilds through the
+  dispatcher instead of retaining warm learned clauses.
 - **Ask:** finish the ADR-0030 half: a true warm lazy-array/UF incremental route
   with retained theory clauses / learned lemmas / push-pop reuse. Until that
   exists, document the one-shot fallback as sound but not the final performance
@@ -69,7 +70,8 @@ Last reconciled with `main`: 2026-06-27.
 - **Source:** `STATUS.md` entries "memory-aware incremental assumptions",
   "SymbolicExecutor auto-routes array/UF CFG queries", and
   "Warm same-index ROW admission" / "Warm literal ROW chain admission" /
-  "Warm constant-array read admission" / "Warm array-ITE read admission";
+  "Warm constant-array read admission" / "Warm array-ITE read admission" /
+  "Warm symbolic ROW conditional admission";
   `docs/plan/track-4-usecases-frontend/P4.1` / `P4.2` notes.
 
 ### U7 - medium - perf/encoding - deep store/read-over-write scaling remains open
