@@ -817,6 +817,11 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     )
     .unwrap();
 
+    assert_eq!(program.labels().len(), 3);
+    assert_eq!(program.label_pc("entry"), Some(0));
+    assert_eq!(program.label_pc("win_block"), Some(4));
+    assert_eq!(program.label_pc("lose_block"), Some(5));
+    assert_eq!(program.label_pc("missing"), None);
     assert_eq!(
         program.code(),
         &[
@@ -839,10 +844,10 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert!(program.uses_memory());
 
     let reach = program
-        .reach_pc_checked(
+        .reach_label_checked(
             &mut arena,
             "asm_input",
-            4,
+            "win_block",
             CfgExploreConfig {
                 max_steps: 128,
                 max_targets: 16,
@@ -852,6 +857,7 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         .unwrap();
 
     assert_eq!(reach.status(), TinyBvReachabilityStatus::Reachable);
+    assert_eq!(reach.target_pc, 4);
     let hit = reach
         .outcome
         .verified
@@ -866,6 +872,21 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
     assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
+
+    let safety = program
+        .check_label_safety_checked(
+            &mut arena,
+            "asm_unsafe_input",
+            "win_block",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(safety.status(), TinyBvSafetyStatus::Unsafe);
+    assert_eq!(safety.forbidden_pc, 4);
 }
 
 #[test]
@@ -933,6 +954,53 @@ fn tiny_bv_assembly_reports_parse_and_validation_errors() {
     assert!(
         missing_label_err.contains("unknown else target label `missing`"),
         "branch labels should resolve before validation: {missing_label_err}"
+    );
+
+    let dangling_label_err = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            beq r0 0 ok ok
+            ok: win
+            dangling:
+        ",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        dangling_label_err.contains("label `dangling` does not name an instruction"),
+        "dangling labels should not enter the public label map: {dangling_label_err}"
+    );
+
+    let program = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            start: win
+        ",
+    )
+    .unwrap();
+    let mut query_arena = TermArena::new();
+    let query_err = program
+        .check_label_safety_checked(
+            &mut query_arena,
+            "missing_label_input",
+            "not_declared",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap_err()
+        .to_string();
+    assert!(
+        query_err.contains("unknown assembly label `not_declared`"),
+        "label query wrappers should reject missing labels: {query_err}"
     );
 }
 

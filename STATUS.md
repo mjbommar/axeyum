@@ -6,17 +6,21 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
-- **Session 2026-06-27 — Tiny BV label-aware assembly import.**
+- **Session 2026-06-27 — Tiny BV label query surface.**
   `TinyBvProgram::from_assembly` now imports a small line-oriented text format
   for the toy BV target: `const`, arithmetic (`add`/`sub`/`mul`/`xor`),
   `load`/`store`, `beq`, `win`, and `lose`. The parser accepts `rN`
   registers, decimal or `0x` constants/targets, blank lines, comma separators,
   `#`/`;` comments, and labels declared as `name:` on their own line or before
   an instruction. `beq` targets can be numeric PCs or labels, resolved in a
-  two-pass parse. Malformed text returns line-numbered `SolverError::Parse`
-  diagnostics; parsed programs still flow through the shared
-  `TinyBvProgram::new` validator, so out-of-range registers and branch targets
-  cannot bypass the existing checks.
+  two-pass parse, and imported labels are retained on the program via
+  `labels()` / `label_pc()`. The frontend also exposes
+  `reach_label_checked` and `check_label_safety_checked`, so callers can query
+  imported block names without hard-coding resolved PCs. Malformed text returns
+  line-numbered `SolverError::Parse` diagnostics; parsed programs still flow
+  through the shared `TinyBvProgram::new` validator, so out-of-range registers
+  and branch targets cannot bypass the existing checks. Dangling labels are
+  rejected before they can enter the public label map.
 
   This advances T4.2.1 from an in-memory toy IR toward imported frontend
   artifacts. It is still deliberately a toy text format, not a byte-level
@@ -6872,21 +6876,24 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | WIP — committed assertions over arrays/UFs are now scoped as deferred theory assertions and decided by `check_with_memory` through the full pure-Rust dispatcher; one-shot branch assumptions over arrays/UFs are supported by `check_assuming_with_memory` / `check_assuming_core_with_memory`, with a coarse-but-sound full-assumption core on UNSAT. `SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate calls, and `SymbolicMemory` provides a typed load/store helper over array-backed memory states. This is a consumer-facing one-shot fallback, not the final warm lazy-array/UF incremental engine: deferred theory checks rebuild through `check_auto`, while the warm BV path still refuses active deferred theories rather than silently ignoring them. Remaining: true warm lazy arrays/UF with learned theory clauses, path-condition CFG/import frontends, and deeper memory model helpers |
-| P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, and routes load-equality branch/assume queries through `SymbolicExecutor`'s memory-aware feasibility APIs; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually warm memory reuse from P4.1 |
+| P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, and routes load-equality branch/assume queries through `SymbolicExecutor`'s memory-aware feasibility APIs; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label metadata, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box`, independent) **and Pareto** (`optimize_lia_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto)**. 23 OMT tests (incl. the {(1,3),(2,2),(3,1)} front). **BV box** (`optimize_bv_box`) also landed — box + lexicographic now span LIA+BV; Pareto is LIA. MaxSAT returns the witnessing model (`max_satisfiable_model`). Remaining: BV Pareto; MILP hardening |
 | P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment, set-option/info, echo/exit); term forms let/forall/exists/`!`/`as` handled. **Codex review gap:** `reset` / `reset-assertions` currently parse as no-op commands rather than represented incremental commands, so implement their semantics or reject them before claiming command-surface completeness. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: `declare-sort` (needs first-class uninterpreted sorts the IR lacks — deep), `define-fun-rec`, full `match` for parametric datatypes |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
 
-- **2026-06-27** — **Tiny BV label-aware assembly import.**
+- **2026-06-27** — **Tiny BV label query surface.**
   Added `TinyBvProgram::from_assembly`, a deliberately small text importer for
   the toy BV frontend. The importer parses `rN` register operands, decimal/hex
   constants and branch targets, comments, labels, and the existing instruction
-  set, then validates through `TinyBvProgram::new`. Focused tests cover an
-  imported label-bearing memory program through checked reachability/concrete
-  replay and verify line-numbered parse errors, duplicate/missing label errors,
-  plus shared register-validation errors.
+  set, then validates through `TinyBvProgram::new` and retains labels in a
+  public deterministic map. Added `labels`, `label_pc`,
+  `reach_label_checked`, and `check_label_safety_checked`; dangling labels are
+  rejected before import. Focused tests cover an imported label-bearing memory
+  program through label-based checked reachability/safety and concrete replay,
+  and verify line-numbered parse errors, duplicate/missing/dangling label
+  errors, missing label-query errors, plus shared register-validation errors.
 
 - **2026-06-27** — **Tiny BV concrete traces.**
   Added `TinyBvConcreteStep`, `TinyBvConcreteTrace`, and

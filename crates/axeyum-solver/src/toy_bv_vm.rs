@@ -103,6 +103,7 @@ pub struct TinyBvProgram {
     input_count: usize,
     max_steps: usize,
     code: Vec<TinyBvInsn>,
+    labels: BTreeMap<String, usize>,
 }
 
 /// Symbolic frontend state for [`TinyBvProgram`] exploration.
@@ -322,6 +323,7 @@ impl TinyBvProgram {
             input_count,
             max_steps,
             code,
+            labels: BTreeMap::new(),
         })
     }
 
@@ -353,8 +355,10 @@ impl TinyBvProgram {
         max_steps: usize,
         text: &str,
     ) -> Result<Self, SolverError> {
-        let code = parse_tiny_bv_assembly(text)?;
-        Self::new(width, reg_count, input_count, max_steps, code)
+        let (code, labels) = parse_tiny_bv_assembly(text)?;
+        let mut program = Self::new(width, reg_count, input_count, max_steps, code)?;
+        program.labels = labels;
+        Ok(program)
     }
 
     /// Program bit-vector width.
@@ -380,6 +384,19 @@ impl TinyBvProgram {
     /// Program instructions.
     pub fn code(&self) -> &[TinyBvInsn] {
         &self.code
+    }
+
+    /// Label-to-program-counter map imported from assembly.
+    ///
+    /// Hand-built programs have no labels. Assembly labels always name an
+    /// instruction inside [`Self::code`].
+    pub fn labels(&self) -> &BTreeMap<String, usize> {
+        &self.labels
+    }
+
+    /// Program counter for an assembly label.
+    pub fn label_pc(&self, label: &str) -> Option<usize> {
+        self.labels.get(label).copied()
     }
 
     /// Whether this program contains memory instructions.
@@ -531,6 +548,24 @@ impl TinyBvProgram {
         Ok(TinyBvReachabilityReport { target_pc, outcome })
     }
 
+    /// Checks whether an assembly label is reachable and concrete-replays every
+    /// reported witness.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if `label` is not known, or the same
+    /// errors as [`Self::reach_pc_checked`] after resolving the label.
+    pub fn reach_label_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        label: &str,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvReachabilityReport, SolverError> {
+        let target_pc = self.resolve_label_pc(label)?;
+        self.reach_pc_checked(arena, input_prefix, target_pc, config)
+    }
+
     /// Checks bounded safety for a forbidden program counter.
     ///
     /// [`TinyBvSafetyStatus::Safe`] means the forbidden counter is unreachable
@@ -555,6 +590,23 @@ impl TinyBvProgram {
             forbidden_pc,
             reachability,
         })
+    }
+
+    /// Checks bounded safety for a forbidden assembly label.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if `label` is not known, or the same
+    /// errors as [`Self::check_pc_safety_checked`] after resolving the label.
+    pub fn check_label_safety_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        label: &str,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvSafetyReport, SolverError> {
+        let forbidden_pc = self.resolve_label_pc(label)?;
+        self.check_pc_safety_checked(arena, input_prefix, forbidden_pc, config)
     }
 
     /// Replays a concrete witness and returns the full executed trace.
@@ -823,6 +875,11 @@ impl TinyBvProgram {
         }
     }
 
+    fn resolve_label_pc(&self, label: &str) -> Result<usize, SolverError> {
+        self.label_pc(label)
+            .ok_or_else(|| tiny_bv_error(format!("unknown assembly label `{label}`")))
+    }
+
     fn effective_config(&self, mut config: CfgExploreConfig) -> CfgExploreConfig {
         if self.uses_memory() {
             config.memory_aware = true;
@@ -887,7 +944,9 @@ fn validate_pc(pc: usize, target: usize, code_len: usize) -> Result<(), SolverEr
     }
 }
 
-fn parse_tiny_bv_assembly(text: &str) -> Result<Vec<TinyBvInsn>, SolverError> {
+fn parse_tiny_bv_assembly(
+    text: &str,
+) -> Result<(Vec<TinyBvInsn>, BTreeMap<String, usize>), SolverError> {
     let mut labels = BTreeMap::new();
     let mut lines = Vec::new();
     for (line_index, raw_line) in text.lines().enumerate() {
@@ -909,11 +968,24 @@ fn parse_tiny_bv_assembly(text: &str) -> Result<Vec<TinyBvInsn>, SolverError> {
         }
     }
 
+    for (label, (pc, line_no)) in &labels {
+        if *pc >= lines.len() {
+            return Err(tiny_bv_parse_error(
+                *line_no,
+                format!("label `{label}` does not name an instruction"),
+            ));
+        }
+    }
+
     let mut code = Vec::with_capacity(lines.len());
     for (line_no, line) in lines {
         code.push(parse_tiny_bv_instruction(line_no, line, &labels)?);
     }
-    Ok(code)
+    let label_pcs = labels
+        .into_iter()
+        .map(|(label, (pc, _))| (label, pc))
+        .collect();
+    Ok((code, label_pcs))
 }
 
 fn clean_assembly_line(raw_line: &str) -> Option<&str> {
