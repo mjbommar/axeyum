@@ -12,8 +12,10 @@
 //! is replayed against the original term through the ground evaluator.
 
 use axeyum_cnf::{check_alethe, write_alethe};
-use axeyum_ir::{Sort, TermArena};
-use axeyum_smtlib::{ScriptCommand, parse_script};
+use std::collections::{BTreeMap, VecDeque};
+
+use axeyum_ir::{Sort, TermArena, TermId};
+use axeyum_smtlib::{Script, ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError};
@@ -32,11 +34,83 @@ pub struct SmtLibOutcome {
     pub expected_status: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct SmtLibSingleQuery {
+    assertions: Vec<TermId>,
+    assertion_names: Vec<Option<String>>,
+}
+
+fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError> {
+    if script.check_sats > 1 {
+        return Err(SolverError::Unsupported(
+            "single-result SMT-LIB helper received multiple check-sat commands; use \
+             solve_smtlib_incremental to get one result per query"
+                .to_owned(),
+        ));
+    }
+
+    let mut names_by_term = BTreeMap::<TermId, VecDeque<Option<String>>>::new();
+    for (&assertion, name) in script.assertions.iter().zip(&script.assertion_names) {
+        names_by_term
+            .entry(assertion)
+            .or_default()
+            .push_back(name.clone());
+    }
+
+    let mut stack = Vec::<(TermId, Option<String>)>::new();
+    let mut scopes = Vec::<usize>::new();
+    let mut queried_stack = None;
+    for command in &script.commands {
+        match command {
+            ScriptCommand::Assert(term) => {
+                let name = names_by_term
+                    .get_mut(term)
+                    .and_then(VecDeque::pop_front)
+                    .unwrap_or(None);
+                stack.push((*term, name));
+            }
+            ScriptCommand::Push(n) => {
+                for _ in 0..*n {
+                    scopes.push(stack.len());
+                }
+            }
+            ScriptCommand::Pop(n) => {
+                for _ in 0..*n {
+                    if let Some(depth) = scopes.pop() {
+                        stack.truncate(depth);
+                    }
+                }
+            }
+            ScriptCommand::CheckSat => {
+                queried_stack = Some(stack.clone());
+            }
+            ScriptCommand::CheckSatAssuming(assumptions) => {
+                let mut with_assumptions = stack.clone();
+                with_assumptions.extend(assumptions.iter().copied().map(|term| (term, None)));
+                queried_stack = Some(with_assumptions);
+            }
+            ScriptCommand::ResetAssertions => {
+                stack.clear();
+                scopes.clear();
+            }
+        }
+    }
+
+    let active = queried_stack.unwrap_or(stack);
+    let (assertions, assertion_names) = active.into_iter().unzip();
+    Ok(SmtLibSingleQuery {
+        assertions,
+        assertion_names,
+    })
+}
+
 /// Parses an SMT-LIB 2 script and decides it — the text front door.
 ///
-/// The script's assertions are decided as a conjunction by [`crate::solve`],
-/// which routes across every supported theory and quantifier mode and replays
-/// any `sat` model against the original term. The returned
+/// For a script with zero or one `check-sat`/`check-sat-assuming`, the active
+/// assertion stack at that query is decided by [`crate::solve`], honoring
+/// `push`/`pop`, `check-sat-assuming`, and `reset-assertions` semantics. Scripts
+/// with multiple queries should use [`solve_smtlib_incremental`], because this
+/// helper has a single-result return type. The returned
 /// [`SmtLibOutcome::expected_status`] reflects the script's own declared
 /// `:status` and is left for the caller to compare against
 /// [`SmtLibOutcome::result`].
@@ -49,7 +123,8 @@ pub struct SmtLibOutcome {
 ///   an internal backend failure).
 pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    let result = solve(&mut script.arena, &script.assertions, config)?;
+    let query = smtlib_single_query(&script)?;
+    let result = solve(&mut script.arena, &query.assertions, config)?;
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,
@@ -73,12 +148,13 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
 pub fn optimize_smtlib(input: &str, config: &SolverConfig) -> Result<Vec<OptOutcome>, SolverError> {
     let _ = config;
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let query = smtlib_single_query(&script)?;
     let objectives = std::mem::take(&mut script.objectives);
     let mut outcomes = Vec::with_capacity(objectives.len());
     for (objective, is_max) in objectives {
         outcomes.push(optimize_one(
             &mut script.arena,
-            &script.assertions,
+            &query.assertions,
             objective,
             is_max,
         )?);
@@ -103,8 +179,9 @@ pub fn optimize_smtlib_lexicographic(
 ) -> Result<Vec<OptOutcome>, SolverError> {
     let _ = config;
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let query = smtlib_single_query(&script)?;
     let objectives = std::mem::take(&mut script.objectives);
-    let mut assertions = script.assertions.clone();
+    let mut assertions = query.assertions;
     let mut outcomes = Vec::with_capacity(objectives.len());
     for (objective, is_max) in objectives {
         let outcome = optimize_one(&mut script.arena, &assertions, objective, is_max)?;
@@ -176,10 +253,11 @@ pub fn solve_smtlib_get_value(
     config: &SolverConfig,
 ) -> Result<Option<Vec<axeyum_ir::Value>>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let query = smtlib_single_query(&script)?;
     if script.get_value_terms.is_empty() {
         return Ok(None);
     }
-    let CheckResult::Sat(model) = solve(&mut script.arena, &script.assertions, config)? else {
+    let CheckResult::Sat(model) = solve(&mut script.arena, &query.assertions, config)? else {
         return Ok(None);
     };
     let assignment = model.to_assignment();
@@ -210,13 +288,14 @@ pub fn solve_smtlib_unsat_core(
     config: &SolverConfig,
 ) -> Result<Option<Vec<String>>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    let Some(core) = unsat_core(&mut script.arena, &script.assertions, config)? else {
+    let query = smtlib_single_query(&script)?;
+    let Some(core) = unsat_core(&mut script.arena, &query.assertions, config)? else {
         return Ok(None);
     };
     let names = core
         .into_iter()
         .map(|i| {
-            script
+            query
                 .assertion_names
                 .get(i)
                 .and_then(Clone::clone)
@@ -261,8 +340,9 @@ pub fn solve_smtlib_get_proof(
     _config: &SolverConfig,
 ) -> Result<Option<String>, SolverError> {
     let script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let query = smtlib_single_query(&script)?;
     let arena = &script.arena;
-    let assertions = &script.assertions;
+    let assertions = &query.assertions;
 
     // QF_BV: the bitblast→CNF→resolution driver (re-checked by check_alethe).
     if let Some(proof) = crate::prove_qf_bv_unsat_alethe(arena, assertions)

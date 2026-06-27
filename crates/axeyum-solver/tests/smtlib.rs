@@ -425,6 +425,59 @@ fn check_sat_assuming_does_not_retain_assumptions() {
     );
 }
 
+#[test]
+fn flat_front_door_honors_single_push_pop_scope() {
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 4))
+(assert (= x #x1))
+(push 1)
+(assert (= x #x2))
+(pop 1)
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "single-result solve_smtlib must use the scoped stack at check-sat, not all flat assertions"
+    );
+}
+
+#[test]
+fn flat_front_door_honors_single_reset_assertions() {
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(reset-assertions)
+(assert (= x #x07))
+(check-sat)
+";
+    let outcome = run(text);
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "single-result solve_smtlib must clear stale assertions at reset-assertions"
+    );
+}
+
+#[test]
+fn flat_front_door_rejects_multiple_check_sats() {
+    use axeyum_solver::SolverError;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(check-sat)
+(assert (= x #x06))
+(check-sat)
+";
+    let err = solve_smtlib(text, &config()).expect_err("multi-query scripts use incremental API");
+    let SolverError::Unsupported(message) = err else {
+        panic!("expected Unsupported, got {err:?}");
+    };
+    assert!(message.contains("solve_smtlib_incremental"));
+}
+
 /// Named assertions + unsat core: `x>5 ∧ x<3` is unsat; the minimized core is
 /// the two named conflicting assertions, excluding an irrelevant tautology.
 #[test]
@@ -453,6 +506,37 @@ fn unsat_core_returns_named_minimal_subset() {
     assert!(
         !core.contains(&"irrelevant".to_owned()),
         "minimized core excludes the tautology: {core:?}"
+    );
+}
+
+#[test]
+fn unsat_core_uses_scoped_active_assertion_names() {
+    use axeyum_solver::solve_smtlib_unsat_core;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(push 1)
+(assert (! (= x #x01) :named stale))
+(pop 1)
+(assert (! (= x #x02) :named active_eq))
+(assert (! (not (= x #x02)) :named active_neq))
+(check-sat)
+(get-unsat-core)
+";
+    let core = solve_smtlib_unsat_core(text, &config())
+        .expect("decides")
+        .expect("active assertions are contradictory");
+    assert!(
+        core.contains(&"active_eq".to_owned()),
+        "core must use active scoped names: {core:?}"
+    );
+    assert!(
+        core.contains(&"active_neq".to_owned()),
+        "core must use active scoped names: {core:?}"
+    );
+    assert!(
+        !core.contains(&"stale".to_owned()),
+        "popped assertion name must not leak into the core: {core:?}"
     );
 }
 
