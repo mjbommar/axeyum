@@ -3533,6 +3533,81 @@ fn warm_bool_readback_equality_to_const_simplifies_to_value() {
 }
 
 #[test]
+fn warm_bool_readback_connectives_drop_constant_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bool_connective_value", Sort::Bool)
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 7).unwrap();
+    let false_value = arena.bool_const(false);
+    let true_value = arena.bool_const(true);
+    let memory = arena
+        .const_array_with_index_sort(Sort::BitVec(8), false_value)
+        .unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let and_true = arena.and(loaded, true_value).unwrap();
+    let simplified_and =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, and_true);
+    assert_eq!(
+        simplified_and, value,
+        "readback and true should simplify to the stored Bool"
+    );
+
+    let or_false = arena.or(loaded, false_value).unwrap();
+    let simplified_or =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, or_false);
+    assert_eq!(
+        simplified_or, value,
+        "readback or false should simplify to the stored Bool"
+    );
+
+    let not_loaded = arena.not(loaded).unwrap();
+    let contradictory = arena.and(loaded, not_loaded).unwrap();
+    let simplified_contradiction =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, contradictory);
+    assert_bool_const(&arena, simplified_contradiction, false);
+
+    let tautology = arena.or(loaded, not_loaded).unwrap();
+    let simplified_tautology =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, tautology);
+    assert_bool_const(&arena, simplified_tautology, true);
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, and_true)
+        .unwrap();
+    assert_eq!(encoded, value);
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "Bool readback connective cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(model.get(value_sym), Some(Value::Bool(true)));
+            assert_eq!(
+                eval(&arena, and_true, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original Bool connective assertion"
+            );
+        }
+        other => panic!("expected Bool readback connective assertion sat, got {other:?}"),
+    }
+
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, contradictory)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a Bool readback cannot be both true and false"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

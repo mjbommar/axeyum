@@ -84,12 +84,14 @@ Last reconciled with `main`: 2026-06-27.
   Trivial scalar `ite`s exposed by memory rewrites collapse too, and the scalar
   cleanup now distributes equality over Bool/BV-valued `ite`s plus folds
   literal-distinct constant equalities, Boolean identity `ite`s, Boolean
-  equality-to-constant wrappers, and double negation. Branch reads whose
-  branches simplify to the same value do not keep an irrelevant merge condition,
-  comparisons like `ite(flag, 1, 0) = 1` collapse to `flag`, and symbolic Bool
-  readbacks like `select(store(mem, i, p), i) = true` collapse to `p`; the
-  resulting `v = v` tautology or `not true` contradiction is folded before warm
-  encoding.
+  equality-to-constant wrappers, double negation, and Boolean connective
+  wrappers. Branch reads whose branches simplify to the same value do not keep
+  an irrelevant merge condition, comparisons like `ite(flag, 1, 0) = 1`
+  collapse to `flag`, symbolic Bool readbacks like
+  `select(store(mem, i, p), i) = true` collapse to `p`, and predicate-like
+  readbacks such as `select(store(mem, i, p), i) and true` drop the connective
+  wrapper; the resulting `v = v` tautology, `not true` contradiction, or
+  `p and not p` contradiction is folded before warm encoding.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -108,7 +110,7 @@ Last reconciled with `main`: 2026-06-27.
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, conditional read/write-index
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
-  equality-to-constant cleanup, branch-merged reads whose selected branches
+  equality/connective cleanup, branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
   wide/BV256 storage-style base loads,
@@ -130,6 +132,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm conditional-write-index read splitting" /
   "Warm scalar ITE equality cleanup" /
   "Warm Bool readback equality cleanup" /
+  "Warm Bool connective cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /

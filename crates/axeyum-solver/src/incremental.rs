@@ -1533,6 +1533,18 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
                 _ => None,
             }
         }
+        Op::BoolAnd => {
+            let [left, right] = args.as_slice() else {
+                return None;
+            };
+            collapse_bool_and(arena, *left, *right)
+        }
+        Op::BoolOr => {
+            let [left, right] = args.as_slice() else {
+                return None;
+            };
+            collapse_bool_or(arena, *left, *right)
+        }
         _ => None,
     }
 }
@@ -1550,6 +1562,58 @@ fn bool_equality_with_const(arena: &mut TermArena, term: TermId, constant: bool)
     } else {
         arena.not(term).ok()
     }
+}
+
+fn collapse_bool_and(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    if left == right {
+        return Some(left);
+    }
+    match (
+        bool_const_value(arena, left),
+        bool_const_value(arena, right),
+    ) {
+        (Some(false), _) | (_, Some(false)) => return Some(arena.bool_const(false)),
+        (Some(true), _) => return Some(right),
+        (_, Some(true)) => return Some(left),
+        _ => {}
+    }
+    are_negations(arena, left, right).then(|| arena.bool_const(false))
+}
+
+fn collapse_bool_or(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    if left == right {
+        return Some(left);
+    }
+    match (
+        bool_const_value(arena, left),
+        bool_const_value(arena, right),
+    ) {
+        (Some(true), _) | (_, Some(true)) => return Some(arena.bool_const(true)),
+        (Some(false), _) => return Some(right),
+        (_, Some(false)) => return Some(left),
+        _ => {}
+    }
+    are_negations(arena, left, right).then(|| arena.bool_const(true))
+}
+
+fn are_negations(arena: &TermArena, left: TermId, right: TermId) -> bool {
+    negated_term(arena, left).is_some_and(|inner| inner == right)
+        || negated_term(arena, right).is_some_and(|inner| inner == left)
+}
+
+fn negated_term(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::BoolNot,
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [inner] = args.as_ref() else {
+        return None;
+    };
+    Some(*inner)
 }
 
 fn distribute_eq_over_scalar_ite(
