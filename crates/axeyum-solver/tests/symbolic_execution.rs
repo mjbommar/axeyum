@@ -12,8 +12,8 @@
 use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
-    SymbolicExecutor, SymbolicMemory, TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram,
-    TinyBvReachabilityStatus, TinyBvSafetyStatus,
+    SymbolicExecutor, SymbolicMemory, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome,
+    TinyBvInsn, TinyBvProgram, TinyBvReachabilityStatus, TinyBvSafetyStatus,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -851,6 +851,61 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         ]
     );
     assert!(program.uses_memory());
+    assert_eq!(
+        program.successors(0).unwrap(),
+        vec![TinyBvCfgEdge {
+            from: 0,
+            to: 1,
+            kind: TinyBvCfgEdgeKind::Fallthrough,
+        }]
+    );
+    assert_eq!(
+        program.successors(3).unwrap(),
+        vec![
+            TinyBvCfgEdge {
+                from: 3,
+                to: 4,
+                kind: TinyBvCfgEdgeKind::BranchTrue,
+            },
+            TinyBvCfgEdge {
+                from: 3,
+                to: 5,
+                kind: TinyBvCfgEdgeKind::BranchFalse,
+            },
+        ]
+    );
+    assert!(program.successors(4).unwrap().is_empty());
+    assert!(program.successors(5).unwrap().is_empty());
+    assert_eq!(
+        program.cfg_edges(),
+        vec![
+            TinyBvCfgEdge {
+                from: 0,
+                to: 1,
+                kind: TinyBvCfgEdgeKind::Fallthrough,
+            },
+            TinyBvCfgEdge {
+                from: 1,
+                to: 2,
+                kind: TinyBvCfgEdgeKind::Fallthrough,
+            },
+            TinyBvCfgEdge {
+                from: 2,
+                to: 3,
+                kind: TinyBvCfgEdgeKind::Fallthrough,
+            },
+            TinyBvCfgEdge {
+                from: 3,
+                to: 4,
+                kind: TinyBvCfgEdgeKind::BranchTrue,
+            },
+            TinyBvCfgEdge {
+                from: 3,
+                to: 5,
+                kind: TinyBvCfgEdgeKind::BranchFalse,
+            },
+        ]
+    );
 
     let reach = program
         .reach_label_checked(
@@ -960,6 +1015,21 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
     assert_eq!(program.source_line(2), Some(4));
     assert_eq!(program.labels_at_pc(3), vec!["equal"]);
     assert_eq!(program.labels_at_pc(4), vec!["done"]);
+    assert_eq!(
+        program.successors(2).unwrap(),
+        vec![
+            TinyBvCfgEdge {
+                from: 2,
+                to: 3,
+                kind: TinyBvCfgEdgeKind::BranchTrue,
+            },
+            TinyBvCfgEdge {
+                from: 2,
+                to: 4,
+                kind: TinyBvCfgEdgeKind::BranchFalse,
+            },
+        ]
+    );
 
     let reach = program
         .reach_label_checked(
@@ -1052,6 +1122,22 @@ fn tiny_bv_assembly_reports_parse_and_validation_errors() {
     assert!(
         branch_reg_validation_err.contains("instruction 0 references register 4"),
         "register branch validation should come from the shared validator: {branch_reg_validation_err}"
+    );
+
+    let program = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            win
+        ",
+    )
+    .unwrap();
+    let invalid_successor_err = program.successors(1).unwrap_err().to_string();
+    assert!(
+        invalid_successor_err.contains("source pc 1 is outside program length 1"),
+        "successor lookup should reject out-of-range source PCs: {invalid_successor_err}"
     );
 
     let duplicate_label_err = TinyBvProgram::from_assembly(

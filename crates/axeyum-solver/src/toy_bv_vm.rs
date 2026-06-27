@@ -118,6 +118,28 @@ pub struct TinyBvProgram {
     source_lines: BTreeMap<usize, usize>,
 }
 
+/// Control-flow edge kind in a [`TinyBvProgram`] CFG.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TinyBvCfgEdgeKind {
+    /// Ordinary instruction fallthrough to the next program counter.
+    Fallthrough,
+    /// True branch of [`TinyBvInsn::BranchEq`] or [`TinyBvInsn::BranchRegEq`].
+    BranchTrue,
+    /// False branch of [`TinyBvInsn::BranchEq`] or [`TinyBvInsn::BranchRegEq`].
+    BranchFalse,
+}
+
+/// One static CFG edge in a [`TinyBvProgram`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TinyBvCfgEdge {
+    /// Source program counter.
+    pub from: usize,
+    /// Destination program counter.
+    pub to: usize,
+    /// Edge classification.
+    pub kind: TinyBvCfgEdgeKind,
+}
+
 /// Symbolic frontend state for [`TinyBvProgram`] exploration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TinyBvState {
@@ -418,6 +440,37 @@ impl TinyBvProgram {
     /// Program instructions.
     pub fn code(&self) -> &[TinyBvInsn] {
         &self.code
+    }
+
+    /// Static CFG successors for a program counter.
+    ///
+    /// Fallthrough instructions have at most one edge to `pc + 1`; if the
+    /// instruction is the final instruction, falling off the program is a
+    /// terminal condition and no edge is returned. Branch instructions return
+    /// two edges in deterministic true-then-false order, even if both edges
+    /// target the same PC. Terminal `win`/`lose` instructions have no
+    /// successors.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if `pc` is outside the program.
+    pub fn successors(&self, pc: usize) -> Result<Vec<TinyBvCfgEdge>, SolverError> {
+        let Some(&instruction) = self.code.get(pc) else {
+            return Err(tiny_bv_error(format!(
+                "source pc {pc} is outside program length {}",
+                self.code.len()
+            )));
+        };
+        Ok(self.instruction_successors(pc, instruction))
+    }
+
+    /// All static CFG edges in program-counter order.
+    pub fn cfg_edges(&self) -> Vec<TinyBvCfgEdge> {
+        self.code
+            .iter()
+            .enumerate()
+            .flat_map(|(pc, &instruction)| self.instruction_successors(pc, instruction))
+            .collect()
     }
 
     /// Label-to-program-counter map imported from assembly.
@@ -977,6 +1030,49 @@ impl TinyBvProgram {
             config.memory_aware = true;
         }
         config
+    }
+
+    fn instruction_successors(&self, pc: usize, instruction: TinyBvInsn) -> Vec<TinyBvCfgEdge> {
+        match instruction {
+            TinyBvInsn::Const { .. }
+            | TinyBvInsn::Add { .. }
+            | TinyBvInsn::Sub { .. }
+            | TinyBvInsn::Mul { .. }
+            | TinyBvInsn::Xor { .. }
+            | TinyBvInsn::Load { .. }
+            | TinyBvInsn::Store { .. } => self.fallthrough_successor(pc),
+            TinyBvInsn::BranchEq {
+                then_pc, else_pc, ..
+            }
+            | TinyBvInsn::BranchRegEq {
+                then_pc, else_pc, ..
+            } => vec![
+                TinyBvCfgEdge {
+                    from: pc,
+                    to: then_pc,
+                    kind: TinyBvCfgEdgeKind::BranchTrue,
+                },
+                TinyBvCfgEdge {
+                    from: pc,
+                    to: else_pc,
+                    kind: TinyBvCfgEdgeKind::BranchFalse,
+                },
+            ],
+            TinyBvInsn::Win | TinyBvInsn::Lose => Vec::new(),
+        }
+    }
+
+    fn fallthrough_successor(&self, pc: usize) -> Vec<TinyBvCfgEdge> {
+        let next_pc = pc + 1;
+        if next_pc < self.code.len() {
+            vec![TinyBvCfgEdge {
+                from: pc,
+                to: next_pc,
+                kind: TinyBvCfgEdgeKind::Fallthrough,
+            }]
+        } else {
+            Vec::new()
+        }
     }
 }
 
