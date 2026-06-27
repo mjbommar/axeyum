@@ -1456,7 +1456,9 @@ fn simplify_memory_for_warm_assertion_inner(
     } else {
         arena.rebuild_with_args(term, &simplified_args)
     };
-    let simplified = match collapse_read_over_write(arena, rebuilt) {
+    let simplified = match collapse_trivial_ite(arena, rebuilt)
+        .or_else(|| collapse_read_over_write(arena, rebuilt))
+    {
         Some(collapsed) if collapsed != rebuilt => {
             simplify_memory_for_warm_assertion_inner(arena, collapsed, memo)
         }
@@ -1464,6 +1466,21 @@ fn simplify_memory_for_warm_assertion_inner(
     };
     memo.insert(term, simplified);
     simplified
+}
+
+fn collapse_trivial_ite(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App { op: Op::Ite, args } = arena.node(term) else {
+        return None;
+    };
+    let [condition, then_term, else_term] = args.as_ref() else {
+        return None;
+    };
+    match arena.node(*condition) {
+        TermNode::BoolConst(true) => return Some(*then_term),
+        TermNode::BoolConst(false) => return Some(*else_term),
+        _ => {}
+    }
+    (*then_term == *else_term).then_some(*then_term)
 }
 
 fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermId> {

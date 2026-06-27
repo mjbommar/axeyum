@@ -3217,6 +3217,78 @@ fn branch_simplifies_select_over_array_ite_on_warm_path() {
 }
 
 #[test]
+fn warm_array_ite_same_readback_drops_merge_guard() {
+    let mut arena = TermArena::new();
+    let flag_sym = arena
+        .declare("warm_array_ite_same_read_flag", Sort::Bool)
+        .unwrap();
+    let left_sym = arena
+        .declare(
+            "warm_array_ite_same_read_left",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let right_sym = arena
+        .declare(
+            "warm_array_ite_same_read_right",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let index_sym = arena
+        .declare("warm_array_ite_same_read_i", Sort::BitVec(8))
+        .unwrap();
+    let flag = arena.var(flag_sym);
+    let left = arena.var(left_sym);
+    let right = arena.var(right_sym);
+    let index = arena.var(index_sym);
+    let value = arena.bv_const(8, 0x5a).unwrap();
+    let left_store = arena.store(left, index, value).unwrap();
+    let right_store = arena.store(right, index, value).unwrap();
+    let merged = arena.ite(flag, left_store, right_store).unwrap();
+    let loaded = arena.select(merged, index).unwrap();
+    let loaded_eq_value = arena.eq(loaded, value).unwrap();
+
+    let simplified =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_value);
+    assert_eq!(
+        count_ite_nodes(&arena, simplified),
+        0,
+        "both array-ite branches read back the same store value, so the merge guard is dead"
+    );
+    assert!(
+        !term_contains(&arena, simplified, flag),
+        "the warm encoding should not retain the irrelevant merge condition"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, loaded_eq_value)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "same-readback array-ite should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "same-readback array-ite must not force the memory dispatcher"
+    );
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("same-readback array-ite assertion should be warm-sat");
+    };
+    assert_eq!(
+        eval(&arena, loaded_eq_value, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "model replay must validate the original branch-merged memory assertion"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena
