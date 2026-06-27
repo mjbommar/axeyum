@@ -2054,11 +2054,21 @@ against competitor source, are now binding:
      OR 236: reported branches **0..7** all locally repair to
      **raw_branch_false=0**, then scalar closure returns replay to OR **236**
      with **final_branch_false=2** and **final_total_false=1**. The next AUFLIA
-     move is no longer branch choice; it is learning/refining the scalar/array
-     constraint that makes this OR-236 branch family impossible under the
-     current model, or adding a production closure-aware rejection guard so the
-     repair loop does not spend time forcing branches that immediately close
-     back to the same OR.
+     move is no longer branch choice; it is either learning/refining the
+     scalar/array constraint that makes this OR-236 branch family impossible
+     under the current model or preventing production repair from spending time
+     on branches that immediately close back to the same OR.
+     **SCALAR-CLOSURE BRANCH REJECTION GUARD LANDED (2026-06-27):**
+     residual follow-up OR repair now routes candidate branch repairs through a
+     bounded scalar-closure guard. The guard declines only when scalar closure
+     takes at least one scalar equality step, replay returns to the same
+     follow-up OR, the repaired branch is false again, and the full replay false
+     count is not lower than before the candidate. On `bug337`, the route still
+     reaches OR **236** with **total_false=1** and reports the same closure-loop
+     branch family, but it no longer spends a follow-up repair on
+     `followup_or236_branch0_branch`. The next AUFLIA move is learning/refining
+     the missing scalar/array constraint that explains the OR-236 family, not
+     raw OR branch forcing.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

@@ -7191,12 +7191,14 @@ fn replay_branch_select_residual_candidate_from_trial(
             break;
         };
         let mut next_trial = followup_trial.clone();
-        let Some((followup_repair_kind, followup_stats)) = repair_projected_branch_best_candidate(
-            arena,
-            originals,
-            followup_or.best_branch_term,
-            &mut next_trial,
-        )?
+        let Some((followup_repair_kind, followup_stats)) =
+            repair_projected_branch_best_candidate_with_scalar_closure_guard(
+                arena,
+                originals,
+                followup_failure.conjunct_term,
+                followup_or.best_branch_term,
+                &mut next_trial,
+            )?
         else {
             break;
         };
@@ -7961,12 +7963,14 @@ fn repair_projected_replay_branch_select_residual_chain(
         };
 
         let mut followup_trial = trial.clone();
-        let Some((_, followup_stats)) = repair_projected_branch_best_candidate(
-            search.arena,
-            search.originals,
-            followup_or.best_branch_term,
-            &mut followup_trial,
-        )?
+        let Some((_, followup_stats)) =
+            repair_projected_branch_best_candidate_with_scalar_closure_guard(
+                search.arena,
+                search.originals,
+                followup_failure.conjunct_term,
+                followup_or.best_branch_term,
+                &mut followup_trial,
+            )?
         else {
             return Ok(());
         };
@@ -8930,6 +8934,66 @@ fn repair_projected_branch_best_candidate(
     Ok(Some((kind, stats)))
 }
 
+fn scalar_closure_rejects_branch_candidate(
+    arena: &TermArena,
+    originals: &[TermId],
+    disjunction: TermId,
+    branch: TermId,
+    baseline_false: usize,
+    candidate: &Assignment,
+) -> Result<bool, SolverError> {
+    let (closure_steps, closure_trial) =
+        replay_scalar_closure_from_trial(arena, originals, branch, candidate)?;
+    if closure_steps.is_empty() {
+        return Ok(false);
+    }
+    let final_total_false = positive_replay_false_count(arena, originals, &closure_trial)?;
+    if final_total_false < baseline_false {
+        return Ok(false);
+    }
+    let Some(final_failure) = first_projected_replay_failure(
+        arena,
+        originals,
+        &closure_trial,
+        ProjectionRepairStats::default(),
+    )?
+    else {
+        return Ok(false);
+    };
+    if final_failure.conjunct_term != disjunction {
+        return Ok(false);
+    }
+    Ok(branch_false_literal_count(arena, branch, &closure_trial)? > 0)
+}
+
+fn repair_projected_branch_best_candidate_with_scalar_closure_guard(
+    arena: &TermArena,
+    originals: &[TermId],
+    disjunction: TermId,
+    branch: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<(&'static str, ProjectionRepairStats)>, SolverError> {
+    let baseline_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut trial = projected.clone();
+    let Some((kind, stats)) =
+        repair_projected_branch_best_candidate(arena, originals, branch, &mut trial)?
+    else {
+        return Ok(None);
+    };
+    if scalar_closure_rejects_branch_candidate(
+        arena,
+        originals,
+        disjunction,
+        branch,
+        baseline_false,
+        &trial,
+    )? {
+        return Ok(None);
+    }
+    *projected = trial;
+    Ok(Some((kind, stats)))
+}
+
 fn project_replay_ext_candidate(
     arena: &TermArena,
     ctx: &RowCtx,
@@ -9406,11 +9470,13 @@ mod tests {
         cross_store_array_disequality_refutation, default_value_for_symbol,
         first_false_replay_conjunct, first_projected_replay_failure, positive_replay_false_count,
         project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
-        repair_projected_branch_as_candidate, repair_projected_branch_scalar_choice_candidate,
-        repair_projected_replay_branch_beam, repair_projected_replay_branch_choice,
-        repair_projected_replay_branch_pair_choice, repair_projected_replay_branch_select_cycle,
-        repair_projected_replay_failure, replay_failure_with_branch_candidate_diagnostics,
-        replay_last_ext_candidate, select_value, store_chain_readback_refutation, store_value,
+        repair_projected_branch_as_candidate,
+        repair_projected_branch_best_candidate_with_scalar_closure_guard,
+        repair_projected_branch_scalar_choice_candidate, repair_projected_replay_branch_beam,
+        repair_projected_replay_branch_choice, repair_projected_replay_branch_pair_choice,
+        repair_projected_replay_branch_select_cycle, repair_projected_replay_failure,
+        replay_failure_with_branch_candidate_diagnostics, replay_last_ext_candidate, select_value,
+        store_chain_readback_refutation, store_value,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -10374,6 +10440,74 @@ mod tests {
             positive_replay_false_count(&arena, &originals, &projected).unwrap(),
             0
         );
+    }
+
+    #[test]
+    fn lazy_ext_scalar_closure_guard_rejects_returned_or_loop() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let z = arena.int_var("z").unwrap();
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let false_term = arena.bool_const(false);
+        let y_eq_x = arena.eq(y, x).unwrap();
+        let z_eq_x = arena.eq(z, x).unwrap();
+        let branch = arena.and(y_eq_x, z_eq_x).unwrap();
+        let disjunction = arena.or(branch, false_term).unwrap();
+        let y_eq_one = arena.eq(y, one).unwrap();
+        let z_eq_two = arena.eq(z, two).unwrap();
+        let rest = arena.and(y_eq_one, z_eq_two).unwrap();
+        let assertion = arena.and(disjunction, rest).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(*x_symbol, Value::Int(0));
+        projected.set(*y_symbol, Value::Int(1));
+        projected.set(*z_symbol, Value::Int(2));
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+
+        let mut raw_candidate = projected.clone();
+        repair_projected_branch_as_candidate(&arena, &originals, branch, &mut raw_candidate)
+            .unwrap()
+            .expect("expected raw branch repair");
+        assert_eq!(
+            eval(&arena, disjunction, &raw_candidate).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &raw_candidate).unwrap(),
+            2
+        );
+
+        let guarded = repair_projected_branch_best_candidate_with_scalar_closure_guard(
+            &arena,
+            &originals,
+            disjunction,
+            branch,
+            &mut projected,
+        )
+        .unwrap();
+        assert!(
+            guarded.is_none(),
+            "closure returns to the same OR without replay improvement"
+        );
+        assert_eq!(projected.get(*x_symbol), Some(Value::Int(0)));
+        assert_eq!(projected.get(*y_symbol), Some(Value::Int(1)));
+        assert_eq!(projected.get(*z_symbol), Some(Value::Int(2)));
     }
 
     #[test]
