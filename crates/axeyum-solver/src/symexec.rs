@@ -1347,7 +1347,7 @@ fn status_or_unknown(result: Result<CheckResult, SolverError>) -> Result<PathSta
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_ir::{ArraySortKey, Assignment, Sort, Value, eval};
+    use axeyum_ir::{ArraySortKey, Assignment, Sort, Value, WideUint, eval};
 
     fn x(arena: &mut TermArena) -> TermId {
         arena.bv_var("x", 8).unwrap()
@@ -1435,6 +1435,53 @@ mod tests {
         assert!(
             !exec.solver.has_deferred_theory_assertions(),
             "one-shot select branch queries must not persist as deferred theory assertions"
+        );
+    }
+
+    #[test]
+    fn branch_over_wide_bv_array_select_auto_stays_warm() {
+        let mut arena = TermArena::new();
+        let mem_sym = arena
+            .declare(
+                "branch_warm_wide_select_mem",
+                Sort::Array {
+                    index: ArraySortKey::BitVec(256),
+                    element: ArraySortKey::BitVec(256),
+                },
+            )
+            .unwrap();
+        let idx = arena.bv_var("branch_warm_wide_select_idx", 256).unwrap();
+        let mem = arena.var(mem_sym);
+        let loaded = arena.select(mem, idx).unwrap();
+        let target = arena.wide_bv_const(
+            WideUint::from_u128(0x5a, 256).or(&WideUint::from_u128(1, 256).shl(190)),
+        );
+        let cond = arena.eq(loaded, target).unwrap();
+
+        let mut exec = SymbolicExecutor::new();
+        let clauses_before = exec.solver.encoded_clause_count();
+        let branch = exec
+            .branch(&mut arena, cond)
+            .expect("branch should auto-route a wide BV-array select condition");
+        let clauses_after = exec.solver.encoded_clause_count();
+
+        assert!(
+            branch.if_true.is_feasible(),
+            "wide array-select branch then-direction should be feasible, got {:?}",
+            branch.if_true
+        );
+        assert!(
+            branch.if_false.is_feasible(),
+            "wide array-select branch else-direction should be feasible, got {:?}",
+            branch.if_false
+        );
+        assert!(
+            clauses_after > clauses_before,
+            "wide BV-array select branch should encode warm one-shot assumptions instead of using the dispatcher"
+        );
+        assert!(
+            !exec.solver.has_deferred_theory_assertions(),
+            "one-shot wide select branch queries must not persist as deferred theory assertions"
         );
     }
 

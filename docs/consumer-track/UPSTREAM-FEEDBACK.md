@@ -56,9 +56,12 @@ Last reconciled with `main`: 2026-06-27.
   encodes the simplified BV term while retaining the original memory term for
   replay and assumption-core reporting. A first retained select-congruence slice
   also landed for plain reads over BV-indexed array symbols whose elements are
-  Bool or BitVec: `select(a,i)` is abstracted to an internal warm scalar
-  variable, same-array reads get scoped congruence lemmas, and SAT models are
-  projected back into concrete array entries before replay. A scalar UF-app sibling now handles Bool/BV
+  Bool or BitVec, including wide/BV256 index or element values:
+  `select(a,i)` is abstracted to an internal warm scalar variable, same-array
+  reads get scoped congruence lemmas, and SAT models are projected back into
+  concrete array entries before replay. Compact BV arrays still use
+  `ArrayValue`; wide BV storage-style reads use `GenericArrayValue` so replay
+  sees the full wide value. A scalar UF-app sibling now handles Bool/BV
   applications: `f(args)` is abstracted to an internal warm variable,
   same-function applications get scoped congruence lemmas, and SAT models are
   projected back into concrete `FuncValue` entries before replay.
@@ -67,8 +70,9 @@ Last reconciled with `main`: 2026-06-27.
   fallback on memory/UF shapes still outside it.
   `SymbolicExecutor::branch` now preflights simplified fork conditions against
   the retained select/UF abstraction coverage too, so plain BV-indexed
-  Bool/BV array-symbol reads and scalar Bool/BV UF calls stay on warm one-shot
-  assumptions instead of jumping straight to the dispatcher.
+  Bool/BV array-symbol reads, including BV256 storage-style reads, and scalar
+  Bool/BV UF calls stay on warm one-shot assumptions instead of jumping straight
+  to the dispatcher.
   Default CFG exploration now uses that auto route too; `memory_aware=true`
   remains the explicit force-dispatch setting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
@@ -77,7 +81,8 @@ Last reconciled with `main`: 2026-06-27.
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
-  reads, plain symbolic-base Bool/BV array loads, scalar Bool/BV UF calls,
+  reads, plain symbolic-base Bool/BV array loads, wide/BV256 storage-style base
+  loads, scalar Bool/BV UF calls,
   helper-level load branches, reducible CFG memory branches, and fork queries,
   but general array/UF work still rebuilds through the dispatcher instead of
   retaining warm learned clauses.
@@ -90,7 +95,8 @@ Last reconciled with `main`: 2026-06-27.
   "Warm same-index ROW admission" / "Warm literal ROW chain admission" /
   "Warm constant-array read admission" / "Warm array-ITE read admission" /
   "Warm symbolic ROW conditional admission" / "Warm BV-array select-congruence
-  admission" / "Warm scalar UF congruence admission" /
+  admission" / "Warm wide-BV array select projection" /
+  "Warm scalar UF congruence admission" /
   "Warm branch routing recognizes retained select/UF slices";
   `docs/plan/track-4-usecases-frontend/P4.1` / `P4.2` notes.
 

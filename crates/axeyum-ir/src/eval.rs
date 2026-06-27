@@ -92,6 +92,9 @@ fn well_founded_default_rec(
 ) -> Option<Value> {
     match sort {
         Sort::Bool => Some(Value::Bool(false)),
+        Sort::BitVec(width) if width > 128 => {
+            Some(Value::WideBv(crate::wide::WideUint::zero(width)))
+        }
         Sort::BitVec(width) => Some(Value::Bv { width, value: 0 }),
         // A floating-point default is +0.0: the all-zero `exp + sig`-bit pattern.
         Sort::Float { exp, sig } => Some(Value::Bv {
@@ -102,7 +105,10 @@ fn well_founded_default_rec(
         Sort::Real => Some(Value::Real(Rational::zero())),
         Sort::Uninterpreted(sort) => Some(Value::Uninterpreted { sort, value: 0 }),
         Sort::Array { index, element } => {
-            if let Some((index_width, element_width)) = sort.array_widths() {
+            if let Some((index_width, element_width)) = sort.array_widths()
+                && index_width <= 128
+                && element_width <= 128
+            {
                 Some(Value::Array(ArrayValue::constant(
                     index_width,
                     element_width,
@@ -409,7 +415,8 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
     // below is unchanged for the common case. This triggers when an operand is
     // already wide, or when a width-*growing* op produces a `> 128`-bit result
     // from `≤ 128`-bit operands (zero/sign-extend, concat, int2bv).
-    if vals.iter().any(|v| matches!(v, Value::WideBv(_))) || result_exceeds_128(op, vals) {
+    let needs_wide_bv_path = vals.iter().any(is_wide_bv_value) || result_exceeds_128(op, vals);
+    if needs_wide_bv_path && supports_wide_bv_path(op, vals) {
         // The wide path is all mod-2^width bit-vector arithmetic (no Int/Real
         // crossing), so it is infallible: no overflow can occur there.
         return Ok(apply_wide(op, vals));
@@ -962,6 +969,65 @@ fn result_exceeds_128(op: Op, vals: &[Value]) -> bool {
             matches!((bv_width_of(&vals[0]), bv_width_of(&vals[1])), (Some(a), Some(b)) if a + b > 128)
         }
         Op::Int2Bv { width } => width > 128,
+        _ => false,
+    }
+}
+
+fn is_bv_value(v: &Value) -> bool {
+    matches!(v, Value::Bv { .. } | Value::WideBv(_))
+}
+
+fn is_wide_bv_value(v: &Value) -> bool {
+    match v {
+        Value::WideBv(_) => true,
+        Value::Bv { width, .. } => *width > 128,
+        _ => false,
+    }
+}
+
+fn supports_wide_bv_path(op: Op, vals: &[Value]) -> bool {
+    match op {
+        Op::BvNot
+        | Op::BvAnd
+        | Op::BvOr
+        | Op::BvXor
+        | Op::BvNand
+        | Op::BvNor
+        | Op::BvXnor
+        | Op::BvNeg
+        | Op::BvAdd
+        | Op::BvSub
+        | Op::BvMul
+        | Op::BvUdiv
+        | Op::BvUrem
+        | Op::BvSdiv
+        | Op::BvSrem
+        | Op::BvSmod
+        | Op::BvShl
+        | Op::BvLshr
+        | Op::BvAshr
+        | Op::BvUlt
+        | Op::BvUle
+        | Op::BvUgt
+        | Op::BvUge
+        | Op::BvSlt
+        | Op::BvSle
+        | Op::BvSgt
+        | Op::BvSge
+        | Op::BvComp
+        | Op::Extract { .. }
+        | Op::Concat
+        | Op::ZeroExt { .. }
+        | Op::SignExt { .. }
+        | Op::RotateLeft { .. }
+        | Op::RotateRight { .. }
+        | Op::FpFromBits { .. }
+        | Op::Int2Bv { .. } => true,
+        Op::Eq => vals.iter().all(is_bv_value),
+        Op::Ite => vals.get(1).is_some_and(|then_value| {
+            vals.get(2)
+                .is_some_and(|else_value| is_bv_value(then_value) && is_bv_value(else_value))
+        }),
         _ => false,
     }
 }

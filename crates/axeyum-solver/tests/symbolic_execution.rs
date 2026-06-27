@@ -11,7 +11,9 @@
 
 #![allow(clippy::too_many_lines)] // scenario-style integration tests stay readable as full flows
 
-use axeyum_ir::{ArraySortKey, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    ArraySortKey, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval,
+};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
     SymbolicExecutor, SymbolicMemory, SymbolicMemoryWrite, TinyBvBasicBlock, TinyBvCfgEdge,
@@ -2075,6 +2077,73 @@ fn warm_assert_abstracts_bool_select_over_array_symbol() {
 }
 
 #[test]
+fn warm_assert_abstracts_wide_bv_select_over_array_symbol() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_wide_select_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(256),
+                element: ArraySortKey::BitVec(256),
+            },
+        )
+        .unwrap();
+    let idx_sym = arena
+        .declare("warm_wide_select_idx", Sort::BitVec(256))
+        .unwrap();
+    let mem = arena.var(mem_sym);
+    let idx = arena.var(idx_sym);
+    let target_value = WideUint::from_u128(0x42, 256).or(&WideUint::from_u128(1, 256).shl(200));
+    let target = arena.wide_bv_const(target_value.clone());
+    let loaded = arena.select(mem, idx).unwrap();
+    let assertion = arena.eq(loaded, target).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .expect("select over a BV256-indexed BV256 array symbol should stay warm");
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the encoded wide-select abstraction should be array-free"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "wide-select abstraction should avoid the one-shot memory dispatcher"
+    );
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("warm wide-select abstraction should be satisfiable");
+    };
+    assert_eq!(
+        eval(&arena, assertion, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected wide-array model must replay the original select assertion"
+    );
+    assert!(
+        matches!(
+            model.get(mem_sym),
+            Some(Value::GenericArray(array))
+                if array.index_sort() == ArraySortKey::BitVec(256)
+                    && array.element_sort() == ArraySortKey::BitVec(256)
+        ),
+        "wide BV-array projection should use the generic array model path"
+    );
+    assert!(
+        matches!(
+            model.get(idx_sym),
+            Some(Value::WideBv(value)) if value.width() == 256
+        ),
+        "unconstrained wide-BV indices should use the canonical wide value path"
+    );
+    assert!(
+        model
+            .iter()
+            .all(|(symbol, _)| !arena.symbol(symbol).0.starts_with("!axeyum_warm_select_")),
+        "internal select abstraction symbols must not leak into public models"
+    );
+}
+
+#[test]
 fn warm_array_select_congruence_refutes_equal_index_conflict() {
     let mut arena = TermArena::new();
     let mem_sym = arena
@@ -2112,6 +2181,53 @@ fn warm_array_select_congruence_refutes_equal_index_conflict() {
     assert!(
         !solver.has_deferred_theory_assertions(),
         "select-congruence conflicts should stay on the warm path"
+    );
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
+fn warm_wide_array_select_congruence_refutes_equal_index_conflict() {
+    let mut arena = TermArena::new();
+    let mem_sym = arena
+        .declare(
+            "warm_wide_congruence_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(256),
+                element: ArraySortKey::BitVec(256),
+            },
+        )
+        .unwrap();
+    let i_sym = arena
+        .declare("warm_wide_congruence_i", Sort::BitVec(256))
+        .unwrap();
+    let j_sym = arena
+        .declare("warm_wide_congruence_j", Sort::BitVec(256))
+        .unwrap();
+    let mem = arena.var(mem_sym);
+    let i = arena.var(i_sym);
+    let j = arena.var(j_sym);
+    let a = arena.wide_bv_const(WideUint::from_u128(0xaa, 256));
+    let b = arena
+        .wide_bv_const(WideUint::from_u128(0xbb, 256).or(&WideUint::from_u128(1, 256).shl(180)));
+    let read_i = arena.select(mem, i).unwrap();
+    let read_j = arena.select(mem, j).unwrap();
+    let read_i_is_a = arena.eq(read_i, a).unwrap();
+    let read_j_is_b = arena.eq(read_j, b).unwrap();
+    let same_index = arena.eq(i, j).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, read_i_is_a)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_index)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, read_j_is_b)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "wide select-congruence conflicts should stay on the warm path"
     );
     assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
 }

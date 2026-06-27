@@ -101,17 +101,19 @@ After the narrow syntactic memory simplifier, reads of the form `select(a, i)`
 where `a` is a BV-indexed array symbol with Bool or BitVec elements and `i` is
 array-free are abstracted to internal warm scalar variables. Same-array read
 pairs get selector-scoped congruence lemmas, and SAT models are projected back
-into concrete array entries before original-term replay (`GenericArrayValue` for
-Bool elements, compact `ArrayValue` for BV elements). This covers symbolic-base
-loads, predicate/set reads, and reducible ROW tails whose remaining base read is
-a plain memory symbol. A scalar UF-app sibling now handles Bool/BV applications
-the same way: `f(args)` is abstracted to a retained warm variable, same-function
-applications get selector-scoped congruence lemmas, and SAT models are projected
-back into `FuncValue` entries before replay. Full lazy arrays/UF remain
-deferred: arbitrary array terms, extensionality, ROW instantiation beyond the
-current simplifier, non-BV indices, non-Bool/BV element arrays, non-scalar or
-infinite-domain UF applications, and learned theory-clause reuse across the
-whole array/UF engine are still open.
+into concrete array entries before original-term replay (`ArrayValue` only for
+BV arrays whose index and element widths both fit in `u128`; `GenericArrayValue`
+for Bool arrays and any wide BV index or element, including BV256 storage
+reads). This covers symbolic-base loads, predicate/set reads, and reducible ROW
+tails whose remaining base read is a plain memory symbol. A scalar UF-app
+sibling now handles Bool/BV applications the same way: `f(args)` is abstracted
+to a retained warm variable, same-function applications get selector-scoped
+congruence lemmas, and SAT models are projected back into `FuncValue` entries
+before replay. Full lazy arrays/UF remain deferred: arbitrary array terms,
+extensionality, ROW instantiation beyond the current simplifier, non-BV
+indices, non-Bool/BV element arrays, non-scalar or infinite-domain UF
+applications, and learned theory-clause reuse across the whole array/UF engine
+are still open.
 
 ## Consequences
 

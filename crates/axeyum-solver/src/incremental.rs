@@ -19,7 +19,7 @@ use axeyum_bv::{BitLowerError, IncrementalLowering, first_unsupported_op};
 use axeyum_cnf::{CnfVar, IncrementalCnf, SatError, SatResult};
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, FuncId, FuncValue, GenericArrayValue, IrError, Op, Sort,
-    SymbolId, TermArena, TermId, TermNode, Value, eval, well_founded_default,
+    SymbolId, TermArena, TermId, TermNode, Value, WideUint, eval, well_founded_default,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -1239,12 +1239,12 @@ impl IncrementalBvSolver {
                 warm_array_select_abstraction_value(arena, assignment, select_term, select)?;
             let model_assignment =
                 assignment_with_internal(arena, model, assignment, &self.internal_symbols);
-            let index_bits = warm_array_select_index_bits(arena, &model_assignment, select)?;
+            let index_value = warm_array_select_index_value(arena, &model_assignment, select)?;
             let array_value = warm_array_select_projected_array(
                 select_term,
                 select,
                 &select_value,
-                index_bits,
+                &index_value,
                 model,
             )?;
             model.set(select.array_symbol, array_value);
@@ -1732,16 +1732,18 @@ fn warm_array_select_abstraction_value(
             ),
         });
     }
-    Ok(value)
+    Ok(normalize_bitvec_value(value))
 }
 
-fn warm_array_select_index_bits(
+fn warm_array_select_index_value(
     arena: &TermArena,
     assignment: &Assignment,
     select: WarmArraySelect,
-) -> Result<u128, UnknownReason> {
+) -> Result<Value, UnknownReason> {
     match eval(arena, select.index, assignment) {
-        Ok(Value::Bv { width, value }) if width == select.index_width => Ok(value),
+        Ok(value) if value.sort() == Sort::BitVec(select.index_width) => {
+            Ok(normalize_bitvec_value(value))
+        }
         Ok(value) => Err(UnknownReason {
             kind: UnknownKind::Other,
             detail: format!(
@@ -1763,15 +1765,15 @@ fn warm_array_select_projected_array(
     select_term: TermId,
     select: WarmArraySelect,
     select_value: &Value,
-    index_bits: u128,
+    index_value: &Value,
     model: &Model,
 ) -> Result<Value, UnknownReason> {
     match select.element {
         ArraySortKey::BitVec(_) => {
-            project_warm_bv_array_select(select_term, select, select_value, index_bits, model)
+            project_warm_bv_array_select(select_term, select, select_value, index_value, model)
         }
         ArraySortKey::Bool => {
-            project_warm_bool_array_select(select_term, select, select_value, index_bits, model)
+            project_warm_bool_array_select(select_term, select, select_value, index_value, model)
         }
         other => Err(UnknownReason {
             kind: UnknownKind::Other,
@@ -1784,50 +1786,75 @@ fn project_warm_bv_array_select(
     select_term: TermId,
     select: WarmArraySelect,
     select_value: &Value,
-    index_bits: u128,
+    index_value: &Value,
     model: &Model,
 ) -> Result<Value, UnknownReason> {
     let ArraySortKey::BitVec(element_width) = select.element else {
         unreachable!("caller checked BV element sort")
     };
-    let (width, value) = match select_value {
-        Value::Bv { width, value } => (*width, *value),
-        _ => {
-            return Err(UnknownReason {
-                kind: UnknownKind::Other,
-                detail: format!(
-                    "warm BV-array select abstraction #{} had non-BV value",
-                    select_term.index()
-                ),
-            });
-        }
-    };
-    if width != element_width {
+    let select_value = normalize_bitvec_value(select_value.clone());
+    if select_value.sort() != Sort::BitVec(element_width) {
         return Err(UnknownReason {
             kind: UnknownKind::Other,
             detail: format!(
-                "warm BV-array select abstraction #{} had width {width}, expected {element_width}",
-                select_term.index()
+                "warm BV-array select abstraction #{} had value sort {}, expected (_ BitVec {element_width})",
+                select_term.index(),
+                select_value.sort()
+            ),
+        });
+    }
+    if select.index_width <= 128
+        && element_width <= 128
+        && let Value::Bv {
+            value: index_bits, ..
+        } = index_value
+        && let Value::Bv { value, .. } = select_value
+    {
+        let array = match model.get(select.array_symbol) {
+            Some(Value::Array(array))
+                if array.index_width() == select.index_width
+                    && array.element_width() == element_width =>
+            {
+                array
+            }
+            _ => ArrayValue::constant(select.index_width, element_width, 0),
+        };
+        return Ok(Value::Array(array.store(*index_bits, value)));
+    }
+    if index_value.sort() != Sort::BitVec(select.index_width) {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm BV-array select index #{} had value sort {}, expected (_ BitVec {})",
+                select.index.index(),
+                index_value.sort(),
+                select.index_width
             ),
         });
     }
     let array = match model.get(select.array_symbol) {
-        Some(Value::Array(array))
-            if array.index_width() == select.index_width
-                && array.element_width() == element_width =>
+        Some(Value::GenericArray(array))
+            if array.index_sort() == ArraySortKey::BitVec(select.index_width)
+                && array.element_sort() == ArraySortKey::BitVec(element_width) =>
         {
             array
         }
-        _ => ArrayValue::constant(select.index_width, element_width, 0),
+        _ => GenericArrayValue::constant(
+            ArraySortKey::BitVec(select.index_width),
+            ArraySortKey::BitVec(element_width),
+            zero_bitvec_value(element_width),
+        ),
     };
-    Ok(Value::Array(array.store(index_bits, value)))
+    Ok(Value::GenericArray(
+        array.store(index_value.clone(), select_value),
+    ))
 }
 
 fn project_warm_bool_array_select(
     select_term: TermId,
     select: WarmArraySelect,
     select_value: &Value,
-    index_bits: u128,
+    index_value: &Value,
     model: &Model,
 ) -> Result<Value, UnknownReason> {
     if !matches!(select_value, Value::Bool(_)) {
@@ -1839,10 +1866,17 @@ fn project_warm_bool_array_select(
             ),
         });
     }
-    let index_value = Value::Bv {
-        width: select.index_width,
-        value: index_bits,
-    };
+    if index_value.sort() != Sort::BitVec(select.index_width) {
+        return Err(UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm Bool-array select index #{} had value sort {}, expected (_ BitVec {})",
+                select.index.index(),
+                index_value.sort(),
+                select.index_width
+            ),
+        });
+    }
     let array = match model.get(select.array_symbol) {
         Some(Value::GenericArray(array))
             if array.index_sort() == ArraySortKey::BitVec(select.index_width)
@@ -1857,8 +1891,29 @@ fn project_warm_bool_array_select(
         ),
     };
     Ok(Value::GenericArray(
-        array.store(index_value, select_value.clone()),
+        array.store(index_value.clone(), select_value.clone()),
     ))
+}
+
+fn zero_bitvec_value(width: u32) -> Value {
+    if width > 128 {
+        Value::WideBv(WideUint::zero(width))
+    } else {
+        Value::Bv { width, value: 0 }
+    }
+}
+
+fn normalize_bitvec_value(value: Value) -> Value {
+    match value {
+        Value::Bv { width, value } if width > 128 => {
+            Value::WideBv(WideUint::from_u128(value, width))
+        }
+        Value::WideBv(value) if value.width() <= 128 => Value::Bv {
+            width: value.width(),
+            value: value.to_u128(),
+        },
+        other => other,
+    }
 }
 
 fn assignment_with_internal(
