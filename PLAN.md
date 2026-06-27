@@ -1853,6 +1853,18 @@ against competitor source, are now binding:
      the next AUFLIA move should be a cost-controlled multi-OR/beam branch
      scheduler or pair-edge diagnostics for the 219↔211 cycle, not unbounded
      branch-pair widening.
+     **BRANCH-PAIR EDGE DIAGNOSTICS LANDED (2026-06-26):** final replay failure
+     notes now include a bounded `branch_pair_candidate_diagnostics` section:
+     for repairable first-OR branches whose next blocker is another OR, it scores
+     each second-OR branch candidate and records the post-pair global blocker.
+     On `bug337`, this proves the current monotone two-OR policy cannot move the
+     new frontier. From OR 219 branch 3, all OR 211 second-branch candidates
+     locally repair but worsen full replay: branches 0/3 leave two false
+     conjuncts, branches 1/2 leave four, and the best branch-3 path lands on OR
+     212 / term 4341. The next AUFLIA repair should therefore be a bounded
+     branch-schedule/beam search that can take temporary uphill moves inside the
+     beam, but still accepts only final full-replay improvement, with explicit
+     caps and cycle/tabu handling for the 219 → 211 → 212 queue-lock chain.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

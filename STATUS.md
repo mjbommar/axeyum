@@ -6,6 +6,48 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA branch-pair edge diagnostics.**
+  Final lazy-extensionality replay failures now include a bounded
+  `branch_pair_candidate_diagnostics` section for failed generated ORs. The
+  diagnostic is computed only on the final failed replay path, follows at most
+  16 pair edges, and only expands first-branch candidates whose next full-replay
+  blocker is a different generated OR. For each second-OR branch it reports the
+  first branch, second OR ordinal/term, second branch, initial/final false
+  literals, whether the pair is a candidate / no-repair / breaks an OR / same or
+  worse full replay, repair-change counts, total full-replay false count, and
+  the next global blocker. A focused regression pins this on a flattened
+  conjunct assertion so the ordinal shape matches the large AUFLIA diagnostics.
+
+  This confirms why the current monotone two-OR repair stops on `bug337`. The
+  10 s diagnostic remains `unknown` at **round=2**, **sites=4096**,
+  **array_eq_atoms=150**, **row_lemmas=42**, **cong_lemmas=6973**,
+  **diff_skolems=146**, **working_assertions=7127**, and the same failed OR
+  **ordinal 219**, term **6084**, after **projection_repair_changes=647**. The
+  branch-candidate section is unchanged: branch **3** repairs locally and lands
+  on global OR **ordinal 211**, term **4108**, with **total_false=1**. The new
+  pair-edge section shows every `219` branch-3 → `211` pair candidate repairs
+  the second branch locally but worsens full replay from that one-false baseline:
+  branch **0** has **init=2**, **final=0**, **total_false=2**, next blocker
+  scalar term **641** (**1 vs 0**); branch **1** has **init=5**, **final=0**,
+  **total_false=4**, next blocker term **646** (**2 vs 0**); branch **2** has
+  **init=5**, **final=0**, **total_false=4**, next blocker term **444**
+  (**1 vs 0**); branch **3** has **init=3**, **final=0**, **total_false=2**,
+  and lands on generated OR **ordinal 212**, term **4341**. This is the key
+  practical result: a strictly monotone two-OR repair cannot progress from the
+  current frontier. Next useful work is a bounded branch-schedule/beam search
+  that allows temporary uphill moves inside the beam while accepting only a final
+  full-replay improvement, with explicit caps and tabu/cycle handling around the
+  **219 → 211 → 212** queue-lock chain.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_pair_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA coupled branch-pair replay repair.**
   Targeted lazy-extensionality replay now has a bounded two-disjunction branch
   repair before the existing single-disjunction branch choice. For a failed
