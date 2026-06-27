@@ -2266,8 +2266,9 @@ registers, final explicit memory cells, and terminal outcome.
 format (`const`, arithmetic, `load`/`store`, `beq`, `win`/`lose`) with labels for
 branch targets, register-vs-register equality branches (`beq rA rB ...`),
 line-numbered parse errors, a public label-to-PC map, a public PC-to-source-line
-map for imported instructions, and label-based reachability/safety query
-wrappers over the existing checked PC queries. P4.2 still needs richer
+map for imported instructions, deterministic PC-to-label lookup, source-aware
+concrete trace rows via `trace_source_steps`, and label-based reachability/safety
+query wrappers over the existing checked PC queries. P4.2 still needs richer
 byte-level/binary frontend work,
 unbounded/certified safety, and eventual warm lazy theory reuse.
 

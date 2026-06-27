@@ -822,6 +822,10 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(program.label_pc("win_block"), Some(4));
     assert_eq!(program.label_pc("lose_block"), Some(5));
     assert_eq!(program.label_pc("missing"), None);
+    assert_eq!(program.labels_at_pc(0), vec!["entry"]);
+    assert_eq!(program.labels_at_pc(4), vec!["win_block"]);
+    assert_eq!(program.labels_at_pc(5), vec!["lose_block"]);
+    assert_eq!(program.labels_at_pc(99), Vec::<&str>::new());
     assert_eq!(program.source_lines().len(), program.code().len());
     assert_eq!(program.source_line(0), Some(4));
     assert_eq!(program.source_line(4), Some(8));
@@ -882,6 +886,30 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
             .collect::<Vec<_>>(),
         vec![Some(4), Some(5), Some(6), Some(7), Some(8)]
     );
+    let source_steps = program.trace_source_steps(&trace);
+    assert_eq!(
+        source_steps
+            .iter()
+            .map(|step| (step.pc, step.source_line))
+            .collect::<Vec<_>>(),
+        vec![
+            (0, Some(4)),
+            (1, Some(5)),
+            (2, Some(6)),
+            (3, Some(7)),
+            (4, Some(8))
+        ]
+    );
+    assert_eq!(source_steps[0].labels, vec!["entry".to_owned()]);
+    assert_eq!(source_steps[4].labels, vec!["win_block".to_owned()]);
+    assert_eq!(
+        source_steps[0].instruction,
+        TinyBvInsn::Const {
+            dst: 2,
+            value: 0x0010
+        }
+    );
+    assert_eq!(source_steps[0].regs_before[0], hit.witness.inputs[0]);
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
     assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
@@ -930,6 +958,8 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
         }
     );
     assert_eq!(program.source_line(2), Some(4));
+    assert_eq!(program.labels_at_pc(3), vec!["equal"]);
+    assert_eq!(program.labels_at_pc(4), vec!["done"]);
 
     let reach = program
         .reach_label_checked(
@@ -955,6 +985,19 @@ fn tiny_bv_assembly_imports_register_equality_branch() {
     assert_eq!(
         trace.steps.iter().map(|step| step.pc).collect::<Vec<_>>(),
         vec![0, 1, 2, 3]
+    );
+    let source_steps = program.trace_source_steps(&trace);
+    assert_eq!(
+        source_steps
+            .iter()
+            .map(|step| (step.pc, step.source_line, step.labels.clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            (0, Some(2), Vec::<String>::new()),
+            (1, Some(3), Vec::<String>::new()),
+            (2, Some(4), Vec::<String>::new()),
+            (3, Some(5), vec!["equal".to_owned()]),
+        ]
     );
     let [x, y] = hit.witness.inputs[..] else {
         panic!("test program has exactly two input words");

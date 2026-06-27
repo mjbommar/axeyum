@@ -163,6 +163,26 @@ pub struct TinyBvConcreteStep {
     pub regs_before: Vec<u128>,
 }
 
+/// Source-aware view of one concrete replay step.
+///
+/// This is derived from a [`TinyBvConcreteTrace`] and a [`TinyBvProgram`].
+/// Hand-built programs have no imported source metadata, so `source_line` is
+/// `None` and `labels` is empty for those traces.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvTraceSourceStep {
+    /// Program counter executed by this step.
+    pub pc: usize,
+    /// One-based assembly source line for `pc`, when the program was imported
+    /// from assembly.
+    pub source_line: Option<usize>,
+    /// Assembly labels attached to `pc`, in deterministic label order.
+    pub labels: Vec<String>,
+    /// Instruction executed at `pc`.
+    pub instruction: TinyBvInsn,
+    /// Register values before executing this instruction.
+    pub regs_before: Vec<u128>,
+}
+
 /// Concrete replay trace for a [`TinyBvWitness`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TinyBvConcreteTrace {
@@ -413,6 +433,18 @@ impl TinyBvProgram {
         self.labels.get(label).copied()
     }
 
+    /// Assembly labels attached to a program counter, in deterministic label
+    /// order.
+    ///
+    /// Hand-built programs have no labels. Multiple labels may name the same
+    /// instruction.
+    pub fn labels_at_pc(&self, pc: usize) -> Vec<&str> {
+        self.labels
+            .iter()
+            .filter_map(|(label, &label_pc)| (label_pc == pc).then_some(label.as_str()))
+            .collect()
+    }
+
     /// Program-counter-to-source-line map imported from assembly.
     ///
     /// Hand-built programs have no source lines. Imported source lines are
@@ -424,6 +456,29 @@ impl TinyBvProgram {
     /// One-based assembly source line for a program counter.
     pub fn source_line(&self, pc: usize) -> Option<usize> {
         self.source_lines.get(&pc).copied()
+    }
+
+    /// Derives source-aware replay rows from a concrete trace.
+    ///
+    /// The returned rows copy the step data and attach imported assembly
+    /// metadata. This is intended for diagnostics and frontend reports: the
+    /// original trace remains the canonical concrete replay artifact.
+    pub fn trace_source_steps(&self, trace: &TinyBvConcreteTrace) -> Vec<TinyBvTraceSourceStep> {
+        trace
+            .steps
+            .iter()
+            .map(|step| TinyBvTraceSourceStep {
+                pc: step.pc,
+                source_line: self.source_line(step.pc),
+                labels: self
+                    .labels_at_pc(step.pc)
+                    .into_iter()
+                    .map(ToOwned::to_owned)
+                    .collect(),
+                instruction: step.instruction,
+                regs_before: step.regs_before.clone(),
+            })
+            .collect()
     }
 
     /// Whether this program contains memory instructions.
