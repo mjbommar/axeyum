@@ -4099,6 +4099,34 @@ fn repair_projected_store_base_literal(
     Ok(changed || readback_changes > 0)
 }
 
+fn repair_projected_store_target_from_current_base(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    target: StoreBaseRepairTarget,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext branch residual repair failed: {e}"))
+    };
+    let index = eval(arena, target.index_term, projected).map_err(ir)?;
+    let element = eval(arena, target.element_term, projected).map_err(ir)?;
+    let current_base = projected
+        .get(target.base_symbol)
+        .unwrap_or(default_value_for_symbol(arena, target.base_symbol)?);
+    let repaired_target = store_value(&current_base, index, element)?;
+    stats.branch_candidates += 1;
+    let mut changed = false;
+    if store_projected_symbol_value(arena, projected, target.target_symbol, repaired_target)? {
+        stats.branch_symbol_changes += 1;
+        changed = true;
+    }
+    let readback_changes =
+        align_direct_select_symbols_for_array(arena, originals, projected, target.target_symbol)?;
+    stats.symbol_changes += readback_changes;
+    Ok(changed || readback_changes > 0)
+}
+
 fn repair_projected_array_equality_literal(
     arena: &TermArena,
     originals: &[TermId],
@@ -6909,9 +6937,10 @@ struct BranchSelectCycleSearch<'a> {
     branch_disjunction: TermId,
     branches: &'a [TermId],
     current_false: usize,
+    allow_alternate_branches: bool,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn repair_projected_replay_branch_select_cycle_after_select(
     search: &BranchSelectCycleSearch<'_>,
     first_ordinal: usize,
@@ -6955,6 +6984,64 @@ fn repair_projected_replay_branch_select_cycle_after_select(
     };
     let mut prefix_stats = first_stats;
     prefix_stats.absorb(select_stats);
+
+    if let Some(or_failure) = &cycle_failure.failed_or
+        && or_failure.best_branch_ordinal == first_ordinal
+        && or_failure.best_branch_false_literals == 1
+        && let Some(false_literal) = or_failure.best_branch_first_false_term
+    {
+        let mut residual_trial = select_trial.clone();
+        let mut residual_stats = prefix_stats;
+        let repaired = if let Some(target) = store_base_repair_target(search.arena, false_literal) {
+            repair_projected_store_target_from_current_base(
+                search.arena,
+                search.originals,
+                &mut residual_trial,
+                target,
+                &mut residual_stats,
+            )?
+        } else {
+            repair_projected_branch_literal_in_branch(
+                search.arena,
+                search.originals,
+                search.branches[first_ordinal],
+                false_literal,
+                &mut residual_trial,
+                &mut residual_stats,
+            )?
+        };
+        if repaired
+            && eval(search.arena, search.branch_disjunction, &residual_trial).map_err(ir)?
+                == Value::Bool(true)
+            && eval(search.arena, select_failure.conjunct_term, &residual_trial).map_err(ir)?
+                == Value::Bool(true)
+        {
+            let total_false =
+                positive_replay_false_count(search.arena, search.originals, &residual_trial)?;
+            if total_false < search.current_false
+                && branch_select_cycle_choice_is_better(
+                    best.as_ref(),
+                    total_false,
+                    first_ordinal,
+                    select_ordinal,
+                    first_ordinal,
+                )
+            {
+                *best = Some((
+                    total_false,
+                    first_ordinal,
+                    select_ordinal,
+                    first_ordinal,
+                    residual_stats,
+                    residual_trial,
+                ));
+            }
+        }
+    }
+
+    if !search.allow_alternate_branches {
+        return Ok(());
+    }
 
     for (second_ordinal, &second_branch) in search.branches.iter().enumerate() {
         if second_ordinal == first_ordinal {
@@ -7041,6 +7128,7 @@ fn repair_projected_replay_branch_select_cycle(
     {
         return Ok(None);
     }
+    let allow_alternate_branches = true;
 
     let ir = |e: axeyum_ir::IrError| {
         SolverError::Backend(format!("lazy-ext branch-select cycle repair failed: {e}"))
@@ -7058,6 +7146,7 @@ fn repair_projected_replay_branch_select_cycle(
         branch_disjunction,
         branches: &branches,
         current_false,
+        allow_alternate_branches,
     };
     let mut trials = 0usize;
     let mut best: Option<BranchSelectCycleRepairChoice> = None;
@@ -8886,6 +8975,77 @@ mod tests {
         assert_eq!(
             positive_replay_false_count(&arena, &originals, &projected).unwrap(),
             0
+        );
+    }
+
+    #[test]
+    fn lazy_ext_branch_select_cycle_repairs_same_branch_store_residual() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let c = arena.array_var("c", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let two4 = arena.bv_const(4, 2).unwrap();
+        let three4 = arena.bv_const(4, 3).unwrap();
+        let five8 = arena.bv_const(8, 5).unwrap();
+        let seven8 = arena.bv_const(8, 7).unwrap();
+        let false_term = arena.bool_const(false);
+        let i_eq_two = arena.eq(i, two4).unwrap();
+        let store_a_three = arena.store(a, three4, seven8).unwrap();
+        let c_eq_store = arena.eq(c, store_a_three).unwrap();
+        let store_branch = arena.and(i_eq_two, c_eq_store).unwrap();
+        let blocked_branch = arena.and(false_term, false_term).unwrap();
+        let branch_or = arena.or(store_branch, blocked_branch).unwrap();
+        let read_a_i = arena.select(a, i).unwrap();
+        let five_eq_read = arena.eq(five8, read_a_i).unwrap();
+        let assertion = arena.and(branch_or, five_eq_read).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(c_symbol) = arena.node(c) else {
+            panic!("c should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(
+            *a_symbol,
+            default_value_for_symbol(&arena, *a_symbol).unwrap(),
+        );
+        projected.set(
+            *c_symbol,
+            default_value_for_symbol(&arena, *c_symbol).unwrap(),
+        );
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            2
+        );
+        let stats = repair_projected_replay_branch_select_cycle(
+            &arena,
+            &originals,
+            branch_or,
+            &mut projected,
+        )
+        .unwrap()
+        .expect("expected same-branch store residual repair");
+        assert!(stats.branch_symbol_changes >= 2, "{stats:?}");
+        assert!(stats.array_changes >= 1, "{stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
+        assert_eq!(
+            eval(&arena, five_eq_read, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            eval(&arena, c_eq_store, &projected).unwrap(),
+            Value::Bool(true)
         );
     }
 

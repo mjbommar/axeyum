@@ -1966,6 +1966,21 @@ against competitor source, are now binding:
      `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])`. The next repair target is
      therefore preserving the select-34 store-chain readback while repairing
      branch-0 store-definition term 580 / its component arrays.
+     **GUARDED SAME-BRANCH STORE RESIDUAL REPAIR LANDED (2026-06-26):**
+     a target-side residual repair now handles the small-surface case where the
+     branch/select cycle returns to the same OR, the same branch is still best,
+     and exactly one false literal remains with shape
+     `target = store(base, i, v)`: rebuild `target` from the current repaired
+     `base` and accept only under a strict full-original-replay improvement.
+     A focused regression covers preserving `c = store(a,3,7)` after
+     `5 = select(a,i)` repairs `a[2]`. The unguarded large `bug337` probe was
+     measured and rejected: it did not move the frontier from OR 210 / term 3879
+     and raised route time to ~87 s. With the small-surface guard restored,
+     `bug337` is back in the prior unknown regime (solve ~76.9 s before evidence
+     cleanup). The next AUFLIA move is residual-candidate/component-array
+     diagnostics explaining why the concrete term-580 target-side repair is not
+     accepted on the large row, not another broad branch-choice or store-target
+     repair.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
