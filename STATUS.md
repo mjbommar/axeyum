@@ -6,6 +6,43 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA definition-aware array equality repair.**
+  Branch array-equality repair now has a second, definition-aware candidate in
+  addition to the prior direct component copy. For a false selected equality
+  `a = b`, the replay repair can try to make each component member equal to a
+  source array value by pushing that value through the member's currently
+  selected `target = store(base, k, v)` or direct-equality definition, recursively
+  repairing bases and rebuilding targets. The candidate is still replay-gated:
+  it competes against the old direct copy and is kept only when the branch false
+  count drops and the full original replay false count does not increase. A
+  focused regression covers the case where direct copying `a := b` would leave a
+  lower selected store branch false, while repairing `base` and rebuilding `a`
+  satisfies both the store branch and the equality branch.
+
+  This does **not** move `bug337` yet. The current 10 s probe is unchanged at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The first false conjunct remains generated branch
+  disjunction **ordinal 211**, term **4108**; best branch **3** has **1/6**
+  false literals, term **714**, `x_325 = x_311`, with `x_325` equal to
+  `(array default 0 [0 -> 1] [1 -> 3] [2 -> 3])` and `x_311` equal to
+  `(array default 0 [0 -> 1] [1 -> 2] [2 -> 1])`. A temporary
+  `MAX_TARGETED_REPLAY_REPAIRS=16` run was measured and rejected: it stayed at
+  the same branch/equality frontier while raising projection churn from **611**
+  to **779** changes. Next useful work is not another cap increase; inspect why
+  the globally satisfying `x_322 = 2` store branch is not selected/repairable
+  under the current branch-choice scoring.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_equality_repairs_target_through_store_definition -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_direct_select_equality -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_targeted_replay_repairs_select_through_store_chain -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_projection_repairs_selected_array_equality_component -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA store-chain readback projection.**
   Targeted lazy-extensionality replay can now repair a false direct
   `x = select(a, i)` readback through the currently selected store-chain

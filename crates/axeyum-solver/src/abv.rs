@@ -3694,6 +3694,198 @@ fn repair_projected_store_definition_readback(
     Ok(changed || base_readback_changes > 0 || target_readback_changes > 0)
 }
 
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn repair_projected_array_symbol_to_value_through_definitions(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    array_symbol: SymbolId,
+    desired_value: &Value,
+    depth: usize,
+    visited: &mut BTreeSet<SymbolId>,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    const MAX_ARRAY_VALUE_REPAIR_DEPTH: usize = 8;
+
+    if depth > MAX_ARRAY_VALUE_REPAIR_DEPTH || !visited.insert(array_symbol) {
+        return Ok(false);
+    }
+
+    let result = (|| -> Result<bool, SolverError> {
+        let current = projected
+            .get(array_symbol)
+            .unwrap_or(default_value_for_symbol(arena, array_symbol)?);
+        if current == *desired_value {
+            return Ok(false);
+        }
+
+        let mut best: Option<(usize, usize, ProjectionRepairStats, Assignment)> = None;
+        let definitions =
+            selected_array_definitions_for_symbol(arena, originals, projected, array_symbol)?;
+        for (ordinal, definition) in definitions.into_iter().enumerate() {
+            let mut trial = projected.clone();
+            let mut trial_stats = ProjectionRepairStats::default();
+            let changed = match definition {
+                SelectedArrayDefinition::Store(target) => {
+                    repair_projected_store_definition_to_value(
+                        arena,
+                        originals,
+                        &mut trial,
+                        target,
+                        desired_value,
+                        depth,
+                        visited,
+                        &mut trial_stats,
+                    )?
+                }
+                SelectedArrayDefinition::Equal(other_symbol) => {
+                    let other_changed = repair_projected_array_symbol_to_value_through_definitions(
+                        arena,
+                        originals,
+                        &mut trial,
+                        other_symbol,
+                        desired_value,
+                        depth + 1,
+                        visited,
+                        &mut trial_stats,
+                    )?;
+                    let other_value = trial
+                        .get(other_symbol)
+                        .unwrap_or(default_value_for_symbol(arena, other_symbol)?);
+                    let mut changed = other_changed;
+                    if store_projected_symbol_value(arena, &mut trial, array_symbol, other_value)? {
+                        trial_stats.branch_symbol_changes += 1;
+                        changed = true;
+                    }
+                    let readback_changes = align_direct_select_symbols_for_array(
+                        arena,
+                        originals,
+                        &mut trial,
+                        array_symbol,
+                    )?;
+                    trial_stats.symbol_changes += readback_changes;
+                    changed || readback_changes > 0
+                }
+            };
+            let repaired_value = trial
+                .get(array_symbol)
+                .unwrap_or(default_value_for_symbol(arena, array_symbol)?);
+            if !changed || repaired_value != *desired_value {
+                continue;
+            }
+            let total_false = positive_replay_false_count(arena, originals, &trial)?;
+            let replace = best
+                .as_ref()
+                .is_none_or(|(best_total_false, best_ordinal, _, _)| {
+                    (total_false, ordinal) < (*best_total_false, *best_ordinal)
+                });
+            if replace {
+                best = Some((total_false, ordinal, trial_stats, trial));
+            }
+        }
+
+        if best.is_none() {
+            let mut trial = projected.clone();
+            let mut trial_stats = ProjectionRepairStats::default();
+            if store_projected_symbol_value(arena, &mut trial, array_symbol, desired_value.clone())?
+            {
+                trial_stats.branch_symbol_changes += 1;
+                let readback_changes = align_direct_select_symbols_for_array(
+                    arena,
+                    originals,
+                    &mut trial,
+                    array_symbol,
+                )?;
+                trial_stats.symbol_changes += readback_changes;
+                let total_false = positive_replay_false_count(arena, originals, &trial)?;
+                best = Some((total_false, usize::MAX, trial_stats, trial));
+            }
+        }
+
+        let Some((_, _, best_stats, trial)) = best else {
+            return Ok(false);
+        };
+        *projected = trial;
+        stats.absorb(best_stats);
+        Ok(true)
+    })();
+
+    visited.remove(&array_symbol);
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+fn repair_projected_store_definition_to_value(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+    target: StoreBaseRepairTarget,
+    desired_value: &Value,
+    depth: usize,
+    visited: &mut BTreeSet<SymbolId>,
+    stats: &mut ProjectionRepairStats,
+) -> Result<bool, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext store-chain equality repair failed: {e}"))
+    };
+    stats.branch_candidates += 1;
+    let store_index = eval(arena, target.index_term, projected).map_err(ir)?;
+    let mut store_element = eval(arena, target.element_term, projected).map_err(ir)?;
+    let desired_store_cell = select_value(desired_value, &store_index)?;
+    let mut changed = false;
+
+    if store_element != desired_store_cell {
+        let Some(element_symbol) = direct_value_symbol(arena, target.element_term) else {
+            return Ok(false);
+        };
+        if store_projected_symbol_value(
+            arena,
+            projected,
+            element_symbol,
+            desired_store_cell.clone(),
+        )? {
+            stats.branch_symbol_changes += 1;
+            changed = true;
+        }
+        store_element = desired_store_cell;
+    }
+
+    let current_base = projected
+        .get(target.base_symbol)
+        .unwrap_or(default_value_for_symbol(arena, target.base_symbol)?);
+    let preserved_base_cell = select_value(&current_base, &store_index)?;
+    let desired_base = store_value(desired_value, store_index.clone(), preserved_base_cell)?;
+    let base_changed = repair_projected_array_symbol_to_value_through_definitions(
+        arena,
+        originals,
+        projected,
+        target.base_symbol,
+        &desired_base,
+        depth + 1,
+        visited,
+        stats,
+    )?;
+    changed |= base_changed;
+
+    let repaired_base = projected
+        .get(target.base_symbol)
+        .unwrap_or(default_value_for_symbol(arena, target.base_symbol)?);
+    let repaired_target = store_value(&repaired_base, store_index, store_element)?;
+    if repaired_target != *desired_value {
+        return Ok(false);
+    }
+    if store_projected_symbol_value(arena, projected, target.target_symbol, repaired_target)? {
+        stats.branch_symbol_changes += 1;
+        changed = true;
+    }
+    let base_readback_changes =
+        align_direct_select_symbols_for_array(arena, originals, projected, target.base_symbol)?;
+    let target_readback_changes =
+        align_direct_select_symbols_for_array(arena, originals, projected, target.target_symbol)?;
+    stats.symbol_changes += base_readback_changes + target_readback_changes;
+    Ok(changed || base_readback_changes > 0 || target_readback_changes > 0)
+}
+
 fn branch_false_literal_count(
     arena: &TermArena,
     branch: TermId,
@@ -3893,6 +4085,7 @@ fn selected_array_equality_component(
     Ok(component)
 }
 
+#[allow(clippy::too_many_lines)]
 fn repair_projected_array_equality_component_literal(
     arena: &TermArena,
     originals: &[TermId],
@@ -3911,6 +4104,35 @@ fn repair_projected_array_equality_component_literal(
     let component =
         selected_array_equality_component(arena, originals, projected, lhs_symbol, rhs_symbol)?;
     let mut best: Option<(usize, usize, usize, ProjectionRepairStats, Assignment)> = None;
+    let mut consider = |ordinal: usize,
+                        trial_stats: ProjectionRepairStats,
+                        trial: Assignment,
+                        changed: bool|
+     -> Result<(), SolverError> {
+        if !changed {
+            return Ok(());
+        }
+
+        let branch_false = branch_false_literal_count(arena, branch, &trial)?;
+        if branch_false >= current_branch_false {
+            return Ok(());
+        }
+        let total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if total_false > current_total_false {
+            return Ok(());
+        }
+        let replace = best.as_ref().is_none_or(
+            |(best_total_false, best_branch_false, best_ordinal, _, _)| {
+                (total_false, branch_false, ordinal)
+                    < (*best_total_false, *best_branch_false, *best_ordinal)
+            },
+        );
+        if replace {
+            best = Some((total_false, branch_false, ordinal, trial_stats, trial));
+        }
+        Ok(())
+    };
+
     for (ordinal, &source_symbol) in component.iter().enumerate() {
         let source_value = projected
             .get(source_symbol)
@@ -3934,27 +4156,47 @@ fn repair_projected_array_equality_component_literal(
             trial_stats.symbol_changes += readback_changes;
             changed |= readback_changes > 0;
         }
-        if !changed {
-            continue;
-        }
+        consider(ordinal, trial_stats, trial, changed)?;
+    }
 
-        let branch_false = branch_false_literal_count(arena, branch, &trial)?;
-        if branch_false >= current_branch_false {
-            continue;
+    let definition_ordinal_base = component.len();
+    for (source_ordinal, &source_symbol) in component.iter().enumerate() {
+        let source_value = projected
+            .get(source_symbol)
+            .unwrap_or(default_value_for_symbol(arena, source_symbol)?);
+        let mut trial = projected.clone();
+        let mut trial_stats = ProjectionRepairStats {
+            branch_candidates: 1,
+            ..ProjectionRepairStats::default()
+        };
+        let mut changed = false;
+        for &target_symbol in &component {
+            let mut visited = BTreeSet::new();
+            if repair_projected_array_symbol_to_value_through_definitions(
+                arena,
+                originals,
+                &mut trial,
+                target_symbol,
+                &source_value,
+                0,
+                &mut visited,
+                &mut trial_stats,
+            )? {
+                changed = true;
+            }
         }
-        let total_false = positive_replay_false_count(arena, originals, &trial)?;
-        if total_false > current_total_false {
-            continue;
+        for &target_symbol in &component {
+            let readback_changes =
+                align_direct_select_symbols_for_array(arena, originals, &mut trial, target_symbol)?;
+            trial_stats.symbol_changes += readback_changes;
+            changed |= readback_changes > 0;
         }
-        let replace = best.as_ref().is_none_or(
-            |(best_total_false, best_branch_false, best_ordinal, _, _)| {
-                (total_false, branch_false, ordinal)
-                    < (*best_total_false, *best_branch_false, *best_ordinal)
-            },
-        );
-        if replace {
-            best = Some((total_false, branch_false, ordinal, trial_stats, trial));
-        }
+        consider(
+            definition_ordinal_base + source_ordinal,
+            trial_stats,
+            trial,
+            changed,
+        )?;
     }
 
     let Some((_, _, _, best_stats, trial)) = best else {
@@ -6290,6 +6532,122 @@ mod tests {
             )
             .unwrap(),
             None
+        );
+        for &original in &originals {
+            assert_eq!(
+                eval(&arena, original, &projected).unwrap(),
+                Value::Bool(true)
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_ext_branch_equality_repairs_target_through_store_definition() {
+        let mut arena = TermArena::new();
+        let base = arena.array_var("base", 4, 8).unwrap();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let j = arena.bv_var("j", 4).unwrap();
+        let v = arena.bv_var("v", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let p = arena.bool_var("p").unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let seven = arena.bv_const(8, 7).unwrap();
+        let stored = arena.store(base, j, v).unwrap();
+        let a_eq_store = arena.eq(a, stored).unwrap();
+        let lower_branch = arena.or(a_eq_store, p).unwrap();
+        let b_eq_a = arena.eq(b, a).unwrap();
+        let equality_branch = arena.or(b_eq_a, q).unwrap();
+        let read_b_i = arena.select(b, i).unwrap();
+        let y_eq_read = arena.eq(y, read_b_i).unwrap();
+        let y_eq_seven = arena.eq(y, seven).unwrap();
+
+        let TermNode::Symbol(base_symbol) = arena.node(base) else {
+            panic!("base should be a symbol");
+        };
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(b_symbol) = arena.node(b) else {
+            panic!("b should be a symbol");
+        };
+
+        let mut candidate = Assignment::new();
+        for (symbol, name, sort) in arena.symbols() {
+            match name {
+                "i" => candidate.set(symbol, Value::Bv { width: 4, value: 1 }),
+                "j" => candidate.set(symbol, Value::Bv { width: 4, value: 2 }),
+                "v" => candidate.set(symbol, Value::Bv { width: 8, value: 9 }),
+                "y" => candidate.set(symbol, Value::Bv { width: 8, value: 7 }),
+                "p" | "q" => candidate.set(symbol, Value::Bool(false)),
+                _ if sort == Sort::BitVec(4) => {
+                    candidate.set(symbol, Value::Bv { width: 4, value: 0 });
+                }
+                _ if sort == Sort::BitVec(8) => {
+                    candidate.set(symbol, Value::Bv { width: 8, value: 0 });
+                }
+                _ => {}
+            }
+        }
+
+        let mut projected = complete_assignment(&arena, &candidate);
+        let base_value = default_value_for_symbol(&arena, *base_symbol).unwrap();
+        let a_initial = store_value(
+            &base_value,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 9 },
+        )
+        .unwrap();
+        let b_desired = store_value(
+            &a_initial,
+            Value::Bv { width: 4, value: 1 },
+            Value::Bv { width: 8, value: 7 },
+        )
+        .unwrap();
+        projected.set(*a_symbol, a_initial);
+        projected.set(*b_symbol, b_desired);
+        assert_eq!(
+            eval(&arena, lower_branch, &projected).unwrap(),
+            Value::Bool(true),
+            "the selected store definition should start true"
+        );
+        assert_eq!(
+            eval(&arena, equality_branch, &projected).unwrap(),
+            Value::Bool(false),
+            "the branch equality should be the only initial failure"
+        );
+
+        let originals = [equality_branch, lower_branch, y_eq_read, y_eq_seven];
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected the branch equality to fail before repair");
+        assert_eq!(failure.conjunct_term, equality_branch);
+
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected branch equality repair through the store definition");
+        assert!(stats.changes() > 0);
+
+        let repaired_base = projected.get(*base_symbol).expect("repaired base array");
+        assert_eq!(
+            select_value(&repaired_base, &Value::Bv { width: 4, value: 1 }).unwrap(),
+            Value::Bv { width: 8, value: 7 }
+        );
+        assert!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .is_none()
         );
         for &original in &originals {
             assert_eq!(
