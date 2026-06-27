@@ -35,6 +35,7 @@ const ISZERO: u8 = 0x15;
 const AND: u8 = 0x16;
 const SHA3: u8 = 0x20;
 const CALLDATALOAD: u8 = 0x35;
+const MLOAD: u8 = 0x51;
 const MSTORE: u8 = 0x52;
 const SLOAD: u8 = 0x54;
 const SSTORE: u8 = 0x55;
@@ -44,6 +45,7 @@ const PUSH1: u8 = 0x60;
 const PUSH2: u8 = 0x61;
 const RETURN: u8 = 0xf3;
 const REVERT: u8 = 0xfd;
+const INVALID: u8 = 0xfe;
 
 const STEP_LIMIT: usize = 10_000;
 
@@ -206,7 +208,7 @@ impl Tally {
 #[rustfmt::skip]
 fn corpus() -> Vec<Case> {
     use Expect::{Bug, Safe};
-    use FindingKind::{AddOverflow, Revert};
+    use FindingKind::{AddOverflow, Invalid, Revert};
     use Shape::{Arith, ConcreteMem, Control, KeccakMapping, SymbolicStorage};
     vec![
         Case {
@@ -228,6 +230,20 @@ fn corpus() -> Vec<Case> {
             bytecode: vec![
                 PUSH1, 0x00, CALLDATALOAD, ISZERO, PUSH1, 0x0a, JUMPI, STOP, STOP, STOP, JUMPDEST,
                 PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
+            name: "reachable-invalid-opcode", shape: Control, expect: Bug(Invalid),
+            bytecode: vec![
+                PUSH1, 0x00, CALLDATALOAD, ISZERO, PUSH1, 0x0a, JUMPI, STOP, STOP, STOP, JUMPDEST,
+                INVALID,
+            ],
+        },
+        Case {
+            name: "mem-roundtrip-safe", shape: ConcreteMem, expect: Safe,
+            bytecode: vec![
+                PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x00, MSTORE, PUSH1, 0x00, MLOAD, PUSH1, 0x20,
+                PUSH1, 0x00, RETURN,
             ],
         },
         Case {

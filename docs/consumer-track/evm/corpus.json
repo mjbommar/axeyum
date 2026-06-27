@@ -1,9 +1,11 @@
 {
-  "total": 6, "bug_found": 4, "safe_proved": 2, "unknown": 0, "disagree": 0,
+  "total": 8, "bug_found": 5, "safe_proved": 3, "unknown": 0, "disagree": 0,
   "cases": [
     { "name": "add-overflow-unguarded", "shape": "arith", "outcome": "bug-found" },
     { "name": "mask-then-store-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
     { "name": "require-nonzero-revert", "shape": "control-flow", "outcome": "bug-found" },
+    { "name": "reachable-invalid-opcode", "shape": "control-flow", "outcome": "bug-found" },
+    { "name": "mem-roundtrip-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
     { "name": "symbolic-storage-roundtrip-revert", "shape": "symbolic-storage", "outcome": "bug-found" },
     { "name": "cold-slot-load-safe", "shape": "symbolic-storage", "outcome": "safe-proved" },
     { "name": "keccak-mapping-alias-revert", "shape": "keccak-mapping", "outcome": "bug-found" }
