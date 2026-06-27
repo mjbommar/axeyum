@@ -70,9 +70,10 @@ over a proven core.
 - Task 44 (build): continue **B (`axeyum-property` v0)** from the committed
   typed Bool/BV/Int proof slice. The first SDK scoreboard gate has landed as
   generated Markdown plus JSON (`property/SCOREBOARD.md`,
-  `property/corpus.json`, 11 cases, DISAGREE=0, including a mixed Bool/BV/Int
+  `property/corpus.json`, 12 cases, DISAGREE=0, including a mixed Bool/BV/Int
   expression-builder alias proof and deterministic executable baseline
-  comparisons for proved and disproved outcomes); remaining B work is broader
-  operator-trait or chaining ergonomics, richer frontend/domain replay bodies,
-  richer graduated corpus coverage, and broader external
+  comparisons for scalar counterexamples, struct counterexamples, and proved
+  assertions); remaining B work is broader operator-trait or chaining
+  ergonomics, richer frontend/domain replay bodies, richer graduated corpus
+  coverage, and broader external
   proptest/Kani-style baseline comparison before moving to D, A, C.

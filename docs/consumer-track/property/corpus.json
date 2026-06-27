@@ -2,9 +2,9 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 11,
+    "cases": 12,
     "proved": 4,
-    "disproved": 7,
+    "disproved": 8,
     "unknown": 0,
     "mismatches": 0,
     "disagree": 0,
@@ -110,6 +110,17 @@
       "baseline_analogue": "Kani exhaustive bounded assertion over the same Rust predicate",
       "lean_required": false,
       "lean_available": true
+    },
+    {
+      "id": "sdk-struct-baseline-counterexample-compare",
+      "tier": "P1",
+      "workflow": "bounded struct baseline comparison for a minimized witness",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "solver-minimized `TransferInput { enabled: true, amount: 1, balance: 0 }` matches the first executable bounded struct failure",
+      "baseline_analogue": "Kani struct harness / proptest `Arbitrary` struct over the same predicate",
+      "lean_required": false,
+      "lean_available": false
     },
     {
       "id": "sdk-derived-struct-counterexample-lift",

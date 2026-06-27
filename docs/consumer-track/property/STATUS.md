@@ -2,6 +2,27 @@
 
 ## Current focus
 
+- **2026-06-27 — Struct baseline comparison landed.**
+  The PROP.6 corpus now includes a derived-struct executable baseline
+  comparison: an independent bounded Rust scan finds the first failing
+  `TransferInput { enabled: true, amount: 1, balance: 0 }` for the guarded
+  `amount <= balance` predicate, and Axeyum's minimized SDK counterexample lifts
+  to the same struct value. This broadens the baseline-backed gate beyond scalar
+  BV workflows while keeping the broader external proptest/Kani runner open.
+  Totals are now 12 cases, 4 proved, 8 disproved, 0 unknown, DISAGREE=0, and
+  1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
 - **2026-06-27 — Expression builder aliases landed.**
   `Property` now exposes context-owned Bool/BV/Int expression aliases such as
   `bool_implies`, `bv_add`, `bv_equals`, `int_add`, and `int_equals`, all
@@ -275,7 +296,7 @@
 1. Broaden expression construction ergonomics toward operator-trait experiments
    or richer chaining syntax that still makes fallible term construction
    visible.
-2. Broaden the baseline runner across struct/assumption/replay property shapes,
+2. Broaden the baseline runner across assumption and replay property shapes,
    including proptest-style random/shrunk witnesses and Kani-style bounded
    assertions.
 3. Keep broadening the SDK property corpus across assumptions, structs,

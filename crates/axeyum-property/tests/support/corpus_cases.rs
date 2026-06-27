@@ -69,6 +69,13 @@ pub(crate) struct CorpusTotals {
     lean_required_available: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, axeyum_property::Symbolic)]
+struct BaselineTransferInput {
+    enabled: bool,
+    amount: u8,
+    balance: u8,
+}
+
 pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
     Ok(vec![
         bv_reflexive_proof()?,
@@ -80,6 +87,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         overflow_helper_counterexample_minimized()?,
         proptest_style_baseline_counterexample_comparison()?,
         kani_style_baseline_proof_comparison()?,
+        kani_style_struct_baseline_counterexample_comparison()?,
         derive_symbolic_counterexample_lifted()?,
         explicit_nested_aggregate_replay_rendered()?,
     ])
@@ -93,9 +101,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 11,
+        cases: 12,
         proved: 4,
-        disproved: 7,
+        disproved: 8,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -286,10 +294,10 @@ fn write_markdown_cases(out: &mut String, reports: &[CorpusCaseReport]) {
 
 fn write_markdown_next_gates(out: &mut String) {
     out.push_str("## Next Gates\n\n");
+    out.push_str("1. Broaden the baseline runner across assumption and replay property shapes,\n");
     out.push_str(
-        "1. Broaden the baseline runner across more property shapes and compare against\n",
+        "   including proptest-style random/shrunk witnesses and Kani-style bounded assertions.\n",
     );
-    out.push_str("   proptest-style random/shrunk witnesses plus Kani-style bounded assertions.\n");
     out.push_str(
         "2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,\n",
     );
@@ -710,6 +718,84 @@ fn first_wrapping_add_commutativity_failure() -> Option<(u8, u8)> {
         }
     }
     None
+}
+
+fn kani_style_struct_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {
+    let expected = first_transfer_withdraw_failure()
+        .expect("bounded executable baseline should find the first struct failure");
+
+    let mut property = Property::new();
+    let transfer = property.symbolic::<BaselineTransferInput>("transfer")?;
+    let amount_within_balance = property.bv_ule(transfer.amount, transfer.balance)?;
+    let goal = property.bool_implies(transfer.enabled, amount_within_balance)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a struct baseline-comparable counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    let actual = property
+        .concrete::<BaselineTransferInput>(&transfer, model)?
+        .expect("model should bind transfer");
+    assert_eq!(actual, expected);
+    assert_eq!(
+        actual,
+        BaselineTransferInput {
+            enabled: true,
+            amount: 1,
+            balance: 0,
+        }
+    );
+    assert_eq!(
+        property
+            .counterexample(model)?
+            .render_rust_named_struct_let("transfer", "TransferInput", "transfer")?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    balance: transfer_balance,\n",
+            "};\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-struct-baseline-counterexample-compare",
+        tier: "P1",
+        workflow: "bounded struct baseline comparison for a minimized witness",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "solver-minimized `TransferInput { enabled: true, amount: 1, balance: 0 }` matches the first executable bounded struct failure",
+        baseline_analogue: "Kani struct harness / proptest `Arbitrary` struct over the same predicate",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn first_transfer_withdraw_failure() -> Option<BaselineTransferInput> {
+    for enabled in [false, true] {
+        for amount in u8::MIN..=u8::MAX {
+            for balance in u8::MIN..=u8::MAX {
+                let input = BaselineTransferInput {
+                    enabled,
+                    amount,
+                    balance,
+                };
+                if !transfer_withdraw_property(input) {
+                    return Some(input);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn transfer_withdraw_property(input: BaselineTransferInput) -> bool {
+    !input.enabled || input.amount <= input.balance
 }
 
 fn derive_symbolic_counterexample_lifted() -> CorpusResult<CorpusCaseReport> {
