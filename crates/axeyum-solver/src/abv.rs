@@ -6157,12 +6157,17 @@ struct ReplayScalarFollowupOrDiagnostic {
     status: String,
     repair_kind: Option<String>,
     repair_changes: usize,
-    closure_steps: usize,
+    closure_steps: Vec<ReplayScalarChoiceDiagnostic>,
     final_branch_false_literals: Option<usize>,
     total_false_conjuncts: Option<usize>,
     first_global_false_ordinal: Option<usize>,
     first_global_false_term: Option<TermId>,
     first_global_false_eq: Option<ReplayEqFailure>,
+    closure_branch_false_literals: Option<usize>,
+    closure_total_false_conjuncts: Option<usize>,
+    closure_global_false_ordinal: Option<usize>,
+    closure_global_false_term: Option<TermId>,
+    closure_global_false_eq: Option<ReplayEqFailure>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -6289,6 +6294,84 @@ fn write_scalar_choice_effect_list(note: &mut String, choices: &[ReplayScalarCho
     let _ = write!(note, "]");
 }
 
+fn write_scalar_followup_or_diagnostic(
+    note: &mut String,
+    followup: &ReplayScalarFollowupOrDiagnostic,
+) {
+    let _ = write!(
+        note,
+        ",followup_or_ordinal={},followup_or_term={},followup_branch={},\
+         followup_branch_false={},followup_branch_literals={},\
+         followup_status={},followup_changes={},followup_closure_steps={}",
+        followup.or_ordinal,
+        followup.or_term.index(),
+        followup.branch_ordinal,
+        followup.branch_initial_false_literals,
+        followup.branch_total_literals,
+        followup.status,
+        followup.repair_changes,
+        followup.closure_steps.len()
+    );
+    if let Some(kind) = &followup.repair_kind {
+        let _ = write!(note, ",followup_kind={kind}");
+    }
+    if !followup.closure_steps.is_empty() {
+        let _ = write!(note, ",followup_closure_step_details=");
+        write_scalar_choice_effect_list(note, &followup.closure_steps);
+    }
+    if let Some(final_branch_false) = followup.final_branch_false_literals {
+        let _ = write!(note, ",followup_final_branch_false={final_branch_false}");
+    }
+    if let Some(total_false) = followup.total_false_conjuncts {
+        let _ = write!(note, ",followup_total_false={total_false}");
+    }
+    if let Some(ordinal) = followup.first_global_false_ordinal {
+        let _ = write!(note, ",followup_global_false_ordinal={ordinal}");
+    }
+    if let Some(term) = followup.first_global_false_term {
+        let _ = write!(note, ",followup_global_false_term={}", term.index());
+    }
+    if let Some(eq) = &followup.first_global_false_eq {
+        let _ = write!(
+            note,
+            ",followup_global_false_lhs_term={},followup_global_false_rhs_term={},\
+             followup_global_false_lhs_value={},followup_global_false_rhs_value={}",
+            eq.lhs_term.index(),
+            eq.rhs_term.index(),
+            eq.lhs_value,
+            eq.rhs_value
+        );
+    }
+    if let Some(closure_branch_false) = followup.closure_branch_false_literals {
+        let _ = write!(
+            note,
+            ",followup_closure_branch_false={closure_branch_false}"
+        );
+    }
+    if let Some(closure_total_false) = followup.closure_total_false_conjuncts {
+        let _ = write!(note, ",followup_closure_total_false={closure_total_false}");
+    }
+    if let Some(ordinal) = followup.closure_global_false_ordinal {
+        let _ = write!(note, ",followup_closure_global_false_ordinal={ordinal}");
+    }
+    if let Some(term) = followup.closure_global_false_term {
+        let _ = write!(note, ",followup_closure_global_false_term={}", term.index());
+    }
+    if let Some(eq) = &followup.closure_global_false_eq {
+        let _ = write!(
+            note,
+            ",followup_closure_global_false_lhs_term={},\
+             followup_closure_global_false_rhs_term={},\
+             followup_closure_global_false_lhs_value={},\
+             followup_closure_global_false_rhs_value={}",
+            eq.lhs_term.index(),
+            eq.rhs_term.index(),
+            eq.lhs_value,
+            eq.rhs_value
+        );
+    }
+}
+
 fn write_scalar_candidate_diagnostics(
     note: &mut String,
     diagnostics: &[ReplayScalarCandidateDiagnostic],
@@ -6334,46 +6417,7 @@ fn write_scalar_candidate_diagnostics(
             );
         }
         if let Some(followup) = &diagnostic.followup_or {
-            let _ = write!(
-                note,
-                ",followup_or_ordinal={},followup_or_term={},followup_branch={},\
-                 followup_branch_false={},followup_branch_literals={},\
-                 followup_status={},followup_changes={},followup_closure_steps={}",
-                followup.or_ordinal,
-                followup.or_term.index(),
-                followup.branch_ordinal,
-                followup.branch_initial_false_literals,
-                followup.branch_total_literals,
-                followup.status,
-                followup.repair_changes,
-                followup.closure_steps
-            );
-            if let Some(kind) = &followup.repair_kind {
-                let _ = write!(note, ",followup_kind={kind}");
-            }
-            if let Some(final_branch_false) = followup.final_branch_false_literals {
-                let _ = write!(note, ",followup_final_branch_false={final_branch_false}");
-            }
-            if let Some(total_false) = followup.total_false_conjuncts {
-                let _ = write!(note, ",followup_total_false={total_false}");
-            }
-            if let Some(ordinal) = followup.first_global_false_ordinal {
-                let _ = write!(note, ",followup_global_false_ordinal={ordinal}");
-            }
-            if let Some(term) = followup.first_global_false_term {
-                let _ = write!(note, ",followup_global_false_term={}", term.index());
-            }
-            if let Some(eq) = &followup.first_global_false_eq {
-                let _ = write!(
-                    note,
-                    ",followup_global_false_lhs_term={},followup_global_false_rhs_term={},\
-                     followup_global_false_lhs_value={},followup_global_false_rhs_value={}",
-                    eq.lhs_term.index(),
-                    eq.rhs_term.index(),
-                    eq.lhs_value,
-                    eq.rhs_value
-                );
-            }
+            write_scalar_followup_or_diagnostic(note, followup);
         }
     }
     let _ = write!(note, "]");
@@ -7383,61 +7427,19 @@ fn replay_scalar_followup_or_diagnostic(
             status: "no_repair".to_owned(),
             repair_kind: None,
             repair_changes: 0,
-            closure_steps: 0,
+            closure_steps: Vec::new(),
             final_branch_false_literals: None,
             total_false_conjuncts: None,
             first_global_false_ordinal: None,
             first_global_false_term: None,
             first_global_false_eq: None,
+            closure_branch_false_literals: None,
+            closure_total_false_conjuncts: None,
+            closure_global_false_ordinal: None,
+            closure_global_false_term: None,
+            closure_global_false_eq: None,
         }));
     };
-
-    let (closure_steps, closure_trial) = replay_scalar_closure_from_trial(
-        arena,
-        originals,
-        or_failure.best_branch_term,
-        &followup_trial,
-    )?;
-    if !closure_steps.is_empty() {
-        let closure_total_false = positive_replay_false_count(arena, originals, &closure_trial)?;
-        let closure_failure = first_projected_replay_failure(
-            arena,
-            originals,
-            &closure_trial,
-            ProjectionRepairStats::default(),
-        )?;
-        let closure_branch_false =
-            branch_false_literal_count(arena, or_failure.best_branch_term, &closure_trial)?;
-        if closure_total_false >= scalar_total_false
-            && closure_branch_false > 0
-            && closure_failure
-                .as_ref()
-                .is_some_and(|failure| failure.conjunct_term == global_failure.conjunct_term)
-        {
-            return Ok(Some(ReplayScalarFollowupOrDiagnostic {
-                or_ordinal: global_failure.conjunct_ordinal,
-                or_term: global_failure.conjunct_term,
-                branch_ordinal: or_failure.best_branch_ordinal,
-                branch_initial_false_literals: or_failure.best_branch_false_literals,
-                branch_total_literals: or_failure.best_branch_total_literals,
-                status: "guarded_loop".to_owned(),
-                repair_kind: Some(repair_kind.to_owned()),
-                repair_changes: repair_stats.changes(),
-                closure_steps: closure_steps.len(),
-                final_branch_false_literals: Some(closure_branch_false),
-                total_false_conjuncts: Some(closure_total_false),
-                first_global_false_ordinal: closure_failure
-                    .as_ref()
-                    .map(|failure| failure.conjunct_ordinal),
-                first_global_false_term: closure_failure
-                    .as_ref()
-                    .map(|failure| failure.conjunct_term),
-                first_global_false_eq: closure_failure
-                    .as_ref()
-                    .and_then(|failure| failure.failed_eq.clone()),
-            }));
-        }
-    }
 
     let total_false = positive_replay_false_count(arena, originals, &followup_trial)?;
     let final_branch_false =
@@ -7448,16 +7450,53 @@ fn replay_scalar_followup_or_diagnostic(
         &followup_trial,
         ProjectionRepairStats::default(),
     )?;
+
+    let (closure_steps, closure_trial) = replay_scalar_closure_from_trial(
+        arena,
+        originals,
+        or_failure.best_branch_term,
+        &followup_trial,
+    )?;
+    let closure_summary = if closure_steps.is_empty() {
+        None
+    } else {
+        let closure_total_false = positive_replay_false_count(arena, originals, &closure_trial)?;
+        let closure_failure = first_projected_replay_failure(
+            arena,
+            originals,
+            &closure_trial,
+            ProjectionRepairStats::default(),
+        )?;
+        let closure_branch_false =
+            branch_false_literal_count(arena, or_failure.best_branch_term, &closure_trial)?;
+        Some((closure_total_false, closure_branch_false, closure_failure))
+    };
+    let status = if let Some((closure_total_false, closure_branch_false, closure_failure)) =
+        &closure_summary
+    {
+        if *closure_total_false >= scalar_total_false
+            && *closure_branch_false > 0
+            && closure_failure
+                .as_ref()
+                .is_some_and(|failure| failure.conjunct_term == global_failure.conjunct_term)
+        {
+            "guarded_loop"
+        } else {
+            scalar_followup_or_status(total_false, scalar_total_false)
+        }
+    } else {
+        scalar_followup_or_status(total_false, scalar_total_false)
+    };
     Ok(Some(ReplayScalarFollowupOrDiagnostic {
         or_ordinal: global_failure.conjunct_ordinal,
         or_term: global_failure.conjunct_term,
         branch_ordinal: or_failure.best_branch_ordinal,
         branch_initial_false_literals: or_failure.best_branch_false_literals,
         branch_total_literals: or_failure.best_branch_total_literals,
-        status: scalar_followup_or_status(total_false, scalar_total_false).to_owned(),
+        status: status.to_owned(),
         repair_kind: Some(repair_kind.to_owned()),
         repair_changes: repair_stats.changes(),
-        closure_steps: closure_steps.len(),
+        closure_steps,
         final_branch_false_literals: Some(final_branch_false),
         total_false_conjuncts: Some(total_false),
         first_global_false_ordinal: followup_failure
@@ -7468,6 +7507,24 @@ fn replay_scalar_followup_or_diagnostic(
             .map(|failure| failure.conjunct_term),
         first_global_false_eq: followup_failure
             .as_ref()
+            .and_then(|failure| failure.failed_eq.clone()),
+        closure_branch_false_literals: closure_summary
+            .as_ref()
+            .map(|(_, branch_false, _)| *branch_false),
+        closure_total_false_conjuncts: closure_summary
+            .as_ref()
+            .map(|(total_false, _, _)| *total_false),
+        closure_global_false_ordinal: closure_summary
+            .as_ref()
+            .and_then(|(_, _, failure)| failure.as_ref())
+            .map(|failure| failure.conjunct_ordinal),
+        closure_global_false_term: closure_summary
+            .as_ref()
+            .and_then(|(_, _, failure)| failure.as_ref())
+            .map(|failure| failure.conjunct_term),
+        closure_global_false_eq: closure_summary
+            .as_ref()
+            .and_then(|(_, _, failure)| failure.as_ref())
             .and_then(|failure| failure.failed_eq.clone()),
     }))
 }
@@ -11436,6 +11493,70 @@ mod tests {
         assert!(note.contains("followup_kind=branch"), "{note}");
         assert!(note.contains("followup_final_branch_false=0"), "{note}");
         assert!(note.contains("followup_total_false=0"), "{note}");
+    }
+
+    #[test]
+    fn lazy_ext_scalar_candidate_reports_followup_or_closure_loop() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let z = arena.int_var("z").unwrap();
+        let zero = arena.int_const(0);
+        let false_term = arena.bool_const(false);
+        let y_plus_zero = arena.int_add(y, zero).unwrap();
+        let x_eq_y = arena.eq(x, y_plus_zero).unwrap();
+        let x_eq_z = arena.eq(x, z).unwrap();
+        let followup_or = arena.or(x_eq_z, false_term).unwrap();
+        let z_eq_zero = arena.eq(z, zero).unwrap();
+        let prefix = arena.and(x_eq_y, followup_or).unwrap();
+        let assertion = arena.and(prefix, z_eq_zero).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(*x_symbol, Value::Int(0));
+        projected.set(*y_symbol, Value::Int(1));
+        projected.set(*z_symbol, Value::Int(0));
+        let originals = [assertion];
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected scalar replay failure");
+        assert_eq!(failure.conjunct_term, x_eq_y);
+
+        let enriched = replay_failure_with_branch_candidate_diagnostics(
+            &arena, &originals, &projected, failure,
+        )
+        .unwrap();
+        let note = enriched.note();
+        assert!(
+            note.contains(&format!("followup_or_term={}", followup_or.index())),
+            "{note}"
+        );
+        assert!(note.contains("followup_status=guarded_loop"), "{note}");
+        assert!(note.contains("followup_closure_steps=1"), "{note}");
+        assert!(note.contains("followup_closure_step_details=["), "{note}");
+        assert!(note.contains("followup_closure_branch_false=1"), "{note}");
+        assert!(note.contains("followup_closure_total_false=1"), "{note}");
+        assert!(
+            note.contains(&format!(
+                "followup_closure_global_false_term={}",
+                followup_or.index()
+            )),
+            "{note}"
+        );
     }
 
     #[test]

@@ -2104,9 +2104,12 @@ against competitor source, are now binding:
      ORs with one guarded best-branch repair. On `bug337`, both obvious
      compositions are negative: OR **210** branch **0** and OR **211** branch
      **3** become locally true but worsen full replay to **total_false=3** and
-     return to scalar equality term **3408**. The next AUFLIA move is therefore
-     a coupled scalar/OR repair or learned dependency that preserves term
-     **3408** while reducing full replay, not greedy OR-210/OR-211 forcing.
+     return to scalar equality term **3408**. Closure-level diagnostics now show
+     the next shape: repairing scalar equality after the OR-210 branch repair
+     restores **total_false=2** but exposes OR **211**, while repairing scalar
+     equality after the OR-211 branch repair restores **total_false=2** but
+     exposes OR **210**. The next AUFLIA move is therefore a paired OR-210/OR-211
+     cycle breaker or learned dependency, not greedy single-OR forcing.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

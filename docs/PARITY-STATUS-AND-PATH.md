@@ -636,8 +636,11 @@ a named mechanism.**
    scalar+OR follow-up diagnostic now shows the obvious compositions are
    negative: OR **210** branch **0** and OR **211** branch **3** become locally
    true but worsen full replay to **total_false=3** and return to scalar equality
-   term **3408**. The next practical AUFLIA step is a coupled scalar/OR repair or
-   learned dependency that preserves term 3408 while reducing full replay.
+   term **3408**. Closure-level diagnostics now show the no-progress cycle:
+   closing OR **210** and then repairing scalar equality exposes OR **211** at
+   **total_false=2**, while closing OR **211** and repairing scalar equality
+   exposes OR **210** at **total_false=2**. The next practical AUFLIA step is a
+   paired OR-210/OR-211 cycle breaker or learned dependency.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now
