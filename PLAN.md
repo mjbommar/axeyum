@@ -1944,6 +1944,18 @@ against competitor source, are now binding:
      `210 -> 34 -> 210` that can keep the branch-0 chain repair while forcing an
      alternate OR-210 branch or component-level store-chain change, still under
      the final strict full-replay improvement gate.
+     **GUARDED BRANCH-SELECT CYCLE REPAIR LANDED (2026-06-26):** the
+     alternate-branch version of that pattern is now implemented for small
+     replay surfaces: after branch repair -> direct select repair -> same OR,
+     try a different branch from the post-select state and accept only a final
+     strict full-replay improvement (8 branches, 32 trials, current_false <= 2,
+     <=64 replay conjuncts). A focused regression covers the useful shape. The
+     large `bug337` attempt was measured and rejected before the guard: it did
+     not move the frontier from OR 210 / term 3879 and raised route time from
+     ~77 s to ~93 s, so the production repair is guarded off for that large
+     row. The next AUFLIA move is specifically component-level store-chain /
+     branch-state repair inside `210 -> 34 -> 210`; simply trying another OR
+     branch after the select repair is ruled out for `bug337`.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
