@@ -525,7 +525,12 @@ impl Counterexample {
     /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
     /// representable by a native Rust scalar literal.
     pub fn render_rust_test(&self, test_name: &str, body: &str) -> Result<String, PropertyError> {
-        self.render_rust_test_with_setup(test_name, std::iter::empty::<&str>(), body)
+        self.render_rust_test_with_prelude(
+            test_name,
+            std::iter::empty::<&str>(),
+            std::iter::empty::<&str>(),
+            body,
+        )
     }
 
     /// Renders a complete Rust `#[test]` skeleton with caller-owned setup code.
@@ -551,7 +556,55 @@ impl Counterexample {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+        self.render_rust_test_with_prelude(
+            test_name,
+            std::iter::empty::<&str>(),
+            setup_snippets,
+            body,
+        )
+    }
+
+    /// Renders a complete Rust `#[test]` skeleton with caller-owned prelude and setup code.
+    ///
+    /// `prelude_snippets` are inserted before the `#[test]` item without
+    /// indentation, making them suitable for frontend-owned imports, helper
+    /// type aliases, or small replay adapters. Scalar bindings are then emitted
+    /// first inside the function from the replay-checked model, followed by
+    /// caller-owned setup snippets and finally `body`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_test_with_prelude<PI, P, SI, S>(
+        &self,
+        test_name: &str,
+        prelude_snippets: PI,
+        setup_snippets: SI,
+        body: &str,
+    ) -> Result<String, PropertyError>
+    where
+        PI: IntoIterator<Item = P>,
+        P: AsRef<str>,
+        SI: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         let mut out = String::new();
+        let mut wrote_prelude = false;
+        for snippet in prelude_snippets {
+            let snippet = snippet.as_ref();
+            if snippet.is_empty() {
+                continue;
+            }
+            if wrote_prelude {
+                out.push('\n');
+            }
+            push_unindented_block(&mut out, snippet);
+            wrote_prelude = true;
+        }
+        if wrote_prelude {
+            out.push('\n');
+        }
         out.push_str("#[test]\n");
         out.push_str("fn ");
         out.push_str(&sanitize_rust_ident(test_name));
@@ -622,6 +675,13 @@ fn render_named_struct_let(
     }
     out.push_str("};\n");
     out
+}
+
+fn push_unindented_block(out: &mut String, block: &str) {
+    for line in block.lines() {
+        out.push_str(line);
+        out.push('\n');
+    }
 }
 
 fn push_indented_block(out: &mut String, block: &str) {

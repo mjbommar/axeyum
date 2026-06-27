@@ -1,7 +1,7 @@
 //! Integration tests for the typed property SDK.
 
 use axeyum_ir::{Sort, Value};
-use axeyum_property::{Bool, Bv, LeanStatus, ProofOutcomeSummary, Property};
+use axeyum_property::{Bool, Bv, Counterexample, LeanStatus, ProofOutcomeSummary, Property};
 use axeyum_solver::{Model, ProofOutcome};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -604,6 +604,72 @@ fn structured_counterexample_rendering_rejects_nested_aggregate_inference() -> T
 
 #[test]
 fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay() -> TestResult {
+    let (counterexample, transfer_limits, transfer_init) = nested_replay_fixture()?;
+
+    assert_eq!(
+        counterexample.render_rust_test_with_setup(
+            "nested replay case",
+            [transfer_limits.as_str(), transfer_init.as_str()],
+            "assert!(replay_transfer(transfer));",
+        )?,
+        concat!(
+            "#[test]\n",
+            "fn nested_replay_case() {\n",
+            "    let transfer_enabled: bool = true;\n",
+            "    let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
+            "    let transfer_limits: TransferLimits = TransferLimits {\n",
+            "        fee: transfer_limits_fee,\n",
+            "    };\n",
+            "    let transfer: TransferInput = TransferInput {\n",
+            "        enabled: transfer_enabled,\n",
+            "        limits: transfer_limits,\n",
+            "    };\n",
+            "    assert!(replay_transfer(transfer));\n",
+            "}\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_prelude(
+            "nested replay case",
+            ["use crate::{TransferInput, TransferLimits};"],
+            [transfer_limits.as_str(), transfer_init.as_str()],
+            "assert!(replay_transfer(transfer));",
+        )?,
+        concat!(
+            "use crate::{TransferInput, TransferLimits};\n",
+            "\n",
+            "#[test]\n",
+            "fn nested_replay_case() {\n",
+            "    let transfer_enabled: bool = true;\n",
+            "    let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
+            "    let transfer_limits: TransferLimits = TransferLimits {\n",
+            "        fee: transfer_limits_fee,\n",
+            "    };\n",
+            "    let transfer: TransferInput = TransferInput {\n",
+            "        enabled: transfer_enabled,\n",
+            "        limits: transfer_limits,\n",
+            "    };\n",
+            "    assert!(replay_transfer(transfer));\n",
+            "}\n",
+        )
+    );
+
+    let duplicate = counterexample
+        .render_rust_named_struct_let_with_fields(
+            "transfer",
+            "TransferInput",
+            "transfer",
+            [("enabled", "override_enabled")],
+        )
+        .expect_err("explicit nested replay should not duplicate direct fields");
+    assert!(
+        duplicate.to_string().contains("already initialized"),
+        "unexpected error: {duplicate}"
+    );
+    Ok(())
+}
+
+fn nested_replay_fixture() -> Result<(Counterexample, String, String), Box<dyn std::error::Error>> {
     #[derive(Debug, Clone, Copy)]
     struct TransferExpr {
         enabled: Bool,
@@ -661,40 +727,5 @@ fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay(
             "};\n",
         )
     );
-    assert_eq!(
-        counterexample.render_rust_test_with_setup(
-            "nested replay case",
-            [transfer_limits.as_str(), transfer_init.as_str()],
-            "assert!(replay_transfer(transfer));",
-        )?,
-        concat!(
-            "#[test]\n",
-            "fn nested_replay_case() {\n",
-            "    let transfer_enabled: bool = true;\n",
-            "    let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
-            "    let transfer_limits: TransferLimits = TransferLimits {\n",
-            "        fee: transfer_limits_fee,\n",
-            "    };\n",
-            "    let transfer: TransferInput = TransferInput {\n",
-            "        enabled: transfer_enabled,\n",
-            "        limits: transfer_limits,\n",
-            "    };\n",
-            "    assert!(replay_transfer(transfer));\n",
-            "}\n",
-        )
-    );
-
-    let duplicate = counterexample
-        .render_rust_named_struct_let_with_fields(
-            "transfer",
-            "TransferInput",
-            "transfer",
-            [("enabled", "override_enabled")],
-        )
-        .expect_err("explicit nested replay should not duplicate direct fields");
-    assert!(
-        duplicate.to_string().contains("already initialized"),
-        "unexpected error: {duplicate}"
-    );
-    Ok(())
+    Ok((counterexample, transfer_limits, transfer_init))
 }
