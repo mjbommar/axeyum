@@ -658,7 +658,7 @@ impl TinyBvProgram {
     /// included in node labels when present, so frontend tools can render the
     /// same graph that trace reports reference without rebuilding the CFG.
     pub fn cfg_dot(&self) -> String {
-        self.cfg_dot_with_highlights(&BTreeSet::new(), &[])
+        self.cfg_dot_with_styles(&BTreeMap::new(), &[], None)
     }
 
     /// Deterministic Graphviz DOT for the static CFG with a replay path
@@ -675,20 +675,59 @@ impl TinyBvProgram {
         let highlighted_blocks = self
             .trace_basic_blocks(trace)
             .into_iter()
-            .map(|step| step.block.start_pc)
-            .collect::<BTreeSet<_>>();
+            .map(|step| (step.block.start_pc, TinyBvDotNodeStyle::Trace))
+            .collect::<BTreeMap<_, _>>();
         let highlighted_edges = self
             .trace_cfg_edges(trace)
             .into_iter()
             .map(|step| step.edge)
             .collect::<Vec<_>>();
-        self.cfg_dot_with_highlights(&highlighted_blocks, &highlighted_edges)
+        self.cfg_dot_with_styles(&highlighted_blocks, &highlighted_edges, Some("#1f6feb"))
     }
 
-    fn cfg_dot_with_highlights(
+    /// Deterministic Graphviz DOT for a generated coverage suite.
+    ///
+    /// The graph shape and labels match [`Self::cfg_dot`]. Covered target
+    /// blocks are colored green, bounded-unreachable targets gray, and unknown
+    /// targets yellow. Edges taken by generated test cases are highlighted in
+    /// green. Coverage reports can be constructed manually; targets outside this
+    /// program are ignored.
+    pub fn cfg_dot_with_coverage(&self, coverage: &TinyBvCoverageReport) -> String {
+        let blocks = self.basic_blocks();
+        let block_start_by_pc = blocks
+            .iter()
+            .flat_map(|block| (block.start_pc..block.end_pc).map(|pc| (pc, block.start_pc)))
+            .collect::<BTreeMap<_, _>>();
+        let mut node_styles = BTreeMap::new();
+        let mut highlighted_edges = Vec::new();
+        for target in &coverage.targets {
+            if let Some(&block_start_pc) = block_start_by_pc.get(&target.target_pc) {
+                let style = match target.status() {
+                    TinyBvReachabilityStatus::Reachable if target.has_test_cases() => {
+                        TinyBvDotNodeStyle::Covered
+                    }
+                    TinyBvReachabilityStatus::Unreachable => TinyBvDotNodeStyle::Unreachable,
+                    TinyBvReachabilityStatus::Reachable | TinyBvReachabilityStatus::Unknown => {
+                        TinyBvDotNodeStyle::Unknown
+                    }
+                };
+                node_styles.insert(block_start_pc, style);
+            }
+            highlighted_edges.extend(
+                target
+                    .test_cases
+                    .iter()
+                    .flat_map(|case| case.report.edge_steps.iter().map(|step| step.edge)),
+            );
+        }
+        self.cfg_dot_with_styles(&node_styles, &highlighted_edges, Some("#2da44e"))
+    }
+
+    fn cfg_dot_with_styles(
         &self,
-        highlighted_blocks: &BTreeSet<usize>,
+        node_styles: &BTreeMap<usize, TinyBvDotNodeStyle>,
         highlighted_edges: &[TinyBvCfgEdge],
+        highlighted_edge_color: Option<&str>,
     ) -> String {
         let blocks = self.basic_blocks();
         let block_start_by_pc = blocks
@@ -699,11 +738,13 @@ impl TinyBvProgram {
         dot.push_str("  rankdir=TB;\n");
         for block in &blocks {
             let label = tiny_bv_dot_escape_label(&tiny_bv_basic_block_dot_label(block));
-            if highlighted_blocks.contains(&block.start_pc) {
+            if let Some(style) = node_styles.get(&block.start_pc) {
                 writeln!(
                     &mut dot,
-                    "  bb_{} [label=\"{}\", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2];",
-                    block.start_pc, label
+                    "  bb_{} [label=\"{}\"{}];",
+                    block.start_pc,
+                    label,
+                    tiny_bv_dot_node_style_attrs(*style)
                 )
                 .expect("writing DOT into a String cannot fail");
             } else {
@@ -715,14 +756,15 @@ impl TinyBvProgram {
             for edge in &block.outgoing {
                 if let Some(target_start_pc) = block_start_by_pc.get(&edge.to) {
                     let label = tiny_bv_cfg_edge_kind_dot_label(edge.kind);
-                    if highlighted_edges
-                        .iter()
-                        .any(|highlighted| highlighted == edge)
+                    if let Some(edge_color) = highlighted_edge_color
+                        && highlighted_edges
+                            .iter()
+                            .any(|highlighted| highlighted == edge)
                     {
                         writeln!(
                             &mut dot,
-                            "  bb_{} -> bb_{} [label=\"{}\", color=\"#1f6feb\", penwidth=2];",
-                            block.start_pc, target_start_pc, label
+                            "  bb_{} -> bb_{} [label=\"{}\", color=\"{}\", penwidth=2];",
+                            block.start_pc, target_start_pc, label, edge_color
                         )
                         .expect("writing DOT into a String cannot fail");
                     } else {
@@ -1570,6 +1612,14 @@ impl TinyBvProgram {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TinyBvDotNodeStyle {
+    Trace,
+    Covered,
+    Unreachable,
+    Unknown,
+}
+
 fn tiny_bv_basic_block_dot_label(block: &TinyBvBasicBlock) -> String {
     let mut rows = Vec::new();
     if block.labels.is_empty() {
@@ -1588,6 +1638,19 @@ fn tiny_bv_basic_block_dot_label(block: &TinyBvBasicBlock) -> String {
         rows.push(format!("lines {}", source_lines.join(",")));
     }
     rows.join("\n")
+}
+
+fn tiny_bv_dot_node_style_attrs(style: TinyBvDotNodeStyle) -> &'static str {
+    match style {
+        TinyBvDotNodeStyle::Trace => ", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2",
+        TinyBvDotNodeStyle::Covered => ", style=\"filled\", fillcolor=\"#e6ffed\", penwidth=2",
+        TinyBvDotNodeStyle::Unreachable => {
+            ", style=\"filled\", fillcolor=\"#f6f8fa\", color=\"#8c959f\""
+        }
+        TinyBvDotNodeStyle::Unknown => {
+            ", style=\"filled\", fillcolor=\"#fff8c5\", color=\"#bf8700\", penwidth=2"
+        }
+    }
 }
 
 fn tiny_bv_cfg_edge_kind_dot_label(kind: TinyBvCfgEdgeKind) -> &'static str {
