@@ -8,9 +8,10 @@ Last updated: 2026-06-27.
 This is the committed graduated SDK corpus gate for
 `axeyum-property`. It is not yet a broad external-vs-SOTA benchmark; it is the
 app-level honesty gate that prevents SDK claims from living only in ad hoc unit
-tests. It now includes deterministic proved/disproved baseline comparisons
-and one actual fixed-seed proptest shrunk-witness comparison;
-richer proptest families and external Kani-style comparison remain the next PROP.6 step.
+tests. It now includes deterministic proved/disproved baseline comparisons,
+one actual fixed-seed proptest shrunk-witness comparison, and a Kani-style
+assume/assert counterexample baseline;
+richer proptest families and real Kani CLI-backed comparison remain the next PROP.6 step.
 
 ## Commands
 
@@ -26,9 +27,9 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 
 | metric | value |
 |---|---:|
-| corpus cases | 15 |
+| corpus cases | 16 |
 | proved | 5 |
-| disproved | 10 |
+| disproved | 11 |
 | unknown | 0 |
 | mismatches / DISAGREE | 0 |
 | Lean-required cases | 1 |
@@ -49,6 +50,7 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 | `sdk-proptest-shrunk-counterexample-compare` | P1 | proptest-backed baseline comparison for a shrunk witness | disproved | fixed-seed proptest runner shrinks the same `u8` wrapping-add monotonicity failure to `(x = 1, y = 255)` that Axeyum minimizes | actual proptest randomized/shrinking baseline over the same Rust predicate |
 | `sdk-u8-baseline-proof-compare` | P1 | bounded baseline comparison for a proved assertion | proved | executable baseline finds no `x + y != y + x` failure for `u8`; Axeyum proves the same assertion with checked evidence | Kani exhaustive bounded assertion over the same Rust predicate |
 | `sdk-assumption-baseline-proof-compare` | P1 | bounded baseline comparison under an SDK assumption | proved | executable baseline finds no `x <= 10 && x + 1 > 11` failure for `u8`; Axeyum proves the assumed assertion with checked evidence | Kani precondition/assertion harness over the same Rust predicate |
+| `sdk-kani-assumption-counterexample-compare` | P1 | Kani-style assume/assert counterexample baseline | disproved | bounded `kani::assume(debit <= 10); assert(balance.wrapping_sub(debit) <= balance)` analogue finds `(balance = 0, debit = 1)`, matching Axeyum's minimized witness | Kani `any::<u8>()` + `assume` + `assert` harness over the same Rust predicate |
 | `sdk-struct-baseline-counterexample-compare` | P1 | bounded struct baseline comparison for a minimized witness | disproved | solver-minimized `TransferInput { enabled: true, amount: 1, balance: 0 }` matches the first executable bounded struct failure | Kani struct harness / proptest `Arbitrary` struct over the same predicate |
 | `sdk-replay-baseline-counterexample-compare` | P1 | bounded replay baseline comparison for a generated counterexample test | disproved | generated replay test replays the first executable struct failure `TransferInput { enabled: true, amount: 1, balance: 0 }` through a caller-owned failure predicate | proptest/Kani regression test emitted from a minimized witness |
 | `sdk-derived-struct-counterexample-lift` | P1 | `derive(Symbolic)` struct witness | disproved | derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
@@ -57,7 +59,7 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 ## Next Gates
 
 1. Broaden the baseline runner across wider randomized and external property shapes,
-   including richer proptest families and external Kani-style bounded assertions.
+   including richer proptest families and real Kani CLI-backed bounded assertions.
 2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,
    assumptions, and certificate fragments.
 3. Keep `corpus.json` and this scoreboard generated from the shared corpus

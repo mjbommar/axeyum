@@ -2,9 +2,9 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 15,
+    "cases": 16,
     "proved": 5,
-    "disproved": 10,
+    "disproved": 11,
     "unknown": 0,
     "mismatches": 0,
     "disagree": 0,
@@ -132,6 +132,17 @@
       "baseline_analogue": "Kani precondition/assertion harness over the same Rust predicate",
       "lean_required": false,
       "lean_available": true
+    },
+    {
+      "id": "sdk-kani-assumption-counterexample-compare",
+      "tier": "P1",
+      "workflow": "Kani-style assume/assert counterexample baseline",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "bounded `kani::assume(debit <= 10); assert(balance.wrapping_sub(debit) <= balance)` analogue finds `(balance = 0, debit = 1)`, matching Axeyum's minimized witness",
+      "baseline_analogue": "Kani `any::<u8>()` + `assume` + `assert` harness over the same Rust predicate",
+      "lean_required": false,
+      "lean_available": false
     },
     {
       "id": "sdk-struct-baseline-counterexample-compare",

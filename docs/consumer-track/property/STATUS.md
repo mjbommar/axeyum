@@ -2,6 +2,27 @@
 
 ## Current focus
 
+- **2026-06-27 — Kani-style assume/assert counterexample comparison landed.**
+  The PROP.6 corpus now checks a bounded Kani-style counterexample workflow:
+  an independent Rust scan of the `kani::assume(debit <= 10)` plus
+  `assert(balance.wrapping_sub(debit) <= balance)` analogue finds the first
+  precondition-respecting failure `(balance = 0, debit = 1)`, and Axeyum's
+  minimized SDK counterexample matches the same witness. This adds a
+  disproved assume/assert baseline next to the existing assumption-backed proof
+  row. Totals are now 16 cases, 5 proved, 11 disproved, 0 unknown,
+  DISAGREE=0, and 1/1 Lean-required coverage. Verification passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- json >/tmp/axeyum-property-corpus.json`;
+  `diff -u docs/consumer-track/property/corpus.json /tmp/axeyum-property-corpus.json`;
+  `CARGO_BUILD_JOBS=2 cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown >/tmp/axeyum-property-scoreboard.md`;
+  `diff -u docs/consumer-track/property/SCOREBOARD.md /tmp/axeyum-property-scoreboard.md`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property --test corpus -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property --all-targets -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-property --no-deps -j1`;
+  `./scripts/check-links.sh`.
+
 - **2026-06-27 — Proptest baseline counterexample comparison landed.**
   The PROP.6 corpus now checks an actual proptest-backed baseline workflow:
   a fixed-seed `TestRunner` shrinks the `u8` wrapping-add monotonicity failure
@@ -359,7 +380,7 @@
    or richer chaining syntax that still makes fallible term construction
    visible.
 2. Broaden the baseline runner across wider randomized and external property
-   shapes, including richer proptest families and external Kani-style bounded
+   shapes, including richer proptest families and real Kani CLI-backed bounded
    assertions.
 3. Keep broadening the SDK property corpus across assumptions, structs,
    fixtures, and certificate fragments.

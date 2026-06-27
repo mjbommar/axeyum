@@ -92,6 +92,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         proptest_shrunk_baseline_counterexample_comparison()?,
         kani_style_baseline_proof_comparison()?,
         kani_style_assumption_baseline_proof_comparison()?,
+        kani_style_assumption_baseline_counterexample_comparison()?,
         kani_style_struct_baseline_counterexample_comparison()?,
         replay_baseline_counterexample_comparison()?,
         derive_symbolic_counterexample_lifted()?,
@@ -107,9 +108,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 15,
+        cases: 16,
         proved: 5,
-        disproved: 10,
+        disproved: 11,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -235,10 +236,11 @@ fn write_markdown_intro(out: &mut String) {
     out.push_str(
         "app-level honesty gate that prevents SDK claims from living only in ad hoc unit\n",
     );
-    out.push_str("tests. It now includes deterministic proved/disproved baseline comparisons\n");
-    out.push_str("and one actual fixed-seed proptest shrunk-witness comparison;\n");
+    out.push_str("tests. It now includes deterministic proved/disproved baseline comparisons,\n");
+    out.push_str("one actual fixed-seed proptest shrunk-witness comparison, and a Kani-style\n");
+    out.push_str("assume/assert counterexample baseline;\n");
     out.push_str(
-        "richer proptest families and external Kani-style comparison remain the next PROP.6 step.\n\n",
+        "richer proptest families and real Kani CLI-backed comparison remain the next PROP.6 step.\n\n",
     );
     out.push_str("## Commands\n\n");
     out.push_str("```sh\n");
@@ -305,7 +307,7 @@ fn write_markdown_next_gates(out: &mut String) {
         "1. Broaden the baseline runner across wider randomized and external property shapes,\n",
     );
     out.push_str(
-        "   including richer proptest families and external Kani-style bounded assertions.\n",
+        "   including richer proptest families and real Kani CLI-backed bounded assertions.\n",
     );
     out.push_str(
         "2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,\n",
@@ -849,6 +851,70 @@ fn kani_style_assumption_baseline_proof_comparison() -> CorpusResult<CorpusCaseR
 
 fn first_assumed_increment_bound_failure() -> Option<u8> {
     (u8::MIN..=u8::MAX).find(|&x| x <= 10 && x.wrapping_add(1) > 11)
+}
+
+fn kani_style_assumption_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {
+    let expected = first_assumed_wrapping_sub_nonincrease_failure()
+        .expect("bounded Kani-style harness should find the first underflow assertion failure");
+
+    let mut property = Property::new();
+    let balance = property.symbolic::<u8>("balance")?;
+    let debit = property.symbolic::<u8>("debit")?;
+    let ten = property.bv_const::<8>(10)?;
+    let pre = property.bv_ule(debit, ten)?;
+    property.assume(pre);
+    let remaining = property.bv_sub(balance, debit)?;
+    let goal = property.bv_ule(remaining, balance)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a Kani-style assumption counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    let actual = (
+        property
+            .concrete::<u8>(&balance, model)?
+            .expect("model should bind balance"),
+        property
+            .concrete::<u8>(&debit, model)?
+            .expect("model should bind debit"),
+    );
+    assert_eq!(actual, expected);
+    assert_eq!(actual, (0, 1));
+    assert_eq!(
+        property.counterexample(model)?.render_rust_let_bindings()?,
+        concat!(
+            "let balance: u8 = 0x00_u8; // BV8\n",
+            "let debit: u8 = 0x01_u8; // BV8\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-kani-assumption-counterexample-compare",
+        tier: "P1",
+        workflow: "Kani-style assume/assert counterexample baseline",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "bounded `kani::assume(debit <= 10); assert(balance.wrapping_sub(debit) <= balance)` analogue finds `(balance = 0, debit = 1)`, matching Axeyum's minimized witness",
+        baseline_analogue: "Kani `any::<u8>()` + `assume` + `assert` harness over the same Rust predicate",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn first_assumed_wrapping_sub_nonincrease_failure() -> Option<(u8, u8)> {
+    for balance in u8::MIN..=u8::MAX {
+        for debit in u8::MIN..=u8::MAX {
+            if debit <= 10 && balance.wrapping_sub(debit) > balance {
+                return Some((balance, debit));
+            }
+        }
+    }
+    None
 }
 
 fn kani_style_struct_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {
