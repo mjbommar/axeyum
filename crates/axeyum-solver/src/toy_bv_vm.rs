@@ -325,6 +325,37 @@ impl TinyBvProgram {
         })
     }
 
+    /// Parses and validates a tiny bit-vector assembly program.
+    ///
+    /// The accepted format is intentionally small and line-oriented:
+    ///
+    /// - `const rD VALUE`
+    /// - `add|sub|mul|xor rD rA rB`
+    /// - `load rD rADDR`
+    /// - `store rADDR rSRC`
+    /// - `beq rREG VALUE THEN_PC ELSE_PC`
+    /// - `win`
+    /// - `lose`
+    ///
+    /// Registers must be written as `r0`, `r1`, etc. Values and branch targets
+    /// accept decimal or `0x` hexadecimal notation. Blank lines and text after
+    /// `#` or `;` are ignored.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Parse`] for malformed text and the same
+    /// validation errors as [`Self::new`] for invalid program shapes.
+    pub fn from_assembly(
+        width: u32,
+        reg_count: usize,
+        input_count: usize,
+        max_steps: usize,
+        text: &str,
+    ) -> Result<Self, SolverError> {
+        let code = parse_tiny_bv_assembly(text)?;
+        Self::new(width, reg_count, input_count, max_steps, code)
+    }
+
     /// Program bit-vector width.
     pub fn width(&self) -> u32 {
         self.width
@@ -853,6 +884,172 @@ fn validate_pc(pc: usize, target: usize, code_len: usize) -> Result<(), SolverEr
             "instruction {pc} branches to pc {target}, but program length is {code_len}"
         )))
     }
+}
+
+fn parse_tiny_bv_assembly(text: &str) -> Result<Vec<TinyBvInsn>, SolverError> {
+    let mut code = Vec::new();
+    for (line_index, raw_line) in text.lines().enumerate() {
+        let line_no = line_index + 1;
+        let Some(line) = clean_assembly_line(raw_line) else {
+            continue;
+        };
+        code.push(parse_tiny_bv_instruction(line_no, line)?);
+    }
+    Ok(code)
+}
+
+fn clean_assembly_line(raw_line: &str) -> Option<&str> {
+    let before_hash = raw_line
+        .split_once('#')
+        .map_or(raw_line, |(before, _)| before);
+    let before_semicolon = before_hash
+        .split_once(';')
+        .map_or(before_hash, |(before, _)| before);
+    let trimmed = before_semicolon.trim();
+    (!trimmed.is_empty()).then_some(trimmed)
+}
+
+fn parse_tiny_bv_instruction(line_no: usize, line: &str) -> Result<TinyBvInsn, SolverError> {
+    let tokens = line
+        .split(|ch: char| ch.is_ascii_whitespace() || ch == ',')
+        .filter(|token| !token.is_empty())
+        .collect::<Vec<_>>();
+    let Some((opcode, args)) = tokens.split_first() else {
+        return Err(tiny_bv_parse_error(line_no, "empty instruction"));
+    };
+    let opcode = opcode.to_ascii_lowercase();
+    match opcode.as_str() {
+        "const" => match args {
+            [dst, value] => Ok(TinyBvInsn::Const {
+                dst: parse_register(line_no, dst)?,
+                value: parse_u128_literal(line_no, "constant", value)?,
+            }),
+            _ => Err(tiny_bv_arity_error(line_no, "const", "rD VALUE")),
+        },
+        "add" | "sub" | "mul" | "xor" => parse_three_register_instruction(line_no, &opcode, args),
+        "load" => match args {
+            [dst, addr] => Ok(TinyBvInsn::Load {
+                dst: parse_register(line_no, dst)?,
+                addr: parse_register(line_no, addr)?,
+            }),
+            _ => Err(tiny_bv_arity_error(line_no, "load", "rD rADDR")),
+        },
+        "store" => match args {
+            [addr, src] => Ok(TinyBvInsn::Store {
+                addr: parse_register(line_no, addr)?,
+                src: parse_register(line_no, src)?,
+            }),
+            _ => Err(tiny_bv_arity_error(line_no, "store", "rADDR rSRC")),
+        },
+        "beq" | "brancheq" => match args {
+            [reg, value, then_pc, else_pc] => Ok(TinyBvInsn::BranchEq {
+                reg: parse_register(line_no, reg)?,
+                value: parse_u128_literal(line_no, "branch constant", value)?,
+                then_pc: parse_usize_literal(line_no, "then pc", then_pc)?,
+                else_pc: parse_usize_literal(line_no, "else pc", else_pc)?,
+            }),
+            _ => Err(tiny_bv_arity_error(
+                line_no,
+                "beq",
+                "rREG VALUE THEN_PC ELSE_PC",
+            )),
+        },
+        "win" => parse_no_args(line_no, "win", args, TinyBvInsn::Win),
+        "lose" => parse_no_args(line_no, "lose", args, TinyBvInsn::Lose),
+        other => Err(tiny_bv_parse_error(
+            line_no,
+            format!("unknown opcode `{other}`"),
+        )),
+    }
+}
+
+fn parse_three_register_instruction(
+    line_no: usize,
+    opcode: &str,
+    args: &[&str],
+) -> Result<TinyBvInsn, SolverError> {
+    let [dst, a, b] = args else {
+        return Err(tiny_bv_arity_error(line_no, opcode, "rD rA rB"));
+    };
+    let dst = parse_register(line_no, dst)?;
+    let a = parse_register(line_no, a)?;
+    let b = parse_register(line_no, b)?;
+    match opcode {
+        "add" => Ok(TinyBvInsn::Add { dst, a, b }),
+        "sub" => Ok(TinyBvInsn::Sub { dst, a, b }),
+        "mul" => Ok(TinyBvInsn::Mul { dst, a, b }),
+        "xor" => Ok(TinyBvInsn::Xor { dst, a, b }),
+        _ => unreachable!("caller restricts opcode"),
+    }
+}
+
+fn parse_no_args(
+    line_no: usize,
+    opcode: &str,
+    args: &[&str],
+    instruction: TinyBvInsn,
+) -> Result<TinyBvInsn, SolverError> {
+    if args.is_empty() {
+        Ok(instruction)
+    } else {
+        Err(tiny_bv_arity_error(line_no, opcode, ""))
+    }
+}
+
+fn parse_register(line_no: usize, token: &str) -> Result<usize, SolverError> {
+    let Some(index) = token.strip_prefix('r') else {
+        return Err(tiny_bv_parse_error(
+            line_no,
+            format!("expected register like `r0`, got `{token}`"),
+        ));
+    };
+    if index.is_empty() {
+        return Err(tiny_bv_parse_error(line_no, "empty register index"));
+    }
+    index
+        .parse::<usize>()
+        .map_err(|_| tiny_bv_parse_error(line_no, format!("invalid register index `{index}`")))
+}
+
+fn parse_usize_literal(line_no: usize, name: &str, token: &str) -> Result<usize, SolverError> {
+    let value = parse_u128_literal(line_no, name, token)?;
+    value.try_into().map_err(|_| {
+        tiny_bv_parse_error(line_no, format!("{name} `{token}` does not fit in usize"))
+    })
+}
+
+fn parse_u128_literal(line_no: usize, name: &str, token: &str) -> Result<u128, SolverError> {
+    if let Some(hex) = token
+        .strip_prefix("0x")
+        .or_else(|| token.strip_prefix("0X"))
+    {
+        if hex.is_empty() {
+            return Err(tiny_bv_parse_error(
+                line_no,
+                format!("empty {name} literal"),
+            ));
+        }
+        u128::from_str_radix(hex, 16)
+    } else {
+        token.parse::<u128>()
+    }
+    .map_err(|_| tiny_bv_parse_error(line_no, format!("invalid {name} literal `{token}`")))
+}
+
+fn tiny_bv_arity_error(line_no: usize, opcode: &str, expected: &str) -> SolverError {
+    let detail = if expected.is_empty() {
+        format!("`{opcode}` takes no operands")
+    } else {
+        format!("`{opcode}` expects {expected}")
+    };
+    tiny_bv_parse_error(line_no, detail)
+}
+
+fn tiny_bv_parse_error(line_no: usize, message: impl Into<String>) -> SolverError {
+    SolverError::Parse(format!(
+        "tiny BV assembly line {line_no}: {}",
+        message.into()
+    ))
 }
 
 fn tiny_bv_error(message: impl Into<String>) -> SolverError {

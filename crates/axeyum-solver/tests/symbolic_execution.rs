@@ -796,6 +796,110 @@ fn tiny_bv_memory_store_load_reachability_replays() {
 }
 
 #[test]
+fn tiny_bv_assembly_imports_memory_program_and_replays() {
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            # raw frontend text: input r0 is stored, loaded, and checked
+            const r2 0x10
+            store r2 r0
+            load r3 r2
+            beq r3 0xcafe 4 5
+            win
+            lose
+        ",
+    )
+    .unwrap();
+
+    assert_eq!(
+        program.code(),
+        &[
+            TinyBvInsn::Const {
+                dst: 2,
+                value: 0x0010
+            },
+            TinyBvInsn::Store { addr: 2, src: 0 },
+            TinyBvInsn::Load { dst: 3, addr: 2 },
+            TinyBvInsn::BranchEq {
+                reg: 3,
+                value: 0xCAFE,
+                then_pc: 4,
+                else_pc: 5,
+            },
+            TinyBvInsn::Win,
+            TinyBvInsn::Lose,
+        ]
+    );
+    assert!(program.uses_memory());
+
+    let reach = program
+        .reach_pc_checked(
+            &mut arena,
+            "asm_input",
+            4,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(reach.status(), TinyBvReachabilityStatus::Reachable);
+    let hit = reach
+        .outcome
+        .verified
+        .first()
+        .expect("imported memory program should have a winning witness");
+    let trace = program.concrete_trace(&hit.witness);
+    assert_eq!(trace.outcome, TinyBvConcreteOutcome::Win);
+    assert_eq!(
+        trace.steps.iter().map(|step| step.pc).collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4]
+    );
+    assert_eq!(hit.witness.inputs[0], 0xCAFE);
+    assert_eq!(trace.final_regs[3], 0xCAFE);
+    assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
+}
+
+#[test]
+fn tiny_bv_assembly_reports_parse_and_validation_errors() {
+    let parse_err =
+        TinyBvProgram::from_assembly(WIDTH, REG_COUNT, INPUT_COUNT, MAX_STEPS, "add r0 r1")
+            .unwrap_err()
+            .to_string();
+    assert!(
+        parse_err.contains("tiny BV assembly line 1"),
+        "parse error should include the source line: {parse_err}"
+    );
+    assert!(
+        parse_err.contains("`add` expects rD rA rB"),
+        "parse error should describe the expected operands: {parse_err}"
+    );
+
+    let validation_err = TinyBvProgram::from_assembly(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        "
+            const r4 0
+            win
+        ",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        validation_err.contains("instruction 0 references register 4"),
+        "validation error should come from the shared program validator: {validation_err}"
+    );
+}
+
+#[test]
 fn tiny_bv_memory_safety_uses_read_over_write() {
     let mut arena = TermArena::new();
     let program = TinyBvProgram::new(
