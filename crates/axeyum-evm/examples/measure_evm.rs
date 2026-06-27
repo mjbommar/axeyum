@@ -1,0 +1,499 @@
+//! EVM / symbolic-execution capability scoreboard — the consumer-track
+//! measurement deliverable (integration I3).
+//!
+//! Runs a **construction-known** EVM corpus through [`axeyum_evm::analyze`] and
+//! emits a committed scoreboard grouped by *memory-shape class*: how many bugs
+//! were found (each carrying a concretely-revalidated calldata witness) and how
+//! many safe contracts were proved `SafeUpToBound`, with the soundness floor
+//! `DISAGREE = 0`.
+//!
+//! This is the symbolic-execution-engine analogue of the SMT `DOMINANCE.md`
+//! scoreboard: the warm-incremental memory/array work that powers symbolic
+//! storage now carries a *number* (decided rate + per-shape coverage) instead of
+//! being asserted. Every reported finding is independently re-confirmed here by
+//! re-running the witness through the concrete interpreter — a separate oracle
+//! from the one `analyze` uses internally.
+//!
+//! Run: `cargo run -p axeyum-evm --example measure_evm`
+//! Writes: `docs/consumer-track/evm/SCOREBOARD.md` and `.../corpus.json`.
+
+use std::fmt::Write as _;
+use std::path::PathBuf;
+use std::process::ExitCode;
+
+use axeyum_evm::concrete::{self, Env, Halt};
+use axeyum_evm::opcode::{Program, decode};
+use axeyum_evm::word::Word;
+use axeyum_evm::{AnalyzeConfig, FindingKind, Verdict, analyze};
+
+// ----- opcode byte helpers -------------------------------------------------
+const STOP: u8 = 0x00;
+const ADD: u8 = 0x01;
+const EQ: u8 = 0x14;
+const ISZERO: u8 = 0x15;
+const AND: u8 = 0x16;
+const SHA3: u8 = 0x20;
+const CALLDATALOAD: u8 = 0x35;
+const MSTORE: u8 = 0x52;
+const SLOAD: u8 = 0x54;
+const SSTORE: u8 = 0x55;
+const JUMPI: u8 = 0x57;
+const JUMPDEST: u8 = 0x5b;
+const PUSH1: u8 = 0x60;
+const PUSH2: u8 = 0x61;
+const RETURN: u8 = 0xf3;
+const REVERT: u8 = 0xfd;
+
+const STEP_LIMIT: usize = 10_000;
+
+/// The symbolic-execution memory-shape a case exercises (the capability axis the
+/// warm-incremental engine work targets).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Shape {
+    /// Pure arithmetic over calldata, no memory.
+    Arith,
+    /// Concrete-offset `MSTORE`/`MLOAD`.
+    ConcreteMem,
+    /// Control flow / reachable `REVERT` guard.
+    Control,
+    /// Symbolic-key `SLOAD`/`SSTORE` (read-over-write storage).
+    SymbolicStorage,
+    /// `keccak256`-keyed mapping storage (injectivity reasoning).
+    KeccakMapping,
+}
+
+impl Shape {
+    fn label(self) -> &'static str {
+        match self {
+            Shape::Arith => "arith",
+            Shape::ConcreteMem => "concrete-mem",
+            Shape::Control => "control-flow",
+            Shape::SymbolicStorage => "symbolic-storage",
+            Shape::KeccakMapping => "keccak-mapping",
+        }
+    }
+}
+
+/// What the contract was *constructed* to be — the oracle.
+#[derive(Clone, Copy)]
+enum Expect {
+    /// A bug of this kind is reachable.
+    Bug(FindingKind),
+    /// No bug is reachable up to the step bound.
+    Safe,
+}
+
+struct Case {
+    name: &'static str,
+    shape: Shape,
+    expect: Expect,
+    bytecode: Vec<u8>,
+}
+
+/// The decided outcome of a case, reconciled against its construction-known label.
+enum Outcome {
+    /// A bug was found and its witness independently reproduced.
+    BugFound,
+    /// The contract was proved `SafeUpToBound`.
+    SafeProved,
+    /// Honest `unknown` (havoc / solver limit) — a decide-incompleteness, not a
+    /// soundness failure.
+    Unknown,
+    /// A wrong verdict against the construction-known label, or a witness that did
+    /// not reproduce. Must never happen (the soundness floor).
+    Disagree(String),
+}
+
+impl Outcome {
+    fn tag(&self) -> &'static str {
+        match self {
+            Outcome::BugFound => "bug-found",
+            Outcome::SafeProved => "safe-proved",
+            Outcome::Unknown => "unknown",
+            Outcome::Disagree(_) => "DISAGREE",
+        }
+    }
+}
+
+/// Independently re-confirm a reported finding by re-running its witness through
+/// the concrete interpreter — a separate oracle from `analyze`'s internal one.
+fn witness_reproduces(program: &Program, f: &axeyum_evm::Finding) -> bool {
+    let env = Env {
+        calldata: f.calldata_witness.clone(),
+        callvalue: Word::from_be_bytes(&f.callvalue),
+        caller: Word::from_be_bytes(&f.caller),
+    };
+    match f.kind {
+        FindingKind::AddOverflow => {
+            concrete::overflow_reproduces(program, &env, f.pc, false, STEP_LIMIT)
+        }
+        FindingKind::MulOverflow => {
+            concrete::overflow_reproduces(program, &env, f.pc, true, STEP_LIMIT)
+        }
+        FindingKind::Revert => matches!(concrete::run(program, &env, STEP_LIMIT), Halt::Revert(_)),
+        FindingKind::Invalid => matches!(concrete::run(program, &env, STEP_LIMIT), Halt::Invalid),
+    }
+}
+
+fn evaluate(case: &Case) -> Outcome {
+    let report = analyze(&case.bytecode, &AnalyzeConfig::default());
+    let program = decode(&case.bytecode);
+
+    if let Some(f) = report.findings.first() {
+        // A finding exists. It was concretely revalidated inside `analyze`; we
+        // re-confirm independently here too.
+        if !witness_reproduces(&program, f) {
+            return Outcome::Disagree(format!(
+                "reported {:?} finding did not reproduce concretely",
+                f.kind
+            ));
+        }
+        return match case.expect {
+            // The witness genuinely reaches the bug. On a contract we labelled
+            // safe, the witness is ground truth — the disagreement is real.
+            Expect::Safe => {
+                Outcome::Disagree(format!("witnessed {:?} bug on a safe contract", f.kind))
+            }
+            Expect::Bug(_) => Outcome::BugFound,
+        };
+    }
+
+    match (&case.expect, report.verdict) {
+        (Expect::Safe, Some(Verdict::SafeUpToBound { .. })) => Outcome::SafeProved,
+        // Proving safety on a contract with a reachable bug is a soundness failure.
+        (Expect::Bug(kind), Some(Verdict::SafeUpToBound { .. })) => Outcome::Disagree(format!(
+            "proved SafeUpToBound but a {kind:?} bug is reachable"
+        )),
+        // Honest unknown either way — decide-incompleteness, not unsoundness.
+        (_, Some(Verdict::InconclusiveDueToUnknown) | None) => Outcome::Unknown,
+    }
+}
+
+#[derive(Default)]
+struct Tally {
+    total: usize,
+    bug_found: usize,
+    safe_proved: usize,
+    unknown: usize,
+    disagree: usize,
+}
+
+impl Tally {
+    fn record(&mut self, outcome: &Outcome) {
+        self.total += 1;
+        match outcome {
+            Outcome::BugFound => self.bug_found += 1,
+            Outcome::SafeProved => self.safe_proved += 1,
+            Outcome::Unknown => self.unknown += 1,
+            Outcome::Disagree(_) => self.disagree += 1,
+        }
+    }
+
+    fn decided(&self) -> usize {
+        self.bug_found + self.safe_proved
+    }
+}
+
+fn corpus() -> Vec<Case> {
+    vec![
+        Case {
+            name: "add-overflow-unguarded",
+            shape: Shape::Arith,
+            expect: Expect::Bug(FindingKind::AddOverflow),
+            bytecode: vec![
+                PUSH1,
+                0x00,
+                CALLDATALOAD,
+                PUSH1,
+                0x20,
+                CALLDATALOAD,
+                ADD,
+                PUSH1,
+                0x00,
+                MSTORE,
+                PUSH1,
+                0x20,
+                PUSH1,
+                0x00,
+                RETURN,
+            ],
+        },
+        Case {
+            name: "mask-then-store-safe",
+            shape: Shape::ConcreteMem,
+            expect: Expect::Safe,
+            bytecode: vec![
+                PUSH1,
+                0x00,
+                CALLDATALOAD,
+                PUSH1,
+                0xff,
+                AND,
+                PUSH1,
+                0x00,
+                MSTORE,
+                PUSH1,
+                0x20,
+                PUSH1,
+                0x00,
+                RETURN,
+            ],
+        },
+        Case {
+            name: "require-nonzero-revert",
+            shape: Shape::Control,
+            expect: Expect::Bug(FindingKind::Revert),
+            bytecode: vec![
+                PUSH1,
+                0x00,
+                CALLDATALOAD,
+                ISZERO,
+                PUSH1,
+                0x0a,
+                JUMPI,
+                STOP,
+                STOP,
+                STOP,
+                JUMPDEST,
+                PUSH1,
+                0x00,
+                PUSH1,
+                0x00,
+                REVERT,
+            ],
+        },
+        Case {
+            name: "symbolic-storage-roundtrip-revert",
+            shape: Shape::SymbolicStorage,
+            expect: Expect::Bug(FindingKind::Revert),
+            bytecode: vec![
+                PUSH1,
+                0x20,
+                CALLDATALOAD,
+                PUSH1,
+                0x00,
+                CALLDATALOAD,
+                SSTORE,
+                PUSH1,
+                0x40,
+                CALLDATALOAD,
+                SLOAD,
+                PUSH2,
+                0xde,
+                0xad,
+                EQ,
+                PUSH1,
+                0x13,
+                JUMPI,
+                STOP,
+                JUMPDEST,
+                PUSH1,
+                0x00,
+                PUSH1,
+                0x00,
+                REVERT,
+            ],
+        },
+        Case {
+            name: "cold-slot-load-safe",
+            shape: Shape::SymbolicStorage,
+            expect: Expect::Safe,
+            bytecode: vec![
+                PUSH1, 0x99, SLOAD, PUSH2, 0xde, 0xad, EQ, PUSH1, 0x0b, JUMPI, STOP, JUMPDEST,
+                PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
+            name: "keccak-mapping-alias-revert",
+            shape: Shape::KeccakMapping,
+            expect: Expect::Bug(FindingKind::Revert),
+            bytecode: vec![
+                PUSH1,
+                0x00,
+                CALLDATALOAD,
+                PUSH1,
+                0x00,
+                MSTORE,
+                PUSH1,
+                0x00,
+                PUSH1,
+                0x20,
+                MSTORE,
+                PUSH2,
+                0xde,
+                0xad,
+                PUSH1,
+                0x40,
+                PUSH1,
+                0x00,
+                SHA3,
+                SSTORE,
+                PUSH1,
+                0x20,
+                CALLDATALOAD,
+                PUSH1,
+                0x00,
+                MSTORE,
+                PUSH1,
+                0x40,
+                PUSH1,
+                0x00,
+                SHA3,
+                SLOAD,
+                PUSH2,
+                0xde,
+                0xad,
+                EQ,
+                PUSH1,
+                0x29,
+                JUMPI,
+                STOP,
+                STOP,
+                JUMPDEST,
+                PUSH1,
+                0x00,
+                PUSH1,
+                0x00,
+                REVERT,
+            ],
+        },
+    ]
+}
+
+fn render_markdown(
+    rows: &[(&Case, Outcome)],
+    overall: &Tally,
+    by_shape: &[(Shape, Tally)],
+) -> String {
+    let mut out = String::new();
+    out.push_str("# EVM / symbolic-execution capability scoreboard\n\n");
+    out.push_str(
+        "Generated by `cargo run -p axeyum-evm --example measure_evm`. A \
+         construction-known EVM corpus through `axeyum_evm::analyze`, grouped by \
+         memory-shape class. Every reported bug carries a calldata witness that \
+         reproduces under the concrete interpreter (re-confirmed here, \
+         independently of `analyze`'s internal revalidation).\n\n",
+    );
+
+    let _ = writeln!(
+        out,
+        "## Headline\n\n- **{} cases**, **{} decided** ({} bugs found + {} safe \
+         proved), {} honest unknown.\n- **DISAGREE = {}** — the soundness floor \
+         (a wrong verdict against a construction-known label, or a witness that \
+         did not reproduce).\n",
+        overall.total,
+        overall.decided(),
+        overall.bug_found,
+        overall.safe_proved,
+        overall.unknown,
+        overall.disagree,
+    );
+
+    out.push_str("## By memory-shape class\n\n");
+    out.push_str("| Shape | Cases | Bug-found | Safe-proved | Unknown | DISAGREE |\n");
+    out.push_str("|---|---|---|---|---|---|\n");
+    for (shape, t) in by_shape {
+        let _ = writeln!(
+            out,
+            "| {} | {} | {} | {} | {} | {} |",
+            shape.label(),
+            t.total,
+            t.bug_found,
+            t.safe_proved,
+            t.unknown,
+            t.disagree,
+        );
+    }
+
+    out.push_str("\n## Per case\n\n");
+    out.push_str("| Case | Shape | Expected | Outcome |\n|---|---|---|---|\n");
+    for (case, outcome) in rows {
+        let expected = match case.expect {
+            Expect::Bug(k) => format!("bug:{k:?}"),
+            Expect::Safe => "safe".to_string(),
+        };
+        let note = match outcome {
+            Outcome::Disagree(why) => format!("{} ({why})", outcome.tag()),
+            _ => outcome.tag().to_string(),
+        };
+        let _ = writeln!(
+            out,
+            "| {} | {} | {expected} | {note} |",
+            case.name,
+            case.shape.label()
+        );
+    }
+    out
+}
+
+fn render_json(rows: &[(&Case, Outcome)], overall: &Tally) -> String {
+    let mut out = String::new();
+    out.push_str("{\n");
+    let _ = writeln!(
+        out,
+        "  \"total\": {}, \"bug_found\": {}, \"safe_proved\": {}, \"unknown\": {}, \"disagree\": {},",
+        overall.total, overall.bug_found, overall.safe_proved, overall.unknown, overall.disagree,
+    );
+    out.push_str("  \"cases\": [\n");
+    for (i, (case, outcome)) in rows.iter().enumerate() {
+        let comma = if i + 1 == rows.len() { "" } else { "," };
+        let _ = writeln!(
+            out,
+            "    {{ \"name\": \"{}\", \"shape\": \"{}\", \"outcome\": \"{}\" }}{comma}",
+            case.name,
+            case.shape.label(),
+            outcome.tag(),
+        );
+    }
+    out.push_str("  ]\n}\n");
+    out
+}
+
+fn main() -> ExitCode {
+    let cases = corpus();
+    let mut rows: Vec<(&Case, Outcome)> = Vec::new();
+    for case in &cases {
+        let outcome = evaluate(case);
+        if let Outcome::Disagree(why) = &outcome {
+            eprintln!("DISAGREE on {}: {why}", case.name);
+        }
+        rows.push((case, outcome));
+    }
+
+    let mut overall = Tally::default();
+    let shapes = [
+        Shape::Arith,
+        Shape::ConcreteMem,
+        Shape::Control,
+        Shape::SymbolicStorage,
+        Shape::KeccakMapping,
+    ];
+    let mut by_shape: Vec<(Shape, Tally)> = shapes.iter().map(|s| (*s, Tally::default())).collect();
+    for (case, outcome) in &rows {
+        overall.record(outcome);
+        if let Some(entry) = by_shape.iter_mut().find(|(s, _)| *s == case.shape) {
+            entry.1.record(outcome);
+        }
+    }
+
+    let md = render_markdown(&rows, &overall, &by_shape);
+    let json = render_json(&rows, &overall);
+
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/consumer-track/evm");
+    std::fs::create_dir_all(&dir).expect("create scoreboard dir");
+    std::fs::write(dir.join("SCOREBOARD.md"), &md).expect("write SCOREBOARD.md");
+    std::fs::write(dir.join("corpus.json"), &json).expect("write corpus.json");
+
+    print!("{md}");
+
+    if overall.disagree == 0 {
+        eprintln!("DISAGREE = 0 over {} cases.", overall.total);
+        ExitCode::SUCCESS
+    } else {
+        eprintln!(
+            "FAIL: {} disagreement(s) — soundness floor breached.",
+            overall.disagree
+        );
+        ExitCode::FAILURE
+    }
+}
