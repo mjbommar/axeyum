@@ -6624,6 +6624,28 @@ fn repair_projected_replay_select_failure(
     Ok(Some(stats))
 }
 
+fn positive_replay_conjunct_count(arena: &TermArena, originals: &[TermId]) -> usize {
+    let mut count = 0;
+    let mut conjuncts = Vec::new();
+    for &assertion in originals {
+        conjuncts.clear();
+        collect_positive_conjuncts(arena, assertion, &mut conjuncts);
+        count += conjuncts.len();
+    }
+    count
+}
+
+fn mixed_replay_beam_admits_or_failure(
+    arena: &TermArena,
+    originals: &[TermId],
+    current_false: usize,
+) -> bool {
+    const MAX_OR_MIXED_BEAM_CONJUNCTS: usize = 64;
+
+    current_false > 1
+        && positive_replay_conjunct_count(arena, originals) <= MAX_OR_MIXED_BEAM_CONJUNCTS
+}
+
 fn repair_projected_replay_failure(
     arena: &TermArena,
     originals: &[TermId],
@@ -6653,6 +6675,16 @@ fn repair_projected_replay_failure(
         repair_projected_replay_branch_beam(arena, originals, failure.conjunct_term, projected)?
     {
         return Ok(Some(beam_stats));
+    }
+
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    if mixed_replay_beam_admits_or_failure(arena, originals, current_false) {
+        if let Some((mixed_stats, trial)) =
+            repair_projected_replay_mixed_beam(arena, originals, projected, current_false)?
+        {
+            *projected = trial;
+            return Ok(Some(mixed_stats));
+        }
     }
 
     if let Some(choice_stats) =
@@ -8281,6 +8313,101 @@ mod tests {
             .expect("only the dependent z readback should remain false")
             .conjunct_term,
             z_eq_read
+        );
+    }
+
+    #[test]
+    fn lazy_ext_or_repair_beam_composes_followup_select_repair() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let j = arena.bv_var("j", 4).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let h = arena.bool_var("h").unwrap();
+        let i_eq_j = arena.eq(i, j).unwrap();
+        let branch_or = arena.or(i_eq_j, q).unwrap();
+        let read = arena.select(a, i).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let zero8 = arena.bv_const(8, 0).unwrap();
+        let y_eq_zero = arena.eq(y, zero8).unwrap();
+        let prefix = arena.and(branch_or, y_eq_read).unwrap();
+        let suffix = arena.and(y_eq_zero, h).unwrap();
+        let assertion = arena.and(prefix, suffix).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+        let TermNode::Symbol(j_symbol) = arena.node(j) else {
+            panic!("j should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+        let TermNode::Symbol(h_symbol) = arena.node(h) else {
+            panic!("h should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let a_value = store_value(
+            &default_a,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 7 },
+        )
+        .unwrap();
+        projected.set(*a_symbol, a_value);
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+        projected.set(*j_symbol, Value::Bv { width: 4, value: 2 });
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 0 });
+        projected.set(*q_symbol, Value::Bool(false));
+        projected.set(*h_symbol, Value::Bool(false));
+
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            2
+        );
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected generated OR replay failure");
+        assert_eq!(failure.conjunct_term, branch_or);
+
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected composed OR/select repair");
+        assert!(stats.branch_symbol_changes >= 1, "{stats:?}");
+        assert!(stats.array_changes >= 1, "{stats:?}");
+        assert_eq!(
+            projected.get(*i_symbol),
+            Some(Value::Bv { width: 4, value: 2 })
+        );
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+        assert_eq!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .expect("only h should remain false")
+            .conjunct_term,
+            h
         );
     }
 

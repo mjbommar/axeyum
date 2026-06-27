@@ -1920,6 +1920,17 @@ against competitor source, are now binding:
      generated-OR failures or diagnose the 210 branch-0 → 34 select cycle
      directly; keep cost caps explicit because the 10 s diagnostic route now
      takes about 76 s wall.
+     **GUARDED OR/SELECT REPLAY BEAM RETAINED (2026-06-26):** invoking the same
+     mixed beam from every generated-OR replay failure was measured and rejected:
+     on `bug337` it regressed the final miss from OR 210 back to select equality
+     34 / term 555 and raised the 10 s diagnostic route to about 149 s wall.
+     The retained OR-start path is therefore admitted only for small,
+     multi-false replay surfaces (`current_false > 1`, <=64 positive conjuncts),
+     with a focused regression covering an OR repair that ties replay until a
+     follow-up select repair is composed. On the large AUFLIA row the guard
+     restores the OR 210 frontier and ~76 s diagnostic wall time. The next
+     useful AUFLIA move is cycle-specific: diagnose or repair the concrete
+     210 branch-0 -> 34 select transition, not a broader OR-start beam.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
