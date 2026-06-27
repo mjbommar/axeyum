@@ -22,6 +22,8 @@ use axeyum_ir::{
     well_founded_default,
 };
 
+use std::collections::{HashMap, HashSet};
+
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::model::Model;
 
@@ -32,7 +34,7 @@ use crate::model::Model;
 /// pure-Rust dispatcher.
 fn needs_deferred_theory(arena: &TermArena, term: TermId) -> bool {
     let mut stack = vec![term];
-    let mut seen = std::collections::HashSet::new();
+    let mut seen = HashSet::new();
     while let Some(t) = stack.pop() {
         if !seen.insert(t) {
             continue;
@@ -159,6 +161,44 @@ impl IncrementalBvSolver {
             .any(|frame| !frame.deferred_assertions.is_empty())
     }
 
+    /// Simplifies the small memory fragment that is safe to encode on the warm
+    /// BV path today.
+    ///
+    /// This is deliberately narrow: it only folds syntactic read-over-write
+    /// identities of the form `select(store(a, i, v), i)` to `v`, recursively
+    /// through ordinary wrappers. It does not instantiate general array
+    /// extensionality, distinct-index read-over-write cases, or UF lemmas.
+    #[must_use]
+    pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
+        let mut memo = HashMap::new();
+        simplify_memory_for_warm_assertion_inner(arena, term, &mut memo)
+    }
+
+    /// Asserts `term`, first applying the small warm-safe memory simplifier.
+    ///
+    /// When simplification removes all array/UF structure, the simplified term
+    /// is encoded into the warm BV solver while the original term is retained
+    /// for replay. If unsupported array/UF structure remains, the original term
+    /// is scoped as a deferred theory assertion exactly like [`Self::assert`].
+    ///
+    /// Returns the term actually presented to the warm/deferred classifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::assert`].
+    pub fn assert_simplifying_memory(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<TermId, SolverError> {
+        if arena.sort_of(term) != Sort::Bool {
+            return Err(SolverError::NonBooleanAssertion(term));
+        }
+        let encoded = Self::simplify_memory_for_warm_assertion(arena, term);
+        self.assert_encoded(arena, term, encoded)?;
+        Ok(encoded)
+    }
+
     /// Bit-blasts `term` and adds it to the current scope.
     ///
     /// The assertion is enforced while the current scope (and all enclosing
@@ -175,10 +215,26 @@ impl IncrementalBvSolver {
     /// Does not panic in practice: the base frame is an invariant, so the
     /// current-frame lookups always succeed.
     pub fn assert(&mut self, arena: &TermArena, term: TermId) -> Result<(), SolverError> {
-        if arena.sort_of(term) != Sort::Bool {
-            return Err(SolverError::NonBooleanAssertion(term));
+        self.assert_encoded(arena, term, term)
+    }
+
+    fn assert_encoded(
+        &mut self,
+        arena: &TermArena,
+        original: TermId,
+        encoded: TermId,
+    ) -> Result<(), SolverError> {
+        if arena.sort_of(original) != Sort::Bool {
+            return Err(SolverError::NonBooleanAssertion(original));
         }
-        if needs_deferred_theory(arena, term) {
+        if arena.sort_of(encoded) != Sort::Bool {
+            return Err(SolverError::Backend(format!(
+                "memory simplification changed Boolean assertion #{} to non-Boolean term #{}",
+                original.index(),
+                encoded.index()
+            )));
+        }
+        if needs_deferred_theory(arena, encoded) {
             // The warm bit-blaster does not encode arrays or UFs; defer this
             // assertion to `check_with_memory`, which decides it with all active
             // assertions through the full dispatcher. Scope is honored: it is
@@ -187,16 +243,19 @@ impl IncrementalBvSolver {
                 .last_mut()
                 .expect("base frame always present")
                 .deferred_assertions
-                .push(term);
+                .push(original);
             return Ok(());
         }
-        if let Some((unsupported, op)) = first_unsupported_op(arena, &[term]) {
+        if let Some((unsupported, op)) = first_unsupported_op(arena, &[encoded]) {
             return Err(SolverError::Unsupported(format!(
                 "term #{} uses unsupported pure-Rust BV operator {op:?}",
                 unsupported.index()
             )));
         }
-        let lowered = self.lowering.lower(arena, term).map_err(map_lower_error)?;
+        let lowered = self
+            .lowering
+            .lower(arena, encoded)
+            .map_err(map_lower_error)?;
         let root = lowered.bits()[0];
         let selector = self
             .frames
@@ -210,7 +269,7 @@ impl IncrementalBvSolver {
             .last_mut()
             .expect("base frame always present")
             .assertions
-            .push(term);
+            .push(original);
         Ok(())
     }
 
@@ -629,6 +688,61 @@ impl IncrementalBvSolver {
         }
         Ok(active)
     }
+}
+
+fn simplify_memory_for_warm_assertion_inner(
+    arena: &mut TermArena,
+    term: TermId,
+    memo: &mut HashMap<TermId, TermId>,
+) -> TermId {
+    if let Some(&simplified) = memo.get(&term) {
+        return simplified;
+    }
+
+    let original_args = if let TermNode::App { args, .. } = arena.node(term) {
+        args.to_vec()
+    } else {
+        memo.insert(term, term);
+        return term;
+    };
+    let simplified_args = original_args
+        .iter()
+        .map(|&arg| simplify_memory_for_warm_assertion_inner(arena, arg, memo))
+        .collect::<Vec<_>>();
+    let rebuilt = if simplified_args == original_args {
+        term
+    } else {
+        arena.rebuild_with_args(term, &simplified_args)
+    };
+    let simplified = collapse_same_index_read_over_write(arena, rebuilt).unwrap_or(rebuilt);
+    memo.insert(term, simplified);
+    simplified
+}
+
+fn collapse_same_index_read_over_write(arena: &TermArena, term: TermId) -> Option<TermId> {
+    let TermNode::App {
+        op: Op::Select,
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [array, read_index] = args.as_ref() else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::Store,
+        args: store_args,
+        ..
+    } = arena.node(*array)
+    else {
+        return None;
+    };
+    let [_base, write_index, value] = store_args.as_ref() else {
+        return None;
+    };
+    (write_index == read_index).then_some(*value)
 }
 
 fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {

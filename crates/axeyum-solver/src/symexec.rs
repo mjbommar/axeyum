@@ -731,7 +731,7 @@ impl SymbolicExecutor {
         arena: &mut TermArena,
         cond: TermId,
     ) -> Result<PathStatus, SolverError> {
-        self.solver.assert(arena, cond)?;
+        self.solver.assert_simplifying_memory(arena, cond)?;
         self.path.push(cond);
         if self.needs_memory_route_for_current_path() {
             Ok(status_of(self.solver.check_with_memory(arena)?))

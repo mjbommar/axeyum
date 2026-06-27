@@ -2251,15 +2251,17 @@ closes the immediate symbolic-memory/keccak-as-UF branch-query gap:
 and `check_assuming_with_memory` dispatch them through the full pure-Rust solver,
 `SymbolicExecutor` exposes memory-aware assume/branch/status/model calls,
 auto-routes `branch` and CFG branch/assume/status/model queries to that path
-when arrays or UFs appear, and `SymbolicMemory` now provides a typed frontend
+when arrays or UFs appear, and now keeps syntactic same-index read-over-write
+assertions warm by encoding the simplified BV term while retaining the original
+memory assertion for replay. `SymbolicMemory` also provides a typed frontend
 helper for array-backed `load`/`store`, load-equality branch/assume queries, and
 conservative write-log normalization that drops shadowed same-index writes before
 emitting compact read-over-write `ite` chains.
 `explore_cfg` now owns the DFS solver mechanics for frontend-supplied CFG states:
 branch feasibility, scope push/pop, infeasible pruning, unknown-safe traversal,
 and replay-checked target models. This is still a one-shot fallback for deferred
-theories, not final warm lazy theory incrementality or a complete lifter/emulator
-frontend. The
+theories beyond the narrow same-index ROW admission, not final warm lazy theory
+incrementality or a complete lifter/emulator frontend. The
 checked concrete replay hook now has a reusable tiny-target library surface:
 `TinyBvProgram` validates a fixed-width BV register program, lifts instructions
 to symbolic CFG steps, extracts model witnesses, and independently replays them

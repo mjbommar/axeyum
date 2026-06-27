@@ -880,9 +880,11 @@ pub const CAPABILITIES: &[Capability] = &[
         area: "incremental",
         feature: "symbolic memory and UF fallback: select/store and Op::Apply via \
                   check_with_memory plus check_assuming_with_memory one-shot branch queries \
-                  (full dispatcher; warm lazy arrays/UF = ADR-0030 future work)",
+                  (full dispatcher; syntactic same-index ROW can stay warm; warm lazy arrays/UF = \
+                  ADR-0030 future work)",
         assurance: Assurance::Validated,
-        evidence: "full dispatcher model replay; warm path refuses deferred array/UF theories",
+        evidence: "full dispatcher model replay; same-index ROW warm replay; warm path refuses \
+                   remaining deferred array/UF theories",
         reference: "ADR-0010/0030",
     },
     Capability {

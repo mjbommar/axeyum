@@ -1917,6 +1917,103 @@ fn all_sat_enumerates_reachable_states() {
 
 // --- symbolic memory (arrays) through the incremental engine (ADR-0030 slice) --
 
+#[test]
+fn warm_assert_simplifies_same_index_read_over_write() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "warm_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("warm_i", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("warm_v", Sort::BitVec(8)).unwrap();
+    let (i, v) = (arena.var(is), arena.var(vs));
+    let target = arena.bv_const(8, 42).unwrap();
+
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, i).unwrap();
+    let goal = arena.eq(loaded, target).unwrap();
+    assert!(
+        IncrementalBvSolver::term_needs_deferred_theory(&arena, goal),
+        "the original memory assertion contains a select/store chain"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, goal)
+        .expect("same-index read-over-write should simplify before warm encoding");
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the encoded assertion should be pure BV after ROW simplification"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "same-index ROW simplification should avoid the deferred one-shot route"
+    );
+
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => assert_eq!(
+            model.get(vs),
+            Some(Value::Bv {
+                width: 8,
+                value: 42
+            }),
+            "the warm path should solve the simplified stored value constraint"
+        ),
+        other => panic!("expected warm sat, got {other:?}"),
+    }
+}
+
+#[test]
+fn assume_auto_keeps_same_index_memory_condition_on_warm_path() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "auto_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("auto_i", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("auto_v", Sort::BitVec(8)).unwrap();
+    let (i, v) = (arena.var(is), arena.var(vs));
+    let target = arena.bv_const(8, 7).unwrap();
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, i).unwrap();
+    let goal = arena.eq(loaded, target).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(
+        executor
+            .assume_auto(&mut arena, goal)
+            .unwrap()
+            .is_feasible(),
+        "same-index memory assertion should be feasible"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should work after assume_auto simplifies ROW"
+    );
+    let model = executor
+        .model(&arena)
+        .unwrap()
+        .expect("warm path should produce a replay-checked model");
+    assert_eq!(model.get(vs), Some(Value::Bv { width: 8, value: 7 }));
+    assert_eq!(
+        executor.path_condition(),
+        &[goal],
+        "the executor should retain the original memory assertion for frontends"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.
