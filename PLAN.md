@@ -1931,6 +1931,19 @@ against competitor source, are now binding:
      restores the OR 210 frontier and ~76 s diagnostic wall time. The next
      useful AUFLIA move is cycle-specific: diagnose or repair the concrete
      210 branch-0 -> 34 select transition, not a broader OR-start beam.
+     **BRANCH-SELECT CYCLE DIAGNOSTIC LANDED (2026-06-26):** final generated-OR
+     replay diagnostics now compose each repairable OR branch trial with the
+     direct-select store-chain/direct array-entry candidates when that branch's
+     next global blocker is a direct `x = select(a,i)` equality. On `bug337`,
+     this confirms the concrete 210/34 queue-lock: branch 0 followed by the
+     select-34 store-chain repair makes term 555 true but remains
+     `worse_full_replay` at total_false=2 and lands back on OR 210 / term 3879;
+     the direct array-entry select repair also makes term 555 true but worsens
+     to total_false=3 and exposes ordinal 35 / term 560. The next useful AUFLIA
+     move is no longer diagnostic: implement a cycle-aware replay repair for
+     `210 -> 34 -> 210` that can keep the branch-0 chain repair while forcing an
+     alternate OR-210 branch or component-level store-chain change, still under
+     the final strict full-replay improvement gate.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

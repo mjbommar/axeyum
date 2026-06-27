@@ -5368,6 +5368,22 @@ struct ReplayBranchPairCandidateDiagnostic {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct ReplayBranchSelectCandidateDiagnostic {
+    branch_ordinal: usize,
+    select_ordinal: usize,
+    select_term: TermId,
+    kind: String,
+    status: String,
+    branch_repair_changes: usize,
+    select_repair_changes: usize,
+    target_true: bool,
+    total_false_conjuncts: Option<usize>,
+    first_global_false_ordinal: Option<usize>,
+    first_global_false_term: Option<TermId>,
+    first_global_false_eq: Option<ReplayEqFailure>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplaySelectCandidateDiagnostic {
     kind: String,
     status: String,
@@ -5389,6 +5405,7 @@ struct ReplayFailure {
     failed_or: Option<ReplayOrFailure>,
     select_candidate_diagnostics: Vec<ReplaySelectCandidateDiagnostic>,
     branch_candidate_diagnostics: Vec<ReplayBranchCandidateDiagnostic>,
+    branch_select_candidate_diagnostics: Vec<ReplayBranchSelectCandidateDiagnostic>,
     branch_pair_candidate_diagnostics: Vec<ReplayBranchPairCandidateDiagnostic>,
     repair_stats: ProjectionRepairStats,
 }
@@ -5535,6 +5552,48 @@ impl ReplayFailure {
                         eq.lhs_value,
                         eq.rhs_value
                     );
+                }
+                if let Some(ordinal) = diagnostic.first_global_false_ordinal {
+                    let _ = write!(note, ",global_false_ordinal={ordinal}");
+                }
+                if let Some(term) = diagnostic.first_global_false_term {
+                    let _ = write!(note, ",global_false_term={}", term.index());
+                }
+                if let Some(eq) = &diagnostic.first_global_false_eq {
+                    let _ = write!(
+                        note,
+                        ",global_false_lhs_term={},global_false_rhs_term={},\
+                         global_false_lhs_value={},global_false_rhs_value={}",
+                        eq.lhs_term.index(),
+                        eq.rhs_term.index(),
+                        eq.lhs_value,
+                        eq.rhs_value
+                    );
+                }
+            }
+            let _ = write!(note, "]");
+        }
+        if !self.branch_select_candidate_diagnostics.is_empty() {
+            let _ = write!(note, ", branch_select_candidate_diagnostics=[");
+            for (idx, diagnostic) in self.branch_select_candidate_diagnostics.iter().enumerate() {
+                if idx > 0 {
+                    let _ = write!(note, "; ");
+                }
+                let _ = write!(
+                    note,
+                    "#{}->{}:{},status={},branch_changes={},select_changes={},\
+                     target_true={},select_term={}",
+                    diagnostic.branch_ordinal,
+                    diagnostic.select_ordinal,
+                    diagnostic.kind,
+                    diagnostic.status,
+                    diagnostic.branch_repair_changes,
+                    diagnostic.select_repair_changes,
+                    diagnostic.target_true,
+                    diagnostic.select_term.index()
+                );
+                if let Some(total_false) = diagnostic.total_false_conjuncts {
+                    let _ = write!(note, ",total_false={total_false}");
                 }
                 if let Some(ordinal) = diagnostic.first_global_false_ordinal {
                     let _ = write!(note, ",global_false_ordinal={ordinal}");
@@ -6149,6 +6208,154 @@ fn replay_select_candidate_diagnostics(
     Ok(diagnostics)
 }
 
+#[allow(clippy::too_many_arguments)]
+fn replay_branch_select_candidate_from_trial(
+    arena: &TermArena,
+    originals: &[TermId],
+    current_false: usize,
+    branch_ordinal: usize,
+    select_failure: &ReplayFailure,
+    kind: &str,
+    branch_stats: ProjectionRepairStats,
+    select_stats: ProjectionRepairStats,
+    trial: &Assignment,
+) -> Result<ReplayBranchSelectCandidateDiagnostic, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext branch-select diagnostic failed: {e}"))
+    };
+    let target_true =
+        eval(arena, select_failure.conjunct_term, trial).map_err(ir)? == Value::Bool(true);
+    let total_false = positive_replay_false_count(arena, originals, trial)?;
+    let global_failure =
+        first_projected_replay_failure(arena, originals, trial, ProjectionRepairStats::default())?;
+    Ok(ReplayBranchSelectCandidateDiagnostic {
+        branch_ordinal,
+        select_ordinal: select_failure.conjunct_ordinal,
+        select_term: select_failure.conjunct_term,
+        kind: kind.to_owned(),
+        status: select_candidate_status(target_true, total_false, current_false),
+        branch_repair_changes: branch_stats.changes(),
+        select_repair_changes: select_stats.changes(),
+        target_true,
+        total_false_conjuncts: Some(total_false),
+        first_global_false_ordinal: global_failure
+            .as_ref()
+            .map(|failure| failure.conjunct_ordinal),
+        first_global_false_term: global_failure.as_ref().map(|failure| failure.conjunct_term),
+        first_global_false_eq: global_failure.and_then(|failure| failure.failed_eq),
+    })
+}
+
+fn replay_branch_select_candidate_diagnostics(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch_disjunction: TermId,
+    projected: &Assignment,
+) -> Result<Vec<ReplayBranchSelectCandidateDiagnostic>, SolverError> {
+    const MAX_BRANCH_SELECT_DIAGNOSTICS: usize = 16;
+
+    if !matches!(
+        arena.node(branch_disjunction),
+        TermNode::App { op: Op::BoolOr, .. }
+    ) {
+        return Ok(Vec::new());
+    }
+
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext branch-select diagnostic failed: {e}"))
+    };
+    let current_total_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut branches = Vec::new();
+    collect_positive_disjuncts(arena, branch_disjunction, &mut branches);
+    let mut diagnostics = Vec::new();
+    for (branch_ordinal, branch) in branches.into_iter().enumerate() {
+        let mut branch_trial = projected.clone();
+        let Some(branch_stats) =
+            repair_projected_branch_as_candidate(arena, originals, branch, &mut branch_trial)?
+        else {
+            continue;
+        };
+        if eval(arena, branch_disjunction, &branch_trial).map_err(ir)? != Value::Bool(true) {
+            continue;
+        }
+
+        let Some(select_failure) = first_projected_replay_failure(
+            arena,
+            originals,
+            &branch_trial,
+            ProjectionRepairStats::default(),
+        )?
+        else {
+            continue;
+        };
+        let Some((array, index_term, element_term)) =
+            direct_select_repair_target(arena, select_failure.conjunct_term)
+        else {
+            continue;
+        };
+
+        let index = eval(arena, index_term, &branch_trial).map_err(ir)?;
+        let element = eval(arena, element_term, &branch_trial).map_err(ir)?;
+
+        let mut chain_trial = branch_trial.clone();
+        let mut chain_stats = ProjectionRepairStats {
+            candidates: 1,
+            ..ProjectionRepairStats::default()
+        };
+        let mut visited = BTreeSet::new();
+        if repair_projected_store_chain_readback(
+            arena,
+            originals,
+            &mut chain_trial,
+            array,
+            &index,
+            &element,
+            0,
+            &mut visited,
+            &mut chain_stats,
+        )? {
+            diagnostics.push(replay_branch_select_candidate_from_trial(
+                arena,
+                originals,
+                current_total_false,
+                branch_ordinal,
+                &select_failure,
+                "chain",
+                branch_stats,
+                chain_stats,
+                &chain_trial,
+            )?);
+            if diagnostics.len() >= MAX_BRANCH_SELECT_DIAGNOSTICS {
+                return Ok(diagnostics);
+            }
+        }
+
+        let mut direct_trial = branch_trial.clone();
+        let mut direct_stats = ProjectionRepairStats {
+            candidates: 1,
+            ..ProjectionRepairStats::default()
+        };
+        if store_projected_array_entry(arena, &mut direct_trial, array, index, element)? {
+            direct_stats.array_changes += 1;
+            diagnostics.push(replay_branch_select_candidate_from_trial(
+                arena,
+                originals,
+                current_total_false,
+                branch_ordinal,
+                &select_failure,
+                "direct",
+                branch_stats,
+                direct_stats,
+                &direct_trial,
+            )?);
+            if diagnostics.len() >= MAX_BRANCH_SELECT_DIAGNOSTICS {
+                return Ok(diagnostics);
+            }
+        }
+    }
+    Ok(diagnostics)
+}
+
 fn replay_failure_with_branch_candidate_diagnostics(
     arena: &TermArena,
     originals: &[TermId],
@@ -6159,6 +6366,12 @@ fn replay_failure_with_branch_candidate_diagnostics(
         replay_select_candidate_diagnostics(arena, originals, projected, &failure)?;
     failure.branch_candidate_diagnostics =
         replay_branch_candidate_diagnostics(arena, originals, failure.conjunct_term, projected)?;
+    failure.branch_select_candidate_diagnostics = replay_branch_select_candidate_diagnostics(
+        arena,
+        originals,
+        failure.conjunct_term,
+        projected,
+    )?;
     failure.branch_pair_candidate_diagnostics = replay_branch_pair_candidate_diagnostics(
         arena,
         originals,
@@ -7304,6 +7517,7 @@ fn first_false_replay_conjunct(
                     failed_or,
                     select_candidate_diagnostics: Vec::new(),
                     branch_candidate_diagnostics: Vec::new(),
+                    branch_select_candidate_diagnostics: Vec::new(),
                     branch_pair_candidate_diagnostics: Vec::new(),
                     repair_stats,
                 });
@@ -7334,6 +7548,7 @@ fn first_false_replay_conjunct(
         failed_or: replay_failed_or_details(arena, assertion, assignment)?,
         select_candidate_diagnostics: Vec::new(),
         branch_candidate_diagnostics: Vec::new(),
+        branch_select_candidate_diagnostics: Vec::new(),
         branch_pair_candidate_diagnostics: Vec::new(),
         repair_stats,
     })
@@ -8173,6 +8388,70 @@ mod tests {
         assert!(note.contains("branch_pair_candidate_diagnostics=["));
         assert!(note.contains("#1->1#0:init=1,status=candidate"), "{note}");
         assert!(note.contains("global_false_ordinal=2"), "{note}");
+    }
+
+    #[test]
+    fn lazy_ext_replay_failure_reports_branch_select_candidate_diagnostics() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let j = arena.bv_var("j", 4).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let i_eq_j = arena.eq(i, j).unwrap();
+        let branch_or = arena.or(i_eq_j, q).unwrap();
+        let read = arena.select(a, i).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let assertion = arena.and(branch_or, y_eq_read).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+        let TermNode::Symbol(j_symbol) = arena.node(j) else {
+            panic!("j should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let a_with_entry = store_value(
+            &default_a,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 7 },
+        )
+        .unwrap();
+        projected.set(*a_symbol, a_with_entry);
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+        projected.set(*j_symbol, Value::Bv { width: 4, value: 2 });
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 0 });
+        projected.set(*q_symbol, Value::Bool(false));
+
+        let originals = [assertion];
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected first OR replay failure");
+        let failure = replay_failure_with_branch_candidate_diagnostics(
+            &arena, &originals, &projected, failure,
+        )
+        .unwrap();
+        let note = failure.note();
+        assert!(note.contains("branch_select_candidate_diagnostics=["));
+        assert!(note.contains("#0->1:direct,status=candidate"), "{note}");
+        assert!(note.contains("target_true=true"), "{note}");
+        assert!(note.contains("total_false=0"), "{note}");
     }
 
     #[test]
