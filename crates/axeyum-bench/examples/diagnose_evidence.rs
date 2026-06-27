@@ -187,6 +187,38 @@ fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &Rou
             ("followup_branch", "followup_branch_term"),
             ("followup_next_branch", "followup_next_branch_term"),
             (
+                "followup_global_false_branch",
+                "followup_global_false_or_best_branch_term",
+            ),
+            (
+                "followup_global_false_branch_first_false",
+                "followup_global_false_or_best_branch_first_false_term",
+            ),
+            (
+                "followup_closure_global_false_branch",
+                "followup_closure_global_false_or_best_branch_term",
+            ),
+            (
+                "followup_closure_global_false_branch_first_false",
+                "followup_closure_global_false_or_best_branch_first_false_term",
+            ),
+            (
+                "followup_next_global_false_branch",
+                "followup_next_global_false_or_best_branch_term",
+            ),
+            (
+                "followup_next_global_false_branch_first_false",
+                "followup_next_global_false_or_best_branch_first_false_term",
+            ),
+            (
+                "followup_next_closure_global_false_branch",
+                "followup_next_closure_global_false_or_best_branch_term",
+            ),
+            (
+                "followup_next_closure_global_false_branch_first_false",
+                "followup_next_closure_global_false_or_best_branch_first_false_term",
+            ),
+            (
                 "best_branch_first_false",
                 "failed_or_best_branch_first_false_term",
             ),

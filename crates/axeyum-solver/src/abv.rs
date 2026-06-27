@@ -6164,11 +6164,13 @@ struct ReplayScalarFollowupNextOrDiagnostic {
     first_global_false_ordinal: Option<usize>,
     first_global_false_term: Option<TermId>,
     first_global_false_eq: Option<ReplayEqFailure>,
+    first_global_false_or: Option<ReplayOrFailure>,
     closure_branch_false_literals: Option<usize>,
     closure_total_false_conjuncts: Option<usize>,
     closure_global_false_ordinal: Option<usize>,
     closure_global_false_term: Option<TermId>,
     closure_global_false_eq: Option<ReplayEqFailure>,
+    closure_global_false_or: Option<ReplayOrFailure>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -6188,11 +6190,13 @@ struct ReplayScalarFollowupOrDiagnostic {
     first_global_false_ordinal: Option<usize>,
     first_global_false_term: Option<TermId>,
     first_global_false_eq: Option<ReplayEqFailure>,
+    first_global_false_or: Option<ReplayOrFailure>,
     closure_branch_false_literals: Option<usize>,
     closure_total_false_conjuncts: Option<usize>,
     closure_global_false_ordinal: Option<usize>,
     closure_global_false_term: Option<TermId>,
     closure_global_false_eq: Option<ReplayEqFailure>,
+    closure_global_false_or: Option<ReplayOrFailure>,
     next_or: Option<ReplayScalarFollowupNextOrDiagnostic>,
 }
 
@@ -6320,6 +6324,42 @@ fn write_scalar_choice_effect_list(note: &mut String, choices: &[ReplayScalarCho
     let _ = write!(note, "]");
 }
 
+fn write_compact_or_failure(note: &mut String, prefix: &str, or_failure: &ReplayOrFailure) {
+    let _ = write!(
+        note,
+        ",{prefix}_or_branches={},\
+         {prefix}_or_best_branch={},\
+         {prefix}_or_best_branch_term={},\
+         {prefix}_or_best_branch_false_literals={},\
+         {prefix}_or_best_branch_total_literals={}",
+        or_failure.branch_count,
+        or_failure.best_branch_ordinal,
+        or_failure.best_branch_term.index(),
+        or_failure.best_branch_false_literals,
+        or_failure.best_branch_total_literals
+    );
+    if let Some(term) = or_failure.best_branch_first_false_term {
+        let _ = write!(
+            note,
+            ",{prefix}_or_best_branch_first_false_term={}",
+            term.index()
+        );
+    }
+    if let Some(eq) = &or_failure.best_branch_first_false_eq {
+        let _ = write!(
+            note,
+            ",{prefix}_or_best_branch_first_false_lhs_term={},\
+             {prefix}_or_best_branch_first_false_rhs_term={},\
+             {prefix}_or_best_branch_first_false_lhs_value={},\
+             {prefix}_or_best_branch_first_false_rhs_value={}",
+            eq.lhs_term.index(),
+            eq.rhs_term.index(),
+            eq.lhs_value,
+            eq.rhs_value
+        );
+    }
+}
+
 fn write_scalar_followup_next_or_diagnostic(
     note: &mut String,
     next: &ReplayScalarFollowupNextOrDiagnostic,
@@ -6376,6 +6416,9 @@ fn write_scalar_followup_next_or_diagnostic(
             eq.rhs_value
         );
     }
+    if let Some(or_failure) = &next.first_global_false_or {
+        write_compact_or_failure(note, "followup_next_global_false", or_failure);
+    }
     if let Some(closure_branch_false) = next.closure_branch_false_literals {
         let _ = write!(
             note,
@@ -6413,6 +6456,9 @@ fn write_scalar_followup_next_or_diagnostic(
             eq.lhs_value,
             eq.rhs_value
         );
+    }
+    if let Some(or_failure) = &next.closure_global_false_or {
+        write_compact_or_failure(note, "followup_next_closure_global_false", or_failure);
     }
 }
 
@@ -6465,6 +6511,9 @@ fn write_scalar_followup_or_diagnostic(
             eq.rhs_value
         );
     }
+    if let Some(or_failure) = &followup.first_global_false_or {
+        write_compact_or_failure(note, "followup_global_false", or_failure);
+    }
     if let Some(closure_branch_false) = followup.closure_branch_false_literals {
         let _ = write!(
             note,
@@ -6492,6 +6541,9 @@ fn write_scalar_followup_or_diagnostic(
             eq.lhs_value,
             eq.rhs_value
         );
+    }
+    if let Some(or_failure) = &followup.closure_global_false_or {
+        write_compact_or_failure(note, "followup_closure_global_false", or_failure);
     }
     if let Some(next) = &followup.next_or {
         write_scalar_followup_next_or_diagnostic(note, next);
@@ -7590,11 +7642,13 @@ fn replay_scalar_followup_next_or_diagnostic(
             first_global_false_ordinal: None,
             first_global_false_term: None,
             first_global_false_eq: None,
+            first_global_false_or: None,
             closure_branch_false_literals: None,
             closure_total_false_conjuncts: None,
             closure_global_false_ordinal: None,
             closure_global_false_term: None,
             closure_global_false_eq: None,
+            closure_global_false_or: None,
         }));
     };
 
@@ -7656,6 +7710,9 @@ fn replay_scalar_followup_next_or_diagnostic(
         first_global_false_eq: raw_failure
             .as_ref()
             .and_then(|failure| failure.failed_eq.clone()),
+        first_global_false_or: raw_failure
+            .as_ref()
+            .and_then(|failure| failure.failed_or.clone()),
         closure_branch_false_literals: closure_summary
             .as_ref()
             .map(|(_, branch_false, _)| *branch_false),
@@ -7674,6 +7731,10 @@ fn replay_scalar_followup_next_or_diagnostic(
             .as_ref()
             .and_then(|(_, _, failure)| failure.as_ref())
             .and_then(|failure| failure.failed_eq.clone()),
+        closure_global_false_or: closure_summary
+            .as_ref()
+            .and_then(|(_, _, failure)| failure.as_ref())
+            .and_then(|failure| failure.failed_or.clone()),
     }))
 }
 
@@ -7716,11 +7777,13 @@ fn replay_scalar_followup_or_diagnostic(
             first_global_false_ordinal: None,
             first_global_false_term: None,
             first_global_false_eq: None,
+            first_global_false_or: None,
             closure_branch_false_literals: None,
             closure_total_false_conjuncts: None,
             closure_global_false_ordinal: None,
             closure_global_false_term: None,
             closure_global_false_eq: None,
+            closure_global_false_or: None,
             next_or: None,
         }));
     };
@@ -7812,6 +7875,9 @@ fn replay_scalar_followup_or_diagnostic(
         first_global_false_eq: followup_failure
             .as_ref()
             .and_then(|failure| failure.failed_eq.clone()),
+        first_global_false_or: followup_failure
+            .as_ref()
+            .and_then(|failure| failure.failed_or.clone()),
         closure_branch_false_literals: closure_summary
             .as_ref()
             .map(|(_, branch_false, _)| *branch_false),
@@ -7830,6 +7896,10 @@ fn replay_scalar_followup_or_diagnostic(
             .as_ref()
             .and_then(|(_, _, failure)| failure.as_ref())
             .and_then(|failure| failure.failed_eq.clone()),
+        closure_global_false_or: closure_summary
+            .as_ref()
+            .and_then(|(_, _, failure)| failure.as_ref())
+            .and_then(|failure| failure.failed_or.clone()),
         next_or,
     }))
 }
@@ -11975,6 +12045,20 @@ mod tests {
             )),
             "{note}"
         );
+        assert!(
+            note.contains(&format!(
+                "followup_closure_global_false_or_best_branch_term={}",
+                x_eq_z.index()
+            )),
+            "{note}"
+        );
+        assert!(
+            note.contains(&format!(
+                "followup_closure_global_false_or_best_branch_first_false_term={}",
+                x_eq_z.index()
+            )),
+            "{note}"
+        );
     }
 
     #[test]
@@ -12050,6 +12134,20 @@ mod tests {
             note.contains(&format!(
                 "followup_next_global_false_term={}",
                 first_or.index()
+            )),
+            "{note}"
+        );
+        assert!(
+            note.contains(&format!(
+                "followup_next_global_false_or_best_branch_term={}",
+                z_eq_x.index()
+            )),
+            "{note}"
+        );
+        assert!(
+            note.contains(&format!(
+                "followup_next_global_false_or_best_branch_first_false_term={}",
+                z_eq_x.index()
             )),
             "{note}"
         );

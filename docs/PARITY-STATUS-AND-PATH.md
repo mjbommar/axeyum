@@ -649,9 +649,13 @@ a named mechanism.**
    and about **72.5 s**, so the large row remains diagnostic-only at term
    **3408**. The follow-up branch-term diagnostic now identifies the concrete
    pair: OR **210** branch term **3805** (store-definition branch) and OR
-   **211** branch term **4107** (copy/no-store branch). The next practical
-   AUFLIA step is to derive or learn the consistency/ordering constraint
-   connecting branch **3805** with branch **4107**.
+   **211** branch term **4107** (copy/no-store branch). Returned-OR literal
+   diagnostics refine this to array/store coherence: 4107 fails on term
+   **4041** (`x_303 = x_317`, inserted-cell array vs default array), while
+   3805 fails on term **583** (`x_331 = store(x_317,x_320,x_337)`, default
+   array vs inserted-cell store RHS). The next practical AUFLIA step is a
+   guarded selected-array equality/store-definition stabilization after scalar
+   readback changes, or an equivalent learned constraint.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

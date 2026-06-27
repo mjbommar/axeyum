@@ -2118,10 +2118,14 @@ against competitor source, are now binding:
      **72.5 s**, so the large row remains diagnostic-only at term **3408**. The
      follow-up branch-term diagnostic now identifies the concrete pair:
      OR **210** branch term **3805** (store-definition branch) and OR **211**
-     branch term **4107** (copy/no-store branch). The next AUFLIA move is
-     therefore to derive or learn the consistency/ordering constraint connecting
-     branch **3805** with branch **4107**, not greedy single-OR forcing or more
-     local branch enumeration.
+     branch term **4107** (copy/no-store branch). Returned-OR literal
+     diagnostics refine the blocker further: 4107 fails on term **4041**
+     (`x_303 = x_317`, inserted-cell array vs default array), while 3805 fails
+     on term **583** (`x_331 = store(x_317,x_320,x_337)`, default array vs
+     inserted-cell store RHS). The next AUFLIA move is therefore guarded
+     selected-array equality/store-definition stabilization after scalar
+     readback changes, or an equivalent learned constraint, not greedy single-OR
+     forcing or more local branch enumeration.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
