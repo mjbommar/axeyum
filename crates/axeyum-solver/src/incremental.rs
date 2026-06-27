@@ -202,6 +202,20 @@ impl IncrementalBvSolver {
         needs_deferred_theory(arena, term)
     }
 
+    /// Whether a term that has already gone through
+    /// [`Self::simplify_memory_for_warm_assertion`] can stay on the warm BV path
+    /// after the retained select/UF abstraction pass.
+    ///
+    /// This is a pure preflight for branch routing. The real encoding still goes
+    /// through [`Self::check_assuming_simplifying_memory`] /
+    /// [`Self::assert_simplifying_memory`], which creates the internal symbols,
+    /// scoped congruence lemmas, and replay projection maps.
+    #[must_use]
+    pub fn term_supported_by_warm_abstraction(arena: &TermArena, term: TermId) -> bool {
+        let mut memo = HashMap::new();
+        warm_abstraction_covers_term(arena, term, &mut memo)
+    }
+
     /// Whether any currently active assertion is being held for the deferred
     /// array/UF theory path.
     #[must_use]
@@ -1576,6 +1590,113 @@ pub(crate) fn known_literal_distinct(arena: &TermArena, left: TermId, right: Ter
 
 fn is_warm_scalar_sort(sort: Sort) -> bool {
     matches!(sort, Sort::Bool | Sort::BitVec(1..=128))
+}
+
+fn warm_abstraction_covers_term(
+    arena: &TermArena,
+    term: TermId,
+    memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    if let Some(&covered) = memo.get(&term) {
+        return covered;
+    }
+    let covered = warm_abstraction_covers_term_uncached(arena, term, memo);
+    memo.insert(term, covered);
+    covered
+}
+
+fn warm_abstraction_covers_term_uncached(
+    arena: &TermArena,
+    term: TermId,
+    memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    if supported_warm_array_select_shape(arena, term) {
+        match arena.node(term) {
+            TermNode::App { args, .. } => {
+                let [_array, index] = args.as_ref() else {
+                    return false;
+                };
+                return warm_abstraction_covers_term(arena, *index, memo);
+            }
+            _ => return false,
+        }
+    }
+
+    if supported_warm_uf_app_shape(arena, term) {
+        match arena.node(term) {
+            TermNode::App { args, .. } => {
+                return args
+                    .iter()
+                    .copied()
+                    .all(|arg| warm_abstraction_covers_term(arena, arg, memo));
+            }
+            _ => return false,
+        }
+    }
+
+    if matches!(arena.sort_of(term), Sort::Array { .. }) {
+        return false;
+    }
+
+    match arena.node(term) {
+        TermNode::App { op, args } => {
+            if matches!(
+                op,
+                Op::Select | Op::Store | Op::ConstArray { .. } | Op::Apply(_)
+            ) {
+                return false;
+            }
+            args.iter()
+                .copied()
+                .all(|arg| warm_abstraction_covers_term(arena, arg, memo))
+        }
+        _ => true,
+    }
+}
+
+fn supported_warm_array_select_shape(arena: &TermArena, term: TermId) -> bool {
+    let TermNode::App {
+        op: Op::Select,
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return false;
+    };
+    let [array, index] = args.as_ref() else {
+        return false;
+    };
+    let TermNode::Symbol(_array_symbol) = arena.node(*array) else {
+        return false;
+    };
+    let Sort::Array {
+        index: ArraySortKey::BitVec(index_width),
+        element: ArraySortKey::BitVec(element_width),
+    } = arena.sort_of(*array)
+    else {
+        return false;
+    };
+    arena.sort_of(*index) == Sort::BitVec(index_width)
+        && arena.sort_of(term) == Sort::BitVec(element_width)
+}
+
+fn supported_warm_uf_app_shape(arena: &TermArena, term: TermId) -> bool {
+    let TermNode::App {
+        op: Op::Apply(func),
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return false;
+    };
+    let (_name, params, result_sort) = arena.function(*func);
+    is_warm_scalar_sort(result_sort)
+        && args.len() == params.len()
+        && params.iter().copied().all(is_warm_scalar_sort)
+        && args
+            .iter()
+            .zip(params)
+            .all(|(&arg, &sort)| arena.sort_of(arg) == sort)
 }
 
 fn fresh_internal_symbol_name(arena: &TermArena, base_name: &str) -> String {

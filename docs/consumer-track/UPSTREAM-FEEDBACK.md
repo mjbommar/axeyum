@@ -65,6 +65,10 @@ Last reconciled with `main`: 2026-06-27.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
+  `SymbolicExecutor::branch` now preflights simplified fork conditions against
+  the retained select/UF abstraction coverage too, so plain BV-array-symbol
+  reads and scalar Bool/BV UF calls stay on warm one-shot assumptions instead
+  of jumping straight to the dispatcher.
   Default CFG exploration now uses that auto route too; `memory_aware=true`
   remains the explicit force-dispatch setting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
@@ -86,7 +90,8 @@ Last reconciled with `main`: 2026-06-27.
   "Warm same-index ROW admission" / "Warm literal ROW chain admission" /
   "Warm constant-array read admission" / "Warm array-ITE read admission" /
   "Warm symbolic ROW conditional admission" / "Warm BV-array select-congruence
-  admission" / "Warm scalar UF congruence admission";
+  admission" / "Warm scalar UF congruence admission" /
+  "Warm branch routing recognizes retained select/UF slices";
   `docs/plan/track-4-usecases-frontend/P4.1` / `P4.2` notes.
 
 ### U7 - medium - perf/encoding - deep store/read-over-write scaling remains open

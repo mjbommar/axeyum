@@ -13,13 +13,13 @@
 //!
 //! * [`assume`](SymbolicExecutor::assume) commits a constraint to the current
 //!   path and reports whether the path is still feasible.
-//! * [`assume_auto`](SymbolicExecutor::assume_auto) does the same while
-//!   automatically selecting the memory/theory-aware route for array or UF
-//!   conditions.
+//! * [`assume_auto`](SymbolicExecutor::assume_auto) does the same while keeping
+//!   the retained warm select/UF abstraction slices on the warm route and using
+//!   the memory/theory-aware route for remaining array or UF conditions.
 //! * [`branch`](SymbolicExecutor::branch) reports, *without committing*, which of
 //!   `cond` / `¬cond` the current path can still take — the fork decision; it
-//!   automatically uses the memory/theory-aware route when the path or condition
-//!   needs it.
+//!   keeps retained warm select/UF abstraction slices on the warm route and uses
+//!   the memory/theory-aware route when the path or condition still needs it.
 //! * [`enter`](SymbolicExecutor::enter) / [`backtrack`](SymbolicExecutor::backtrack)
 //!   open and discard a choice point, so a caller can explore the path tree
 //!   depth-first and undo a branch.
@@ -728,8 +728,9 @@ impl SymbolicExecutor {
     }
 
     /// Commits `cond` and automatically selects the precise feasibility route:
-    /// warm BV when the path remains array/UF-free, otherwise the
-    /// memory/theory-aware dispatcher.
+    /// warm BV when the path remains array/UF-free or inside the retained warm
+    /// select/UF abstraction slices, otherwise the memory/theory-aware
+    /// dispatcher.
     ///
     /// This is the ergonomic path for frontends that may mix ordinary BV
     /// constraints with occasional symbolic memory or uninterpreted-call terms.
@@ -757,13 +758,13 @@ impl SymbolicExecutor {
     /// committing to either — the fork query. Use it to decide whether to
     /// explore the then-branch, the else-branch, or both.
     ///
-    /// The method automatically dispatches to the memory/theory-aware solver
-    /// when the current path or the branch condition contains arrays
-    /// (`select`/`store`) or uninterpreted-function applications. This preserves
-    /// the fast warm BV path for pure-BV queries but avoids returning a coarse
-    /// `Unknown` solely because a branch mentions symbolic memory or a UF. The
-    /// narrow same-index read-over-write fragment is simplified first, so simple
-    /// store/read-back fork queries can still use the warm path.
+    /// The method keeps pure-BV queries and retained warm select/UF abstraction
+    /// slices on the warm path, and dispatches to the memory/theory-aware solver
+    /// when the current path or branch condition contains array/UF structure
+    /// outside those slices. This avoids returning a coarse `Unknown` solely
+    /// because a branch mentions symbolic memory or a UF, while still preserving
+    /// the fast route for simple store/read-back, BV-array select, and scalar UF
+    /// fork queries.
     ///
     /// # Errors
     ///
@@ -774,8 +775,8 @@ impl SymbolicExecutor {
         let encoded_not_cond =
             IncrementalBvSolver::simplify_memory_for_warm_assertion(arena, not_cond);
         if self.needs_memory_route_for_current_path()
-            || IncrementalBvSolver::term_needs_deferred_theory(arena, encoded_cond)
-            || IncrementalBvSolver::term_needs_deferred_theory(arena, encoded_not_cond)
+            || !IncrementalBvSolver::term_supported_by_warm_abstraction(arena, encoded_cond)
+            || !IncrementalBvSolver::term_supported_by_warm_abstraction(arena, encoded_not_cond)
         {
             return self.branch_with_memory(arena, cond);
         }
@@ -1346,18 +1347,18 @@ fn status_or_unknown(result: Result<CheckResult, SolverError>) -> Result<PathSta
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_ir::{Assignment, Sort, Value, eval};
+    use axeyum_ir::{ArraySortKey, Assignment, Sort, Value, eval};
 
     fn x(arena: &mut TermArena) -> TermId {
         arena.bv_var("x", 8).unwrap()
     }
 
     #[test]
-    fn branch_over_uninterpreted_call_auto_uses_theory_route() {
+    fn branch_over_scalar_uf_auto_stays_warm() {
         // Modeling an unmodeled library/syscall as an uninterpreted `g`: branching
         // on `g(x) == 5` must not require callers to pick the explicit
-        // memory/theory-aware entry point. `branch` detects `Apply` and routes the
-        // feasibility check through the full dispatcher.
+        // memory/theory-aware entry point. The scalar Bool/BV UF slice should now
+        // stay on the retained warm abstraction route.
         let mut arena = TermArena::new();
         let xv = x(&mut arena);
         let g = arena
@@ -1367,9 +1368,11 @@ mod tests {
         let five = arena.bv_const(8, 5).unwrap();
         let cond = arena.eq(gx, five).unwrap();
         let mut exec = SymbolicExecutor::new();
+        let clauses_before = exec.solver.encoded_clause_count();
         let branch = exec
             .branch(&mut arena, cond)
-            .expect("branch should auto-route a UF condition");
+            .expect("branch should auto-route a scalar UF condition");
+        let clauses_after = exec.solver.encoded_clause_count();
         assert!(
             branch.if_true.is_feasible(),
             "UF branch then-direction should be feasible, got {:?}",
@@ -1379,6 +1382,59 @@ mod tests {
             branch.if_false.is_feasible(),
             "UF branch else-direction should be feasible, got {:?}",
             branch.if_false
+        );
+        assert!(
+            clauses_after > clauses_before,
+            "scalar UF branch should encode warm one-shot assumptions instead of using the dispatcher"
+        );
+        assert!(
+            !exec.solver.has_deferred_theory_assertions(),
+            "one-shot scalar UF branch queries must not persist as deferred theory assertions"
+        );
+    }
+
+    #[test]
+    fn branch_over_bv_array_select_auto_stays_warm() {
+        let mut arena = TermArena::new();
+        let mem_sym = arena
+            .declare(
+                "branch_warm_select_mem",
+                Sort::Array {
+                    index: ArraySortKey::BitVec(8),
+                    element: ArraySortKey::BitVec(8),
+                },
+            )
+            .unwrap();
+        let idx = arena.bv_var("branch_warm_select_idx", 8).unwrap();
+        let mem = arena.var(mem_sym);
+        let loaded = arena.select(mem, idx).unwrap();
+        let target = arena.bv_const(8, 0x5a).unwrap();
+        let cond = arena.eq(loaded, target).unwrap();
+
+        let mut exec = SymbolicExecutor::new();
+        let clauses_before = exec.solver.encoded_clause_count();
+        let branch = exec
+            .branch(&mut arena, cond)
+            .expect("branch should auto-route a BV-array select condition");
+        let clauses_after = exec.solver.encoded_clause_count();
+
+        assert!(
+            branch.if_true.is_feasible(),
+            "array-select branch then-direction should be feasible, got {:?}",
+            branch.if_true
+        );
+        assert!(
+            branch.if_false.is_feasible(),
+            "array-select branch else-direction should be feasible, got {:?}",
+            branch.if_false
+        );
+        assert!(
+            clauses_after > clauses_before,
+            "BV-array select branch should encode warm one-shot assumptions instead of using the dispatcher"
+        );
+        assert!(
+            !exec.solver.has_deferred_theory_assertions(),
+            "one-shot select branch queries must not persist as deferred theory assertions"
         );
     }
 
