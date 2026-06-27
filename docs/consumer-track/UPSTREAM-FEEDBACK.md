@@ -50,14 +50,15 @@ Last reconciled with `main`: 2026-06-27.
   are scoped, `check_with_memory` / `check_assuming_with_memory` dispatch through
   the full solver, and `SymbolicExecutor` / CFG exploration auto-route array/UF
   queries to that memory-aware path. A narrow warm slice also landed for
-  syntactic same-index read-over-write assertions: the warm solver encodes the
-  simplified BV term while retaining the original memory assertion for replay.
+  syntactic same-index read-over-write assertions and branch assumptions: the
+  warm solver encodes the simplified BV term while retaining the original memory
+  term for replay and assumption-core reporting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
   are central for EVM and verifier frontends. The one-shot fallback removes a
   frontend footgun and lets consumers keep arrays/UFs in path conditions, and
   the same-index ROW slice avoids the dispatcher for simple store/read-back
-  constraints, but general array/UF work still rebuilds through the dispatcher
-  instead of retaining warm learned clauses.
+  path constraints and fork queries, but general array/UF work still rebuilds
+  through the dispatcher instead of retaining warm learned clauses.
 - **Ask:** finish the ADR-0030 half: a true warm lazy-array/UF incremental route
   with retained theory clauses / learned lemmas / push-pop reuse. Until that
   exists, document the one-shot fallback as sound but not the final performance

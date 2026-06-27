@@ -2014,6 +2014,113 @@ fn assume_auto_keeps_same_index_memory_condition_on_warm_path() {
     );
 }
 
+#[test]
+fn warm_assumption_simplifies_same_index_read_over_write() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "warm_assume_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("warm_assume_i", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("warm_assume_v", Sort::BitVec(8)).unwrap();
+    let (i, v) = (arena.var(is), arena.var(vs));
+    let target = arena.bv_const(8, 19).unwrap();
+    let v_eq_target = arena.eq(v, target).unwrap();
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, i).unwrap();
+    let cond = arena.eq(loaded, target).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, v_eq_target).unwrap();
+    assert!(
+        solver.check_assuming(&arena, &[cond]).is_err(),
+        "the ordinary warm assumption route should still refuse raw array terms"
+    );
+
+    match solver
+        .check_assuming_simplifying_memory(&mut arena, &[cond])
+        .unwrap()
+    {
+        CheckResult::Sat(model) => assert_eq!(
+            model.get(vs),
+            Some(Value::Bv {
+                width: 8,
+                value: 19
+            })
+        ),
+        other => panic!("expected warm assumption sat, got {other:?}"),
+    }
+    assert_eq!(
+        solver
+            .check_assuming_simplifying_memory(&mut arena, &[not_cond])
+            .unwrap(),
+        CheckResult::Unsat,
+        "v = target contradicts not(select(store(mem,i,v),i) = target)"
+    );
+    match solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[not_cond])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => assert_eq!(core, vec![not_cond]),
+        other => panic!("expected warm assumption core, got {other:?}"),
+    }
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "one-shot ROW assumptions should not persist as deferred theory assertions"
+    );
+}
+
+#[test]
+fn branch_simplifies_same_index_memory_condition_on_warm_path() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "branch_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("branch_i", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("branch_v", Sort::BitVec(8)).unwrap();
+    let (i, v) = (arena.var(is), arena.var(vs));
+    let target = arena.bv_const(8, 7).unwrap();
+    let v_eq_target = arena.eq(v, target).unwrap();
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, i).unwrap();
+    let cond = arena.eq(loaded, target).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(executor.assume(&arena, v_eq_target).unwrap().is_feasible());
+    let branch = executor.branch(&mut arena, cond).unwrap();
+    assert!(
+        branch.if_true.is_feasible(),
+        "read-back equality should be feasible under v = target"
+    );
+    assert!(
+        branch.if_false.is_infeasible(),
+        "negated read-back equality should be pruned by the warm simplified assumption"
+    );
+    assert_eq!(
+        executor.path_condition(),
+        &[v_eq_target],
+        "branch queries must remain one-shot and not commit either direction"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should still work after a simplified branch query"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.

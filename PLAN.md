@@ -2252,8 +2252,9 @@ and `check_assuming_with_memory` dispatch them through the full pure-Rust solver
 `SymbolicExecutor` exposes memory-aware assume/branch/status/model calls,
 auto-routes `branch` and CFG branch/assume/status/model queries to that path
 when arrays or UFs appear, and now keeps syntactic same-index read-over-write
-assertions warm by encoding the simplified BV term while retaining the original
-memory assertion for replay. `SymbolicMemory` also provides a typed frontend
+assertions and one-shot branch assumptions warm by encoding the simplified BV
+term while retaining the original memory term for replay and core reporting.
+`SymbolicMemory` also provides a typed frontend
 helper for array-backed `load`/`store`, load-equality branch/assume queries, and
 conservative write-log normalization that drops shadowed same-index writes before
 emitting compact read-over-write `ite` chains.

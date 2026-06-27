@@ -83,6 +83,12 @@ struct Frame {
     deferred_assertions: Vec<TermId>,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct OneShotAssumption {
+    original: TermId,
+    encoded: TermId,
+}
+
 /// A warm, incremental pure-Rust bit-vector solver.
 ///
 /// Bound to a single [`TermArena`] over its lifetime (term IDs are arena-stable
@@ -397,6 +403,25 @@ impl IncrementalBvSolver {
         Ok(self.solve_with_extra(arena, assumptions)?.0)
     }
 
+    /// Checks one-shot assumptions after applying the same narrow warm-safe
+    /// memory simplification used by [`Self::assert_simplifying_memory`].
+    ///
+    /// This lets branch/fork queries over syntactic same-index read-over-write
+    /// conditions stay on the warm BV path. The original assumptions are still
+    /// replayed against any returned model and reported in any assumption core.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::check_assuming`].
+    pub fn check_assuming_simplifying_memory(
+        &mut self,
+        arena: &mut TermArena,
+        assumptions: &[TermId],
+    ) -> Result<CheckResult, SolverError> {
+        let assumptions = Self::simplified_one_shot_assumptions(arena, assumptions)?;
+        Ok(self.solve_with_encoded_extra(arena, &assumptions)?.0)
+    }
+
     /// Like [`Self::check_assuming`], but on `unsat` also returns the
     /// **assumption core**: the subset of `assumptions` already jointly
     /// inconsistent with the active assertions. The rest of the assumptions are
@@ -421,6 +446,26 @@ impl IncrementalBvSolver {
         assumptions: &[TermId],
     ) -> Result<AssumptionOutcome, SolverError> {
         let (result, core) = self.solve_with_extra(arena, assumptions)?;
+        Ok(match result {
+            CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
+            CheckResult::Unsat => AssumptionOutcome::Unsat { core },
+            CheckResult::Unknown(reason) => AssumptionOutcome::Unknown(reason),
+        })
+    }
+
+    /// Like [`Self::check_assuming_simplifying_memory`], but on `unsat` returns
+    /// a core in terms of the original, unsimplified assumptions.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::check_assuming_core`].
+    pub fn check_assuming_core_simplifying_memory(
+        &mut self,
+        arena: &mut TermArena,
+        assumptions: &[TermId],
+    ) -> Result<AssumptionOutcome, SolverError> {
+        let assumptions = Self::simplified_one_shot_assumptions(arena, assumptions)?;
+        let (result, core) = self.solve_with_encoded_extra(arena, &assumptions)?;
         Ok(match result {
             CheckResult::Sat(model) => AssumptionOutcome::Sat(model),
             CheckResult::Unsat => AssumptionOutcome::Unsat { core },
@@ -492,6 +537,24 @@ impl IncrementalBvSolver {
         self.assert(arena, clause)
     }
 
+    fn simplified_one_shot_assumptions(
+        arena: &mut TermArena,
+        assumptions: &[TermId],
+    ) -> Result<Vec<OneShotAssumption>, SolverError> {
+        assumptions
+            .iter()
+            .map(|&term| {
+                if arena.sort_of(term) != Sort::Bool {
+                    return Err(SolverError::NonBooleanAssertion(term));
+                }
+                Ok(OneShotAssumption {
+                    original: term,
+                    encoded: Self::simplify_memory_for_warm_assertion(arena, term),
+                })
+            })
+            .collect()
+    }
+
     /// Core solve. Returns the [`CheckResult`] and, on an `unsat` under
     /// assumptions, the subset of `assumptions` (as `TermId`s) the solver found
     /// sufficient for the contradiction — its final-conflict core, the
@@ -501,6 +564,21 @@ impl IncrementalBvSolver {
         &mut self,
         arena: &TermArena,
         assumptions: &[TermId],
+    ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
+        let assumptions = assumptions
+            .iter()
+            .map(|&term| OneShotAssumption {
+                original: term,
+                encoded: term,
+            })
+            .collect::<Vec<_>>();
+        self.solve_with_encoded_extra(arena, &assumptions)
+    }
+
+    fn solve_with_encoded_extra(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[OneShotAssumption],
     ) -> Result<(CheckResult, Vec<TermId>), SolverError> {
         // The warm path does not bit-blast arrays or UFs; if any deferred theory
         // assertion is active, refuse rather than silently ignore it (which would
@@ -517,24 +595,34 @@ impl IncrementalBvSolver {
         // is assumed only for this solve, so it does not persist as a hard
         // constraint after the check returns.
         let mut ephemeral = Vec::with_capacity(assumptions.len());
-        for &term in assumptions {
-            if arena.sort_of(term) != Sort::Bool {
-                return Err(SolverError::NonBooleanAssertion(term));
+        for assumption in assumptions {
+            if arena.sort_of(assumption.original) != Sort::Bool {
+                return Err(SolverError::NonBooleanAssertion(assumption.original));
             }
-            if needs_deferred_theory(arena, term) {
+            if arena.sort_of(assumption.encoded) != Sort::Bool {
+                return Err(SolverError::Backend(format!(
+                    "memory simplification changed Boolean assumption #{} to non-Boolean term #{}",
+                    assumption.original.index(),
+                    assumption.encoded.index()
+                )));
+            }
+            if needs_deferred_theory(arena, assumption.encoded) {
                 return Err(SolverError::Unsupported(
                     "array/UF assumption: use check_assuming_with_memory (the warm path does not \
                      bit-blast deferred theories)"
                         .to_owned(),
                 ));
             }
-            if let Some((unsupported, op)) = first_unsupported_op(arena, &[term]) {
+            if let Some((unsupported, op)) = first_unsupported_op(arena, &[assumption.encoded]) {
                 return Err(SolverError::Unsupported(format!(
                     "term #{} uses unsupported pure-Rust BV operator {op:?}",
                     unsupported.index()
                 )));
             }
-            let lowered = self.lowering.lower(arena, term).map_err(map_lower_error)?;
+            let lowered = self
+                .lowering
+                .lower(arena, assumption.encoded)
+                .map_err(map_lower_error)?;
             let root = lowered.bits()[0];
             let selector = self
                 .cnf
@@ -572,7 +660,8 @@ impl IncrementalBvSolver {
                 // cannot evaluate a term (e.g. an arithmetic overflow), the model
                 // is unverifiable: degrade to a graceful `Unknown` rather than
                 // accepting an unchecked sat or crashing.
-                if let Some(reason) = self.replay(arena, assumptions, &model)? {
+                let original_assumptions = original_assumptions(assumptions);
+                if let Some(reason) = self.replay(arena, &original_assumptions, &model)? {
                     return Ok((CheckResult::Unknown(reason), Vec::new()));
                 }
                 Ok((CheckResult::Sat(model), Vec::new()))
@@ -586,11 +675,11 @@ impl IncrementalBvSolver {
                 let mut core = Vec::new();
                 for lit in &evidence.failed_assumptions {
                     if let Some(i) = ephemeral.iter().position(|&sel| sel == lit.var()) {
-                        core.push(assumptions[i]);
+                        core.push(assumptions[i].original);
                     }
                 }
                 if core.is_empty() && !assumptions.is_empty() {
-                    core.extend_from_slice(assumptions);
+                    core.extend(original_assumptions(assumptions));
                 }
                 Ok((CheckResult::Unsat, core))
             }
@@ -743,6 +832,13 @@ fn collapse_same_index_read_over_write(arena: &TermArena, term: TermId) -> Optio
         return None;
     };
     (write_index == read_index).then_some(*value)
+}
+
+fn original_assumptions(assumptions: &[OneShotAssumption]) -> Vec<TermId> {
+    assumptions
+        .iter()
+        .map(|assumption| assumption.original)
+        .collect()
 }
 
 fn complete_model(arena: &TermArena, assignment: &Assignment) -> Model {

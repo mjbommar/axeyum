@@ -748,18 +748,32 @@ impl SymbolicExecutor {
     /// when the current path or the branch condition contains arrays
     /// (`select`/`store`) or uninterpreted-function applications. This preserves
     /// the fast warm BV path for pure-BV queries but avoids returning a coarse
-    /// `Unknown` solely because a branch mentions symbolic memory or a UF.
+    /// `Unknown` solely because a branch mentions symbolic memory or a UF. The
+    /// narrow same-index read-over-write fragment is simplified first, so simple
+    /// store/read-back fork queries can still use the warm path.
     ///
     /// # Errors
     ///
     /// Returns [`SolverError`] if building `¬cond` or a feasibility check fails.
     pub fn branch(&mut self, arena: &mut TermArena, cond: TermId) -> Result<Branch, SolverError> {
-        if self.needs_memory_route_for_term(arena, cond) {
+        let not_cond = arena.not(cond)?;
+        let encoded_cond = IncrementalBvSolver::simplify_memory_for_warm_assertion(arena, cond);
+        let encoded_not_cond =
+            IncrementalBvSolver::simplify_memory_for_warm_assertion(arena, not_cond);
+        if self.needs_memory_route_for_current_path()
+            || IncrementalBvSolver::term_needs_deferred_theory(arena, encoded_cond)
+            || IncrementalBvSolver::term_needs_deferred_theory(arena, encoded_not_cond)
+        {
             return self.branch_with_memory(arena, cond);
         }
-        let not_cond = arena.not(cond)?;
-        let if_true = status_or_unknown(self.solver.check_assuming(arena, &[cond]))?;
-        let if_false = status_or_unknown(self.solver.check_assuming(arena, &[not_cond]))?;
+        let if_true = status_or_unknown(
+            self.solver
+                .check_assuming_simplifying_memory(arena, &[cond]),
+        )?;
+        let if_false = status_or_unknown(
+            self.solver
+                .check_assuming_simplifying_memory(arena, &[not_cond]),
+        )?;
         Ok(Branch { if_true, if_false })
     }
 
@@ -1134,11 +1148,6 @@ impl SymbolicExecutor {
         objective: TermId,
     ) -> Result<OptOutcome, SolverError> {
         minimize_lia(arena, &self.path, objective)
-    }
-
-    fn needs_memory_route_for_term(&self, arena: &TermArena, term: TermId) -> bool {
-        self.needs_memory_route_for_current_path()
-            || IncrementalBvSolver::term_needs_deferred_theory(arena, term)
     }
 
     fn needs_memory_route_for_current_path(&self) -> bool {
