@@ -3497,6 +3497,11 @@ fn finite_array_extensional_eq_proof(
 /// `False`, **and** rendered to externally-checkable Lean source — never a wrong
 /// `False`.
 ///
+/// If direct reconstruction declines, the assertion spine is retried after
+/// splitting top-level conjunctions and stripping repeated top-level double
+/// negations. This accepts consumer-facing shapes such as a single
+/// `hyps ∧ ¬goal` assertion without perturbing existing direct routes.
+///
 /// # Errors
 ///
 /// Same as [`prove_unsat_to_lean`]: an [`ReconstructError`] when no reconstructor
@@ -3507,8 +3512,94 @@ pub fn prove_unsat_to_lean_module(
     assertions: &[TermId],
 ) -> Result<(ProofFragment, String), ReconstructError> {
     let fragment = scan_proof_fragment(arena, assertions);
-    let source = reconstruct_proof_fragment_to_lean_module(fragment, arena, assertions)?;
-    Ok((fragment, source))
+    match reconstruct_proof_fragment_to_lean_module(fragment, arena, assertions) {
+        Ok(source) => Ok((fragment, source)),
+        Err(original_error) if should_retry_with_normalized_lean_input(&original_error) => {
+            let normalized_assertions = normalize_lean_assertion_inputs(arena, assertions);
+            let normalized = normalized_assertions.as_slice();
+            if normalized == assertions {
+                return Err(original_error);
+            }
+            let fragment = scan_proof_fragment(arena, normalized);
+            let source = reconstruct_proof_fragment_to_lean_module(fragment, arena, normalized)?;
+            Ok((fragment, source))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn should_retry_with_normalized_lean_input(error: &ReconstructError) -> bool {
+    matches!(
+        error,
+        ReconstructError::UnsupportedTerm { .. }
+            | ReconstructError::UnsupportedRule { .. }
+            | ReconstructError::MalformedStep { .. }
+            | ReconstructError::UnsupportedResolution { .. }
+    )
+}
+
+/// Normalizes the assertion spine accepted by the Lean reconstruction facade.
+///
+/// Several reconstructors intentionally recognize small, checkable fragments over
+/// a slice of top-level facts. Consumer frontends naturally pass the same facts as
+/// one `and` tree or wrap a goal negation in `not (not ...)`; both are equivalent
+/// to the fact slice under the classical SMT semantics the solver checks. This is
+/// used only as a fallback after direct reconstruction declines, so existing
+/// route-specific audit behavior is preserved. Keep it deliberately shallow:
+/// only the top-level assertion spine is split, and only repeated top-level
+/// double negations are removed.
+fn normalize_lean_assertion_inputs(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
+    let mut normalized = Vec::new();
+    for &assertion in assertions {
+        collect_normalized_lean_assertion(arena, assertion, &mut normalized);
+    }
+    normalized
+}
+
+fn collect_normalized_lean_assertion(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    let term = strip_top_double_negations(arena, term);
+    if let IrTermNode::App {
+        op: IrOp::BoolAnd,
+        args,
+    } = arena.node(term)
+    {
+        if let [left, right] = &**args {
+            collect_normalized_lean_assertion(arena, *left, out);
+            collect_normalized_lean_assertion(arena, *right, out);
+            return;
+        }
+    }
+    out.push(term);
+}
+
+fn strip_top_double_negations(arena: &TermArena, mut term: TermId) -> TermId {
+    loop {
+        let Some(inner) = (match arena.node(term) {
+            IrTermNode::App {
+                op: IrOp::BoolNot,
+                args,
+            } => match &**args {
+                [inner] => Some(*inner),
+                _ => None,
+            },
+            _ => None,
+        }) else {
+            return term;
+        };
+        let Some(grandchild) = (match arena.node(inner) {
+            IrTermNode::App {
+                op: IrOp::BoolNot,
+                args,
+            } => match &**args {
+                [grandchild] => Some(*grandchild),
+                _ => None,
+            },
+            _ => None,
+        }) else {
+            return term;
+        };
+        term = grandchild;
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -3779,6 +3870,24 @@ fn reconstruct_qf_abv_to_lean_source(
 /// Returns a [`ReconstructError`] when the query is not classified as the `Sos`
 /// fragment, or the SOS reconstruction does not kernel-check to `False`.
 pub fn reconstruct_sos_to_lean_module(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<String, ReconstructError> {
+    match reconstruct_sos_to_lean_module_raw(arena, assertions) {
+        Ok(source) => Ok(source),
+        Err(original_error) if should_retry_with_normalized_lean_input(&original_error) => {
+            let normalized_assertions = normalize_lean_assertion_inputs(arena, assertions);
+            let normalized = normalized_assertions.as_slice();
+            if normalized == assertions {
+                return Err(original_error);
+            }
+            reconstruct_sos_to_lean_module_raw(arena, normalized)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn reconstruct_sos_to_lean_module_raw(
     arena: &TermArena,
     assertions: &[TermId],
 ) -> Result<String, ReconstructError> {

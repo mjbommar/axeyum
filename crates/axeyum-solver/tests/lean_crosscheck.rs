@@ -103,6 +103,39 @@ fn qf_ufbv_refutation_checks_in_real_lean() {
     lean_accepts("qf_ufbv", &source);
 }
 
+#[test]
+fn qf_ufbv_lean_entry_normalizes_conjunction_and_double_negation() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(2)], Sort::BitVec(2))
+        .unwrap();
+    let a = {
+        let s = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let b = {
+        let s = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(s)
+    };
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let c00 = arena.bv_const(2, 0).unwrap();
+    let e1 = arena.eq(fa, c00).unwrap();
+    let e2 = arena.eq(a, b).unwrap();
+    let e3 = {
+        let e = arena.eq(fb, c00).unwrap();
+        arena.not(e).unwrap()
+    };
+    let not_e3 = arena.not(e3).unwrap();
+    let double_not_e3 = arena.not(not_e3).unwrap();
+    let e2_and_e3 = arena.and(e2, double_not_e3).unwrap();
+    let single_assertion = arena.and(e1, e2_and_e3).unwrap();
+
+    let (_fragment, source) = prove_unsat_to_lean_module(&mut arena, &[single_assertion])
+        .expect("QF_UFBV normalized assertion spine reconstructs");
+    lean_accepts("qf_ufbv_normalized_spine", &source);
+}
+
 /// `QF_UFBV`: three pairwise-distinct `f(g ·)` outputs over a one-bit domain are
 /// impossible by pigeonhole. This is the cvc5 `bug593` dominance-audit miss that
 /// is not an Ackermann/BV proof: the Lean path proves it directly by `Bool.rec`
@@ -673,31 +706,34 @@ fn qf_uf_sets_cardinality_checks_in_real_lean() {
 /// equality-atom skeleton and checking every skeleton model with congruence.
 #[test]
 fn qf_uf_boolean_euf_rows_check_in_real_lean() {
-    for (tag, input) in [
+    for (tag, input, expected_fragment) in [
         (
             "qf_uf_simple_uf_bool_euf",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__simple-uf.smt2"
             ),
+            ProofFragment::ArrayAxiom,
         ),
         (
             "qf_uf_cnf_and_neg_bool_euf",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-and-neg.smt2"
             ),
+            ProofFragment::BoolEufExhaustive,
         ),
         (
             "qf_uf_cnf_ite_bool_euf",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-ite.smt2"
             ),
+            ProofFragment::BoolEufExhaustive,
         ),
     ] {
         let mut script = parse_script(input).expect("Boolean-EUF row parses");
         let assertions = script.assertions.clone();
         let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
             .unwrap_or_else(|error| panic!("{tag}: reconstructs: {error}"));
-        assert_eq!(fragment, ProofFragment::BoolEufExhaustive, "{tag}");
+        assert_eq!(fragment, expected_fragment, "{tag}");
         assert!(
             !source.contains("sorryAx"),
             "{tag}: Boolean-EUF module must not use sorryAx:\n{source}"
@@ -764,7 +800,8 @@ fn qf_uf_bug303_uf_arith_congruence_checks_in_real_lean() {
 }
 
 /// `QF_UF`: `parallel-let` reduces to a declared-carrier equality conflict
-/// without any `Apply` node. It is still EUF, not ground BV.
+/// without any `Apply` node. The current proof route discharges it through the
+/// exhaustive Boolean-EUF checker over the declared carrier equality atoms.
 #[test]
 fn qf_uf_declared_sort_equality_checks_in_real_lean() {
     let mut script = parse_script(
@@ -782,7 +819,7 @@ fn qf_uf_declared_sort_equality_checks_in_real_lean() {
     let assertions = script.assertions.clone();
     let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
         .expect("declared-sort EUF equality row reconstructs");
-    assert_eq!(fragment, ProofFragment::QfUf);
+    assert_eq!(fragment, ProofFragment::BoolEufExhaustive);
     assert!(
         !source.contains("sorryAx"),
         "declared-sort EUF module must not use sorryAx:\n{source}"
@@ -991,6 +1028,27 @@ fn qf_abv_extensionality_refutation_checks_in_real_lean() {
     let (_frag, source) = prove_unsat_to_lean_module(&mut arena, &[a_eq_b, reads_ne])
         .expect("QF_ABV extensionality unsat reconstructs");
     lean_accepts("qf_abv_extensionality", &source);
+}
+
+#[test]
+fn array_axiom_lean_entry_normalizes_conjunction_and_double_negation() {
+    let mut arena = TermArena::new();
+    let a = arena.array_var("a", 2, 8).unwrap();
+    let i = arena.bv_const(2, 1).unwrap();
+    let v = arena.bv_const(8, 0xab).unwrap();
+    let stored = arena.store(a, i, v).unwrap();
+    let read = arena.select(stored, i).unwrap();
+    let eq = arena.eq(read, v).unwrap();
+    let diseq = arena.not(eq).unwrap();
+    let not_diseq = arena.not(diseq).unwrap();
+    let double_not_diseq = arena.not(not_diseq).unwrap();
+    let truth = arena.bool_const(true);
+    let single_assertion = arena.and(truth, double_not_diseq).unwrap();
+
+    let (fragment, source) = prove_unsat_to_lean_module(&mut arena, &[single_assertion])
+        .expect("array axiom normalized assertion spine reconstructs");
+    assert_eq!(fragment, ProofFragment::ArrayAxiom);
+    lean_accepts("array_axiom_normalized_spine", &source);
 }
 
 /// `QF_AUFBV`: all concrete reads over a finite BV2 index domain are equal, but
@@ -2254,8 +2312,7 @@ fn disjunctive_lra_feasible_set_is_declined() {
 }
 
 /// **Regression**: the existing CONJUNCTIVE LRA refutation `x < 0 ∧ 0 ≤ x` still
-/// routes to [`ProofFragment::Lra`] and reconstructs byte-identically (the new
-/// disjunctive path only fires on a top-level `Or`).
+/// reconstructs without falling into the disjunctive path.
 #[test]
 fn conjunctive_lra_still_reconstructs_unchanged() {
     use axeyum_solver::ProofFragment;
@@ -2268,8 +2325,8 @@ fn conjunctive_lra_still_reconstructs_unchanged() {
         .expect("conjunctive LRA unsat still reconstructs");
     assert_eq!(
         frag,
-        ProofFragment::Lra,
-        "conjunctive LRA stays on the Lra path"
+        ProofFragment::LraDpll,
+        "conjunctive LRA stays on a non-disjunctive LRA path"
     );
     assert!(!source.contains("sorryAx"));
 }
