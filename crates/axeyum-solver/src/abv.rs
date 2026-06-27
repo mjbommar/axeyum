@@ -6327,6 +6327,22 @@ struct ReplayScalarFollowupOrDiagnostic {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct ReplayReturnedOrStabilizationDiagnostic {
+    or_ordinal: usize,
+    or_term: TermId,
+    branch_ordinal: usize,
+    branch_term: TermId,
+    false_literal_term: TermId,
+    status: String,
+    repair_changes: usize,
+    total_false_conjuncts: Option<usize>,
+    first_global_false_ordinal: Option<usize>,
+    first_global_false_term: Option<TermId>,
+    first_global_false_eq: Option<ReplayEqFailure>,
+    first_global_false_or: Option<ReplayOrFailure>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplayScalarCandidateDiagnostic {
     target_symbol: SymbolId,
     value_term: TermId,
@@ -6340,6 +6356,7 @@ struct ReplayScalarCandidateDiagnostic {
     first_global_false_ordinal: Option<usize>,
     first_global_false_term: Option<TermId>,
     first_global_false_eq: Option<ReplayEqFailure>,
+    returned_or_stabilization: Option<ReplayReturnedOrStabilizationDiagnostic>,
     followup_or: Option<ReplayScalarFollowupOrDiagnostic>,
 }
 
@@ -6676,6 +6693,61 @@ fn write_scalar_followup_or_diagnostic(
     }
 }
 
+fn write_returned_or_stabilization_diagnostic(
+    note: &mut String,
+    diagnostic: &ReplayReturnedOrStabilizationDiagnostic,
+) {
+    let _ = write!(
+        note,
+        ",returned_or_stabilization_or_ordinal={},\
+         returned_or_stabilization_or_term={},\
+         returned_or_stabilization_branch={},\
+         returned_or_stabilization_branch_term={},\
+         returned_or_stabilization_false_literal_term={},\
+         returned_or_stabilization_status={},\
+         returned_or_stabilization_changes={}",
+        diagnostic.or_ordinal,
+        diagnostic.or_term.index(),
+        diagnostic.branch_ordinal,
+        diagnostic.branch_term.index(),
+        diagnostic.false_literal_term.index(),
+        diagnostic.status,
+        diagnostic.repair_changes
+    );
+    if let Some(total_false) = diagnostic.total_false_conjuncts {
+        let _ = write!(note, ",returned_or_stabilization_total_false={total_false}");
+    }
+    if let Some(ordinal) = diagnostic.first_global_false_ordinal {
+        let _ = write!(
+            note,
+            ",returned_or_stabilization_global_false_ordinal={ordinal}"
+        );
+    }
+    if let Some(term) = diagnostic.first_global_false_term {
+        let _ = write!(
+            note,
+            ",returned_or_stabilization_global_false_term={}",
+            term.index()
+        );
+    }
+    if let Some(eq) = &diagnostic.first_global_false_eq {
+        let _ = write!(
+            note,
+            ",returned_or_stabilization_global_false_lhs_term={},\
+             returned_or_stabilization_global_false_rhs_term={},\
+             returned_or_stabilization_global_false_lhs_value={},\
+             returned_or_stabilization_global_false_rhs_value={}",
+            eq.lhs_term.index(),
+            eq.rhs_term.index(),
+            eq.lhs_value,
+            eq.rhs_value
+        );
+    }
+    if let Some(or_failure) = &diagnostic.first_global_false_or {
+        write_compact_or_failure(note, "returned_or_stabilization_global_false", or_failure);
+    }
+}
+
 fn write_scalar_candidate_diagnostics(
     note: &mut String,
     diagnostics: &[ReplayScalarCandidateDiagnostic],
@@ -6722,6 +6794,9 @@ fn write_scalar_candidate_diagnostics(
         }
         if let Some(followup) = &diagnostic.followup_or {
             write_scalar_followup_or_diagnostic(note, followup);
+        }
+        if let Some(stabilization) = &diagnostic.returned_or_stabilization {
+            write_returned_or_stabilization_diagnostic(note, stabilization);
         }
     }
     let _ = write!(note, "]");
@@ -7725,6 +7800,92 @@ fn scalar_followup_next_or_status(
     }
 }
 
+fn returned_or_stabilization_status(total_false: usize, baseline_false: usize) -> &'static str {
+    if total_false == 0 {
+        "closes"
+    } else if total_false < baseline_false {
+        "improves"
+    } else if total_false == baseline_false {
+        "same"
+    } else {
+        "worse"
+    }
+}
+
+fn replay_returned_or_stabilization_diagnostic(
+    arena: &TermArena,
+    originals: &[TermId],
+    baseline_false: usize,
+    global_failure: Option<&ReplayFailure>,
+    scalar_trial: &Assignment,
+) -> Result<Option<ReplayReturnedOrStabilizationDiagnostic>, SolverError> {
+    let Some(global_failure) = global_failure else {
+        return Ok(None);
+    };
+    let Some(or_failure) = &global_failure.failed_or else {
+        return Ok(None);
+    };
+    if or_failure.best_branch_false_literals != 1 {
+        return Ok(None);
+    }
+    let Some(false_literal) = or_failure.best_branch_first_false_term else {
+        return Ok(None);
+    };
+    if store_base_repair_target(arena, false_literal).is_none()
+        && direct_array_equality_repair_target(arena, false_literal).is_none()
+    {
+        return Ok(None);
+    }
+
+    let mut trial = scalar_trial.clone();
+    let mut stats = ProjectionRepairStats::default();
+    if !repair_projected_branch_literal_in_branch(
+        arena,
+        originals,
+        or_failure.best_branch_term,
+        false_literal,
+        &mut trial,
+        &mut stats,
+    )? {
+        return Ok(Some(ReplayReturnedOrStabilizationDiagnostic {
+            or_ordinal: global_failure.conjunct_ordinal,
+            or_term: global_failure.conjunct_term,
+            branch_ordinal: or_failure.best_branch_ordinal,
+            branch_term: or_failure.best_branch_term,
+            false_literal_term: false_literal,
+            status: "no_repair".to_owned(),
+            repair_changes: 0,
+            total_false_conjuncts: None,
+            first_global_false_ordinal: None,
+            first_global_false_term: None,
+            first_global_false_eq: None,
+            first_global_false_or: None,
+        }));
+    }
+
+    let total_false = positive_replay_false_count(arena, originals, &trial)?;
+    let next_failure =
+        first_projected_replay_failure(arena, originals, &trial, ProjectionRepairStats::default())?;
+    Ok(Some(ReplayReturnedOrStabilizationDiagnostic {
+        or_ordinal: global_failure.conjunct_ordinal,
+        or_term: global_failure.conjunct_term,
+        branch_ordinal: or_failure.best_branch_ordinal,
+        branch_term: or_failure.best_branch_term,
+        false_literal_term: false_literal,
+        status: returned_or_stabilization_status(total_false, baseline_false).to_owned(),
+        repair_changes: stats.changes(),
+        total_false_conjuncts: Some(total_false),
+        first_global_false_ordinal: next_failure
+            .as_ref()
+            .map(|failure| failure.conjunct_ordinal),
+        first_global_false_term: next_failure.as_ref().map(|failure| failure.conjunct_term),
+        first_global_false_eq: next_failure
+            .as_ref()
+            .and_then(|failure| failure.failed_eq.clone()),
+        first_global_false_or: next_failure.and_then(|failure| failure.failed_or),
+    }))
+}
+
 #[allow(clippy::too_many_lines)]
 fn replay_scalar_followup_next_or_diagnostic(
     arena: &TermArena,
@@ -8097,6 +8258,13 @@ fn replay_scalar_candidate_diagnostics(
             global_failure.as_ref(),
             &trial,
         )?;
+        let returned_or_stabilization = replay_returned_or_stabilization_diagnostic(
+            arena,
+            originals,
+            total_false,
+            global_failure.as_ref(),
+            &trial,
+        )?;
         diagnostics.push(ReplayScalarCandidateDiagnostic {
             target_symbol,
             value_term,
@@ -8114,6 +8282,7 @@ fn replay_scalar_candidate_diagnostics(
             first_global_false_eq: global_failure
                 .as_ref()
                 .and_then(|failure| failure.failed_eq.clone()),
+            returned_or_stabilization,
             followup_or,
         });
     }
@@ -10764,9 +10933,9 @@ mod tests {
         array_value_from_entries, check_qf_abv_lazy, check_with_array_elimination,
         collect_base_array_entries, complete_assignment, const_array_default_mismatch_refutation,
         cross_store_array_disequality_refutation, default_value_for_symbol,
-        first_false_replay_conjunct, first_projected_replay_failure, positive_replay_false_count,
-        project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
-        repair_projected_branch_as_candidate,
+        first_false_replay_conjunct, first_projected_replay_failure,
+        positive_replay_conjunct_count, positive_replay_false_count, project_replay_ext_candidate,
+        prove_unsat_by_symmetric_swap_chain, repair_projected_branch_as_candidate,
         repair_projected_branch_best_candidate_with_scalar_closure_guard,
         repair_projected_branch_disjunctions, repair_projected_branch_scalar_choice_candidate,
         repair_projected_branch_schedule, repair_projected_replay_branch_beam,
@@ -12093,6 +12262,127 @@ mod tests {
             Value::Bool(true)
         );
         assert_eq!(eval(&arena, q, &projected).unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn lazy_ext_scalar_candidate_reports_returned_or_stabilization() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let c = arena.array_var("c", 4, 8).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let three = arena.bv_const(4, 3).unwrap();
+        let one8 = arena.bv_const(8, 1).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let q = arena.bool_var("q").unwrap();
+
+        let y_read = arena.select(a, two).unwrap();
+        let z_read_two = arena.select(c, two).unwrap();
+        let z_read_three = arena.select(c, three).unwrap();
+        let y_eq_read = arena.eq(y, y_read).unwrap();
+        let z_eq_read_two = arena.eq(z, z_read_two).unwrap();
+        let z_eq_read_three = arena.eq(z, z_read_three).unwrap();
+        let y_eq_z = arena.eq(y, z).unwrap();
+        let y_eq_one = arena.eq(y, one8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let false_term = arena.bool_const(false);
+        let branch_or = arena.or(a_eq_b, false_term).unwrap();
+        let mut assertion = arena.and(y_eq_read, z_eq_read_two).unwrap();
+        assertion = arena.and(assertion, z_eq_read_three).unwrap();
+        assertion = arena.and(assertion, y_eq_z).unwrap();
+        assertion = arena.and(assertion, y_eq_one).unwrap();
+        assertion = arena.and(assertion, branch_or).unwrap();
+        assertion = arena.and(assertion, q).unwrap();
+        for _ in 0..65 {
+            let true_term = arena.bool_const(true);
+            assertion = arena.and(true_term, assertion).unwrap();
+        }
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(b_symbol) = arena.node(b) else {
+            panic!("b should be a symbol");
+        };
+        let TermNode::Symbol(c_symbol) = arena.node(c) else {
+            panic!("c should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+
+        let default_c = default_value_for_symbol(&arena, *c_symbol).unwrap();
+        let c_with_two = store_value(
+            &default_c,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let c_with_entries = store_value(
+            &c_with_two,
+            Value::Bv { width: 4, value: 3 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let mut projected = Assignment::new();
+        projected.set(
+            *a_symbol,
+            default_value_for_symbol(&arena, *a_symbol).unwrap(),
+        );
+        projected.set(
+            *b_symbol,
+            default_value_for_symbol(&arena, *b_symbol).unwrap(),
+        );
+        projected.set(*c_symbol, c_with_entries);
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 0 });
+        projected.set(*z_symbol, Value::Bv { width: 8, value: 1 });
+        projected.set(*q_symbol, Value::Bool(false));
+
+        let originals = [assertion];
+        assert!(positive_replay_conjunct_count(&arena, &originals) > 64);
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected scalar replay failure");
+        assert_eq!(failure.conjunct_term, y_eq_z);
+        let enriched = replay_failure_with_branch_candidate_diagnostics(
+            &arena, &originals, &projected, failure,
+        )
+        .unwrap();
+        let note = enriched.note();
+        assert!(
+            note.contains(&format!(
+                "returned_or_stabilization_branch_term={}",
+                a_eq_b.index()
+            )),
+            "{note}"
+        );
+        assert!(
+            note.contains("returned_or_stabilization_status=improves"),
+            "{note}"
+        );
+        assert!(
+            note.contains("returned_or_stabilization_total_false=1"),
+            "{note}"
+        );
+        assert!(
+            note.contains(&format!(
+                "returned_or_stabilization_global_false_term={}",
+                q.index()
+            )),
+            "{note}"
+        );
     }
 
     #[test]

@@ -219,6 +219,22 @@ fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &Rou
                 "followup_next_closure_global_false_or_best_branch_first_false_term",
             ),
             (
+                "returned_or_stabilization_branch",
+                "returned_or_stabilization_branch_term",
+            ),
+            (
+                "returned_or_stabilization_false_literal",
+                "returned_or_stabilization_false_literal_term",
+            ),
+            (
+                "returned_or_stabilization_global_false_branch",
+                "returned_or_stabilization_global_false_or_best_branch_term",
+            ),
+            (
+                "returned_or_stabilization_global_false_branch_first_false",
+                "returned_or_stabilization_global_false_or_best_branch_first_false_term",
+            ),
+            (
                 "best_branch_first_false",
                 "failed_or_best_branch_first_false_term",
             ),

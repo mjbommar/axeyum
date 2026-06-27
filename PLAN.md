@@ -2126,10 +2126,18 @@ against competitor source, are now binding:
      handles the synthetic version of that shape under the strict replay gate,
      but the ungated `bug337` attempt regressed the first diagnostic phase to
      **231.8 s** and was capped at <=64 replay conjuncts; the large row is back
-     to ~**52.5 s** and remains at term **3408**. The next AUFLIA move is
-     therefore a relevance-guided or learned large-row constraint for the
-     4041/583 array-cell disagreement, not greedy single-OR forcing or more
-     local branch enumeration.
+     to ~**52.5 s** and remains at term **3408**. A diagnostic-only direct
+     returned-OR stabilization probe then ruled out the obvious large-row
+     literal repair: repairing OR **210** branch **3805** false literal
+     **583** (`x_331 = store(x_317,x_320,x_337)`) is `worse`
+     (`total_false=3`) and returns to term **3408** with values **0 vs 1**;
+     repairing OR **211** branch **4107** false literal **4041**
+     (`x_303 = x_317`) is also `worse` (`total_false=3`) and returns to term
+     **3408** with values **1 vs 0**. The next AUFLIA move is therefore a
+     paired scalar+array or relevance-guided learned large-row constraint that
+     preserves the term-3408 scalar equality while relating the 4041/583
+     array-cell disagreement, not direct single-literal repair, greedy
+     single-OR forcing, or more local branch enumeration.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
