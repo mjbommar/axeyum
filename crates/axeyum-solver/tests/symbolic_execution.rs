@@ -3332,8 +3332,12 @@ fn warm_index_ite_read_distributes_to_row_branches() {
     );
     assert_eq!(
         count_ite_nodes(&arena, simplified),
-        1,
-        "the warm encoding should retain only the scalar path choice"
+        0,
+        "the warm encoding should collapse the scalar path choice"
+    );
+    assert_eq!(
+        simplified, flag,
+        "the conditional-address read equality should simplify to the path flag"
     );
     assert!(
         !IncrementalBvSolver::term_needs_deferred_theory(&arena, simplified),
@@ -3402,8 +3406,12 @@ fn warm_index_ite_write_distributes_to_row_branches() {
     );
     assert_eq!(
         count_ite_nodes(&arena, simplified),
-        1,
-        "the warm encoding should retain only the scalar path choice"
+        0,
+        "the warm encoding should collapse the scalar path choice"
+    );
+    assert_eq!(
+        simplified, flag,
+        "the conditional-write read equality should simplify to the path flag"
     );
     assert!(
         !IncrementalBvSolver::term_needs_deferred_theory(&arena, simplified),

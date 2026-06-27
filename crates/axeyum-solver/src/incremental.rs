@@ -1483,13 +1483,28 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
                 TermNode::BoolConst(false) => return Some(*else_term),
                 _ => {}
             }
-            (*then_term == *else_term).then_some(*then_term)
+            if then_term == else_term {
+                return Some(*then_term);
+            }
+            match (arena.node(*then_term), arena.node(*else_term)) {
+                (TermNode::BoolConst(true), TermNode::BoolConst(false)) => Some(*condition),
+                (TermNode::BoolConst(false), TermNode::BoolConst(true)) => {
+                    arena.not(*condition).ok()
+                }
+                _ => None,
+            }
         }
         Op::Eq => {
             let [left, right] = args.as_slice() else {
                 return None;
             };
-            (left == right).then(|| arena.bool_const(true))
+            if left == right {
+                return Some(arena.bool_const(true));
+            }
+            if known_literal_distinct(arena, *left, *right) {
+                return Some(arena.bool_const(false));
+            }
+            distribute_eq_over_scalar_ite(arena, *left, *right)
         }
         Op::BoolNot => {
             let [arg] = args.as_slice() else {
@@ -1502,6 +1517,40 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
         }
         _ => None,
     }
+}
+
+fn distribute_eq_over_scalar_ite(
+    arena: &mut TermArena,
+    left: TermId,
+    right: TermId,
+) -> Option<TermId> {
+    if !is_warm_scalar_sort(arena.sort_of(left)) {
+        return None;
+    }
+    if let Some((condition, then_term, else_term)) = ite_parts(arena, left) {
+        let then_eq = arena.eq(then_term, right).ok()?;
+        let else_eq = arena.eq(else_term, right).ok()?;
+        return arena.ite(condition, then_eq, else_eq).ok();
+    }
+    if let Some((condition, then_term, else_term)) = ite_parts(arena, right) {
+        let then_eq = arena.eq(left, then_term).ok()?;
+        let else_eq = arena.eq(left, else_term).ok()?;
+        return arena.ite(condition, then_eq, else_eq).ok();
+    }
+    None
+}
+
+fn ite_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Ite, args, ..
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [condition, then_term, else_term] = args.as_ref() else {
+        return None;
+    };
+    Some((*condition, *then_term, *else_term))
 }
 
 fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermId> {

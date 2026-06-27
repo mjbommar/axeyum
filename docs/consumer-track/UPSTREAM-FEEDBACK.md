@@ -81,10 +81,13 @@ Last reconciled with `main`: 2026-06-27.
   Selected stores with conditional write indices split the same way before the
   generic symbolic ROW equality, so `select(store(a, ite(c, i, j), v), k)`
   becomes a scalar branch choice over two branch-local store/read terms.
-  Trivial scalar `ite`s exposed by memory rewrites collapse too, so
-  branch-merged reads whose branches simplify to the same value do not keep an
-  irrelevant merge condition; the resulting `v = v` tautology or `not true`
-  contradiction is folded before warm encoding.
+  Trivial scalar `ite`s exposed by memory rewrites collapse too, and the scalar
+  cleanup now distributes equality over Bool/BV-valued `ite`s plus folds
+  literal-distinct constant equalities and Boolean identity `ite`s. Branch reads
+  whose branches simplify to the same value do not keep an irrelevant merge
+  condition, and comparisons like `ite(flag, 1, 0) = 1` collapse to `flag`; the
+  resulting `v = v` tautology or `not true` contradiction is folded before warm
+  encoding.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -102,9 +105,10 @@ Last reconciled with `main`: 2026-06-27.
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, conditional read/write-index
-  paths, branch-merged reads whose selected branches reduce to the same scalar
-  value plus the reflexive equality/negation cleanup exposed by that reduction,
-  plain symbolic-base Bool/BV array loads, wide/BV256 storage-style base loads,
+  paths with scalar equality-over-`ite` cleanup, branch-merged reads whose
+  selected branches reduce to the same scalar value plus the reflexive
+  equality/negation cleanup exposed by that reduction, plain symbolic-base
+  Bool/BV array loads, wide/BV256 storage-style base loads,
   scalar Bool/BV UF calls, wide/BV256 keccak-style UF calls, helper-level load
   branches, reducible CFG memory branches, and fork queries, but general array/UF work still
   rebuilds through the dispatcher instead of retaining warm learned clauses.
@@ -121,6 +125,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm reflexive memory tautology pruning" /
   "Warm conditional-index read splitting" /
   "Warm conditional-write-index read splitting" /
+  "Warm scalar ITE equality cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /
