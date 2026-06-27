@@ -2269,13 +2269,14 @@ line-numbered parse errors, a public label-to-PC map, a public PC-to-source-line
 map for imported instructions, deterministic PC-to-label lookup, typed static
 CFG edges via `successors` / `cfg_edges`, source/label-aware basic blocks via
 `basic_blocks`, deterministic Graphviz DOT export for the basic-block CFG via
-`cfg_dot`, block lookup and compressed block trace paths via
-`basic_block_containing_pc` / `trace_basic_blocks`, taken CFG edge reports via
-`trace_cfg_edges`, source-aware concrete trace rows via `trace_source_steps`, a
-consolidated witness replay report via `trace_report`, and label-based
-reachability/safety query wrappers over the existing checked PC queries. P4.2
-still needs richer byte-level/binary frontend work, unbounded/certified safety,
-and eventual warm lazy theory reuse.
+`cfg_dot`, trace-highlighted DOT overlays via `cfg_dot_with_trace`, block lookup
+and compressed block trace paths via `basic_block_containing_pc` /
+`trace_basic_blocks`, taken CFG edge reports via `trace_cfg_edges`,
+source-aware concrete trace rows via `trace_source_steps`, a consolidated
+witness replay report via `trace_report`, and label-based reachability/safety
+query wrappers over the existing checked PC queries. P4.2 still needs richer
+byte-level/binary frontend work, unbounded/certified safety, and eventual warm
+lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

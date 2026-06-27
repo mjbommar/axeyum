@@ -570,6 +570,38 @@ impl TinyBvProgram {
     /// included in node labels when present, so frontend tools can render the
     /// same graph that trace reports reference without rebuilding the CFG.
     pub fn cfg_dot(&self) -> String {
+        self.cfg_dot_with_highlights(&BTreeSet::new(), &[])
+    }
+
+    /// Deterministic Graphviz DOT for the static CFG with a replay path
+    /// highlighted.
+    ///
+    /// The graph shape and labels match [`Self::cfg_dot`]. Blocks visited by
+    /// `trace` are rendered with a filled style, and rendered block-to-block
+    /// edges taken by the trace are rendered with a heavier colored stroke.
+    /// Intra-block instruction transitions remain implicit because DOT nodes
+    /// are basic blocks, not individual instructions. Public traces can be
+    /// constructed manually; PCs and transitions outside this program are
+    /// ignored by the same mapping helpers used by trace reports.
+    pub fn cfg_dot_with_trace(&self, trace: &TinyBvConcreteTrace) -> String {
+        let highlighted_blocks = self
+            .trace_basic_blocks(trace)
+            .into_iter()
+            .map(|step| step.block.start_pc)
+            .collect::<BTreeSet<_>>();
+        let highlighted_edges = self
+            .trace_cfg_edges(trace)
+            .into_iter()
+            .map(|step| step.edge)
+            .collect::<Vec<_>>();
+        self.cfg_dot_with_highlights(&highlighted_blocks, &highlighted_edges)
+    }
+
+    fn cfg_dot_with_highlights(
+        &self,
+        highlighted_blocks: &BTreeSet<usize>,
+        highlighted_edges: &[TinyBvCfgEdge],
+    ) -> String {
         let blocks = self.basic_blocks();
         let block_start_by_pc = blocks
             .iter()
@@ -578,25 +610,41 @@ impl TinyBvProgram {
         let mut dot = String::from("digraph tiny_bv_cfg {\n");
         dot.push_str("  rankdir=TB;\n");
         for block in &blocks {
-            writeln!(
-                &mut dot,
-                "  bb_{} [label=\"{}\"];",
-                block.start_pc,
-                tiny_bv_dot_escape_label(&tiny_bv_basic_block_dot_label(block))
-            )
-            .expect("writing DOT into a String cannot fail");
+            let label = tiny_bv_dot_escape_label(&tiny_bv_basic_block_dot_label(block));
+            if highlighted_blocks.contains(&block.start_pc) {
+                writeln!(
+                    &mut dot,
+                    "  bb_{} [label=\"{}\", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2];",
+                    block.start_pc, label
+                )
+                .expect("writing DOT into a String cannot fail");
+            } else {
+                writeln!(&mut dot, "  bb_{} [label=\"{}\"];", block.start_pc, label)
+                    .expect("writing DOT into a String cannot fail");
+            }
         }
         for block in &blocks {
             for edge in &block.outgoing {
                 if let Some(target_start_pc) = block_start_by_pc.get(&edge.to) {
-                    writeln!(
-                        &mut dot,
-                        "  bb_{} -> bb_{} [label=\"{}\"];",
-                        block.start_pc,
-                        target_start_pc,
-                        tiny_bv_cfg_edge_kind_dot_label(edge.kind)
-                    )
-                    .expect("writing DOT into a String cannot fail");
+                    let label = tiny_bv_cfg_edge_kind_dot_label(edge.kind);
+                    if highlighted_edges
+                        .iter()
+                        .any(|highlighted| highlighted == edge)
+                    {
+                        writeln!(
+                            &mut dot,
+                            "  bb_{} -> bb_{} [label=\"{}\", color=\"#1f6feb\", penwidth=2];",
+                            block.start_pc, target_start_pc, label
+                        )
+                        .expect("writing DOT into a String cannot fail");
+                    } else {
+                        writeln!(
+                            &mut dot,
+                            "  bb_{} -> bb_{} [label=\"{}\"];",
+                            block.start_pc, target_start_pc, label
+                        )
+                        .expect("writing DOT into a String cannot fail");
+                    }
                 }
             }
         }

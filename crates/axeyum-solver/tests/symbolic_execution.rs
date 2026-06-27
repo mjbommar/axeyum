@@ -1068,6 +1068,19 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(trace_edges[3].from_source_line, Some(7));
     assert_eq!(trace_edges[3].to_source_line, Some(8));
     assert_eq!(trace_edges[3].to_labels, vec!["win_block".to_owned()]);
+    assert_eq!(
+        program.cfg_dot_with_trace(&trace),
+        concat!(
+            "digraph tiny_bv_cfg {\n",
+            "  rankdir=TB;\n",
+            "  bb_0 [label=\"entry\\npc 0..4\\nlines 4,5,6,7\", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2];\n",
+            "  bb_4 [label=\"win_block\\npc 4..5\\nlines 8\", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2];\n",
+            "  bb_5 [label=\"lose_block\\npc 5..6\\nlines 10\"];\n",
+            "  bb_0 -> bb_4 [label=\"true\", color=\"#1f6feb\", penwidth=2];\n",
+            "  bb_0 -> bb_5 [label=\"false\"];\n",
+            "}\n",
+        )
+    );
     let report = program.trace_report(&hit.witness);
     assert_eq!(report.witness, hit.witness);
     assert_eq!(report.trace, trace);
@@ -1105,6 +1118,19 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(lose_edges[3].from_source_line, Some(7));
     assert_eq!(lose_edges[3].to_source_line, Some(10));
     assert_eq!(lose_edges[3].to_labels, vec!["lose_block".to_owned()]);
+    assert_eq!(
+        program.cfg_dot_with_trace(&lose_trace),
+        concat!(
+            "digraph tiny_bv_cfg {\n",
+            "  rankdir=TB;\n",
+            "  bb_0 [label=\"entry\\npc 0..4\\nlines 4,5,6,7\", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2];\n",
+            "  bb_4 [label=\"win_block\\npc 4..5\\nlines 8\"];\n",
+            "  bb_5 [label=\"lose_block\\npc 5..6\\nlines 10\", style=\"filled\", fillcolor=\"#e8f0ff\", penwidth=2];\n",
+            "  bb_0 -> bb_4 [label=\"true\"];\n",
+            "  bb_0 -> bb_5 [label=\"false\", color=\"#1f6feb\", penwidth=2];\n",
+            "}\n",
+        )
+    );
     let lose_report = program.trace_report(&lose_witness);
     assert_eq!(lose_report.witness, lose_witness);
     assert_eq!(lose_report.trace, lose_trace);
