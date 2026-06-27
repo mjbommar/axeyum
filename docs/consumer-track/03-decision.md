@@ -68,6 +68,6 @@ over a proven core.
   instruction is superseded for this session by the thread rule to stay on
   `main`.
 - Task 44 (build): continue **B (`axeyum-property` v0)** from the committed
-  typed Bool/BV/Int proof slice: add ergonomic operator traits, extend the
-  native-scalar counterexample-to-`#[test]` layer to structured/domain replay,
-  and add the SDK scoreboard gate before moving to D, A, C.
+  typed Bool/BV/Int proof slice: add ergonomic operator traits, extend
+  counterexample-to-`#[test]` output to nested/domain replay bodies, and add the
+  SDK scoreboard gate before moving to D, A, C.

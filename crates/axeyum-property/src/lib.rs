@@ -32,6 +32,15 @@ pub enum PropertyError {
         /// The value that could not be rendered.
         value: Value,
     },
+    /// A requested Rust aggregate counterexample binding cannot be rendered.
+    UnsupportedRustAggregate {
+        /// The requested Axeyum input root, such as `transfer`.
+        root: String,
+        /// The binding name that made the aggregate unsupported, if any.
+        binding: Option<String>,
+        /// Why the aggregate cannot be rendered by this SDK layer.
+        reason: String,
+    },
 }
 
 impl core::fmt::Display for PropertyError {
@@ -49,6 +58,23 @@ impl core::fmt::Display for PropertyError {
                     f,
                     "cannot render counterexample input `{name}` with value {value:?} as a native Rust literal"
                 )
+            }
+            PropertyError::UnsupportedRustAggregate {
+                root,
+                binding,
+                reason,
+            } => {
+                if let Some(binding) = binding {
+                    write!(
+                        f,
+                        "cannot render counterexample aggregate `{root}` because binding `{binding}` is unsupported: {reason}"
+                    )
+                } else {
+                    write!(
+                        f,
+                        "cannot render counterexample aggregate `{root}`: {reason}"
+                    )
+                }
             }
         }
     }
@@ -286,6 +312,113 @@ impl Counterexample {
         Ok(out)
     }
 
+    /// Renders a Rust named-struct binding from direct child inputs.
+    ///
+    /// The generated statement assumes [`Self::render_rust_let_bindings`] has
+    /// already emitted the scalar field bindings it references. `root_name`
+    /// selects direct children such as `transfer.enabled` and
+    /// `transfer.amount`; nested children such as `transfer.limits.fee` are
+    /// rejected because the SDK cannot infer the caller's nested Rust domain
+    /// type. `rust_type` is inserted verbatim so callers can pass a path such as
+    /// `crate::TransferInput`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any selected scalar
+    /// cannot be rendered, or [`PropertyError::UnsupportedRustAggregate`] if the
+    /// selected names do not form direct Rust named fields.
+    pub fn render_rust_named_struct_let(
+        &self,
+        root_name: &str,
+        rust_type: &str,
+        rust_ident: &str,
+    ) -> Result<String, PropertyError> {
+        let fields = self.direct_fields(root_name)?;
+        let mut out = String::new();
+        out.push_str("let ");
+        out.push_str(&sanitize_rust_ident(rust_ident));
+        out.push_str(": ");
+        out.push_str(rust_type);
+        out.push_str(" = ");
+        out.push_str(rust_type);
+        out.push_str(" {\n");
+        for (field, binding) in fields {
+            binding.render_rust_let()?;
+            let Some(field_ident) = rust_field_ident(field) else {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: Some(binding.name().to_owned()),
+                    reason: format!("field suffix `{field}` is not a Rust named field"),
+                });
+            };
+            out.push_str("    ");
+            out.push_str(&field_ident);
+            out.push_str(": ");
+            out.push_str(binding.rust_ident());
+            out.push_str(",\n");
+        }
+        out.push_str("};\n");
+        Ok(out)
+    }
+
+    /// Renders a Rust tuple-struct binding from direct numeric child inputs.
+    ///
+    /// The generated statement assumes [`Self::render_rust_let_bindings`] has
+    /// already emitted the scalar field bindings it references. `root_name`
+    /// selects direct numeric children such as `pair.0` and `pair.1`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any selected scalar
+    /// cannot be rendered, or [`PropertyError::UnsupportedRustAggregate`] if the
+    /// selected names do not form contiguous tuple positions starting at `0`.
+    pub fn render_rust_tuple_struct_let(
+        &self,
+        root_name: &str,
+        rust_type: &str,
+        rust_ident: &str,
+    ) -> Result<String, PropertyError> {
+        let mut fields = Vec::new();
+        for (field, binding) in self.direct_fields(root_name)? {
+            binding.render_rust_let()?;
+            let Ok(index) = field.parse::<usize>() else {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: Some(binding.name().to_owned()),
+                    reason: format!("field suffix `{field}` is not a tuple index"),
+                });
+            };
+            fields.push((index, binding));
+        }
+        fields.sort_by_key(|(index, _)| *index);
+        for (expected, (actual, binding)) in fields.iter().enumerate() {
+            if *actual != expected {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: Some(binding.name().to_owned()),
+                    reason: format!("tuple fields must be contiguous from 0, found {actual}"),
+                });
+            }
+        }
+
+        let mut out = String::new();
+        out.push_str("let ");
+        out.push_str(&sanitize_rust_ident(rust_ident));
+        out.push_str(": ");
+        out.push_str(rust_type);
+        out.push_str(" = ");
+        out.push_str(rust_type);
+        out.push('(');
+        for (i, (_, binding)) in fields.iter().enumerate() {
+            if i > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(binding.rust_ident());
+        }
+        out.push_str(");\n");
+        Ok(out)
+    }
+
     /// Renders a complete Rust `#[test]` skeleton.
     ///
     /// `body` is inserted after the generated input bindings and should contain
@@ -319,6 +452,36 @@ impl Counterexample {
         }
         out.push_str("}\n");
         Ok(out)
+    }
+
+    fn direct_fields<'a>(
+        &'a self,
+        root_name: &str,
+    ) -> Result<Vec<(&'a str, &'a InputBinding)>, PropertyError> {
+        let prefix = format!("{root_name}.");
+        let mut fields = Vec::new();
+        for binding in &self.bindings {
+            let Some(suffix) = binding.name().strip_prefix(&prefix) else {
+                continue;
+            };
+            if suffix.is_empty() || suffix.contains('.') {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: Some(binding.name().to_owned()),
+                    reason: "only direct scalar fields can be rendered as a Rust aggregate"
+                        .to_owned(),
+                });
+            }
+            fields.push((suffix, binding));
+        }
+        if fields.is_empty() {
+            return Err(PropertyError::UnsupportedRustAggregate {
+                root: root_name.to_owned(),
+                binding: None,
+                reason: "no direct scalar fields found for this root".to_owned(),
+            });
+        }
+        Ok(fields)
     }
 }
 
@@ -879,6 +1042,34 @@ fn sanitize_rust_ident(name: &str) -> String {
         out.push('_');
     }
     out
+}
+
+fn rust_field_ident(field: &str) -> Option<String> {
+    if let Some(raw) = field.strip_prefix("r#")
+        && is_plain_rust_ident(raw)
+        && is_rust_keyword(raw)
+    {
+        return Some(format!("r#{raw}"));
+    }
+    if !is_plain_rust_ident(field) {
+        return None;
+    }
+    if is_rust_keyword(field) {
+        Some(format!("r#{field}"))
+    } else {
+        Some(field.to_owned())
+    }
+}
+
+fn is_plain_rust_ident(ident: &str) -> bool {
+    let mut chars = ident.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !(first == '_' || first.is_ascii_alphabetic()) {
+        return false;
+    }
+    chars.all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
 }
 
 fn is_rust_keyword(ident: &str) -> bool {

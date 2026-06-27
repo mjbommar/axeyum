@@ -2,6 +2,15 @@
 
 ## Current focus
 
+- **2026-06-27 — Structured Rust counterexample snippets landed.**
+  `Counterexample` now renders aggregate Rust bindings for direct symbolic
+  input bundles: `render_rust_named_struct_let` emits `Type { field: value_id }`
+  initializers for direct named fields such as `transfer.amount`, and
+  `render_rust_tuple_struct_let` emits tuple-struct constructors for contiguous
+  numeric fields such as `pair.0`, `pair.1`. The helpers deliberately reuse the
+  replay-checked scalar let-bindings and reject nested aggregate inference
+  (`transfer.limits.fee`) until a frontend supplies its domain shape.
+
 - **2026-06-27 — Signed-order minimization metadata landed.**
   `Property::prove_minimized` now preserves signed symbolic intent during
   counterexample minimization. The solver exposes metadata-aware objectives
@@ -72,6 +81,7 @@
 ## Verification
 
 - `cargo fmt --all --check`
+- `git diff --check`
 - `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property-macros -j1 -- --nocapture`
 - `CARGO_BUILD_JOBS=2 cargo test -p axeyum-property -j1 -- --nocapture`
 - `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-property-macros --all-targets -j1 -- -D warnings`
@@ -83,6 +93,6 @@
 
 1. Add ergonomic expression construction without compromising fallible builder
    errors.
-2. Extend counterexample-to-`#[test]` output for structured inputs and
-   frontend-specific replay bodies.
+2. Extend counterexample-to-`#[test]` output for frontend-specific replay
+   bodies and nested/domain aggregate shapes.
 3. Add a graduated SDK property corpus and scoreboard gate.

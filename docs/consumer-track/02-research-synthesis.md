@@ -48,15 +48,21 @@ crates that consume `axeyum-solver` as a black box.
 committed on `main`. It provides typed `Bool`, `Bv<W>`, and `Int` handles,
 assumptions, proof and minimized-counterexample calls over the existing
 evidence APIs, typed scalar model lifting, and unsigned BV overflow helper
-predicates. Remaining v0 polish is ergonomic syntax/operator traits, structured
-counterexample-to-test output, and best-effort Lean-module packaging in the SDK
-certificate surface.
+predicates. Remaining v0 polish is ergonomic syntax/operator traits, nested or
+frontend-specific counterexample replay bodies, and best-effort Lean-module
+packaging in the SDK certificate surface.
 
 **Status update (2026-06-27, follow-up):** native scalar counterexample-to-test
 rendering is now in the crate. Disproving models become deterministic
 `Counterexample` bindings over declared SDK inputs and can render Bool, Int, and
 BV<=128 values as Rust let-bindings or a `#[test]` skeleton. Structured/domain
 replay remains caller/frontend-owned.
+
+**Status update (2026-06-27, structured replay slice):** direct symbolic
+bundles now render Rust aggregate initializer statements:
+`render_rust_named_struct_let` for direct named fields and
+`render_rust_tuple_struct_let` for contiguous tuple fields. Nested/domain replay
+still remains caller/frontend-owned.
 
 **Status update (2026-06-27, Symbolic slice):** the macro-free `Symbolic` trait
 now covers scalar Bool/unsigned-BV/Int-backed inputs and 2-/3-tuples. This gives

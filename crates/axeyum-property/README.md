@@ -17,4 +17,6 @@ either explicit builder code or a derive when their input shape is a Rust struct
 
 Disproving models can be extracted as deterministic `Counterexample` bindings
 and rendered as native Rust scalar `let` bindings or a `#[test]` skeleton with
-caller-provided replay code.
+caller-provided replay code. Direct named and tuple symbolic bundles can also
+render Rust aggregate initializer statements over those scalar bindings; nested
+or domain-specific replay remains caller-owned.

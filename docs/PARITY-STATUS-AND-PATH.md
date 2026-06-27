@@ -774,7 +774,9 @@ two's-complement order before being lifted back to Rust values. It now also
 exposes deterministic native-scalar counterexample rendering: replay-checked
 Bool, Int, unsigned BV<=128, and signed two's-complement BV input values can be
 emitted as Rust let-bindings or a `#[test]` skeleton with caller-provided domain
-replay code, while unsupported richer values decline explicitly.
+replay code. Direct named and tuple symbolic bundles can also emit Rust
+aggregate initializer statements over those scalar bindings, while nested or
+unsupported richer values decline explicitly.
 
 ## 4. Reflection on PLAN.md
 

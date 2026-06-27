@@ -270,6 +270,18 @@ fn symbolic_struct_builder_uses_named_fields_in_counterexample_order() -> TestRe
             "let transfer_balance: u16 = 0x0000_u16; // BV16\n",
         )
     );
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_named_struct_let("transfer", "TransferInput", "transfer")?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    balance: transfer_balance,\n",
+            "};\n",
+        )
+    );
     Ok(())
 }
 
@@ -327,6 +339,18 @@ fn derive_symbolic_supports_named_structs() -> TestResult {
             "let transfer_enabled: bool = false;\n",
             "let transfer_amount: u16 = 0x0001_u16; // BV16\n",
             "let transfer_balance: u16 = 0x0000_u16; // BV16\n",
+        )
+    );
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_named_struct_let("transfer", "TransferInput", "transfer")?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    balance: transfer_balance,\n",
+            "};\n",
         )
     );
     Ok(())
@@ -410,6 +434,12 @@ fn derive_symbolic_supports_tuple_structs() -> TestResult {
             "let pair_1: u8 = 0x09_u8; // BV8\n",
         )
     );
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_tuple_struct_let("pair", "Pair", "pair")?,
+        "let pair: Pair = Pair(pair_0, pair_1);\n"
+    );
     Ok(())
 }
 
@@ -454,6 +484,27 @@ fn derive_symbolic_supports_generic_and_unit_structs() -> TestResult {
             "let wrapper_inner: u8 = 0x2b_u8; // BV8\n",
             "let wrapper_enabled: bool = true;\n",
         )
+    );
+    Ok(())
+}
+
+#[test]
+fn structured_counterexample_rendering_rejects_nested_aggregate_inference() -> TestResult {
+    let mut property = Property::new();
+    let fee = property.symbolic_struct("transfer", |fields| {
+        fields.struct_field("limits", |limits| limits.field::<u8>("fee"))
+    })?;
+
+    let mut model = Model::new();
+    model.set(fee.symbol().unwrap(), Value::Bv { width: 8, value: 3 });
+
+    let err = property
+        .counterexample(&model)?
+        .render_rust_named_struct_let("transfer", "Transfer", "transfer")
+        .expect_err("nested aggregate replay needs caller-owned domain shape");
+    assert!(
+        err.to_string().contains("only direct scalar fields"),
+        "unexpected error: {err}"
     );
     Ok(())
 }

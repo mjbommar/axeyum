@@ -34,7 +34,8 @@ The committed v0 slice is intentionally thin and additive:
 - `Counterexample` / `InputBinding` render native scalar model values as Rust
   let-bindings or a `#[test]` skeleton with caller-provided replay code,
   preserving signed two's-complement Rust integer intent for signed symbolic BV
-  inputs.
+  inputs; direct named/tuple symbolic bundles can also render aggregate Rust
+  initializer statements over those scalar bindings.
 
 ## Tasks
 | id | task | exit |
@@ -42,7 +43,7 @@ The committed v0 slice is intentionally thin and additive:
 | PROP.1 | Typed scalar proof SDK | DONE — Bool/BV/Int handles, assumptions, proof/minimized proof calls, scalar model lifting, overflow predicates |
 | PROP.2 | Ergonomic expression syntax | TODO — operator traits or a small builder style that does not hide fallible construction |
 | PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms and signed counterexample minimization while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs |
-| PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; richer structured/domain replay remains |
+| PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; direct named/tuple symbolic bundles render Rust aggregate initializer statements; nested/domain replay remains frontend-owned |
 | PROP.5 | Lean certificate surface | TODO — expose `EvidenceReport` plus best-effort standalone Lean module when available |
 | PROP.6 | SDK measurement gate | TODO — committed graduated corpus and scoreboard vs proptest/Kani-style baselines, DISAGREE=0 |
 
