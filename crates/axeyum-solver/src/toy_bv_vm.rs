@@ -8,6 +8,7 @@
 //! those witnesses by independent concrete replay.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value};
 
@@ -558,6 +559,49 @@ impl TinyBvProgram {
                 }
             })
             .collect()
+    }
+
+    /// Deterministic Graphviz DOT for the static basic-block CFG.
+    ///
+    /// Nodes are the blocks returned by [`Self::basic_blocks`], in
+    /// program-counter order. Edges are the outgoing edges from each block's
+    /// terminator, mapped to the destination block, and are labelled as
+    /// `fallthrough`, `true`, or `false`. Source-line and label metadata is
+    /// included in node labels when present, so frontend tools can render the
+    /// same graph that trace reports reference without rebuilding the CFG.
+    pub fn cfg_dot(&self) -> String {
+        let blocks = self.basic_blocks();
+        let block_start_by_pc = blocks
+            .iter()
+            .flat_map(|block| (block.start_pc..block.end_pc).map(|pc| (pc, block.start_pc)))
+            .collect::<BTreeMap<_, _>>();
+        let mut dot = String::from("digraph tiny_bv_cfg {\n");
+        dot.push_str("  rankdir=TB;\n");
+        for block in &blocks {
+            writeln!(
+                &mut dot,
+                "  bb_{} [label=\"{}\"];",
+                block.start_pc,
+                tiny_bv_dot_escape_label(&tiny_bv_basic_block_dot_label(block))
+            )
+            .expect("writing DOT into a String cannot fail");
+        }
+        for block in &blocks {
+            for edge in &block.outgoing {
+                if let Some(target_start_pc) = block_start_by_pc.get(&edge.to) {
+                    writeln!(
+                        &mut dot,
+                        "  bb_{} -> bb_{} [label=\"{}\"];",
+                        block.start_pc,
+                        target_start_pc,
+                        tiny_bv_cfg_edge_kind_dot_label(edge.kind)
+                    )
+                    .expect("writing DOT into a String cannot fail");
+                }
+            }
+        }
+        dot.push_str("}\n");
+        dot
     }
 
     /// Static basic block containing `pc`.
@@ -1289,6 +1333,47 @@ impl TinyBvProgram {
         }
         leaders
     }
+}
+
+fn tiny_bv_basic_block_dot_label(block: &TinyBvBasicBlock) -> String {
+    let mut rows = Vec::new();
+    if block.labels.is_empty() {
+        rows.push(format!("bb_{}", block.start_pc));
+    } else {
+        rows.push(block.labels.join(", "));
+    }
+    rows.push(format!("pc {}..{}", block.start_pc, block.end_pc));
+    let source_lines = block
+        .source_lines
+        .iter()
+        .flatten()
+        .map(usize::to_string)
+        .collect::<Vec<_>>();
+    if !source_lines.is_empty() {
+        rows.push(format!("lines {}", source_lines.join(",")));
+    }
+    rows.join("\n")
+}
+
+fn tiny_bv_cfg_edge_kind_dot_label(kind: TinyBvCfgEdgeKind) -> &'static str {
+    match kind {
+        TinyBvCfgEdgeKind::Fallthrough => "fallthrough",
+        TinyBvCfgEdgeKind::BranchTrue => "true",
+        TinyBvCfgEdgeKind::BranchFalse => "false",
+    }
+}
+
+fn tiny_bv_dot_escape_label(label: &str) -> String {
+    let mut escaped = String::new();
+    for ch in label.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '"' => escaped.push_str("\\\""),
+            '\n' => escaped.push_str("\\n"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
 }
 
 fn finish_concrete_trace(

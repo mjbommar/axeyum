@@ -2268,7 +2268,8 @@ branch targets, register-vs-register equality branches (`beq rA rB ...`),
 line-numbered parse errors, a public label-to-PC map, a public PC-to-source-line
 map for imported instructions, deterministic PC-to-label lookup, typed static
 CFG edges via `successors` / `cfg_edges`, source/label-aware basic blocks via
-`basic_blocks`, block lookup and compressed block trace paths via
+`basic_blocks`, deterministic Graphviz DOT export for the basic-block CFG via
+`cfg_dot`, block lookup and compressed block trace paths via
 `basic_block_containing_pc` / `trace_basic_blocks`, taken CFG edge reports via
 `trace_cfg_edges`, source-aware concrete trace rows via `trace_source_steps`, a
 consolidated witness replay report via `trace_report`, and label-based

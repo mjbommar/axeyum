@@ -961,6 +961,19 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
         Some((4, 5, vec!["win_block".to_owned()]))
     );
     assert_eq!(program.basic_block_containing_pc(99), None);
+    assert_eq!(
+        program.cfg_dot(),
+        concat!(
+            "digraph tiny_bv_cfg {\n",
+            "  rankdir=TB;\n",
+            "  bb_0 [label=\"entry\\npc 0..4\\nlines 4,5,6,7\"];\n",
+            "  bb_4 [label=\"win_block\\npc 4..5\\nlines 8\"];\n",
+            "  bb_5 [label=\"lose_block\\npc 5..6\\nlines 10\"];\n",
+            "  bb_0 -> bb_4 [label=\"true\"];\n",
+            "  bb_0 -> bb_5 [label=\"false\"];\n",
+            "}\n",
+        )
+    );
 
     let reach = program
         .reach_label_checked(
