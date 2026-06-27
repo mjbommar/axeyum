@@ -173,10 +173,11 @@ impl IncrementalBvSolver {
     /// This is deliberately narrow: it folds syntactic read-over-write
     /// identities of the form `select(store(a, i, v), i)` to `v`, skips a store
     /// at a literal-distinct index (`select(store(a, c1, v), c2)` to
-    /// `select(a, c2)` when `c1 != c2` is known from constants), and collapses
-    /// reads from constant arrays to their default value. It recurses through
-    /// ordinary wrappers, but does not instantiate symbolic distinct-index
-    /// read-over-write cases, array extensionality, or UF lemmas.
+    /// `select(a, c2)` when `c1 != c2` is known from constants), collapses reads
+    /// from constant arrays to their default value, and distributes reads over
+    /// array-valued `ite`. It recurses through ordinary wrappers, but does not
+    /// instantiate symbolic distinct-index read-over-write cases, array
+    /// extensionality, or UF lemmas.
     #[must_use]
     pub fn simplify_memory_for_warm_assertion(arena: &mut TermArena, term: TermId) -> TermId {
         let mut memo = HashMap::new();
@@ -409,9 +410,9 @@ impl IncrementalBvSolver {
     /// Checks one-shot assumptions after applying the same narrow warm-safe
     /// memory simplification used by [`Self::assert_simplifying_memory`].
     ///
-    /// This lets branch/fork queries over the narrow warm read-over-write slice
-    /// stay on the warm BV path. The original assumptions are still replayed
-    /// against any returned model and reported in any assumption core.
+    /// This lets branch/fork queries over the narrow warm memory slice stay on
+    /// the warm BV path. The original assumptions are still replayed against
+    /// any returned model and reported in any assumption core.
     ///
     /// # Errors
     ///
@@ -833,6 +834,9 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
     if let Some(value) = const_array_default(arena, array) {
         return Some(value);
     }
+    if let Some(distributed) = distribute_select_over_array_ite(arena, array, read_index) {
+        return Some(distributed);
+    }
     let (base, write_index, value) = match arena.node(array) {
         TermNode::App {
             op: Op::Store,
@@ -853,6 +857,27 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         return arena.select(base, read_index).ok();
     }
     None
+}
+
+fn distribute_select_over_array_ite(
+    arena: &mut TermArena,
+    array: TermId,
+    read_index: TermId,
+) -> Option<TermId> {
+    let (condition, then_array, else_array) = match arena.node(array) {
+        TermNode::App {
+            op: Op::Ite, args, ..
+        } => {
+            let [condition, then_array, else_array] = args.as_ref() else {
+                return None;
+            };
+            (*condition, *then_array, *else_array)
+        }
+        _ => return None,
+    };
+    let then_read = arena.select(then_array, read_index).ok()?;
+    let else_read = arena.select(else_array, read_index).ok()?;
+    arena.ite(condition, then_read, else_read).ok()
 }
 
 fn const_array_default(arena: &TermArena, term: TermId) -> Option<TermId> {

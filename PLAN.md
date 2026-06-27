@@ -2255,7 +2255,9 @@ when arrays or UFs appear, and now keeps a narrow read-over-write slice warm:
 same-index store/read-back constraints collapse to the stored value, and
 literal-distinct concrete-address store misses skip the unrelated store to
 expose inner read-backs; reads from constant arrays collapse to the default
-value, covering zero-initialized toy-memory loads before any symbolic write.
+value, covering zero-initialized toy-memory loads before any symbolic write; and
+reads over array-valued `ite`s distribute to scalar branch reads, covering simple
+state-merged memories when both selected branches reduce through that slice.
 Assertions and one-shot branch assumptions encode the simplified BV term while
 retaining the original memory term for replay and core reporting.
 `SymbolicMemory` also provides a typed frontend
@@ -2265,8 +2267,8 @@ emitting compact read-over-write `ite` chains.
 `explore_cfg` now owns the DFS solver mechanics for frontend-supplied CFG states:
 branch feasibility, scope push/pop, infeasible pruning, unknown-safe traversal,
 and replay-checked target models. This is still a one-shot fallback for deferred
-theories beyond the narrow same-index / literal-distinct / const-array memory
-admission, not final warm lazy theory incrementality or a complete
+theories beyond the narrow same-index / literal-distinct / const-array /
+array-`ite` memory admission, not final warm lazy theory incrementality or a complete
 lifter/emulator frontend. The
 checked concrete replay hook now has a reusable tiny-target library surface:
 `TinyBvProgram` validates a fixed-width BV register program, lifts instructions

@@ -881,10 +881,11 @@ pub const CAPABILITIES: &[Capability] = &[
         feature: "symbolic memory and UF fallback: select/store and Op::Apply via \
                   check_with_memory plus check_assuming_with_memory one-shot branch queries \
                   (full dispatcher; syntactic same-index ROW hits, literal-distinct store \
-                  misses, and constant-array reads can stay warm with original-term replay/core \
-                  reporting; warm lazy arrays/UF = ADR-0030 future work)",
+                  misses, constant-array reads, and reducible array-valued ite reads can stay \
+                  warm with original-term replay/core reporting; warm lazy arrays/UF = ADR-0030 \
+                  future work)",
         assurance: Assurance::Validated,
-        evidence: "full dispatcher model replay; same-index/literal-distinct/const-array \
+        evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite \
                    assertion and branch warm replay; warm path refuses remaining deferred array/UF \
                    theories",
         reference: "ADR-0010/0030",

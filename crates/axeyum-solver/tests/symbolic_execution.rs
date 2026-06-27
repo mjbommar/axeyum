@@ -2370,6 +2370,144 @@ fn branch_simplifies_constant_array_store_miss_on_warm_path() {
     );
 }
 
+#[test]
+fn warm_assert_simplifies_select_over_array_ite() {
+    let mut arena = TermArena::new();
+    let flag_sym = arena
+        .declare("warm_assert_array_ite_flag", Sort::Bool)
+        .unwrap();
+    let index_sym = arena
+        .declare("warm_assert_array_ite_i", Sort::BitVec(8))
+        .unwrap();
+    let flag = arena.var(flag_sym);
+    let index = arena.var(index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let zero_memory = arena.const_array(8, zero).unwrap();
+    let one_memory = arena.const_array(8, one).unwrap();
+    let merged_memory = arena.ite(flag, zero_memory, one_memory).unwrap();
+    let loaded = arena.select(merged_memory, index).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut feasible = IncrementalBvSolver::new();
+    feasible.assert(&arena, flag).unwrap();
+    let encoded = feasible
+        .assert_simplifying_memory(&mut arena, cond)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "select-over-array-ite assertion should simplify to a pure BV condition"
+    );
+    assert!(
+        !feasible.has_deferred_theory_assertions(),
+        "select-over-array-ite assertion should stay on the warm path"
+    );
+    match feasible.check(&arena).unwrap() {
+        CheckResult::Sat(model) => assert_eq!(model.get(flag_sym), Some(Value::Bool(true))),
+        other => panic!("expected warm array-ite assertion sat, got {other:?}"),
+    }
+
+    let mut infeasible = IncrementalBvSolver::new();
+    infeasible.assert(&arena, flag).unwrap();
+    infeasible
+        .assert_simplifying_memory(&mut arena, not_cond)
+        .unwrap();
+    assert_eq!(
+        infeasible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "under flag=true, the array-ite read cannot be the else default"
+    );
+}
+
+#[test]
+fn warm_assumption_simplifies_select_over_array_ite() {
+    let mut arena = TermArena::new();
+    let flag_sym = arena
+        .declare("warm_assume_array_ite_flag", Sort::Bool)
+        .unwrap();
+    let index_sym = arena
+        .declare("warm_assume_array_ite_i", Sort::BitVec(8))
+        .unwrap();
+    let flag = arena.var(flag_sym);
+    let index = arena.var(index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let zero_memory = arena.const_array(8, zero).unwrap();
+    let one_memory = arena.const_array(8, one).unwrap();
+    let merged_memory = arena.ite(flag, zero_memory, one_memory).unwrap();
+    let loaded = arena.select(merged_memory, index).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+    let not_cond = arena.not(cond).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, flag).unwrap();
+    assert!(
+        solver.check_assuming(&arena, &[cond]).is_err(),
+        "the ordinary warm assumption route should still refuse raw array-ite terms"
+    );
+    match solver
+        .check_assuming_simplifying_memory(&mut arena, &[cond])
+        .unwrap()
+    {
+        CheckResult::Sat(model) => assert_eq!(model.get(flag_sym), Some(Value::Bool(true))),
+        other => panic!("expected warm array-ite assumption sat, got {other:?}"),
+    }
+    assert_eq!(
+        solver
+            .check_assuming_simplifying_memory(&mut arena, &[not_cond])
+            .unwrap(),
+        CheckResult::Unsat,
+        "under flag=true, the negated array-ite read equality should be unsat"
+    );
+    match solver
+        .check_assuming_core_simplifying_memory(&mut arena, &[not_cond])
+        .unwrap()
+    {
+        AssumptionOutcome::Unsat { core } => assert_eq!(core, vec![not_cond]),
+        other => panic!("expected warm array-ite assumption core, got {other:?}"),
+    }
+}
+
+#[test]
+fn branch_simplifies_select_over_array_ite_on_warm_path() {
+    let mut arena = TermArena::new();
+    let flag_sym = arena.declare("branch_array_ite_flag", Sort::Bool).unwrap();
+    let index_sym = arena
+        .declare("branch_array_ite_i", Sort::BitVec(8))
+        .unwrap();
+    let flag = arena.var(flag_sym);
+    let index = arena.var(index_sym);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let zero_memory = arena.const_array(8, zero).unwrap();
+    let one_memory = arena.const_array(8, one).unwrap();
+    let merged_memory = arena.ite(flag, zero_memory, one_memory).unwrap();
+    let loaded = arena.select(merged_memory, index).unwrap();
+    let cond = arena.eq(loaded, zero).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    assert!(executor.assume(&arena, flag).unwrap().is_feasible());
+    let branch = executor.branch(&mut arena, cond).unwrap();
+    assert!(
+        branch.if_true.is_feasible(),
+        "array-ite true branch should keep the default-zero read feasible"
+    );
+    assert!(
+        branch.if_false.is_infeasible(),
+        "array-ite false fork should be pruned under flag=true"
+    );
+    assert_eq!(
+        executor.path_condition(),
+        &[flag],
+        "array-ite branch queries must stay one-shot"
+    );
+    assert!(
+        executor.status(&arena).unwrap().is_feasible(),
+        "ordinary warm status should still work after an array-ite branch query"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.
