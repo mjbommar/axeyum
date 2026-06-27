@@ -761,13 +761,13 @@ The first bounded-property SDK crate now consumes that surface directly:
 `TermArena`, proof calls through the checked evidence APIs, minimized scalar
 countermodel lifting, reusable typed unsigned-BV overflow predicates, and a
 macro-free `Symbolic` trait for scalar/tuple declaration and model lifting. This
-now includes a `symbolic_struct` named-field builder for struct-shaped inputs
-before the derive macro exists. This is the first committed consumer-track app
-slice; it is intentionally thin and does not add solver logic. It now also
-exposes deterministic native-scalar counterexample rendering: replay-checked
-Bool, Int, and BV<=128 input values can be emitted as Rust let-bindings or a
-`#[test]` skeleton with caller-provided domain replay code, while unsupported
-richer values decline explicitly.
+now includes a `symbolic_struct` named-field builder and
+`#[derive(axeyum_property::Symbolic)]` for struct-shaped inputs. This is the
+first committed consumer-track app slice; it is intentionally thin and does not
+add solver logic. It now also exposes deterministic native-scalar counterexample
+rendering: replay-checked Bool, Int, and BV<=128 input values can be emitted as
+Rust let-bindings or a `#[test]` skeleton with caller-provided domain replay
+code, while unsupported richer values decline explicitly.
 
 ## 4. Reflection on PLAN.md
 

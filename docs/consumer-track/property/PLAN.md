@@ -24,7 +24,8 @@ The committed v0 slice is intentionally thin and additive:
 - `Symbolic` declares and lifts scalar Bool/unsigned-BV/Int-backed values plus
   2-/3-tuples with deterministic field names;
 - `Property::symbolic_struct` gives macro-free named-field bundles for
-  struct-shaped inputs before the derive macro exists;
+  struct-shaped inputs, and `#[derive(axeyum_property::Symbolic)]` lowers named
+  and tuple structs to that surface;
 - proof calls delegate to `axeyum_solver::{prove, prove_minimized}`;
 - scalar model lifting reads values from `Model`;
 - typed unsigned BV overflow predicates expose the core overflow builders.
@@ -36,7 +37,7 @@ The committed v0 slice is intentionally thin and additive:
 |---|---|---|
 | PROP.1 | Typed scalar proof SDK | DONE — Bool/BV/Int handles, assumptions, proof/minimized proof calls, scalar model lifting, overflow predicates |
 | PROP.2 | Ergonomic expression syntax | TODO — operator traits or a small builder style that does not hide fallible construction |
-| PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/i128 plus 2-/3-tuples declare and lift deterministically; `symbolic_struct` covers macro-free named-field bundles; derive macro and signed fixed-width Rust integers remain |
+| PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/i128 plus 2-/3-tuples declare and lift deterministically; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs; signed fixed-width Rust integers remain |
 | PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons; richer structured/domain replay remains |
 | PROP.5 | Lean certificate surface | TODO — expose `EvidenceReport` plus best-effort standalone Lean module when available |
 | PROP.6 | SDK measurement gate | TODO — committed graduated corpus and scoreboard vs proptest/Kani-style baselines, DISAGREE=0 |

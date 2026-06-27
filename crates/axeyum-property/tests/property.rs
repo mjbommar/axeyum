@@ -230,3 +230,115 @@ fn symbolic_struct_builder_supports_nested_field_names() -> TestResult {
     );
     Ok(())
 }
+
+#[test]
+fn derive_symbolic_supports_named_structs() -> TestResult {
+    #[derive(Debug, Clone, PartialEq, Eq, axeyum_property::Symbolic)]
+    struct TransferInput {
+        enabled: bool,
+        amount: u16,
+        balance: u16,
+    }
+
+    let mut property = Property::new();
+    let transfer = property.symbolic::<TransferInput>("transfer")?;
+    let goal = transfer.amount.ule(&mut property, transfer.balance)?;
+
+    let outcome = property.prove_minimized(goal)?;
+    let ProofOutcome::Disproved(model) = outcome else {
+        panic!("expected a minimized counterexample, got {outcome:?}");
+    };
+
+    assert_eq!(
+        property.concrete::<TransferInput>(&transfer, &model)?,
+        Some(TransferInput {
+            enabled: false,
+            amount: 1,
+            balance: 0,
+        })
+    );
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        concat!(
+            "let transfer_enabled: bool = false;\n",
+            "let transfer_amount: u16 = 0x0001_u16; // BV16\n",
+            "let transfer_balance: u16 = 0x0000_u16; // BV16\n",
+        )
+    );
+    Ok(())
+}
+
+#[test]
+fn derive_symbolic_supports_tuple_structs() -> TestResult {
+    #[derive(Debug, Clone, PartialEq, Eq, axeyum_property::Symbolic)]
+    struct Pair(bool, u8);
+
+    let mut property = Property::new();
+    let pair = property.symbolic::<Pair>("pair")?;
+
+    let mut model = Model::new();
+    model.set(pair.0.symbol().unwrap(), Value::Bool(true));
+    model.set(pair.1.symbol().unwrap(), Value::Bv { width: 8, value: 9 });
+
+    assert_eq!(
+        property.concrete::<Pair>(&pair, &model)?,
+        Some(Pair(true, 9))
+    );
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        concat!(
+            "let pair_0: bool = true;\n",
+            "let pair_1: u8 = 0x09_u8; // BV8\n",
+        )
+    );
+    Ok(())
+}
+
+#[test]
+fn derive_symbolic_supports_generic_and_unit_structs() -> TestResult {
+    #[derive(Debug, Clone, PartialEq, Eq, axeyum_property::Symbolic)]
+    struct Wrapper<T> {
+        inner: T,
+        enabled: bool,
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, axeyum_property::Symbolic)]
+    struct Empty;
+
+    let mut property = Property::new();
+    let wrapper = property.symbolic::<Wrapper<u8>>("wrapper")?;
+    property.symbolic::<Empty>("empty")?;
+
+    let mut model = Model::new();
+    model.set(
+        wrapper.inner.symbol().unwrap(),
+        Value::Bv {
+            width: 8,
+            value: 0x2b,
+        },
+    );
+    model.set(wrapper.enabled.symbol().unwrap(), Value::Bool(true));
+
+    assert_eq!(
+        property.concrete::<Wrapper<u8>>(&wrapper, &model)?,
+        Some(Wrapper {
+            inner: 43,
+            enabled: true,
+        })
+    );
+    assert_eq!(property.concrete::<Empty>(&(), &model)?, Some(Empty));
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        concat!(
+            "let wrapper_inner: u8 = 0x2b_u8; // BV8\n",
+            "let wrapper_enabled: bool = true;\n",
+        )
+    );
+    Ok(())
+}

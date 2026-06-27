@@ -49,8 +49,9 @@ committed on `main`. It provides typed `Bool`, `Bv<W>`, and `Int` handles,
 assumptions, proof and minimized-counterexample calls over the existing
 evidence APIs, typed scalar model lifting, and unsigned BV overflow helper
 predicates. Remaining v0 polish is ergonomic syntax/operator traits,
-`Symbolic`/derive support for structs, structured counterexample-to-test output,
-and best-effort Lean-module packaging in the SDK certificate surface.
+signed fixed-width Rust integer policy for `Symbolic`, structured
+counterexample-to-test output, and best-effort Lean-module packaging in the SDK
+certificate surface.
 
 **Status update (2026-06-27, follow-up):** native scalar counterexample-to-test
 rendering is now in the crate. Disproving models become deterministic
@@ -60,12 +61,17 @@ replay remains caller/frontend-owned.
 
 **Status update (2026-06-27, Symbolic slice):** the macro-free `Symbolic` trait
 now covers scalar Bool/unsigned-BV/Int-backed inputs and 2-/3-tuples. This gives
-frontends deterministic declaration and concrete model lifting before the
-`#[derive(Symbolic)]` crate exists.
+frontends deterministic declaration and concrete model lifting; follow-up slices
+add named fields and derive support.
 
 **Status update (2026-06-27, named-field slice):** `Property::symbolic_struct`
 now gives frontends macro-free struct-shaped inputs with stable field names such
-as `transfer.amount`; the later derive macro can lower to the same builder.
+as `transfer.amount`; the derive macro now lowers to the same builder.
+
+**Status update (2026-06-27, derive slice):**
+`#[derive(axeyum_property::Symbolic)]` now supports named, tuple, and unit
+structs over the same builder, including concrete model lifting for the derived
+Rust input type.
 
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted

@@ -13,6 +13,7 @@ publish = false
 
 [dependencies]
 axeyum-ir.workspace = true
+axeyum-property-macros = { path = "../axeyum-property-macros" }
 axeyum-solver = { path = "../axeyum-solver" }
 
 [features]

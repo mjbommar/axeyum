@@ -11,6 +11,7 @@ members = [
     "crates/axeyum-ir",
     "crates/axeyum-lean-kernel",
     "crates/axeyum-property",
+    "crates/axeyum-property-macros",
     "crates/axeyum-rewrite",
     "crates/axeyum-scenarios",
     "crates/axeyum-smtlib",

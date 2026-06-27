@@ -68,8 +68,7 @@ over a proven core.
   instruction is superseded for this session by the thread rule to stay on
   `main`.
 - Task 44 (build): continue **B (`axeyum-property` v0)** from the committed
-  typed Bool/BV/Int proof slice: add ergonomic operator traits or
-  `#[derive(Symbolic)]` over the landed `symbolic_struct` named-field builder,
-  extend the native-scalar counterexample-to-`#[test]` layer to
-  structured/domain replay, and add the SDK scoreboard gate before moving to D,
-  A, C.
+  typed Bool/BV/Int proof slice: add ergonomic operator traits, decide the
+  signed fixed-width Rust integer `Symbolic` policy, extend the native-scalar
+  counterexample-to-`#[test]` layer to structured/domain replay, and add the SDK
+  scoreboard gate before moving to D, A, C.

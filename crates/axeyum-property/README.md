@@ -7,10 +7,11 @@ typed `Bool` / `Bv<W>` / `Int` builder, records declared scalar symbols in a
 deterministic counterexample-objective order, and delegates proof attempts to
 `axeyum-solver`'s replay-checked evidence functions.
 
-The `Symbolic` trait gives macro-free typed declaration/lifting for scalar
-inputs and small tuples today. `Property::symbolic_struct` adds a named-field
-builder for struct-shaped inputs; a derive macro can lower to that builder in a
-later layer.
+The `Symbolic` trait gives typed declaration/lifting for scalar inputs, small
+tuples, and derived structs. `Property::symbolic_struct` is the macro-free
+named-field builder underneath `#[derive(axeyum_property::Symbolic)]`, so
+frontends can choose either explicit builder code or a derive when their input
+shape is a Rust struct.
 
 Disproving models can be extracted as deterministic `Counterexample` bindings
 and rendered as native Rust scalar `let` bindings or a `#[test]` skeleton with

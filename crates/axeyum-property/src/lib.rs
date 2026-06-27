@@ -6,7 +6,9 @@
 //! add solver logic or weaken the underlying evidence contract.
 
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId, Value};
-use axeyum_solver::{Model, ProofOutcome, SolverConfig, SolverError, prove, prove_minimized};
+pub use axeyum_property_macros::Symbolic;
+pub use axeyum_solver::{Model, ProofOutcome, SolverConfig};
+use axeyum_solver::{SolverError, prove, prove_minimized};
 
 /// Errors produced by the property SDK.
 #[derive(Debug, Clone, PartialEq, Eq)]
