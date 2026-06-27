@@ -737,6 +737,14 @@ lazy-array/UF engine: deferred theory checks still rebuild through `check_auto`;
 retained learned theory clauses plus a real small-target lifter and emulator
 library remain Track 4 work.
 
+The product-facing counterexample path now also has a shared minimization helper:
+`minimize_model` / `minimize_model_with_config` and `Solver::minimize_model`
+re-solve the query under lexicographically optimal pins for selected Bool,
+unsigned-BV (`w <= 127`), and Int symbols, returning a replay-checked minimized
+model. This addresses the first consumer need for "small failing input" UX
+without each frontend reimplementing shrink loops; wider BV and richer theory
+values remain explicit unsupported/unknown cases.
+
 ## 4. Reflection on PLAN.md
 
 **The 2026-06-23 "MEASURE, don't seed" course-correction was right and is now

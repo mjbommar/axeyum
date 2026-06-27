@@ -47,6 +47,7 @@ mod certify;
 mod combined;
 mod combined_theory;
 mod combined_theory_lia;
+mod counterexample;
 mod datatype_acyclicity;
 mod datatype_elim;
 mod datatype_native;
@@ -221,6 +222,7 @@ pub use combined_theory_lia::{
     combined_incremental_lia_vs_check, combined_lia_vs_cold_conjunction,
     combined_theory_lia_propagations,
 };
+pub use counterexample::{ModelMinimizeOutcome, minimize_model, minimize_model_with_config};
 pub use datatype_acyclicity::prove_datatype_unsat_structurally;
 pub use datatype_elim::check_with_datatype_elimination;
 pub use datatype_native::check_with_datatype_native;

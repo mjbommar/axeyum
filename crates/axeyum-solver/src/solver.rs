@@ -45,7 +45,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use axeyum_ir::{TermArena, TermId};
+use axeyum_ir::{SymbolId, TermArena, TermId};
 
 use crate::backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError,
@@ -398,6 +398,21 @@ impl<B: SolverBackend> Solver<B> {
         objective: TermId,
     ) -> Result<crate::OptOutcome, SolverError> {
         crate::minimize_lia(arena, &self.assertions, objective)
+    }
+
+    /// Returns a replay-checked model that is lexicographically minimized over
+    /// `symbols` in the order provided, using the active assertions as the
+    /// constraint set (see [`crate::minimize_model`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the minimizer.
+    pub fn minimize_model(
+        &self,
+        arena: &mut TermArena,
+        symbols: &[SymbolId],
+    ) -> Result<crate::ModelMinimizeOutcome, SolverError> {
+        crate::minimize_model_with_config(arena, &self.assertions, symbols, &self.config)
     }
 
     /// Lexicographic multi-objective optimization over the active assertions (see
