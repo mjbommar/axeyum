@@ -1504,6 +1504,14 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
             if known_literal_distinct(arena, *left, *right) {
                 return Some(arena.bool_const(false));
             }
+            if arena.sort_of(*left) == Sort::Bool {
+                if let Some(value) = bool_const_value(arena, *left) {
+                    return bool_equality_with_const(arena, *right, value);
+                }
+                if let Some(value) = bool_const_value(arena, *right) {
+                    return bool_equality_with_const(arena, *left, value);
+                }
+            }
             distribute_eq_over_scalar_ite(arena, *left, *right)
         }
         Op::BoolNot => {
@@ -1512,10 +1520,35 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
             };
             match arena.node(*arg) {
                 TermNode::BoolConst(value) => Some(arena.bool_const(!value)),
+                TermNode::App {
+                    op: Op::BoolNot,
+                    args,
+                    ..
+                } => {
+                    let [inner] = args.as_ref() else {
+                        return None;
+                    };
+                    Some(*inner)
+                }
                 _ => None,
             }
         }
         _ => None,
+    }
+}
+
+fn bool_const_value(arena: &TermArena, term: TermId) -> Option<bool> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(*value),
+        _ => None,
+    }
+}
+
+fn bool_equality_with_const(arena: &mut TermArena, term: TermId, constant: bool) -> Option<TermId> {
+    if constant {
+        Some(term)
+    } else {
+        arena.not(term).ok()
     }
 }
 

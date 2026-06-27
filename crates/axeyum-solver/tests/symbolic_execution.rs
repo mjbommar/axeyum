@@ -3456,6 +3456,83 @@ fn warm_index_ite_write_distributes_to_row_branches() {
 }
 
 #[test]
+fn warm_bool_readback_equality_to_const_simplifies_to_value() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bool_readback_value", Sort::Bool)
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 3).unwrap();
+    let false_value = arena.bool_const(false);
+    let true_value = arena.bool_const(true);
+    let memory = arena
+        .const_array_with_index_sort(Sort::BitVec(8), false_value)
+        .unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let loaded_eq_true = arena.eq(loaded, true_value).unwrap();
+
+    let simplified =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_true);
+    assert_eq!(
+        simplified, value,
+        "readback equality to true should simplify to the symbolic Bool value"
+    );
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, simplified),
+        "Bool readback equality should simplify to a pure warm assertion"
+    );
+
+    let loaded_eq_false = arena.eq(loaded, false_value).unwrap();
+    let not_value = arena.not(value).unwrap();
+    let simplified_false =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_false);
+    assert_eq!(
+        simplified_false, not_value,
+        "readback equality to false should simplify to the negated symbolic Bool value"
+    );
+    let loaded_ne_false = arena.not(loaded_eq_false).unwrap();
+    let simplified_ne_false =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_ne_false);
+    assert_eq!(
+        simplified_ne_false, value,
+        "double negation exposed by equality-to-false cleanup should collapse"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, loaded_eq_true)
+        .unwrap();
+    assert_eq!(encoded, value);
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "symbolic Bool readback equality must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(model.get(value_sym), Some(Value::Bool(true)));
+            assert_eq!(
+                eval(&arena, loaded_eq_true, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original Bool memory assertion"
+            );
+        }
+        other => panic!("expected symbolic Bool readback equality sat, got {other:?}"),
+    }
+
+    let mut impossible = IncrementalBvSolver::new();
+    impossible.assert(&arena, not_value).unwrap();
+    impossible
+        .assert_simplifying_memory(&mut arena, loaded_eq_true)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "loaded = true is impossible when the symbolic stored Bool is false"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena
