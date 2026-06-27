@@ -75,6 +75,17 @@ pub enum BugKind {
     MulOverflow,
 }
 
+/// The concrete inputs of one transaction in a witnessing sequence.
+#[derive(Debug, Clone)]
+pub struct TxWitness {
+    /// The concrete calldata for this transaction.
+    pub calldata: Vec<u8>,
+    /// The concrete `CALLVALUE` for this transaction.
+    pub callvalue: crate::word::Word,
+    /// The concrete `CALLER` for this transaction.
+    pub caller: crate::word::Word,
+}
+
 /// A bug witnessed on some feasible path, with a lifted concrete witness.
 #[derive(Debug, Clone)]
 pub struct PathBug {
@@ -82,12 +93,16 @@ pub struct PathBug {
     pub kind: BugKind,
     /// The byte offset (pc) where the bug was witnessed.
     pub pc: usize,
-    /// The concrete calldata driving the path to the bug.
+    /// The concrete calldata driving the **bug's** transaction to the bug.
     pub calldata: Vec<u8>,
-    /// The concrete `CALLVALUE` along the path.
+    /// The concrete `CALLVALUE` of the bug's transaction.
     pub callvalue: crate::word::Word,
-    /// The concrete `CALLER` along the path.
+    /// The concrete `CALLER` of the bug's transaction.
     pub caller: crate::word::Word,
+    /// Inputs for the transactions *preceding* the bug's transaction (empty for a
+    /// single-tx bug). Replayed in order, with storage persisting, before the
+    /// bug's transaction — the multi-tx revalidation sequence.
+    pub prior_txs: Vec<TxWitness>,
 }
 
 /// Outcome of exploring the program.
@@ -891,29 +906,39 @@ fn lift_witness(
     let Some(model) = exec.model(arena)? else {
         return Ok(None);
     };
-    // Lift transaction `tx`'s inputs. For a multi-tx bug this single-tx witness is
-    // incomplete; the single-tx `revalidate` will then fail to reproduce it and it
-    // is conservatively surfaced as Unknown (never a wrong finding) until the
-    // multi-tx replay + sequence witness land (A1.2 / A1.3).
-    let vars = env.tx(tx);
-    let mut calldata = vec![0u8; vars.calldata_syms.len()];
-    for (i, &sym) in vars.calldata_syms.iter().enumerate() {
-        if let Some(v) = model.get(sym) {
-            calldata[i] = crate::value_to_u8(&v);
+    // Lift the inputs of every transaction up to and including the bug's tx, so a
+    // cross-tx bug carries the full replayable sequence (txs 0..tx are `prior_txs`,
+    // tx is the bug's transaction). For a single-tx bug `prior_txs` is empty and
+    // this is the original behavior.
+    let lift_tx = |k: usize| -> TxWitness {
+        let vars = env.tx(k);
+        let mut calldata = vec![0u8; vars.calldata_syms.len()];
+        for (i, &sym) in vars.calldata_syms.iter().enumerate() {
+            if let Some(v) = model.get(sym) {
+                calldata[i] = crate::value_to_u8(&v);
+            }
         }
-    }
-    let callvalue = model
-        .get(vars.callvalue_sym)
-        .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v));
-    let caller = model
-        .get(vars.caller_sym)
-        .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v));
+        let callvalue = model
+            .get(vars.callvalue_sym)
+            .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v));
+        let caller = model
+            .get(vars.caller_sym)
+            .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v));
+        TxWitness {
+            calldata,
+            callvalue,
+            caller,
+        }
+    };
+    let prior_txs: Vec<TxWitness> = (0..tx).map(lift_tx).collect();
+    let here = lift_tx(tx);
     Ok(Some(PathBug {
         kind,
         pc,
-        calldata,
-        callvalue,
-        caller,
+        calldata: here.calldata,
+        callvalue: here.callvalue,
+        caller: here.caller,
+        prior_txs,
     }))
 }
 

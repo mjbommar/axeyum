@@ -36,9 +36,9 @@ Both storage encodings are denotation-equivalent, so **cross-encoding agreement 
 
 | Case | Shape | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|---|
-| symbolic-storage-roundtrip-revert | symbolic-storage | bug-found | 19173 | bug-found | 19920 | yes |
-| cold-slot-load-safe | symbolic-storage | safe-proved | 891 | safe-proved | 843 | yes |
-| keccak-mapping-alias-revert | keccak-mapping | bug-found | 48585 | bug-found | 47533 | yes |
+| symbolic-storage-roundtrip-revert | symbolic-storage | bug-found | 19107 | bug-found | 19820 | yes |
+| cold-slot-load-safe | symbolic-storage | safe-proved | 826 | safe-proved | 786 | yes |
+| keccak-mapping-alias-revert | keccak-mapping | bug-found | 48506 | bug-found | 46925 | yes |
 
 ## Storage-depth scaling (warm-array vs `ite`-fold)
 
@@ -46,8 +46,17 @@ A safe contract that `SSTORE`s `n` distinct concrete slots then `SLOAD`s a symbo
 
 | Store-chain depth | `ite`-fold | t µs | warm-array | t µs | agree |
 |---|---|---|---|---|---|
-| 2 | safe-proved | 1250 | safe-proved | 1215 | yes |
-| 4 | safe-proved | 1272 | safe-proved | 1433 | yes |
-| 8 | safe-proved | 1572 | safe-proved | 2208 | yes |
-| 16 | safe-proved | 2024 | safe-proved | 4944 | yes |
-| 32 | safe-proved | 3160 | safe-proved | 14955 | yes |
+| 2 | safe-proved | 1234 | safe-proved | 1219 | yes |
+| 4 | safe-proved | 1275 | safe-proved | 1421 | yes |
+| 8 | safe-proved | 1558 | safe-proved | 2191 | yes |
+| 16 | safe-proved | 2030 | safe-proved | 4817 | yes |
+| 32 | safe-proved | 3131 | safe-proved | 14287 | yes |
+
+## Multi-transaction invariants (A1)
+
+Bugs reachable only across a call sequence (persistent storage between txs). A reported cross-tx bug carries a replay-validated multi-tx witness (the persistent-storage concrete oracle); DISAGREE stays 0.
+
+| Case | max_txs | expected | outcome | txs in witness |
+|---|---|---|---|---|
+| cross-tx-init-then-revert | 2 | bug:Revert | bug-found | 2 |
+| safe-under-any-tx-count | 3 | safe | safe-proved | 0 |

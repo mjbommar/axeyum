@@ -60,7 +60,30 @@ impl Default for Env {
 /// bounds execution (loops / runaway code) — exceeding it is `Unsupported`.
 #[must_use]
 pub fn run(program: &Program, env: &Env, step_limit: usize) -> Halt {
-    run_core(program, env, step_limit, None).0
+    let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
+    run_core(program, env, step_limit, None, &mut storage).0
+}
+
+/// Runs a **sequence** of transactions with persistent storage between them
+/// (memory and the stack are per-tx; storage carries over) — the concrete oracle
+/// for multi-tx witnesses. Returns the halt of the *last* transaction. An earlier
+/// tx that does not halt normally (`Stop`/`Return`) aborts the sequence and its
+/// halt is returned (the sequence could not proceed as the witness intended).
+#[must_use]
+pub fn run_sequence(program: &Program, envs: &[Env], step_limit: usize) -> Halt {
+    let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
+    let mut last = Halt::Stop;
+    for (i, env) in envs.iter().enumerate() {
+        last = run_core(program, env, step_limit, None, &mut storage).0;
+        let is_last = i + 1 == envs.len();
+        if !is_last && !matches!(last, Halt::Stop | Halt::Return(_)) {
+            // A pre-final tx reverted/failed: the intended sequence cannot reach
+            // the final-tx state, so report this halt (it will not match the
+            // expected final-tx bug and the witness is rejected).
+            return last;
+        }
+    }
+    last
 }
 
 /// The single concrete interpreter. When `watch = Some((pc, is_mul))`, it reports
@@ -74,10 +97,10 @@ fn run_core(
     env: &Env,
     step_limit: usize,
     watch: Option<(usize, bool)>,
+    storage: &mut BTreeMap<[u8; 32], Word>,
 ) -> (Halt, bool) {
     let mut stack: Vec<Word> = Vec::new();
     let mut memory: BTreeMap<usize, u8> = BTreeMap::new();
-    let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
     let mut pc = 0usize;
     let mut steps = 0usize;
     let mut overflowed = false;
@@ -453,7 +476,15 @@ pub fn overflow_reproduces(
     is_mul: bool,
     step_limit: usize,
 ) -> bool {
-    run_core(program, env, step_limit, Some((watch_pc, is_mul))).1
+    let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
+    run_core(
+        program,
+        env,
+        step_limit,
+        Some((watch_pc, is_mul)),
+        &mut storage,
+    )
+    .1
 }
 
 /// A shift amount `< 256` as a `u32` (EVM shifts ≥ 256 produce 0 / sign-fill,

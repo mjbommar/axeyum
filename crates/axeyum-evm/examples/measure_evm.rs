@@ -126,6 +126,26 @@ fn witness_reproduces(program: &Program, f: &axeyum_evm::Finding) -> bool {
         callvalue: Word::from_be_bytes(&f.callvalue),
         caller: Word::from_be_bytes(&f.caller),
     };
+    // Multi-tx witness: replay the full transaction sequence (storage persisting)
+    // and confirm the bug fires in the final tx — the independent multi-tx oracle.
+    if !f.prior_txs.is_empty() {
+        let mut envs: Vec<Env> = f
+            .prior_txs
+            .iter()
+            .map(|t| Env {
+                calldata: t.calldata.clone(),
+                callvalue: Word::from_be_bytes(&t.callvalue),
+                caller: Word::from_be_bytes(&t.caller),
+            })
+            .collect();
+        envs.push(env);
+        let halt = concrete::run_sequence(program, &envs, STEP_LIMIT);
+        return match f.kind {
+            FindingKind::Revert => matches!(halt, Halt::Revert(_)),
+            FindingKind::Invalid => matches!(halt, Halt::Invalid),
+            FindingKind::AddOverflow | FindingKind::MulOverflow => false,
+        };
+    }
     match f.kind {
         FindingKind::AddOverflow => {
             concrete::overflow_reproduces(program, &env, f.pc, false, STEP_LIMIT)
@@ -148,6 +168,12 @@ fn evaluate_with(case: &Case, memory: MemoryEncoding) -> Outcome {
         ..AnalyzeConfig::default()
     };
     let report = analyze(&case.bytecode, &cfg);
+    evaluate_report(case, report)
+}
+
+/// Reconcile an already-computed report against the case's construction-known
+/// label (shared by the default sweep and the multi-tx / encoding comparisons).
+fn evaluate_report(case: &Case, report: axeyum_evm::AnalysisReport) -> Outcome {
     let program = decode(&case.bytecode);
 
     if let Some(f) = report.findings.first() {
@@ -511,6 +537,93 @@ fn render_scaling(rows: &[ScaleRow]) -> String {
     out
 }
 
+/// One multi-transaction case: a construction-known sequence outcome.
+struct MultiTxRow {
+    name: &'static str,
+    max_txs: usize,
+    expect: Expect,
+    outcome: Outcome,
+    txs_in_witness: usize,
+}
+
+/// Decide a couple of construction-known multi-transaction contracts: a bug that
+/// is reachable only across calls (and must carry a replay-validated sequence
+/// witness), and a contract safe under any number of calls.
+fn multitx_sweep() -> Vec<MultiTxRow> {
+    // `if storage[0]==0 { storage[0]=1 } else { revert }` — safe in 1 call, the
+    // revert is reachable in 2 (storage persists). The reported finding must carry
+    // a 2-tx witness (revalidated by the persistent-storage concrete replay).
+    let cross_tx_bug = vec![
+        PUSH1, 0x00, SLOAD, ISZERO, PUSH1, 0x0c, JUMPI, PUSH1, 0x00, PUSH1, 0x00, REVERT, JUMPDEST,
+        PUSH1, 0x01, PUSH1, 0x00, SSTORE, STOP,
+    ];
+    // Loads a cold slot vs a sentinel — safe regardless of call count.
+    let multi_safe = vec![
+        PUSH1, 0x99, SLOAD, PUSH2, 0xde, 0xad, EQ, PUSH1, 0x0b, JUMPI, STOP, JUMPDEST, PUSH1, 0x00,
+        PUSH1, 0x00, REVERT,
+    ];
+    let mut rows = Vec::new();
+    for (name, max_txs, expect, bytecode) in [
+        (
+            "cross-tx-init-then-revert",
+            2,
+            Expect::Bug(FindingKind::Revert),
+            cross_tx_bug,
+        ),
+        ("safe-under-any-tx-count", 3, Expect::Safe, multi_safe),
+    ] {
+        let case = Case {
+            name,
+            shape: Shape::SymbolicStorage,
+            expect,
+            bytecode,
+        };
+        let report = analyze(
+            &case.bytecode,
+            &AnalyzeConfig {
+                max_txs,
+                ..AnalyzeConfig::default()
+            },
+        );
+        let txs_in_witness = report.findings.first().map_or(0, |f| f.prior_txs.len() + 1);
+        rows.push(MultiTxRow {
+            name,
+            max_txs,
+            expect,
+            outcome: evaluate_report(&case, report),
+            txs_in_witness,
+        });
+    }
+    rows
+}
+
+fn render_multitx(rows: &[MultiTxRow]) -> String {
+    let mut out = String::new();
+    out.push_str("\n## Multi-transaction invariants (A1)\n\n");
+    out.push_str(
+        "Bugs reachable only across a call sequence (persistent storage between \
+         txs). A reported cross-tx bug carries a replay-validated multi-tx witness \
+         (the persistent-storage concrete oracle); DISAGREE stays 0.\n\n",
+    );
+    out.push_str("| Case | max_txs | expected | outcome | txs in witness |\n");
+    out.push_str("|---|---|---|---|---|\n");
+    for r in rows {
+        let expected = match r.expect {
+            Expect::Bug(k) => format!("bug:{k:?}"),
+            Expect::Safe => "safe".to_string(),
+        };
+        let _ = writeln!(
+            out,
+            "| {} | {} | {expected} | {} | {} |",
+            r.name,
+            r.max_txs,
+            r.outcome.tag(),
+            r.txs_in_witness,
+        );
+    }
+    out
+}
+
 /// Aggregate per-case outcomes into an overall tally and a per-shape breakdown.
 fn aggregate(rows: &[(&Case, Outcome)]) -> (Tally, Vec<(Shape, Tally)>) {
     let shapes = [
@@ -568,11 +681,20 @@ fn main() -> ExitCode {
         }
     }
 
+    let multitx = multitx_sweep();
+    for r in &multitx {
+        if let Outcome::Disagree(why) = &r.outcome {
+            eprintln!("MULTI-TX DISAGREE on {}: {why}", r.name);
+            overall.disagree += 1;
+        }
+    }
+
     let md = format!(
-        "{}{}{}",
+        "{}{}{}{}",
         render_markdown(&rows, &overall, &by_shape),
         render_compare(&cmp),
         render_scaling(&scale),
+        render_multitx(&multitx),
     );
     let json = render_json(&rows, &overall);
 

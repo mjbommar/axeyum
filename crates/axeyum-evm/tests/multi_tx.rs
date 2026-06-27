@@ -8,7 +8,7 @@
 //! reported as honest `Unknown`, never a wrong verdict; the validated multi-tx
 //! witness arrives with A1.2/A1.3).
 
-use axeyum_evm::{AnalyzeConfig, Verdict, analyze};
+use axeyum_evm::{AnalyzeConfig, FindingKind, Verdict, analyze};
 
 const STOP: u8 = 0x00;
 const EQ: u8 = 0x14;
@@ -63,20 +63,21 @@ fn single_tx_proves_increment_contract_safe() {
 }
 
 #[test]
-fn two_tx_exploration_reaches_the_cross_tx_state() {
-    // Two calls reach the revert (slot is 1 on the second call). A1.1 cannot yet
-    // single-tx-revalidate that cross-tx witness, so it is conservatively
-    // surfaced as Unknown — crucially NOT SafeUpToBound (the state space really
-    // did expand) and NOT a wrong finding.
+fn two_tx_reports_validated_cross_tx_bug() {
+    // Two calls reach the revert (slot is 1 on the second call). With the multi-tx
+    // replay oracle (A1.2) + sequence witness (A1.3), this cross-tx bug is now
+    // *reported* with a replay-validated 2-tx witness — not just reached.
     let report = analyze(&increment_once_then_revert(), &cfg(2));
     assert!(
-        !report.has_findings(),
-        "no validated single-tx witness exists yet (A1.2 adds multi-tx replay)"
+        report.has_findings(),
+        "the cross-tx revert is now a reported finding"
     );
-    assert!(
-        matches!(report.verdict, Some(Verdict::InconclusiveDueToUnknown)),
-        "two-tx exploration must reach the cross-tx revert state (not prove safe), got {:?}",
-        report.verdict
+    let f = &report.findings[0];
+    assert_eq!(f.kind, FindingKind::Revert);
+    assert_eq!(
+        f.prior_txs.len(),
+        1,
+        "the witness is a 2-tx sequence: one prior tx (sets the slot) then the bug tx"
     );
 }
 

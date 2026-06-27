@@ -118,6 +118,17 @@ impl From<BugKind> for FindingKind {
     }
 }
 
+/// The concrete inputs of one transaction in a multi-tx witness sequence.
+#[derive(Debug, Clone)]
+pub struct TxCall {
+    /// The concrete calldata for this transaction.
+    pub calldata: Vec<u8>,
+    /// The concrete `CALLVALUE` (msg.value) for this transaction.
+    pub callvalue: [u8; 32],
+    /// The concrete `CALLER` (msg.sender) for this transaction.
+    pub caller: [u8; 32],
+}
+
 /// A discovered bug plus the concrete inputs that trigger it.
 #[derive(Debug, Clone)]
 pub struct Finding {
@@ -125,14 +136,19 @@ pub struct Finding {
     pub kind: FindingKind,
     /// The byte offset (pc) of the offending opcode.
     pub pc: usize,
-    /// The concrete calldata that drives execution to the bug — the **replayable
-    /// witness** (validated by concrete re-execution before being reported).
+    /// The concrete calldata that drives the **bug's transaction** to the bug —
+    /// the **replayable witness** (validated by concrete re-execution before being
+    /// reported). For a single-tx bug this is the whole witness.
     pub calldata_witness: Vec<u8>,
-    /// The concrete `CALLVALUE` (msg.value) in the witness.
+    /// The concrete `CALLVALUE` (msg.value) in the bug's transaction.
     pub callvalue: [u8; 32],
-    /// The concrete `CALLER` (msg.sender) in the witness.
+    /// The concrete `CALLER` (msg.sender) in the bug's transaction.
     pub caller: [u8; 32],
-    /// How the concrete re-execution halted on this witness — the independent
+    /// Transactions that must run first (storage persisting) to reach the bug —
+    /// empty for a single-tx bug. The full replay sequence is
+    /// `prior_txs` followed by `(calldata_witness, callvalue, caller)`.
+    pub prior_txs: Vec<TxCall>,
+    /// How the concrete re-execution of the full sequence halted — the independent
     /// confirmation that the bug is real.
     pub concrete_halt: Halt,
 }
@@ -297,38 +313,83 @@ fn revalidate(
     bug: &symbolic::PathBug,
     cfg: &AnalyzeConfig,
 ) -> Option<Finding> {
-    let env = Env {
+    let here = Env {
         calldata: bug.calldata.clone(),
         callvalue: bug.callvalue.clone(),
         caller: bug.caller.clone(),
     };
-    let halt = concrete::run(program, &env, cfg.max_steps);
 
+    // Single-tx bug: the original concrete revalidation.
+    if bug.prior_txs.is_empty() {
+        let halt = concrete::run(program, &here, cfg.max_steps);
+        let reproduces = match bug.kind {
+            BugKind::Revert => matches!(halt, Halt::Revert(_)),
+            BugKind::Invalid => matches!(halt, Halt::Invalid),
+            // For an overflow bug the concrete run need not revert; instead we
+            // confirm the tracked arithmetic op at `bug.pc` concretely overflows.
+            BugKind::AddOverflow | BugKind::MulOverflow => concrete::overflow_reproduces(
+                program,
+                &here,
+                bug.pc,
+                bug.kind == BugKind::MulOverflow,
+                cfg.max_steps,
+            ),
+        };
+        if !reproduces {
+            return None;
+        }
+        return Some(Finding {
+            kind: bug.kind.into(),
+            pc: bug.pc,
+            calldata_witness: bug.calldata.clone(),
+            callvalue: bug.callvalue.to_be_bytes(),
+            caller: bug.caller.to_be_bytes(),
+            prior_txs: Vec::new(),
+            concrete_halt: halt,
+        });
+    }
+
+    // Multi-tx bug: replay the witness transaction sequence with persistent
+    // storage and confirm the final tx reaches the bug. Cross-tx *overflow* is not
+    // revalidated here (conservatively rejected → Unknown, never a wrong finding).
+    if matches!(bug.kind, BugKind::AddOverflow | BugKind::MulOverflow) {
+        return None;
+    }
+    let mut envs: Vec<Env> = bug
+        .prior_txs
+        .iter()
+        .map(|t| Env {
+            calldata: t.calldata.clone(),
+            callvalue: t.callvalue.clone(),
+            caller: t.caller.clone(),
+        })
+        .collect();
+    envs.push(here);
+    let halt = concrete::run_sequence(program, &envs, cfg.max_steps);
     let reproduces = match bug.kind {
         BugKind::Revert => matches!(halt, Halt::Revert(_)),
         BugKind::Invalid => matches!(halt, Halt::Invalid),
-        // For an overflow bug the concrete run need not revert; instead we confirm
-        // the tracked arithmetic op at `bug.pc` concretely overflows on this
-        // witness (the same predicate the solver found feasible).
-        BugKind::AddOverflow | BugKind::MulOverflow => concrete::overflow_reproduces(
-            program,
-            &env,
-            bug.pc,
-            bug.kind == BugKind::MulOverflow,
-            cfg.max_steps,
-        ),
+        BugKind::AddOverflow | BugKind::MulOverflow => false,
     };
-
     if !reproduces {
         return None;
     }
-
+    let prior_txs = bug
+        .prior_txs
+        .iter()
+        .map(|t| TxCall {
+            calldata: t.calldata.clone(),
+            callvalue: t.callvalue.to_be_bytes(),
+            caller: t.caller.to_be_bytes(),
+        })
+        .collect();
     Some(Finding {
         kind: bug.kind.into(),
         pc: bug.pc,
         calldata_witness: bug.calldata.clone(),
         callvalue: bug.callvalue.to_be_bytes(),
         caller: bug.caller.to_be_bytes(),
+        prior_txs,
         concrete_halt: halt,
     })
 }
