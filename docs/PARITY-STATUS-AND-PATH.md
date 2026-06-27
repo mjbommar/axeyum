@@ -753,8 +753,12 @@ model. This addresses the first consumer need for "small failing input" UX
 without each frontend reimplementing shrink loops. The same strict minimizer is
 now surfaced through `produce_evidence_minimized` and `prove_minimized`, so
 property/verification callers can request minimized `Evidence::Sat` models or
-minimized `ProofOutcome::Disproved` countermodels directly. Wider BV and richer
-theory values remain explicit unsupported/unknown cases.
+minimized `ProofOutcome::Disproved` countermodels directly. Metadata-aware
+variants (`minimize_model_objectives`,
+`produce_evidence_minimized_with_objectives`, and
+`prove_minimized_with_objectives`) preserve signed two's-complement order for
+BV symbols whose frontend type is signed. Wider BV and richer theory values
+remain explicit unsupported/unknown cases.
 
 The first bounded-property SDK crate now consumes that surface directly:
 `axeyum-property` provides typed `Bool`, `Bv<W>`, and `Int` handles over
@@ -765,11 +769,12 @@ includes a `symbolic_struct` named-field builder,
 `#[derive(axeyum_property::Symbolic)]` for struct-shaped inputs, and
 two's-complement `i8`/`i16`/`i32`/`i64` symbolic inputs over BV terms. This is
 the first committed consumer-track app slice; it is intentionally thin and does
-not add solver logic. It now also exposes deterministic native-scalar
-counterexample rendering: replay-checked Bool, Int, unsigned BV<=128, and
-signed two's-complement BV input values can be emitted as Rust let-bindings or a
-`#[test]` skeleton with caller-provided domain replay code, while unsupported
-richer values decline explicitly.
+not add solver logic. Signed `Symbolic` BV inputs now minimize in signed
+two's-complement order before being lifted back to Rust values. It now also
+exposes deterministic native-scalar counterexample rendering: replay-checked
+Bool, Int, unsigned BV<=128, and signed two's-complement BV input values can be
+emitted as Rust let-bindings or a `#[test]` skeleton with caller-provided domain
+replay code, while unsupported richer values decline explicitly.
 
 ## 4. Reflection on PLAN.md
 

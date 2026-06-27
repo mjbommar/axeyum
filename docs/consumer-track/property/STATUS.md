@@ -2,17 +2,25 @@
 
 ## Current focus
 
+- **2026-06-27 — Signed-order minimization metadata landed.**
+  `Property::prove_minimized` now preserves signed symbolic intent during
+  counterexample minimization. The solver exposes metadata-aware objectives
+  (`ModelMinimizeObjective::{Symbol,SignedBv}`) plus
+  `minimize_model_objectives` / `prove_minimized_with_objectives`; the property
+  SDK maps `signed_bv` and `Symbolic` `i8`/`i16`/`i32`/`i64` inputs to
+  `SignedBv` objectives. Raw `Property::bv::<W>` inputs still minimize in
+  unsigned order. A focused regression confirms the same signed BV8 feasible set
+  minimizes to raw `0` in unsigned order and raw `0xfd` (`-3_i8`) in signed
+  order.
+
 - **2026-06-27 — Signed fixed-width `Symbolic` policy landed.**
   `i8`/`i16`/`i32`/`i64` now implement `Symbolic` as two's-complement
   `Bv<8>`/`Bv<16>`/`Bv<32>`/`Bv<64>` terms, while `i128` remains mathematical
   Int. Model lifting sign-extends replay-checked BV values back to Rust signed
   integers, and counterexample rendering preserves the signed intent for those
   SDK-declared symbols (`let x: i8 = -1_i8; // BV8 two's-complement`). Raw
-  `Property::bv::<W>` inputs still render as unsigned Rust integers. The
-  remaining optimization gap is signed-order minimization metadata:
-  `prove_minimized` still receives only symbols, so signed BV symbols are
-  minimized by the lower-level unsigned BV objective until that API grows
-  per-objective signedness.
+  `Property::bv::<W>` inputs still render and minimize as unsigned Rust
+  integers.
 
 - **2026-06-27 — `#[derive(Symbolic)]` landed.**
   `axeyum-property` now re-exports `#[derive(axeyum_property::Symbolic)]` from
@@ -75,8 +83,6 @@
 
 1. Add ergonomic expression construction without compromising fallible builder
    errors.
-2. Add signed-order objective metadata to counterexample minimization for signed
-   symbolic BV inputs.
-3. Extend counterexample-to-`#[test]` output for structured inputs and
+2. Extend counterexample-to-`#[test]` output for structured inputs and
    frontend-specific replay bodies.
-4. Add a graduated SDK property corpus and scoreboard gate.
+3. Add a graduated SDK property corpus and scoreboard gate.

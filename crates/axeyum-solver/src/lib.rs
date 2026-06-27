@@ -222,7 +222,10 @@ pub use combined_theory_lia::{
     combined_incremental_lia_vs_check, combined_lia_vs_cold_conjunction,
     combined_theory_lia_propagations,
 };
-pub use counterexample::{ModelMinimizeOutcome, minimize_model, minimize_model_with_config};
+pub use counterexample::{
+    ModelMinimizeObjective, ModelMinimizeOutcome, minimize_model, minimize_model_objectives,
+    minimize_model_objectives_with_config, minimize_model_with_config,
+};
 pub use datatype_acyclicity::prove_datatype_unsat_structurally;
 pub use datatype_elim::check_with_datatype_elimination;
 pub use datatype_native::check_with_datatype_native;
@@ -251,8 +254,9 @@ pub use euf_interpolant::{
 pub use evidence::{
     Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
     produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
-    produce_lra_dpll_evidence, produce_lra_evidence, produce_nra_even_power_evidence,
-    produce_nra_evidence, produce_nra_sos_evidence, produce_qf_bv_evidence, prove, prove_minimized,
+    produce_evidence_minimized_with_objectives, produce_lra_dpll_evidence, produce_lra_evidence,
+    produce_nra_even_power_evidence, produce_nra_evidence, produce_nra_sos_evidence,
+    produce_qf_bv_evidence, prove, prove_minimized, prove_minimized_with_objectives,
 };
 pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
 pub use fp::FloatFormat;

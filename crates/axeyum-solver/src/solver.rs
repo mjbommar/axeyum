@@ -415,6 +415,26 @@ impl<B: SolverBackend> Solver<B> {
         crate::minimize_model_with_config(arena, &self.assertions, symbols, &self.config)
     }
 
+    /// Returns a replay-checked model that is lexicographically minimized over
+    /// richer objective metadata, using the active assertions as the constraint
+    /// set (see [`crate::minimize_model_objectives`]).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] from the minimizer.
+    pub fn minimize_model_objectives(
+        &self,
+        arena: &mut TermArena,
+        objectives: &[crate::ModelMinimizeObjective],
+    ) -> Result<crate::ModelMinimizeOutcome, SolverError> {
+        crate::minimize_model_objectives_with_config(
+            arena,
+            &self.assertions,
+            objectives,
+            &self.config,
+        )
+    }
+
     /// Lexicographic multi-objective optimization over the active assertions (see
     /// [`crate::optimize_lia_lexicographic`]).
     ///

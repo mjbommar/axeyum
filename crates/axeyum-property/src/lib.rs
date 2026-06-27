@@ -8,7 +8,7 @@
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId, Value};
 pub use axeyum_property_macros::Symbolic;
 pub use axeyum_solver::{Model, ProofOutcome, SolverConfig};
-use axeyum_solver::{SolverError, prove, prove_minimized};
+use axeyum_solver::{ModelMinimizeObjective, SolverError, prove, prove_minimized_with_objectives};
 
 /// Errors produced by the property SDK.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -411,8 +411,10 @@ impl Property {
     /// Declares a bit-vector input symbol rendered as a signed Rust integer.
     ///
     /// The SMT sort is still `BitVec(W)` and all bit-vector operations remain
-    /// explicit on [`Bv`]. This method only records a two's-complement Rust
-    /// literal preference for counterexample rendering.
+    /// explicit on [`Bv`]. This method records two's-complement Rust intent for
+    /// counterexample rendering and signed-order counterexample minimization.
+    /// Unsupported signed minimization widths are reported by
+    /// [`Self::prove_minimized`].
     ///
     /// # Errors
     ///
@@ -550,11 +552,12 @@ impl Property {
     /// construction fails. Unsupported objective sorts are reported by the
     /// underlying solver; this v0 SDK tracks only Bool, BV, and Int symbols.
     pub fn prove_minimized(&mut self, goal: Bool) -> Result<ProofOutcome, PropertyError> {
-        Ok(prove_minimized(
+        let objectives = self.counterexample_objectives();
+        Ok(prove_minimized_with_objectives(
             &mut self.arena,
             &self.hypotheses,
             goal.term,
-            &self.counterexample_symbols,
+            &objectives,
             &self.config,
         )?)
     }
@@ -648,6 +651,17 @@ impl Property {
             .iter()
             .find_map(|(existing, style)| (*existing == symbol).then_some(*style))
             .unwrap_or(BvLiteralStyle::Unsigned)
+    }
+
+    fn counterexample_objectives(&self) -> Vec<ModelMinimizeObjective> {
+        self.counterexample_symbols
+            .iter()
+            .copied()
+            .map(|symbol| match self.bv_literal_style(symbol) {
+                BvLiteralStyle::Unsigned => ModelMinimizeObjective::Symbol(symbol),
+                BvLiteralStyle::Signed => ModelMinimizeObjective::SignedBv(symbol),
+            })
+            .collect()
     }
 }
 

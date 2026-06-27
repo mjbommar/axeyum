@@ -1971,12 +1971,34 @@ pub fn produce_evidence_minimized(
     symbols: &[SymbolId],
     config: &SolverConfig,
 ) -> Result<EvidenceReport, SolverError> {
+    let objectives: Vec<crate::ModelMinimizeObjective> = symbols
+        .iter()
+        .copied()
+        .map(crate::ModelMinimizeObjective::Symbol)
+        .collect();
+    produce_evidence_minimized_with_objectives(arena, assertions, &objectives, config)
+}
+
+/// Like [`produce_evidence_minimized`], but accepts per-objective metadata such
+/// as signed two's-complement order for bit-vector symbols.
+///
+/// # Errors
+///
+/// Returns errors from [`produce_evidence`] or from the model minimizer.
+pub fn produce_evidence_minimized_with_objectives(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    objectives: &[crate::ModelMinimizeObjective],
+    config: &SolverConfig,
+) -> Result<EvidenceReport, SolverError> {
     let mut report = produce_evidence(arena, assertions, config)?;
-    if symbols.is_empty() || !matches!(report.evidence, Evidence::Sat(_)) {
+    if objectives.is_empty() || !matches!(report.evidence, Evidence::Sat(_)) {
         return Ok(report);
     }
 
-    report.evidence = match crate::minimize_model_with_config(arena, assertions, symbols, config)? {
+    report.evidence = match crate::minimize_model_objectives_with_config(
+        arena, assertions, objectives, config,
+    )? {
         ModelMinimizeOutcome::Minimized(model) => Evidence::Sat(model),
         ModelMinimizeOutcome::Unknown(reason) => Evidence::Unknown(reason),
         ModelMinimizeOutcome::Infeasible => {
@@ -2579,8 +2601,31 @@ pub fn prove_minimized(
     symbols: &[SymbolId],
     config: &SolverConfig,
 ) -> Result<ProofOutcome, SolverError> {
+    let objectives: Vec<crate::ModelMinimizeObjective> = symbols
+        .iter()
+        .copied()
+        .map(crate::ModelMinimizeObjective::Symbol)
+        .collect();
+    prove_minimized_with_objectives(arena, hypotheses, goal, &objectives, config)
+}
+
+/// Like [`prove_minimized`], but accepts per-objective metadata such as signed
+/// two's-complement order for bit-vector symbols.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if a requested objective symbol has an
+/// unsupported sort or unsupported metadata, or propagates errors from
+/// [`prove`] and the minimizer.
+pub fn prove_minimized_with_objectives(
+    arena: &mut TermArena,
+    hypotheses: &[TermId],
+    goal: TermId,
+    objectives: &[crate::ModelMinimizeObjective],
+    config: &SolverConfig,
+) -> Result<ProofOutcome, SolverError> {
     let outcome = prove(arena, hypotheses, goal, config)?;
-    if symbols.is_empty() || !matches!(outcome, ProofOutcome::Disproved(_)) {
+    if objectives.is_empty() || !matches!(outcome, ProofOutcome::Disproved(_)) {
         return Ok(outcome);
     }
 
@@ -2588,7 +2633,7 @@ pub fn prove_minimized(
     let mut query: Vec<TermId> = hypotheses.to_vec();
     query.push(negated_goal);
 
-    match crate::minimize_model_with_config(arena, &query, symbols, config)? {
+    match crate::minimize_model_objectives_with_config(arena, &query, objectives, config)? {
         ModelMinimizeOutcome::Minimized(model) => Ok(ProofOutcome::Disproved(model)),
         ModelMinimizeOutcome::Unknown(reason) => Ok(ProofOutcome::Unknown(reason)),
         ModelMinimizeOutcome::Infeasible => Err(SolverError::Backend(

@@ -1,7 +1,10 @@
 //! Public counterexample/model minimization API tests.
 
 use axeyum_ir::{Sort, TermArena, Value, eval};
-use axeyum_solver::{ModelMinimizeOutcome, SatBvBackend, Solver, SolverError, minimize_model};
+use axeyum_solver::{
+    ModelMinimizeObjective, ModelMinimizeOutcome, SatBvBackend, Solver, SolverError,
+    minimize_model, minimize_model_objectives,
+};
 
 fn expect_minimized(outcome: ModelMinimizeOutcome) -> axeyum_solver::Model {
     match outcome {
@@ -52,6 +55,40 @@ fn minimizes_int_symbol() {
 
     let model = expect_minimized(minimize_model(&mut arena, &[x_ge_lo, x_le_hi], &[x_s]).unwrap());
     assert_eq!(model.get(x_s), Some(Value::Int(-3)));
+}
+
+#[test]
+fn signed_bv_objective_uses_twos_complement_order() {
+    let mut arena = TermArena::new();
+    let x_s = arena.declare("sx", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_s);
+    let neg_three = arena.bv_const(8, 0xfd).unwrap();
+    let two = arena.bv_const(8, 2).unwrap();
+    let x_ge_neg_three = arena.bv_sge(x, neg_three).unwrap();
+    let x_le_two = arena.bv_sle(x, two).unwrap();
+    let assertions = [x_ge_neg_three, x_le_two];
+
+    let unsigned_model = expect_minimized(minimize_model(&mut arena, &assertions, &[x_s]).unwrap());
+    assert_eq!(
+        unsigned_model.get(x_s),
+        Some(Value::Bv { width: 8, value: 0 })
+    );
+
+    let signed_model = expect_minimized(
+        minimize_model_objectives(
+            &mut arena,
+            &assertions,
+            &[ModelMinimizeObjective::SignedBv(x_s)],
+        )
+        .unwrap(),
+    );
+    assert_eq!(
+        signed_model.get(x_s),
+        Some(Value::Bv {
+            width: 8,
+            value: 0xfd,
+        })
+    );
 }
 
 #[test]

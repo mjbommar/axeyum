@@ -26,7 +26,9 @@ The committed v0 slice is intentionally thin and additive:
 - `Property::symbolic_struct` gives macro-free named-field bundles for
   struct-shaped inputs, and `#[derive(axeyum_property::Symbolic)]` lowers named
   and tuple structs to that surface;
-- proof calls delegate to `axeyum_solver::{prove, prove_minimized}`;
+- proof calls delegate to `axeyum_solver::{prove, prove_minimized}`; minimized
+  proofs use signed two's-complement objective metadata for signed symbolic BV
+  inputs;
 - scalar model lifting reads values from `Model`;
 - typed unsigned BV overflow predicates expose the core overflow builders.
 - `Counterexample` / `InputBinding` render native scalar model values as Rust
@@ -39,7 +41,7 @@ The committed v0 slice is intentionally thin and additive:
 |---|---|---|
 | PROP.1 | Typed scalar proof SDK | DONE — Bool/BV/Int handles, assumptions, proof/minimized proof calls, scalar model lifting, overflow predicates |
 | PROP.2 | Ergonomic expression syntax | TODO — operator traits or a small builder style that does not hide fallible construction |
-| PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs; signed-order counterexample minimization metadata remains |
+| PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms and signed counterexample minimization while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs |
 | PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; richer structured/domain replay remains |
 | PROP.5 | Lean certificate surface | TODO — expose `EvidenceReport` plus best-effort standalone Lean module when available |
 | PROP.6 | SDK measurement gate | TODO — committed graduated corpus and scoreboard vs proptest/Kani-style baselines, DISAGREE=0 |

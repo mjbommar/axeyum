@@ -169,6 +169,32 @@ fn symbolic_trait_lifts_signed_fixed_width_inputs() -> TestResult {
 }
 
 #[test]
+fn prove_minimized_uses_signed_order_for_signed_symbolic_bv_inputs() -> TestResult {
+    let mut property = Property::new();
+    let delta = property.symbolic::<i8>("delta")?;
+    let neg_three = property.bv_const::<8>(0xfd)?;
+    let two = property.bv_const::<8>(2)?;
+    let lower = delta.sge(&mut property, neg_three)?;
+    let upper = delta.sle(&mut property, two)?;
+    property.assume(lower);
+    property.assume(upper);
+    let goal = property.bool_const(false);
+
+    let outcome = property.prove_minimized(goal)?;
+    let ProofOutcome::Disproved(model) = outcome else {
+        panic!("expected a minimized counterexample, got {outcome:?}");
+    };
+    assert_eq!(property.concrete::<i8>(&delta, &model)?, Some(-3));
+    assert_eq!(
+        property
+            .counterexample(&model)?
+            .render_rust_let_bindings()?,
+        "let delta: i8 = -3_i8; // BV8 two's-complement\n"
+    );
+    Ok(())
+}
+
+#[test]
 fn symbolic_trait_composes_tuple_inputs_in_deterministic_order() -> TestResult {
     let mut property = Property::new();
     let input = property.symbolic::<(bool, u8, i128)>("input")?;
