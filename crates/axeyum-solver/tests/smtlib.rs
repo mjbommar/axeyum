@@ -797,6 +797,65 @@ fn get_model_is_none_without_request_or_without_sat_model() {
     );
 }
 
+#[test]
+fn get_assertions_returns_scoped_snapshots() {
+    use axeyum_solver::solve_smtlib_get_assertions;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x01))
+(push 1)
+(assert (= x #x02))
+(get-assertions)
+(pop 1)
+(get-assertions)
+(reset-assertions)
+(assert (= x #x03))
+(get-assertions)
+";
+    let snapshots = solve_smtlib_get_assertions(text, &config())
+        .expect("assertion helper succeeds")
+        .expect("script requested assertions");
+    assert_eq!(
+        snapshots,
+        vec![
+            vec!["(= x (_ bv1 8))".to_owned(), "(= x (_ bv2 8))".to_owned()],
+            vec!["(= x (_ bv1 8))".to_owned()],
+            vec!["(= x (_ bv3 8))".to_owned()],
+        ]
+    );
+}
+
+#[test]
+fn get_assertions_ignores_check_sat_assuming_literals() {
+    use axeyum_solver::solve_smtlib_get_assertions;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x01))
+(check-sat-assuming ((= x #x02)))
+(get-assertions)
+";
+    let snapshots = solve_smtlib_get_assertions(text, &config())
+        .expect("assertion helper succeeds")
+        .expect("script requested assertions");
+    assert_eq!(snapshots, vec![vec!["(= x (_ bv1 8))".to_owned()]]);
+}
+
+#[test]
+fn get_assertions_is_none_without_requests() {
+    use axeyum_solver::solve_smtlib_get_assertions;
+    let text = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x01))
+";
+    assert_eq!(
+        solve_smtlib_get_assertions(text, &config()).expect("assertion helper succeeds"),
+        None
+    );
+}
+
 /// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
 #[test]
 fn optimize_integer_objective() {

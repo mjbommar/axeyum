@@ -14,7 +14,7 @@
 use axeyum_cnf::{check_alethe, write_alethe};
 use std::collections::{BTreeMap, VecDeque};
 
-use axeyum_ir::{FuncValue, Sort, TermArena, TermId, Value, well_founded_default};
+use axeyum_ir::{FuncValue, Sort, TermArena, TermId, Value, render, well_founded_default};
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
@@ -109,6 +109,7 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
                 stack.clear();
                 scopes.clear();
             }
+            ScriptCommand::GetAssertions => {}
         }
     }
 
@@ -332,6 +333,63 @@ pub fn solve_smtlib_get_assignment(
         Ok(None)
     } else {
         Ok(Some(values))
+    }
+}
+
+/// Returns scoped assertion-stack snapshots requested by SMT-LIB
+/// `(get-assertions)` commands.
+///
+/// Each snapshot is rendered in SMT-LIB-style text at the exact command point,
+/// after honoring prior `assert`, `push`, `pop`, and `reset-assertions`
+/// commands. One-shot `check-sat-assuming` assumptions are intentionally not
+/// retained in the assertion stack. Returns `Ok(None)` when the script requested
+/// no assertion snapshots.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text.
+pub fn solve_smtlib_get_assertions(
+    input: &str,
+    _config: &SolverConfig,
+) -> Result<Option<Vec<Vec<String>>>, SolverError> {
+    let script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let mut stack = Vec::<TermId>::new();
+    let mut scopes = Vec::<usize>::new();
+    let mut snapshots = Vec::new();
+    for command in &script.commands {
+        match command {
+            ScriptCommand::Assert(term) => stack.push(*term),
+            ScriptCommand::Push(n) => {
+                for _ in 0..*n {
+                    scopes.push(stack.len());
+                }
+            }
+            ScriptCommand::Pop(n) => {
+                for _ in 0..*n {
+                    if let Some(depth) = scopes.pop() {
+                        stack.truncate(depth);
+                    }
+                }
+            }
+            ScriptCommand::ResetAssertions => {
+                stack.clear();
+                scopes.clear();
+            }
+            ScriptCommand::CheckSat | ScriptCommand::CheckSatAssuming(_) => {}
+            ScriptCommand::GetAssertions => {
+                snapshots.push(
+                    stack
+                        .iter()
+                        .map(|&term| render(&script.arena, term))
+                        .collect(),
+                );
+            }
+        }
+    }
+    if snapshots.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(snapshots))
     }
 }
 
@@ -690,6 +748,7 @@ pub fn solve_smtlib_incremental(
                 stack.clear();
                 scopes.clear();
             }
+            ScriptCommand::GetAssertions => {}
         }
     }
     Ok(results)

@@ -3,7 +3,7 @@
 use axeyum_ir::{
     ArraySortKey, Assignment, GenericArrayValue, Sort, SymbolId, TermStats, Value, eval,
 };
-use axeyum_smtlib::{SmtError, parse_script, write_script};
+use axeyum_smtlib::{ScriptCommand, SmtError, parse_script, write_script};
 
 #[test]
 fn parses_core_benchmark_shape() {
@@ -2732,6 +2732,12 @@ fn accepts_standard_output_commands() {
     let (name, sort) = script.arena.symbol(script.model_symbols[0]);
     assert_eq!(name, "x");
     assert_eq!(sort, axeyum_ir::Sort::BitVec(8));
+    assert!(
+        script
+            .commands
+            .iter()
+            .any(|command| matches!(command, ScriptCommand::GetAssertions))
+    );
 }
 
 #[test]

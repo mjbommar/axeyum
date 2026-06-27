@@ -17,9 +17,11 @@ use axeyum_ir::{ArraySortKey, FuncId, Op, Rational, Sort, SymbolId, TermArena, T
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
 
-/// An ordered command from an (incremental) SMT-LIB script. Only the commands
-/// that affect the assertion stack and its `check-sat` queries are recorded;
-/// declarations mutate the shared arena directly (and stay global).
+/// An ordered command from an (incremental) SMT-LIB script. Commands that affect
+/// the assertion stack and its `check-sat` queries are recorded; declarations
+/// mutate the shared arena directly (and stay global). A small number of output
+/// commands are also recorded when their answer depends on the scoped assertion
+/// stack at the command point.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptCommand {
     /// `(assert t)` — push `t` onto the current assertion scope.
@@ -37,6 +39,9 @@ pub enum ScriptCommand {
     /// declarations and definitions. Modeled explicitly because treating it as a
     /// no-op would silently solve a *different* problem than the script asked.
     ResetAssertions,
+    /// `(get-assertions)` — request the current assertion stack at this command
+    /// point.
+    GetAssertions,
 }
 
 /// A parsed benchmark script.
@@ -1189,10 +1194,13 @@ fn parse_command<'a>(
         "exit"
         | "get-unsat-core"
         | "get-proof"
-        | "get-assertions"
         | "get-assignment"
         | "get-unsat-assumptions"
         | "get-objectives" => exact_len(items, 1, head)?,
+        "get-assertions" => {
+            exact_len(items, 1, head)?;
+            script.commands.push(ScriptCommand::GetAssertions);
+        }
         // `(reset-assertions)` clears assertions but keeps declarations — modeled
         // explicitly (a no-op here would silently keep stale assertions across the
         // reset, solving a different problem than the script asked).
