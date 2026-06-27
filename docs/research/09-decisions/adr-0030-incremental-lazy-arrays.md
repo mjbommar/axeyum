@@ -109,7 +109,9 @@ tails whose remaining base read is a plain memory symbol. A scalar UF-app
 sibling now handles Bool/BV applications the same way: `f(args)` is abstracted
 to a retained warm variable, same-function applications get selector-scoped
 congruence lemmas, and SAT models are projected back into `FuncValue` entries
-before replay. Full lazy arrays/UF remain deferred: arbitrary array terms,
+before replay. Wide-BV UF signatures, including BV256 keccak-style
+arguments/results, use full-value `FuncValue` entries instead of lossy `u128`
+codes. Full lazy arrays/UF remain deferred: arbitrary array terms,
 extensionality, ROW instantiation beyond the current simplifier, non-BV
 indices, non-Bool/BV element arrays, non-scalar or infinite-domain UF
 applications, and learned theory-clause reuse across the whole array/UF engine

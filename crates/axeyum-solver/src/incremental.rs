@@ -1287,6 +1287,7 @@ impl IncrementalBvSolver {
                         app_term.index()
                     ),
                 })?;
+            let result = normalize_bitvec_value(result);
             if result.sort() != app.result_sort {
                 return Err(UnknownReason {
                     kind: UnknownKind::Other,
@@ -1300,7 +1301,7 @@ impl IncrementalBvSolver {
             let (_name, params, result_sort) = arena.function(app.func);
             let model_assignment =
                 assignment_with_internal(arena, model, assignment, &self.internal_symbols);
-            let mut arg_codes = Vec::with_capacity(app.args.len());
+            let mut arg_values = Vec::with_capacity(app.args.len());
             for (&arg, &sort) in app.args.iter().zip(params) {
                 let value = eval(arena, arg, &model_assignment).map_err(|error| UnknownReason {
                     kind: UnknownKind::Other,
@@ -1310,6 +1311,7 @@ impl IncrementalBvSolver {
                         app_term.index()
                     ),
                 })?;
+                let value = normalize_bitvec_value(value);
                 if value.sort() != sort {
                     return Err(UnknownReason {
                         kind: UnknownKind::Other,
@@ -1320,17 +1322,33 @@ impl IncrementalBvSolver {
                         ),
                     });
                 }
-                arg_codes.push(value.scalar_code());
+                arg_values.push(value);
             }
 
-            let interpretation = model
-                .function(app.func)
-                .cloned()
-                .unwrap_or_else(|| FuncValue::constant(params.to_vec(), result_sort, 0));
-            model.set_function(
-                app.func,
-                interpretation.define(&arg_codes, result.scalar_code()),
-            );
+            let use_value_storage = FuncValue::uses_value_storage_for(params, result_sort);
+            let interpretation = match model.function(app.func).cloned() {
+                Some(existing) if existing.uses_value_storage() == use_value_storage => existing,
+                _ if use_value_storage => {
+                    let default = well_founded_default(arena, result_sort)
+                        .map(normalize_bitvec_value)
+                        .ok_or_else(|| UnknownReason {
+                            kind: UnknownKind::Other,
+                            detail: format!(
+                                "warm UF abstraction #{} had no default function result",
+                                app_term.index()
+                            ),
+                        })?;
+                    FuncValue::constant_value(params.to_vec(), result_sort, default)
+                }
+                _ => FuncValue::constant(params.to_vec(), result_sort, 0),
+            };
+            let interpretation = if use_value_storage {
+                interpretation.define_value(&arg_values, result)
+            } else {
+                let arg_codes: Vec<u128> = arg_values.iter().map(Value::scalar_code).collect();
+                interpretation.define(&arg_codes, result.scalar_code())
+            };
+            model.set_function(app.func, interpretation);
         }
         Ok(())
     }
@@ -1552,7 +1570,7 @@ pub(crate) fn known_literal_distinct(arena: &TermArena, left: TermId, right: Ter
 }
 
 fn is_warm_scalar_sort(sort: Sort) -> bool {
-    matches!(sort, Sort::Bool | Sort::BitVec(1..=128))
+    matches!(sort, Sort::Bool | Sort::BitVec(_))
 }
 
 fn is_warm_array_element_sort(sort: ArraySortKey) -> bool {

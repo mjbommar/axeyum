@@ -888,8 +888,9 @@ pub const CAPABILITIES: &[Capability] = &[
                   BV-indexed Bool/BV array symbols, including wide/BV256 index or element values, \
                   abstract to retained warm scalar variables with scoped select-congruence lemmas \
                   and replay-projected array models; scalar Bool/BV \
-                  uninterpreted-function applications abstract to retained warm variables with \
-                  scoped congruence lemmas and replay-projected function interpretations; warm \
+                  uninterpreted-function applications, including wide/BV256 argument or result values, \
+                  abstract to retained warm variables with scoped congruence lemmas and \
+                  replay-projected function interpretations; warm \
                   lazy arrays/UF = ADR-0030 future work)",
         assurance: Assurance::Validated,
         evidence: "full dispatcher model replay; same-index/literal-distinct/const-array/array-ite/\

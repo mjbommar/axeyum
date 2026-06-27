@@ -1394,6 +1394,50 @@ mod tests {
     }
 
     #[test]
+    fn branch_over_wide_bv_uf_auto_stays_warm() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("branch_warm_wide_uf_x", 256).unwrap();
+        let g = arena
+            .declare_fun(
+                "branch_warm_wide_uf_g",
+                &[Sort::BitVec(256)],
+                Sort::BitVec(256),
+            )
+            .unwrap();
+        let gx = arena.apply(g, &[x]).unwrap();
+        let target = arena.wide_bv_const(
+            WideUint::from_u128(0x5a, 256).or(&WideUint::from_u128(1, 256).shl(190)),
+        );
+        let cond = arena.eq(gx, target).unwrap();
+
+        let mut exec = SymbolicExecutor::new();
+        let clauses_before = exec.solver.encoded_clause_count();
+        let branch = exec
+            .branch(&mut arena, cond)
+            .expect("branch should auto-route a wide scalar UF condition");
+        let clauses_after = exec.solver.encoded_clause_count();
+
+        assert!(
+            branch.if_true.is_feasible(),
+            "wide UF branch then-direction should be feasible, got {:?}",
+            branch.if_true
+        );
+        assert!(
+            branch.if_false.is_feasible(),
+            "wide UF branch else-direction should be feasible, got {:?}",
+            branch.if_false
+        );
+        assert!(
+            clauses_after > clauses_before,
+            "wide UF branch should encode warm one-shot assumptions instead of using the dispatcher"
+        );
+        assert!(
+            !exec.solver.has_deferred_theory_assertions(),
+            "one-shot wide UF branch queries must not persist as deferred theory assertions"
+        );
+    }
+
+    #[test]
     fn branch_over_bv_array_select_auto_stays_warm() {
         let mut arena = TermArena::new();
         let mem_sym = arena

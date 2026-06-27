@@ -62,17 +62,20 @@ Last reconciled with `main`: 2026-06-27.
   concrete array entries before replay. Compact BV arrays still use
   `ArrayValue`; wide BV storage-style reads use `GenericArrayValue` so replay
   sees the full wide value. A scalar UF-app sibling now handles Bool/BV
-  applications: `f(args)` is abstracted to an internal warm variable,
-  same-function applications get scoped congruence lemmas, and SAT models are
-  projected back into concrete `FuncValue` entries before replay.
+  applications, including BV256 keccak-style argument or result values:
+  `f(args)` is abstracted to an internal warm variable, same-function
+  applications get scoped congruence lemmas, and SAT models are projected back
+  into concrete `FuncValue` entries before replay. Compact Bool/BV<=128
+  signatures use the scalar function table; wide-BV signatures use full-value
+  entries so replay sees canonical `Value::WideBv`s.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
   `SymbolicExecutor::branch` now preflights simplified fork conditions against
   the retained select/UF abstraction coverage too, so plain BV-indexed
   Bool/BV array-symbol reads, including BV256 storage-style reads, and scalar
-  Bool/BV UF calls stay on warm one-shot assumptions instead of jumping straight
-  to the dispatcher.
+  Bool/BV UF calls, including BV256 keccak-style calls, stay on warm one-shot
+  assumptions instead of jumping straight to the dispatcher.
   Default CFG exploration now uses that auto route too; `memory_aware=true`
   remains the explicit force-dispatch setting.
 - **Why it matters:** symbolic memory/storage and keccak-style uninterpreted calls
@@ -82,7 +85,7 @@ Last reconciled with `main`: 2026-06-27.
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads, plain symbolic-base Bool/BV array loads, wide/BV256 storage-style base
-  loads, scalar Bool/BV UF calls,
+  loads, scalar Bool/BV UF calls, wide/BV256 keccak-style UF calls,
   helper-level load branches, reducible CFG memory branches, and fork queries,
   but general array/UF work still rebuilds through the dispatcher instead of
   retaining warm learned clauses.
@@ -97,6 +100,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm symbolic ROW conditional admission" / "Warm BV-array select-congruence
   admission" / "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /
+  "Warm wide-BV scalar UF projection" /
   "Warm branch routing recognizes retained select/UF slices";
   `docs/plan/track-4-usecases-frontend/P4.1` / `P4.2` notes.
 

@@ -6,7 +6,8 @@
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue,
     GenericArrayValue, IrError, Op, Rational, Sort, TermArena, TermNode, TermStats, Value,
-    bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value, value_to_lsb_bits,
+    WideUint, bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value,
+    value_to_lsb_bits,
 };
 
 fn bv(width: u32, value: u128) -> Value {
@@ -872,6 +873,37 @@ fn apply_evaluates_against_a_model_interpretation() {
         };
         assert_eq!(eval(&arena, app, &model).unwrap(), bv(8, expected));
     }
+}
+
+#[test]
+fn wide_bv_function_interpretation_uses_full_value_storage() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("wide_f", &[Sort::BitVec(256)], Sort::BitVec(256))
+        .unwrap();
+    let x_sym = arena.declare("wide_x", Sort::BitVec(256)).unwrap();
+    let x = arena.var(x_sym);
+    let app = arena.apply(f, &[x]).unwrap();
+    let arg =
+        Value::WideBv(WideUint::from_u128(0x11, 256).or(&WideUint::from_u128(1, 256).shl(190)));
+    let result =
+        Value::WideBv(WideUint::from_u128(0x42, 256).or(&WideUint::from_u128(1, 256).shl(200)));
+
+    assert!(FuncValue::uses_value_storage_for(
+        &[Sort::BitVec(256)],
+        Sort::BitVec(256)
+    ));
+    let interp = FuncValue::constant_value(
+        vec![Sort::BitVec(256)],
+        Sort::BitVec(256),
+        Value::WideBv(WideUint::zero(256)),
+    )
+    .define_value(std::slice::from_ref(&arg), result.clone());
+
+    let mut model = Assignment::new();
+    model.set(x_sym, arg);
+    model.set_function(f, interp);
+    assert_eq!(eval(&arena, app, &model).unwrap(), result);
 }
 
 #[test]

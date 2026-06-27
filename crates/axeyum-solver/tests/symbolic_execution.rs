@@ -2433,6 +2433,67 @@ fn warm_assert_abstracts_bv_uf_application() {
 }
 
 #[test]
+fn warm_assert_abstracts_wide_bv_uf_application() {
+    let mut arena = TermArena::new();
+    let f = arena
+        .declare_fun("warm_wide_uf_f", &[Sort::BitVec(256)], Sort::BitVec(256))
+        .unwrap();
+    let x_sym = arena.declare("warm_wide_uf_x", Sort::BitVec(256)).unwrap();
+    let x = arena.var(x_sym);
+    let fx = arena.apply(f, &[x]).unwrap();
+    let target_value = WideUint::from_u128(0x42, 256).or(&WideUint::from_u128(1, 256).shl(200));
+    let target = arena.wide_bv_const(target_value.clone());
+    let assertion = arena.eq(fx, target).unwrap();
+    assert!(
+        IncrementalBvSolver::term_needs_deferred_theory(&arena, assertion),
+        "the original wide assertion contains an uninterpreted function application"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, assertion)
+        .expect("wide BV UF applications should abstract to warm BV terms");
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the encoded wide UF abstraction should be UF-free"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "wide UF abstraction should avoid the one-shot memory dispatcher"
+    );
+
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("warm wide UF abstraction should be satisfiable");
+    };
+    assert_eq!(
+        eval(&arena, assertion, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected wide UF model must replay the original application assertion"
+    );
+    let interp = model
+        .function(f)
+        .expect("warm wide UF projection should define the touched function point");
+    assert!(
+        interp.uses_value_storage(),
+        "wide UF projection should use the full-value function model path"
+    );
+    assert_eq!(interp.value_entries().count(), 1);
+    assert!(
+        matches!(
+            model.get(x_sym),
+            Some(Value::WideBv(value)) if value.width() == 256
+        ),
+        "unconstrained wide UF arguments should use the canonical wide value path"
+    );
+    assert!(
+        model
+            .iter()
+            .all(|(symbol, _)| !arena.symbol(symbol).0.starts_with("!axeyum_warm_uf_")),
+        "internal UF abstraction symbols must not leak into public models"
+    );
+}
+
+#[test]
 fn warm_uf_congruence_refutes_equal_arg_conflict() {
     let mut arena = TermArena::new();
     let func = arena
@@ -2467,6 +2528,50 @@ fn warm_uf_congruence_refutes_equal_arg_conflict() {
     assert!(
         !solver.has_deferred_theory_assertions(),
         "scalar UF congruence conflicts should stay on the warm path"
+    );
+    assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
+}
+
+#[test]
+fn warm_wide_uf_congruence_refutes_equal_arg_conflict() {
+    let mut arena = TermArena::new();
+    let func = arena
+        .declare_fun(
+            "warm_wide_uf_congruence_f",
+            &[Sort::BitVec(256)],
+            Sort::BitVec(256),
+        )
+        .unwrap();
+    let x_sym = arena
+        .declare("warm_wide_uf_congruence_x", Sort::BitVec(256))
+        .unwrap();
+    let y_sym = arena
+        .declare("warm_wide_uf_congruence_y", Sort::BitVec(256))
+        .unwrap();
+    let arg_x = arena.var(x_sym);
+    let arg_y = arena.var(y_sym);
+    let fx = arena.apply(func, &[arg_x]).unwrap();
+    let fy = arena.apply(func, &[arg_y]).unwrap();
+    let value_a = arena.wide_bv_const(WideUint::from_u128(0xaa, 256));
+    let value_b = arena
+        .wide_bv_const(WideUint::from_u128(0xbb, 256).or(&WideUint::from_u128(1, 256).shl(180)));
+    let fx_is_a = arena.eq(fx, value_a).unwrap();
+    let fy_is_b = arena.eq(fy, value_b).unwrap();
+    let same_arg = arena.eq(arg_x, arg_y).unwrap();
+
+    let mut solver = IncrementalBvSolver::new();
+    solver
+        .assert_simplifying_memory(&mut arena, fx_is_a)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, same_arg)
+        .unwrap();
+    solver
+        .assert_simplifying_memory(&mut arena, fy_is_b)
+        .unwrap();
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "wide UF congruence conflicts should stay on the warm path"
     );
     assert_eq!(solver.check(&arena).unwrap(), CheckResult::Unsat);
 }

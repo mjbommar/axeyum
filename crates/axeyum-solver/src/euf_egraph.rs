@@ -27,6 +27,7 @@ use std::time::Instant;
 use axeyum_egraph::{EGraph, ENodeId, check_congruence};
 use axeyum_ir::{
     Assignment, FuncId, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+    well_founded_default,
 };
 use axeyum_rewrite::replace_subterms;
 
@@ -594,7 +595,8 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
     for (&term, &node) in &bridge.term_to_node {
         if is_constant(arena.node(term)) {
             let root = bridge.egraph.root(node);
-            let code = eval(arena, term, &Assignment::new()).ok()?.scalar_code();
+            let value = eval(arena, term, &Assignment::new()).ok()?;
+            let code = euf_model_code(&value)?;
             class_code.insert(root, code);
             used.entry(class_sort[&root]).or_default().insert(code);
         }
@@ -645,9 +647,24 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
     }
     for (func, entries) in tables {
         let (_, params, result) = arena.function(func);
-        let mut fv = FuncValue::constant(params.to_vec(), result, 0);
+        let use_value_storage = FuncValue::uses_value_storage_for(params, result);
+        let mut fv = if use_value_storage {
+            let default = well_founded_default(arena, result)?;
+            FuncValue::constant_value(params.to_vec(), result, default)
+        } else {
+            FuncValue::constant(params.to_vec(), result, 0)
+        };
         for (args, res) in entries {
-            fv = fv.define(&args, res);
+            if use_value_storage {
+                let arg_values: Vec<Value> = params
+                    .iter()
+                    .zip(args)
+                    .map(|(&sort, code)| value_from_code(sort, code))
+                    .collect();
+                fv = fv.define_value(&arg_values, value_from_code(result, res));
+            } else {
+                fv = fv.define(&args, res);
+            }
         }
         model.set_function(func, fv);
     }
@@ -670,19 +687,16 @@ fn is_constant(node: &TermNode) -> bool {
 fn value_from_code(sort: Sort, code: u128) -> Value {
     match sort {
         Sort::Bool => Value::Bool(code != 0),
-        Sort::BitVec(width) => {
-            let mask = if width >= 128 {
-                u128::MAX
-            } else {
-                (1u128 << width) - 1
-            };
-            Value::Bv {
-                width,
-                value: code & mask,
-            }
-        }
+        Sort::BitVec(width) => Value::from_scalar_code(Sort::BitVec(width), code),
         Sort::Uninterpreted(sort) => Value::Uninterpreted { sort, value: code },
         _ => unreachable!("build_model filtered to Bool/BitVec"),
+    }
+}
+
+fn euf_model_code(value: &Value) -> Option<u128> {
+    match value {
+        Value::WideBv(_) => None,
+        _ => Some(value.scalar_code()),
     }
 }
 

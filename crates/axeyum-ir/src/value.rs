@@ -257,13 +257,13 @@ fn value_order_key(value: &Value) -> String {
 ///
 /// Two storage modes coexist:
 ///
-/// * **Scalar** (`Bool`/`BitVec`/`Float`/uninterpreted parameters *and* result):
+/// * **Scalar** (`Bool`/`BitVec<=128`/`Float<=128`/uninterpreted parameters *and* result):
 ///   both keys and results are encoded to `u128` (a `Bool` as `0`/`1`, a
 ///   `BitVec`/`Float` masked to its width, an uninterpreted value as its model
 ///   token). This is the original ADR-0013 path extended to many-sorted EUF;
 ///   entries are kept in a normalized [`BTreeMap`] — entries equal to `default`
 ///   are removed.
-/// * **Full-value** (`Int`/`Real`/array/datatype appearing in a parameter or the
+/// * **Full-value** (wide `BitVec`/`Float`, `Int`/`Real`/array/datatype appearing in a parameter or the
 ///   result): keys and results are full [`Value`]s, since those sorts have no
 ///   scalar `u128` code (the `QF_UFLIA`/`QF_UFLRA` witnessing-model path, plus
 ///   mixed UF/array signatures). The table is kept finite — only the argument
@@ -285,27 +285,30 @@ pub struct FuncValue {
 /// (full-[`Value`]-keyed) — see [`FuncValue`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum FuncStorage {
-    /// `u128`-coded keys and results (`Bool`/`BitVec`/`Float`/uninterpreted).
+    /// `u128`-coded keys and results (`Bool`/`BitVec<=128`/`Float<=128`/uninterpreted).
     Scalar {
         default: u128,
         entries: BTreeMap<Vec<u128>, u128>,
     },
-    /// Full-[`Value`]-keyed keys and results (`Int`/`Real`/array/datatype
-    /// present); entries are an insertion-deduplicated [`Vec`] because [`Value`]
-    /// is not `Ord`.
+    /// Full-[`Value`]-keyed keys and results (wide `BitVec`/`Float`,
+    /// `Int`/`Real`/array/datatype present); entries are an
+    /// insertion-deduplicated [`Vec`] because [`Value`] is not `Ord`.
     FullValue {
         default: Value,
         entries: Vec<(Vec<Value>, Value)>,
     },
 }
 
-/// Whether `sort` has no `u128` scalar code and therefore requires the
+/// Whether `sort` has no lossless `u128` scalar code and therefore requires the
 /// [`FuncStorage::FullValue`] path in function interpretations.
 fn needs_value_storage(sort: Sort) -> bool {
-    matches!(
-        sort,
-        Sort::Int | Sort::Real | Sort::Array { .. } | Sort::Datatype(_)
-    )
+    match sort {
+        Sort::Float { exp, sig } => exp + sig > 128,
+        Sort::BitVec(129..) | Sort::Int | Sort::Real | Sort::Array { .. } | Sort::Datatype(_) => {
+            true
+        }
+        Sort::Bool | Sort::BitVec(_) | Sort::Uninterpreted(_) => false,
+    }
 }
 
 impl FuncValue {
@@ -321,8 +324,8 @@ impl FuncValue {
     /// # Panics
     ///
     /// Panics if any parameter or the result sort requires full [`Value`]
-    /// storage (`Int`/`Real`/array/datatype) — those interpretations must use
-    /// [`FuncValue::constant_value`].
+    /// storage (wide `BitVec`/`Float`, `Int`/`Real`/array/datatype) — those
+    /// interpretations must use [`FuncValue::constant_value`].
     pub fn constant(params: Vec<Sort>, result: Sort, default: u128) -> Self {
         assert!(
             !Self::uses_value_storage_for(&params, result),
@@ -598,6 +601,7 @@ impl Value {
     pub fn from_scalar_code(sort: Sort, code: u128) -> Value {
         match sort {
             Sort::Bool => Value::Bool(code != 0),
+            Sort::BitVec(w) if w > 128 => Value::WideBv(crate::wide::WideUint::from_u128(code, w)),
             Sort::BitVec(w) => Value::Bv {
                 width: w,
                 value: code & mask(w),
