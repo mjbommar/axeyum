@@ -2,9 +2,9 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 14,
+    "cases": 15,
     "proved": 5,
-    "disproved": 9,
+    "disproved": 10,
     "unknown": 0,
     "mismatches": 0,
     "disagree": 0,
@@ -97,6 +97,17 @@
       "actual": "disproved",
       "checks": "solver-minimized witness `(x = 1, y = 255)` matches the first executable proptest-style baseline failure",
       "baseline_analogue": "proptest exhaustive/shrink baseline over the same Rust predicate",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-proptest-shrunk-counterexample-compare",
+      "tier": "P1",
+      "workflow": "proptest-backed baseline comparison for a shrunk witness",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "fixed-seed proptest runner shrinks the same `u8` wrapping-add monotonicity failure to `(x = 1, y = 255)` that Axeyum minimizes",
+      "baseline_analogue": "actual proptest randomized/shrinking baseline over the same Rust predicate",
       "lean_required": false,
       "lean_available": false
     },

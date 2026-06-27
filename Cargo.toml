@@ -39,6 +39,7 @@ axeyum-query = { path = "crates/axeyum-query", version = "0.1.0" }
 axeyum-scenarios = { path = "crates/axeyum-scenarios", version = "0.1.0" }
 rustsat = { version = "0.7.5", default-features = false }
 rustsat-batsat = { version = "0.7.5" }
+proptest = { version = "1", default-features = false, features = ["std"] }
 z3 = { version = "0.20", default-features = false }
 # Browser-compatible monotonic clock; only used on wasm32 targets (ADR-0017).
 web-time = { version = "1" }

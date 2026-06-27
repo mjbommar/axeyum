@@ -2,6 +2,9 @@ use std::fmt::Write as _;
 
 use axeyum_property::{Bool, Bv, Counterexample, LeanStatus, ProofOutcomeSummary, Property};
 use axeyum_solver::ProofOutcome;
+use proptest::test_runner::{
+    Config as ProptestConfig, RngAlgorithm, RngSeed, TestCaseError, TestError, TestRunner,
+};
 
 const LAST_UPDATED: &str = "2026-06-27";
 
@@ -86,6 +89,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         aggregate_counterexample_rendered()?,
         overflow_helper_counterexample_minimized()?,
         proptest_style_baseline_counterexample_comparison()?,
+        proptest_shrunk_baseline_counterexample_comparison()?,
         kani_style_baseline_proof_comparison()?,
         kani_style_assumption_baseline_proof_comparison()?,
         kani_style_struct_baseline_counterexample_comparison()?,
@@ -103,9 +107,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 14,
+        cases: 15,
         proved: 5,
-        disproved: 9,
+        disproved: 10,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -231,10 +235,11 @@ fn write_markdown_intro(out: &mut String) {
     out.push_str(
         "app-level honesty gate that prevents SDK claims from living only in ad hoc unit\n",
     );
+    out.push_str("tests. It now includes deterministic proved/disproved baseline comparisons\n");
+    out.push_str("and one actual fixed-seed proptest shrunk-witness comparison;\n");
     out.push_str(
-        "tests. It now includes deterministic proved and disproved baseline comparisons;\n",
+        "richer proptest families and external Kani-style comparison remain the next PROP.6 step.\n\n",
     );
-    out.push_str("broader proptest/Kani-style comparison remains the next PROP.6 step.\n\n");
     out.push_str("## Commands\n\n");
     out.push_str("```sh\n");
     out.push_str(
@@ -297,10 +302,10 @@ fn write_markdown_cases(out: &mut String, reports: &[CorpusCaseReport]) {
 fn write_markdown_next_gates(out: &mut String) {
     out.push_str("## Next Gates\n\n");
     out.push_str(
-        "1. Broaden the baseline runner across randomized and external property shapes,\n",
+        "1. Broaden the baseline runner across wider randomized and external property shapes,\n",
     );
     out.push_str(
-        "   including proptest-style random/shrunk witnesses and external Kani-style bounded assertions.\n",
+        "   including richer proptest families and external Kani-style bounded assertions.\n",
     );
     out.push_str(
         "2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,\n",
@@ -675,6 +680,85 @@ fn first_wrapping_add_monotonicity_failure() -> Option<(u8, u8)> {
         }
     }
     None
+}
+
+fn proptest_shrunk_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {
+    let expected = first_wrapping_add_monotonicity_failure()
+        .expect("bounded executable baseline should find the first overflow witness");
+    let shrunk = proptest_wrapping_add_monotonicity_failure()?;
+    assert_eq!(
+        shrunk, expected,
+        "proptest's shrunk witness should match the exhaustive baseline minimum",
+    );
+
+    let mut property = Property::new();
+    let x = property.symbolic::<u8>("x")?;
+    let y = property.symbolic::<u8>("y")?;
+    let sum = property.bv_add(x, y)?;
+    let goal = property.bv_uge(sum, x)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a proptest-comparable counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    let actual = (
+        property
+            .concrete::<u8>(&x, model)?
+            .expect("model should bind x"),
+        property
+            .concrete::<u8>(&y, model)?
+            .expect("model should bind y"),
+    );
+    assert_eq!(actual, expected);
+    assert_eq!(actual, shrunk);
+    assert_eq!(
+        property.counterexample(model)?.render_rust_let_bindings()?,
+        concat!(
+            "let x: u8 = 0x01_u8; // BV8\n",
+            "let y: u8 = 0xff_u8; // BV8\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-proptest-shrunk-counterexample-compare",
+        tier: "P1",
+        workflow: "proptest-backed baseline comparison for a shrunk witness",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "fixed-seed proptest runner shrinks the same `u8` wrapping-add monotonicity failure to `(x = 1, y = 255)` that Axeyum minimizes",
+        baseline_analogue: "actual proptest randomized/shrinking baseline over the same Rust predicate",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn proptest_wrapping_add_monotonicity_failure() -> CorpusResult<(u8, u8)> {
+    let mut runner = TestRunner::new(ProptestConfig {
+        cases: 64,
+        failure_persistence: None,
+        rng_algorithm: RngAlgorithm::ChaCha,
+        rng_seed: RngSeed::Fixed(0xAEE1_2026),
+        ..ProptestConfig::default()
+    });
+    let result = runner.run(&(1u8..=u8::MAX, u8::MAX..=u8::MAX), |(x, y)| {
+        if x.wrapping_add(y) < x {
+            Err(TestCaseError::fail(
+                "wrapping-add monotonicity fails after overflow",
+            ))
+        } else {
+            Ok(())
+        }
+    });
+    match result {
+        Err(TestError::Fail(_, minimal)) => Ok(minimal),
+        Err(TestError::Abort(reason)) => Err(format!("proptest baseline aborted: {reason}").into()),
+        Ok(()) => Err("proptest baseline unexpectedly found no failure".into()),
+    }
 }
 
 fn kani_style_baseline_proof_comparison() -> CorpusResult<CorpusCaseReport> {
