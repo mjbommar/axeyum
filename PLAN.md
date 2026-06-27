@@ -2122,10 +2122,14 @@ against competitor source, are now binding:
      diagnostics refine the blocker further: 4107 fails on term **4041**
      (`x_303 = x_317`, inserted-cell array vs default array), while 3805 fails
      on term **583** (`x_331 = store(x_317,x_320,x_337)`, default array vs
-     inserted-cell store RHS). The next AUFLIA move is therefore guarded
-     selected-array equality/store-definition stabilization after scalar
-     readback changes, or an equivalent learned constraint, not greedy single-OR
-     forcing or more local branch enumeration.
+     inserted-cell store RHS). A small-surface returned-OR stabilizer now
+     handles the synthetic version of that shape under the strict replay gate,
+     but the ungated `bug337` attempt regressed the first diagnostic phase to
+     **231.8 s** and was capped at <=64 replay conjuncts; the large row is back
+     to ~**52.5 s** and remains at term **3408**. The next AUFLIA move is
+     therefore a relevance-guided or learned large-row constraint for the
+     4041/583 array-cell disagreement, not greedy single-OR forcing or more
+     local branch enumeration.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

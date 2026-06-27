@@ -653,9 +653,13 @@ a named mechanism.**
    diagnostics refine this to array/store coherence: 4107 fails on term
    **4041** (`x_303 = x_317`, inserted-cell array vs default array), while
    3805 fails on term **583** (`x_331 = store(x_317,x_320,x_337)`, default
-   array vs inserted-cell store RHS). The next practical AUFLIA step is a
-   guarded selected-array equality/store-definition stabilization after scalar
-   readback changes, or an equivalent learned constraint.
+   array vs inserted-cell store RHS). A small-surface returned-OR stabilizer now
+   handles the synthetic version of that shape under the strict replay gate, but
+   the ungated `bug337` attempt regressed the first diagnostic phase to
+   **231.8 s** and is capped at <=64 replay conjuncts; the large row is back to
+   ~**52.5 s** and remains at term **3408**. The next practical AUFLIA step is a
+   relevance-guided or learned large-row constraint for the 4041/583 array-cell
+   disagreement.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

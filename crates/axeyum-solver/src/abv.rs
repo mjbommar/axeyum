@@ -3246,6 +3246,20 @@ fn scalar_select_support_score(
     Ok(score)
 }
 
+fn scalar_repair_support_gain(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &Assignment,
+    target_symbol: SymbolId,
+    value_term: TermId,
+) -> Result<usize, SolverError> {
+    let target_support = scalar_select_support_score(arena, originals, projected, target_symbol)?;
+    let source_support = direct_value_symbol(arena, value_term).map_or(Ok(0), |source| {
+        scalar_select_support_score(arena, originals, projected, source)
+    })?;
+    Ok(source_support.saturating_sub(target_support))
+}
+
 fn array_equality_repair_key(
     arena: &TermArena,
     originals: &[TermId],
@@ -5248,23 +5262,22 @@ fn repair_projected_scalar_equalities(
                         }
                         trial_stats.scalar_symbol_changes += 1;
                     }
-                    let target_support =
-                        scalar_select_support_score(arena, originals, projected, symbol)?;
-                    let source_support = direct_value_symbol(arena, value_term)
-                        .map_or(Ok(0), |source| {
-                            scalar_select_support_score(arena, originals, projected, source)
-                        })?;
-                    let support_gain = source_support.saturating_sub(target_support);
+                    let support_gain = scalar_repair_support_gain(
+                        arena, originals, projected, symbol, value_term,
+                    )?;
                     if support_gain > 0 {
                         stats.scalar_support_candidates += 1;
                     }
                     let mut false_count = positive_replay_false_count(arena, originals, &trial)?;
-                    if false_count >= current_false && support_gain > 0 {
-                        stats.scalar_stabilized_trials += 1;
-                        trial_stats =
-                            stabilize_projected_after_scalar_trial(arena, originals, &mut trial)?;
-                        false_count = positive_replay_false_count(arena, originals, &trial)?;
-                    }
+                    stabilize_supported_scalar_trial(
+                        arena,
+                        originals,
+                        current_false,
+                        support_gain,
+                        &mut trial,
+                        &mut trial_stats,
+                        &mut false_count,
+                    )?;
                     if false_count > current_false {
                         stats.scalar_rejected_worse_trials += 1;
                         continue;
@@ -5321,6 +5334,119 @@ fn stabilize_projected_after_scalar_trial(
         stats.absorb(after_branch_select);
     }
     Ok(stats)
+}
+
+fn repair_projected_returned_or_array_store_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &Assignment,
+) -> Result<Option<(usize, ProjectionRepairStats, Assignment)>, SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!(
+            "lazy-ext scalar returned-OR stabilization failed: {e}"
+        ))
+    };
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    let Some(failure) = first_projected_replay_failure(
+        arena,
+        originals,
+        projected,
+        ProjectionRepairStats::default(),
+    )?
+    else {
+        return Ok(None);
+    };
+    let Some(or_failure) = failure.failed_or else {
+        return Ok(None);
+    };
+    if or_failure.best_branch_false_literals != 1 {
+        return Ok(None);
+    }
+    let Some(false_literal) = or_failure.best_branch_first_false_term else {
+        return Ok(None);
+    };
+    if store_base_repair_target(arena, false_literal).is_none()
+        && direct_array_equality_repair_target(arena, false_literal).is_none()
+    {
+        return Ok(None);
+    }
+
+    let mut trial = projected.clone();
+    let mut stats = ProjectionRepairStats::default();
+    let repaired = repair_projected_branch_literal_in_branch(
+        arena,
+        originals,
+        or_failure.best_branch_term,
+        false_literal,
+        &mut trial,
+        &mut stats,
+    )?;
+    if !repaired || eval(arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true) {
+        return Ok(None);
+    }
+    let total_false = positive_replay_false_count(arena, originals, &trial)?;
+    if total_false <= current_false {
+        Ok(Some((total_false, stats, trial)))
+    } else {
+        Ok(None)
+    }
+}
+
+fn stabilize_scalar_trial_after_returned_or_array_store(
+    arena: &TermArena,
+    originals: &[TermId],
+    trial: &mut Assignment,
+    stats: &mut ProjectionRepairStats,
+    total_false: &mut usize,
+) -> Result<bool, SolverError> {
+    let Some((stabilized_false, stabilized_stats, stabilized_trial)) =
+        repair_projected_returned_or_array_store_literal(arena, originals, trial)?
+    else {
+        return Ok(false);
+    };
+    if stabilized_false >= *total_false {
+        return Ok(false);
+    }
+    *trial = stabilized_trial;
+    stats.absorb(stabilized_stats);
+    *total_false = stabilized_false;
+    Ok(true)
+}
+
+fn stabilize_supported_scalar_trial(
+    arena: &TermArena,
+    originals: &[TermId],
+    current_false: usize,
+    support_gain: usize,
+    trial: &mut Assignment,
+    trial_stats: &mut ProjectionRepairStats,
+    total_false: &mut usize,
+) -> Result<(), SolverError> {
+    if support_gain == 0 {
+        return Ok(());
+    }
+    if *total_false >= current_false {
+        trial_stats.scalar_stabilized_trials += 1;
+        let stabilize_stats = stabilize_projected_after_scalar_trial(arena, originals, trial)?;
+        trial_stats.absorb(stabilize_stats);
+        *total_false = positive_replay_false_count(arena, originals, trial)?;
+    } else {
+        const MAX_RETURNED_OR_STABILIZATION_CONJUNCTS: usize = 64;
+        if positive_replay_conjunct_count(arena, originals)
+            > MAX_RETURNED_OR_STABILIZATION_CONJUNCTS
+        {
+            return Ok(());
+        }
+        trial_stats.scalar_stabilized_trials += 1;
+        let _ = stabilize_scalar_trial_after_returned_or_array_store(
+            arena,
+            originals,
+            trial,
+            trial_stats,
+            total_false,
+        )?;
+    }
+    Ok(())
 }
 
 fn repair_projected_branch_disjunctions(
@@ -7942,20 +8068,21 @@ fn replay_scalar_candidate_diagnostics(
             changed = true;
         }
 
-        let target_support =
-            scalar_select_support_score(arena, originals, projected, target_symbol)?;
-        let source_support = direct_value_symbol(arena, value_term).map_or(Ok(0), |source| {
-            scalar_select_support_score(arena, originals, projected, source)
-        })?;
-        let support_gain = source_support.saturating_sub(target_support);
+        let support_gain =
+            scalar_repair_support_gain(arena, originals, projected, target_symbol, value_term)?;
         let literal_true =
             eval(arena, failure.conjunct_term, &trial).map_err(ir)? == Value::Bool(true);
         let mut total_false = positive_replay_false_count(arena, originals, &trial)?;
-        if changed && total_false >= current_false && support_gain > 0 {
-            let stabilize_stats =
-                stabilize_projected_after_scalar_trial(arena, originals, &mut trial)?;
-            stats.absorb(stabilize_stats);
-            total_false = positive_replay_false_count(arena, originals, &trial)?;
+        if changed {
+            stabilize_supported_scalar_trial(
+                arena,
+                originals,
+                current_false,
+                support_gain,
+                &mut trial,
+                &mut stats,
+                &mut total_false,
+            )?;
         }
         let global_failure = first_projected_replay_failure(
             arena,
@@ -9329,22 +9456,21 @@ fn repair_projected_replay_scalar_failure(
             continue;
         }
 
-        let target_support = scalar_select_support_score(arena, originals, projected, symbol)?;
-        let source_support = direct_value_symbol(arena, value_term).map_or(Ok(0), |source| {
-            scalar_select_support_score(arena, originals, projected, source)
-        })?;
-        let support_gain = source_support.saturating_sub(target_support);
+        let support_gain =
+            scalar_repair_support_gain(arena, originals, projected, symbol, value_term)?;
         if support_gain > 0 {
             stats.scalar_support_candidates += 1;
         }
         let mut total_false = positive_replay_false_count(arena, originals, &trial)?;
-        if total_false >= current_false && support_gain > 0 {
-            stats.scalar_stabilized_trials += 1;
-            let stabilize_stats =
-                stabilize_projected_after_scalar_trial(arena, originals, &mut trial)?;
-            stats.absorb(stabilize_stats);
-            total_false = positive_replay_false_count(arena, originals, &trial)?;
-        }
+        stabilize_supported_scalar_trial(
+            arena,
+            originals,
+            current_false,
+            support_gain,
+            &mut trial,
+            &mut stats,
+            &mut total_false,
+        )?;
         if total_false >= current_false {
             continue;
         }
@@ -11865,6 +11991,108 @@ mod tests {
             eval(&arena, y_eq_three, &projected).unwrap(),
             Value::Bool(true)
         );
+    }
+
+    #[test]
+    fn lazy_ext_scalar_repair_stabilizes_returned_array_or() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let c = arena.array_var("c", 4, 8).unwrap();
+        let two = arena.bv_const(4, 2).unwrap();
+        let three = arena.bv_const(4, 3).unwrap();
+        let one8 = arena.bv_const(8, 1).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let q = arena.bool_var("q").unwrap();
+
+        let y_read = arena.select(a, two).unwrap();
+        let z_read_two = arena.select(c, two).unwrap();
+        let z_read_three = arena.select(c, three).unwrap();
+        let y_eq_read = arena.eq(y, y_read).unwrap();
+        let z_eq_read_two = arena.eq(z, z_read_two).unwrap();
+        let z_eq_read_three = arena.eq(z, z_read_three).unwrap();
+        let y_eq_z = arena.eq(y, z).unwrap();
+        let y_eq_one = arena.eq(y, one8).unwrap();
+        let a_eq_b = arena.eq(a, b).unwrap();
+        let false_term = arena.bool_const(false);
+        let branch_or = arena.or(a_eq_b, false_term).unwrap();
+        let prefix = arena.and(y_eq_read, z_eq_read_two).unwrap();
+        let prefix = arena.and(prefix, z_eq_read_three).unwrap();
+        let prefix = arena.and(prefix, y_eq_z).unwrap();
+        let prefix = arena.and(prefix, y_eq_one).unwrap();
+        let suffix = arena.and(branch_or, q).unwrap();
+        let assertion = arena.and(prefix, suffix).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(b_symbol) = arena.node(b) else {
+            panic!("b should be a symbol");
+        };
+        let TermNode::Symbol(c_symbol) = arena.node(c) else {
+            panic!("c should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let default_b = default_value_for_symbol(&arena, *b_symbol).unwrap();
+        let default_c = default_value_for_symbol(&arena, *c_symbol).unwrap();
+        let c_with_two = store_value(
+            &default_c,
+            Value::Bv { width: 4, value: 2 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+        let c_with_entries = store_value(
+            &c_with_two,
+            Value::Bv { width: 4, value: 3 },
+            Value::Bv { width: 8, value: 1 },
+        )
+        .unwrap();
+
+        let mut projected = Assignment::new();
+        projected.set(*a_symbol, default_a);
+        projected.set(*b_symbol, default_b);
+        projected.set(*c_symbol, c_with_entries);
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 0 });
+        projected.set(*z_symbol, Value::Bv { width: 8, value: 1 });
+        projected.set(*q_symbol, Value::Bool(false));
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            3
+        );
+        assert_eq!(
+            eval(&arena, branch_or, &projected).unwrap(),
+            Value::Bool(true)
+        );
+
+        let stats = repair_projected_scalar_equalities(&arena, &originals, &mut projected).unwrap();
+        assert!(stats.scalar_stabilized_trials >= 1, "{stats:?}");
+        assert!(stats.branch_symbol_changes >= 1, "{stats:?}");
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+        assert_eq!(eval(&arena, y_eq_z, &projected).unwrap(), Value::Bool(true));
+        assert_eq!(
+            eval(&arena, y_eq_one, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            eval(&arena, branch_or, &projected).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(eval(&arena, q, &projected).unwrap(), Value::Bool(false));
     }
 
     #[test]
