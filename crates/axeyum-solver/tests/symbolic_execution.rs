@@ -3011,6 +3011,73 @@ fn cfg_explorer_auto_routes_array_branch_without_memory_flag() {
 }
 
 #[test]
+fn cfg_explorer_uses_auto_route_for_reducible_memory_conditions() {
+    let mut arena = TermArena::new();
+    let is = arena.declare("cfg_warm_i", Sort::BitVec(8)).unwrap();
+    let js = arena.declare("cfg_warm_j", Sort::BitVec(8)).unwrap();
+    let i = arena.var(is);
+    let j = arena.var(js);
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, i, one).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let loaded_eq_one = arena.eq(loaded, one).unwrap();
+    let loaded_ne_one = arena.not(loaded_eq_one).unwrap();
+    let loaded_not_ne_one = arena.not(loaded_ne_one).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    let outcome = executor
+        .explore_cfg(
+            &mut arena,
+            0u8,
+            CfgExploreConfig {
+                max_steps: 8,
+                max_targets: 4,
+                memory_aware: false,
+            },
+            move |_arena, state| {
+                Ok(match state {
+                    0 => CfgStep::Assume {
+                        condition: i_eq_j,
+                        next: 1,
+                    },
+                    1 => CfgStep::Branch {
+                        condition: loaded_ne_one,
+                        if_true: 2,
+                        if_false: 3,
+                    },
+                    2 | 3 => CfgStep::Target(state),
+                    _ => CfgStep::Stop,
+                })
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.reached.len(),
+        1,
+        "the reducible read-over-write branch should reach only the consistent target"
+    );
+    assert_eq!(outcome.reached[0].state, 3);
+    assert_eq!(
+        outcome.reached[0].path_condition,
+        vec![i_eq_j, loaded_not_ne_one],
+        "the reached path retains the original frontend-visible conditions"
+    );
+    assert_eq!(outcome.pruned_infeasible, 1);
+    assert_eq!(
+        outcome.unknown_branches, 0,
+        "reducible memory conditions should not degrade CFG exploration to Unknown"
+    );
+    assert!(
+        executor.path_condition().is_empty(),
+        "CFG exploration must restore the caller's incoming path"
+    );
+}
+
+#[test]
 fn symbolic_memory_helper_routes_load_branches_through_memory_executor() {
     let mut arena = TermArena::new();
     let is = arena.declare("helper_i", Sort::BitVec(8)).unwrap();

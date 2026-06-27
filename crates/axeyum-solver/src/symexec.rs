@@ -456,9 +456,9 @@ pub struct CfgExploreConfig {
     pub max_steps: usize,
     /// Maximum number of target states to return before stopping exploration.
     pub max_targets: usize,
-    /// Whether branch/assume/model checks use the memory-aware full dispatcher.
-    /// Set this when path conditions may mention arrays or uninterpreted
-    /// functions.
+    /// Whether branch/assume/model checks force the memory-aware full
+    /// dispatcher. The default `false` uses the automatic route: warm BV first
+    /// when memory simplification removes arrays/UFs, otherwise memory fallback.
     pub memory_aware: bool,
 }
 
@@ -1197,11 +1197,7 @@ where
         if_true: State,
         if_false: State,
     ) -> Result<(), SolverError> {
-        let branch = if self.config.memory_aware
-            || self
-                .executor
-                .cfg_should_use_memory_route(self.arena, Some(condition))
-        {
+        let branch = if self.config.memory_aware {
             self.executor.branch_with_memory(self.arena, condition)?
         } else {
             self.executor.branch(self.arena, condition)?
@@ -1232,14 +1228,10 @@ where
 
     fn visit_assumption(&mut self, condition: TermId, state: State) -> Result<(), SolverError> {
         self.executor.enter()?;
-        let status = match if self.config.memory_aware
-            || self
-                .executor
-                .cfg_should_use_memory_route(self.arena, Some(condition))
-        {
+        let status = match if self.config.memory_aware {
             self.executor.assume_with_memory(self.arena, condition)
         } else {
-            self.executor.assume(self.arena, condition)
+            self.executor.assume_auto(self.arena, condition)
         } {
             Ok(status) => status,
             Err(error) => {
@@ -1287,18 +1279,18 @@ where
     }
 
     fn current_status(&mut self) -> Result<PathStatus, SolverError> {
-        if self.config.memory_aware || self.executor.cfg_should_use_memory_route(self.arena, None) {
+        if self.config.memory_aware {
             self.executor.status_with_memory(self.arena)
         } else {
-            self.executor.status(self.arena)
+            self.executor.status_auto(self.arena)
         }
     }
 
     fn current_model(&mut self) -> Result<Option<Model>, SolverError> {
-        if self.config.memory_aware || self.executor.cfg_should_use_memory_route(self.arena, None) {
+        if self.config.memory_aware {
             self.executor.model_with_memory(self.arena)
         } else {
-            self.executor.model(self.arena)
+            self.executor.model_auto(self.arena)
         }
     }
 
@@ -1309,13 +1301,6 @@ where
         } else {
             false
         }
-    }
-}
-
-impl SymbolicExecutor {
-    fn cfg_should_use_memory_route(&self, arena: &TermArena, term: Option<TermId>) -> bool {
-        self.solver.has_deferred_theory_assertions()
-            || term.is_some_and(|term| IncrementalBvSolver::term_needs_deferred_theory(arena, term))
     }
 }
 

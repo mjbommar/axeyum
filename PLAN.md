@@ -2272,10 +2272,12 @@ now use the same automatic warm/memory route, so reducible helper queries avoid
 the dispatcher while unreduced memory still falls back soundly.
 `explore_cfg` now owns the DFS solver mechanics for frontend-supplied CFG states:
 branch feasibility, scope push/pop, infeasible pruning, unknown-safe traversal,
-and replay-checked target models. This is still a one-shot fallback for deferred
-theories beyond the narrow same-index / literal-distinct / const-array /
-array-`ite` / reducible conditional-ROW memory admission, not final warm lazy
-theory incrementality or a complete lifter/emulator frontend. The
+and replay-checked target models; with the default `memory_aware=false` it now
+uses the same automatic warm/memory route as direct executor calls, so reducible
+CFG memory branches stay warm before falling back. This is still a one-shot
+fallback for deferred theories beyond the narrow same-index / literal-distinct /
+const-array / array-`ite` / reducible conditional-ROW memory admission, not final
+warm lazy theory incrementality or a complete lifter/emulator frontend. The
 checked concrete replay hook now has a reusable tiny-target library surface:
 `TinyBvProgram` validates a fixed-width BV register program, lifts instructions
 to symbolic CFG steps, extracts model witnesses, and independently replays them

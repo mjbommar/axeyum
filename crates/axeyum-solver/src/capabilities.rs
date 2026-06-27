@@ -897,15 +897,15 @@ pub const CAPABILITIES: &[Capability] = &[
                   enter+backtrack / generic CFG exploration harness with model-witnessed targets / \
                   checked CFG exploration with concrete witness replay hook / \
                   concrete test-input model / SymbolicMemory load/store helper plus automatic \
-                  warm/memory assume/branch/model routing for array/UF path conditions / distinct \
-                  test-suite enumeration (all-SAT) / \
+                  warm/memory assume/branch/model routing for array/UF path conditions and default \
+                  CFG exploration / distinct test-suite enumeration (all-SAT) / \
                   optimize objective over the path condition (min/max, unsigned/signed BV + LIA)",
         assurance: Assurance::Validated,
         evidence: "models replay-checked vs path condition; CFG targets are returned only with \
                    replay-checked models and optionally bucketed by caller-supplied concrete replay; \
-                   memory load helpers stay warm when their reads reduce and route through the full \
-                   dispatcher when unreduced; optimum certified by the underlying procedure; \
-                   three-valued PathStatus keeps unknown from wrongly pruning a live path",
+                   memory load helpers and CFG queries stay warm when their reads reduce and route \
+                   through the full dispatcher when unreduced; optimum certified by the underlying \
+                   procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",
         reference: "ADR-0009/0027",
     },
     Capability {
