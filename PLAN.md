@@ -2250,8 +2250,11 @@ the DFS solver mechanics for frontend-supplied CFG states: branch feasibility,
 scope push/pop, infeasible pruning, unknown-safe traversal, and replay-checked
 target models. This is still a one-shot fallback for deferred theories, not final
 warm lazy theory incrementality or a complete lifter/emulator frontend. The
-concrete replay hook exists; an actual small-target lifter and emulator library
-remain P4.2 work.
+checked concrete replay hook now has a reusable tiny-target library surface:
+`TinyBvProgram` validates a fixed-width BV register program, lifts instructions
+to symbolic CFG steps, extracts model witnesses, and independently replays them
+in a concrete emulator. P4.2 still needs richer memory-bearing frontend work,
+reachability/safety wrappers, and eventual warm lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

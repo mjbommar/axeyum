@@ -12,7 +12,7 @@
 use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
-    SymbolicExecutor, SymbolicMemory,
+    SymbolicExecutor, SymbolicMemory, TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -522,6 +522,79 @@ fn cfg_explorer_finds_winning_paths_and_concrete_witnesses() {
             concretely_reaches_win(&program, inputs),
             "solver-found CFG input {inputs:?} must concretely reach Win"
         );
+    }
+}
+
+#[test]
+fn tiny_bv_program_frontend_lifts_explores_and_replays() {
+    // This is the reusable P4.2 frontend surface: the program validates its
+    // tiny target IR, lifts instructions into symbolic CFG steps, extracts
+    // concrete model witnesses, and independently replays them.
+    let mut arena = TermArena::new();
+    let program = TinyBvProgram::new(
+        WIDTH,
+        REG_COUNT,
+        INPUT_COUNT,
+        MAX_STEPS,
+        vec![
+            TinyBvInsn::Add { dst: 2, a: 0, b: 1 },
+            TinyBvInsn::Xor { dst: 3, a: 0, b: 1 },
+            TinyBvInsn::BranchEq {
+                reg: 2,
+                value: 0x2f2f,
+                then_pc: 3,
+                else_pc: 5,
+            },
+            TinyBvInsn::BranchEq {
+                reg: 3,
+                value: 0x0f0f,
+                then_pc: 4,
+                else_pc: 5,
+            },
+            TinyBvInsn::Win,
+            TinyBvInsn::Lose,
+        ],
+    )
+    .unwrap();
+
+    let outcome = program
+        .explore_checked(
+            &mut arena,
+            "tiny_input",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+
+    assert!(!outcome.truncated);
+    assert_eq!(outcome.undecided_targets, 0);
+    assert!(outcome.missing_witnesses.is_empty());
+    assert!(outcome.mismatches.is_empty());
+    assert!(
+        !outcome.verified.is_empty(),
+        "library frontend should find a concrete winning witness"
+    );
+    for hit in &outcome.verified {
+        assert_eq!(
+            program.concrete_run(&hit.witness),
+            TinyBvConcreteOutcome::Win
+        );
+        assert!(matches!(
+            program.code().get(hit.state.pc),
+            Some(TinyBvInsn::Win)
+        ));
+        assert!(
+            !hit.path_condition.is_empty(),
+            "winning path should preserve branch constraints"
+        );
+        let [x, y] = hit.witness.inputs[..] else {
+            panic!("test program has exactly two input words");
+        };
+        assert_eq!((x + y) & MASK, 0x2f2f);
+        assert_eq!((x ^ y) & MASK, 0x0f0f);
     }
 }
 
