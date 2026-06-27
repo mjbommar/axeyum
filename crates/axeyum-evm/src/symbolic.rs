@@ -45,9 +45,10 @@
 use std::collections::BTreeMap;
 
 use axeyum_ir::{SymbolId, TermArena, TermId};
-use axeyum_solver::{PathStatus, SymbolicExecutor};
+use axeyum_solver::{PathStatus, SymbolicExecutor, SymbolicMemory};
 use axeyum_solver::{SolverConfig, SolverError};
 
+use crate::MemoryEncoding;
 use crate::opcode::{Op, Program};
 
 /// Word width for the symbolic machine (EVM 256-bit).
@@ -144,6 +145,12 @@ struct State {
     /// result_term)`. Used to emit pairwise injectivity constraints when a hash
     /// participates in a feasibility query.
     keccak_apps: Vec<KeccakApp>,
+    /// How storage reads/writes are lowered on this path.
+    encoding: MemoryEncoding,
+    /// The warm SMT-array storage state, used only under
+    /// [`MemoryEncoding::WarmArray`]. Lazily created (as `const_array(0)`) on the
+    /// first symbolic storage access so the `IteFold` path allocates nothing.
+    storage_array: Option<SymbolicMemory>,
 }
 
 /// A keccak application observed on a path.
@@ -158,7 +165,7 @@ struct KeccakApp {
 }
 
 impl State {
-    fn new() -> Self {
+    fn new(encoding: MemoryEncoding) -> Self {
         State {
             stack: Vec::new(),
             memory: BTreeMap::new(),
@@ -166,7 +173,61 @@ impl State {
             storage: BTreeMap::new(),
             sym_storage: Vec::new(),
             keccak_apps: Vec::new(),
+            encoding,
+            storage_array: None,
         }
+    }
+
+    /// The warm storage array, created on first use as `const_array(0)` (EVM cold
+    /// slots read zero). Only called under [`MemoryEncoding::WarmArray`].
+    fn storage_mem(&mut self, arena: &mut TermArena) -> Result<SymbolicMemory, SolverError> {
+        if let Some(mem) = self.storage_array {
+            return Ok(mem);
+        }
+        let zero = arena.bv_const(W, 0)?;
+        let base = arena.const_array(W, zero)?;
+        let mem = SymbolicMemory::from_array(arena, base)?;
+        self.storage_array = Some(mem);
+        Ok(mem)
+    }
+
+    /// `SLOAD(key)` lowered per the active encoding (warm `select` vs `ite`-fold).
+    fn storage_load(&mut self, arena: &mut TermArena, key: TermId) -> Result<TermId, SolverError> {
+        match self.encoding {
+            MemoryEncoding::WarmArray => {
+                let mem = self.storage_mem(arena)?;
+                mem.load(arena, key)
+            }
+            MemoryEncoding::IteFold => {
+                let base = storage_base(arena, self, key)?;
+                fold_word_writes(arena, &self.sym_storage, key, base)
+            }
+        }
+    }
+
+    /// `SSTORE(key, value)` recorded per the active encoding.
+    fn storage_store(
+        &mut self,
+        arena: &mut TermArena,
+        key: TermId,
+        value: TermId,
+    ) -> Result<(), SolverError> {
+        // The concrete fast-path map is maintained in both encodings (it also
+        // feeds keccak preimage byte reads); it is harmless when unused.
+        if let Some(k) = concrete_bytes(arena, key) {
+            self.storage.insert(k, value);
+        }
+        match self.encoding {
+            MemoryEncoding::WarmArray => {
+                let mut mem = self.storage_mem(arena)?;
+                mem.store(arena, key, value)?;
+                self.storage_array = Some(mem);
+            }
+            // A later symbolic read must see this write even when the key is
+            // concrete (it may alias a symbolic key), so record it on the list.
+            MemoryEncoding::IteFold => self.sym_storage.push(Write { key, value }),
+        }
+        Ok(())
     }
 }
 
@@ -194,6 +255,7 @@ pub fn explore(
     config: &SolverConfig,
     max_steps: usize,
     track_overflow: bool,
+    encoding: MemoryEncoding,
 ) -> Result<Exploration, SolverError> {
     let mut arena = TermArena::new();
     let mut env = build_env(&mut arena)?;
@@ -208,6 +270,7 @@ pub fn explore(
         &mut env,
         max_steps,
         track_overflow,
+        encoding,
         &mut saw_unknown,
         &mut obligations,
     )?;
@@ -269,10 +332,11 @@ fn walk(
     env: &mut SymEnv,
     max_steps: usize,
     track_overflow: bool,
+    encoding: MemoryEncoding,
     saw_unknown: &mut bool,
     obligations: &mut Vec<TermId>,
 ) -> Result<Option<PathBug>, SolverError> {
-    let mut state = State::new();
+    let mut state = State::new(encoding);
     run_from(
         program,
         arena,
@@ -548,7 +612,7 @@ fn run_from(
                 // are monotone facts; asserting them now keeps them live for all
                 // downstream feasibility queries on this path.
                 if let Some(lemma) = keccak_injectivity_pair(arena, &state.keccak_apps, &new_app)? {
-                    let status = exec.assume(arena, lemma)?;
+                    let status = exec.assume_auto(arena, lemma)?;
                     if matches!(status, PathStatus::Unknown(_)) {
                         *saw_unknown = true;
                     }
@@ -627,20 +691,13 @@ fn run_from(
             }
             Op::Sload => {
                 let key = pop_or_unknown!();
-                let base = storage_base(arena, state, key)?;
-                let word = fold_word_writes(arena, &state.sym_storage, key, base)?;
+                let word = state.storage_load(arena, key)?;
                 state.stack.push(word);
             }
             Op::Sstore => {
                 let key = pop_or_unknown!();
                 let val = pop_or_unknown!();
-                if let Some(k) = concrete_bytes(arena, key) {
-                    state.storage.insert(k, val);
-                }
-                // Always record on the symbolic write-list too: a later symbolic
-                // read must see this write even when the key is concrete (it may
-                // alias a symbolic key), and a symbolic key only lives here.
-                state.sym_storage.push(Write { key, value: val });
+                state.storage_store(arena, key, val)?;
             }
             Op::Pc => {
                 state.stack.push(arena.bv_const(W, pc as u128)?);
@@ -684,7 +741,7 @@ fn run_from(
                     if let Some(next) = program.index_at(d) {
                         if program.is_jumpdest(d) {
                             exec.enter()?;
-                            let status = exec.assume(arena, taken)?;
+                            let status = exec.assume_auto(arena, taken)?;
                             if !status.is_infeasible() {
                                 let mut forked = state.clone();
                                 let found = run_from(
@@ -718,7 +775,7 @@ fn run_from(
                     *saw_unknown = true;
                 }
                 let not_taken = arena.not(taken)?;
-                let status = exec.assume(arena, not_taken)?;
+                let status = exec.assume_auto(arena, not_taken)?;
                 if status.is_infeasible() {
                     return Ok(None);
                 }
@@ -808,7 +865,7 @@ fn check_overflow(
     let branch = exec.branch(arena, ovf)?;
     if branch.if_true.is_feasible() {
         // Commit the overflow condition so model() lifts a witnessing input.
-        exec.assume(arena, ovf)?;
+        exec.assume_auto(arena, ovf)?;
         return lift_witness(arena, exec, env, kind, pc);
     }
     if matches!(branch.if_true, PathStatus::Unknown(_)) {

@@ -34,7 +34,7 @@ engine work finally carries a number.
 | I2 | Port `axeyum-verify` + `-macros` (own `Witness` enum; direct syn deps) | `DONE` (19d11b4) |
 | I3 | **EVM/symexec capability scoreboard** (6/6 decided, DISAGREE=0, 5 shapes) | `DONE` (c840cab) |
 | I4a | Reconcile `UPSTREAM-FEEDBACK` — U6 now measured by the scoreboard | `DONE` |
-| I4b | Rewire EVM to `main`'s warm-array path; measure warm vs `ite`-fold (depth/CNF/time) | `TODO` (follow-up) |
+| I4b | EVM `MemoryEncoding::WarmArray` (`select`/`store` via `SymbolicMemory`) + warm-vs-`ite`-fold scoreboard column | `DONE` |
 
 **Landed.** All three apps (`axeyum-evm`, `axeyum-verify`+`-macros`) build on
 `main`, pass `cargo test` + `clippy -D warnings`, and hold **DISAGREE = 0**.
@@ -44,10 +44,21 @@ engine now carries a committed number via `evm/SCOREBOARD.md`.
 `axeyum-consumer-bench` was deliberately **not** ported (its corpus is coupled to
 the retired branch property API and duplicates `main`'s `property/SCOREBOARD`).
 
-**Next (I4b).** Make the EVM memory model optionally use `main`'s warm
-`SymbolicExecutor` array path instead of the frontend `ite`-fold, and extend the
-capability scoreboard with a warm-vs-`ite`-fold column (ite depth / CNF size /
-solve time) so the U6 special-case-vs-general decision is data-driven.
+**I4b finding.** `axeyum-evm` now decides symbolic storage two ways —
+`MemoryEncoding::IteFold` (frontend read-over-write, default) and
+`MemoryEncoding::WarmArray` (`const_array(0)` + `store`/`select`, auto-routed via
+`SymbolicMemory` + `assume_auto`). They are denotation-equivalent: cross-encoding
+agreement holds on every symbolic-storage/keccak row (DISAGREE=0), proving
+`main`'s warm array path handles the EVM's storage patterns. At the corpus's
+*shallow* store depths the two are comparable in wall-clock (roundtrip ~20 ms
+either way); the warm-path advantage is expected only at **deep store-chains**,
+which the corpus does not yet stress. So the next measurement is a deep-chain row
+(forward-backlog A1), and *that* number should drive the U6 general-vs-special
+decision.
+
+**Next.** Forward backlog in [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main):
+A1 multi-tx invariants (+ a deep-store-chain warm-vs-`ite` row), then A2
+CALL/DELEGATECALL modeling; C4 general CFG→`TransitionSystem` lowering.
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds

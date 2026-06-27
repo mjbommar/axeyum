@@ -20,11 +20,12 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::time::Instant;
 
 use axeyum_evm::concrete::{self, Env, Halt};
 use axeyum_evm::opcode::{Program, decode};
 use axeyum_evm::word::Word;
-use axeyum_evm::{AnalyzeConfig, FindingKind, Verdict, analyze};
+use axeyum_evm::{AnalyzeConfig, FindingKind, MemoryEncoding, Verdict, analyze};
 
 // ----- opcode byte helpers -------------------------------------------------
 const STOP: u8 = 0x00;
@@ -136,7 +137,15 @@ fn witness_reproduces(program: &Program, f: &axeyum_evm::Finding) -> bool {
 }
 
 fn evaluate(case: &Case) -> Outcome {
-    let report = analyze(&case.bytecode, &AnalyzeConfig::default());
+    evaluate_with(case, MemoryEncoding::default())
+}
+
+fn evaluate_with(case: &Case, memory: MemoryEncoding) -> Outcome {
+    let cfg = AnalyzeConfig {
+        memory,
+        ..AnalyzeConfig::default()
+    };
+    let report = analyze(&case.bytecode, &cfg);
     let program = decode(&case.bytecode);
 
     if let Some(f) = report.findings.first() {
@@ -194,170 +203,125 @@ impl Tally {
     }
 }
 
+#[rustfmt::skip]
 fn corpus() -> Vec<Case> {
+    use Expect::{Bug, Safe};
+    use FindingKind::{AddOverflow, Revert};
+    use Shape::{Arith, ConcreteMem, Control, KeccakMapping, SymbolicStorage};
     vec![
         Case {
-            name: "add-overflow-unguarded",
-            shape: Shape::Arith,
-            expect: Expect::Bug(FindingKind::AddOverflow),
+            name: "add-overflow-unguarded", shape: Arith, expect: Bug(AddOverflow),
             bytecode: vec![
-                PUSH1,
-                0x00,
-                CALLDATALOAD,
-                PUSH1,
-                0x20,
-                CALLDATALOAD,
-                ADD,
-                PUSH1,
-                0x00,
-                MSTORE,
-                PUSH1,
-                0x20,
-                PUSH1,
-                0x00,
-                RETURN,
+                PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x20, CALLDATALOAD, ADD, PUSH1, 0x00, MSTORE,
+                PUSH1, 0x20, PUSH1, 0x00, RETURN,
             ],
         },
         Case {
-            name: "mask-then-store-safe",
-            shape: Shape::ConcreteMem,
-            expect: Expect::Safe,
+            name: "mask-then-store-safe", shape: ConcreteMem, expect: Safe,
             bytecode: vec![
-                PUSH1,
-                0x00,
-                CALLDATALOAD,
-                PUSH1,
-                0xff,
-                AND,
-                PUSH1,
-                0x00,
-                MSTORE,
-                PUSH1,
-                0x20,
-                PUSH1,
-                0x00,
-                RETURN,
+                PUSH1, 0x00, CALLDATALOAD, PUSH1, 0xff, AND, PUSH1, 0x00, MSTORE, PUSH1, 0x20,
+                PUSH1, 0x00, RETURN,
             ],
         },
         Case {
-            name: "require-nonzero-revert",
-            shape: Shape::Control,
-            expect: Expect::Bug(FindingKind::Revert),
+            name: "require-nonzero-revert", shape: Control, expect: Bug(Revert),
             bytecode: vec![
-                PUSH1,
-                0x00,
-                CALLDATALOAD,
-                ISZERO,
-                PUSH1,
-                0x0a,
-                JUMPI,
-                STOP,
-                STOP,
-                STOP,
-                JUMPDEST,
-                PUSH1,
-                0x00,
-                PUSH1,
-                0x00,
-                REVERT,
+                PUSH1, 0x00, CALLDATALOAD, ISZERO, PUSH1, 0x0a, JUMPI, STOP, STOP, STOP, JUMPDEST,
+                PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
         },
         Case {
-            name: "symbolic-storage-roundtrip-revert",
-            shape: Shape::SymbolicStorage,
-            expect: Expect::Bug(FindingKind::Revert),
+            name: "symbolic-storage-roundtrip-revert", shape: SymbolicStorage, expect: Bug(Revert),
             bytecode: vec![
-                PUSH1,
-                0x20,
-                CALLDATALOAD,
-                PUSH1,
-                0x00,
-                CALLDATALOAD,
-                SSTORE,
-                PUSH1,
-                0x40,
-                CALLDATALOAD,
-                SLOAD,
-                PUSH2,
-                0xde,
-                0xad,
-                EQ,
-                PUSH1,
-                0x13,
-                JUMPI,
-                STOP,
-                JUMPDEST,
-                PUSH1,
-                0x00,
-                PUSH1,
-                0x00,
-                REVERT,
+                PUSH1, 0x20, CALLDATALOAD, PUSH1, 0x00, CALLDATALOAD, SSTORE, PUSH1, 0x40,
+                CALLDATALOAD, SLOAD, PUSH2, 0xde, 0xad, EQ, PUSH1, 0x13, JUMPI, STOP, JUMPDEST,
+                PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
         },
         Case {
-            name: "cold-slot-load-safe",
-            shape: Shape::SymbolicStorage,
-            expect: Expect::Safe,
+            name: "cold-slot-load-safe", shape: SymbolicStorage, expect: Safe,
             bytecode: vec![
                 PUSH1, 0x99, SLOAD, PUSH2, 0xde, 0xad, EQ, PUSH1, 0x0b, JUMPI, STOP, JUMPDEST,
                 PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
         },
         Case {
-            name: "keccak-mapping-alias-revert",
-            shape: Shape::KeccakMapping,
-            expect: Expect::Bug(FindingKind::Revert),
+            name: "keccak-mapping-alias-revert", shape: KeccakMapping, expect: Bug(Revert),
             bytecode: vec![
-                PUSH1,
-                0x00,
-                CALLDATALOAD,
-                PUSH1,
-                0x00,
-                MSTORE,
-                PUSH1,
-                0x00,
-                PUSH1,
-                0x20,
-                MSTORE,
-                PUSH2,
-                0xde,
-                0xad,
-                PUSH1,
-                0x40,
-                PUSH1,
-                0x00,
-                SHA3,
-                SSTORE,
-                PUSH1,
-                0x20,
-                CALLDATALOAD,
-                PUSH1,
-                0x00,
-                MSTORE,
-                PUSH1,
-                0x40,
-                PUSH1,
-                0x00,
-                SHA3,
-                SLOAD,
-                PUSH2,
-                0xde,
-                0xad,
-                EQ,
-                PUSH1,
-                0x29,
-                JUMPI,
-                STOP,
-                STOP,
-                JUMPDEST,
-                PUSH1,
-                0x00,
-                PUSH1,
-                0x00,
+                PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x00, MSTORE, PUSH1, 0x00, PUSH1, 0x20, MSTORE,
+                PUSH2, 0xde, 0xad, PUSH1, 0x40, PUSH1, 0x00, SHA3, SSTORE, PUSH1, 0x20,
+                CALLDATALOAD, PUSH1, 0x00, MSTORE, PUSH1, 0x40, PUSH1, 0x00, SHA3, SLOAD, PUSH2,
+                0xde, 0xad, EQ, PUSH1, 0x29, JUMPI, STOP, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00,
                 REVERT,
             ],
         },
     ]
+}
+
+/// One case decided under both storage encodings, with wall-clock timings.
+struct EncCompare {
+    name: &'static str,
+    shape: &'static str,
+    ite_tag: String,
+    ite_us: u128,
+    warm_tag: String,
+    warm_us: u128,
+    agree: bool,
+}
+
+/// Decide the symbolic-storage / keccak rows under both `ite`-fold and warm-array
+/// encodings. The two must agree (denotation equivalence); the timings are the
+/// warm-vs-`ite`-fold signal that informs the U6 special-case-vs-general decision.
+fn compare_encodings(cases: &[Case]) -> Vec<EncCompare> {
+    let mut out = Vec::new();
+    for case in cases {
+        if !matches!(case.shape, Shape::SymbolicStorage | Shape::KeccakMapping) {
+            continue;
+        }
+        let t0 = Instant::now();
+        let ite = evaluate_with(case, MemoryEncoding::IteFold);
+        let ite_us = t0.elapsed().as_micros();
+        let t1 = Instant::now();
+        let warm = evaluate_with(case, MemoryEncoding::WarmArray);
+        let warm_us = t1.elapsed().as_micros();
+        out.push(EncCompare {
+            name: case.name,
+            shape: case.shape.label(),
+            agree: ite.tag() == warm.tag(),
+            ite_tag: ite.tag().to_string(),
+            ite_us,
+            warm_tag: warm.tag().to_string(),
+            warm_us,
+        });
+    }
+    out
+}
+
+fn render_compare(cmp: &[EncCompare]) -> String {
+    let mut out = String::new();
+    out.push_str("\n## Warm-array vs `ite`-fold (symbolic-storage rows)\n\n");
+    out.push_str(
+        "Both storage encodings are denotation-equivalent, so **cross-encoding \
+         agreement must hold on every row** (a disagreement counts against the \
+         DISAGREE floor above). Times are a single wall-clock `analyze()` run — \
+         indicative of the encoding cost, not a tuned benchmark.\n\n",
+    );
+    out.push_str("| Case | Shape | `ite`-fold | t µs | warm-array | t µs | agree |\n");
+    out.push_str("|---|---|---|---|---|---|---|\n");
+    for c in cmp {
+        let _ = writeln!(
+            out,
+            "| {} | {} | {} | {} | {} | {} | {} |",
+            c.name,
+            c.shape,
+            c.ite_tag,
+            c.ite_us,
+            c.warm_tag,
+            c.warm_us,
+            if c.agree { "yes" } else { "**NO**" },
+        );
+    }
+    out
 }
 
 fn render_markdown(
@@ -449,6 +413,26 @@ fn render_json(rows: &[(&Case, Outcome)], overall: &Tally) -> String {
     out
 }
 
+/// Aggregate per-case outcomes into an overall tally and a per-shape breakdown.
+fn aggregate(rows: &[(&Case, Outcome)]) -> (Tally, Vec<(Shape, Tally)>) {
+    let shapes = [
+        Shape::Arith,
+        Shape::ConcreteMem,
+        Shape::Control,
+        Shape::SymbolicStorage,
+        Shape::KeccakMapping,
+    ];
+    let mut overall = Tally::default();
+    let mut by_shape: Vec<(Shape, Tally)> = shapes.iter().map(|s| (*s, Tally::default())).collect();
+    for (case, outcome) in rows {
+        overall.record(outcome);
+        if let Some(entry) = by_shape.iter_mut().find(|(s, _)| *s == case.shape) {
+            entry.1.record(outcome);
+        }
+    }
+    (overall, by_shape)
+}
+
 fn main() -> ExitCode {
     let cases = corpus();
     let mut rows: Vec<(&Case, Outcome)> = Vec::new();
@@ -460,23 +444,26 @@ fn main() -> ExitCode {
         rows.push((case, outcome));
     }
 
-    let mut overall = Tally::default();
-    let shapes = [
-        Shape::Arith,
-        Shape::ConcreteMem,
-        Shape::Control,
-        Shape::SymbolicStorage,
-        Shape::KeccakMapping,
-    ];
-    let mut by_shape: Vec<(Shape, Tally)> = shapes.iter().map(|s| (*s, Tally::default())).collect();
-    for (case, outcome) in &rows {
-        overall.record(outcome);
-        if let Some(entry) = by_shape.iter_mut().find(|(s, _)| *s == case.shape) {
-            entry.1.record(outcome);
+    let (mut overall, by_shape) = aggregate(&rows);
+
+    // Warm-array vs ite-fold on the symbolic-storage rows. A cross-encoding
+    // disagreement is a soundness concern and counts against the DISAGREE floor.
+    let cmp = compare_encodings(&cases);
+    for c in &cmp {
+        if !c.agree {
+            eprintln!(
+                "CROSS-ENCODING DISAGREE on {}: {} vs {}",
+                c.name, c.ite_tag, c.warm_tag
+            );
+            overall.disagree += 1;
         }
     }
 
-    let md = render_markdown(&rows, &overall, &by_shape);
+    let md = format!(
+        "{}{}",
+        render_markdown(&rows, &overall, &by_shape),
+        render_compare(&cmp)
+    );
     let json = render_json(&rows, &overall);
 
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/consumer-track/evm");

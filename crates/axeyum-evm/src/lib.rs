@@ -44,6 +44,24 @@ use crate::concrete::{Env, Halt};
 use crate::symbolic::BugKind;
 use crate::word::Word;
 
+/// How symbolic-key storage reads/writes are lowered to the solver.
+///
+/// Both encodings are denotation-equivalent (last-write-wins, cold slots read 0);
+/// they differ only in *how* the read-over-write is expressed, which is the
+/// warm-array vs frontend-`ite`-fold trade-off the capability scoreboard measures
+/// (see `docs/consumer-track/evm/SCOREBOARD.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MemoryEncoding {
+    /// Frontend read-over-write: `SLOAD(k)` folds `ite(k = kᵢ, vᵢ, …)` over the
+    /// write list (pure `QF_BV`). The original Phase-2 encoding.
+    #[default]
+    IteFold,
+    /// Real SMT arrays: storage is a `const_array(0)` advanced by `store` on each
+    /// `SSTORE`, and `SLOAD(k)` is `select`. Feasibility auto-routes through the
+    /// solver's warm/memory-aware path (`SymbolicMemory` + `assume_auto`).
+    WarmArray,
+}
+
 /// Configuration for an [`analyze`] run.
 #[derive(Debug, Clone)]
 pub struct AnalyzeConfig {
@@ -53,6 +71,8 @@ pub struct AnalyzeConfig {
     pub detect_assertions: bool,
     /// Maximum opcodes executed per path (loop / runaway bound).
     pub max_steps: usize,
+    /// How symbolic-key storage is lowered (warm arrays vs `ite`-fold).
+    pub memory: MemoryEncoding,
     /// The solver configuration threaded into the feasibility checks.
     pub solver: SolverConfig,
 }
@@ -63,6 +83,7 @@ impl Default for AnalyzeConfig {
             detect_overflow: true,
             detect_assertions: true,
             max_steps: 10_000,
+            memory: MemoryEncoding::default(),
             solver: SolverConfig::default(),
         }
     }
@@ -172,7 +193,13 @@ fn analyze_inner(bytecode: &[u8], cfg: &AnalyzeConfig) -> Result<AnalysisReport,
     let program = opcode::decode(bytecode);
     let track_overflow = cfg.detect_overflow;
 
-    let exploration = symbolic::explore(&program, &cfg.solver, cfg.max_steps, track_overflow)?;
+    let exploration = symbolic::explore(
+        &program,
+        &cfg.solver,
+        cfg.max_steps,
+        track_overflow,
+        cfg.memory,
+    )?;
 
     if let Some(bug) = &exploration.bug {
         // Only report assertion bugs if assertion detection is on; overflow bugs
