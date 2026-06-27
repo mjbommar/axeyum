@@ -82,6 +82,15 @@ name = "axeyum-egraph"
 version = "0.1.0"
 
 [[package]]
+name = "axeyum-evm"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+ "axeyum-property",
+ "axeyum-solver",
+]
+
+[[package]]
 name = "axeyum-fp"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,20 @@
+[package]
+name = "axeyum-evm"
+description = "EVM bytecode symbolic bug-hunter on Axeyum: find overflow / assertion-violation bugs over symbolic calldata, emit replayable calldata witnesses and Lean-checkable no-bug certificates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-ir.workspace = true
+axeyum-solver = { path = "../axeyum-solver" }
+axeyum-property = { path = "../axeyum-property" }
+
+[lints]
+workspace = true

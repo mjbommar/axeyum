@@ -7,6 +7,11 @@
 
 use std::fmt::Write as _;
 
+/// Counterexample → runnable `#[test]` rendering, shared by the EVM and verify
+/// frontends (an app-agnostic [`Witness`] → [`render_reproduction_test`] layer).
+pub mod reproduce;
+pub use reproduce::{Reproduction, Witness, WitnessBinding, render_reproduction_test};
+
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId, Value};
 pub use axeyum_property_macros::Symbolic;
 pub use axeyum_solver::{
