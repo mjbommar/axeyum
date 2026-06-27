@@ -2243,6 +2243,76 @@ DAG, keystones, critical paths), and
 Z3, cvc5, bitwuzla, CaDiCaL/Kissat, Carcara, lean4/nanoda, lean-smt that this
 plan is built on).
 
+## Consumer-track integration (2026-06-27): converge the apps onto `main`
+
+The demand-pull consumer track (apps that *use* axeyum to hunt bugs / prove
+software properties — the [`docs/consumer-track/`](docs/consumer-track/README.md)
+program) was started on an isolated `consumer-track` worktree/branch and has
+**diverged** from `main`. This section is the standing plan to **merge and
+integrate** it, one verifiable new-crate-only increment at a time. It is owned by
+the consumer-integration lane and does not touch core IR/solver/rewrite files.
+
+**State at takeover (2026-06-27).** Two efforts forked:
+- On `main`: `axeyum-property` (+ `axeyum-property-macros`) — the typed
+  prove-or-counterexample SDK — built out independently and is now a **superset**
+  of the branch's version (phantom `Bv<W>`, derive, counterexample→`#[test]`
+  replay fixtures, signed minimization, `ProofCertificate`/Lean modules, a
+  committed `property/SCOREBOARD.md` with proptest/Kani baselines, DISAGREE=0).
+- On `consumer-track` (worktree `../axeyum-consumer`): `axeyum-property`
+  (+ `-derive`) **plus** the apps that never landed on `main` —
+  **`axeyum-evm`** (EVM symbolic bug-hunter, Phase 1+2), **`axeyum-verify`**
+  (+ `-macros`, the `#[axeyum::verify]` Rust verifier, Phase 1+2), and
+  **`axeyum-consumer-bench`** (the measurement backbone).
+
+**Reconciliation decisions.**
+1. **`axeyum-property`: `main`'s is canonical.** It supersedes the branch's
+   design; the branch's `axeyum-property` + `axeyum-property-derive` are
+   **retired, not ported**. Any unique helper the apps need (e.g. a `Witness`/
+   reproduce export, `BvArray` shape) is folded into `main`'s `axeyum-property`
+   as a small additive slice.
+2. **`axeyum-evm` ports as a new crate.** It depends only on
+   `axeyum-ir` + `axeyum-solver` (zero property coupling), so the port is
+   low-friction; adapt to `main`'s (newer, warm-array) solver API. Independent
+   concrete-interpreter revalidation of every witness keeps **DISAGREE = 0**.
+3. **`axeyum-verify` (+ `-macros`) ports as new crates.** Its only tie to the
+   branch's SDK is `axeyum_property::Witness` (2 call sites) → rebind to
+   `main`'s `axeyum-property` counterexample/replay surface.
+4. **`axeyum-consumer-bench` ports and is extended** into the headline
+   deliverable below.
+
+**The measurement deliverable (answers the standing review).** The ~190
+warm-incremental symbolic-execution commits (array/memory/UF readback folding —
+the angr/unicorn foundation, and the right capability) are **real but
+unmeasured**: the frontier dashboard has only SMT levers, nothing for
+symbolic-execution depth, memory-shape coverage, or vs-hevm/angr. Integration
+stands up a committed **EVM/symexec capability scoreboard** — the analog of
+`DOMINANCE.md` for the symbolic-execution engine: paths explored / memory-shapes
+decided / bug-classes found, with **DISAGREE = 0** vs an independent oracle (the
+EVM app's own concrete interpreter always; vs hevm/halmos when installed,
+honestly install-gated). This gives the engine work a number, and the shape
+coverage it reports is what decides **special-case folding vs the general warm
+array/UF theory (U6)** — driven by which memory shapes the corpus actually
+exercises, not an unbounded fold-list.
+
+**Sequenced increments (each: builds + gates + DISAGREE=0, committed).**
+- **I0** — record this plan; reconcile the consumer-track docs (this change).
+- **I1** — port `axeyum-evm`; add to workspace members (additive). Keep the
+  pure-QF_BV `ite`-fold read-over-write initially for parity.
+- **I2** — port `axeyum-verify` + `axeyum-verify-macros`; rebind `Witness`.
+- **I3** — port `axeyum-consumer-bench`; wire the property scoreboard; **add the
+  EVM/symexec capability scoreboard** (the measurement deliverable).
+- **I4** — exploit `main`'s warm-array path to simplify the EVM memory model
+  where sound; **measure warm-path vs `ite`-fold** (ite depth / CNF size / time);
+  reconcile `UPSTREAM-FEEDBACK.md` (mark U6/U7 *partially mitigated* — warm
+  array-select/equality folding landed; general lazy array/UF + extensionality
+  still open).
+
+**Coordination.** `main` is clean and compiling at takeover; the solver agent
+actively rewrites STATUS.md's *Current focus*, so consumer-integration status
+lives in its **own** STATUS.md section (no line collision). All changes are
+**new-crate-only + an additive root `Cargo.toml` member line** — zero conflict
+with their IR/solver edits. Build/test via `scripts/mem-run.sh` (64 GB cap).
+
 ## The gap to Z3/cvc5, itemized (2026-06-22; amended 2026-06-23)
 
 A grounded audit against `crates/axeyum-solver/src/capabilities.rs` (the golden

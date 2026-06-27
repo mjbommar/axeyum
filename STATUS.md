@@ -4,6 +4,41 @@ The mutable state file. [PLAN.md](PLAN.md) is the map; this is where we are.
 Update the **Current focus**, the **phase table**, and the **changelog** every
 session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
+> Two lanes write here. The **solver/engine lane** owns *Current focus* below.
+> The **consumer-integration lane** owns its own section (immediately following)
+> so the two never edit the same lines. See
+> [PLAN.md § Consumer-track integration](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
+
+## Consumer-track integration lane (2026-06-27) — `WIP`
+
+**Goal.** Merge the diverged consumer apps onto `main`: port `axeyum-evm`,
+`axeyum-verify` (+ `-macros`), and `axeyum-consumer-bench` from the
+`consumer-track` worktree (`../axeyum-consumer`), converge on `main`'s
+`axeyum-property` as the single canonical SDK, and stand up the missing
+**EVM/symexec capability scoreboard** (DISAGREE=0) so the warm-incremental
+engine work finally carries a number.
+
+**Reconciliation (decided).**
+- `axeyum-property`: **`main`'s is canonical** (it is a superset). The branch's
+  `axeyum-property` + `axeyum-property-derive` are **retired, not ported**.
+- `axeyum-evm`: depends only on `axeyum-ir`+`axeyum-solver` → low-friction port.
+- `axeyum-verify`: only coupling is `axeyum_property::Witness` (2 sites) → rebind
+  to `main`'s property surface (add a thin `Witness`/reproduce export if missing).
+- `axeyum-consumer-bench`: port + extend into the capability scoreboard.
+
+**Increment status.**
+| ID | Increment | Status |
+|----|-----------|--------|
+| I0 | Record plan in PLAN/STATUS; reconcile consumer-track docs | `WIP` |
+| I1 | Port `axeyum-evm` (+ workspace member) | `TODO` |
+| I2 | Port `axeyum-verify` + `-macros` (rebind `Witness`) | `TODO` |
+| I3 | Port `axeyum-consumer-bench` + **EVM/symexec capability scoreboard** | `TODO` |
+| I4 | Warm-array path in EVM + measure vs `ite`-fold; reconcile `UPSTREAM-FEEDBACK` (U6/U7 partial) | `TODO` |
+
+**Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
+core IR/solver/rewrite edits; every increment builds, passes gates, and holds
+**DISAGREE = 0**; build/test via `scripts/mem-run.sh` (64 GB cap).
+
 ## Current focus
 
 - **Session 2026-06-27 — Warm direct array-equality admission.**
@@ -8744,6 +8779,15 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-06-27** — **Consumer-track integration lane opened.** Took over the
+  diverged consumer track. Recorded the merge plan in
+  [PLAN.md § Consumer-track integration](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main)
+  and a dedicated STATUS lane: `main`'s `axeyum-property` is canonical (branch
+  duplicate + `-derive` retired); `axeyum-evm` / `axeyum-verify` (+`-macros`) /
+  `axeyum-consumer-bench` port from `../axeyum-consumer` as new crates; and the
+  ~190-commit warm-symexec engine gets a committed **EVM/symexec capability
+  scoreboard** (DISAGREE=0) to end its measurement vacuum. New-crate-only,
+  no core edits.
 - **2026-06-27** — **Warm direct array-equality admission.**
   Direct equality between supported BV-indexed Bool/BV array symbols is now a
   retained warm theory fact. The incremental solver generates scoped

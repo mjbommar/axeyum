@@ -79,3 +79,16 @@ over a proven core.
   broader operator-trait or chaining ergonomics, richer frontend/domain replay
   bodies, richer graduated corpus coverage, richer proptest families, and
   real Kani CLI-backed baseline comparison before moving to D, A, C.
+
+## Integration / reconciliation (2026-06-27)
+
+B (`axeyum-property`) was built out **twice** — once on `main`, once on the
+`consumer-track` worktree. The `main` version is now a **superset** and is
+**canonical**; the worktree's `axeyum-property` + `axeyum-property-derive` are
+**retired, not merged**. Apps A (`axeyum-evm`), C (`axeyum-verify` + `-macros`),
+and the D backbone (`axeyum-consumer-bench`) exist only on the worktree and are
+being **ported onto `main` as new crates**, adapted to `main`'s canonical
+`axeyum-property` and its newer warm-array solver surface. The full sequenced
+plan and the new **EVM/symexec capability scoreboard** deliverable live in
+[PLAN.md § Consumer-track integration](../../PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main)
+and the STATUS consumer-integration lane.
