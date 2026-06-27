@@ -5,8 +5,8 @@
 
 use axeyum_ir::{
     ArraySortKey, ArrayValue, Assignment, BIT_VECTOR_WIRE_ORDER, BitOrder, FuncValue,
-    GenericArrayValue, IrError, Rational, Sort, TermArena, Value, bv_value_to_lsb_bits, eval,
-    lsb_bits_to_bv_value, lsb_bits_to_value, value_to_lsb_bits,
+    GenericArrayValue, IrError, Op, Rational, Sort, TermArena, TermNode, TermStats, Value,
+    bv_value_to_lsb_bits, eval, lsb_bits_to_bv_value, lsb_bits_to_value, value_to_lsb_bits,
 };
 
 fn bv(width: u32, value: u128) -> Value {
@@ -1406,6 +1406,41 @@ fn bv_overflow_predicates_match_reference_exhaustively() {
             );
         }
     }
+}
+
+#[test]
+fn wide_bv_umulo_uses_word_width_division_encoding() {
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 256).unwrap();
+    let y = a.bv_var("y", 256).unwrap();
+    let overflow = a.bv_umulo(x, y).unwrap();
+
+    let stats = TermStats::compute(&a, &[overflow]);
+    assert_eq!(
+        stats.mul_div_count, 1,
+        "bvumulo should contain one word-width bvudiv, not a widened multiplier"
+    );
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = vec![overflow];
+    let mut saw_udiv = false;
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let Sort::BitVec(width) = a.sort_of(term) {
+            assert!(
+                width <= 256,
+                "bvumulo must not build a doubled-width intermediate, got BV{width}"
+            );
+        }
+        if let TermNode::App { op, args } = a.node(term) {
+            assert_ne!(*op, Op::BvMul, "bvumulo must not build a multiplier");
+            saw_udiv |= *op == Op::BvUdiv;
+            stack.extend(args.iter().copied());
+        }
+    }
+    assert!(saw_udiv, "bvumulo should use the max / operand threshold");
 }
 
 #[test]

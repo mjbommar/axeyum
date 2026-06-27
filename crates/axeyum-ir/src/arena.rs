@@ -1094,22 +1094,26 @@ impl TermArena {
         self.eq(a, min)
     }
 
-    /// `bvumulo` — unsigned multiplication overflow: the high `w` bits of the
-    /// `2w`-bit product are nonzero.
+    /// `bvumulo` — unsigned multiplication overflow.
+    ///
+    /// Encoded at the original word width as `a > (max / b)`, using SMT-LIB's
+    /// total `bvudiv` convention (`max / 0 = max`) to make the zero-multiplier
+    /// case false without a separate guard. This is equivalent to testing
+    /// whether the high `w` bits of the `2w`-bit product are nonzero, while
+    /// avoiding a doubled-width multiplier for wide machine words.
     ///
     /// # Errors
     ///
-    /// Returns [`IrError`] from the builders (incl. [`IrError::ConcatTooWide`] if
-    /// `2w` exceeds [`MAX_BV_WIDTH`]).
+    /// Returns [`IrError`] from the builders.
     pub fn bv_umulo(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
         let w = self.expect_same_bv(a, b)?;
-        let ae = self.zero_ext(w, a)?;
-        let be = self.zero_ext(w, b)?;
-        let p = self.bv_mul(ae, be)?;
-        let hi = self.extract(2 * w - 1, w, p)?;
-        let zero = self.bv_const(w, 0)?;
-        let hi_zero = self.eq(hi, zero)?;
-        self.not(hi_zero)
+        let max = if w > 128 {
+            self.wide_bv_const(crate::wide::WideUint::ones(w))
+        } else {
+            self.bv_const(w, mask(w))?
+        };
+        let threshold = self.bv_udiv(max, b)?;
+        self.bv_ugt(a, threshold)
     }
 
     /// `bvsmulo` — signed multiplication overflow: the `2w`-bit signed product

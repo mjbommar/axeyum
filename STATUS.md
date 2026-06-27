@@ -6,6 +6,28 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-27 — Word-width `bvumulo` encoding for wide BV overflow checks.**
+  `TermArena::bv_umulo` no longer expands to a `2w`-bit zero-extended
+  multiplier plus high-half nonzero test. It now builds the equivalent word-width
+  predicate `a > (all_ones / b)` using SMT-LIB total `bvudiv`, whose
+  divide-by-zero convention makes the `b = 0` case false without a separate
+  guard. This keeps BV256 unsigned-multiply-overflow checks inside the original
+  width instead of constructing a BV512 multiplier, directly addressing the
+  first U2 performance pain point for EVM-style arithmetic. Existing exhaustive
+  small-width overflow tests still validate the semantics, and a new BV256 shape
+  regression asserts the term DAG contains one `BvUdiv`, no `BvMul`, and no
+  doubled-width intermediate.
+
+  This is a word-level encoding improvement, not the full wide-multiplier
+  performance story: hard arbitrary multiplication constraints still need the
+  broader P1.2/P2.1 reduction and lazy/word-level bit-blasting work. Verification
+  passed:
+  `cargo fmt --all --check`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-ir --test ir -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-ir --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-ir --no-deps -j1`.
+
 - **Session 2026-06-27 — Minimized counterexamples surfaced through proof/evidence APIs.**
   The counterexample minimizer is now available at the consumer-facing proof and
   evidence front doors. `produce_evidence_minimized` wraps `produce_evidence`
@@ -7335,7 +7357,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P1.1 | SAT inprocessing (subsumption → BVE → vivification → glue tiers) | WIP — subsumption+BVE landed (T1.1.1/2), wired into the solve pipeline (T1.1.3), made occurrence-list near-linear + time-bounded (T1.1.4): safe, no regression, but the curated unknowns are SAT-search-bound (→ P1.3) or BVE-resistant. **CDCL(XOR) foundation landed** (`gf2`/`xor_extract`/`xor_propagate` in `axeyum-cnf`) — the path-2 multiplier-wall attack: a sound GF(2) Gaussian engine + exact XOR-gate extraction + an entailment-checked propagation pass; slice 4 wires it into the live preprocess pipeline (measured). Vivification / glue tiers remain |
-| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). 6 unit (incl. 300-trial randomized reconstruction) + 2 solver end-to-end. Next: measure on the public p4dfa slice; then max_bv_sharing / bv_slice / AIG 2-level (T1.2.5–T1.2.9) |
+| P1.2 | Preprocessing (word-level rewrite, solve_eqs, bv_slice/bounds/max-sharing, AIG 2-level rewrite) | WIP — T1.2.1 trail + T1.2.2 propagate_values + T1.2.3 solve_eqs landed (model-sound, unit-tested, 36 tests). **T1.2.4 elim_unconstrained landed** (`axeyum-rewrite::elim_unconstrained`): a variable occurring once under an invertible BV op (`bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg`) makes that subterm unconstrained → replaced by a fresh var, operator dropped (Z3's `elim_unconstr`); peels nested layers, terminates. Model-sound via the trail (`x := op⁻¹(u,w…)`; orphaned operands defaulted, sound by the inverse identity); wired into `check_with_preprocessing` after solve_eqs (opt-in, default-off per ADR-0034). `bvumulo` now uses the word-width threshold encoding `a > all_ones / b` instead of a doubled-width multiplier, so BV256 overflow checks no longer build BV512 multiplication terms. 6 unit (incl. 300-trial randomized reconstruction) + 2 solver end-to-end plus focused IR overflow/shape coverage. Next: measure on the public p4dfa slice; then max_bv_sharing / bv_slice / AIG 2-level (T1.2.5–T1.2.9) |
 | P1.3 | SAT-core modernization (VSIDS/VMTF modes, EMA/Luby restarts, arena+packed watches, chrono BT) | WIP — the proof-producing core `solve_with_drat_proof` (`proof_sat.rs`) modernized: **VSIDS activity branching** (bump conflict-side vars, MiniSat-style decay, rescale-on-overflow; highest-activity unassigned var, ties to lowest index), **phase saving**, and **Luby restarts**. Sound by construction — every emitted clause is RUP and the proof is DRAT-checked, so a heuristic bug only slows search. All 231 cnf tests pass (incl. the 400-CNF differential vs BatSat + a new pigeonhole-4→3). NB the modern CDCL(XOR) core in `xor_cdcl.rs` already has VSIDS/Luby/LBD. Remaining: arena + packed watches, chronological backtracking; wire a modern core into the default path |
 | P1.4 | Incremental e-graph (congruence + explanation + checker) **[keystone]** | **DONE** — `axeyum-egraph` (ADR-0032): hash-cons + union-find + congruence cascade (T1.4.1/2), proof-forest `explain` (T1.4.3), backtrackable push/pop (T1.4.4), independent `check_congruence` (T1.4.5), per-class theory-var lists (T1.4.6). 17 tests incl. brute-force + backtracking property tests |
 | P1.5 | CDCL(T) loop (theory-as-extension, final-check, theory propagation) **[keystone]** | WIP — EUF on the e-graph: `prove_unsat_by_congruence` (conjunctive), `prove_unsat_lazy` (offline DPLL(T)), and `check_qf_uf` (full decision with **replay-checked sat models** from e-graph classes + function interps). Conflicts independently checked; **differentially validated vs Ackermann**. T1.5.5 met for the equality/UF fragment. **Online `TheorySolver` trait + `EufTheory` landed** (one backtrackable e-graph, explained conflict cores, lockstep push/pop) — the online theory side of the loop. Remaining: drive it from an online CDCL search with theory propagation (T1.5.1–T1.5.4) + dispatch wiring; theory combination with BV (P1.6) for complete QF_UFBV |

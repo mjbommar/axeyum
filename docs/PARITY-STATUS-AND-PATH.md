@@ -737,6 +737,14 @@ lazy-array/UF engine: deferred theory checks still rebuild through `check_auto`;
 retained learned theory clauses plus a real small-target lifter and emulator
 library remain Track 4 work.
 
+The wide-BV overflow path now has a targeted word-level encoding improvement:
+`bvumulo(a,b)` is built as `a > (all_ones / b)` at width `w` instead of by
+constructing a `2w`-bit product and testing the high half. SMT-LIB total
+`bvudiv` makes the zero multiplier case false (`all_ones / 0 = all_ones`), so
+the rewrite is semantic-preserving and avoids BV512 multiplication terms for
+BV256 EVM-style unsigned-multiply-overflow checks. This is a first U2 slice, not
+a full replacement for the broader wide-multiplier/lazy-BV performance work.
+
 The product-facing counterexample path now also has a shared minimization helper:
 `minimize_model` / `minimize_model_with_config` and `Solver::minimize_model`
 re-solve the query under lexicographically optimal pins for selected Bool,
