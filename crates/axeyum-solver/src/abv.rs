@@ -11497,6 +11497,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn lazy_ext_branch_select_cycle_repair_forces_alternate_or_branch() {
         let mut arena = TermArena::new();
         let a = arena.array_var("a", 4, 8).unwrap();
@@ -12265,6 +12266,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn lazy_ext_scalar_candidate_reports_returned_or_stabilization() {
         let mut arena = TermArena::new();
         let a = arena.array_var("a", 4, 8).unwrap();
@@ -13375,6 +13377,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn lazy_ext_branch_equality_repairs_target_through_store_definition() {
         let mut arena = TermArena::new();
         let base = arena.array_var("base", 4, 8).unwrap();
@@ -13693,6 +13696,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn lazy_ext_projection_repairs_selected_array_equality_component() {
         let mut arena = TermArena::new();
         let a = arena.array_var("a", 4, 8).unwrap();

@@ -3330,20 +3330,22 @@ mod tests {
         let x = arena.declare("x", Sort::Int).unwrap();
         let xv = arena.var(x);
         let zero = arena.int_const(0);
-        let x_le_zero = arena.int_le(xv, zero).unwrap();
-        let x_ge_zero = arena.int_ge(xv, zero).unwrap();
-        let equality_pair = arena.and(x_le_zero, x_ge_zero).unwrap();
+        let nonpositive = arena.int_le(xv, zero).unwrap();
+        let nonnegative = arena.int_ge(xv, zero).unwrap();
+        let equality_pair = arena.and(nonpositive, nonnegative).unwrap();
         let not_pair = arena.not(equality_pair).unwrap();
-        let pair_implies_le = arena.or(not_pair, x_le_zero).unwrap();
+        let pair_implies_nonpositive = arena.or(not_pair, nonpositive).unwrap();
 
         let mut ctx = ArithAbstractor::default();
-        let folded = ctx.abstract_term(&mut arena, pair_implies_le).unwrap();
+        let folded = ctx
+            .abstract_term(&mut arena, pair_implies_nonpositive)
+            .unwrap();
         assert!(matches!(arena.node(folded), TermNode::BoolConst(true)));
 
-        let not_le = arena.not(x_le_zero).unwrap();
-        let not_ge = arena.not(x_ge_zero).unwrap();
-        let not_le_or_not_ge = arena.or(not_le, not_ge).unwrap();
-        let reverse_definition = arena.or(not_le_or_not_ge, equality_pair).unwrap();
+        let not_nonpositive = arena.not(nonpositive).unwrap();
+        let not_nonnegative = arena.not(nonnegative).unwrap();
+        let not_equality_pair = arena.or(not_nonpositive, not_nonnegative).unwrap();
+        let reverse_definition = arena.or(not_equality_pair, equality_pair).unwrap();
         let folded = ctx.abstract_term(&mut arena, reverse_definition).unwrap();
         assert!(matches!(arena.node(folded), TermNode::BoolConst(true)));
         assert_eq!(
@@ -3402,11 +3404,11 @@ mod tests {
         let xv = arena.var(x);
         let six = arena.int_const(6);
         let eight = arena.int_const(8);
-        let x_ge_eight = arena.int_ge(xv, eight).unwrap();
-        let x_le_six = arena.int_le(xv, six).unwrap();
-        let not_ge = arena.not(x_ge_eight).unwrap();
-        let not_le = arena.not(x_le_six).unwrap();
-        let clause = arena.or(not_ge, not_le).unwrap();
+        let at_least_eight = arena.int_ge(xv, eight).unwrap();
+        let at_most_six = arena.int_le(xv, six).unwrap();
+        let below_eight = arena.not(at_least_eight).unwrap();
+        let above_six = arena.not(at_most_six).unwrap();
+        let clause = arena.or(below_eight, above_six).unwrap();
 
         let mut ctx = ArithAbstractor::default();
         let folded = ctx.abstract_term(&mut arena, clause).unwrap();

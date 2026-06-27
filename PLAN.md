@@ -80,6 +80,12 @@ correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
 question is no longer "are we measured" — it is the next section.
 
+**Verification hygiene (2026-06-27).** The solver crate's full all-targets
+clippy gate is clean again:
+`CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --all-targets -j1 -- -D warnings`.
+Keep this gate green for solver/proof/frontend slices; broad capability work is
+only useful if the core crate remains easy to audit and re-run.
+
 ## Strategy: work backwards from Pareto dominance (2026-06-24)
 
 **The decide-rate race is the wrong target.** Z3/cvc5 have ~20 years of tuning;

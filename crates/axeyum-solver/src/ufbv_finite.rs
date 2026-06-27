@@ -385,6 +385,8 @@ fn ordered_pair(a: TermId, b: TermId) -> (TermId, TermId) {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::many_single_char_names, clippy::similar_names)]
+
     use axeyum_ir::Sort;
 
     use super::*;

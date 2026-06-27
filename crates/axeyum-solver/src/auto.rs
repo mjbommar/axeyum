@@ -4637,7 +4637,7 @@ mod tests {
         for i in 0..12 {
             let v = arena.int_var(&format!("x{i}")).expect("x");
             let app = arena.apply(f, &[v]).expect("f(x)");
-            let value = arena.int_const(i as i128);
+            let value = arena.int_const(i128::from(i));
             assertions.push(arena.eq(app, value).expect("pin app"));
         }
         while assertions.len() <= MAX_PRE_LIA_UF_PROBE_ASSERTIONS {
@@ -4694,7 +4694,7 @@ mod tests {
         for i in 0..20 {
             let v = arena.int_var(&format!("pad{i}")).expect("pad");
             let app = arena.apply(f, &[v]).expect("f(pad)");
-            let value = arena.int_const(i as i128);
+            let value = arena.int_const(i128::from(i));
             assertions.push(arena.eq(app, value).expect("pin app"));
         }
         let a = arena.int_var("a").expect("a");
@@ -4721,7 +4721,6 @@ mod tests {
             &mut rec,
         )
         .unwrap();
-        drop(rec);
 
         assert_eq!(result, Some(CheckResult::Unsat));
         let trace_text = trace.to_string();

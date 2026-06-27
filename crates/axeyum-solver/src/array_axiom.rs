@@ -4113,6 +4113,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::many_single_char_names)] // array axiom schema names mirror SMT notation
     fn recognizes_store_over_ite_under_select() {
         let mut arena = TermArena::new();
         let a = arena.array_var("a", 4, 8).unwrap();
