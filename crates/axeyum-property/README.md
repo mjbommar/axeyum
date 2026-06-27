@@ -20,6 +20,11 @@ explicit builder methods such as `add`, `ule`, and `equals`, while
 `Property::all` / `Property::any` fold Boolean conditions without hiding
 construction errors.
 
+Proof calls can also be packaged as `ProofCertificate`: the ordinary
+`ProofOutcome` still carries the checked Axeyum `EvidenceReport`, and proved
+queries get a best-effort standalone Lean module when the refutation fragment is
+covered by reconstruction.
+
 Disproving models can be extracted as deterministic `Counterexample` bindings
 and rendered as native Rust scalar `let` bindings or a `#[test]` skeleton with
 caller-provided replay code. Direct named and tuple symbolic bundles can also

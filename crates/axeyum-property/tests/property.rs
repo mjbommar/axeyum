@@ -45,6 +45,50 @@ fn ergonomic_equals_aliases_and_boolean_folds_stay_fallible() -> TestResult {
 }
 
 #[test]
+fn proved_properties_expose_evidence_and_best_effort_lean_module() -> TestResult {
+    let mut property = Property::new();
+    let x = property.bv::<4>("x")?;
+    let goal = x.equals(&mut property, x)?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+
+    assert!(matches!(certificate.outcome, ProofOutcome::Proved(_)));
+    assert!(certificate.evidence_report().is_some());
+    assert!(
+        certificate.lean_error.is_none(),
+        "unexpected Lean reconstruction error: {:?}",
+        certificate.lean_error
+    );
+    let lean_module = certificate
+        .lean_module
+        .as_ref()
+        .expect("reflexive BV equality should reconstruct to Lean");
+    assert!(lean_module.source.contains("theorem axeyum_refutation"));
+    assert!(
+        lean_module
+            .source
+            .contains("#print axioms axeyum_refutation")
+    );
+    Ok(())
+}
+
+#[test]
+fn disproved_properties_do_not_fabricate_lean_modules() -> TestResult {
+    let mut property = Property::new();
+    let x = property.bv::<4>("x")?;
+    let zero = property.bv_const::<4>(0)?;
+    let goal = x.equals(&mut property, zero)?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+
+    assert!(matches!(certificate.outcome, ProofOutcome::Disproved(_)));
+    assert!(certificate.evidence_report().is_none());
+    assert!(certificate.lean_module.is_none());
+    assert!(certificate.lean_error.is_none());
+    Ok(())
+}
+
+#[test]
 fn minimized_counterexample_lifts_through_typed_bv_handle() -> TestResult {
     let mut property = Property::new();
     let x = property.bv::<8>("x")?;

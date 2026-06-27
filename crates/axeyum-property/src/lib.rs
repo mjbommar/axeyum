@@ -7,8 +7,13 @@
 
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId, Value};
 pub use axeyum_property_macros::Symbolic;
-pub use axeyum_solver::{Model, ProofOutcome, SolverConfig};
-use axeyum_solver::{ModelMinimizeObjective, SolverError, prove, prove_minimized_with_objectives};
+pub use axeyum_solver::{
+    EvidenceReport, Model, ProofFragment, ProofOutcome, ReconstructError, SolverConfig,
+};
+use axeyum_solver::{
+    ModelMinimizeObjective, SolverError, prove, prove_minimized_with_objectives,
+    prove_unsat_to_lean_module,
+};
 
 /// Errors produced by the property SDK.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -485,6 +490,40 @@ impl Counterexample {
     }
 }
 
+/// A standalone Lean module proving a refuted property query.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LeanModule {
+    /// The reconstruction route that produced the module.
+    pub fragment: ProofFragment,
+    /// Self-contained Lean 4 source for the refutation.
+    pub source: String,
+}
+
+/// A property proof attempt with optional Lean-module packaging.
+#[derive(Debug, Clone)]
+pub struct ProofCertificate {
+    /// The ordinary checked Axeyum proof outcome.
+    pub outcome: ProofOutcome,
+    /// A standalone Lean module when reconstruction supports the proved fragment.
+    pub lean_module: Option<LeanModule>,
+    /// Why Lean-module reconstruction was unavailable for a proved result.
+    ///
+    /// This is `None` for disproved/unknown outcomes because no unsat refutation
+    /// exists to reconstruct.
+    pub lean_error: Option<ReconstructError>,
+}
+
+impl ProofCertificate {
+    /// Returns the checked evidence report for proved outcomes.
+    #[must_use]
+    pub fn evidence_report(&self) -> Option<&EvidenceReport> {
+        match &self.outcome {
+            ProofOutcome::Proved(report) => Some(report),
+            ProofOutcome::Disproved(_) | ProofOutcome::Unknown(_) => None,
+        }
+    }
+}
+
 /// A typed property-building context.
 #[derive(Debug, Clone)]
 pub struct Property {
@@ -753,6 +792,30 @@ impl Property {
         )?)
     }
 
+    /// Proves `goal` and attaches a best-effort standalone Lean module.
+    ///
+    /// The returned [`ProofCertificate::outcome`] is exactly the ordinary
+    /// checked Axeyum proof outcome. When that outcome is
+    /// [`ProofOutcome::Proved`] and the refutation fragment is covered by Lean
+    /// reconstruction, [`ProofCertificate::lean_module`] contains a
+    /// self-contained Lean 4 module for `hypotheses ∧ ¬goal ⊢ False`.
+    /// Unsupported Lean reconstruction is reported in
+    /// [`ProofCertificate::lean_error`] without weakening the underlying
+    /// evidence result.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if evidence production fails or the underlying
+    /// solver reports a construction error.
+    pub fn prove_with_certificate(
+        &mut self,
+        goal: Bool,
+    ) -> Result<ProofCertificate, PropertyError> {
+        let refutation_query = self.refutation_query(goal)?;
+        let outcome = self.prove(goal)?;
+        Ok(self.attach_lean_module(outcome, &refutation_query))
+    }
+
     /// Proves `goal`, minimizing a disproving model over declared SDK inputs.
     ///
     /// # Errors
@@ -769,6 +832,26 @@ impl Property {
             &objectives,
             &self.config,
         )?)
+    }
+
+    /// Proves `goal` with minimized counterexamples and best-effort Lean output.
+    ///
+    /// This is [`Self::prove_minimized`] plus the same optional Lean-module
+    /// packaging as [`Self::prove_with_certificate`]. Lean reconstruction is
+    /// attempted only for proved outcomes; disproved outcomes still use the
+    /// SDK's signed/unsigned counterexample minimization order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if evidence production, minimization, or term
+    /// construction fails.
+    pub fn prove_minimized_with_certificate(
+        &mut self,
+        goal: Bool,
+    ) -> Result<ProofCertificate, PropertyError> {
+        let refutation_query = self.refutation_query(goal)?;
+        let outcome = self.prove_minimized(goal)?;
+        Ok(self.attach_lean_module(outcome, &refutation_query))
     }
 
     /// Extracts a deterministic counterexample view from a model.
@@ -871,6 +954,40 @@ impl Property {
                 BvLiteralStyle::Signed => ModelMinimizeObjective::SignedBv(symbol),
             })
             .collect()
+    }
+
+    fn refutation_query(&mut self, goal: Bool) -> Result<Vec<TermId>, PropertyError> {
+        let negated_goal = self.arena.not(goal.term)?;
+        let mut query = self.hypotheses.clone();
+        query.push(negated_goal);
+        Ok(query)
+    }
+
+    fn attach_lean_module(
+        &mut self,
+        outcome: ProofOutcome,
+        refutation_query: &[TermId],
+    ) -> ProofCertificate {
+        if matches!(outcome, ProofOutcome::Proved(_)) {
+            match prove_unsat_to_lean_module(&mut self.arena, refutation_query) {
+                Ok((fragment, source)) => ProofCertificate {
+                    outcome,
+                    lean_module: Some(LeanModule { fragment, source }),
+                    lean_error: None,
+                },
+                Err(error) => ProofCertificate {
+                    outcome,
+                    lean_module: None,
+                    lean_error: Some(error),
+                },
+            }
+        } else {
+            ProofCertificate {
+                outcome,
+                lean_module: None,
+                lean_error: None,
+            }
+        }
     }
 }
 

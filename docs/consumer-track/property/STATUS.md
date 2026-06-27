@@ -2,6 +2,17 @@
 
 ## Current focus
 
+- **2026-06-27 — Lean certificate surface first slice landed.**
+  `axeyum-property` now re-exports `EvidenceReport`, `ProofFragment`, and
+  `ReconstructError`, and exposes a `ProofCertificate` envelope for proof calls.
+  `Property::prove_with_certificate` and
+  `prove_minimized_with_certificate` return the ordinary checked
+  `ProofOutcome`, expose the proved `EvidenceReport`, and attach a
+  best-effort standalone Lean module when `prove_unsat_to_lean_module` covers
+  the `hypotheses ∧ ¬goal` refutation fragment. Disproved and unknown outcomes
+  deliberately return no Lean module, so the SDK does not fabricate proof
+  artifacts for non-refutations.
+
 - **2026-06-27 — Expression ergonomics first slice landed.**
   The typed handles now expose `.equals()` aliases for Bool, BV, and Int
   equality, avoiding the Rust `Eq::eq` naming friction while preserving the
@@ -100,6 +111,8 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output for frontend-specific replay
+2. Broaden certificate presentation: summarize proof/evidence route, trust
+   steps, and Lean reconstruction diagnostics in frontend-friendly form.
+3. Extend counterexample-to-`#[test]` output for frontend-specific replay
    bodies and nested/domain aggregate shapes.
-3. Add a graduated SDK property corpus and scoreboard gate.
+4. Add a graduated SDK property corpus and scoreboard gate.

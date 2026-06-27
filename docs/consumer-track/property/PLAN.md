@@ -29,6 +29,9 @@ The committed v0 slice is intentionally thin and additive:
 - proof calls delegate to `axeyum_solver::{prove, prove_minimized}`; minimized
   proofs use signed two's-complement objective metadata for signed symbolic BV
   inputs;
+- `ProofCertificate` wraps the ordinary `ProofOutcome`, exposes the checked
+  `EvidenceReport` for proved outcomes, and attaches a best-effort standalone
+  Lean module when `prove_unsat_to_lean_module` covers the refutation fragment;
 - scalar model lifting reads values from `Model`;
 - typed unsigned BV overflow predicates expose the core overflow builders.
 - expression ergonomics include `.equals()` aliases for Bool/BV/Int equality
@@ -47,7 +50,7 @@ The committed v0 slice is intentionally thin and additive:
 | PROP.2 | Ergonomic expression syntax | WIP — `.equals()` aliases for Bool/BV/Int and `Property::all` / `Property::any` Boolean folds landed; broader operator traits or richer builder style remains open |
 | PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms and signed counterexample minimization while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs |
 | PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; direct named/tuple symbolic bundles render Rust aggregate initializer statements; nested/domain replay remains frontend-owned |
-| PROP.5 | Lean certificate surface | TODO — expose `EvidenceReport` plus best-effort standalone Lean module when available |
+| PROP.5 | Lean certificate surface | WIP — `EvidenceReport` is re-exported, `ProofCertificate` exposes proved evidence, and `prove_with_certificate` / `prove_minimized_with_certificate` attach best-effort standalone Lean modules when reconstruction supports the refutation fragment |
 | PROP.6 | SDK measurement gate | TODO — committed graduated corpus and scoreboard vs proptest/Kani-style baselines, DISAGREE=0 |
 
 ## Guardrails
