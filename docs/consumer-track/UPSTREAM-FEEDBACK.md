@@ -52,7 +52,8 @@ Last reconciled with `main`: 2026-06-27.
   queries to that memory-aware path. A narrow warm memory slice also landed for
   syntactic same-index hits, literal-distinct concrete-address store misses,
   constant-array reads, reads over simple array-valued `ite` state merges, and
-  reducible symbolic-address read-over-write over store chains: the warm solver
+  reducible symbolic-address read-over-write over store chains, including
+  same-index shadowed-store pruning before ROW expansion: the warm solver
   encodes the simplified BV term while retaining the original memory term for
   replay and assumption-core reporting. A first retained select-congruence slice
   also landed for plain reads over BV-indexed array symbols whose elements are
@@ -67,7 +68,10 @@ Last reconciled with `main`: 2026-06-27.
   applications get scoped congruence lemmas, and SAT models are projected back
   into concrete `FuncValue` entries before replay. Compact Bool/BV<=128
   signatures use the scalar function table; wide-BV signatures use full-value
-  entries so replay sees canonical `Value::WideBv`s.
+  entries so replay sees canonical `Value::WideBv`s. The warm ROW simplifier
+  also prunes earlier same-index stores shadowed by a later store before
+  expanding an undecided symbolic read, so simple write-log shapes do not retain
+  dead old values or duplicate equality guards in the warm encoding.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -84,11 +88,11 @@ Last reconciled with `main`: 2026-06-27.
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
-  reads, plain symbolic-base Bool/BV array loads, wide/BV256 storage-style base
-  loads, scalar Bool/BV UF calls, wide/BV256 keccak-style UF calls,
-  helper-level load branches, reducible CFG memory branches, and fork queries,
-  but general array/UF work still rebuilds through the dispatcher instead of
-  retaining warm learned clauses.
+  reads with same-index shadowed-store pruning, plain symbolic-base Bool/BV
+  array loads, wide/BV256 storage-style base loads, scalar Bool/BV UF calls,
+  wide/BV256 keccak-style UF calls, helper-level load branches, reducible CFG
+  memory branches, and fork queries, but general array/UF work still rebuilds
+  through the dispatcher instead of retaining warm learned clauses.
 - **Ask:** finish the ADR-0030 half: a true warm lazy-array/UF incremental route
   with retained theory clauses / learned lemmas / push-pop reuse. Until that
   exists, document the one-shot fallback as sound but not the final performance
@@ -97,8 +101,9 @@ Last reconciled with `main`: 2026-06-27.
   "SymbolicExecutor auto-routes array/UF CFG queries", and
   "Warm same-index ROW admission" / "Warm literal ROW chain admission" /
   "Warm constant-array read admission" / "Warm array-ITE read admission" /
-  "Warm symbolic ROW conditional admission" / "Warm BV-array select-congruence
-  admission" / "Warm wide-BV array select projection" /
+  "Warm symbolic ROW conditional admission" / "Warm ROW same-index shadow
+  pruning" / "Warm BV-array select-congruence admission" /
+  "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /
   "Warm wide-BV scalar UF projection" /
   "Warm branch routing recognizes retained select/UF slices";
@@ -114,9 +119,11 @@ Last reconciled with `main`: 2026-06-27.
   conditions, and `SymbolicMemory` now has a write-log helper that drops
   same-index shadowed writes, skips writes at literal-distinct addresses for a
   specific read, elides exact-hit guards, and emits guards only for remaining
-  writes that may alias. Deep store-chain scaling is still the array-solver
-  performance problem unless the warm lazy array path reuses structure and
-  instantiates ROW facts on demand.
+  writes that may alias. The upstream warm ROW simplifier now mirrors part of
+  that normalization by dropping syntactically shadowed same-index stores before
+  expanding undecided symbolic reads. Deep store-chain scaling is still the
+  array-solver performance problem unless the warm lazy array path reuses
+  structure and instantiates ROW facts on demand.
 - **Why it matters:** EVM paths with many storage writes can still make per-read
   formulas grow linearly or worse if the frontend has to materialize store-chain
   guards.

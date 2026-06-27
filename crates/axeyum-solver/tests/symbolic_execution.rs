@@ -3408,6 +3408,68 @@ fn symbolic_read_over_write_with_symbolic_base_uses_warm_select_abstraction() {
     );
 }
 
+#[test]
+fn warm_symbolic_row_drops_shadowed_same_index_store() {
+    let mut arena = TermArena::new();
+    let memory_sym = arena
+        .declare(
+            "shadowed_row_memory",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let write_index_sym = arena
+        .declare("shadowed_row_write_i", Sort::BitVec(8))
+        .unwrap();
+    let read_index_sym = arena
+        .declare("shadowed_row_read_i", Sort::BitVec(8))
+        .unwrap();
+    let memory = arena.var(memory_sym);
+    let write_index = arena.var(write_index_sym);
+    let read_index = arena.var(read_index_sym);
+    let old_value = arena.bv_const(8, 0x11).unwrap();
+    let new_value = arena.bv_const(8, 0x33).unwrap();
+    let old_store = arena.store(memory, write_index, old_value).unwrap();
+    let new_store = arena.store(old_store, write_index, new_value).unwrap();
+    let loaded = arena.select(new_store, read_index).unwrap();
+    let loaded_eq_new = arena.eq(loaded, new_value).unwrap();
+
+    let simplified =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_new);
+    assert_eq!(
+        count_ite_nodes(&arena, simplified),
+        1,
+        "the older same-index store is shadowed, so the symbolic ROW needs one guard"
+    );
+    assert!(
+        !term_contains(&arena, simplified, old_value),
+        "shadowed same-index stores should not leave their old value in the warm encoding"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, loaded_eq_new)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "the pruned symbolic ROW tail should stay on the retained warm select route"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "same-index store shadowing must not force the memory dispatcher"
+    );
+    let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+        panic!("shadow-pruned ROW assertion should remain warm-sat");
+    };
+    assert_eq!(
+        eval(&arena, loaded_eq_new, &model.to_assignment()).unwrap(),
+        Value::Bool(true),
+        "projected array model must replay the original shadowed-store assertion"
+    );
+}
+
 /// Read-over-write soundness through `check_with_memory`: at the same index, a
 /// load after a store returns the stored value, so demanding otherwise is unsat.
 /// This is the memory primitive symbolic execution needs.
@@ -4157,4 +4219,21 @@ fn count_ite_nodes(arena: &TermArena, root: TermId) -> usize {
         }
     }
     count
+}
+
+fn term_contains(arena: &TermArena, root: TermId, needle: TermId) -> bool {
+    let mut stack = vec![root];
+    let mut seen = std::collections::BTreeSet::new();
+    while let Some(term) = stack.pop() {
+        if term == needle {
+            return true;
+        }
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }

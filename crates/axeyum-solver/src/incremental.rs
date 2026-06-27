@@ -1499,6 +1499,7 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         }
         _ => return None,
     };
+    let base = drop_shadowed_stores_at_index(arena, base, write_index);
     if write_index == read_index {
         return Some(value);
     }
@@ -1508,6 +1509,39 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
     let same_index = arena.eq(write_index, read_index).ok()?;
     let base_read = arena.select(base, read_index).ok()?;
     arena.ite(same_index, value, base_read).ok()
+}
+
+fn drop_shadowed_stores_at_index(
+    arena: &mut TermArena,
+    term: TermId,
+    shadowing_index: TermId,
+) -> TermId {
+    let Some((base, index, value)) = store_parts(arena, term) else {
+        return term;
+    };
+    let pruned_base = drop_shadowed_stores_at_index(arena, base, shadowing_index);
+    if index == shadowing_index {
+        return pruned_base;
+    }
+    if pruned_base == base {
+        return term;
+    }
+    arena.store(pruned_base, index, value).unwrap_or(term)
+}
+
+fn store_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, TermId)> {
+    let TermNode::App {
+        op: Op::Store,
+        args,
+        ..
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [base, index, value] = args.as_ref() else {
+        return None;
+    };
+    Some((*base, *index, *value))
 }
 
 fn distribute_select_over_array_ite(
