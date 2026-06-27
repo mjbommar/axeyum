@@ -2,9 +2,9 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 8,
+    "cases": 9,
     "proved": 2,
-    "disproved": 6,
+    "disproved": 7,
     "unknown": 0,
     "mismatches": 0,
     "disagree": 0,
@@ -75,6 +75,17 @@
       "actual": "disproved",
       "checks": "minimized `u8` overflow witness is `(x = 1, y = 255)`; replay bindings render deterministically",
       "baseline_analogue": "Kani arithmetic-overflow check / Rust verifier overflow assertion",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-u8-baseline-counterexample-compare",
+      "tier": "P1",
+      "workflow": "bounded baseline comparison for a minimized witness",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "solver-minimized witness `(x = 1, y = 255)` matches the first executable proptest-style baseline failure",
+      "baseline_analogue": "proptest exhaustive/shrink baseline over the same Rust predicate",
       "lean_required": false,
       "lean_available": false
     },

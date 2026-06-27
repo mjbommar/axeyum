@@ -2,6 +2,16 @@
 
 ## Current focus
 
+- **2026-06-27 — Baseline comparison first slice landed.**
+  The PROP.6 corpus now includes a deterministic proptest-style executable
+  baseline comparison for the unsigned `u8` wrapping-add monotonicity property:
+  the SDK asks Axeyum for a minimized counterexample, independently scans the
+  bounded Rust predicate for the first failing `(x, y)` pair, and checks both
+  routes agree on `(1, 255)`. This is the first app-level SOTA-style baseline
+  row; it is not yet a broad external proptest/Kani runner. Totals are now
+  9 cases, 2 proved, 7 disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required
+  coverage.
+
 - **2026-06-27 — Fixture file assembly landed.**
   `Counterexample::render_rust_test_file` now assembles caller-owned top-level
   prelude blocks plus multiple generated modules or standalone test items into
@@ -233,7 +243,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Broaden generated fixture files toward external proptest/Kani-style baseline
-   harnesses while keeping domain semantics caller-owned.
-3. Keep broadening the SDK property corpus and add the external
-   proptest/Kani-style baseline comparison.
+2. Broaden the baseline runner across more property shapes, including
+   proptest-style random/shrunk witnesses and Kani-style bounded assertions.
+3. Keep broadening the SDK property corpus across assumptions, structs,
+   fixtures, and certificate fragments.

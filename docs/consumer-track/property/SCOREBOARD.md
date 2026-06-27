@@ -8,7 +8,8 @@ Last updated: 2026-06-27.
 This is the committed graduated SDK corpus gate for
 `axeyum-property`. It is not yet a broad external-vs-SOTA benchmark; it is the
 app-level honesty gate that prevents SDK claims from living only in ad hoc unit
-tests. External proptest/Kani-style comparison remains the next PROP.6 step.
+tests. It now includes a first deterministic proptest-style baseline comparison;
+broader proptest/Kani-style comparison remains the next PROP.6 step.
 
 ## Commands
 
@@ -24,9 +25,9 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 
 | metric | value |
 |---|---:|
-| corpus cases | 8 |
+| corpus cases | 9 |
 | proved | 2 |
-| disproved | 6 |
+| disproved | 7 |
 | unknown | 0 |
 | mismatches / DISAGREE | 0 |
 | Lean-required cases | 1 |
@@ -42,13 +43,14 @@ Machine-readable artifact: [`corpus.json`](corpus.json).
 | `sdk-i8-signed-minimized-counterexample` | P1 | signed fixed-width input order | disproved | minimized signed witness is `-3`; two's-complement Rust binding preserves signed intent | Kani/proptest signed integer witness |
 | `sdk-aggregate-counterexample-render` | P1 | struct-shaped symbolic input | disproved | minimized transfer witness is `{ enabled: false, amount: 1, balance: 0 }`; direct Rust aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
 | `sdk-u8-uadd-overflow-helper-witness` | P1 | unsigned overflow helper witness | disproved | minimized `u8` overflow witness is `(x = 1, y = 255)`; replay bindings render deterministically | Kani arithmetic-overflow check / Rust verifier overflow assertion |
+| `sdk-u8-baseline-counterexample-compare` | P1 | bounded baseline comparison for a minimized witness | disproved | solver-minimized witness `(x = 1, y = 255)` matches the first executable proptest-style baseline failure | proptest exhaustive/shrink baseline over the same Rust predicate |
 | `sdk-derived-struct-counterexample-lift` | P1 | `derive(Symbolic)` struct witness | disproved | derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders | Kani struct harness / proptest `Arbitrary` struct |
 | `sdk-explicit-nested-aggregate-replay` | P1 | caller-owned nested aggregate replay | disproved | generated multi-case fixture file includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order | Rust verifier domain replay body / Kani nested harness struct |
 
 ## Next Gates
 
-1. Add a baseline runner that compares the same property shapes against
-   proptest-style random/shrunk witnesses and Kani-style bounded assertions.
+1. Broaden the baseline runner across more property shapes and compare against
+   proptest-style random/shrunk witnesses plus Kani-style bounded assertions.
 2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,
    assumptions, and certificate fragments.
 3. Keep `corpus.json` and this scoreboard generated from the shared corpus

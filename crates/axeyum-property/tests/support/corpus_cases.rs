@@ -77,6 +77,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         signed_bv_counterexample_minimized()?,
         aggregate_counterexample_rendered()?,
         overflow_helper_counterexample_minimized()?,
+        proptest_style_baseline_counterexample_comparison()?,
         derive_symbolic_counterexample_lifted()?,
         explicit_nested_aggregate_replay_rendered()?,
     ])
@@ -90,9 +91,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 8,
+        cases: 9,
         proved: 2,
-        disproved: 6,
+        disproved: 7,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -219,8 +220,9 @@ fn write_markdown_intro(out: &mut String) {
         "app-level honesty gate that prevents SDK claims from living only in ad hoc unit\n",
     );
     out.push_str(
-        "tests. External proptest/Kani-style comparison remains the next PROP.6 step.\n\n",
+        "tests. It now includes a first deterministic proptest-style baseline comparison;\n",
     );
+    out.push_str("broader proptest/Kani-style comparison remains the next PROP.6 step.\n\n");
     out.push_str("## Commands\n\n");
     out.push_str("```sh\n");
     out.push_str(
@@ -282,8 +284,10 @@ fn write_markdown_cases(out: &mut String, reports: &[CorpusCaseReport]) {
 
 fn write_markdown_next_gates(out: &mut String) {
     out.push_str("## Next Gates\n\n");
-    out.push_str("1. Add a baseline runner that compares the same property shapes against\n");
-    out.push_str("   proptest-style random/shrunk witnesses and Kani-style bounded assertions.\n");
+    out.push_str(
+        "1. Broaden the baseline runner across more property shapes and compare against\n",
+    );
+    out.push_str("   proptest-style random/shrunk witnesses plus Kani-style bounded assertions.\n");
     out.push_str(
         "2. Broaden the corpus across BV widths, overflow predicates, nested aggregates,\n",
     );
@@ -560,6 +564,66 @@ fn overflow_helper_counterexample_minimized() -> CorpusResult<CorpusCaseReport> 
         lean_required: false,
         lean_available: false,
     })
+}
+
+fn proptest_style_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {
+    let expected = first_wrapping_add_monotonicity_failure()
+        .expect("bounded executable baseline should find the first overflow witness");
+
+    let mut property = Property::new();
+    let x = property.symbolic::<u8>("x")?;
+    let y = property.symbolic::<u8>("y")?;
+    let sum = x.add(&mut property, y)?;
+    let goal = sum.uge(&mut property, x)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a baseline-comparable counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    let actual = (
+        property
+            .concrete::<u8>(&x, model)?
+            .expect("model should bind x"),
+        property
+            .concrete::<u8>(&y, model)?
+            .expect("model should bind y"),
+    );
+    assert_eq!(actual, expected);
+    assert_eq!(
+        property.counterexample(model)?.render_rust_let_bindings()?,
+        concat!(
+            "let x: u8 = 0x01_u8; // BV8\n",
+            "let y: u8 = 0xff_u8; // BV8\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-u8-baseline-counterexample-compare",
+        tier: "P1",
+        workflow: "bounded baseline comparison for a minimized witness",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "solver-minimized witness `(x = 1, y = 255)` matches the first executable proptest-style baseline failure",
+        baseline_analogue: "proptest exhaustive/shrink baseline over the same Rust predicate",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn first_wrapping_add_monotonicity_failure() -> Option<(u8, u8)> {
+    for x in u8::MIN..=u8::MAX {
+        for y in u8::MIN..=u8::MAX {
+            if x.wrapping_add(y) < x {
+                return Some((x, y));
+            }
+        }
+    }
+    None
 }
 
 fn derive_symbolic_counterexample_lifted() -> CorpusResult<CorpusCaseReport> {
