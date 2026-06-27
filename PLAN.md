@@ -1906,6 +1906,20 @@ against competitor source, are now binding:
      chain candidate with generated-OR scheduling under the existing final
      strict replay-improvement gate; more one-step direct-select repair is not
      the bottleneck.
+     **MIXED SELECT/OR REPLAY BEAM LANDED (2026-06-26):** direct-select targeted
+     replay repair now first tries a bounded mixed beam over direct select
+     failures and generated OR failures, accepting only a composed strict
+     full-replay improvement before mutating the projection (width 8, 64
+     expansions, depth 6, `current_false + 4` temporary false conjuncts, at most
+     two visits per failure ordinal). This moves `bug337` from direct select
+     equality ordinal 34 / term 555 to generated OR ordinal 210 / term 3879,
+     after 587 projection changes. The row is still `unknown`: OR 210 branch 0
+     repairs locally but returns to the select equality at ordinal 34 with
+     total_false=2, while branch 3 flows to OR 211 and the old 211→212 pair
+     cycle. The next AUFLIA move should either invoke the same mixed beam from
+     generated-OR failures or diagnose the 210 branch-0 → 34 select cycle
+     directly; keep cost caps explicit because the 10 s diagnostic route now
+     takes about 76 s wall.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

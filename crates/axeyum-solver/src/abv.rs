@@ -6168,6 +6168,372 @@ fn replay_failure_with_branch_candidate_diagnostics(
     Ok(failure)
 }
 
+#[derive(Clone)]
+struct ReplayRepairBeamState {
+    assignment: Assignment,
+    stats: ProjectionRepairStats,
+    false_count: usize,
+    depth: usize,
+    sequence: usize,
+    seen_failures: BTreeMap<usize, usize>,
+}
+
+type ReplayRepairBeamSuccess = (usize, usize, usize, ProjectionRepairStats, Assignment);
+
+fn replay_repair_beam_state_key(state: &ReplayRepairBeamState) -> (usize, usize, usize, usize) {
+    (
+        state.false_count,
+        state.depth,
+        state.stats.changes(),
+        state.sequence,
+    )
+}
+
+fn replay_repair_beam_success_is_better(
+    best: Option<&ReplayRepairBeamSuccess>,
+    false_count: usize,
+    depth: usize,
+    sequence: usize,
+) -> bool {
+    best.is_none_or(|(best_false_count, best_depth, best_sequence, _, _)| {
+        (false_count, depth, sequence) < (*best_false_count, *best_depth, *best_sequence)
+    })
+}
+
+fn replay_repair_beam_record_success(
+    best: &mut Option<ReplayRepairBeamSuccess>,
+    false_count: usize,
+    depth: usize,
+    sequence: usize,
+    stats: ProjectionRepairStats,
+    assignment: Assignment,
+) {
+    if replay_repair_beam_success_is_better(best.as_ref(), false_count, depth, sequence) {
+        *best = Some((false_count, depth, sequence, stats, assignment));
+    }
+}
+
+struct ReplayRepairBeamSearch<'a> {
+    arena: &'a TermArena,
+    originals: &'a [TermId],
+    baseline_false: usize,
+    max_false: usize,
+    max_depth: usize,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn replay_repair_beam_consider_trial(
+    search: &ReplayRepairBeamSearch<'_>,
+    trial: Assignment,
+    stats: ProjectionRepairStats,
+    false_count: usize,
+    depth: usize,
+    sequence: &mut usize,
+    seen_failures: &BTreeMap<usize, usize>,
+    frontier: &mut Vec<ReplayRepairBeamState>,
+    best: &mut Option<ReplayRepairBeamSuccess>,
+) {
+    if false_count > search.max_false {
+        return;
+    }
+    if false_count < search.baseline_false {
+        replay_repair_beam_record_success(best, false_count, depth, *sequence, stats, trial);
+        *sequence += 1;
+        return;
+    }
+    frontier.push(ReplayRepairBeamState {
+        assignment: trial,
+        stats,
+        false_count,
+        depth,
+        sequence: *sequence,
+        seen_failures: seen_failures.clone(),
+    });
+    *sequence += 1;
+}
+
+#[allow(clippy::too_many_arguments)]
+fn replay_repair_beam_consider_select_trial(
+    search: &ReplayRepairBeamSearch<'_>,
+    failure: &ReplayFailure,
+    trial: Assignment,
+    stats: ProjectionRepairStats,
+    depth: usize,
+    sequence: &mut usize,
+    seen_failures: &BTreeMap<usize, usize>,
+    frontier: &mut Vec<ReplayRepairBeamState>,
+    best: &mut Option<ReplayRepairBeamSuccess>,
+) -> Result<(), SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext mixed replay repair failed: {e}"))
+    };
+    if eval(search.arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true) {
+        return Ok(());
+    }
+    let false_count = positive_replay_false_count(search.arena, search.originals, &trial)?;
+    replay_repair_beam_consider_trial(
+        search,
+        trial,
+        stats,
+        false_count,
+        depth,
+        sequence,
+        seen_failures,
+        frontier,
+        best,
+    );
+    Ok(())
+}
+
+fn replay_repair_beam_expand_select(
+    search: &ReplayRepairBeamSearch<'_>,
+    state: &ReplayRepairBeamState,
+    failure: &ReplayFailure,
+    seen_failures: &BTreeMap<usize, usize>,
+    frontier: &mut Vec<ReplayRepairBeamState>,
+    best: &mut Option<ReplayRepairBeamSuccess>,
+    sequence: &mut usize,
+) -> Result<bool, SolverError> {
+    let Some((array, index_term, element_term)) =
+        direct_select_repair_target(search.arena, failure.conjunct_term)
+    else {
+        return Ok(false);
+    };
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext mixed replay repair failed: {e}"))
+    };
+    let index = eval(search.arena, index_term, &state.assignment).map_err(ir)?;
+    let element = eval(search.arena, element_term, &state.assignment).map_err(ir)?;
+
+    let mut chain_trial = state.assignment.clone();
+    let mut chain_stats = ProjectionRepairStats {
+        candidates: 1,
+        ..ProjectionRepairStats::default()
+    };
+    let mut visited = BTreeSet::new();
+    if repair_projected_store_chain_readback(
+        search.arena,
+        search.originals,
+        &mut chain_trial,
+        array,
+        &index,
+        &element,
+        0,
+        &mut visited,
+        &mut chain_stats,
+    )? {
+        let mut accumulated_stats = state.stats;
+        accumulated_stats.absorb(chain_stats);
+        replay_repair_beam_consider_select_trial(
+            search,
+            failure,
+            chain_trial,
+            accumulated_stats,
+            state.depth + 1,
+            sequence,
+            seen_failures,
+            frontier,
+            best,
+        )?;
+    }
+
+    let mut direct_trial = state.assignment.clone();
+    let mut direct_stats = ProjectionRepairStats {
+        candidates: 1,
+        ..ProjectionRepairStats::default()
+    };
+    if store_projected_array_entry(search.arena, &mut direct_trial, array, index, element)? {
+        direct_stats.array_changes += 1;
+        let mut accumulated_stats = state.stats;
+        accumulated_stats.absorb(direct_stats);
+        replay_repair_beam_consider_select_trial(
+            search,
+            failure,
+            direct_trial,
+            accumulated_stats,
+            state.depth + 1,
+            sequence,
+            seen_failures,
+            frontier,
+            best,
+        )?;
+    }
+
+    Ok(true)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn replay_repair_beam_expand_branch(
+    search: &ReplayRepairBeamSearch<'_>,
+    state: &ReplayRepairBeamState,
+    failure: &ReplayFailure,
+    seen_failures: &BTreeMap<usize, usize>,
+    frontier: &mut Vec<ReplayRepairBeamState>,
+    best: &mut Option<ReplayRepairBeamSuccess>,
+    sequence: &mut usize,
+) -> Result<bool, SolverError> {
+    if !matches!(
+        search.arena.node(failure.conjunct_term),
+        TermNode::App { op: Op::BoolOr, .. }
+    ) {
+        return Ok(false);
+    }
+
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext mixed replay repair failed: {e}"))
+    };
+    let branch_search = BranchBeamSearch {
+        arena: search.arena,
+        originals: search.originals,
+        current_false: search.baseline_false,
+        max_false: search.max_false,
+        max_depth: search.max_depth,
+    };
+    let mut branches = Vec::new();
+    collect_positive_disjuncts(search.arena, failure.conjunct_term, &mut branches);
+    for branch in branches {
+        let mut trial = state.assignment.clone();
+        let Some(branch_stats) = repair_projected_branch_as_candidate(
+            search.arena,
+            search.originals,
+            branch,
+            &mut trial,
+        )?
+        else {
+            continue;
+        };
+        if eval(search.arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true) {
+            continue;
+        }
+        let (false_count, accumulated_stats, trial) =
+            branch_beam_stabilized_candidate(&branch_search, state.stats, branch_stats, trial)?;
+        replay_repair_beam_consider_trial(
+            search,
+            trial,
+            accumulated_stats,
+            false_count,
+            state.depth + 1,
+            sequence,
+            seen_failures,
+            frontier,
+            best,
+        );
+    }
+
+    Ok(true)
+}
+
+fn replay_repair_beam_expand_state(
+    search: &ReplayRepairBeamSearch<'_>,
+    state: ReplayRepairBeamState,
+    frontier: &mut Vec<ReplayRepairBeamState>,
+    best: &mut Option<ReplayRepairBeamSuccess>,
+    sequence: &mut usize,
+) -> Result<(), SolverError> {
+    const MAX_MIXED_BEAM_FAILURE_VISITS: usize = 2;
+
+    let Some(failure) = first_projected_replay_failure(
+        search.arena,
+        search.originals,
+        &state.assignment,
+        ProjectionRepairStats::default(),
+    )?
+    else {
+        replay_repair_beam_record_success(
+            best,
+            0,
+            state.depth,
+            state.sequence,
+            state.stats,
+            state.assignment,
+        );
+        return Ok(());
+    };
+    if state.depth >= search.max_depth {
+        return Ok(());
+    }
+    let seen_count = state
+        .seen_failures
+        .get(&failure.conjunct_ordinal)
+        .copied()
+        .unwrap_or(0);
+    if seen_count >= MAX_MIXED_BEAM_FAILURE_VISITS {
+        return Ok(());
+    }
+    let mut seen_failures = state.seen_failures.clone();
+    *seen_failures.entry(failure.conjunct_ordinal).or_default() += 1;
+
+    if replay_repair_beam_expand_select(
+        search,
+        &state,
+        &failure,
+        &seen_failures,
+        frontier,
+        best,
+        sequence,
+    )? {
+        return Ok(());
+    }
+    let _ = replay_repair_beam_expand_branch(
+        search,
+        &state,
+        &failure,
+        &seen_failures,
+        frontier,
+        best,
+        sequence,
+    )?;
+    Ok(())
+}
+
+fn repair_projected_replay_mixed_beam(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &Assignment,
+    baseline_false: usize,
+) -> Result<Option<(ProjectionRepairStats, Assignment)>, SolverError> {
+    const MAX_MIXED_REPAIR_BEAM_DEPTH: usize = 6;
+    const MAX_MIXED_REPAIR_BEAM_WIDTH: usize = 8;
+    const MAX_MIXED_REPAIR_BEAM_EXPANSIONS: usize = 64;
+    const MAX_MIXED_REPAIR_BEAM_UPHILL_FALSE: usize = 4;
+
+    if baseline_false == 0 {
+        return Ok(None);
+    }
+    let search = ReplayRepairBeamSearch {
+        arena,
+        originals,
+        baseline_false,
+        max_false: baseline_false + MAX_MIXED_REPAIR_BEAM_UPHILL_FALSE,
+        max_depth: MAX_MIXED_REPAIR_BEAM_DEPTH,
+    };
+    let mut sequence = 1usize;
+    let mut expansions = 0usize;
+    let mut best: Option<ReplayRepairBeamSuccess> = None;
+    let mut frontier = vec![ReplayRepairBeamState {
+        assignment: projected.clone(),
+        stats: ProjectionRepairStats::default(),
+        false_count: baseline_false,
+        depth: 0,
+        sequence: 0,
+        seen_failures: BTreeMap::new(),
+    }];
+
+    while !frontier.is_empty() && expansions < MAX_MIXED_REPAIR_BEAM_EXPANSIONS {
+        frontier.sort_by_key(replay_repair_beam_state_key);
+        let state = frontier.remove(0);
+        expansions += 1;
+        replay_repair_beam_expand_state(&search, state, &mut frontier, &mut best, &mut sequence)?;
+        frontier.sort_by_key(replay_repair_beam_state_key);
+        frontier.truncate(MAX_MIXED_REPAIR_BEAM_WIDTH);
+    }
+
+    let Some((_, _, _, stats, trial)) = best else {
+        return Ok(None);
+    };
+    Ok(Some((stats, trial)))
+}
+
 fn repair_projected_replay_select_failure(
     arena: &TermArena,
     originals: &[TermId],
@@ -6185,6 +6551,13 @@ fn repair_projected_replay_select_failure(
     let index = eval(arena, index_term, projected).map_err(ir)?;
     let element = eval(arena, element_term, projected).map_err(ir)?;
     let mut best: Option<(usize, usize, ProjectionRepairStats, Assignment)> = None;
+
+    if let Some((stats, trial)) =
+        repair_projected_replay_mixed_beam(arena, originals, projected, current_false)?
+    {
+        *projected = trial;
+        return Ok(Some(stats));
+    }
 
     let mut consider = |ordinal: usize,
                         trial: Assignment,
@@ -7819,6 +8192,96 @@ mod tests {
         assert!(note.contains("chain:status=candidate"), "{note}");
         assert!(note.contains("direct:status=candidate"), "{note}");
         assert!(note.contains("global_false_ordinal=1"), "{note}");
+    }
+
+    #[test]
+    fn lazy_ext_select_repair_beam_composes_followup_or_repair() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let z = arena.bv_var("z", 8).unwrap();
+        let x = arena.int_var("x").unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let read = arena.select(a, i).unwrap();
+        let y_eq_read = arena.eq(y, read).unwrap();
+        let one = arena.int_const(1);
+        let x_eq_one = arena.eq(x, one).unwrap();
+        let branch_or = arena.or(x_eq_one, q).unwrap();
+        let z_eq_read = arena.eq(z, read).unwrap();
+        let zero8 = arena.bv_const(8, 0).unwrap();
+        let z_eq_zero = arena.eq(z, zero8).unwrap();
+        let prefix = arena.and(y_eq_read, branch_or).unwrap();
+        let suffix = arena.and(z_eq_read, z_eq_zero).unwrap();
+        let assertion = arena.and(prefix, suffix).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(
+            *a_symbol,
+            default_value_for_symbol(&arena, *a_symbol).unwrap(),
+        );
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 7 });
+        projected.set(*z_symbol, Value::Bv { width: 8, value: 0 });
+        projected.set(*x_symbol, Value::Int(0));
+        projected.set(*q_symbol, Value::Bool(false));
+
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            2
+        );
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected direct select replay failure");
+        assert_eq!(failure.conjunct_term, y_eq_read);
+
+        let stats = repair_projected_replay_failure(&arena, &originals, &mut projected, &failure)
+            .unwrap()
+            .expect("expected composed select/OR repair");
+        assert!(stats.array_changes >= 1, "{stats:?}");
+        assert!(stats.branch_symbol_changes >= 1, "{stats:?}");
+        assert_eq!(projected.get(*x_symbol), Some(Value::Int(1)));
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+        assert_eq!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .expect("only the dependent z readback should remain false")
+            .conjunct_term,
+            z_eq_read
+        );
     }
 
     #[test]
