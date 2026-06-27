@@ -5829,6 +5829,15 @@ fn repair_projected_replay_failure(
         return Ok(None);
     };
 
+    if let Some(pair_stats) = repair_projected_replay_branch_pair_choice(
+        arena,
+        originals,
+        failure.conjunct_term,
+        projected,
+    )? {
+        return Ok(Some(pair_stats));
+    }
+
     if let Some(choice_stats) =
         repair_projected_replay_branch_choice(arena, originals, failure.conjunct_term, projected)?
     {
@@ -5858,6 +5867,148 @@ fn repair_projected_replay_failure(
         &mut stats,
     )?;
     Ok(changed.then_some(stats))
+}
+
+type BranchPairRepairChoice = (
+    usize,
+    usize,
+    usize,
+    usize,
+    ProjectionRepairStats,
+    Assignment,
+);
+
+fn branch_pair_choice_is_better(
+    best: Option<&BranchPairRepairChoice>,
+    total_false: usize,
+    pair_branch_false: usize,
+    first_ordinal: usize,
+    second_ordinal: usize,
+) -> bool {
+    best.is_none_or(
+        |(
+            best_total_false,
+            best_pair_branch_false,
+            best_first_ordinal,
+            best_second_ordinal,
+            _,
+            _,
+        )| {
+            (
+                total_false,
+                pair_branch_false,
+                first_ordinal,
+                second_ordinal,
+            ) < (
+                *best_total_false,
+                *best_pair_branch_false,
+                *best_first_ordinal,
+                *best_second_ordinal,
+            )
+        },
+    )
+}
+
+fn repair_projected_replay_branch_pair_choice(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch_disjunction: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    if !matches!(
+        arena.node(branch_disjunction),
+        TermNode::App { op: Op::BoolOr, .. }
+    ) {
+        return Ok(None);
+    }
+
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch repair failed: {e}"));
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    let mut first_branches = Vec::new();
+    collect_positive_disjuncts(arena, branch_disjunction, &mut first_branches);
+    let mut best: Option<BranchPairRepairChoice> = None;
+
+    for (first_ordinal, first_branch) in first_branches.iter().copied().enumerate() {
+        let mut first_trial = projected.clone();
+        let Some(first_stats) =
+            repair_projected_branch_as_candidate(arena, originals, first_branch, &mut first_trial)?
+        else {
+            continue;
+        };
+
+        let Some(next_failure) = first_projected_replay_failure(
+            arena,
+            originals,
+            &first_trial,
+            ProjectionRepairStats::default(),
+        )?
+        else {
+            continue;
+        };
+
+        if next_failure.conjunct_term == branch_disjunction
+            || !matches!(
+                arena.node(next_failure.conjunct_term),
+                TermNode::App { op: Op::BoolOr, .. }
+            )
+        {
+            continue;
+        }
+
+        let mut second_branches = Vec::new();
+        collect_positive_disjuncts(arena, next_failure.conjunct_term, &mut second_branches);
+        for (second_ordinal, second_branch) in second_branches.iter().copied().enumerate() {
+            let mut pair_trial = first_trial.clone();
+            let Some(second_stats) = repair_projected_branch_as_candidate(
+                arena,
+                originals,
+                second_branch,
+                &mut pair_trial,
+            )?
+            else {
+                continue;
+            };
+            if eval(arena, branch_disjunction, &pair_trial).map_err(ir)? != Value::Bool(true)
+                || eval(arena, next_failure.conjunct_term, &pair_trial).map_err(ir)?
+                    != Value::Bool(true)
+            {
+                continue;
+            }
+            let total_false = positive_replay_false_count(arena, originals, &pair_trial)?;
+            if total_false >= current_false {
+                continue;
+            }
+            let first_branch_false = branch_false_literal_count(arena, first_branch, &pair_trial)?;
+            let second_branch_false =
+                branch_false_literal_count(arena, second_branch, &pair_trial)?;
+            let pair_branch_false = first_branch_false + second_branch_false;
+            if branch_pair_choice_is_better(
+                best.as_ref(),
+                total_false,
+                pair_branch_false,
+                first_ordinal,
+                second_ordinal,
+            ) {
+                let mut pair_stats = first_stats;
+                pair_stats.absorb(second_stats);
+                best = Some((
+                    total_false,
+                    pair_branch_false,
+                    first_ordinal,
+                    second_ordinal,
+                    pair_stats,
+                    pair_trial,
+                ));
+            }
+        }
+    }
+
+    let Some((_, _, _, _, stats, trial)) = best else {
+        return Ok(None);
+    };
+    *projected = trial;
+    Ok(Some(stats))
 }
 
 fn repair_projected_replay_branch_choice(
@@ -6446,9 +6597,11 @@ mod tests {
         array_value_from_entries, check_qf_abv_lazy, check_with_array_elimination,
         collect_base_array_entries, complete_assignment, const_array_default_mismatch_refutation,
         cross_store_array_disequality_refutation, default_value_for_symbol,
-        first_false_replay_conjunct, first_projected_replay_failure, project_replay_ext_candidate,
-        prove_unsat_by_symmetric_swap_chain, repair_projected_replay_failure,
-        replay_last_ext_candidate, select_value, store_chain_readback_refutation, store_value,
+        first_false_replay_conjunct, first_projected_replay_failure, positive_replay_false_count,
+        project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
+        repair_projected_replay_branch_choice, repair_projected_replay_branch_pair_choice,
+        repair_projected_replay_failure, replay_last_ext_candidate, select_value,
+        store_chain_readback_refutation, store_value,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -6672,6 +6825,66 @@ mod tests {
         assert!(note.contains("branch_candidate_diagnostics=["));
         assert!(note.contains("#0:init=1,status=no_repair"));
         assert!(note.contains("#1:init=1,status=no_repair"));
+    }
+
+    #[test]
+    fn lazy_ext_branch_pair_choice_scores_adjacent_or_repairs() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let x_eq_one = arena.eq(x, one).unwrap();
+        let y_eq_one = arena.eq(y, one).unwrap();
+        let first_or = arena.or(x_eq_one, y_eq_one).unwrap();
+        let x_eq_two = arena.eq(x, two).unwrap();
+        let second_or = arena.or(x_eq_two, q).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(*x_symbol, Value::Int(0));
+        projected.set(*y_symbol, Value::Int(0));
+        projected.set(*q_symbol, Value::Bool(false));
+        let originals = [first_or, second_or];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            2
+        );
+
+        let mut single = projected.clone();
+        repair_projected_replay_branch_choice(&arena, &originals, first_or, &mut single)
+            .unwrap()
+            .expect("single-OR repair should choose the local branch tie");
+        assert_eq!(single.get(*x_symbol), Some(Value::Int(1)));
+        assert_eq!(single.get(*y_symbol), Some(Value::Int(0)));
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &single).unwrap(),
+            1
+        );
+
+        let mut paired = projected;
+        repair_projected_replay_branch_pair_choice(&arena, &originals, first_or, &mut paired)
+            .unwrap()
+            .expect("paired repair should compose adjacent OR choices");
+        assert_eq!(paired.get(*x_symbol), Some(Value::Int(2)));
+        assert_eq!(paired.get(*y_symbol), Some(Value::Int(1)));
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &paired).unwrap(),
+            0
+        );
+        for &original in &originals {
+            assert_eq!(eval(&arena, original, &paired).unwrap(), Value::Bool(true));
+        }
     }
 
     #[test]

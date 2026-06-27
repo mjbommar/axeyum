@@ -6,6 +6,51 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA coupled branch-pair replay repair.**
+  Targeted lazy-extensionality replay now has a bounded two-disjunction branch
+  repair before the existing single-disjunction branch choice. For a failed
+  generated OR, it tries each repairable branch candidate on a projection copy;
+  if that copy's next full-replay blocker is a different generated OR, it tries
+  each repairable branch of that second OR on the same copy. A pair is accepted
+  only when both ORs evaluate true and the full original positive replay false
+  count strictly decreases. The existing full original evaluator replay remains
+  the only SAT acceptance gate, and the old single-OR repair remains the
+  fallback. A focused regression pins the motivating scoring shape: single-OR
+  repair takes a local tie (`x = 1`), while pair scoring chooses the compatible
+  adjacent schedule (`y = 1`, then `x = 2`) that satisfies both ORs.
+
+  This still does **not** close `bug337`, but it is a real frontier move rather
+  than a no-op. The 10 s diagnostic remains `unknown` at **round=2**,
+  **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**, but the first false replay point moves from
+  generated OR **ordinal 211**, term **4108**, to generated OR **ordinal 219**,
+  term **6084**. Projection telemetry rises to
+  **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=343**, **branch_repair_candidates=142**,
+  **branch_repair_symbol_changes=178**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=647**. The new failed OR's best branch is **3**,
+  with first false term **1402**, `x_213 = x_199`; branch **3** repairs locally
+  (**init=1**, **final=0**, **changes=48**) and moves the global blocker back to
+  **ordinal 211**, term **4108**. Branches **0/1/2** repair locally but worsen
+  full replay and expose earlier scalar blockers at terms **1329** (**1 vs 0**),
+  **1334** (**2 vs 0**), and **388** (**1 vs 0**). The diagnostic run is also
+  slower than the prior one-branch frontier (**~45 s** wall for the 10 s solver
+  budget), so the next step should be a bounded multi-OR/beam branch scheduler
+  with explicit cost control, or pair-edge diagnostics that identify the
+  219↔211 cycle before broadening the search further.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA branch-candidate replay diagnostics.**
   Final lazy-extensionality replay failures now annotate failed generated ORs
   with per-branch candidate diagnostics, computed only on the final failed replay

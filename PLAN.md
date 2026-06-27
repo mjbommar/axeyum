@@ -1839,6 +1839,20 @@ against competitor source, are now binding:
      `x_388 = select(x_325, x_337)`, values 1 vs 0, after 571 projection repair
      changes. The row remains `unknown`; next useful work is readback/store-chain
      component repair around the `x_325/x_339` transition.
+     **COUPLED BRANCH-PAIR REPLAY REPAIR LANDED (2026-06-26):** targeted replay
+     now has a bounded two-generated-OR branch scheduler before the existing
+     single-OR branch choice. It repairs each branch candidate of the failed OR,
+     observes the next full-replay blocker, and if that blocker is a different
+     OR, tries each branch candidate there on the same projection copy. A pair is
+     retained only when both ORs evaluate true and the full original replay false
+     count strictly decreases, so SAT remains gated by the original evaluator
+     replay. On `bug337`, this is a real but incomplete frontier move: the 10 s
+     diagnostic advances from OR ordinal 211 / term 4108 to OR ordinal 219 / term
+     6084, with branch 3's local repair pointing back to ordinal 211. Projection
+     churn rises to 647 changes and the diagnostic wall time rises to ~45 s, so
+     the next AUFLIA move should be a cost-controlled multi-OR/beam branch
+     scheduler or pair-edge diagnostics for the 219↔211 cycle, not unbounded
+     branch-pair widening.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
