@@ -4188,6 +4188,123 @@ fn warm_bv_readback_slice_extension_identities_drop_wrappers() {
 }
 
 #[test]
+fn warm_bv_readback_shift_identities_drop_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bv_shift_value", Sort::BitVec(8))
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 61).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let ones = arena.bv_const(8, 0xff).unwrap();
+    let target = arena.bv_const(8, 0x5c).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let shl_zero = arena.bv_shl(loaded, zero).unwrap();
+    let shl_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, shl_zero);
+    assert_eq!(
+        shl_zero_result, value,
+        "left shift by zero around readback should simplify to the stored BV"
+    );
+
+    let lshr_zero = arena.bv_lshr(loaded, zero).unwrap();
+    let lshr_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, lshr_zero);
+    assert_eq!(
+        lshr_zero_result, value,
+        "logical right shift by zero around readback should simplify to the stored BV"
+    );
+
+    let ashr_zero = arena.bv_ashr(loaded, zero).unwrap();
+    let ashr_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, ashr_zero);
+    assert_eq!(
+        ashr_zero_result, value,
+        "arithmetic right shift by zero around readback should simplify to the stored BV"
+    );
+
+    let zero_shl_readback = arena.bv_shl(zero, loaded).unwrap();
+    let zero_shl_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, zero_shl_readback);
+    assert_eq!(
+        zero_shl_result, zero,
+        "zero shifted left by any readback should simplify to zero"
+    );
+
+    let zero_lshr_readback = arena.bv_lshr(zero, loaded).unwrap();
+    let zero_lshr_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, zero_lshr_readback);
+    assert_eq!(
+        zero_lshr_result, zero,
+        "zero logical-right-shifted by any readback should simplify to zero"
+    );
+
+    let source_zero_arith_shift = arena.bv_ashr(zero, loaded).unwrap();
+    let source_zero_arith_result = IncrementalBvSolver::simplify_memory_for_warm_assertion(
+        &mut arena,
+        source_zero_arith_shift,
+    );
+    assert_eq!(
+        source_zero_arith_result, zero,
+        "zero arithmetic-right-shifted by any readback should simplify to zero"
+    );
+
+    let ones_ashr_readback = arena.bv_ashr(ones, loaded).unwrap();
+    let ones_ashr_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, ones_ashr_readback);
+    assert_eq!(
+        ones_ashr_result, ones,
+        "all-ones arithmetic-right-shifted by any readback should stay all ones"
+    );
+
+    let shl_eq_target = arena.eq(shl_zero, target).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, shl_eq_target)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "BV shift readback cleanup should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "BV shift readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(value_sym),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 0x5c
+                })
+            );
+            assert_eq!(
+                eval(&arena, shl_eq_target, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original BV shift memory assertion"
+            );
+        }
+        other => panic!("expected BV shift readback assertion sat, got {other:?}"),
+    }
+
+    let lshr_eq_loaded = arena.eq(lshr_zero, loaded).unwrap();
+    let lshr_ne_loaded = arena.not(lshr_eq_loaded).unwrap();
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, lshr_ne_loaded)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a zero-shifted readback cannot differ from the original readback"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

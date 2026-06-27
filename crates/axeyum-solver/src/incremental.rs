@@ -1491,6 +1491,9 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
         | Op::BvUle
         | Op::BvUgt
         | Op::BvUge
+        | Op::BvShl
+        | Op::BvLshr
+        | Op::BvAshr
         | Op::BvSlt
         | Op::BvSle
         | Op::BvSgt
@@ -1590,6 +1593,9 @@ fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option
         | Op::BvUle
         | Op::BvUgt
         | Op::BvUge
+        | Op::BvShl
+        | Op::BvLshr
+        | Op::BvAshr
         | Op::BvSlt
         | Op::BvSle
         | Op::BvSgt
@@ -1604,6 +1610,7 @@ fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option
                 Op::BvAnd => collapse_bv_and(arena, *left, *right),
                 Op::BvOr => collapse_bv_or(arena, *left, *right),
                 Op::BvXor => collapse_bv_xor(arena, *left, *right),
+                Op::BvShl | Op::BvLshr | Op::BvAshr => collapse_bv_shift(arena, op, *left, *right),
                 Op::BvUlt
                 | Op::BvUle
                 | Op::BvUgt
@@ -1894,6 +1901,23 @@ fn collapse_bv_xor(arena: &mut TermArena, left: TermId, right: TermId) -> Option
     }
     if bv_const_is_zero(arena, right) {
         return Some(left);
+    }
+    None
+}
+
+fn collapse_bv_shift(arena: &mut TermArena, op: Op, left: TermId, right: TermId) -> Option<TermId> {
+    let sort = arena.sort_of(left);
+    if !matches!(sort, Sort::BitVec(_)) || arena.sort_of(right) != sort {
+        return None;
+    }
+    if bv_const_is_zero(arena, right) {
+        return Some(left);
+    }
+    if bv_const_is_zero(arena, left) {
+        return bv_zero_for_sort(arena, sort);
+    }
+    if matches!(op, Op::BvAshr) && bv_const_is_ones(arena, left) {
+        return bv_ones_for_sort(arena, sort);
     }
     None
 }
