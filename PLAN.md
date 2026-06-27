@@ -1891,6 +1891,21 @@ against competitor source, are now binding:
      diagnostic for term 555 that reports chain/direct candidates, replay false
      counts, and first blockers; the simple scalar-readback-alignment hypothesis
      is now rejected.
+     **DIRECT-SELECT REPAIR DIAGNOSTICS LANDED (2026-06-26):** final replay
+     failure notes now include `select_candidate_diagnostics` for direct
+     `x = select(a,i)` equality misses. The diagnostic replays both targeted
+     select-repair candidates on copies (store-chain/readback and direct
+     array-entry), reporting whether the select equality becomes true, repair
+     changes, full replay false count, and the next global blocker. On `bug337`,
+     this shows select repair is reached and locally works: the chain candidate
+     makes term 555 true, but only ties full replay (`same_full_replay`,
+     changes=37, total_false=2) and moves the blocker to generated OR ordinal
+     210 / term 3879. The direct array-entry candidate also makes term 555 true
+     but worsens full replay (total_false=3) and exposes ordinal 35 / term 560
+     (`0` vs `1`). The next AUFLIA move should compose the same-full-replay
+     chain candidate with generated-OR scheduling under the existing final
+     strict replay-improvement gate; more one-step direct-select repair is not
+     the bottleneck.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

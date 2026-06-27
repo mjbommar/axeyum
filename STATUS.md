@@ -6,6 +6,47 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA direct-select repair diagnostics.**
+  Final lazy-extensionality replay failures on a direct `x = select(a,i)`
+  equality now include `select_candidate_diagnostics` alongside the existing
+  branch diagnostics. The note tries the same two candidates as targeted replay
+  repair on projection copies: the store-chain/readback repair and the direct
+  array-entry store. For each candidate it records whether the failed select
+  equality becomes true, the repair-change count, the full original replay false
+  count, and the first global replay blocker after applying the candidate. A
+  focused regression pins the intended case where both select candidates repair
+  the current equality and expose the next false conjunct.
+
+  This does **not** close `bug337`, but it replaces the prior guess with a
+  concrete queue-lock edge. The 10 s route diagnostic still reports `unknown` at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The first false replay point remains direct
+  readback equality **ordinal 34**, term **555**,
+  `x_388 = select(x_325, x_337)`, values **1 vs 0**, after the same
+  **projection_repair_changes=655**. The new select diagnostics show:
+  `chain` makes term 555 true but is **same_full_replay** with **changes=37**,
+  **total_false=2**, and next global blocker **ordinal 210**, term **3879**;
+  `direct` also makes term 555 true but is **worse_full_replay** with
+  **changes=1**, **total_false=3**, and next blocker **ordinal 35**, term
+  **560**, equality terms **557/559**, values **0 vs 1**. Next useful work is
+  therefore not more one-step direct-select repair. We need a bounded composition
+  move that can carry the same-full-replay store-chain candidate into repair of
+  generated OR **210** while still accepting only a final strict replay
+  improvement, or a diagnostic that explains why the 210/34 select-chain cycle
+  cannot be scheduled.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_select_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`.
+  Diagnostic emitted the route note above before being interrupted after no
+  further useful output:
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA beam readback stabilization.**
   Accepted branch-beam candidates now get a post-branch readback stabilization
   pass before they are scored: direct scalar symbols of asserted
@@ -5728,7 +5769,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P2.1 | BV lazy blasting + word-level slicing + BV theory-checker | WIP — **destination-2 lever measured & scoped** (commits beee599/9846349, `docs/research/05-algorithms/lazy-bitblasting-p21-findings.md`). KEY FACT: lazy abstraction-refinement bit-blasting (`solve_lazy_bv_abstraction`, ADR-0019) is **built but NOT wired into default `solve()`/bench** — so the "~2-3/113 public QF_BV" picture is the *eager* mountain-builder. Measured (`tests/lazy_bv_curated_measure.rs`): lazy decides **incidental-heavy-op** cases with 0 multiplier blasts (`x=1∧x=2∧r=p·q` → unsat ~0ms, 0 refined), cracks `calypto_9` (sat, 2 ops refined), is a safe no-op when `ops=0` (public files), no shortcut on essential multiplier-equivalence. Next (coordinate on shared bench): lazy-bv bench backend → measure public 113 (DISAGREE=0) → opt-in `SolverConfig::lazy_bv` strategy → default-on ADR after net benefit. The highest-ROI perf move is wiring+measuring a built CEGAR bit-blaster, not a new algorithm |
-| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Lazy ROW/extensionality `unknown` details now report refinement counters and attempt replay-gated last-candidate SAT salvage before budget declines. The AUFLIA `bug337` probe still times out at round 2 with 4096 sites, 150 array-equality atoms, 6973 congruence lemmas, and 146 diff-skolems; grouped replay projection plus branch store-base/readback, direct array-equality, bounded multi-literal branch-schedule, scalar equality repair, support-aware scalar/readback propagation, targeted final branch-literal replay repair, replay-gated all-branch candidate selection, and selected carry-component projection now move the first false replay point to direct readback equality ordinal 34 / term 555, `x_388 = select(x_325, x_337)`, values 1 vs 0. Remaining: readback/store-chain component repair around the `x_325/x_339` transition; **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays; and func_interp model polish |
+| P2.2 | Arrays: lazy ROW axioms + extensionality + func_interp models | WIP — **lazy select-congruence** (`check_qf_abv_lazy`): read-over-read consistency added on demand (CEGAR) vs the eager O(n²) per-array pairing; sound (post-ROW abstraction relaxation ⇒ UNSAT transfers; sat replays) + terminating; 200-formula differential vs eager `check_with_array_elimination` (all agree). `eliminate_arrays` exposes `abstraction()`/`selects()`. **Array-extensionality refutation via congruence** wired into dispatch (`has_array` flag): `a=b ∧ select(a,i)≠select(b,i)` (incl. **wide-index** array equality the eager 2^iw enumeration refuses) is `unsat` by `prove_unsat_by_congruence` (select/store as UF; congruence valid for arrays). Lazy ROW/extensionality `unknown` details now report refinement counters and attempt replay-gated last-candidate SAT salvage before budget declines. The AUFLIA `bug337` probe still times out at round 2 with 4096 sites, 150 array-equality atoms, 6973 congruence lemmas, and 146 diff-skolems; replay projection/branch scheduling now moves the first false replay point to direct readback equality ordinal 34 / term 555, `x_388 = select(x_325, x_337)`, values 1 vs 0. Final-failure select diagnostics show the store-chain candidate repairs term 555 but only ties full replay (`same_full_replay`, next blocker generated OR ordinal 210 / term 3879), while direct array-entry repair worsens full replay (next blocker ordinal 35 / term 560). Remaining: compose same-full-replay store-chain repairs with generated-OR scheduling under a final strict replay-improvement gate; **lazy ROW (on-demand store axioms)** for the SAT side of wide-index arrays; and func_interp model polish |
 | P2.3 | EUF on the e-graph (from Ackermann to incremental) | TODO |
 | P2.4 | LIA cut portfolio (GCD, Gomory, HNF, cube, Diophantine) | WIP — **multi-equation Diophantine infeasibility** (`prove_lia_unsat_by_diophantine`, commit 96f07a3): a conjunction of integer equalities that is rational-feasible but **integer-infeasible** is UNSAT — fraction-free Hermite-style integer Gaussian elimination reports a contradiction row (`0=c` or per-row `gcd ∤ rhs`), deciding the case B&B can't terminate on for unbounded vars and the single-equation GCD misses (e.g. `x+y=0 ∧ x−y=1 → 2x=1`). **Strictly generalizes & replaced** the single-equation `prove_lia_unsat_by_gcd` in dispatch (no regression). Sound (only integer-preserving row ops; `checked_*` → "not refuted" on overflow, never a wrong unsat; SAT systems never refuted, negative-tested). 11+2 tests. Remaining: Gomory/cube cuts; inequality-integrated cuts |
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). **Sum-of-squares lemmas landed (2026-06-18)** — `sos_lemmas`: for a pair `a,b` with `a·a`/`b·b`/`a·b` all abstracted, add `(a±b)² ≥ 0` over the result vars (sound), restoring the cross-product correlation independent abstraction drops, so **`a²+b² ≥ 2ab` / AM–GM₂ is now PROVED** (the Spivak SOS-frontier test promoted prompt-`Unknown`→`Unsat`; negative test confirms `a²+b²=2ab` stays sat). 26 NRA + 5 Spivak tests. Remaining: higher-degree / multi-var SOS (Bernoulli, general Cauchy–Schwarz) + nlsat/CAD for completeness |
@@ -5759,6 +5800,23 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-26** — **AUFLIA direct-select repair diagnostics.**
+  Final lazy-extensionality replay failures for direct `x = select(a,i)`
+  equalities now report `select_candidate_diagnostics`: store-chain/readback and
+  direct array-entry candidates are tried on projection copies and annotated
+  with target truth, repair changes, full replay false count, and the first
+  global blocker. The focused regression covers the case where both candidates
+  repair the select equality but leave a later assertion false. On `bug337`, the
+  first replay miss is still ordinal **34**, term **555**,
+  `x_388 = select(x_325, x_337)`, values **1** vs **0**. The new diagnostic is
+  actionable: the `chain` candidate makes term 555 true but is
+  **same_full_replay** (**changes=37**, **total_false=2**) and lands on generated
+  OR **210** / term **3879**; the `direct` candidate also makes term 555 true
+  but is **worse_full_replay** (**changes=1**, **total_false=3**) and lands on
+  ordinal **35** / term **560** (`0` vs `1`). The next AUFLIA move should
+  compose the same-full-replay chain candidate with generated-OR repair under a
+  final strict replay-improvement gate, not add another one-step select repair.
 
 - **2026-06-26** — **AUFLIA selected carry-component projection.**
   Targeted lazy-extensionality replay now repairs direct array equality branch
