@@ -2037,6 +2037,17 @@ against competitor source, are now binding:
      **3 vs 2**) with the same counts. The next AUFLIA move is a paired
      repair/diagnostic over those sibling scalar chains, or a proof that this
      late OR-236 branch must be handled by a stronger combined repair.
+     **PAIRED SCALAR-CHAIN DIAGNOSTIC LANDED (2026-06-27):** the OR replay
+     note now applies the selected branch's false scalar literals as a coupled
+     repair, then follows up to four scalar equality blockers. On `bug337`,
+     forcing OR 236 branch 0 is an oscillation: setting symbols **460/461** from
+     term **510** to **3** repairs branch terms **12950/12951** and reaches
+     **branch_false=0**, but the downstream blockers **2611/2615** require
+     setting those same symbols back from terms **2610/2614** to **1/2**,
+     returning to OR **236** with **branch_false=2** and **total_false=1**.
+     The next AUFLIA move is scalar-closure-aware OR-236 branch selection:
+     score candidate branches after their local scalar closure, not just by raw
+     false-literal count.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

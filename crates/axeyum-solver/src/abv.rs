@@ -3242,6 +3242,7 @@ struct ReplayOrFailure {
     best_branch_first_false_term: Option<TermId>,
     best_branch_first_false_eq: Option<ReplayEqFailure>,
     best_branch_false_literal_details: Vec<ReplayBranchFalseLiteralDiagnostic>,
+    best_branch_paired_scalar_chain: Option<ReplayScalarChainDiagnostic>,
 }
 
 fn replay_failed_or_details(
@@ -3309,6 +3310,7 @@ fn replay_failed_or_details(
                 None => None,
             },
             best_branch_false_literal_details: false_literal_details,
+            best_branch_paired_scalar_chain: None,
         };
         let candidate_key = (
             candidate.best_branch_false_literals,
@@ -3398,28 +3400,47 @@ fn replay_scalar_choice_diagnostics_for_literal(
 ) -> Result<Vec<ReplayScalarChoiceDiagnostic>, SolverError> {
     const MAX_SCALAR_CHOICE_DIAGNOSTICS: usize = 4;
 
-    let ir = |e: axeyum_ir::IrError| {
-        SolverError::Backend(format!("lazy-ext scalar choice diagnostic failed: {e}"))
-    };
     let mut diagnostics = Vec::new();
     for (target_symbol, value_term) in direct_scalar_equality_repair_choices(arena, literal)
         .into_iter()
         .take(MAX_SCALAR_CHOICE_DIAGNOSTICS)
     {
-        let value = eval(arena, value_term, assignment).map_err(ir)?;
-        let mut trial = assignment.clone();
-        let changed =
-            store_projected_symbol_value(arena, &mut trial, target_symbol, value.clone())?;
-        let literal_true = eval(arena, literal, &trial).map_err(ir)? == Value::Bool(true);
-        let branch_false_literals = branch_false_literal_count(arena, branch, &trial)?;
-        let total_false_conjuncts = positive_replay_false_count(arena, originals, &trial)?;
-        let global_failure = first_projected_replay_failure(
+        let (diagnostic, _) = replay_scalar_choice_effect(
             arena,
             originals,
-            &trial,
-            ProjectionRepairStats::default(),
+            branch,
+            assignment,
+            literal,
+            target_symbol,
+            value_term,
         )?;
-        diagnostics.push(ReplayScalarChoiceDiagnostic {
+        diagnostics.push(diagnostic);
+    }
+    Ok(diagnostics)
+}
+
+fn replay_scalar_choice_effect(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    assignment: &Assignment,
+    literal: TermId,
+    target_symbol: SymbolId,
+    value_term: TermId,
+) -> Result<(ReplayScalarChoiceDiagnostic, Assignment), SolverError> {
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext scalar choice diagnostic failed: {e}"))
+    };
+    let value = eval(arena, value_term, assignment).map_err(ir)?;
+    let mut trial = assignment.clone();
+    let changed = store_projected_symbol_value(arena, &mut trial, target_symbol, value.clone())?;
+    let literal_true = eval(arena, literal, &trial).map_err(ir)? == Value::Bool(true);
+    let branch_false_literals = branch_false_literal_count(arena, branch, &trial)?;
+    let total_false_conjuncts = positive_replay_false_count(arena, originals, &trial)?;
+    let global_failure =
+        first_projected_replay_failure(arena, originals, &trial, ProjectionRepairStats::default())?;
+    Ok((
+        ReplayScalarChoiceDiagnostic {
             target_symbol,
             value_term,
             value: compact_replay_value(&value),
@@ -3434,9 +3455,161 @@ fn replay_scalar_choice_diagnostics_for_literal(
             first_global_false_eq: global_failure
                 .as_ref()
                 .and_then(|failure| failure.failed_eq.clone()),
-        });
+        },
+        trial,
+    ))
+}
+
+fn replay_best_scalar_choice_effect_for_literal(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    assignment: &Assignment,
+    literal: TermId,
+) -> Result<Option<(ReplayScalarChoiceDiagnostic, Assignment)>, SolverError> {
+    let mut best: Option<(
+        usize,
+        usize,
+        usize,
+        ReplayScalarChoiceDiagnostic,
+        Assignment,
+    )> = None;
+    for (ordinal, (target_symbol, value_term)) in
+        direct_scalar_equality_repair_choices(arena, literal)
+            .into_iter()
+            .enumerate()
+    {
+        let (diagnostic, trial) = replay_scalar_choice_effect(
+            arena,
+            originals,
+            branch,
+            assignment,
+            literal,
+            target_symbol,
+            value_term,
+        )?;
+        if !diagnostic.changed || !diagnostic.literal_true {
+            continue;
+        }
+        let replace = best.as_ref().is_none_or(
+            |(best_branch_false, best_total_false, best_ordinal, _, _)| {
+                (
+                    diagnostic.branch_false_literals,
+                    diagnostic.total_false_conjuncts,
+                    ordinal,
+                ) < (*best_branch_false, *best_total_false, *best_ordinal)
+            },
+        );
+        if replace {
+            best = Some((
+                diagnostic.branch_false_literals,
+                diagnostic.total_false_conjuncts,
+                ordinal,
+                diagnostic,
+                trial,
+            ));
+        }
     }
-    Ok(diagnostics)
+    Ok(best.map(|(_, _, _, diagnostic, trial)| (diagnostic, trial)))
+}
+
+fn replay_paired_scalar_chain_diagnostic_for_or_failure(
+    arena: &TermArena,
+    originals: &[TermId],
+    assignment: &Assignment,
+    or_failure: &ReplayOrFailure,
+) -> Result<Option<ReplayScalarChainDiagnostic>, SolverError> {
+    const MAX_PAIRED_SCALAR_CHAIN_LITERALS: usize = 4;
+    const MAX_PAIRED_SCALAR_CHAIN_FOLLOWUPS: usize = 4;
+
+    let scalar_false_literals = or_failure
+        .best_branch_false_literal_details
+        .iter()
+        .filter(|detail| {
+            !direct_scalar_equality_repair_choices(arena, detail.literal_term).is_empty()
+        })
+        .take(MAX_PAIRED_SCALAR_CHAIN_LITERALS + 1)
+        .map(|detail| detail.literal_term)
+        .collect::<Vec<_>>();
+    if !(2..=MAX_PAIRED_SCALAR_CHAIN_LITERALS).contains(&scalar_false_literals.len()) {
+        return Ok(None);
+    }
+
+    let mut trial = assignment.clone();
+    let mut branch_steps = Vec::new();
+    for literal in scalar_false_literals {
+        if eval(arena, literal, &trial).map_err(|error| {
+            SolverError::Backend(format!("lazy-ext paired scalar diagnostic failed: {error}"))
+        })? == Value::Bool(true)
+        {
+            continue;
+        }
+        let Some((diagnostic, next_trial)) = replay_best_scalar_choice_effect_for_literal(
+            arena,
+            originals,
+            or_failure.best_branch_term,
+            &trial,
+            literal,
+        )?
+        else {
+            return Ok(None);
+        };
+        branch_steps.push(diagnostic);
+        trial = next_trial;
+    }
+    if branch_steps.len() < 2 {
+        return Ok(None);
+    }
+
+    let mut followup_steps = Vec::new();
+    let mut seen_followups = BTreeSet::new();
+    for _ in 0..MAX_PAIRED_SCALAR_CHAIN_FOLLOWUPS {
+        let Some(failure) = first_projected_replay_failure(
+            arena,
+            originals,
+            &trial,
+            ProjectionRepairStats::default(),
+        )?
+        else {
+            break;
+        };
+        if !seen_followups.insert(failure.conjunct_ordinal)
+            || direct_scalar_equality_repair_choices(arena, failure.conjunct_term).is_empty()
+        {
+            break;
+        }
+        let Some((diagnostic, next_trial)) = replay_best_scalar_choice_effect_for_literal(
+            arena,
+            originals,
+            or_failure.best_branch_term,
+            &trial,
+            failure.conjunct_term,
+        )?
+        else {
+            break;
+        };
+        followup_steps.push(diagnostic);
+        trial = next_trial;
+    }
+
+    let final_branch_false =
+        branch_false_literal_count(arena, or_failure.best_branch_term, &trial)?;
+    let final_total_false = positive_replay_false_count(arena, originals, &trial)?;
+    let final_failure =
+        first_projected_replay_failure(arena, originals, &trial, ProjectionRepairStats::default())?;
+    Ok(Some(ReplayScalarChainDiagnostic {
+        branch_steps,
+        followup_steps,
+        final_branch_false_literals: final_branch_false,
+        final_total_false_conjuncts: final_total_false,
+        final_global_false_ordinal: final_failure
+            .as_ref()
+            .map(|failure| failure.conjunct_ordinal),
+        final_global_false_term: final_failure.as_ref().map(|failure| failure.conjunct_term),
+        final_global_false_eq: final_failure
+            .as_ref()
+            .and_then(|failure| failure.failed_eq.clone()),
+    }))
 }
 
 fn enrich_replay_or_failure_with_scalar_choices(
@@ -3454,6 +3627,13 @@ fn enrich_replay_or_failure_with_scalar_choices(
             detail.literal_term,
         )?;
     }
+    or_failure.best_branch_paired_scalar_chain =
+        replay_paired_scalar_chain_diagnostic_for_or_failure(
+            arena,
+            originals,
+            assignment,
+            &or_failure,
+        )?;
     Ok(or_failure)
 }
 
@@ -5567,6 +5747,17 @@ struct ReplayBranchFalseLiteralDiagnostic {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct ReplayScalarChainDiagnostic {
+    branch_steps: Vec<ReplayScalarChoiceDiagnostic>,
+    followup_steps: Vec<ReplayScalarChoiceDiagnostic>,
+    final_branch_false_literals: usize,
+    final_total_false_conjuncts: usize,
+    final_global_false_ordinal: Option<usize>,
+    final_global_false_term: Option<TermId>,
+    final_global_false_eq: Option<ReplayEqFailure>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplayBranchCandidateDiagnostic {
     branch_ordinal: usize,
     initial_false_literals: usize,
@@ -5678,40 +5869,97 @@ fn write_replay_or_false_literal_details(
             if choice_idx > 0 {
                 let _ = write!(note, "|");
             }
-            let _ = write!(
-                note,
-                "#{}:symbol={},value_term={},value={},changed={},literal_true={},\
-                 branch_false={},total_false={}",
-                choice_idx,
-                choice.target_symbol.index(),
-                choice.value_term.index(),
-                choice.value,
-                choice.changed,
-                choice.literal_true,
-                choice.branch_false_literals,
-                choice.total_false_conjuncts
-            );
-            if let Some(ordinal) = choice.first_global_false_ordinal {
-                let _ = write!(note, ",global_false_ordinal={ordinal}");
-            }
-            if let Some(term) = choice.first_global_false_term {
-                let _ = write!(note, ",global_false_term={}", term.index());
-            }
-            if let Some(eq) = &choice.first_global_false_eq {
-                let _ = write!(
-                    note,
-                    ",global_false_lhs_term={},global_false_rhs_term={},\
-                     global_false_lhs_value={},global_false_rhs_value={}",
-                    eq.lhs_term.index(),
-                    eq.rhs_term.index(),
-                    eq.lhs_value,
-                    eq.rhs_value
-                );
-            }
+            write_scalar_choice_effect(note, choice_idx, choice);
         }
         let _ = write!(note, ")");
     }
     let _ = write!(note, "]");
+}
+
+fn write_scalar_choice_effect(
+    note: &mut String,
+    choice_idx: usize,
+    choice: &ReplayScalarChoiceDiagnostic,
+) {
+    let _ = write!(
+        note,
+        "#{}:symbol={},value_term={},value={},changed={},literal_true={},\
+         branch_false={},total_false={}",
+        choice_idx,
+        choice.target_symbol.index(),
+        choice.value_term.index(),
+        choice.value,
+        choice.changed,
+        choice.literal_true,
+        choice.branch_false_literals,
+        choice.total_false_conjuncts
+    );
+    if let Some(ordinal) = choice.first_global_false_ordinal {
+        let _ = write!(note, ",global_false_ordinal={ordinal}");
+    }
+    if let Some(term) = choice.first_global_false_term {
+        let _ = write!(note, ",global_false_term={}", term.index());
+    }
+    if let Some(eq) = &choice.first_global_false_eq {
+        let _ = write!(
+            note,
+            ",global_false_lhs_term={},global_false_rhs_term={},\
+             global_false_lhs_value={},global_false_rhs_value={}",
+            eq.lhs_term.index(),
+            eq.rhs_term.index(),
+            eq.lhs_value,
+            eq.rhs_value
+        );
+    }
+}
+
+fn write_scalar_choice_effect_list(note: &mut String, choices: &[ReplayScalarChoiceDiagnostic]) {
+    let _ = write!(note, "[");
+    for (idx, choice) in choices.iter().enumerate() {
+        if idx > 0 {
+            let _ = write!(note, "|");
+        }
+        write_scalar_choice_effect(note, idx, choice);
+    }
+    let _ = write!(note, "]");
+}
+
+fn write_replay_or_paired_scalar_chain(
+    note: &mut String,
+    prefix: &str,
+    or_failure: &ReplayOrFailure,
+) {
+    let Some(chain) = &or_failure.best_branch_paired_scalar_chain else {
+        return;
+    };
+    let _ = write!(note, ", {prefix}_best_branch_paired_scalar_chain=(");
+    let _ = write!(note, "branch_steps=");
+    write_scalar_choice_effect_list(note, &chain.branch_steps);
+    let _ = write!(note, ",followup_steps=");
+    write_scalar_choice_effect_list(note, &chain.followup_steps);
+    let _ = write!(
+        note,
+        ",final_branch_false={},final_total_false={}",
+        chain.final_branch_false_literals, chain.final_total_false_conjuncts
+    );
+    if let Some(ordinal) = chain.final_global_false_ordinal {
+        let _ = write!(note, ",final_global_false_ordinal={ordinal}");
+    }
+    if let Some(term) = chain.final_global_false_term {
+        let _ = write!(note, ",final_global_false_term={}", term.index());
+    }
+    if let Some(eq) = &chain.final_global_false_eq {
+        let _ = write!(
+            note,
+            ",final_global_false_lhs_term={},final_global_false_rhs_term={},\
+             final_global_false_lhs_value={},final_global_false_rhs_value={}",
+            eq.lhs_term.index(),
+            eq.rhs_term.index(),
+            eq.lhs_value,
+            eq.rhs_value
+        );
+    }
+    let _ = write!(note, ")");
 }
 
 impl ReplayFailure {
@@ -5786,6 +6034,7 @@ impl ReplayFailure {
                 );
             }
             write_replay_or_false_literal_details(&mut note, "failed_or", or_failure);
+            write_replay_or_paired_scalar_chain(&mut note, "failed_or", or_failure);
         }
         if !self.select_candidate_diagnostics.is_empty() {
             let _ = write!(note, ", select_candidate_diagnostics=[");
@@ -5949,6 +6198,7 @@ impl ReplayFailure {
                         );
                     }
                     write_replay_or_false_literal_details(&mut note, "global_false_or", or_failure);
+                    write_replay_or_paired_scalar_chain(&mut note, "global_false_or", or_failure);
                 }
             }
             let _ = write!(note, "]");
@@ -9936,6 +10186,14 @@ mod tests {
         assert!(note.contains("literal_true=true"), "{note}");
         assert!(note.contains("branch_false=1"), "{note}");
         assert!(note.contains("global_false_term="), "{note}");
+        assert!(
+            note.contains("failed_or_best_branch_paired_scalar_chain=("),
+            "{note}"
+        );
+        assert!(note.contains("branch_steps=["), "{note}");
+        assert!(note.contains("followup_steps=[]"), "{note}");
+        assert!(note.contains("final_branch_false=0"), "{note}");
+        assert!(note.contains("final_total_false=0"), "{note}");
     }
 
     #[test]
