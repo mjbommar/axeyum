@@ -1865,6 +1865,20 @@ against competitor source, are now binding:
      branch-schedule/beam search that can take temporary uphill moves inside the
      beam, but still accepts only final full-replay improvement, with explicit
      caps and cycle/tabu handling for the 219 → 211 → 212 queue-lock chain.
+     **BOUNDED BRANCH-BEAM REPLAY REPAIR LANDED (2026-06-26):** targeted replay
+     now has a capped generated-OR beam after strict pair repair: width 8,
+     64 expansions, depth 6, and at most `current_false + 4` temporary false
+     conjuncts inside the beam. The projected assignment is changed only when
+     the final candidate strictly improves full original replay; SAT remains
+     accepted only by evaluator replay. A regression covers a four-OR schedule
+     where strict pair repair rejects the temporary two-false state but the beam
+     repairs later ORs to reach a replaying assignment. On `bug337`, this crosses
+     the 219/211/212 branch cycle but does not close the row: the new first false
+     replay point is direct readback equality ordinal 34 / term 555,
+     `x_388 = select(x_325, x_337)`, values 1 vs 0, after 655 projection changes.
+     The next AUFLIA move should inspect why existing select/store-chain readback
+     repair cannot stabilize this post-beam assignment, or add readback
+     stabilization inside accepted beam states; do not widen the beam blindly.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is

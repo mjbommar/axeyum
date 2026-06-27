@@ -6081,6 +6081,12 @@ fn repair_projected_replay_failure(
         return Ok(Some(pair_stats));
     }
 
+    if let Some(beam_stats) =
+        repair_projected_replay_branch_beam(arena, originals, failure.conjunct_term, projected)?
+    {
+        return Ok(Some(beam_stats));
+    }
+
     if let Some(choice_stats) =
         repair_projected_replay_branch_choice(arena, originals, failure.conjunct_term, projected)?
     {
@@ -6110,6 +6116,213 @@ fn repair_projected_replay_failure(
         &mut stats,
     )?;
     Ok(changed.then_some(stats))
+}
+
+#[derive(Clone)]
+struct BranchBeamState {
+    assignment: Assignment,
+    stats: ProjectionRepairStats,
+    false_count: usize,
+    depth: usize,
+    sequence: usize,
+    seen_failures: BTreeSet<usize>,
+}
+
+type BranchBeamSuccess = (usize, usize, usize, ProjectionRepairStats, Assignment);
+
+fn branch_beam_state_key(state: &BranchBeamState) -> (usize, usize, usize, usize) {
+    (
+        state.false_count,
+        state.depth,
+        state.stats.changes(),
+        state.sequence,
+    )
+}
+
+fn branch_beam_success_is_better(
+    best: Option<&BranchBeamSuccess>,
+    false_count: usize,
+    depth: usize,
+    sequence: usize,
+) -> bool {
+    best.is_none_or(|(best_false_count, best_depth, best_sequence, _, _)| {
+        (false_count, depth, sequence) < (*best_false_count, *best_depth, *best_sequence)
+    })
+}
+
+fn branch_beam_record_success(
+    best: &mut Option<BranchBeamSuccess>,
+    false_count: usize,
+    depth: usize,
+    sequence: usize,
+    stats: ProjectionRepairStats,
+    assignment: Assignment,
+) {
+    if branch_beam_success_is_better(best.as_ref(), false_count, depth, sequence) {
+        *best = Some((false_count, depth, sequence, stats, assignment));
+    }
+}
+
+struct BranchBeamSearch<'a> {
+    arena: &'a TermArena,
+    originals: &'a [TermId],
+    current_false: usize,
+    max_false: usize,
+    max_depth: usize,
+}
+
+fn branch_beam_expand_state(
+    search: &BranchBeamSearch<'_>,
+    state: BranchBeamState,
+    frontier: &mut Vec<BranchBeamState>,
+    best: &mut Option<BranchBeamSuccess>,
+    sequence: &mut usize,
+) -> Result<(), SolverError> {
+    let Some(failure) = first_projected_replay_failure(
+        search.arena,
+        search.originals,
+        &state.assignment,
+        ProjectionRepairStats::default(),
+    )?
+    else {
+        branch_beam_record_success(
+            best,
+            0,
+            state.depth,
+            state.sequence,
+            state.stats,
+            state.assignment,
+        );
+        return Ok(());
+    };
+    if state.depth >= search.max_depth
+        || state.seen_failures.contains(&failure.conjunct_ordinal)
+        || !matches!(
+            search.arena.node(failure.conjunct_term),
+            TermNode::App { op: Op::BoolOr, .. }
+        )
+    {
+        return Ok(());
+    }
+
+    let ir =
+        |e: axeyum_ir::IrError| SolverError::Backend(format!("lazy-ext branch beam failed: {e}"));
+    let mut seen = state.seen_failures.clone();
+    seen.insert(failure.conjunct_ordinal);
+    let mut branches = Vec::new();
+    collect_positive_disjuncts(search.arena, failure.conjunct_term, &mut branches);
+    for branch in branches {
+        let mut trial = state.assignment.clone();
+        let Some(branch_stats) = repair_projected_branch_as_candidate(
+            search.arena,
+            search.originals,
+            branch,
+            &mut trial,
+        )?
+        else {
+            continue;
+        };
+        if eval(search.arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true) {
+            continue;
+        }
+        let false_count = positive_replay_false_count(search.arena, search.originals, &trial)?;
+        if false_count > search.max_false {
+            continue;
+        }
+        let mut accumulated_stats = state.stats;
+        accumulated_stats.absorb(branch_stats);
+        if false_count < search.current_false {
+            branch_beam_record_success(
+                best,
+                false_count,
+                state.depth + 1,
+                *sequence,
+                accumulated_stats,
+                trial,
+            );
+            *sequence += 1;
+            continue;
+        }
+        let next_failure = first_projected_replay_failure(
+            search.arena,
+            search.originals,
+            &trial,
+            ProjectionRepairStats::default(),
+        )?;
+        if next_failure
+            .as_ref()
+            .is_some_and(|next| seen.contains(&next.conjunct_ordinal))
+        {
+            continue;
+        }
+        frontier.push(BranchBeamState {
+            assignment: trial,
+            stats: accumulated_stats,
+            false_count,
+            depth: state.depth + 1,
+            sequence: *sequence,
+            seen_failures: seen.clone(),
+        });
+        *sequence += 1;
+    }
+    Ok(())
+}
+
+fn repair_projected_replay_branch_beam(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch_disjunction: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    const MAX_BRANCH_BEAM_DEPTH: usize = 6;
+    const MAX_BRANCH_BEAM_WIDTH: usize = 8;
+    const MAX_BRANCH_BEAM_EXPANSIONS: usize = 64;
+    const MAX_BRANCH_BEAM_UPHILL_FALSE: usize = 4;
+
+    if !matches!(
+        arena.node(branch_disjunction),
+        TermNode::App { op: Op::BoolOr, .. }
+    ) {
+        return Ok(None);
+    }
+
+    let current_false = positive_replay_false_count(arena, originals, projected)?;
+    if current_false == 0 {
+        return Ok(None);
+    }
+    let search = BranchBeamSearch {
+        arena,
+        originals,
+        current_false,
+        max_false: current_false + MAX_BRANCH_BEAM_UPHILL_FALSE,
+        max_depth: MAX_BRANCH_BEAM_DEPTH,
+    };
+    let mut sequence = 1usize;
+    let mut expansions = 0usize;
+    let mut best: Option<BranchBeamSuccess> = None;
+    let mut frontier = vec![BranchBeamState {
+        assignment: projected.clone(),
+        stats: ProjectionRepairStats::default(),
+        false_count: current_false,
+        depth: 0,
+        sequence: 0,
+        seen_failures: BTreeSet::new(),
+    }];
+
+    while !frontier.is_empty() && expansions < MAX_BRANCH_BEAM_EXPANSIONS {
+        frontier.sort_by_key(branch_beam_state_key);
+        let state = frontier.remove(0);
+        expansions += 1;
+        branch_beam_expand_state(&search, state, &mut frontier, &mut best, &mut sequence)?;
+        frontier.sort_by_key(branch_beam_state_key);
+        frontier.truncate(MAX_BRANCH_BEAM_WIDTH);
+    }
+
+    let Some((_, _, _, stats, trial)) = best else {
+        return Ok(None);
+    };
+    *projected = trial;
+    Ok(Some(stats))
 }
 
 type BranchPairRepairChoice = (
@@ -6844,9 +7057,10 @@ mod tests {
         cross_store_array_disequality_refutation, default_value_for_symbol,
         first_false_replay_conjunct, first_projected_replay_failure, positive_replay_false_count,
         project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
-        repair_projected_replay_branch_choice, repair_projected_replay_branch_pair_choice,
-        repair_projected_replay_failure, replay_failure_with_branch_candidate_diagnostics,
-        replay_last_ext_candidate, select_value, store_chain_readback_refutation, store_value,
+        repair_projected_replay_branch_beam, repair_projected_replay_branch_choice,
+        repair_projected_replay_branch_pair_choice, repair_projected_replay_failure,
+        replay_failure_with_branch_candidate_diagnostics, replay_last_ext_candidate, select_value,
+        store_chain_readback_refutation, store_value,
     };
     use crate::backend::{CheckResult, SolverConfig};
     use crate::sat_bv_backend::SatBvBackend;
@@ -7130,6 +7344,88 @@ mod tests {
         for &original in &originals {
             assert_eq!(eval(&arena, original, &paired).unwrap(), Value::Bool(true));
         }
+    }
+
+    #[test]
+    fn lazy_ext_branch_beam_allows_temporary_uphill_schedule() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let z = arena.int_var("z").unwrap();
+        let w = arena.int_var("w").unwrap();
+        let q = arena.bool_var("q").unwrap();
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let three = arena.int_const(3);
+
+        let x_eq_one = arena.eq(x, one).unwrap();
+        let first_or = arena.or(x_eq_one, q).unwrap();
+        let x_eq_zero = arena.eq(x, zero).unwrap();
+        let z_eq_one = arena.eq(z, one).unwrap();
+        let second_or = arena.or(x_eq_zero, z_eq_one).unwrap();
+        let z_eq_zero = arena.eq(z, zero).unwrap();
+        let y_eq_two = arena.eq(y, two).unwrap();
+        let third_or = arena.or(z_eq_zero, y_eq_two).unwrap();
+        let w_eq_three = arena.eq(w, three).unwrap();
+        let fourth_or = arena.or(z_eq_zero, w_eq_three).unwrap();
+        let prefix = arena.and(first_or, second_or).unwrap();
+        let suffix = arena.and(third_or, fourth_or).unwrap();
+        let assertion = arena.and(prefix, suffix).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+        let TermNode::Symbol(w_symbol) = arena.node(w) else {
+            panic!("w should be a symbol");
+        };
+        let TermNode::Symbol(q_symbol) = arena.node(q) else {
+            panic!("q should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(*x_symbol, Value::Int(0));
+        projected.set(*y_symbol, Value::Int(0));
+        projected.set(*z_symbol, Value::Int(0));
+        projected.set(*w_symbol, Value::Int(0));
+        projected.set(*q_symbol, Value::Bool(false));
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+
+        let mut paired = projected.clone();
+        assert!(
+            repair_projected_replay_branch_pair_choice(&arena, &originals, first_or, &mut paired)
+                .unwrap()
+                .is_none(),
+            "strict pair repair should reject the temporary two-false state"
+        );
+
+        let stats =
+            repair_projected_replay_branch_beam(&arena, &originals, first_or, &mut projected)
+                .unwrap()
+                .expect("beam should find the final improving branch schedule");
+        assert!(stats.branch_symbol_changes >= 4);
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
+        assert_eq!(projected.get(*x_symbol), Some(Value::Int(1)));
+        assert_eq!(projected.get(*z_symbol), Some(Value::Int(1)));
+        assert_eq!(projected.get(*y_symbol), Some(Value::Int(2)));
+        assert_eq!(projected.get(*w_symbol), Some(Value::Int(3)));
+        assert_eq!(
+            eval(&arena, assertion, &projected).unwrap(),
+            Value::Bool(true)
+        );
     }
 
     #[test]
