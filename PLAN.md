@@ -2221,7 +2221,7 @@ untrusted search and validated by small independent checkers.
 | 1 — Engine & Performance | [`track-1-engine/`](docs/plan/track-1-engine/README.md) | SAT inprocessing, preprocessing, SAT-core modernization, e-graph, CDCL(T), theory combination, PBLS, strategy |
 | 2 — Theories & Breadth | [`track-2-theories/`](docs/plan/track-2-theories/README.md) | lazy BV, lazy arrays, EUF, LIA cuts (+ unbounded backstop), NRA/CAD, quantifiers, strings, FP polish, datatypes, **breadth backlog** (sequences/sets/sep-logic/finite-fields/co-datatypes/rec-fun) |
 | 3 — Proofs & Lean | [`track-3-proof-lean/`](docs/plan/track-3-proof-lean/README.md) | trust ledger, LRAT, Alethe IR+emitter, Carcara-checked QF_BV, embedded checker, reduction proofs, Lean kernel + reconstruction, **Craig interpolation**; 2026-06-27 `prove_unsat_to_lean_module` now falls back to normalizing the assertion spine by splitting top-level conjunctions and stripping repeated top-level double negations after direct reconstruction declines, closing the consumer-facing shape-sensitivity gap for common `hyps ∧ ¬goal` queries without perturbing existing direct routes |
-| 4 — Use Cases & Frontend | [`track-4-usecases-frontend/`](docs/plan/track-4-usecases-frontend/README.md) | warm lazy memory, symexec/CFG frontend, OMT/MILP, SMT-LIB command surface, benchmarking & the perf gate, **CHC/Horn (PDR/Spacer)**, **synthesis/abduction**; 2026-06-27 memory-aware incremental assumptions now cover one-shot array/UF branch feasibility through the full dispatcher, `SymbolicMemory` gives frontends a typed load/store helper, and `explore_cfg` / `explore_cfg_checked` provide DFS with model-witnessed targets plus concrete replay hooks. The SMT-LIB front door also now handles `push`/`pop`/`check-sat-assuming`/`reset-assertions` in both incremental and single-query helpers without flattening scoped scripts, exposes `solve_smtlib_get_model` for user-declared model bindings, `solve_smtlib_get_assignment` for active top-level named assertions, and `solve_smtlib_get_assertions` for scoped rendered assertion snapshots, records `set-info`/`set-option`/`get-info`/`get-option` metadata with `solve_smtlib_get_info` and `solve_smtlib_get_option` responses, and explicitly rejects full `(reset)` in the shared-arena model |
+| 4 — Use Cases & Frontend | [`track-4-usecases-frontend/`](docs/plan/track-4-usecases-frontend/README.md) | warm lazy memory, symexec/CFG frontend, OMT/MILP, SMT-LIB command surface, benchmarking & the perf gate, **CHC/Horn (PDR/Spacer)**, **synthesis/abduction**; 2026-06-27 memory-aware incremental assumptions now cover one-shot array/UF branch feasibility through the full dispatcher, `SymbolicMemory` gives frontends a typed load/store helper, `SymbolicExecutor::branch` and `explore_cfg` auto-promote array/UF queries to the memory/theory-aware route when needed, and `explore_cfg` / `explore_cfg_checked` provide DFS with model-witnessed targets plus concrete replay hooks. The SMT-LIB front door also now handles `push`/`pop`/`check-sat-assuming`/`reset-assertions` in both incremental and single-query helpers without flattening scoped scripts, exposes `solve_smtlib_get_model` for user-declared model bindings, `solve_smtlib_get_assignment` for active top-level named assertions, and `solve_smtlib_get_assertions` for scoped rendered assertion snapshots, records `set-info`/`set-option`/`get-info`/`get-option` metadata with `solve_smtlib_get_info` and `solve_smtlib_get_option` responses, and explicitly rejects full `(reset)` in the shared-arena model |
 
 Cross-cutting: [`00-north-star.md`](docs/plan/00-north-star.md) (definition of
 done), [`01-dependency-dag.md`](docs/plan/01-dependency-dag.md) (the end-to-end
@@ -2243,13 +2243,15 @@ symbolic execution, BMC, and k-induction. The 2026-06-27 Track-4 slice also
 closes the immediate symbolic-memory/keccak-as-UF branch-query gap:
 `IncrementalBvSolver` scopes deferred array/UF assertions, `check_with_memory`
 and `check_assuming_with_memory` dispatch them through the full pure-Rust solver,
-`SymbolicExecutor` exposes memory-aware assume/branch/status/model calls, and
-`SymbolicMemory` now provides a typed frontend helper for array-backed
-`load`/`store` plus load-equality branch/assume queries. `explore_cfg` now owns
-the DFS solver mechanics for frontend-supplied CFG states: branch feasibility,
-scope push/pop, infeasible pruning, unknown-safe traversal, and replay-checked
-target models. This is still a one-shot fallback for deferred theories, not final
-warm lazy theory incrementality or a complete lifter/emulator frontend. The
+`SymbolicExecutor` exposes memory-aware assume/branch/status/model calls,
+auto-routes `branch` and CFG branch/assume/status/model queries to that path
+when arrays or UFs appear, and `SymbolicMemory` now provides a typed frontend
+helper for array-backed `load`/`store` plus load-equality branch/assume queries.
+`explore_cfg` now owns the DFS solver mechanics for frontend-supplied CFG states:
+branch feasibility, scope push/pop, infeasible pruning, unknown-safe traversal,
+and replay-checked target models. This is still a one-shot fallback for deferred
+theories, not final warm lazy theory incrementality or a complete lifter/emulator
+frontend. The
 checked concrete replay hook now has a reusable tiny-target library surface:
 `TinyBvProgram` validates a fixed-width BV register program, lifts instructions
 to symbolic CFG steps, extracts model witnesses, and independently replays them

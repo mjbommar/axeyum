@@ -13,8 +13,13 @@
 //!
 //! * [`assume`](SymbolicExecutor::assume) commits a constraint to the current
 //!   path and reports whether the path is still feasible.
+//! * [`assume_auto`](SymbolicExecutor::assume_auto) does the same while
+//!   automatically selecting the memory/theory-aware route for array or UF
+//!   conditions.
 //! * [`branch`](SymbolicExecutor::branch) reports, *without committing*, which of
-//!   `cond` / `¬cond` the current path can still take — the fork decision.
+//!   `cond` / `¬cond` the current path can still take — the fork decision; it
+//!   automatically uses the memory/theory-aware route when the path or condition
+//!   needs it.
 //! * [`enter`](SymbolicExecutor::enter) / [`backtrack`](SymbolicExecutor::backtrack)
 //!   open and discard a choice point, so a caller can explore the path tree
 //!   depth-first and undo a branch.
@@ -545,14 +550,49 @@ impl SymbolicExecutor {
         Ok(status_of(self.solver.check_with_memory(arena)?))
     }
 
+    /// Commits `cond` and automatically selects the precise feasibility route:
+    /// warm BV when the path remains array/UF-free, otherwise the
+    /// memory/theory-aware dispatcher.
+    ///
+    /// This is the ergonomic path for frontends that may mix ordinary BV
+    /// constraints with occasional symbolic memory or uninterpreted-call terms.
+    /// The constraint remains scoped by [`enter`](Self::enter) /
+    /// [`backtrack`](Self::backtrack).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the underlying assert/check.
+    pub fn assume_auto(
+        &mut self,
+        arena: &mut TermArena,
+        cond: TermId,
+    ) -> Result<PathStatus, SolverError> {
+        self.solver.assert(arena, cond)?;
+        self.path.push(cond);
+        if self.needs_memory_route_for_current_path() {
+            Ok(status_of(self.solver.check_with_memory(arena)?))
+        } else {
+            status_or_unknown(self.solver.check(arena))
+        }
+    }
+
     /// Reports which directions of `cond` the current path can take, **without**
     /// committing to either — the fork query. Use it to decide whether to
     /// explore the then-branch, the else-branch, or both.
+    ///
+    /// The method automatically dispatches to the memory/theory-aware solver
+    /// when the current path or the branch condition contains arrays
+    /// (`select`/`store`) or uninterpreted-function applications. This preserves
+    /// the fast warm BV path for pure-BV queries but avoids returning a coarse
+    /// `Unknown` solely because a branch mentions symbolic memory or a UF.
     ///
     /// # Errors
     ///
     /// Returns [`SolverError`] if building `¬cond` or a feasibility check fails.
     pub fn branch(&mut self, arena: &mut TermArena, cond: TermId) -> Result<Branch, SolverError> {
+        if self.needs_memory_route_for_term(arena, cond) {
+            return self.branch_with_memory(arena, cond);
+        }
         let not_cond = arena.not(cond)?;
         let if_true = status_or_unknown(self.solver.check_assuming(arena, &[cond]))?;
         let if_false = status_or_unknown(self.solver.check_assuming(arena, &[not_cond]))?;
@@ -597,6 +637,20 @@ impl SymbolicExecutor {
         status_or_unknown(self.solver.check_with_memory(arena))
     }
 
+    /// Feasibility of the current path, automatically selecting the memory-aware
+    /// dispatcher if an active assertion contains arrays or UFs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the selected check.
+    pub fn status_auto(&mut self, arena: &mut TermArena) -> Result<PathStatus, SolverError> {
+        if self.needs_memory_route_for_current_path() {
+            self.status_with_memory(arena)
+        } else {
+            self.status(arena)
+        }
+    }
+
     /// A concrete assignment satisfying the current path condition — a runnable
     /// test input for the explored path — or `None` if the path is infeasible (or
     /// `unknown`). The model is replay-checked by the incremental engine before it
@@ -625,6 +679,20 @@ impl SymbolicExecutor {
         match self.solver.check_with_memory(arena)? {
             CheckResult::Sat(model) => Ok(Some(model)),
             CheckResult::Unsat | CheckResult::Unknown(_) => Ok(None),
+        }
+    }
+
+    /// A concrete assignment for the current path, automatically selecting the
+    /// memory-aware dispatcher if an active assertion contains arrays or UFs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the selected check.
+    pub fn model_auto(&mut self, arena: &mut TermArena) -> Result<Option<Model>, SolverError> {
+        if self.needs_memory_route_for_current_path() {
+            self.model_with_memory(arena)
+        } else {
+            self.model(arena)
         }
     }
 
@@ -903,6 +971,15 @@ impl SymbolicExecutor {
     ) -> Result<OptOutcome, SolverError> {
         minimize_lia(arena, &self.path, objective)
     }
+
+    fn needs_memory_route_for_term(&self, arena: &TermArena, term: TermId) -> bool {
+        self.needs_memory_route_for_current_path()
+            || IncrementalBvSolver::term_needs_deferred_theory(arena, term)
+    }
+
+    fn needs_memory_route_for_current_path(&self) -> bool {
+        self.solver.has_deferred_theory_assertions()
+    }
 }
 
 struct CfgSearch<'a, State, F> {
@@ -946,7 +1023,11 @@ where
         if_true: State,
         if_false: State,
     ) -> Result<(), SolverError> {
-        let branch = if self.config.memory_aware {
+        let branch = if self.config.memory_aware
+            || self
+                .executor
+                .cfg_should_use_memory_route(self.arena, Some(condition))
+        {
             self.executor.branch_with_memory(self.arena, condition)?
         } else {
             self.executor.branch(self.arena, condition)?
@@ -977,10 +1058,20 @@ where
 
     fn visit_assumption(&mut self, condition: TermId, state: State) -> Result<(), SolverError> {
         self.executor.enter()?;
-        let status = if self.config.memory_aware {
-            self.executor.assume_with_memory(self.arena, condition)?
+        let status = match if self.config.memory_aware
+            || self
+                .executor
+                .cfg_should_use_memory_route(self.arena, Some(condition))
+        {
+            self.executor.assume_with_memory(self.arena, condition)
         } else {
-            self.executor.assume(self.arena, condition)?
+            self.executor.assume(self.arena, condition)
+        } {
+            Ok(status) => status,
+            Err(error) => {
+                self.executor.backtrack();
+                return Err(error);
+            }
         };
         if status.is_infeasible() {
             self.outcome.pruned_infeasible += 1;
@@ -1022,7 +1113,7 @@ where
     }
 
     fn current_status(&mut self) -> Result<PathStatus, SolverError> {
-        if self.config.memory_aware {
+        if self.config.memory_aware || self.executor.cfg_should_use_memory_route(self.arena, None) {
             self.executor.status_with_memory(self.arena)
         } else {
             self.executor.status(self.arena)
@@ -1030,7 +1121,7 @@ where
     }
 
     fn current_model(&mut self) -> Result<Option<Model>, SolverError> {
-        if self.config.memory_aware {
+        if self.config.memory_aware || self.executor.cfg_should_use_memory_route(self.arena, None) {
             self.executor.model_with_memory(self.arena)
         } else {
             self.executor.model(self.arena)
@@ -1044,6 +1135,13 @@ where
         } else {
             false
         }
+    }
+}
+
+impl SymbolicExecutor {
+    fn cfg_should_use_memory_route(&self, arena: &TermArena, term: Option<TermId>) -> bool {
+        self.solver.has_deferred_theory_assertions()
+            || term.is_some_and(|term| IncrementalBvSolver::term_needs_deferred_theory(arena, term))
     }
 }
 
@@ -1084,12 +1182,11 @@ mod tests {
     }
 
     #[test]
-    fn branch_over_uninterpreted_call_is_unknown_not_error() {
+    fn branch_over_uninterpreted_call_auto_uses_theory_route() {
         // Modeling an unmodeled library/syscall as an uninterpreted `g`: branching
-        // on `g(x) == 5` must yield a graceful three-valued verdict (Unknown — "may
-        // be feasible, do not prune"), NOT a hard `Err` — the warm BV backend can't
-        // represent `Apply`, but a feasibility *decision* query honors "unknown is
-        // never an error".
+        // on `g(x) == 5` must not require callers to pick the explicit
+        // memory/theory-aware entry point. `branch` detects `Apply` and routes the
+        // feasibility check through the full dispatcher.
         let mut arena = TermArena::new();
         let xv = x(&mut arena);
         let g = arena
@@ -1101,15 +1198,15 @@ mod tests {
         let mut exec = SymbolicExecutor::new();
         let branch = exec
             .branch(&mut arena, cond)
-            .expect("branch must not error on a UF condition");
+            .expect("branch should auto-route a UF condition");
         assert!(
-            matches!(branch.if_true, PathStatus::Unknown(_)),
-            "UF branch then-direction must be Unknown, got {:?}",
+            branch.if_true.is_feasible(),
+            "UF branch then-direction should be feasible, got {:?}",
             branch.if_true
         );
         assert!(
-            matches!(branch.if_false, PathStatus::Unknown(_)),
-            "UF branch else-direction must be Unknown, got {:?}",
+            branch.if_false.is_feasible(),
+            "UF branch else-direction should be feasible, got {:?}",
             branch.if_false
         );
     }

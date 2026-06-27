@@ -2158,6 +2158,78 @@ fn symbolic_executor_branches_on_memory_conditions() {
 }
 
 #[test]
+fn cfg_explorer_auto_routes_array_branch_without_memory_flag() {
+    let mut arena = TermArena::new();
+    let mem = arena
+        .declare(
+            "auto_mem",
+            Sort::Array {
+                index: ArraySortKey::BitVec(8),
+                element: ArraySortKey::BitVec(8),
+            },
+        )
+        .unwrap();
+    let mem_v = arena.var(mem);
+    let is = arena.declare("auto_i", Sort::BitVec(8)).unwrap();
+    let js = arena.declare("auto_j", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("auto_v", Sort::BitVec(8)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+
+    let stored = arena.store(mem_v, i, v).unwrap();
+    let loaded = arena.select(stored, j).unwrap();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    let loaded_eq_v = arena.eq(loaded, v).unwrap();
+    let load_ne_v = arena.not(loaded_eq_v).unwrap();
+
+    let mut executor = SymbolicExecutor::new();
+    let outcome = executor
+        .explore_cfg(
+            &mut arena,
+            0u8,
+            CfgExploreConfig {
+                max_steps: 8,
+                max_targets: 4,
+                memory_aware: false,
+            },
+            move |_arena, state| {
+                Ok(match state {
+                    0 => CfgStep::Assume {
+                        condition: i_eq_j,
+                        next: 1,
+                    },
+                    1 => CfgStep::Branch {
+                        condition: load_ne_v,
+                        if_true: 2,
+                        if_false: 3,
+                    },
+                    2 | 3 => CfgStep::Target(state),
+                    _ => CfgStep::Stop,
+                })
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.reached.len(),
+        1,
+        "only the read-over-write-consistent branch should reach a target"
+    );
+    assert_eq!(outcome.reached[0].state, 3);
+    assert_eq!(
+        outcome.pruned_infeasible, 1,
+        "the disequality branch should be pruned by the auto-selected array route"
+    );
+    assert_eq!(
+        outcome.unknown_branches, 0,
+        "array support should not degrade this branch to Unknown"
+    );
+    assert!(
+        executor.path_condition().is_empty(),
+        "CFG exploration must restore the caller's incoming path"
+    );
+}
+
+#[test]
 fn symbolic_memory_helper_routes_load_branches_through_memory_executor() {
     let mut arena = TermArena::new();
     let is = arena.declare("helper_i", Sort::BitVec(8)).unwrap();

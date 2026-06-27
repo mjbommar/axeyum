@@ -143,6 +143,22 @@ impl IncrementalBvSolver {
         self.cnf.variable_count()
     }
 
+    /// Whether `term` contains array or uninterpreted-function structure that
+    /// the warm BV bit-blaster intentionally defers to the full dispatcher.
+    #[must_use]
+    pub fn term_needs_deferred_theory(arena: &TermArena, term: TermId) -> bool {
+        needs_deferred_theory(arena, term)
+    }
+
+    /// Whether any currently active assertion is being held for the deferred
+    /// array/UF theory path.
+    #[must_use]
+    pub fn has_deferred_theory_assertions(&self) -> bool {
+        self.frames
+            .iter()
+            .any(|frame| !frame.deferred_assertions.is_empty())
+    }
+
     /// Bit-blasts `term` and adds it to the current scope.
     ///
     /// The assertion is enforced while the current scope (and all enclosing
@@ -431,11 +447,7 @@ impl IncrementalBvSolver {
         // assertion is active, refuse rather than silently ignore it (which would
         // risk a wrong result). Callers use `check_with_memory` for those
         // queries.
-        if self
-            .frames
-            .iter()
-            .any(|f| !f.deferred_assertions.is_empty())
-        {
+        if self.has_deferred_theory_assertions() {
             return Err(SolverError::Unsupported(
                 "active array/UF theory assertions: use check_with_memory (the warm path does \
                  not bit-blast deferred theories)"

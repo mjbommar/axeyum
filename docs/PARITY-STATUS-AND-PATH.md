@@ -723,12 +723,16 @@ the active slice through the full pure-Rust solver, and
 methods, and `SymbolicMemory` now gives frontends a typed array-backed
 load/store state plus load-equality branch/assume helpers. This covers the
 immediate angr/KLEE-style path-query need and removes the need for every frontend
-to hand-assemble read-over-write terms. `SymbolicExecutor::explore_cfg` now adds
-the reusable DFS layer over frontend-supplied states: branch feasibility, scope
-management, infeasible pruning, unknown-safe traversal, and replay-checked target
-models. `explore_cfg_checked` adds the concrete replay hook: frontend callbacks
-lift a concrete witness from each model and independently accept/reject it, with
-missing witnesses and mismatches bucketed explicitly. This is not the final warm
+to hand-assemble read-over-write terms. `SymbolicExecutor::branch` and
+`explore_cfg` now auto-promote array/UF branch, assume, status, and model queries
+to that memory/theory-aware route when needed, so default CFG exploration no
+longer degrades such branches to coarse warm-BV `Unknown` solely because the
+caller omitted the explicit memory flag. `explore_cfg` is the reusable DFS layer
+over frontend-supplied states: branch feasibility, scope management, infeasible
+pruning, unknown-safe traversal, and replay-checked target models.
+`explore_cfg_checked` adds the concrete replay hook: frontend callbacks lift a
+concrete witness from each model and independently accept/reject it, with missing
+witnesses and mismatches bucketed explicitly. This is not the final warm
 lazy-array/UF engine: deferred theory checks still rebuild through `check_auto`;
 retained learned theory clauses plus a real small-target lifter and emulator
 library remain Track 4 work.
