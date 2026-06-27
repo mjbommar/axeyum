@@ -12,6 +12,7 @@
 use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{
     AssumptionOutcome, CheckResult, IncrementalBvSolver, PathStatus, SymbolicExecutor,
+    SymbolicMemory,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -759,5 +760,63 @@ fn symbolic_executor_branches_on_memory_conditions() {
     assert!(
         executor.model_with_memory(&mut arena).unwrap().is_some(),
         "memory-aware model extraction should replay the committed path"
+    );
+}
+
+#[test]
+fn symbolic_memory_helper_routes_load_branches_through_memory_executor() {
+    let mut arena = TermArena::new();
+    let is = arena.declare("helper_i", Sort::BitVec(8)).unwrap();
+    let js = arena.declare("helper_j", Sort::BitVec(8)).unwrap();
+    let vs = arena.declare("helper_v", Sort::BitVec(8)).unwrap();
+    let (i, j, v) = (arena.var(is), arena.var(js), arena.var(vs));
+
+    let mut memory = SymbolicMemory::declare_bv(&mut arena, "helper_mem", 8, 8).unwrap();
+    assert_eq!(memory.index_sort(), Sort::BitVec(8));
+    assert_eq!(memory.element_sort(), Sort::BitVec(8));
+    let original_term = memory.term();
+    let updated = memory.store(&mut arena, i, v).unwrap();
+    assert_ne!(
+        updated, original_term,
+        "store advances the symbolic memory term"
+    );
+
+    let mut executor = SymbolicExecutor::new();
+    let i_eq_j = arena.eq(i, j).unwrap();
+    assert!(
+        executor
+            .assume_with_memory(&mut arena, i_eq_j)
+            .unwrap()
+            .is_feasible(),
+        "address aliasing path prefix is feasible"
+    );
+
+    let branch = memory
+        .branch_load_eq(&mut executor, &mut arena, j, v)
+        .unwrap();
+    assert!(
+        branch.if_true.is_feasible(),
+        "load after store at an equal address may take the equality branch"
+    );
+    assert!(
+        branch.if_false.is_infeasible(),
+        "read-over-write rules out the disequality branch"
+    );
+    assert_eq!(
+        executor.path_condition(),
+        &[i_eq_j],
+        "branch_load_eq must not commit either direction"
+    );
+
+    assert!(
+        memory
+            .assume_load_eq(&mut executor, &mut arena, j, v)
+            .unwrap()
+            .is_feasible(),
+        "committing the feasible load equality keeps the path alive"
+    );
+    assert!(
+        executor.model_with_memory(&mut arena).unwrap().is_some(),
+        "the memory-helper path yields a replay-checked model"
     );
 }

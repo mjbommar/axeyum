@@ -888,12 +888,14 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "symbolic execution",
         feature: "DFS path explorer (SymbolicExecutor): assume / branch fork query / \
-                  enter+backtrack / concrete test-input model / memory-aware assume/branch/model \
-                  for array/UF path conditions / distinct test-suite enumeration (all-SAT) / \
+                  enter+backtrack / concrete test-input model / SymbolicMemory load/store helper \
+                  plus memory-aware assume/branch/model for array/UF path conditions / \
+                  distinct test-suite enumeration (all-SAT) / \
                   optimize objective over the path condition (min/max, unsigned/signed BV + LIA)",
         assurance: Assurance::Validated,
-        evidence: "models replay-checked vs path condition; optimum certified by the underlying \
-                   procedure; three-valued PathStatus keeps unknown from wrongly pruning a live path",
+        evidence: "models replay-checked vs path condition; memory load branches route through \
+                   the full dispatcher; optimum certified by the underlying procedure; three-valued \
+                   PathStatus keeps unknown from wrongly pruning a live path",
         reference: "ADR-0009/0027",
     },
     Capability {

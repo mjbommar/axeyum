@@ -720,10 +720,12 @@ array/UF assertions as deferred theory assertions, `check_with_memory` dispatche
 the active slice through the full pure-Rust solver, and
 `check_assuming_with_memory` handles array/UF assumptions without persisting them.
 `SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate
-methods, covering the immediate angr/KLEE-style path-query need. This is not the
-final warm lazy-array/UF engine: deferred theory checks still rebuild through
-`check_auto`; retained learned theory clauses and native symbolic-memory helpers
-remain Track 4 work.
+methods, and `SymbolicMemory` now gives frontends a typed array-backed
+load/store state plus load-equality branch/assume helpers. This covers the
+immediate angr/KLEE-style path-query need and removes the need for every frontend
+to hand-assemble read-over-write terms. This is not the final warm lazy-array/UF
+engine: deferred theory checks still rebuild through `check_auto`; retained
+learned theory clauses and a full CFG/lifter/explorer stack remain Track 4 work.
 
 ## 4. Reflection on PLAN.md
 

@@ -25,8 +25,13 @@
 //! replay-checked against the path constraints by the ground evaluator, and
 //! `unknown` (a resource limit) is a first-class [`PathStatus`], never silently
 //! treated as infeasible (which would wrongly prune a live path).
+//!
+//! [`SymbolicMemory`] is the companion frontend helper for memory-bearing paths:
+//! it owns the current SMT array term, builds `select`/`store` terms, and routes
+//! load-equality feasibility through the memory-aware executor APIs. It is a thin
+//! term-building layer, not the final warm lazy-array engine.
 
-use axeyum_ir::{SymbolId, TermArena, TermId};
+use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::incremental::IncrementalBvSolver;
@@ -82,6 +87,189 @@ impl Branch {
     #[must_use]
     pub fn forks(&self) -> bool {
         self.if_true.is_feasible() && self.if_false.is_feasible()
+    }
+}
+
+/// A typed symbolic memory value backed by an SMT array term.
+///
+/// This is the small frontend-facing memory abstraction needed by CFG symbolic
+/// executors: `load` builds `select(mem, addr)`, `store` advances the current
+/// memory term to `store(mem, addr, value)`, and the convenience branch/assume
+/// helpers ask [`SymbolicExecutor`] through its memory-aware path. It deliberately
+/// does not claim warm lazy-array incrementality; the solver route is still the
+/// one-shot full dispatcher behind [`SymbolicExecutor::branch_with_memory`] and
+/// [`SymbolicExecutor::assume_with_memory`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SymbolicMemory {
+    array: TermId,
+    index_sort: Sort,
+    element_sort: Sort,
+}
+
+impl SymbolicMemory {
+    /// Declares a bit-vector indexed/value memory and wraps its array term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if either width is invalid or `name` is already
+    /// declared with a different sort.
+    pub fn declare_bv(
+        arena: &mut TermArena,
+        name: &str,
+        index_width: u32,
+        element_width: u32,
+    ) -> Result<Self, SolverError> {
+        let array = arena.array_var(name, index_width, element_width)?;
+        Self::from_array(arena, array)
+    }
+
+    /// Declares an array memory with arbitrary non-array index and element sorts
+    /// and wraps its array term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if either component sort is unsupported for arrays
+    /// or `name` is already declared with a different sort.
+    pub fn declare_with_sorts(
+        arena: &mut TermArena,
+        name: &str,
+        index: Sort,
+        element: Sort,
+    ) -> Result<Self, SolverError> {
+        let array = arena.array_var_with_sorts(name, index, element)?;
+        Self::from_array(arena, array)
+    }
+
+    /// Creates a memory wrapper from an existing array term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `array` is not an array term.
+    pub fn from_array(arena: &TermArena, array: TermId) -> Result<Self, SolverError> {
+        let Sort::Array { index, element } = arena.sort_of(array) else {
+            return Err(IrError::SortMismatch {
+                expected: "Array",
+                found: arena.sort_of(array),
+            }
+            .into());
+        };
+        Ok(Self {
+            array,
+            index_sort: index.to_sort(),
+            element_sort: element.to_sort(),
+        })
+    }
+
+    /// The current array term representing this memory state.
+    #[must_use]
+    pub fn term(&self) -> TermId {
+        self.array
+    }
+
+    /// Sort of valid memory addresses.
+    #[must_use]
+    pub fn index_sort(&self) -> Sort {
+        self.index_sort
+    }
+
+    /// Sort of values stored in memory.
+    #[must_use]
+    pub fn element_sort(&self) -> Sort {
+        self.element_sort
+    }
+
+    /// Builds `select(current_memory, index)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `index` does not match this memory's index
+    /// sort.
+    pub fn load(&self, arena: &mut TermArena, index: TermId) -> Result<TermId, SolverError> {
+        arena.select(self.array, index).map_err(Into::into)
+    }
+
+    /// Advances this memory to `store(current_memory, index, value)` and returns
+    /// the new current memory term.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `index` or `value` does not match this memory's
+    /// array sort.
+    pub fn store(
+        &mut self,
+        arena: &mut TermArena,
+        index: TermId,
+        value: TermId,
+    ) -> Result<TermId, SolverError> {
+        self.array = arena.store(self.array, index, value)?;
+        Ok(self.array)
+    }
+
+    /// Returns a copy of this memory after one store, leaving `self` unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `index` or `value` does not match this memory's
+    /// array sort.
+    pub fn with_store(
+        &self,
+        arena: &mut TermArena,
+        index: TermId,
+        value: TermId,
+    ) -> Result<Self, SolverError> {
+        let mut next = *self;
+        next.store(arena, index, value)?;
+        Ok(next)
+    }
+
+    /// Builds the Boolean term `select(current_memory, index) = expected`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `index` or `expected` has the wrong sort.
+    pub fn load_eq(
+        &self,
+        arena: &mut TermArena,
+        index: TermId,
+        expected: TermId,
+    ) -> Result<TermId, SolverError> {
+        let loaded = self.load(arena, index)?;
+        arena.eq(loaded, expected).map_err(Into::into)
+    }
+
+    /// Commits `select(current_memory, index) = expected` to `executor` and
+    /// checks feasibility through the memory-aware solver route.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from term construction or the executor check.
+    pub fn assume_load_eq(
+        &self,
+        executor: &mut SymbolicExecutor,
+        arena: &mut TermArena,
+        index: TermId,
+        expected: TermId,
+    ) -> Result<PathStatus, SolverError> {
+        let cond = self.load_eq(arena, index, expected)?;
+        executor.assume_with_memory(arena, cond)
+    }
+
+    /// Checks the feasibility of both directions of
+    /// `select(current_memory, index) = expected`, without committing either
+    /// direction to `executor`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from term construction or the executor check.
+    pub fn branch_load_eq(
+        &self,
+        executor: &mut SymbolicExecutor,
+        arena: &mut TermArena,
+        index: TermId,
+        expected: TermId,
+    ) -> Result<Branch, SolverError> {
+        let cond = self.load_eq(arena, index, expected)?;
+        executor.branch_with_memory(arena, cond)
     }
 }
 
