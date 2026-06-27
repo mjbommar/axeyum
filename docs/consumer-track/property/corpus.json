@@ -2,9 +2,9 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 7,
+    "cases": 8,
     "proved": 2,
-    "disproved": 5,
+    "disproved": 6,
     "unknown": 0,
     "mismatches": 0,
     "disagree": 0,
@@ -86,6 +86,17 @@
       "actual": "disproved",
       "checks": "derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders",
       "baseline_analogue": "Kani struct harness / proptest `Arbitrary` struct",
+      "lean_required": false,
+      "lean_available": false
+    },
+    {
+      "id": "sdk-explicit-nested-aggregate-replay",
+      "tier": "P1",
+      "workflow": "caller-owned nested aggregate replay",
+      "expected": "disproved",
+      "actual": "disproved",
+      "checks": "nested `transfer.limits` initializer renders separately and the caller explicitly plugs it into `TransferInput`",
+      "baseline_analogue": "Rust verifier domain replay body / Kani nested harness struct",
       "lean_required": false,
       "lean_available": false
     }

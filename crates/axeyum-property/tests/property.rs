@@ -601,3 +601,76 @@ fn structured_counterexample_rendering_rejects_nested_aggregate_inference() -> T
     );
     Ok(())
 }
+
+#[test]
+fn structured_counterexample_rendering_accepts_explicit_nested_aggregate_replay() -> TestResult {
+    #[derive(Debug, Clone, Copy)]
+    struct TransferExpr {
+        enabled: Bool,
+        fee: Bv<8>,
+    }
+
+    let mut property = Property::new();
+    let transfer = property.symbolic_struct("transfer", |fields| {
+        Ok(TransferExpr {
+            enabled: fields.field::<bool>("enabled")?,
+            fee: fields.struct_field("limits", |limits| limits.field::<u8>("fee"))?,
+        })
+    })?;
+
+    let mut model = Model::new();
+    model.set(transfer.enabled.symbol().unwrap(), Value::Bool(true));
+    model.set(
+        transfer.fee.symbol().unwrap(),
+        Value::Bv { width: 8, value: 3 },
+    );
+
+    let counterexample = property.counterexample(&model)?;
+    assert_eq!(
+        counterexample.render_rust_let_bindings()?,
+        concat!(
+            "let transfer_enabled: bool = true;\n",
+            "let transfer_limits_fee: u8 = 0x03_u8; // BV8\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_named_struct_let(
+            "transfer.limits",
+            "TransferLimits",
+            "transfer_limits",
+        )?,
+        concat!(
+            "let transfer_limits: TransferLimits = TransferLimits {\n",
+            "    fee: transfer_limits_fee,\n",
+            "};\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_named_struct_let_with_fields(
+            "transfer",
+            "TransferInput",
+            "transfer",
+            [(String::from("limits"), String::from("transfer_limits"))],
+        )?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    limits: transfer_limits,\n",
+            "};\n",
+        )
+    );
+
+    let duplicate = counterexample
+        .render_rust_named_struct_let_with_fields(
+            "transfer",
+            "TransferInput",
+            "transfer",
+            [("enabled", "override_enabled")],
+        )
+        .expect_err("explicit nested replay should not duplicate direct fields");
+    assert!(
+        duplicate.to_string().contains("already initialized"),
+        "unexpected error: {duplicate}"
+    );
+    Ok(())
+}

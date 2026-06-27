@@ -90,12 +90,12 @@ Rust signed integer intent instead of falling back to unsigned BV order.
 
 **Status update (2026-06-27, measurement slice):** the first committed
 graduated SDK corpus, generated `property/SCOREBOARD.md`, and machine-readable
-`property/corpus.json` are in place. The gate covers seven workflows (BV proof +
+`property/corpus.json` are in place. The gate covers eight workflows (BV proof +
 Lean-required certificate, Int assumption proof, unsigned minimized witness,
 signed minimized witness, struct-shaped witness, overflow witness, and derived
-struct lifting) with 2 proved, 5 disproved, 0 unknown, DISAGREE=0, and 1/1
-Lean-required coverage. External proptest/Kani-style comparison remains the
-next measurement step.
+struct lifting, plus explicit nested aggregate replay) with 2 proved, 6
+disproved, 0 unknown, DISAGREE=0, and 1/1 Lean-required coverage. External
+proptest/Kani-style comparison remains the next measurement step.
 
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted

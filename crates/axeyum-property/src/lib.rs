@@ -366,6 +366,95 @@ impl Counterexample {
         Ok(out)
     }
 
+    /// Renders a Rust named-struct binding with explicit caller-owned fields.
+    ///
+    /// Direct scalar children of `root_name` are included exactly as in
+    /// [`Self::render_rust_named_struct_let`]. Nested descendants are ignored
+    /// instead of inferred; callers can render those nested aggregates
+    /// separately and pass field expressions such as `("limits",
+    /// "transfer_limits")` through `extra_fields`.
+    ///
+    /// This is the deliberate escape hatch for frontend/domain replay shapes:
+    /// the SDK verifies and reuses scalar model bindings, but the caller owns
+    /// the nested Rust domain expression it asks to splice into the initializer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any included direct
+    /// scalar cannot be rendered, or [`PropertyError::UnsupportedRustAggregate`]
+    /// if a Rust field name is invalid, a caller-supplied field duplicates a
+    /// direct field, or no direct/caller-supplied fields are available.
+    pub fn render_rust_named_struct_let_with_fields<I, F, E>(
+        &self,
+        root_name: &str,
+        rust_type: &str,
+        rust_ident: &str,
+        extra_fields: I,
+    ) -> Result<String, PropertyError>
+    where
+        I: IntoIterator<Item = (F, E)>,
+        F: AsRef<str>,
+        E: AsRef<str>,
+    {
+        let prefix = format!("{root_name}.");
+        let mut fields = Vec::new();
+        for binding in &self.bindings {
+            let Some(suffix) = binding.name().strip_prefix(&prefix) else {
+                continue;
+            };
+            if suffix.is_empty() || suffix.contains('.') {
+                continue;
+            }
+            binding.render_rust_let()?;
+            let Some(field_ident) = rust_field_ident(suffix) else {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: Some(binding.name().to_owned()),
+                    reason: format!("field suffix `{suffix}` is not a Rust named field"),
+                });
+            };
+            fields.push((field_ident, binding.rust_ident().to_owned()));
+        }
+
+        for (field, expr) in extra_fields {
+            let field = field.as_ref();
+            let expr = expr.as_ref();
+            let Some(field_ident) = rust_field_ident(field) else {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: None,
+                    reason: format!("field suffix `{field}` is not a Rust named field"),
+                });
+            };
+            if fields.iter().any(|(existing, _)| existing == &field_ident) {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: None,
+                    reason: format!("field `{field}` is already initialized"),
+                });
+            }
+            if expr.trim().is_empty() {
+                return Err(PropertyError::UnsupportedRustAggregate {
+                    root: root_name.to_owned(),
+                    binding: None,
+                    reason: format!("field `{field}` has an empty Rust expression"),
+                });
+            }
+            fields.push((field_ident, expr.to_owned()));
+        }
+
+        if fields.is_empty() {
+            return Err(PropertyError::UnsupportedRustAggregate {
+                root: root_name.to_owned(),
+                binding: None,
+                reason: "no direct scalar fields or caller-supplied fields found for this root"
+                    .to_owned(),
+            });
+        }
+
+        Ok(render_named_struct_let(rust_type, rust_ident, &fields))
+    }
+
     /// Renders a Rust tuple-struct binding from direct numeric child inputs.
     ///
     /// The generated statement assumes [`Self::render_rust_let_bindings`] has
@@ -488,6 +577,30 @@ impl Counterexample {
         }
         Ok(fields)
     }
+}
+
+fn render_named_struct_let(
+    rust_type: &str,
+    rust_ident: &str,
+    fields: &[(String, String)],
+) -> String {
+    let mut out = String::new();
+    out.push_str("let ");
+    out.push_str(&sanitize_rust_ident(rust_ident));
+    out.push_str(": ");
+    out.push_str(rust_type);
+    out.push_str(" = ");
+    out.push_str(rust_type);
+    out.push_str(" {\n");
+    for (field, expr) in fields {
+        out.push_str("    ");
+        out.push_str(field);
+        out.push_str(": ");
+        out.push_str(expr);
+        out.push_str(",\n");
+    }
+    out.push_str("};\n");
+    out
 }
 
 /// A standalone Lean module proving a refuted property query.

@@ -2,16 +2,29 @@
 
 ## Current focus
 
+- **2026-06-27 — Explicit nested aggregate replay landed.**
+  `Counterexample::render_rust_named_struct_let_with_fields` now lets
+  frontends compose caller-owned nested/domain Rust replay shapes without the
+  SDK inferring those shapes. Direct scalar children still come from
+  replay-checked model bindings, nested descendants are ignored until the
+  caller supplies an explicit field expression such as `limits:
+  transfer_limits`, duplicate field initialization is rejected, and the older
+  direct aggregate helper still rejects implicit nested inference. The generated
+  PROP.6 corpus now includes a nested `transfer.limits` replay workflow; totals
+  are 8 cases, 2 proved, 6 disproved, 0 unknown, DISAGREE=0, and 1/1
+  Lean-required coverage.
+
 - **2026-06-27 — Corpus broadened to overflow and derive workflows.**
-  The PROP.6 corpus now covers seven generated SDK workflows instead of five.
-  The new rows exercise the typed `uadd_overflows` helper with a minimized
-  `(x=1,y=255)` witness and `#[derive(Symbolic)]` concrete struct lifting for a
-  `TransferInput` counterexample. `tests/support/corpus_cases.rs` remains the
-  shared source for the integration test, committed JSON, and generated
-  Markdown snapshot. Current totals are 7 cases, 2 proved, 5 disproved, 0
-  unknown, 0 mismatches / DISAGREE, and 1/1 Lean-required case available.
-  External proptest/Kani-style baselines and broader corpus coverage remain
-  open.
+  This slice broadened the PROP.6 corpus from five to seven generated SDK
+  workflows. The new rows exercise the typed `uadd_overflows` helper with a
+  minimized `(x=1,y=255)` witness and `#[derive(Symbolic)]` concrete struct
+  lifting for a `TransferInput` counterexample.
+  `tests/support/corpus_cases.rs` remains the shared source for the integration
+  test, committed JSON, and generated Markdown snapshot. The explicit nested
+  replay slice above has since moved current totals to 8 cases, 2 proved, 6
+  disproved, 0 unknown, 0 mismatches / DISAGREE, and 1/1 Lean-required case
+  available. External proptest/Kani-style baselines and broader corpus coverage
+  remain open.
 
 - **2026-06-27 — Generated corpus artifacts landed.**
   The PROP.6 corpus is now shared by the integration test and the generator
@@ -31,7 +44,7 @@
   integer implication under assumptions, unsigned minimized counterexamples,
   signed two's-complement minimized counterexamples, and struct-shaped
   counterexample rendering. The generated gate above has since broadened this
-  to 7 cases, 2 proved, 5 disproved, 0 unknown, 0 mismatches / DISAGREE, and
+  to 8 cases, 2 proved, 6 disproved, 0 unknown, 0 mismatches / DISAGREE, and
   1/1 Lean-required case available. External proptest/Kani-style baselines are
   still the next measurement step, so this is a first gate rather than a full
   SOTA comparison.
@@ -161,7 +174,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output for frontend-specific replay
-   bodies and nested/domain aggregate shapes.
-3. Keep broadening the SDK property corpus around nested/domain aggregates and
-   add the external proptest/Kani-style baseline comparison.
+2. Extend counterexample-to-`#[test]` output for richer frontend-specific
+   replay bodies around the explicit nested aggregate initializer support.
+3. Keep broadening the SDK property corpus and add the external
+   proptest/Kani-style baseline comparison.

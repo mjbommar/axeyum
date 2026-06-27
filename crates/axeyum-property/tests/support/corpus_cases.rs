@@ -78,6 +78,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         aggregate_counterexample_rendered()?,
         overflow_helper_counterexample_minimized()?,
         derive_symbolic_counterexample_lifted()?,
+        explicit_nested_aggregate_replay_rendered()?,
     ])
 }
 
@@ -89,9 +90,9 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 7,
+        cases: 8,
         proved: 2,
-        disproved: 5,
+        disproved: 6,
         unknown: 0,
         mismatches: 0,
         lean_required: 1,
@@ -611,6 +612,81 @@ fn derive_symbolic_counterexample_lifted() -> CorpusResult<CorpusCaseReport> {
         actual: summary.outcome,
         checks: "derived `TransferInput` lifts to `{ enabled: false, amount: 1, balance: 0 }`; aggregate initializer renders",
         baseline_analogue: "Kani struct harness / proptest `Arbitrary` struct",
+        lean_required: false,
+        lean_available: false,
+    })
+}
+
+fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport> {
+    #[derive(Debug, Clone, Copy)]
+    struct TransferExpr {
+        enabled: Bool,
+        amount: Bv<8>,
+        fee: Bv<8>,
+    }
+
+    let mut property = Property::new();
+    let transfer = property.symbolic_struct("transfer", |fields| {
+        Ok(TransferExpr {
+            enabled: fields.field::<bool>("enabled")?,
+            amount: fields.field::<u8>("amount")?,
+            fee: fields.struct_field("limits", |limits| limits.field::<u8>("fee"))?,
+        })
+    })?;
+    let goal = transfer.amount.ule(&mut property, transfer.fee)?;
+
+    let certificate = property.prove_minimized_with_certificate(goal)?;
+    let ProofOutcome::Disproved(model) = &certificate.outcome else {
+        panic!(
+            "expected a nested aggregate counterexample, got {:?}",
+            certificate.outcome
+        );
+    };
+    assert_eq!(
+        property.concrete::<bool>(&transfer.enabled, model)?,
+        Some(false)
+    );
+    assert_eq!(property.concrete::<u8>(&transfer.amount, model)?, Some(1));
+    assert_eq!(property.concrete::<u8>(&transfer.fee, model)?, Some(0));
+    let counterexample = property.counterexample(model)?;
+    assert_eq!(
+        counterexample.render_rust_named_struct_let(
+            "transfer.limits",
+            "TransferLimits",
+            "transfer_limits",
+        )?,
+        concat!(
+            "let transfer_limits: TransferLimits = TransferLimits {\n",
+            "    fee: transfer_limits_fee,\n",
+            "};\n",
+        )
+    );
+    assert_eq!(
+        counterexample.render_rust_named_struct_let_with_fields(
+            "transfer",
+            "TransferInput",
+            "transfer",
+            [("limits", "transfer_limits")],
+        )?,
+        concat!(
+            "let transfer: TransferInput = TransferInput {\n",
+            "    enabled: transfer_enabled,\n",
+            "    amount: transfer_amount,\n",
+            "    limits: transfer_limits,\n",
+            "};\n",
+        )
+    );
+    let summary = certificate.summary();
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+
+    Ok(CorpusCaseReport {
+        id: "sdk-explicit-nested-aggregate-replay",
+        tier: "P1",
+        workflow: "caller-owned nested aggregate replay",
+        expected: ExpectedOutcome::Disproved,
+        actual: summary.outcome,
+        checks: "nested `transfer.limits` initializer renders separately and the caller explicitly plugs it into `TransferInput`",
+        baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
         lean_required: false,
         lean_available: false,
     })
