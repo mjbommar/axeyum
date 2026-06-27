@@ -6,6 +6,41 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA branch-candidate replay diagnostics.**
+  Final lazy-extensionality replay failures now annotate failed generated ORs
+  with per-branch candidate diagnostics, computed only on the final failed replay
+  path. For each branch the note records initial false literals, whether targeted
+  branch repair produced a non-worsening candidate or worsened full replay,
+  repair-change count, final branch false count, total full-replay false count,
+  the first branch-local blocker, and the first global blocker after applying
+  the candidate. A focused regression pins the simple unrepairable two-branch
+  shape so this remains available in future diagnostics.
+
+  This still does **not** close `bug337`; the 10 s diagnostic remains
+  `unknown` at **round=2**, **sites=4096**, **array_eq_atoms=150**,
+  **row_lemmas=42**, **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. The failed generated branch disjunction remains
+  **ordinal 211**, term **4108**, with best branch **3** blocked by term
+  **714**, `x_325 = x_311`. The new branch diagnostics are the useful result:
+  branch **0** repairs locally (**init=3**, **final=0**) but leaves
+  **total_false=2** and moves the global first blocker to **ordinal 210**, term
+  **3879**; branch **3** repairs locally (**init=1**, **final=0**) and is best
+  by **total_false=1**, but also moves the global first blocker to **ordinal
+  210**, term **3879**. Branches **1** and **2** repair locally but worsen full
+  replay (**total_false=4/5**) and expose earlier scalar equalities: term
+  **646** with values **2 vs 1**, and term **444** with values **1 vs 0**.
+  Next useful work is a coupled two-level branch repair/schedule across adjacent
+  disjunctions **210/211** (`x_336`/`x_322`), or a diagnostic/repair that scores
+  branch pairs jointly. More one-branch local heuristics are now unlikely to move
+  this instance.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_replay_failure_reports_branch_candidate_diagnostics -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA order-guarded branch repair.**
   Targeted lazy-extensionality branch-choice repair can now repair false integer
   order guards inside a candidate branch. The repair recognizes `IntLt/Le/Gt/Ge`
