@@ -2295,17 +2295,58 @@ array/UF theory (U6)** — driven by which memory shapes the corpus actually
 exercises, not an unbounded fold-list.
 
 **Sequenced increments (each: builds + gates + DISAGREE=0, committed).**
-- **I0** — record this plan; reconcile the consumer-track docs (this change).
-- **I1** — port `axeyum-evm`; add to workspace members (additive). Keep the
-  pure-QF_BV `ite`-fold read-over-write initially for parity.
-- **I2** — port `axeyum-verify` + `axeyum-verify-macros`; rebind `Witness`.
-- **I3** — port `axeyum-consumer-bench`; wire the property scoreboard; **add the
-  EVM/symexec capability scoreboard** (the measurement deliverable).
-- **I4** — exploit `main`'s warm-array path to simplify the EVM memory model
-  where sound; **measure warm-path vs `ite`-fold** (ite depth / CNF size / time);
-  reconcile `UPSTREAM-FEEDBACK.md` (mark U6/U7 *partially mitigated* — warm
-  array-select/equality folding landed; general lazy array/UF + extensionality
-  still open).
+- **I0** — ✅ DONE (`79193f2`) — recorded this plan; reconciled the docs.
+- **I1** — ✅ DONE (`3a22101`) — ported `axeyum-evm` (no API drift); folded the
+  `reproduce` layer into `main`'s `axeyum-property`; added the workspace member.
+- **I2** — ✅ DONE (`19d11b4`) — ported `axeyum-verify` + `axeyum-verify-macros`
+  (own `Witness` enum; `syn`/`quote` declared directly).
+- **I3** — ✅ DONE (`c840cab`) — **EVM/symexec capability scoreboard**
+  (`docs/consumer-track/evm/SCOREBOARD.md`, `cargo run -p axeyum-evm --example
+  measure_evm`): 6/6 decided, DISAGREE=0, 5 memory-shape classes.
+  `axeyum-consumer-bench` deliberately *not* ported (retired-API + duplicative).
+- **I4a** — ✅ DONE (`b774df2`) — reconciled `UPSTREAM-FEEDBACK.md`: U6 is now
+  *measured* by the scoreboard (it is the special-case-vs-general arbiter).
+- **I4b** — ⏭ NEXT — make `axeyum-evm`'s memory model optionally use `main`'s
+  warm `SymbolicExecutor` array path instead of the frontend `ite`-fold, and add
+  a warm-vs-`ite`-fold column (ite depth / CNF size / solve time) to the
+  scoreboard. *Path:* `crates/axeyum-evm/src/symbolic.rs` (the `fold_word_writes`
+  read-over-write site) + `examples/measure_evm.rs`. *Exit:* the scoreboard shows
+  both encodings on the symbolic-storage rows with DISAGREE=0, and the
+  unknown/fallback rows name which general capability (U6) to build next.
+
+**Forward backlog (autonomous continuation — pick the top unblocked item).**
+Each is a self-contained increment under the standing discipline below; do them
+in order unless a dependency says otherwise. Update the STATUS consumer lane +
+this list as each lands.
+
+*App A — `axeyum-evm` (Phase 3):*
+1. **Multi-tx invariants** via `bounded_model_check_with_memory` — a sequence of
+   calls with persistent storage between txs. *Exit:* a worked multi-tx
+   reentrancy/accounting bug + a multi-tx safe case on the scoreboard, DISAGREE=0.
+2. **`CALL`/`DELEGATECALL`/`CREATE`/`EXTCODE*` modeling** (havoc return + touched
+   storage) so dispatched contracts explore further before `Unknown`. *Exit:*
+   fewer `InconclusiveDueToUnknown` rows on a dispatched-call corpus case.
+3. **WASM in-browser surface** (the delivery differentiator) + the vs-hevm/halmos
+   scoreboard once those tools are installable (the `ExternalOracle` seam exists).
+
+*App C — `axeyum-verify` (Phase 3 / hardening):*
+4. **General CFG→`TransitionSystem` lowering** — map every live local of a
+   `#[verify]` body to a step-indexed state var and build `trans` from the body,
+   giving warm-solver reuse across unroll depths for deep loops (scalar state;
+   arrays-in-loop-state stay on the one-shot `_with_memory` route, off U6).
+   *Path:* `crates/axeyum-verify/src/{lower,bmc}.rs`. *Exit:* a deep-loop example
+   verified via the warm BMC route, DISAGREE=0.
+5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
+   demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
+6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).
+
+*Cross-cutting:*
+7. **Lean-cert coverage** rises for free as upstream U1/U4 widen the
+   reconstructable fragment; add more in-fragment safe examples to each app's
+   metric set as it does.
+8. **Port the per-app `PLAN.md`/`STATUS.md`** for `evm`/`verify` from the
+   `consumer-track` worktree into `docs/consumer-track/{evm,verify}/` on `main`
+   (docs-only) so each app's detailed plan lives beside its scoreboard.
 
 **Coordination.** `main` is clean and compiling at takeover; the solver agent
 actively rewrites STATUS.md's *Current focus*, so consumer-integration status
