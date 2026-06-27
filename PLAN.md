@@ -1981,6 +1981,18 @@ against competitor source, are now binding:
      diagnostics explaining why the concrete term-580 target-side repair is not
      accepted on the large row, not another broad branch-choice or store-target
      repair.
+     **SAME-BRANCH RESIDUAL DIAGNOSTIC LANDED (2026-06-26):** branch/select
+     candidate diagnostics now try the same-branch residual candidate on
+     diagnostic copies and emit rows such as
+     `chain+same_branch_store_target`. On `bug337`, term 580's target-side
+     repair is locally effective and keeps select term 555 true, but full replay
+     remains `worse_full_replay` with total_false=2 and the first global blocker
+     moves to OR 209 / term 3654. OR 209's best branch is branch 3 with one
+     false literal, term 3650, over the same two array values flipped:
+     `(array default 0 [0 -> 2] [1 -> 2] [2 -> 1])` vs
+     `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])`. The next AUFLIA move is a
+     paired OR-210/OR-209 component-array consistency repair, not another
+     isolated term-580 target repair.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
