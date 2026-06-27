@@ -647,6 +647,13 @@ fn tiny_bv_reachability_reports_pc_witnesses() {
     for hit in &reach.outcome.verified {
         assert_eq!(hit.state.pc, 4);
         assert!(program.concrete_reaches_pc(&hit.witness, 4));
+        let trace = program.concrete_trace(&hit.witness);
+        assert!(trace.reaches_pc(4));
+        assert_eq!(trace.outcome, TinyBvConcreteOutcome::Win);
+        assert_eq!(
+            trace.steps.iter().map(|step| step.pc).collect::<Vec<_>>(),
+            vec![0, 1, 2, 3, 4]
+        );
         let [x, y] = hit.witness.inputs[..] else {
             panic!("test program has exactly two input words");
         };
@@ -772,12 +779,19 @@ fn tiny_bv_memory_store_load_reachability_replays() {
     for hit in &reach.outcome.verified {
         assert_eq!(hit.state.pc, 4);
         assert!(hit.state.memory.is_some());
-        assert_eq!(
-            program.concrete_run(&hit.witness),
-            TinyBvConcreteOutcome::Win
-        );
+        let trace = program.concrete_trace(&hit.witness);
+        assert_eq!(trace.outcome, TinyBvConcreteOutcome::Win);
+        assert_eq!(program.concrete_run(&hit.witness), trace.outcome);
         assert!(program.concrete_reaches_pc(&hit.witness, 4));
+        assert!(trace.reaches_pc(4));
+        assert_eq!(
+            trace.steps.iter().map(|step| step.pc).collect::<Vec<_>>(),
+            vec![0, 1, 2, 3, 4]
+        );
+        assert_eq!(trace.final_pc, Some(4));
         assert_eq!(hit.witness.inputs[0], 0xCAFE);
+        assert_eq!(trace.final_regs[3], 0xCAFE);
+        assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
     }
 }
 

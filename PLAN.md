@@ -2259,8 +2259,11 @@ unreachable/safe is reported only after exhaustive bounded exploration with no
 unknowns, witness gaps, mismatches, or truncation. The same tiny target now has
 `Load`/`Store` instructions over a zero-initialized SMT array memory, with
 concrete replay using the same zero-default map and memory-bearing paths routed
-through the memory-aware solver path. P4.2 still needs richer imported/byte-level
-frontend work, unbounded/certified safety, and eventual warm lazy theory reuse.
+through the memory-aware solver path. Concrete replay now also returns a
+machine-usable trace: executed PCs/instructions, register snapshots, final
+registers, final explicit memory cells, and terminal outcome. P4.2 still needs
+richer imported/byte-level frontend work, unbounded/certified safety, and
+eventual warm lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

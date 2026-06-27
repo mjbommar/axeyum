@@ -139,6 +139,42 @@ pub enum TinyBvConcreteOutcome {
     InvalidInputCount,
 }
 
+/// One concrete instruction step in a replay trace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvConcreteStep {
+    /// Program counter executed by this step.
+    pub pc: usize,
+    /// Instruction executed at `pc`.
+    pub instruction: TinyBvInsn,
+    /// Register values before executing this instruction.
+    pub regs_before: Vec<u128>,
+}
+
+/// Concrete replay trace for a [`TinyBvWitness`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvConcreteTrace {
+    /// Executed instruction steps, in order.
+    pub steps: Vec<TinyBvConcreteStep>,
+    /// Terminal replay outcome.
+    pub outcome: TinyBvConcreteOutcome,
+    /// Program counter where replay stopped, when it is still inside the
+    /// program. `None` means replay fell off the program or the witness shape was
+    /// invalid.
+    pub final_pc: Option<usize>,
+    /// Register values at replay termination.
+    pub final_regs: Vec<u128>,
+    /// Explicit non-default memory cells at replay termination, sorted by
+    /// address. Unlisted cells read as zero.
+    pub final_memory: Vec<(u128, u128)>,
+}
+
+impl TinyBvConcreteTrace {
+    /// Whether this trace executed `pc`.
+    pub fn reaches_pc(&self, pc: usize) -> bool {
+        self.steps.iter().any(|step| step.pc == pc)
+    }
+}
+
 /// Checked symbolic-execution result for the tiny BV frontend.
 pub type TinyBvExploreOutcome = CfgCheckedOutcome<TinyBvState, TinyBvWitness>;
 
@@ -489,10 +525,16 @@ impl TinyBvProgram {
         })
     }
 
-    /// Replays a concrete witness under this program's concrete semantics.
-    pub fn concrete_run(&self, witness: &TinyBvWitness) -> TinyBvConcreteOutcome {
+    /// Replays a concrete witness and returns the full executed trace.
+    pub fn concrete_trace(&self, witness: &TinyBvWitness) -> TinyBvConcreteTrace {
         if witness.inputs.len() != self.input_count {
-            return TinyBvConcreteOutcome::InvalidInputCount;
+            return TinyBvConcreteTrace {
+                steps: Vec::new(),
+                outcome: TinyBvConcreteOutcome::InvalidInputCount,
+                final_pc: None,
+                final_regs: Vec::new(),
+                final_memory: Vec::new(),
+            };
         }
 
         let mut regs = vec![0; self.reg_count];
@@ -500,54 +542,96 @@ impl TinyBvProgram {
             *reg = self.normalize(*value);
         }
         let mut memory = BTreeMap::new();
+        let mut steps = Vec::new();
         let mut pc = 0usize;
         for _ in 0..self.max_steps {
-            match self.code.get(pc) {
-                Some(TinyBvInsn::Const { dst, value }) => {
-                    regs[*dst] = self.normalize(*value);
+            let Some(&instruction) = self.code.get(pc) else {
+                return TinyBvConcreteTrace {
+                    steps,
+                    outcome: TinyBvConcreteOutcome::Lose,
+                    final_pc: None,
+                    final_regs: regs,
+                    final_memory: memory.into_iter().collect(),
+                };
+            };
+            steps.push(TinyBvConcreteStep {
+                pc,
+                instruction,
+                regs_before: regs.clone(),
+            });
+            match instruction {
+                TinyBvInsn::Const { dst, value } => {
+                    regs[dst] = self.normalize(value);
                     pc += 1;
                 }
-                Some(TinyBvInsn::Add { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a].wrapping_add(regs[*b]));
+                TinyBvInsn::Add { dst, a, b } => {
+                    regs[dst] = self.normalize(regs[a].wrapping_add(regs[b]));
                     pc += 1;
                 }
-                Some(TinyBvInsn::Sub { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a].wrapping_sub(regs[*b]));
+                TinyBvInsn::Sub { dst, a, b } => {
+                    regs[dst] = self.normalize(regs[a].wrapping_sub(regs[b]));
                     pc += 1;
                 }
-                Some(TinyBvInsn::Mul { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a].wrapping_mul(regs[*b]));
+                TinyBvInsn::Mul { dst, a, b } => {
+                    regs[dst] = self.normalize(regs[a].wrapping_mul(regs[b]));
                     pc += 1;
                 }
-                Some(TinyBvInsn::Xor { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a] ^ regs[*b]);
+                TinyBvInsn::Xor { dst, a, b } => {
+                    regs[dst] = self.normalize(regs[a] ^ regs[b]);
                     pc += 1;
                 }
-                Some(TinyBvInsn::Load { dst, addr }) => {
-                    regs[*dst] = *memory.get(&regs[*addr]).unwrap_or(&0);
+                TinyBvInsn::Load { dst, addr } => {
+                    regs[dst] = *memory.get(&regs[addr]).unwrap_or(&0);
                     pc += 1;
                 }
-                Some(TinyBvInsn::Store { addr, src }) => {
-                    memory.insert(regs[*addr], regs[*src]);
+                TinyBvInsn::Store { addr, src } => {
+                    memory.insert(regs[addr], regs[src]);
                     pc += 1;
                 }
-                Some(TinyBvInsn::BranchEq {
+                TinyBvInsn::BranchEq {
                     reg,
                     value,
                     then_pc,
                     else_pc,
-                }) => {
-                    pc = if regs[*reg] == self.normalize(*value) {
-                        *then_pc
+                } => {
+                    pc = if regs[reg] == self.normalize(value) {
+                        then_pc
                     } else {
-                        *else_pc
+                        else_pc
                     };
                 }
-                Some(TinyBvInsn::Win) => return TinyBvConcreteOutcome::Win,
-                Some(TinyBvInsn::Lose) | None => return TinyBvConcreteOutcome::Lose,
+                TinyBvInsn::Win => {
+                    return TinyBvConcreteTrace {
+                        steps,
+                        outcome: TinyBvConcreteOutcome::Win,
+                        final_pc: Some(pc),
+                        final_regs: regs,
+                        final_memory: memory.into_iter().collect(),
+                    };
+                }
+                TinyBvInsn::Lose => {
+                    return TinyBvConcreteTrace {
+                        steps,
+                        outcome: TinyBvConcreteOutcome::Lose,
+                        final_pc: Some(pc),
+                        final_regs: regs,
+                        final_memory: memory.into_iter().collect(),
+                    };
+                }
             }
         }
-        TinyBvConcreteOutcome::OutOfFuel
+        TinyBvConcreteTrace {
+            steps,
+            outcome: TinyBvConcreteOutcome::OutOfFuel,
+            final_pc: self.code.get(pc).map(|_| pc),
+            final_regs: regs,
+            final_memory: memory.into_iter().collect(),
+        }
+    }
+
+    /// Replays a concrete witness under this program's concrete semantics.
+    pub fn concrete_run(&self, witness: &TinyBvWitness) -> TinyBvConcreteOutcome {
+        self.concrete_trace(witness).outcome
     }
 
     /// Returns whether a witness concretely reaches [`TinyBvInsn::Win`].
@@ -558,65 +642,10 @@ impl TinyBvProgram {
     /// Returns whether a witness concretely reaches `target_pc` before
     /// termination or fuel exhaustion.
     pub fn concrete_reaches_pc(&self, witness: &TinyBvWitness, target_pc: usize) -> bool {
-        if target_pc >= self.code.len() || witness.inputs.len() != self.input_count {
+        if target_pc >= self.code.len() {
             return false;
         }
-
-        let mut regs = vec![0; self.reg_count];
-        for (reg, value) in regs.iter_mut().zip(witness.inputs.iter()) {
-            *reg = self.normalize(*value);
-        }
-        let mut memory = BTreeMap::new();
-        let mut pc = 0usize;
-        for _ in 0..self.max_steps {
-            if pc == target_pc {
-                return true;
-            }
-            match self.code.get(pc) {
-                Some(TinyBvInsn::Const { dst, value }) => {
-                    regs[*dst] = self.normalize(*value);
-                    pc += 1;
-                }
-                Some(TinyBvInsn::Add { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a].wrapping_add(regs[*b]));
-                    pc += 1;
-                }
-                Some(TinyBvInsn::Sub { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a].wrapping_sub(regs[*b]));
-                    pc += 1;
-                }
-                Some(TinyBvInsn::Mul { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a].wrapping_mul(regs[*b]));
-                    pc += 1;
-                }
-                Some(TinyBvInsn::Xor { dst, a, b }) => {
-                    regs[*dst] = self.normalize(regs[*a] ^ regs[*b]);
-                    pc += 1;
-                }
-                Some(TinyBvInsn::Load { dst, addr }) => {
-                    regs[*dst] = *memory.get(&regs[*addr]).unwrap_or(&0);
-                    pc += 1;
-                }
-                Some(TinyBvInsn::Store { addr, src }) => {
-                    memory.insert(regs[*addr], regs[*src]);
-                    pc += 1;
-                }
-                Some(TinyBvInsn::BranchEq {
-                    reg,
-                    value,
-                    then_pc,
-                    else_pc,
-                }) => {
-                    pc = if regs[*reg] == self.normalize(*value) {
-                        *then_pc
-                    } else {
-                        *else_pc
-                    };
-                }
-                Some(TinyBvInsn::Win | TinyBvInsn::Lose) | None => return false,
-            }
-        }
-        false
+        self.concrete_trace(witness).reaches_pc(target_pc)
     }
 
     fn symbolic_step(
