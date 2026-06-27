@@ -742,6 +742,61 @@ fn get_option_is_none_without_requests() {
     );
 }
 
+#[test]
+fn get_model_returns_declared_constant_values() {
+    use axeyum_ir::Value;
+    use axeyum_solver::solve_smtlib_get_model;
+    let text = "\
+(set-logic QF_BV)
+(set-option :produce-models true)
+(declare-const x (_ BitVec 8))
+(declare-fun b () Bool)
+(assert (= x #x05))
+(assert b)
+(check-sat)
+(get-model)
+";
+    let model = solve_smtlib_get_model(text, &config())
+        .expect("model helper succeeds")
+        .expect("sat script requested a model");
+    assert_eq!(
+        model.constants,
+        vec![
+            ("x".to_owned(), Value::Bv { width: 8, value: 5 },),
+            ("b".to_owned(), Value::Bool(true)),
+        ]
+    );
+    assert!(model.functions.is_empty());
+}
+
+#[test]
+fn get_model_is_none_without_request_or_without_sat_model() {
+    use axeyum_solver::solve_smtlib_get_model;
+    let no_request = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(check-sat)
+";
+    assert_eq!(
+        solve_smtlib_get_model(no_request, &config()).expect("model helper succeeds"),
+        None
+    );
+
+    let unsat = "\
+(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(assert (= x #x05))
+(assert (= x #x06))
+(check-sat)
+(get-model)
+";
+    assert_eq!(
+        solve_smtlib_get_model(unsat, &config()).expect("model helper succeeds"),
+        None
+    );
+}
+
 /// Optimization (OMT): maximize/minimize an Int objective under linear bounds.
 #[test]
 fn optimize_integer_objective() {

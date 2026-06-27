@@ -12,7 +12,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
-use axeyum_ir::{ArraySortKey, Op, Rational, Sort, TermArena, TermId, TermNode};
+use axeyum_ir::{ArraySortKey, FuncId, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
@@ -61,6 +61,15 @@ pub struct Script {
     pub get_option_keys: Vec<String>,
     /// Requested `(get-info :key)` queries, in script order.
     pub get_info_keys: Vec<String>,
+    /// Whether the script requested `(get-model)`.
+    pub get_model: bool,
+    /// User-declared 0-ary constants that should appear in a model, in
+    /// declaration order. Quantifier locals and parser-introduced aliases are not
+    /// recorded here.
+    pub model_symbols: Vec<SymbolId>,
+    /// User-declared n-ary uninterpreted functions that should appear in a model,
+    /// in declaration order.
+    pub model_functions: Vec<FuncId>,
     /// Number of `check-sat` commands seen.
     pub check_sats: u32,
     /// Per-assertion `:named` label (parallel to [`Script::assertions`]; `None`
@@ -1173,8 +1182,11 @@ fn parse_command<'a>(
         // Output/query commands: accepted as no-ops at parse time. The core is
         // produced by the solver (`solve_smtlib_unsat_core`), the model by the
         // `sat` result — the parser just records a well-formed script.
-        "get-model"
-        | "exit"
+        "get-model" => {
+            exact_len(items, 1, head)?;
+            script.get_model = true;
+        }
+        "exit"
         | "get-unsat-core"
         | "get-proof"
         | "get-assertions"
@@ -1407,14 +1419,16 @@ fn parse_declare_fun(
     let result = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     if args.is_empty() {
         // 0-ary: a plain constant symbol.
-        script.arena.declare(name, result)?;
+        let symbol = script.arena.declare(name, result)?;
+        record_model_symbol(script, symbol);
     } else {
         // n-ary: an uninterpreted function (ADR-0013).
         let params = args
             .iter()
             .map(|s| parse_sort(&script.arena, sort_aliases, s))
             .collect::<Result<Vec<Sort>, SmtError>>()?;
-        script.arena.declare_fun(name, &params, result)?;
+        let func = script.arena.declare_fun(name, &params, result)?;
+        record_model_function(script, func);
     }
     Ok(())
 }
@@ -1554,8 +1568,21 @@ fn parse_declare_const(
         return declare_seq_symbol(script, name, ew);
     }
     let sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
-    script.arena.declare(name, sort)?;
+    let symbol = script.arena.declare(name, sort)?;
+    record_model_symbol(script, symbol);
     Ok(())
+}
+
+fn record_model_symbol(script: &mut Script, symbol: SymbolId) {
+    if !script.model_symbols.contains(&symbol) {
+        script.model_symbols.push(symbol);
+    }
+}
+
+fn record_model_function(script: &mut Script, func: FuncId) {
+    if !script.model_functions.contains(&func) {
+        script.model_functions.push(func);
+    }
 }
 
 /// The element width of a syntactic `(Seq E)` declaration sort, or `None` if the
@@ -1583,6 +1610,7 @@ fn declare_seq_symbol(script: &mut Script, name: &str, ew: u32) -> Result<(), Sm
     })?;
     let total = seq_total(ew, m);
     let sym = script.arena.declare(name, Sort::BitVec(total))?;
+    record_model_symbol(script, sym);
     let v = script.arena.var(sym);
     let wf = seq_wellformed(&mut script.arena, v, m, ew)?;
     script.assertions.push(wf);
@@ -1598,6 +1626,7 @@ fn declare_seq_symbol(script: &mut Script, name: &str, ew: u32) -> Result<(), Sm
 /// `declare-const ... String` and 0-ary `declare-fun ... String`.
 fn declare_string_symbol(script: &mut Script, name: &str) -> Result<(), SmtError> {
     let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
+    record_model_symbol(script, sym);
     let v = script.arena.var(sym);
     let wf = string_wellformed(&mut script.arena, v)?;
     script.assertions.push(wf);
@@ -1615,6 +1644,7 @@ fn declare_rounding_mode_symbol(script: &mut Script, name: &str) -> Result<(), S
     let sym = script
         .arena
         .declare(name, Sort::BitVec(ROUNDING_MODE_BITS))?;
+    record_model_symbol(script, sym);
     let v = script.arena.var(sym);
     // `rm ≤ 4` (`#b100`): the 5 valid tokens are `0..=4`.
     let max = script.arena.bv_const(ROUNDING_MODE_BITS, 4)?;
@@ -1645,6 +1675,7 @@ fn ff_decl_prime(ff: &FfInfo, sort: &SExpr) -> Option<u128> {
 fn declare_ff_symbol(script: &mut Script, name: &str, p: u128) -> Result<(), SmtError> {
     let w = ff_width(p);
     let sym = script.arena.declare(name, Sort::BitVec(w))?;
+    record_model_symbol(script, sym);
     let v = script.arena.var(sym);
     let pw = script.arena.bv_const(w, p)?;
     let wf = script.arena.bv_ult(v, pw)?;

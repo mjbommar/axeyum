@@ -2727,6 +2727,11 @@ fn accepts_standard_output_commands() {
     let script = parse_script(text).expect("standard output commands parse");
     assert_eq!(script.logic.as_deref(), Some("QF_BV"));
     assert_eq!(script.assertions.len(), 1);
+    assert!(script.get_model);
+    assert_eq!(script.model_symbols.len(), 1);
+    let (name, sort) = script.arena.symbol(script.model_symbols[0]);
+    assert_eq!(name, "x");
+    assert_eq!(sort, axeyum_ir::Sort::BitVec(8));
 }
 
 #[test]
@@ -2762,6 +2767,52 @@ fn records_info_options_and_get_info_queries() {
     assert_eq!(
         script.get_info_keys,
         vec![":name".to_owned(), ":status".to_owned()]
+    );
+}
+
+#[test]
+fn records_model_symbols_and_functions() {
+    let text = r#"
+        (set-logic QF_UFBV)
+        (declare-const x (_ BitVec 8))
+        (declare-fun y () Bool)
+        (declare-fun f ((_ BitVec 8)) (_ BitVec 8))
+        (assert (= (f x) x))
+        (check-sat)
+        (get-model)
+    "#;
+    let script = parse_script(text).expect("model script parses");
+    assert!(script.get_model);
+    let symbols: Vec<_> = script
+        .model_symbols
+        .iter()
+        .map(|&symbol| {
+            let (name, sort) = script.arena.symbol(symbol);
+            (name.to_owned(), sort)
+        })
+        .collect();
+    assert_eq!(
+        symbols,
+        vec![
+            ("x".to_owned(), axeyum_ir::Sort::BitVec(8)),
+            ("y".to_owned(), axeyum_ir::Sort::Bool),
+        ]
+    );
+    let functions: Vec<_> = script
+        .model_functions
+        .iter()
+        .map(|&func| {
+            let (name, params, result) = script.arena.function(func);
+            (name.to_owned(), params.to_vec(), result)
+        })
+        .collect();
+    assert_eq!(
+        functions,
+        vec![(
+            "f".to_owned(),
+            vec![axeyum_ir::Sort::BitVec(8)],
+            axeyum_ir::Sort::BitVec(8),
+        )]
     );
 }
 

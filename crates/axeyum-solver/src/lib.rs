@@ -357,10 +357,10 @@ pub use sat_bv_backend::SatBvBackend;
 pub use set_cardinality::{SetCardinalityRefutationCertificate, set_cardinality_refutation};
 pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
 pub use smtlib::{
-    SmtLibOutcome, optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib,
-    solve_smtlib_get_assignment, solve_smtlib_get_info, solve_smtlib_get_option,
-    solve_smtlib_get_proof, solve_smtlib_get_value, solve_smtlib_incremental,
-    solve_smtlib_unsat_core,
+    SmtLibModel, SmtLibOutcome, optimize_smtlib, optimize_smtlib_lexicographic, solve_smtlib,
+    solve_smtlib_get_assignment, solve_smtlib_get_info, solve_smtlib_get_model,
+    solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
+    solve_smtlib_incremental, solve_smtlib_unsat_core,
 };
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};

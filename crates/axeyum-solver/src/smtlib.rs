@@ -14,7 +14,7 @@
 use axeyum_cnf::{check_alethe, write_alethe};
 use std::collections::{BTreeMap, VecDeque};
 
-use axeyum_ir::{Sort, TermArena, TermId, Value};
+use axeyum_ir::{FuncValue, Sort, TermArena, TermId, Value, well_founded_default};
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
@@ -32,6 +32,22 @@ pub struct SmtLibOutcome {
     /// The declared `(set-info :status ...)` (`"sat"`/`"unsat"`/`"unknown"`), if
     /// present. Ground truth for cross-checking; never consulted when solving.
     pub expected_status: Option<String>,
+}
+
+/// A Rust-facing result for SMT-LIB `(get-model)`.
+///
+/// Constants and functions are reported in user declaration order. Values are
+/// Axeyum IR values, not textual SMT-LIB terms; this avoids pretending the
+/// front-end can already render every lowered theory value back into canonical
+/// SMT-LIB syntax. Textual command-session rendering is a later P4.4 step.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SmtLibModel {
+    /// User-declared 0-ary constants and their model values.
+    pub constants: Vec<(String, Value)>,
+    /// User-declared n-ary uninterpreted functions and their finite
+    /// interpretations.
+    pub functions: Vec<(String, FuncValue)>,
 }
 
 #[derive(Debug, Clone)]
@@ -442,6 +458,67 @@ fn smtlib_option_default(key: &str) -> Option<&'static str> {
         ":regular-output-channel" => Some("\"stdout\""),
         _ => None,
     }
+}
+
+/// Returns the model requested by an SMT-LIB `(get-model)` command.
+///
+/// For a `sat` single-query script that requested `(get-model)`, this returns
+/// user-declared constants and interpreted functions in declaration order.
+/// Quantifier locals, definitions/macros, and parser-internal lowering details
+/// are not reported. Returns `Ok(None)` when no model was requested or the query
+/// is `unsat`/`unknown`.
+///
+/// The helper returns [`Value`]s and [`FuncValue`]s rather than SMT-LIB text; a
+/// full interactive command renderer is tracked separately under P4.4.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, any [`SolverError`]
+/// from [`crate::solve`], or [`SolverError::Backend`] if a sat model omits a
+/// declared constant whose sort has no well-founded default.
+pub fn solve_smtlib_get_model(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<Option<SmtLibModel>, SolverError> {
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    if !script.get_model {
+        return Ok(None);
+    }
+    let query = smtlib_single_query(&script)?;
+    let CheckResult::Sat(model) = solve(&mut script.arena, &query.assertions, config)? else {
+        return Ok(None);
+    };
+
+    let constants = script
+        .model_symbols
+        .iter()
+        .map(|&symbol| {
+            let (name, sort) = script.arena.symbol(symbol);
+            let value = model
+                .get(symbol)
+                .or_else(|| well_founded_default(&script.arena, sort));
+            let Some(value) = value else {
+                return Err(SolverError::Backend(format!(
+                    "get-model could not complete symbol `{name}` of sort {sort:?}"
+                )));
+            };
+            Ok((name.to_owned(), value))
+        })
+        .collect::<Result<Vec<_>, SolverError>>()?;
+    let functions = script
+        .model_functions
+        .iter()
+        .filter_map(|&func| {
+            model.function(func).map(|value| {
+                let (name, _params, _result) = script.arena.function(func);
+                (name.to_owned(), value.clone())
+            })
+        })
+        .collect();
+    Ok(Some(SmtLibModel {
+        constants,
+        functions,
+    }))
 }
 
 /// Extracts an **unsat core** from an SMT-LIB script (`get-unsat-core`): the
