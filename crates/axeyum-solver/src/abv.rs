@@ -4437,6 +4437,108 @@ fn repair_projected_branch_scalar_equality_literal(
     Ok(false)
 }
 
+fn repair_projected_branch_scalar_choice_candidate(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<ProjectionRepairStats>, SolverError> {
+    const MAX_BRANCH_SCALAR_CHOICE_DEPTH: usize = 4;
+    const MAX_BRANCH_SCALAR_CHOICE_STATES: usize = 16;
+
+    let initial_branch_false = branch_false_literal_count(arena, branch, projected)?;
+    if initial_branch_false == 0 || initial_branch_false > MAX_BRANCH_SCALAR_CHOICE_DEPTH {
+        return Ok(None);
+    }
+    let ir = |e: axeyum_ir::IrError| {
+        SolverError::Backend(format!("lazy-ext scalar branch choice repair failed: {e}"))
+    };
+
+    let mut sequence = 0usize;
+    let mut frontier = vec![(
+        initial_branch_false,
+        positive_replay_false_count(arena, originals, projected)?,
+        sequence,
+        ProjectionRepairStats::default(),
+        projected.clone(),
+    )];
+    sequence += 1;
+    let mut best: Option<(usize, usize, ProjectionRepairStats, Assignment)> = None;
+
+    while !frontier.is_empty() {
+        frontier.sort_by_key(|(branch_false, total_false, state_sequence, _, _)| {
+            (*branch_false, *total_false, *state_sequence)
+        });
+        let (_, _, _, state_stats, state_assignment) = frontier.remove(0);
+        let branch_false = branch_false_literal_count(arena, branch, &state_assignment)?;
+        if branch_false == 0 {
+            let total_false = positive_replay_false_count(arena, originals, &state_assignment)?;
+            let replace = best
+                .as_ref()
+                .is_none_or(|(best_total_false, best_changes, _, _)| {
+                    (total_false, state_stats.changes()) < (*best_total_false, *best_changes)
+                });
+            if replace {
+                best = Some((
+                    total_false,
+                    state_stats.changes(),
+                    state_stats,
+                    state_assignment,
+                ));
+            }
+            continue;
+        }
+        if state_stats.branch_symbol_changes >= MAX_BRANCH_SCALAR_CHOICE_DEPTH {
+            continue;
+        }
+
+        let Some(false_literal) = branch_first_false_literal(arena, branch, &state_assignment)?
+        else {
+            continue;
+        };
+        let choices = direct_scalar_equality_repair_choices(arena, false_literal);
+        if choices.is_empty() {
+            continue;
+        }
+        for (symbol, value_term) in choices {
+            let mut trial = state_assignment.clone();
+            let value = eval(arena, value_term, &trial).map_err(ir)?;
+            if !store_projected_symbol_value(arena, &mut trial, symbol, value)? {
+                continue;
+            }
+            if eval(arena, false_literal, &trial).map_err(ir)? != Value::Bool(true) {
+                continue;
+            }
+            let trial_branch_false = branch_false_literal_count(arena, branch, &trial)?;
+            if trial_branch_false >= branch_false {
+                continue;
+            }
+            let trial_total_false = positive_replay_false_count(arena, originals, &trial)?;
+            let mut trial_stats = state_stats;
+            trial_stats.branch_candidates += 1;
+            trial_stats.branch_symbol_changes += 1;
+            frontier.push((
+                trial_branch_false,
+                trial_total_false,
+                sequence,
+                trial_stats,
+                trial,
+            ));
+            sequence += 1;
+        }
+        frontier.sort_by_key(|(branch_false, total_false, state_sequence, _, _)| {
+            (*branch_false, *total_false, *state_sequence)
+        });
+        frontier.truncate(MAX_BRANCH_SCALAR_CHOICE_STATES);
+    }
+
+    let Some((_, _, stats, trial)) = best else {
+        return Ok(None);
+    };
+    *projected = trial;
+    Ok(Some(stats))
+}
+
 fn repair_projected_branch_literal(
     arena: &TermArena,
     originals: &[TermId],
@@ -6416,7 +6518,7 @@ fn replay_branch_select_residual_candidate_from_trial(
             break;
         };
         let mut next_trial = followup_trial.clone();
-        let Some(followup_stats) = repair_projected_branch_as_candidate(
+        let Some((followup_repair_kind, followup_stats)) = repair_projected_branch_best_candidate(
             arena,
             originals,
             followup_or.best_branch_term,
@@ -6427,8 +6529,10 @@ fn replay_branch_select_residual_candidate_from_trial(
         };
         followup_select_stats.absorb(followup_stats);
         followup_kind = format!(
-            "{followup_kind}+followup_or{}_branch{}",
-            followup_failure.conjunct_ordinal, followup_or.best_branch_ordinal
+            "{followup_kind}+followup_or{}_branch{}_{}",
+            followup_failure.conjunct_ordinal,
+            followup_or.best_branch_ordinal,
+            followup_repair_kind
         );
         diagnostics.push(replay_branch_select_candidate_from_trial(
             arena,
@@ -7175,7 +7279,7 @@ fn repair_projected_replay_branch_select_residual_chain(
         };
 
         let mut followup_trial = trial.clone();
-        let Some(followup_stats) = repair_projected_branch_as_candidate(
+        let Some((_, followup_stats)) = repair_projected_branch_best_candidate(
             search.arena,
             search.originals,
             followup_or.best_branch_term,
@@ -8097,6 +8201,53 @@ fn repair_projected_branch_as_candidate(
     }
 }
 
+fn repair_projected_branch_best_candidate(
+    arena: &TermArena,
+    originals: &[TermId],
+    branch: TermId,
+    projected: &mut Assignment,
+) -> Result<Option<(&'static str, ProjectionRepairStats)>, SolverError> {
+    let mut best: Option<(
+        usize,
+        usize,
+        &'static str,
+        ProjectionRepairStats,
+        Assignment,
+    )> = None;
+
+    let mut greedy_trial = projected.clone();
+    if let Some(stats) =
+        repair_projected_branch_as_candidate(arena, originals, branch, &mut greedy_trial)?
+    {
+        let total_false = positive_replay_false_count(arena, originals, &greedy_trial)?;
+        best = Some((total_false, stats.changes(), "branch", stats, greedy_trial));
+    }
+
+    let mut scalar_trial = projected.clone();
+    if let Some(stats) = repair_projected_branch_scalar_choice_candidate(
+        arena,
+        originals,
+        branch,
+        &mut scalar_trial,
+    )? {
+        let total_false = positive_replay_false_count(arena, originals, &scalar_trial)?;
+        let replace = best
+            .as_ref()
+            .is_none_or(|(best_false, best_changes, best_kind, _, _)| {
+                (total_false, stats.changes(), "scalar") < (*best_false, *best_changes, *best_kind)
+            });
+        if replace {
+            best = Some((total_false, stats.changes(), "scalar", stats, scalar_trial));
+        }
+    }
+
+    let Some((_, _, kind, stats, trial)) = best else {
+        return Ok(None);
+    };
+    *projected = trial;
+    Ok(Some((kind, stats)))
+}
+
 fn project_replay_ext_candidate(
     arena: &TermArena,
     ctx: &RowCtx,
@@ -8573,6 +8724,7 @@ mod tests {
         cross_store_array_disequality_refutation, default_value_for_symbol,
         first_false_replay_conjunct, first_projected_replay_failure, positive_replay_false_count,
         project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
+        repair_projected_branch_as_candidate, repair_projected_branch_scalar_choice_candidate,
         repair_projected_replay_branch_beam, repair_projected_replay_branch_choice,
         repair_projected_replay_branch_pair_choice, repair_projected_replay_branch_select_cycle,
         repair_projected_replay_failure, replay_failure_with_branch_candidate_diagnostics,
@@ -9487,6 +9639,59 @@ mod tests {
             Value::Bool(true)
         );
         assert_eq!(eval(&arena, d_eq_c, &projected).unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn lazy_ext_scalar_branch_choice_prefers_replay_safe_direction() {
+        let mut arena = TermArena::new();
+        let u = arena.int_var("u").unwrap();
+        let v = arena.int_var("v").unwrap();
+        let zero = arena.int_const(0);
+        let false_term = arena.bool_const(false);
+        let u_eq_v = arena.eq(u, v).unwrap();
+        let branch_or = arena.or(u_eq_v, false_term).unwrap();
+        let u_eq_zero = arena.eq(u, zero).unwrap();
+        let assertion = arena.and(branch_or, u_eq_zero).unwrap();
+
+        let TermNode::Symbol(u_symbol) = arena.node(u) else {
+            panic!("u should be a symbol");
+        };
+        let TermNode::Symbol(v_symbol) = arena.node(v) else {
+            panic!("v should be a symbol");
+        };
+
+        let mut greedy = Assignment::new();
+        greedy.set(*u_symbol, Value::Int(0));
+        greedy.set(*v_symbol, Value::Int(1));
+        let originals = [assertion];
+        let greedy_stats =
+            repair_projected_branch_as_candidate(&arena, &originals, u_eq_v, &mut greedy)
+                .unwrap()
+                .expect("expected greedy branch repair");
+        assert!(greedy_stats.branch_symbol_changes >= 1);
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &greedy).unwrap(),
+            1
+        );
+
+        let mut projected = Assignment::new();
+        projected.set(*u_symbol, Value::Int(0));
+        projected.set(*v_symbol, Value::Int(1));
+        let stats = repair_projected_branch_scalar_choice_candidate(
+            &arena,
+            &originals,
+            u_eq_v,
+            &mut projected,
+        )
+        .unwrap()
+        .expect("expected scalar choice repair");
+        assert_eq!(stats.branch_symbol_changes, 1);
+        assert_eq!(projected.get(*u_symbol), Some(Value::Int(0)));
+        assert_eq!(projected.get(*v_symbol), Some(Value::Int(0)));
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
     }
 
     #[test]

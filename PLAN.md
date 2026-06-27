@@ -2015,6 +2015,16 @@ against competitor source, are now binding:
      that branch worsens to total_false=2 at scalar equality term 2611. The next
      AUFLIA move is scalar-aware OR-236 handling after the residual chain, not
      more component-array-only hops.
+     **SCALAR-CHOICE BRANCH REPAIR LANDED (2026-06-26):** follow-up OR repair
+     now compares the greedy branch repair with a bounded scalar-choice
+     candidate that explores both directions of direct scalar equalities and
+     scores completed branch repairs by full replay. The small `u = v` with an
+     existing `u = 0` regression now chooses `v := 0` and clears replay. On
+     `bug337`, this does not move the large frontier: OR 236 still selects the
+     ordinary `branch` candidate, then worsens to scalar equality term 2611.
+     Therefore the next AUFLIA move is an OR-236-specific diagnostic for both
+     false branch literals and their scalar side effects, not another generic
+     scalar-direction heuristic.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
