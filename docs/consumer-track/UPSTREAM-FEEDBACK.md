@@ -52,7 +52,8 @@ Last reconciled with `main`: 2026-06-27.
   queries to that memory-aware path. A narrow warm memory slice also landed for
   syntactic same-index hits, literal-distinct concrete-address store misses,
   constant-array reads, reads over simple array-valued `ite` state merges,
-  reads over index-valued `ite`s, and reducible symbolic-address
+  reads over index-valued `ite`s, selected stores with index-valued `ite`s, and
+  reducible symbolic-address
   read-over-write over store chains, including same-index shadowed-store
   pruning before ROW expansion and trivial scalar `ite` / reflexive-equality
   collapse after branch reads simplify: the warm
@@ -77,6 +78,9 @@ Last reconciled with `main`: 2026-06-27.
   splits conditional read indices before ROW expansion, so
   `select(a, ite(c, i, j))` becomes a scalar branch choice over two ordinary
   reads and can reuse the existing branch-local memory simplifications.
+  Selected stores with conditional write indices split the same way before the
+  generic symbolic ROW equality, so `select(store(a, ite(c, i, j), v), k)`
+  becomes a scalar branch choice over two branch-local store/read terms.
   Trivial scalar `ite`s exposed by memory rewrites collapse too, so
   branch-merged reads whose branches simplify to the same value do not keep an
   irrelevant merge condition; the resulting `v = v` tautology or `not true`
@@ -97,10 +101,10 @@ Last reconciled with `main`: 2026-06-27.
   the warm memory slice avoids the dispatcher for simple store/read-back path
   constraints, concrete-address store-chain misses, zero-initialized memory
   reads, simple branch-merged memory reads, reducible symbolic-address memory
-  reads with same-index shadowed-store pruning, conditional-index reads,
-  branch-merged reads whose selected branches reduce to the same scalar value
-  plus the reflexive equality/negation cleanup exposed by that reduction, plain
-  symbolic-base Bool/BV array loads, wide/BV256 storage-style base loads,
+  reads with same-index shadowed-store pruning, conditional read/write-index
+  paths, branch-merged reads whose selected branches reduce to the same scalar
+  value plus the reflexive equality/negation cleanup exposed by that reduction,
+  plain symbolic-base Bool/BV array loads, wide/BV256 storage-style base loads,
   scalar Bool/BV UF calls, wide/BV256 keccak-style UF calls, helper-level load
   branches, reducible CFG memory branches, and fork queries, but general array/UF work still
   rebuilds through the dispatcher instead of retaining warm learned clauses.
@@ -116,6 +120,7 @@ Last reconciled with `main`: 2026-06-27.
   pruning" / "Warm array-ITE same-readback guard pruning" /
   "Warm reflexive memory tautology pruning" /
   "Warm conditional-index read splitting" /
+  "Warm conditional-write-index read splitting" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /
@@ -136,9 +141,9 @@ Last reconciled with `main`: 2026-06-27.
   writes that may alias. The upstream warm ROW simplifier now mirrors part of
   that normalization by dropping syntactically shadowed same-index stores before
   expanding undecided symbolic reads and by splitting conditional read indices
-  before ROW expansion when the selected branches reduce through the warm slice.
-  Deep store-chain scaling is still the array-solver performance problem unless
-  the warm lazy array path reuses
+  and conditional write indices before ROW expansion when the selected branches
+  reduce through the warm slice. Deep store-chain scaling is still the
+  array-solver performance problem unless the warm lazy array path reuses
   structure and instantiates ROW facts on demand.
 - **Why it matters:** EVM paths with many storage writes can still make per-read
   formulas grow linearly or worse if the frontend has to materialize store-chain

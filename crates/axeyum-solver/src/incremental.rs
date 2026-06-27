@@ -1540,6 +1540,11 @@ fn collapse_read_over_write(arena: &mut TermArena, term: TermId) -> Option<TermI
         }
         _ => return None,
     };
+    if let Some(distributed) =
+        distribute_select_over_store_index_ite(arena, base, write_index, value, read_index)
+    {
+        return Some(distributed);
+    }
     let base = drop_shadowed_stores_at_index(arena, base, write_index);
     if write_index == read_index {
         return Some(value);
@@ -1570,6 +1575,31 @@ fn distribute_select_over_index_ite(
     };
     let then_read = arena.select(array, then_index).ok()?;
     let else_read = arena.select(array, else_index).ok()?;
+    arena.ite(condition, then_read, else_read).ok()
+}
+
+fn distribute_select_over_store_index_ite(
+    arena: &mut TermArena,
+    base: TermId,
+    write_index: TermId,
+    value: TermId,
+    read_index: TermId,
+) -> Option<TermId> {
+    let (condition, then_index, else_index) = match arena.node(write_index) {
+        TermNode::App {
+            op: Op::Ite, args, ..
+        } => {
+            let [condition, then_index, else_index] = args.as_ref() else {
+                return None;
+            };
+            (*condition, *then_index, *else_index)
+        }
+        _ => return None,
+    };
+    let then_array = arena.store(base, then_index, value).ok()?;
+    let else_array = arena.store(base, else_index, value).ok()?;
+    let then_read = arena.select(then_array, read_index).ok()?;
+    let else_read = arena.select(else_array, read_index).ok()?;
     arena.ite(condition, then_read, else_read).ok()
 }
 

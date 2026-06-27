@@ -3378,6 +3378,76 @@ fn warm_index_ite_read_distributes_to_row_branches() {
 }
 
 #[test]
+fn warm_index_ite_write_distributes_to_row_branches() {
+    let mut arena = TermArena::new();
+    let flag_sym = arena
+        .declare("warm_index_ite_write_flag", Sort::Bool)
+        .unwrap();
+    let flag = arena.var(flag_sym);
+    let idx_three = arena.bv_const(8, 3).unwrap();
+    let idx_four = arena.bv_const(8, 4).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let write_index = arena.ite(flag, idx_three, idx_four).unwrap();
+    let stored = arena.store(memory, write_index, one).unwrap();
+    let loaded = arena.select(stored, idx_three).unwrap();
+    let loaded_eq_one = arena.eq(loaded, one).unwrap();
+
+    let simplified =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, loaded_eq_one);
+    assert!(
+        !term_contains(&arena, simplified, write_index),
+        "the conditional write address should be split before ROW expansion"
+    );
+    assert_eq!(
+        count_ite_nodes(&arena, simplified),
+        1,
+        "the warm encoding should retain only the scalar path choice"
+    );
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, simplified),
+        "conditional-write read should simplify to a pure warm assertion"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, loaded_eq_one)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "assert_simplifying_memory should not defer the split conditional write"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "conditional-write ROW simplification must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(model.get(flag_sym), Some(Value::Bool(true)));
+            assert_eq!(
+                eval(&arena, loaded_eq_one, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original conditional-write read"
+            );
+        }
+        other => panic!("expected warm conditional-write read assertion sat, got {other:?}"),
+    }
+
+    let mut impossible = IncrementalBvSolver::new();
+    let not_flag = arena.not(flag).unwrap();
+    impossible.assert(&arena, not_flag).unwrap();
+    impossible
+        .assert_simplifying_memory(&mut arena, loaded_eq_one)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "the selected cell receives the stored value only on the true write branch"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena
