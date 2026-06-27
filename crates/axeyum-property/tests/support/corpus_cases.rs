@@ -688,7 +688,7 @@ fn explicit_nested_aggregate_replay_rendered() -> CorpusResult<CorpusCaseReport>
         workflow: "caller-owned nested aggregate replay",
         expected: ExpectedOutcome::Disproved,
         actual: summary.outcome,
-        checks: "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered replay assertion in order",
+        checks: "generated `#[test]` includes caller-owned imports, nested `transfer.limits` setup, `TransferInput` setup, and a helper-rendered `Result<bool, _>` replay assertion in order",
         baseline_analogue: "Rust verifier domain replay body / Kani nested harness struct",
         lean_required: false,
         lean_available: false,
@@ -705,12 +705,29 @@ fn assert_nested_replay_test_rendering(
         "assert!(replay_transfer(transfer));\n"
     );
     assert_eq!(
-        counterexample.render_rust_test_with_replay_assertion(
+        Counterexample::render_rust_replay_expect_ok(
+            "replay_transfer_checked",
+            ["transfer"],
+            "counterexample replay failed",
+        ),
+        "replay_transfer_checked(transfer).expect(\"counterexample replay failed\");\n"
+    );
+    assert_eq!(
+        Counterexample::render_rust_replay_expect_ok_assertion(
+            "replay_transfer",
+            ["transfer"],
+            "counterexample replay failed",
+        ),
+        "assert!(replay_transfer(transfer).expect(\"counterexample replay failed\"));\n"
+    );
+    assert_eq!(
+        counterexample.render_rust_test_with_replay_expect_ok_assertion(
             "nested transfer replay",
             ["use crate::{TransferInput, TransferLimits};"],
             [transfer_limits, transfer_init],
             "replay_transfer",
             ["transfer"],
+            "counterexample replay failed",
         )?,
         concat!(
             "use crate::{TransferInput, TransferLimits};\n",
@@ -728,7 +745,7 @@ fn assert_nested_replay_test_rendering(
             "        amount: transfer_amount,\n",
             "        limits: transfer_limits,\n",
             "    };\n",
-            "    assert!(replay_transfer(transfer));\n",
+            "    assert!(replay_transfer(transfer).expect(\"counterexample replay failed\"));\n",
             "}\n",
         )
     );

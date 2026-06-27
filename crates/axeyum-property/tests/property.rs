@@ -190,6 +190,26 @@ fn counterexample_renderer_sanitizes_names_and_builds_test_skeleton() -> TestRes
             "let _1_byte: u16 = 0xabc_u16; // BV12\n",
         )
     );
+    assert_eq!(
+        Counterexample::render_rust_replay_call("replay", ["flag_name", "match_", "_1_byte"]),
+        "replay(flag_name, match_, _1_byte)"
+    );
+    assert_eq!(
+        Counterexample::render_rust_replay_expect_ok(
+            "replay_checked",
+            ["flag_name", "match_", "_1_byte"],
+            "counterexample replay failed",
+        ),
+        "replay_checked(flag_name, match_, _1_byte).expect(\"counterexample replay failed\");\n"
+    );
+    assert_eq!(
+        Counterexample::render_rust_replay_expect_ok_assertion(
+            "replay_bool",
+            ["flag_name"],
+            "counterexample \"replay\" failed",
+        ),
+        "assert!(replay_bool(flag_name).expect(\"counterexample \\\"replay\\\" failed\"));\n"
+    );
 
     let test = counterexample.render_rust_test(
         "counterexample case",

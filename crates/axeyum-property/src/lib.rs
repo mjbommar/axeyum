@@ -5,6 +5,8 @@
 //! [`axeyum_solver::prove`] or [`axeyum_solver::prove_minimized`]. It does not
 //! add solver logic or weaken the underlying evidence contract.
 
+use std::fmt::Write as _;
+
 use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId, Value};
 pub use axeyum_property_macros::Symbolic;
 pub use axeyum_solver::{
@@ -622,7 +624,30 @@ impl Counterexample {
         Ok(out)
     }
 
-    /// Renders the common Rust replay assertion body.
+    /// Renders a Rust replay call expression.
+    ///
+    /// `replay_fn` and `args` are caller-owned Rust expressions. This helper
+    /// intentionally does not validate or interpret them; it only formats the
+    /// repeated `replay_fn(args...)` shape used by the generated test adapters.
+    pub fn render_rust_replay_call<I, A>(replay_fn: &str, args: I) -> String
+    where
+        I: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let mut out = String::new();
+        out.push_str(replay_fn);
+        out.push('(');
+        for (index, arg) in args.into_iter().enumerate() {
+            if index > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(arg.as_ref());
+        }
+        out.push(')');
+        out
+    }
+
+    /// Renders the common Rust Boolean replay assertion body.
     ///
     /// `replay_fn` and `args` are caller-owned Rust expressions. This helper
     /// intentionally does not validate or interpret them; it only formats the
@@ -633,16 +658,57 @@ impl Counterexample {
         I: IntoIterator<Item = A>,
         A: AsRef<str>,
     {
+        let call = Self::render_rust_replay_call(replay_fn, args);
         let mut out = String::new();
         out.push_str("assert!(");
-        out.push_str(replay_fn);
-        out.push('(');
-        for (index, arg) in args.into_iter().enumerate() {
-            if index > 0 {
-                out.push_str(", ");
-            }
-            out.push_str(arg.as_ref());
-        }
+        out.push_str(&call);
+        out.push_str(");\n");
+        out
+    }
+
+    /// Renders a Rust replay body for frontends whose replay function returns
+    /// `Result<(), E>`.
+    ///
+    /// The helper formats `replay_fn(args...).expect(message);`; the replay
+    /// function path, argument expressions, and domain result type remain
+    /// caller-owned.
+    pub fn render_rust_replay_expect_ok<I, A>(
+        replay_fn: &str,
+        args: I,
+        expect_message: &str,
+    ) -> String
+    where
+        I: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let mut out = Self::render_rust_replay_call(replay_fn, args);
+        out.push_str(".expect(");
+        push_rust_string_literal(&mut out, expect_message);
+        out.push_str(");\n");
+        out
+    }
+
+    /// Renders a Rust replay body for frontends whose replay function returns
+    /// `Result<bool, E>`.
+    ///
+    /// The helper formats `assert!(replay_fn(args...).expect(message));`; the
+    /// replay function path, argument expressions, and domain result type
+    /// remain caller-owned.
+    pub fn render_rust_replay_expect_ok_assertion<I, A>(
+        replay_fn: &str,
+        args: I,
+        expect_message: &str,
+    ) -> String
+    where
+        I: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let call = Self::render_rust_replay_call(replay_fn, args);
+        let mut out = String::new();
+        out.push_str("assert!(");
+        out.push_str(&call);
+        out.push_str(".expect(");
+        push_rust_string_literal(&mut out, expect_message);
         out.push_str("));\n");
         out
     }
@@ -677,6 +743,84 @@ impl Counterexample {
         A: AsRef<str>,
     {
         let body = Self::render_rust_replay_assertion(replay_fn, args);
+        self.render_rust_test_with_prelude(
+            test_name,
+            prelude_snippets,
+            setup_snippets,
+            body.as_str(),
+        )
+    }
+
+    /// Renders a Rust `#[test]` skeleton whose body expects a successful
+    /// `Result<(), E>` replay.
+    ///
+    /// This is a convenience wrapper over
+    /// [`Self::render_rust_test_with_prelude`] and
+    /// [`Self::render_rust_replay_expect_ok`]. Prelude snippets, setup
+    /// snippets, the replay function path, argument expressions, and failure
+    /// message remain caller-owned.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_test_with_replay_expect_ok<PI, P, SI, S, AI, A>(
+        &self,
+        test_name: &str,
+        prelude_snippets: PI,
+        setup_snippets: SI,
+        replay_fn: &str,
+        args: AI,
+        expect_message: &str,
+    ) -> Result<String, PropertyError>
+    where
+        PI: IntoIterator<Item = P>,
+        P: AsRef<str>,
+        SI: IntoIterator<Item = S>,
+        S: AsRef<str>,
+        AI: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let body = Self::render_rust_replay_expect_ok(replay_fn, args, expect_message);
+        self.render_rust_test_with_prelude(
+            test_name,
+            prelude_snippets,
+            setup_snippets,
+            body.as_str(),
+        )
+    }
+
+    /// Renders a Rust `#[test]` skeleton whose body expects a successful
+    /// `Result<bool, E>` replay and asserts the returned Boolean.
+    ///
+    /// This is a convenience wrapper over
+    /// [`Self::render_rust_test_with_prelude`] and
+    /// [`Self::render_rust_replay_expect_ok_assertion`]. Prelude snippets,
+    /// setup snippets, the replay function path, argument expressions, and
+    /// failure message remain caller-owned.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError::UnsupportedRustLiteral`] if any binding is not
+    /// representable by a native Rust scalar literal.
+    pub fn render_rust_test_with_replay_expect_ok_assertion<PI, P, SI, S, AI, A>(
+        &self,
+        test_name: &str,
+        prelude_snippets: PI,
+        setup_snippets: SI,
+        replay_fn: &str,
+        args: AI,
+        expect_message: &str,
+    ) -> Result<String, PropertyError>
+    where
+        PI: IntoIterator<Item = P>,
+        P: AsRef<str>,
+        SI: IntoIterator<Item = S>,
+        S: AsRef<str>,
+        AI: IntoIterator<Item = A>,
+        A: AsRef<str>,
+    {
+        let body = Self::render_rust_replay_expect_ok_assertion(replay_fn, args, expect_message);
         self.render_rust_test_with_prelude(
             test_name,
             prelude_snippets,
@@ -745,6 +889,24 @@ fn push_unindented_block(out: &mut String, block: &str) {
         out.push_str(line);
         out.push('\n');
     }
+}
+
+fn push_rust_string_literal(out: &mut String, value: &str) {
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            ch if ch.is_control() => {
+                write!(out, "\\u{{{:x}}}", ch as u32).expect("write string");
+            }
+            ch => out.push(ch),
+        }
+    }
+    out.push('"');
 }
 
 fn push_indented_block(out: &mut String, block: &str) {

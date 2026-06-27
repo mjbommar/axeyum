@@ -38,4 +38,8 @@ snippets before a caller-owned replay assertion with
 `render_rust_test_with_prelude`. For the common predicate-replay shape,
 `render_rust_replay_assertion` formats `assert!(replay(args...));`, and
 `render_rust_test_with_replay_assertion` wires that body into the generated
-test while leaving the replay function and arguments frontend-owned.
+test. Result-returning replay functions are covered by
+`render_rust_replay_expect_ok` / `render_rust_test_with_replay_expect_ok` for
+`Result<(), E>` and `render_rust_replay_expect_ok_assertion` /
+`render_rust_test_with_replay_expect_ok_assertion` for `Result<bool, E>`, while
+leaving the replay function, arguments, and failure message frontend-owned.

@@ -2,6 +2,19 @@
 
 ## Current focus
 
+- **2026-06-27 — Result-returning replay adapters landed.**
+  `Counterexample::render_rust_replay_call` now centralizes replay-call
+  formatting, and the counterexample-to-test surface covers common
+  result-returning replay shapes:
+  `render_rust_replay_expect_ok` / `render_rust_test_with_replay_expect_ok`
+  for `Result<(), E>` and `render_rust_replay_expect_ok_assertion` /
+  `render_rust_test_with_replay_expect_ok_assertion` for `Result<bool, E>`.
+  The replay function path, argument expressions, and failure message remain
+  frontend-owned. The generated nested aggregate corpus row now checks a
+  complete `#[test]` skeleton with a `Result<bool, _>` replay assertion;
+  totals remain 8 cases, 2 proved, 6 disproved, 0 unknown, DISAGREE=0, and
+  1/1 Lean-required coverage.
+
 - **2026-06-27 — Replay assertion helper landed.**
   `Counterexample::render_rust_replay_assertion` now formats the common
   `assert!(replay_fn(args...));` body for generated counterexample tests, and
@@ -198,7 +211,7 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Extend counterexample-to-`#[test]` output toward richer replay result
-   adapters while keeping domain semantics caller-owned.
+2. Extend counterexample-to-`#[test]` output toward richer fixture/module
+   assembly while keeping domain semantics caller-owned.
 3. Keep broadening the SDK property corpus and add the external
    proptest/Kani-style baseline comparison.
