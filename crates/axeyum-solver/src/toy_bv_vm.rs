@@ -831,6 +831,48 @@ impl TinyBvProgram {
         self.cfg_dot_with_styles(&node_styles, &highlighted_edges, Some("#2da44e"))
     }
 
+    /// Deterministic Graphviz DOT for a generated edge-coverage suite.
+    ///
+    /// The graph shape and labels match [`Self::cfg_dot`]. Blocks incident to
+    /// covered edges are colored green, blocks incident to bounded-unreachable
+    /// edges gray, and blocks incident to unknown edges yellow. Covered rendered
+    /// block-to-block edges are highlighted in purple. Intra-block instruction
+    /// fallthrough edges remain implicit because DOT nodes are basic blocks, not
+    /// individual instructions. Coverage reports can be constructed manually;
+    /// edges outside this program are ignored.
+    pub fn cfg_dot_with_edge_coverage(&self, coverage: &TinyBvEdgeCoverageReport) -> String {
+        let blocks = self.basic_blocks();
+        let block_start_by_pc = blocks
+            .iter()
+            .flat_map(|block| (block.start_pc..block.end_pc).map(|pc| (pc, block.start_pc)))
+            .collect::<BTreeMap<_, _>>();
+        let mut node_styles = BTreeMap::new();
+        let mut highlighted_edges = Vec::new();
+        for edge_report in &coverage.edges {
+            let style = match edge_report.status() {
+                TinyBvReachabilityStatus::Reachable if edge_report.has_test_cases() => {
+                    TinyBvDotNodeStyle::Covered
+                }
+                TinyBvReachabilityStatus::Unreachable => TinyBvDotNodeStyle::Unreachable,
+                TinyBvReachabilityStatus::Reachable | TinyBvReachabilityStatus::Unknown => {
+                    TinyBvDotNodeStyle::Unknown
+                }
+            };
+            for pc in [edge_report.edge.from, edge_report.edge.to] {
+                if let Some(&block_start_pc) = block_start_by_pc.get(&pc) {
+                    tiny_bv_merge_dot_node_style(&mut node_styles, block_start_pc, style);
+                }
+            }
+            highlighted_edges.extend(
+                edge_report
+                    .test_cases
+                    .iter()
+                    .flat_map(|case| case.report.edge_steps.iter().map(|step| step.edge)),
+            );
+        }
+        self.cfg_dot_with_styles(&node_styles, &highlighted_edges, Some("#8250df"))
+    }
+
     fn cfg_dot_with_styles(
         &self,
         node_styles: &BTreeMap<usize, TinyBvDotNodeStyle>,
@@ -1944,6 +1986,24 @@ fn tiny_bv_dot_node_style_attrs(style: TinyBvDotNodeStyle) -> &'static str {
         TinyBvDotNodeStyle::Unknown => {
             ", style=\"filled\", fillcolor=\"#fff8c5\", color=\"#bf8700\", penwidth=2"
         }
+    }
+}
+
+fn tiny_bv_merge_dot_node_style(
+    node_styles: &mut BTreeMap<usize, TinyBvDotNodeStyle>,
+    block_start_pc: usize,
+    style: TinyBvDotNodeStyle,
+) {
+    let replace = match node_styles.get(&block_start_pc).copied() {
+        None => true,
+        Some(TinyBvDotNodeStyle::Covered) => false,
+        Some(TinyBvDotNodeStyle::Unknown) => style == TinyBvDotNodeStyle::Covered,
+        Some(TinyBvDotNodeStyle::Unreachable | TinyBvDotNodeStyle::Trace) => {
+            style != TinyBvDotNodeStyle::Unreachable
+        }
+    };
+    if replace {
+        node_styles.insert(block_start_pc, style);
     }
 }
 

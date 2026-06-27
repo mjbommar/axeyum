@@ -2270,8 +2270,9 @@ map for imported instructions, deterministic PC-to-label lookup, typed static
 CFG edges via `successors` / `cfg_edges`, source/label-aware basic blocks via
 `basic_blocks`, deterministic Graphviz DOT export for the basic-block CFG via
 `cfg_dot`, trace-highlighted DOT overlays via `cfg_dot_with_trace`,
-coverage-highlighted DOT overlays via `cfg_dot_with_coverage`, block lookup and
-compressed block trace paths via `basic_block_containing_pc` /
+block-coverage-highlighted DOT overlays via `cfg_dot_with_coverage`,
+edge-coverage-highlighted DOT overlays via `cfg_dot_with_edge_coverage`, block
+lookup and compressed block trace paths via `basic_block_containing_pc` /
 `trace_basic_blocks`, taken CFG edge reports via `trace_cfg_edges`,
 source-aware concrete trace rows via `trace_source_steps`, a consolidated
 witness replay report via `trace_report`, replay-checked test-case generation

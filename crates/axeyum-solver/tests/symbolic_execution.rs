@@ -1292,6 +1292,19 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
             .map(|step| (step.edge.from, step.edge.to, step.edge.kind)),
         Some((3, 5, TinyBvCfgEdgeKind::BranchFalse))
     );
+    assert_eq!(
+        program.cfg_dot_with_edge_coverage(&edge_suite),
+        concat!(
+            "digraph tiny_bv_cfg {\n",
+            "  rankdir=TB;\n",
+            "  bb_0 [label=\"entry\\npc 0..4\\nlines 4,5,6,7\", style=\"filled\", fillcolor=\"#e6ffed\", penwidth=2];\n",
+            "  bb_4 [label=\"win_block\\npc 4..5\\nlines 8\", style=\"filled\", fillcolor=\"#e6ffed\", penwidth=2];\n",
+            "  bb_5 [label=\"lose_block\\npc 5..6\\nlines 10\", style=\"filled\", fillcolor=\"#e6ffed\", penwidth=2];\n",
+            "  bb_0 -> bb_4 [label=\"true\", color=\"#8250df\", penwidth=2];\n",
+            "  bb_0 -> bb_5 [label=\"false\", color=\"#8250df\", penwidth=2];\n",
+            "}\n",
+        )
+    );
 
     let lose_witness = TinyBvWitness { inputs: vec![0, 0] };
     let lose_trace = program.concrete_trace(&lose_witness);
