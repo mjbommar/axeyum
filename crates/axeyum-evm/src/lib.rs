@@ -73,6 +73,10 @@ pub struct AnalyzeConfig {
     pub max_steps: usize,
     /// How symbolic-key storage is lowered (warm arrays vs `ite`-fold).
     pub memory: MemoryEncoding,
+    /// Maximum number of transactions in a sequence to explore (persistent
+    /// storage between them, fresh symbolic calldata each). `1` = single-tx
+    /// (the default); `>1` searches for bugs reachable only across calls.
+    pub max_txs: usize,
     /// The solver configuration threaded into the feasibility checks.
     pub solver: SolverConfig,
 }
@@ -84,6 +88,7 @@ impl Default for AnalyzeConfig {
             detect_assertions: true,
             max_steps: 10_000,
             memory: MemoryEncoding::default(),
+            max_txs: 1,
             solver: SolverConfig::default(),
         }
     }
@@ -199,6 +204,7 @@ fn analyze_inner(bytecode: &[u8], cfg: &AnalyzeConfig) -> Result<AnalysisReport,
         cfg.max_steps,
         track_overflow,
         cfg.memory,
+        cfg.max_txs,
     )?;
 
     if let Some(bug) = &exploration.bug {

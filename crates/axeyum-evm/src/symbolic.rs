@@ -151,6 +151,9 @@ struct State {
     /// [`MemoryEncoding::WarmArray`]. Lazily created (as `const_array(0)`) on the
     /// first symbolic storage access so the `IteFold` path allocates nothing.
     storage_array: Option<SymbolicMemory>,
+    /// The current transaction index (0-based) on this path. Advanced on a normal
+    /// halt when more transactions remain; selects which `TxVars` calldata reads.
+    tx: usize,
 }
 
 /// A keccak application observed on a path.
@@ -175,6 +178,7 @@ impl State {
             keccak_apps: Vec::new(),
             encoding,
             storage_array: None,
+            tx: 0,
         }
     }
 
@@ -231,8 +235,9 @@ impl State {
     }
 }
 
-/// Reusable symbolic environment (declared once, shared across all paths).
-struct SymEnv {
+/// The symbolic inputs of one transaction (calldata bytes, msg.value, sender).
+/// Each external call in a multi-tx sequence gets its own independent set.
+struct TxVars {
     /// One 8-bit symbol per calldata byte index.
     calldata_bytes: Vec<TermId>,
     calldata_syms: Vec<SymbolId>,
@@ -240,6 +245,14 @@ struct SymEnv {
     callvalue_sym: SymbolId,
     caller: TermId,
     caller_sym: SymbolId,
+}
+
+/// Reusable symbolic environment (declared once, shared across all paths).
+struct SymEnv {
+    /// Per-transaction input variables, index = transaction number. Index 0 uses
+    /// the unprefixed names (`calldata[i]`/`callvalue`/`caller`) so single-tx
+    /// behavior is byte-identical; tx `k>0` uses `tx{k}.`-prefixed names.
+    txs: Vec<TxVars>,
     /// Monotonic counter for fresh havoc symbols.
     havoc_counter: u64,
 }
@@ -256,9 +269,10 @@ pub fn explore(
     max_steps: usize,
     track_overflow: bool,
     encoding: MemoryEncoding,
+    max_txs: usize,
 ) -> Result<Exploration, SolverError> {
     let mut arena = TermArena::new();
-    let mut env = build_env(&mut arena)?;
+    let mut env = build_env(&mut arena, max_txs)?;
     let mut exec = SymbolicExecutor::with_config(config.clone());
 
     let mut saw_unknown = false;
@@ -271,6 +285,7 @@ pub fn explore(
         max_steps,
         track_overflow,
         encoding,
+        max_txs.max(1),
         &mut saw_unknown,
         &mut obligations,
     )?;
@@ -282,31 +297,58 @@ pub fn explore(
     })
 }
 
-fn build_env(arena: &mut TermArena) -> Result<SymEnv, SolverError> {
+/// Declares the input variables of transaction `tx`. Transaction 0 uses the
+/// unprefixed names so single-tx runs are byte-identical to before; `tx>0` uses a
+/// `tx{tx}.` prefix so each external call has independent symbolic inputs.
+fn declare_tx_vars(arena: &mut TermArena, tx: usize) -> Result<TxVars, SolverError> {
+    let prefix = if tx == 0 {
+        String::new()
+    } else {
+        format!("tx{tx}.")
+    };
     let mut calldata_bytes = Vec::with_capacity(MAX_CALLDATA_BYTES);
     let mut calldata_syms = Vec::with_capacity(MAX_CALLDATA_BYTES);
     for i in 0..MAX_CALLDATA_BYTES {
-        let name = format!("calldata[{i}]");
-        let sym = arena.declare(&name, axeyum_ir::Sort::BitVec(8))?;
+        let sym = arena.declare(
+            &format!("{prefix}calldata[{i}]"),
+            axeyum_ir::Sort::BitVec(8),
+        )?;
         calldata_syms.push(sym);
         calldata_bytes.push(arena.var(sym));
     }
-    let callvalue_sym = arena.declare("callvalue", axeyum_ir::Sort::BitVec(W))?;
+    let callvalue_sym = arena.declare(&format!("{prefix}callvalue"), axeyum_ir::Sort::BitVec(W))?;
     let callvalue = arena.var(callvalue_sym);
-    let caller_sym = arena.declare("caller", axeyum_ir::Sort::BitVec(W))?;
+    let caller_sym = arena.declare(&format!("{prefix}caller"), axeyum_ir::Sort::BitVec(W))?;
     let caller = arena.var(caller_sym);
-    Ok(SymEnv {
+    Ok(TxVars {
         calldata_bytes,
         calldata_syms,
         callvalue,
         callvalue_sym,
         caller,
         caller_sym,
+    })
+}
+
+/// Declares the input variables for `max_txs` transactions up front (eager, so
+/// per-tx access needs no `&mut` and every path agrees on each tx's variables).
+fn build_env(arena: &mut TermArena, max_txs: usize) -> Result<SymEnv, SolverError> {
+    let mut txs = Vec::with_capacity(max_txs.max(1));
+    for tx in 0..max_txs.max(1) {
+        txs.push(declare_tx_vars(arena, tx)?);
+    }
+    Ok(SymEnv {
+        txs,
         havoc_counter: 0,
     })
 }
 
 impl SymEnv {
+    /// The input variables of transaction `tx`.
+    fn tx(&self, tx: usize) -> &TxVars {
+        &self.txs[tx]
+    }
+
     /// A fresh unconstrained 256-bit word (the havoc primitive).
     fn havoc(&mut self, arena: &mut TermArena) -> Result<TermId, SolverError> {
         let name = format!("havoc!{}", self.havoc_counter);
@@ -333,6 +375,7 @@ fn walk(
     max_steps: usize,
     track_overflow: bool,
     encoding: MemoryEncoding,
+    max_txs: usize,
     saw_unknown: &mut bool,
     obligations: &mut Vec<TermId>,
 ) -> Result<Option<PathBug>, SolverError> {
@@ -347,6 +390,7 @@ fn walk(
         0,
         max_steps,
         track_overflow,
+        max_txs,
         saw_unknown,
         obligations,
     )
@@ -366,6 +410,7 @@ fn run_from(
     mut steps: usize,
     max_steps: usize,
     track_overflow: bool,
+    max_txs: usize,
     saw_unknown: &mut bool,
     obligations: &mut Vec<TermId>,
 ) -> Result<Option<PathBug>, SolverError> {
@@ -396,17 +441,31 @@ fn run_from(
         let op = inst.op;
 
         match op {
-            Op::Stop | Op::Return => return Ok(None),
+            Op::Stop | Op::Return => {
+                // Normal end of the current transaction. If more transactions
+                // remain in the sequence, begin the next one: EVM semantics clear
+                // memory and the stack between external calls but **persist
+                // storage**, and the next call gets fresh symbolic calldata.
+                if state.tx + 1 < max_txs {
+                    state.tx += 1;
+                    state.stack.clear();
+                    state.memory.clear();
+                    state.sym_memory.clear();
+                    idx = 0;
+                    continue;
+                }
+                return Ok(None);
+            }
             Op::Invalid => {
                 // INVALID is reachable on this (feasible) path; lift a witness.
-                if let Some(bug) = lift_witness(arena, exec, env, BugKind::Invalid, pc)? {
+                if let Some(bug) = lift_witness(arena, exec, env, state.tx, BugKind::Invalid, pc)? {
                     return Ok(Some(bug));
                 }
                 *saw_unknown = true;
                 return Ok(None);
             }
             Op::Revert => {
-                if let Some(bug) = lift_witness(arena, exec, env, BugKind::Revert, pc)? {
+                if let Some(bug) = lift_witness(arena, exec, env, state.tx, BugKind::Revert, pc)? {
                     return Ok(Some(bug));
                 }
                 *saw_unknown = true;
@@ -421,6 +480,7 @@ fn run_from(
                         arena,
                         exec,
                         env,
+                        state.tx,
                         ovf,
                         BugKind::AddOverflow,
                         pc,
@@ -441,6 +501,7 @@ fn run_from(
                         arena,
                         exec,
                         env,
+                        state.tx,
                         ovf,
                         BugKind::MulOverflow,
                         pc,
@@ -620,8 +681,8 @@ fn run_from(
                 state.keccak_apps.push(new_app);
                 state.stack.push(result);
             }
-            Op::CallValue => state.stack.push(env.callvalue),
-            Op::Caller => state.stack.push(env.caller),
+            Op::CallValue => state.stack.push(env.tx(state.tx).callvalue),
+            Op::Caller => state.stack.push(env.tx(state.tx).caller),
             Op::CallDataSize => {
                 // We model exactly MAX_CALLDATA_BYTES of symbolic calldata.
                 let size = arena.bv_const(W, MAX_CALLDATA_BYTES as u128)?;
@@ -633,7 +694,7 @@ fn run_from(
                     *saw_unknown = true;
                     return Ok(None);
                 };
-                let word = calldata_word(arena, env, o)?;
+                let word = calldata_word(arena, env, state.tx, o)?;
                 state.stack.push(word);
             }
             Op::Pop => {
@@ -754,6 +815,7 @@ fn run_from(
                                     steps,
                                     max_steps,
                                     track_overflow,
+                                    max_txs,
                                     saw_unknown,
                                     obligations,
                                 )?;
@@ -822,23 +884,29 @@ fn lift_witness(
     arena: &TermArena,
     exec: &mut SymbolicExecutor,
     env: &SymEnv,
+    tx: usize,
     kind: BugKind,
     pc: usize,
 ) -> Result<Option<PathBug>, SolverError> {
     let Some(model) = exec.model(arena)? else {
         return Ok(None);
     };
-    let mut calldata = vec![0u8; env.calldata_syms.len()];
-    for (i, &sym) in env.calldata_syms.iter().enumerate() {
+    // Lift transaction `tx`'s inputs. For a multi-tx bug this single-tx witness is
+    // incomplete; the single-tx `revalidate` will then fail to reproduce it and it
+    // is conservatively surfaced as Unknown (never a wrong finding) until the
+    // multi-tx replay + sequence witness land (A1.2 / A1.3).
+    let vars = env.tx(tx);
+    let mut calldata = vec![0u8; vars.calldata_syms.len()];
+    for (i, &sym) in vars.calldata_syms.iter().enumerate() {
         if let Some(v) = model.get(sym) {
             calldata[i] = crate::value_to_u8(&v);
         }
     }
     let callvalue = model
-        .get(env.callvalue_sym)
+        .get(vars.callvalue_sym)
         .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v));
     let caller = model
-        .get(env.caller_sym)
+        .get(vars.caller_sym)
         .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v));
     Ok(Some(PathBug {
         kind,
@@ -856,6 +924,7 @@ fn check_overflow(
     arena: &mut TermArena,
     exec: &mut SymbolicExecutor,
     env: &SymEnv,
+    tx: usize,
     ovf: TermId,
     kind: BugKind,
     pc: usize,
@@ -866,7 +935,7 @@ fn check_overflow(
     if branch.if_true.is_feasible() {
         // Commit the overflow condition so model() lifts a witnessing input.
         exec.assume_auto(arena, ovf)?;
-        return lift_witness(arena, exec, env, kind, pc);
+        return lift_witness(arena, exec, env, tx, kind, pc);
     }
     if matches!(branch.if_true, PathStatus::Unknown(_)) {
         *saw_unknown = true;
@@ -947,11 +1016,16 @@ fn push_word(arena: &mut TermArena, immediate: &[u8]) -> TermId {
 
 /// Reads 32 calldata bytes starting at offset `o` as a big-endian 256-bit word.
 /// Bytes past the modeled buffer are zero.
-fn calldata_word(arena: &mut TermArena, env: &SymEnv, o: usize) -> Result<TermId, SolverError> {
+fn calldata_word(
+    arena: &mut TermArena,
+    env: &SymEnv,
+    tx: usize,
+    o: usize,
+) -> Result<TermId, SolverError> {
     // Concatenate bytes o..o+32, most-significant first.
     let mut acc: Option<TermId> = None;
     for i in 0..32 {
-        let byte = match env.calldata_bytes.get(o + i) {
+        let byte = match env.tx(tx).calldata_bytes.get(o + i) {
             Some(t) => *t,
             None => arena.bv_const(8, 0)?,
         };
