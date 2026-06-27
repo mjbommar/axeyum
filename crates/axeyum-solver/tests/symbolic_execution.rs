@@ -1055,11 +1055,18 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(trace_edges[3].from_source_line, Some(7));
     assert_eq!(trace_edges[3].to_source_line, Some(8));
     assert_eq!(trace_edges[3].to_labels, vec!["win_block".to_owned()]);
+    let report = program.trace_report(&hit.witness);
+    assert_eq!(report.witness, hit.witness);
+    assert_eq!(report.trace, trace);
+    assert_eq!(report.source_steps, source_steps);
+    assert_eq!(report.block_steps, trace_blocks);
+    assert_eq!(report.edge_steps, trace_edges);
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
     assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
 
-    let lose_trace = program.concrete_trace(&TinyBvWitness { inputs: vec![0, 0] });
+    let lose_witness = TinyBvWitness { inputs: vec![0, 0] };
+    let lose_trace = program.concrete_trace(&lose_witness);
     assert_eq!(lose_trace.outcome, TinyBvConcreteOutcome::Lose);
     assert_eq!(
         lose_trace
@@ -1085,6 +1092,18 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(lose_edges[3].from_source_line, Some(7));
     assert_eq!(lose_edges[3].to_source_line, Some(10));
     assert_eq!(lose_edges[3].to_labels, vec!["lose_block".to_owned()]);
+    let lose_report = program.trace_report(&lose_witness);
+    assert_eq!(lose_report.witness, lose_witness);
+    assert_eq!(lose_report.trace, lose_trace);
+    assert_eq!(lose_report.edge_steps, lose_edges);
+    assert_eq!(
+        lose_report
+            .block_steps
+            .iter()
+            .map(|step| (step.block.start_pc, step.executed_pcs.clone()))
+            .collect::<Vec<_>>(),
+        vec![(0, vec![0, 1, 2, 3]), (5, vec![5])]
+    );
 
     let safety = program
         .check_label_safety_checked(

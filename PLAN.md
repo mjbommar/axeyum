@@ -2270,10 +2270,11 @@ map for imported instructions, deterministic PC-to-label lookup, typed static
 CFG edges via `successors` / `cfg_edges`, source/label-aware basic blocks via
 `basic_blocks`, block lookup and compressed block trace paths via
 `basic_block_containing_pc` / `trace_basic_blocks`, taken CFG edge reports via
-`trace_cfg_edges`, source-aware concrete trace rows via `trace_source_steps`, and
-label-based reachability/safety query wrappers over the existing checked PC
-queries. P4.2 still needs richer byte-level/binary frontend work,
-unbounded/certified safety, and eventual warm lazy theory reuse.
+`trace_cfg_edges`, source-aware concrete trace rows via `trace_source_steps`, a
+consolidated witness replay report via `trace_report`, and label-based
+reachability/safety query wrappers over the existing checked PC queries. P4.2
+still needs richer byte-level/binary frontend work, unbounded/certified safety,
+and eventual warm lazy theory reuse.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

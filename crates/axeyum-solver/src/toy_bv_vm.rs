@@ -272,6 +272,21 @@ impl TinyBvConcreteTrace {
     }
 }
 
+/// Complete concrete witness report for a tiny BV replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvTraceReport {
+    /// Concrete input witness being replayed.
+    pub witness: TinyBvWitness,
+    /// Canonical concrete replay trace.
+    pub trace: TinyBvConcreteTrace,
+    /// Source-aware instruction-step rows derived from `trace`.
+    pub source_steps: Vec<TinyBvTraceSourceStep>,
+    /// Contiguous basic-block visits derived from `trace`.
+    pub block_steps: Vec<TinyBvTraceBlockStep>,
+    /// Static CFG edges taken by `trace`.
+    pub edge_steps: Vec<TinyBvTraceEdgeStep>,
+}
+
 /// Checked symbolic-execution result for the tiny BV frontend.
 pub type TinyBvExploreOutcome = CfgCheckedOutcome<TinyBvState, TinyBvWitness>;
 
@@ -620,6 +635,23 @@ impl TinyBvProgram {
                 })
             })
             .collect()
+    }
+
+    /// Builds a complete concrete witness report.
+    ///
+    /// The report keeps the canonical concrete replay trace and derives the
+    /// source-step, block-path, and taken-edge views from that single trace, so
+    /// frontend diagnostics cannot accidentally mix rows from different
+    /// witnesses.
+    pub fn trace_report(&self, witness: &TinyBvWitness) -> TinyBvTraceReport {
+        let trace = self.concrete_trace(witness);
+        TinyBvTraceReport {
+            witness: witness.clone(),
+            source_steps: self.trace_source_steps(&trace),
+            block_steps: self.trace_basic_blocks(&trace),
+            edge_steps: self.trace_cfg_edges(&trace),
+            trace,
+        }
     }
 
     /// Label-to-program-counter map imported from assembly.
