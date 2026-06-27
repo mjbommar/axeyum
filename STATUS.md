@@ -6,6 +6,48 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Current focus
 
+- **Session 2026-06-26 — AUFLIA beam readback stabilization.**
+  Accepted branch-beam candidates now get a post-branch readback stabilization
+  pass before they are scored: direct scalar symbols of asserted
+  `x = select(a,i)` equalities are aligned to the candidate's repaired array
+  values across all array symbols, and the beam keeps the stabilized candidate
+  only when its full-original-replay false count is better than the raw
+  candidate. This preserves the existing SAT gate: the projected assignment is
+  still mutated only by a final strict replay improvement, and returned `sat`
+  still requires a complete evaluator replay. A focused regression covers the
+  branch-store case where repairing `a = store(b,i,v)` would otherwise leave
+  `y = select(a,i)` stale; stabilization updates `y` to the repaired array
+  value and reaches zero replay failures.
+
+  This does **not** move `bug337`. The 10 s diagnostic remains `unknown` at
+  **round=2**, **sites=4096**, **array_eq_atoms=150**, **row_lemmas=42**,
+  **cong_lemmas=6973**, **diff_skolems=146**, and
+  **working_assertions=7127**. Projection telemetry remains
+  **select_repair_candidates=10011**, **select_repair_array_changes=102**,
+  **select_repair_symbol_changes=352**, **branch_repair_candidates=140**,
+  **branch_repair_symbol_changes=177**, **scalar_repair_candidates=24**,
+  **scalar_support_candidates=24**, **scalar_stabilized_trials=0**,
+  **scalar_rejected_worse_trials=0**,
+  **scalar_equal_support_repairs=0**, **scalar_repair_symbol_changes=24**, and
+  **projection_repair_changes=655**. The first false replay point is unchanged:
+  direct readback equality **ordinal 34**, term **555**,
+  `x_388 = select(x_325, x_337)`, values **1 vs 0**. This rules out simple
+  post-beam scalar-readback alignment as the missing step. Next useful work is
+  a targeted direct-select repair diagnostic for term **555** that reports the
+  chain candidate, direct array-entry candidate, post-candidate false counts,
+  and the first blocker after each candidate, so we can see whether select
+  repair is rejected as worsening, undone by store-chain reconstruction, or not
+  reached before the targeted repair cap.
+  Verification passed:
+  `cargo fmt --all --check`;
+  `CARGO_BUILD_JOBS=2 cargo clippy -p axeyum-solver --lib -j1 -- -D warnings`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam_stabilizes_direct_select_readbacks -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_beam_allows_temporary_uphill_schedule -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --lib lazy_ext_branch_pair_choice_scores_adjacent_or_repairs -j1 -- --nocapture`;
+  `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test abv_lazy_ext -j1 -- --nocapture`;
+  `git diff --check`;
+  `CARGO_BUILD_JOBS=2 cargo run -q -p axeyum-bench --example diagnose_evidence -- corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__bug337.smt2 10000`.
+
 - **Session 2026-06-26 — AUFLIA bounded branch-beam replay repair.**
   Targeted lazy-extensionality replay now has a capped branch-schedule beam
   after strict two-OR pair repair and before the older single-OR fallback. The

@@ -3067,6 +3067,20 @@ fn align_direct_select_symbols_for_array(
     Ok(changes)
 }
 
+fn align_all_direct_select_symbols(
+    arena: &TermArena,
+    originals: &[TermId],
+    projected: &mut Assignment,
+) -> Result<usize, SolverError> {
+    let mut changes = 0;
+    for (symbol, _name, sort) in arena.symbols() {
+        if matches!(sort, Sort::Array { .. }) {
+            changes += align_direct_select_symbols_for_array(arena, originals, projected, symbol)?;
+        }
+    }
+    Ok(changes)
+}
+
 fn direct_array_equality_repair_target(
     arena: &TermArena,
     term: TermId,
@@ -6171,6 +6185,31 @@ struct BranchBeamSearch<'a> {
     max_depth: usize,
 }
 
+fn branch_beam_stabilized_candidate(
+    search: &BranchBeamSearch<'_>,
+    state_stats: ProjectionRepairStats,
+    branch_stats: ProjectionRepairStats,
+    trial: Assignment,
+) -> Result<(usize, ProjectionRepairStats, Assignment), SolverError> {
+    let mut raw_stats = state_stats;
+    raw_stats.absorb(branch_stats);
+    let raw_false = positive_replay_false_count(search.arena, search.originals, &trial)?;
+
+    let mut stabilized = trial.clone();
+    let mut stabilized_stats = raw_stats;
+    let readback_changes =
+        align_all_direct_select_symbols(search.arena, search.originals, &mut stabilized)?;
+    stabilized_stats.symbol_changes += readback_changes;
+    let stabilized_false =
+        positive_replay_false_count(search.arena, search.originals, &stabilized)?;
+
+    if stabilized_false < raw_false {
+        Ok((stabilized_false, stabilized_stats, stabilized))
+    } else {
+        Ok((raw_false, raw_stats, trial))
+    }
+}
+
 fn branch_beam_expand_state(
     search: &BranchBeamSearch<'_>,
     state: BranchBeamState,
@@ -6225,12 +6264,11 @@ fn branch_beam_expand_state(
         if eval(search.arena, failure.conjunct_term, &trial).map_err(ir)? != Value::Bool(true) {
             continue;
         }
-        let false_count = positive_replay_false_count(search.arena, search.originals, &trial)?;
+        let (false_count, accumulated_stats, trial) =
+            branch_beam_stabilized_candidate(search, state.stats, branch_stats, trial)?;
         if false_count > search.max_false {
             continue;
         }
-        let mut accumulated_stats = state.stats;
-        accumulated_stats.absorb(branch_stats);
         if false_count < search.current_false {
             branch_beam_record_success(
                 best,
@@ -7422,6 +7460,73 @@ mod tests {
         assert_eq!(projected.get(*z_symbol), Some(Value::Int(1)));
         assert_eq!(projected.get(*y_symbol), Some(Value::Int(2)));
         assert_eq!(projected.get(*w_symbol), Some(Value::Int(3)));
+        assert_eq!(
+            eval(&arena, assertion, &projected).unwrap(),
+            Value::Bool(true)
+        );
+    }
+
+    #[test]
+    fn lazy_ext_branch_beam_stabilizes_direct_select_readbacks() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let b = arena.array_var("b", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let v = arena.bv_var("v", 8).unwrap();
+        let y = arena.bv_var("y", 8).unwrap();
+        let p = arena.bool_var("p").unwrap();
+        let stored = arena.store(b, i, v).unwrap();
+        let a_eq_store = arena.eq(a, stored).unwrap();
+        let branch_or = arena.or(a_eq_store, p).unwrap();
+        let read_a_i = arena.select(a, i).unwrap();
+        let y_eq_read = arena.eq(y, read_a_i).unwrap();
+        let assertion = arena.and(branch_or, y_eq_read).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(b_symbol) = arena.node(b) else {
+            panic!("b should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+        let TermNode::Symbol(v_symbol) = arena.node(v) else {
+            panic!("v should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(p_symbol) = arena.node(p) else {
+            panic!("p should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        let default_a = default_value_for_symbol(&arena, *a_symbol).unwrap();
+        let default_b = default_value_for_symbol(&arena, *b_symbol).unwrap();
+        projected.set(*a_symbol, default_a);
+        projected.set(*b_symbol, default_b);
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+        projected.set(*v_symbol, Value::Bv { width: 8, value: 7 });
+        projected.set(*y_symbol, Value::Bv { width: 8, value: 0 });
+        projected.set(*p_symbol, Value::Bool(false));
+
+        let originals = [assertion];
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+        repair_projected_replay_branch_beam(&arena, &originals, branch_or, &mut projected)
+            .unwrap()
+            .expect("beam should repair the store branch and align readback");
+        assert_eq!(
+            projected.get(*y_symbol),
+            Some(Value::Bv { width: 8, value: 7 })
+        );
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            0
+        );
         assert_eq!(
             eval(&arena, assertion, &projected).unwrap(),
             Value::Bool(true)

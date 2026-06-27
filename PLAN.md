@@ -1879,6 +1879,18 @@ against competitor source, are now binding:
      The next AUFLIA move should inspect why existing select/store-chain readback
      repair cannot stabilize this post-beam assignment, or add readback
      stabilization inside accepted beam states; do not widen the beam blindly.
+     **BEAM READBACK STABILIZATION LANDED (2026-06-26):** accepted branch-beam
+     candidates now align direct scalar readback symbols for all asserted
+     `x = select(a,i)` equalities against the candidate's repaired arrays before
+     scoring the beam state. This fixes the simple stale-readback shape in a
+     regression (`a = store(b,i,v)` plus `y = select(a,i)`) while preserving the
+     full evaluator replay SAT gate. It does **not** move `bug337`: the first
+     false replay point remains direct readback equality ordinal 34 / term 555,
+     `x_388 = select(x_325, x_337)`, values 1 vs 0, after the same 655
+     projection changes. The next AUFLIA move should be a direct-select repair
+     diagnostic for term 555 that reports chain/direct candidates, replay false
+     counts, and first blockers; the simple scalar-readback-alignment hypothesis
+     is now rejected.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
