@@ -481,6 +481,60 @@ pub enum Evidence {
 }
 
 impl Evidence {
+    /// Stable short label for this evidence variant.
+    ///
+    /// These labels are intended for SDK/UI summaries and artifact metadata.
+    /// They are deliberately independent of Rust `Debug` formatting.
+    #[must_use]
+    pub const fn kind_label(&self) -> &'static str {
+        match self {
+            Evidence::Sat(_) => "sat-model",
+            Evidence::Unsat(_) => "unsat-drat",
+            Evidence::UnsatAletheProof(_) => "unsat-alethe",
+            Evidence::UnsatArithAletheProof(_) => "unsat-arith-alethe",
+            Evidence::UnsatGuardedQuantAletheProof { .. } => "unsat-guarded-quant-alethe",
+            Evidence::UnsatTermLevel { .. } => "unsat-term-level",
+            Evidence::UnsatFiniteDomainEnum { .. } => "unsat-finite-domain-enum",
+            Evidence::UnsatBvDefinedEnum(_) => "unsat-bv-defined-enum",
+            Evidence::UnsatBvForallNonconstant(_) => "unsat-bv-forall-nonconstant",
+            Evidence::UnsatBvUfLocal(_) => "unsat-bv-uf-local",
+            Evidence::UnsatSetCardinality(_) => "unsat-set-cardinality",
+            Evidence::UnsatFarkas(_) => "unsat-farkas",
+            Evidence::UnsatLraDpll(_) => "unsat-lra-dpll",
+            Evidence::UnsatArithDpll(_) => "unsat-arith-dpll",
+            Evidence::UnsatSos { .. } => "unsat-sos",
+            Evidence::UnsatNraEvenPower(_) => "unsat-nra-even-power",
+            Evidence::UnsatDiophantine { .. } => "unsat-diophantine",
+            Evidence::UnsatBoundedIntBlast(_) => "unsat-bounded-int-blast",
+            Evidence::UnsatFiniteDomainPigeonhole(_) => "unsat-finite-domain-pigeonhole",
+            Evidence::UnsatBoolUfExhaustive(_) => "unsat-bool-uf-exhaustive",
+            Evidence::UnsatBoolEufExhaustive(_) => "unsat-bool-euf-exhaustive",
+            Evidence::UnsatBoolEufOnline(_) => "unsat-bool-euf-online",
+            Evidence::UnsatUfArithCongruence(_) => "unsat-uf-arith-congruence",
+            Evidence::UnsatDatatypeStructural(_) => "unsat-datatype-structural",
+            Evidence::UnsatFiniteArrayExtensionality(_) => "unsat-finite-array-extensionality",
+            Evidence::UnsatBoolArrayReadCollapse(_) => "unsat-bool-array-read-collapse",
+            Evidence::UnsatArrayAxiom(_) => "unsat-array-axiom",
+            Evidence::UnsatConstArrayDefaultMismatch(_) => "unsat-const-array-default-mismatch",
+            Evidence::UnsatStoreChainReadback(_) => "unsat-store-chain-readback",
+            Evidence::UnsatCrossStoreArrayDisequality(_) => "unsat-cross-store-array-disequality",
+            Evidence::UnsatTermIdentity(_) => "unsat-term-identity",
+            Evidence::UnsatBoolSimplification(_) => "unsat-bool-simplification",
+            Evidence::UnsatBvAbstraction(_) => "unsat-bv-abstraction",
+            Evidence::UnsatAlignedWriteChainCommutation(_) => {
+                "unsat-aligned-write-chain-commutation"
+            }
+            Evidence::UnsatTwoByteMemcpy(_) => "unsat-two-byte-memcpy",
+            Evidence::UnsatTwoElementBubbleSort(_) => "unsat-two-element-bubble-sort",
+            Evidence::UnsatTwoElementSelectionSort(_) => "unsat-two-element-selection-sort",
+            Evidence::UnsatTwoCellXorSwap(_) => "unsat-two-cell-xor-swap",
+            Evidence::UnsatTwoByteXorSwapRoundtrip(_) => "unsat-two-byte-xor-swap-roundtrip",
+            Evidence::UnsatBinarySearch16(_) => "unsat-binary-search-16",
+            Evidence::UnsatFifoBc04(_) => "unsat-fifo-bc04",
+            Evidence::Unknown(_) => "unknown",
+        }
+    }
+
     /// Independently re-validates this evidence against the original
     /// `assertions`. Returns `true` when the evidence holds up.
     ///

@@ -11,7 +11,7 @@ pub use axeyum_solver::{
     EvidenceReport, Model, ProofFragment, ProofOutcome, ReconstructError, SolverConfig,
 };
 use axeyum_solver::{
-    ModelMinimizeObjective, SolverError, prove, prove_minimized_with_objectives,
+    ModelMinimizeObjective, SolverError, UnknownKind, prove, prove_minimized_with_objectives,
     prove_unsat_to_lean_module,
 };
 
@@ -513,6 +513,91 @@ pub struct ProofCertificate {
     pub lean_error: Option<ReconstructError>,
 }
 
+/// Frontend-friendly summary of a [`ProofCertificate`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProofCertificateSummary {
+    /// Decided proof status without carrying a full model or proof artifact.
+    pub outcome: ProofOutcomeSummary,
+    /// Evidence route and trust summary for proved outcomes.
+    pub evidence: Option<EvidenceSummary>,
+    /// Lean reconstruction availability.
+    pub lean: LeanSummary,
+}
+
+/// Compact proof outcome for UI/reporting code.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProofOutcomeSummary {
+    /// The property was proved from checked Axeyum evidence.
+    Proved,
+    /// The property was disproved by a replay-checked model.
+    Disproved,
+    /// The property was not decided.
+    Unknown {
+        /// Stable classified unknown kind.
+        kind: &'static str,
+        /// Backend or route detail.
+        detail: String,
+    },
+}
+
+/// Evidence/provenance summary for a proved property.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EvidenceSummary {
+    /// Stable evidence variant label.
+    pub kind: &'static str,
+    /// Deciding route/backend recorded in the evidence provenance.
+    pub backend: String,
+    /// Number of assertions in the refutation query.
+    pub assertion_count: usize,
+    /// Executable-semantics version used by the checker.
+    pub semantics_version: &'static str,
+    /// Trust reductions this result depended on, in canonical order.
+    pub trust_steps: Vec<TrustStepSummary>,
+}
+
+/// One trust-ledger row used by a specific proof result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrustStepSummary {
+    /// Stable trust-step label.
+    pub label: &'static str,
+    /// One-line meaning from the trust ledger.
+    pub meaning: &'static str,
+    /// ADR/reference for the reduction.
+    pub reference: &'static str,
+    /// cvc5-style pedantic score.
+    pub pedantic_level: u8,
+    /// Whether the global ledger marks every use of this reduction certified.
+    pub ledger_certified: bool,
+    /// Whether this particular proof run carried an independent certificate.
+    pub certified_this_run: bool,
+}
+
+/// Lean reconstruction summary for a proof attempt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LeanSummary {
+    /// Whether a Lean module is available, unsupported, or not applicable.
+    pub status: LeanStatus,
+    /// Reconstruction fragment when a module was produced.
+    pub fragment: Option<ProofFragment>,
+    /// Size of the generated Lean source, when present.
+    pub source_bytes: Option<usize>,
+    /// Reconstruction diagnostic for proved results outside the current Lean
+    /// surface.
+    pub error: Option<ReconstructError>,
+}
+
+/// Lean reconstruction availability.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeanStatus {
+    /// A standalone Lean module was produced.
+    Available,
+    /// The property was proved, but this fragment did not reconstruct to Lean.
+    Unsupported,
+    /// No refutation exists to reconstruct, because the property was disproved
+    /// or unknown.
+    NotApplicable,
+}
+
 impl ProofCertificate {
     /// Returns the checked evidence report for proved outcomes.
     #[must_use]
@@ -521,6 +606,89 @@ impl ProofCertificate {
             ProofOutcome::Proved(report) => Some(report),
             ProofOutcome::Disproved(_) | ProofOutcome::Unknown(_) => None,
         }
+    }
+
+    /// Builds a compact owned summary for frontend reports.
+    #[must_use]
+    pub fn summary(&self) -> ProofCertificateSummary {
+        ProofCertificateSummary {
+            outcome: summarize_proof_outcome(&self.outcome),
+            evidence: self.evidence_report().map(summarize_evidence_report),
+            lean: summarize_lean(self),
+        }
+    }
+}
+
+fn summarize_proof_outcome(outcome: &ProofOutcome) -> ProofOutcomeSummary {
+    match outcome {
+        ProofOutcome::Proved(_) => ProofOutcomeSummary::Proved,
+        ProofOutcome::Disproved(_) => ProofOutcomeSummary::Disproved,
+        ProofOutcome::Unknown(reason) => ProofOutcomeSummary::Unknown {
+            kind: unknown_kind_label(reason.kind),
+            detail: reason.detail.clone(),
+        },
+    }
+}
+
+fn summarize_evidence_report(report: &EvidenceReport) -> EvidenceSummary {
+    EvidenceSummary {
+        kind: report.evidence.kind_label(),
+        backend: report.provenance.backend.clone(),
+        assertion_count: report.provenance.assertion_count,
+        semantics_version: report.provenance.semantics_version,
+        trust_steps: report
+            .trusted_steps
+            .iter()
+            .map(|step| {
+                let id = step.id;
+                TrustStepSummary {
+                    label: id.label(),
+                    meaning: id.meaning(),
+                    reference: id.reference(),
+                    pedantic_level: id.pedantic_level(),
+                    ledger_certified: id.is_certified(),
+                    certified_this_run: step.certified,
+                }
+            })
+            .collect(),
+    }
+}
+
+fn summarize_lean(certificate: &ProofCertificate) -> LeanSummary {
+    if let Some(module) = &certificate.lean_module {
+        LeanSummary {
+            status: LeanStatus::Available,
+            fragment: Some(module.fragment),
+            source_bytes: Some(module.source.len()),
+            error: None,
+        }
+    } else if let Some(error) = &certificate.lean_error {
+        LeanSummary {
+            status: LeanStatus::Unsupported,
+            fragment: None,
+            source_bytes: None,
+            error: Some(error.clone()),
+        }
+    } else {
+        LeanSummary {
+            status: LeanStatus::NotApplicable,
+            fragment: None,
+            source_bytes: None,
+            error: None,
+        }
+    }
+}
+
+fn unknown_kind_label(kind: UnknownKind) -> &'static str {
+    match kind {
+        UnknownKind::Timeout => "timeout",
+        UnknownKind::ResourceLimit => "resource-limit",
+        UnknownKind::MemoryLimit => "memory-limit",
+        UnknownKind::NodeBudget => "node-budget",
+        UnknownKind::EncodingBudget => "encoding-budget",
+        UnknownKind::Incomplete => "incomplete",
+        UnknownKind::Other => "other",
+        _ => "unknown",
     }
 }
 

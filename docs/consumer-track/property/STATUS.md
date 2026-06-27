@@ -2,6 +2,16 @@
 
 ## Current focus
 
+- **2026-06-27 — Certificate summary surface landed.**
+  `ProofCertificate::summary()` now gives frontends a compact owned view over a
+  proof attempt: proved/disproved/unknown status, stable evidence-kind label,
+  backend/provenance assertion count, per-run trust-step labels and certification
+  bits, and Lean reconstruction availability or diagnostics. The solver evidence
+  enum now exposes `Evidence::kind_label()` so SDK/UI text does not depend on
+  Rust debug formatting. Focused property tests cover proved summaries with Lean
+  modules and disproved summaries that intentionally have no evidence/Lean
+  artifact.
+
 - **2026-06-27 — Lean certificate surface first slice landed.**
   `axeyum-property` now re-exports `EvidenceReport`, `ProofFragment`, and
   `ReconstructError`, and exposes a `ProofCertificate` envelope for proof calls.
@@ -111,8 +121,6 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Broaden certificate presentation: summarize proof/evidence route, trust
-   steps, and Lean reconstruction diagnostics in frontend-friendly form.
-3. Extend counterexample-to-`#[test]` output for frontend-specific replay
+2. Extend counterexample-to-`#[test]` output for frontend-specific replay
    bodies and nested/domain aggregate shapes.
-4. Add a graduated SDK property corpus and scoreboard gate.
+3. Add a graduated SDK property corpus and scoreboard gate.

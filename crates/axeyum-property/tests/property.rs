@@ -1,7 +1,7 @@
 //! Integration tests for the typed property SDK.
 
 use axeyum_ir::{Sort, Value};
-use axeyum_property::{Bool, Bv, Property};
+use axeyum_property::{Bool, Bv, LeanStatus, ProofOutcomeSummary, Property};
 use axeyum_solver::{Model, ProofOutcome};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -69,6 +69,20 @@ fn proved_properties_expose_evidence_and_best_effort_lean_module() -> TestResult
             .source
             .contains("#print axioms axeyum_refutation")
     );
+    let summary = certificate.summary();
+    assert_eq!(summary.outcome, ProofOutcomeSummary::Proved);
+    let evidence = summary
+        .evidence
+        .as_ref()
+        .expect("proved certificate should summarize evidence");
+    assert!(evidence.kind.starts_with("unsat-"));
+    assert!(!evidence.backend.is_empty());
+    assert_eq!(evidence.assertion_count, 1);
+    assert_eq!(evidence.semantics_version, "1");
+    assert_eq!(summary.lean.status, LeanStatus::Available);
+    assert_eq!(summary.lean.fragment, Some(lean_module.fragment));
+    assert_eq!(summary.lean.source_bytes, Some(lean_module.source.len()));
+    assert!(summary.lean.error.is_none());
     Ok(())
 }
 
@@ -85,6 +99,14 @@ fn disproved_properties_do_not_fabricate_lean_modules() -> TestResult {
     assert!(certificate.evidence_report().is_none());
     assert!(certificate.lean_module.is_none());
     assert!(certificate.lean_error.is_none());
+
+    let summary = certificate.summary();
+    assert_eq!(summary.outcome, ProofOutcomeSummary::Disproved);
+    assert!(summary.evidence.is_none());
+    assert_eq!(summary.lean.status, LeanStatus::NotApplicable);
+    assert!(summary.lean.fragment.is_none());
+    assert!(summary.lean.source_bytes.is_none());
+    assert!(summary.lean.error.is_none());
     Ok(())
 }
 

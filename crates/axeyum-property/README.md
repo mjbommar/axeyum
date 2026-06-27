@@ -23,7 +23,8 @@ construction errors.
 Proof calls can also be packaged as `ProofCertificate`: the ordinary
 `ProofOutcome` still carries the checked Axeyum `EvidenceReport`, and proved
 queries get a best-effort standalone Lean module when the refutation fragment is
-covered by reconstruction.
+covered by reconstruction. `ProofCertificate::summary()` turns that raw evidence
+into stable frontend-facing route, trust-ledger, and Lean reconstruction fields.
 
 Disproving models can be extracted as deterministic `Counterexample` bindings
 and rendered as native Rust scalar `let` bindings or a `#[test]` skeleton with
