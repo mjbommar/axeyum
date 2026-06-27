@@ -95,6 +95,10 @@ Last reconciled with `main`: 2026-06-27.
   contradiction, or `p xor p` contradiction is folded before warm encoding.
   BV-valued readbacks also drop common bitwise wrappers such as all-ones masks,
   zero masks, zero ORs/XORs, self-XORs, and double `bvnot` before warm encoding.
+  They now drop common modular arithmetic wrappers too, including add/sub zero,
+  self-subtraction, zero-minus-readback, additive inverse pairs, multiply by
+  zero/one, and double `bvneg`; division/remainder wrappers remain outside this
+  cleanup until zero-divisor guards are explicit.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -113,7 +117,8 @@ Last reconciled with `main`: 2026-06-27.
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, conditional read/write-index
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
-  equality/connective/xor/implication cleanup, BV bitwise readback cleanup,
+  equality/connective/xor/implication cleanup, BV bitwise and arithmetic
+  readback cleanup,
   branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
@@ -139,6 +144,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm Bool connective cleanup" /
   "Warm Bool xor/implication cleanup" /
   "Warm BV bitwise readback cleanup" /
+  "Warm BV arithmetic readback cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /

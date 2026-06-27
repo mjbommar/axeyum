@@ -3828,6 +3828,138 @@ fn warm_bv_readback_bitwise_identities_drop_constant_wrappers() {
 }
 
 #[test]
+fn warm_bv_readback_arithmetic_identities_drop_constant_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bv_arith_value", Sort::BitVec(8))
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 21).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let one = arena.bv_const(8, 1).unwrap();
+    let target = arena.bv_const(8, 0x3c).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let sum_with_zero = arena.bv_add(loaded, zero).unwrap();
+    let add_identity_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, sum_with_zero);
+    assert_eq!(
+        add_identity_result, value,
+        "readback plus zero should simplify to the stored BV"
+    );
+
+    let zero_plus_loaded = arena.bv_add(zero, loaded).unwrap();
+    let commuted_add_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, zero_plus_loaded);
+    assert_eq!(
+        commuted_add_result, value,
+        "zero plus readback should simplify to the stored BV"
+    );
+
+    let difference_zero = arena.bv_sub(loaded, zero).unwrap();
+    let sub_identity_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, difference_zero);
+    assert_eq!(
+        sub_identity_result, value,
+        "readback minus zero should simplify to the stored BV"
+    );
+
+    let difference_self = arena.bv_sub(loaded, loaded).unwrap();
+    let self_sub_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, difference_self);
+    assert_eq!(
+        self_sub_result, zero,
+        "readback minus itself should simplify to zero"
+    );
+
+    let zero_minus_loaded = arena.bv_sub(zero, loaded).unwrap();
+    let neg_value = arena.bv_neg(value).unwrap();
+    let zero_sub_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, zero_minus_loaded);
+    assert_eq!(
+        zero_sub_result, neg_value,
+        "zero minus readback should simplify to negation of the stored BV"
+    );
+
+    let neg_loaded = arena.bv_neg(loaded).unwrap();
+    let double_neg = arena.bv_neg(neg_loaded).unwrap();
+    let double_neg_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, double_neg);
+    assert_eq!(
+        double_neg_result, value,
+        "double arithmetic negation around readback should simplify to the stored BV"
+    );
+
+    let inverse_sum = arena.bv_add(loaded, neg_loaded).unwrap();
+    let inverse_sum_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, inverse_sum);
+    assert_eq!(
+        inverse_sum_result, zero,
+        "readback plus its negation should simplify to zero"
+    );
+
+    let product_one = arena.bv_mul(loaded, one).unwrap();
+    let mul_identity_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, product_one);
+    assert_eq!(
+        mul_identity_result, value,
+        "readback times one should simplify to the stored BV"
+    );
+
+    let product_zero = arena.bv_mul(loaded, zero).unwrap();
+    let mul_zero_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, product_zero);
+    assert_eq!(
+        mul_zero_result, zero,
+        "readback times zero should simplify to zero"
+    );
+
+    let sum_with_zero_eq_target = arena.eq(sum_with_zero, target).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, sum_with_zero_eq_target)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "BV arithmetic readback cleanup should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "BV arithmetic readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(value_sym),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 0x3c
+                })
+            );
+            assert_eq!(
+                eval(&arena, sum_with_zero_eq_target, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original BV arithmetic memory assertion"
+            );
+        }
+        other => panic!("expected BV arithmetic readback assertion sat, got {other:?}"),
+    }
+
+    let self_sub_eq_one = arena.eq(difference_self, one).unwrap();
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, self_sub_eq_one)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a BV readback cannot differ from itself by one"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena
