@@ -23,6 +23,9 @@
 //! * [`explore_cfg`](SymbolicExecutor::explore_cfg) is the reusable DFS harness:
 //!   a frontend supplies CFG states and branch terms; the executor handles
 //!   scopes, feasibility pruning, and model-checked target witnesses.
+//! * [`explore_cfg_checked`](SymbolicExecutor::explore_cfg_checked) adds the
+//!   unicorn-style concrete replay hook: a frontend extracts concrete inputs
+//!   from each model and independently checks that they reproduce the target.
 //!
 //! Soundness is inherited verbatim from the incremental engine: every `model` is
 //! replay-checked against the path constraints by the ground evaluator, and
@@ -310,11 +313,68 @@ pub struct CfgReached<State> {
     pub path_condition: Vec<TermId>,
 }
 
+/// One target whose model also passed an external concrete-emulation check.
+#[derive(Debug, Clone)]
+pub struct CfgCheckedReached<State, Witness> {
+    /// Frontend state at the target.
+    pub state: State,
+    /// Replay-checked solver model witnessing the symbolic path.
+    pub model: Model,
+    /// Axeyum path condition active when the target was reached.
+    pub path_condition: Vec<TermId>,
+    /// Concrete witness extracted from the model and accepted by the caller's
+    /// concrete checker.
+    pub witness: Witness,
+}
+
+/// A symbolic target whose extracted concrete witness did not reproduce the
+/// target under the caller's independent concrete checker.
+#[derive(Debug, Clone)]
+pub struct CfgConcreteMismatch<State, Witness> {
+    /// Frontend state at the target.
+    pub state: State,
+    /// Replay-checked solver model for the symbolic path.
+    pub model: Model,
+    /// Axeyum path condition active when the target was reached.
+    pub path_condition: Vec<TermId>,
+    /// Concrete witness extracted from the model but rejected by the concrete
+    /// checker.
+    pub witness: Witness,
+}
+
 /// Exploration result from [`SymbolicExecutor::explore_cfg`].
 #[derive(Debug, Clone)]
 pub struct CfgExploreOutcome<State> {
     /// Model-witnessed target states found within the configured limits.
     pub reached: Vec<CfgReached<State>>,
+    /// Number of CFG states whose transfer function was evaluated.
+    pub steps: usize,
+    /// Number of branch/assume directions pruned because they were proved
+    /// infeasible.
+    pub pruned_infeasible: usize,
+    /// Number of branch directions whose feasibility was unknown and therefore
+    /// explored as maybe-feasible.
+    pub unknown_branches: usize,
+    /// Number of target states that could not be reported because final
+    /// feasibility/model extraction was `unknown`.
+    pub undecided_targets: usize,
+    /// Whether exploration stopped because `max_steps` or `max_targets` was
+    /// reached.
+    pub truncated: bool,
+}
+
+/// Exploration plus concrete-emulation checking result from
+/// [`SymbolicExecutor::explore_cfg_checked`].
+#[derive(Debug, Clone)]
+pub struct CfgCheckedOutcome<State, Witness> {
+    /// Targets accepted by both symbolic solving and concrete replay.
+    pub verified: Vec<CfgCheckedReached<State, Witness>>,
+    /// Symbolic targets for which the caller could not extract a concrete
+    /// witness from the model.
+    pub missing_witnesses: Vec<CfgReached<State>>,
+    /// Symbolic targets whose concrete witness failed the caller's concrete
+    /// replay check.
+    pub mismatches: Vec<CfgConcreteMismatch<State, Witness>>,
     /// Number of CFG states whose transfer function was evaluated.
     pub steps: usize,
     /// Number of branch/assume directions pruned because they were proved
@@ -669,6 +729,91 @@ impl SymbolicExecutor {
         };
         search.visit(initial)?;
         Ok(search.outcome)
+    }
+
+    /// Explores a frontend CFG and checks each symbolic target against an
+    /// independent concrete witness.
+    ///
+    /// This wraps [`Self::explore_cfg`]. For each model-witnessed target,
+    /// `extract_witness` lifts the solver model into a concrete input/test case,
+    /// and `concrete_check` independently confirms that the input reproduces the
+    /// target in the caller's concrete semantics. A target is reported in
+    /// [`CfgCheckedOutcome::verified`] only when both layers agree. Missing
+    /// witnesses and concrete mismatches are kept as explicit diagnostics because
+    /// they usually indicate a frontend/lifter/model-lifting bug, not a solver
+    /// proof of reachability.
+    ///
+    /// The executor's incoming path condition is preserved when this method
+    /// returns.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from CFG exploration, witness extraction, or the
+    /// concrete checker.
+    pub fn explore_cfg_checked<State, Witness, Step, Extract, Check>(
+        &mut self,
+        arena: &mut TermArena,
+        initial: State,
+        config: CfgExploreConfig,
+        step: Step,
+        mut extract_witness: Extract,
+        mut concrete_check: Check,
+    ) -> Result<CfgCheckedOutcome<State, Witness>, SolverError>
+    where
+        Step: FnMut(&mut TermArena, State) -> Result<CfgStep<State>, SolverError>,
+        Extract: FnMut(&Model, &State) -> Result<Option<Witness>, SolverError>,
+        Check: FnMut(&State, &Witness) -> Result<bool, SolverError>,
+    {
+        let exploration = self.explore_cfg(arena, initial, config, step)?;
+        let CfgExploreOutcome {
+            reached,
+            steps,
+            pruned_infeasible,
+            unknown_branches,
+            undecided_targets,
+            truncated,
+        } = exploration;
+        let mut outcome = CfgCheckedOutcome {
+            verified: Vec::new(),
+            missing_witnesses: Vec::new(),
+            mismatches: Vec::new(),
+            steps,
+            pruned_infeasible,
+            unknown_branches,
+            undecided_targets,
+            truncated,
+        };
+        for reached in reached {
+            let CfgReached {
+                state,
+                model,
+                path_condition,
+            } = reached;
+            let Some(witness) = extract_witness(&model, &state)? else {
+                outcome.missing_witnesses.push(CfgReached {
+                    state,
+                    model,
+                    path_condition,
+                });
+                continue;
+            };
+            if concrete_check(&state, &witness)? {
+                outcome.verified.push(CfgCheckedReached {
+                    state,
+                    model,
+                    path_condition,
+                    witness,
+                });
+            } else {
+                outcome.mismatches.push(CfgConcreteMismatch {
+                    state,
+                    model,
+                    path_condition,
+                    witness,
+                });
+            }
+        }
+        Ok(outcome)
     }
 
     /// Maximizes the **unsigned** bit-vector `objective` subject to the current

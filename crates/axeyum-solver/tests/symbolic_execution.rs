@@ -93,9 +93,10 @@ fn symbolically_execute(arena: &mut TermArena, program: &Program) -> Vec<Winning
 }
 
 /// The public CFG-shaped explorer over [`SymbolicExecutor`]: the frontend
-/// provides the transfer relation, while axeyum owns branch feasibility,
-/// push/pop, pruning, and model-witnessed target reporting.
-fn symbolically_execute_with_cfg_explorer(
+/// provides the transfer relation and concrete replay hooks, while axeyum owns
+/// branch feasibility, push/pop, pruning, model-witnessed target reporting, and
+/// checked witness bucketing.
+fn symbolically_execute_with_checked_cfg_explorer(
     arena: &mut TermArena,
     program: &Program,
 ) -> Vec<WinningInputs> {
@@ -112,7 +113,7 @@ fn symbolically_execute_with_cfg_explorer(
 
     let mut executor = SymbolicExecutor::new();
     let outcome = executor
-        .explore_cfg(
+        .explore_cfg_checked(
             arena,
             initial,
             CfgExploreConfig {
@@ -185,6 +186,20 @@ fn symbolically_execute_with_cfg_explorer(
                     Insn::Lose => Ok(CfgStep::Stop),
                 }
             },
+            |model, _state| {
+                let mut inputs = Vec::new();
+                for &symbol in &program.inputs {
+                    let Some(Value::Bv { value, .. }) = model.get(symbol) else {
+                        return Ok(None);
+                    };
+                    inputs.push(value);
+                }
+                Ok(Some(inputs))
+            },
+            |state, inputs| {
+                Ok(matches!(program.code.get(state.pc), Some(Insn::Win))
+                    && concretely_reaches_win(program, inputs))
+            },
         )
         .unwrap();
     assert!(
@@ -195,9 +210,17 @@ fn symbolically_execute_with_cfg_explorer(
         outcome.undecided_targets, 0,
         "reported target coverage must be model-decided"
     );
+    assert!(
+        outcome.missing_witnesses.is_empty(),
+        "every symbolic target should lift to concrete VM inputs"
+    );
+    assert!(
+        outcome.mismatches.is_empty(),
+        "every lifted witness should pass concrete replay"
+    );
 
     outcome
-        .reached
+        .verified
         .iter()
         .map(|hit| {
             assert!(
@@ -208,14 +231,7 @@ fn symbolically_execute_with_cfg_explorer(
                 !hit.path_condition.is_empty(),
                 "a winning path should carry branch constraints"
             );
-            program
-                .inputs
-                .iter()
-                .map(|&symbol| match hit.model.get(symbol) {
-                    Some(Value::Bv { value, .. }) => value,
-                    _ => 0,
-                })
-                .collect()
+            hit.witness.clone()
         })
         .collect()
 }
@@ -496,7 +512,7 @@ fn cfg_explorer_finds_winning_paths_and_concrete_witnesses() {
         inputs,
     };
 
-    let wins = symbolically_execute_with_cfg_explorer(&mut arena, &program);
+    let wins = symbolically_execute_with_checked_cfg_explorer(&mut arena, &program);
     assert!(!wins.is_empty(), "CFG explorer should find a winning path");
     for inputs in &wins {
         let (x, y) = (inputs[0], inputs[1]);

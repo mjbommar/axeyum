@@ -726,9 +726,12 @@ immediate angr/KLEE-style path-query need and removes the need for every fronten
 to hand-assemble read-over-write terms. `SymbolicExecutor::explore_cfg` now adds
 the reusable DFS layer over frontend-supplied states: branch feasibility, scope
 management, infeasible pruning, unknown-safe traversal, and replay-checked target
-models. This is not the final warm lazy-array/UF engine: deferred theory checks
-still rebuild through `check_auto`; retained learned theory clauses plus a real
-small-target lifter and concrete-emulation library remain Track 4 work.
+models. `explore_cfg_checked` adds the concrete replay hook: frontend callbacks
+lift a concrete witness from each model and independently accept/reject it, with
+missing witnesses and mismatches bucketed explicitly. This is not the final warm
+lazy-array/UF engine: deferred theory checks still rebuild through `check_auto`;
+retained learned theory clauses plus a real small-target lifter and emulator
+library remain Track 4 work.
 
 ## 4. Reflection on PLAN.md
 
