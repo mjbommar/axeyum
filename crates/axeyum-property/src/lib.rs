@@ -66,6 +66,35 @@ impl From<SolverError> for PropertyError {
     }
 }
 
+/// Declares a typed symbolic value and lifts it back from a replay-checked model.
+///
+/// This is the trait that a future derive macro will implement for structs. The
+/// hand-written scalar and tuple implementations here are enough for SDK users
+/// to build deterministic input bundles today without depending on a macro.
+pub trait Symbolic {
+    /// The expression handle or bundle of handles used while building terms.
+    type Expr;
+    /// The concrete Rust value recovered from a model.
+    type Concrete;
+
+    /// Declares this symbolic value under `name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any underlying symbol declaration fails.
+    fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError>;
+
+    /// Lifts a concrete Rust value from `model` through `expr`.
+    ///
+    /// Returns `Ok(None)` if the model omits any required symbol.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if a model value has the wrong sort for its
+    /// typed expression handle.
+    fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError>;
+}
+
 /// One scalar input binding from a replay-checked counterexample model.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputBinding {
@@ -318,6 +347,15 @@ impl Property {
         })
     }
 
+    /// Declares a typed symbolic value through [`Symbolic`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if any underlying declaration fails.
+    pub fn symbolic<T: Symbolic>(&mut self, name: &str) -> Result<T::Expr, PropertyError> {
+        T::symbolic(self, name)
+    }
+
     /// Creates a Boolean constant.
     pub fn bool_const(&mut self, value: bool) -> Bool {
         Bool {
@@ -442,6 +480,20 @@ impl Property {
             ProofOutcome::Disproved(model) => Ok(Some(self.counterexample(model)?)),
             ProofOutcome::Proved(_) | ProofOutcome::Unknown(_) => Ok(None),
         }
+    }
+
+    /// Lifts a typed symbolic value from a model through [`Symbolic`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PropertyError`] if a model value has the wrong sort for its
+    /// typed expression handle.
+    pub fn concrete<T: Symbolic>(
+        &self,
+        expr: &T::Expr,
+        model: &Model,
+    ) -> Result<Option<T::Concrete>, PropertyError> {
+        T::concrete(expr, model)
     }
 
     fn track_symbol(&mut self, symbol: SymbolId) {
@@ -651,6 +703,148 @@ fn is_rust_keyword(ident: &str) -> bool {
             | "yield"
             | "try"
     )
+}
+
+impl Symbolic for bool {
+    type Expr = Bool;
+    type Concrete = bool;
+
+    fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+        property.bool(name)
+    }
+
+    fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError> {
+        expr.value(model)
+    }
+}
+
+macro_rules! impl_symbolic_unsigned {
+    ($ty:ty, $width:literal) => {
+        impl Symbolic for $ty {
+            type Expr = Bv<$width>;
+            type Concrete = $ty;
+
+            fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+                property.bv::<$width>(name)
+            }
+
+            fn concrete(
+                expr: &Self::Expr,
+                model: &Model,
+            ) -> Result<Option<Self::Concrete>, PropertyError> {
+                let Some(value) = expr.value_u128(model)? else {
+                    return Ok(None);
+                };
+                Ok(Some(<$ty>::try_from(value).expect(
+                    "model value is masked to the bit-width of the unsigned Rust type",
+                )))
+            }
+        }
+    };
+}
+
+impl_symbolic_unsigned!(u8, 8);
+impl_symbolic_unsigned!(u16, 16);
+impl_symbolic_unsigned!(u32, 32);
+impl_symbolic_unsigned!(u64, 64);
+
+impl Symbolic for u128 {
+    type Expr = Bv<128>;
+    type Concrete = u128;
+
+    fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+        property.bv::<128>(name)
+    }
+
+    fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError> {
+        expr.value_u128(model)
+    }
+}
+
+impl Symbolic for i128 {
+    type Expr = Int;
+    type Concrete = i128;
+
+    fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+        property.int(name)
+    }
+
+    fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError> {
+        expr.value(model)
+    }
+}
+
+impl Symbolic for () {
+    type Expr = ();
+    type Concrete = ();
+
+    fn symbolic(_property: &mut Property, _name: &str) -> Result<Self::Expr, PropertyError> {
+        Ok(())
+    }
+
+    fn concrete(
+        _expr: &Self::Expr,
+        _model: &Model,
+    ) -> Result<Option<Self::Concrete>, PropertyError> {
+        Ok(Some(()))
+    }
+}
+
+impl<A, B> Symbolic for (A, B)
+where
+    A: Symbolic,
+    B: Symbolic,
+{
+    type Expr = (A::Expr, B::Expr);
+    type Concrete = (A::Concrete, B::Concrete);
+
+    fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+        Ok((
+            A::symbolic(property, &format!("{name}.0"))?,
+            B::symbolic(property, &format!("{name}.1"))?,
+        ))
+    }
+
+    fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError> {
+        let Some(a) = A::concrete(&expr.0, model)? else {
+            return Ok(None);
+        };
+        let Some(b) = B::concrete(&expr.1, model)? else {
+            return Ok(None);
+        };
+        Ok(Some((a, b)))
+    }
+}
+
+impl<A, B, C> Symbolic for (A, B, C)
+where
+    A: Symbolic,
+    B: Symbolic,
+    C: Symbolic,
+{
+    type Expr = (A::Expr, B::Expr, C::Expr);
+    type Concrete = (A::Concrete, B::Concrete, C::Concrete);
+
+    fn symbolic(property: &mut Property, name: &str) -> Result<Self::Expr, PropertyError> {
+        Ok((
+            A::symbolic(property, &format!("{name}.0"))?,
+            B::symbolic(property, &format!("{name}.1"))?,
+            C::symbolic(property, &format!("{name}.2"))?,
+        ))
+    }
+
+    fn concrete(expr: &Self::Expr, model: &Model) -> Result<Option<Self::Concrete>, PropertyError> {
+        let Some(a) = A::concrete(&expr.0, model)? else {
+            return Ok(None);
+        };
+        let Some(b) = B::concrete(&expr.1, model)? else {
+            return Ok(None);
+        };
+        let Some(c) = C::concrete(&expr.2, model)? else {
+            return Ok(None);
+        };
+        Ok(Some((a, b, c)))
+    }
 }
 
 /// Typed bit-vector expression handle.

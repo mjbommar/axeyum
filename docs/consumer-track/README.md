@@ -34,7 +34,8 @@
 - `{horn::solve_horn, prove_safety_imc, prove_safety_pdr*}` — reachability.
 - `evidence::produce_evidence`, `prove_unsat_to_lean_module` — the certificate.
 - `axeyum-property` — typed Bool / BV / Int prove-or-counterexample SDK over the
-  evidence APIs, with minimized scalar counterexamples and Rust test skeletons.
+  evidence APIs, with `Symbolic` scalar/tuple inputs, minimized scalar
+  counterexamples, and Rust test skeletons.
 - `axeyum-wasm` — `solve_smtlib_json` (client-side, the delivery substrate).
 
 A frontend's job: lower a program/property → axeyum IR terms → call the above →

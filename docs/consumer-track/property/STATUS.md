@@ -2,6 +2,15 @@
 
 ## Current focus
 
+- **2026-06-27 — Scalar and tuple `Symbolic` trait landed.**
+  `Symbolic` is now the macro-free typed input path for the SDK:
+  `Property::symbolic::<T>("name")` declares values, and
+  `Property::concrete::<T>(&expr, &model)` lifts them from replay-checked
+  models. Built-in implementations cover `bool`, unsigned Rust integer widths
+  (`u8` through `u128` as BV8 through BV128), `i128` as Int, unit, and 2-/3-tuples
+  with field names like `input.0`, `input.1`, etc. Struct derive and signed
+  fixed-width two's-complement policy are still pending.
+
 - **2026-06-27 — Native scalar counterexample-to-test rendering landed.**
   `Property::counterexample` and `counterexample_from_outcome` now extract a
   deterministic `Counterexample` over SDK-declared symbols from a model or
@@ -32,7 +41,8 @@
 
 1. Add ergonomic expression construction without compromising fallible builder
    errors.
-2. Add `Symbolic` and derive support for structs.
+2. Add `Symbolic` derive support for structs and decide signed fixed-width Rust
+   integer policy.
 3. Extend counterexample-to-`#[test]` output for structured inputs and
    frontend-specific replay bodies.
 4. Add a graduated SDK property corpus and scoreboard gate.

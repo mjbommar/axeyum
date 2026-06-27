@@ -116,3 +116,51 @@ fn counterexample_renderer_sanitizes_names_and_builds_test_skeleton() -> TestRes
     );
     Ok(())
 }
+
+#[test]
+fn symbolic_trait_declares_and_lifts_scalar_inputs() -> TestResult {
+    let mut property = Property::new();
+    let x = property.symbolic::<u16>("x")?;
+    let limit = property.bv_const::<16>(10)?;
+    let goal = x.ule(&mut property, limit)?;
+
+    let outcome = property.prove_minimized(goal)?;
+    let ProofOutcome::Disproved(model) = outcome else {
+        panic!("expected a minimized counterexample, got {outcome:?}");
+    };
+    assert_eq!(property.concrete::<u16>(&x, &model)?, Some(11));
+    Ok(())
+}
+
+#[test]
+fn symbolic_trait_composes_tuple_inputs_in_deterministic_order() -> TestResult {
+    let mut property = Property::new();
+    let input = property.symbolic::<(bool, u8, i128)>("input")?;
+
+    let mut model = Model::new();
+    model.set(input.0.symbol().unwrap(), Value::Bool(false));
+    model.set(
+        input.1.symbol().unwrap(),
+        Value::Bv {
+            width: 8,
+            value: 0x2a,
+        },
+    );
+    model.set(input.2.symbol().unwrap(), Value::Int(-7));
+
+    assert_eq!(
+        property.concrete::<(bool, u8, i128)>(&input, &model)?,
+        Some((false, 42, -7))
+    );
+
+    let counterexample = property.counterexample(&model)?;
+    assert_eq!(
+        counterexample.render_rust_let_bindings()?,
+        concat!(
+            "let input_0: bool = false;\n",
+            "let input_1: u8 = 0x2a_u8; // BV8\n",
+            "let input_2: i128 = -7_i128;\n",
+        )
+    );
+    Ok(())
+}

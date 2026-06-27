@@ -58,6 +58,11 @@ rendering is now in the crate. Disproving models become deterministic
 BV<=128 values as Rust let-bindings or a `#[test]` skeleton. Structured/domain
 replay remains caller/frontend-owned.
 
+**Status update (2026-06-27, Symbolic slice):** the macro-free `Symbolic` trait
+now covers scalar Bool/unsigned-BV/Int-backed inputs and 2-/3-tuples. This gives
+frontends deterministic declaration and concrete model lifting before the
+`#[derive(Symbolic)]` crate exists.
+
 ### C. Rust verifier — `axeyum-verify` · Leverage 4 / Tractability 3 (proc-macro) / Moat 5 / Demand 5
 - **Lowest-effort path is a `#[axeyum::verify]` `syn` proc-macro over a restricted
   surface (NOT MIR).** `crates/axeyum-solver/tests/symbolic_execution.rs` is already
