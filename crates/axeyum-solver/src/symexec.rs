@@ -117,6 +117,28 @@ pub struct SymbolicMemory {
     element_sort: Sort,
 }
 
+/// One frontend-owned symbolic memory write.
+///
+/// This is a construction helper for consumers that track memory writes as a
+/// log before deciding whether to materialize an SMT array `store` chain or a
+/// read-specific read-over-write `ite` chain. Later writes shadow earlier writes
+/// at the same syntactic/concrete index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SymbolicMemoryWrite {
+    /// Address/index written.
+    pub index: TermId,
+    /// Value written at `index`.
+    pub value: TermId,
+}
+
+impl SymbolicMemoryWrite {
+    /// Creates a symbolic memory write entry.
+    #[must_use]
+    pub fn new(index: TermId, value: TermId) -> Self {
+        Self { index, value }
+    }
+}
+
 impl SymbolicMemory {
     /// Declares a bit-vector indexed/value memory and wraps its array term.
     ///
@@ -233,6 +255,123 @@ impl SymbolicMemory {
         Ok(next)
     }
 
+    /// Returns a normalized last-writer-wins write log for this memory sort.
+    ///
+    /// The normalization is intentionally conservative: it drops writes shadowed
+    /// by a later write to the same `TermId` index, which covers concrete
+    /// addresses because constants are interned by [`TermArena`], and it
+    /// preserves all other writes in program order. This gives frontends a
+    /// deterministic compact log without proving arbitrary index equivalences.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if any write index or value has the wrong sort.
+    pub fn normalized_writes(
+        &self,
+        arena: &TermArena,
+        writes: &[SymbolicMemoryWrite],
+    ) -> Result<Vec<SymbolicMemoryWrite>, SolverError> {
+        let mut reversed = Vec::with_capacity(writes.len());
+        let mut seen_indices = Vec::new();
+        for &write in writes.iter().rev() {
+            self.check_write_sorts(arena, write)?;
+            if seen_indices.contains(&write.index) {
+                continue;
+            }
+            seen_indices.push(write.index);
+            reversed.push(write);
+        }
+        reversed.reverse();
+        Ok(reversed)
+    }
+
+    /// Builds `select(base_memory_after_writes, read_index)` as a compact
+    /// read-over-write `ite` chain.
+    ///
+    /// Writes are first normalized with [`Self::normalized_writes`], so shadowed
+    /// same-index writes do not emit dead equality guards. The emitted term is:
+    ///
+    /// `ite(read_index = i_last, v_last, ... select(base, read_index))`
+    ///
+    /// with one equality guard per visible write. This is a frontend-side
+    /// scaling helper for deep memory logs while the true warm lazy-array route
+    /// remains in progress; it does not change the solver's theory support.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `read_index` or any write has the wrong sort, or
+    /// if term construction fails.
+    pub fn load_with_write_log(
+        &self,
+        arena: &mut TermArena,
+        read_index: TermId,
+        writes: &[SymbolicMemoryWrite],
+    ) -> Result<TermId, SolverError> {
+        self.check_index_sort(arena, read_index)?;
+        let visible = self.normalized_writes(arena, writes)?;
+        let mut loaded = self.load(arena, read_index)?;
+        for write in &visible {
+            let guard = arena.eq(read_index, write.index)?;
+            loaded = arena.ite(guard, write.value, loaded)?;
+        }
+        Ok(loaded)
+    }
+
+    /// Builds `select(base_memory_after_writes, read_index) = expected` using the
+    /// compact write-log read helper.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] if `read_index`, `expected`, or any write has the
+    /// wrong sort, or if term construction fails.
+    pub fn load_eq_with_write_log(
+        &self,
+        arena: &mut TermArena,
+        read_index: TermId,
+        writes: &[SymbolicMemoryWrite],
+        expected: TermId,
+    ) -> Result<TermId, SolverError> {
+        self.check_element_sort(arena, expected)?;
+        let loaded = self.load_with_write_log(arena, read_index, writes)?;
+        arena.eq(loaded, expected).map_err(Into::into)
+    }
+
+    /// Commits a compact write-log load equality to `executor` and checks it
+    /// through the memory-aware route.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from term construction or the executor check.
+    pub fn assume_load_eq_with_write_log(
+        &self,
+        executor: &mut SymbolicExecutor,
+        arena: &mut TermArena,
+        read_index: TermId,
+        writes: &[SymbolicMemoryWrite],
+        expected: TermId,
+    ) -> Result<PathStatus, SolverError> {
+        let cond = self.load_eq_with_write_log(arena, read_index, writes, expected)?;
+        executor.assume_with_memory(arena, cond)
+    }
+
+    /// Branches on a compact write-log load equality without committing either
+    /// direction to `executor`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from term construction or the executor check.
+    pub fn branch_load_eq_with_write_log(
+        &self,
+        executor: &mut SymbolicExecutor,
+        arena: &mut TermArena,
+        read_index: TermId,
+        writes: &[SymbolicMemoryWrite],
+        expected: TermId,
+    ) -> Result<Branch, SolverError> {
+        let cond = self.load_eq_with_write_log(arena, read_index, writes, expected)?;
+        executor.branch_with_memory(arena, cond)
+    }
+
     /// Builds the Boolean term `select(current_memory, index) = expected`.
     ///
     /// # Errors
@@ -281,6 +420,31 @@ impl SymbolicMemory {
     ) -> Result<Branch, SolverError> {
         let cond = self.load_eq(arena, index, expected)?;
         executor.branch_with_memory(arena, cond)
+    }
+
+    fn check_write_sorts(
+        &self,
+        arena: &TermArena,
+        write: SymbolicMemoryWrite,
+    ) -> Result<(), SolverError> {
+        self.check_index_sort(arena, write.index)?;
+        self.check_element_sort(arena, write.value)
+    }
+
+    fn check_index_sort(&self, arena: &TermArena, index: TermId) -> Result<(), SolverError> {
+        let found = arena.sort_of(index);
+        if found != self.index_sort {
+            return Err(IrError::SortsDiffer(found, self.index_sort).into());
+        }
+        Ok(())
+    }
+
+    fn check_element_sort(&self, arena: &TermArena, value: TermId) -> Result<(), SolverError> {
+        let found = arena.sort_of(value);
+        if found != self.element_sort {
+            return Err(IrError::SortsDiffer(found, self.element_sort).into());
+        }
+        Ok(())
     }
 }
 

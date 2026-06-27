@@ -98,12 +98,12 @@ fn solver_facade_minimizes_active_assertions() {
     let x = arena.var(x_s);
     let five = arena.bv_const(4, 5).unwrap();
     let eight = arena.bv_const(4, 8).unwrap();
-    let x_ge_5 = arena.bv_uge(x, five).unwrap();
-    let x_le_8 = arena.bv_ule(x, eight).unwrap();
+    let lower_bound = arena.bv_uge(x, five).unwrap();
+    let upper_bound = arena.bv_ule(x, eight).unwrap();
 
     let mut solver = Solver::new(SatBvBackend::new());
-    solver.assert(x_ge_5);
-    solver.assert(x_le_8);
+    solver.assert(lower_bound);
+    solver.assert(upper_bound);
 
     let model = expect_minimized(solver.minimize_model(&mut arena, &[x_s]).unwrap());
     assert_eq!(model.get(x_s), Some(Value::Bv { width: 4, value: 5 }));

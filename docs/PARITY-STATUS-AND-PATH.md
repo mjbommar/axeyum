@@ -721,15 +721,18 @@ the active slice through the full pure-Rust solver, and
 `check_assuming_with_memory` handles array/UF assumptions without persisting them.
 `SymbolicExecutor` exposes memory-aware assume/branch/status/model/enumerate
 methods, and `SymbolicMemory` now gives frontends a typed array-backed
-load/store state plus load-equality branch/assume helpers. This covers the
-immediate angr/KLEE-style path-query need and removes the need for every frontend
-to hand-assemble read-over-write terms. `SymbolicExecutor::branch` and
-`explore_cfg` now auto-promote array/UF branch, assume, status, and model queries
-to that memory/theory-aware route when needed, so default CFG exploration no
-longer degrades such branches to coarse warm-BV `Unknown` solely because the
-caller omitted the explicit memory flag. `explore_cfg` is the reusable DFS layer
-over frontend-supplied states: branch feasibility, scope management, infeasible
-pruning, unknown-safe traversal, and replay-checked target models.
+load/store state plus load-equality branch/assume helpers. `SymbolicMemoryWrite`
+and the write-log helpers now also let frontends drop same-index shadowed writes
+and emit one deterministic read-over-write `ite` guard per visible write before
+querying the memory-aware route. This covers the immediate angr/KLEE-style
+path-query need and reduces hand-assembled read-over-write boilerplate for
+simple store logs. `SymbolicExecutor::branch` and `explore_cfg` now auto-promote
+array/UF branch, assume, status, and model queries to that memory/theory-aware
+route when needed, so default CFG exploration no longer degrades such branches
+to coarse warm-BV `Unknown` solely because the caller omitted the explicit
+memory flag. `explore_cfg` is the reusable DFS layer over frontend-supplied
+states: branch feasibility, scope management, infeasible pruning, unknown-safe
+traversal, and replay-checked target models.
 `explore_cfg_checked` adds the concrete replay hook: frontend callbacks lift a
 concrete witness from each model and independently accept/reject it, with missing
 witnesses and mismatches bucketed explicitly. This is not the final warm

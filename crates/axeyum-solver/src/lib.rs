@@ -373,6 +373,7 @@ pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_
 pub use symexec::{
     Branch, CfgCheckedOutcome, CfgCheckedReached, CfgConcreteMismatch, CfgExploreConfig,
     CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,
+    SymbolicMemoryWrite,
 };
 pub use term_identity::{
     TermIdentityKind, TermIdentityRefutationCertificate, term_identity_refutation,

@@ -64,19 +64,23 @@ Last reconciled with `main`: 2026-06-27.
 
 ### U7 - medium - perf/encoding - deep store/read-over-write scaling remains open
 
-- **Status:** partial, subsumed by U6 for the main fix.
+- **Status:** partial, subsumed by U6 for the main fix; frontend write-log
+  mitigation landed on 2026-06-27.
 - **What:** consumers previously had to encode symbolic memory reads as
   read-over-write `ite` chains, with one 256-bit equality guard per prior store.
-  The memory-aware solver route now lets frontends avoid some manual lowering,
-  but deep store-chain scaling is still the array-solver performance problem
-  unless the warm lazy array path reuses structure and instantiates ROW facts
-  on demand.
+  The memory-aware solver route lets frontends keep array assertions in path
+  conditions, and `SymbolicMemory` now has a write-log helper that drops
+  same-index shadowed writes and emits one deterministic read-over-write `ite`
+  guard per visible write. Deep store-chain scaling is still the array-solver
+  performance problem unless the warm lazy array path reuses structure and
+  instantiates ROW facts on demand.
 - **Why it matters:** EVM paths with many storage writes can still make per-read
   formulas grow linearly or worse if the frontend has to materialize store-chain
   guards.
-- **Ask:** prefer the native lazy-array route from U6. If that is delayed, add a
-  frontend-facing helper that canonicalizes write lists: drop shadowed concrete
-  keys, share equality guards, and emit a minimal deterministic `ite` chain.
+- **Ask:** prefer the native lazy-array route from U6. The interim
+  frontend-facing helper exists for syntactic/concrete same-index shadowing;
+  next upstream work is still retained lazy-array/UF theory clauses, not more
+  frontend lowering.
 - **Source:** `docs/plan/track-2-theories/P2.2-arrays-lazy.md`,
   `docs/plan/track-4-usecases-frontend/P4.1-warm-lazy-memory.md`, and the EVM
   memory notes when that app track is active.

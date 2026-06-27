@@ -9,12 +9,14 @@
 //! solver. It demonstrates, with checked evidence, that the incremental engine
 //! supports realistic path exploration.
 
-use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
+#![allow(clippy::too_many_lines)] // scenario-style integration tests stay readable as full flows
+
+use axeyum_ir::{ArraySortKey, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value};
 use axeyum_solver::{
     AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
-    SymbolicExecutor, SymbolicMemory, TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind,
-    TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram, TinyBvReachabilityStatus, TinyBvSafetyStatus,
-    TinyBvWitness,
+    SymbolicExecutor, SymbolicMemory, SymbolicMemoryWrite, TinyBvBasicBlock, TinyBvCfgEdge,
+    TinyBvCfgEdgeKind, TinyBvConcreteOutcome, TinyBvInsn, TinyBvProgram, TinyBvReachabilityStatus,
+    TinyBvSafetyStatus, TinyBvWitness,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -2285,4 +2287,115 @@ fn symbolic_memory_helper_routes_load_branches_through_memory_executor() {
         executor.model_with_memory(&mut arena).unwrap().is_some(),
         "the memory-helper path yields a replay-checked model"
     );
+}
+
+#[test]
+fn symbolic_memory_write_log_drops_shadowed_concrete_indices() {
+    let mut arena = TermArena::new();
+    let memory = SymbolicMemory::declare_bv(&mut arena, "log_mem", 8, 8).unwrap();
+    let idx_three = arena.bv_const(8, 3).unwrap();
+    let idx_four = arena.bv_const(8, 4).unwrap();
+    let old_three = arena.bv_const(8, 0x11).unwrap();
+    let four_value = arena.bv_const(8, 0x22).unwrap();
+    let new_three = arena.bv_const(8, 0x33).unwrap();
+    let writes = [
+        SymbolicMemoryWrite::new(idx_three, old_three),
+        SymbolicMemoryWrite::new(idx_four, four_value),
+        SymbolicMemoryWrite::new(idx_three, new_three),
+    ];
+
+    let normalized = memory.normalized_writes(&arena, &writes).unwrap();
+    assert_eq!(
+        normalized,
+        vec![
+            SymbolicMemoryWrite::new(idx_four, four_value),
+            SymbolicMemoryWrite::new(idx_three, new_three)
+        ],
+        "the older write to concrete index 3 is shadowed by the later one"
+    );
+
+    let loaded = memory
+        .load_with_write_log(&mut arena, idx_three, &writes)
+        .unwrap();
+    assert_eq!(
+        count_ite_nodes(&arena, loaded),
+        2,
+        "only the two visible writes should emit read-over-write guards"
+    );
+
+    let loaded_eq_new = arena.eq(loaded, new_three).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    solver.assert(&arena, loaded_eq_new).unwrap();
+    assert!(
+        matches!(
+            solver.check_with_memory(&mut arena).unwrap(),
+            CheckResult::Sat(_)
+        ),
+        "the compact write-log read should replay with the latest concrete write"
+    );
+}
+
+#[test]
+fn symbolic_memory_write_log_preserves_last_writer_for_symbolic_aliases() {
+    let mut arena = TermArena::new();
+    let memory = SymbolicMemory::declare_bv(&mut arena, "alias_mem", 8, 8).unwrap();
+    let xs = arena.declare("alias_x", Sort::BitVec(8)).unwrap();
+    let ys = arena.declare("alias_y", Sort::BitVec(8)).unwrap();
+    let x = arena.var(xs);
+    let y = arena.var(ys);
+    let old = arena.bv_const(8, 0x44).unwrap();
+    let new = arena.bv_const(8, 0x55).unwrap();
+    let writes = [
+        SymbolicMemoryWrite::new(x, old),
+        SymbolicMemoryWrite::new(y, new),
+    ];
+
+    let loaded = memory.load_with_write_log(&mut arena, x, &writes).unwrap();
+    assert_eq!(
+        count_ite_nodes(&arena, loaded),
+        2,
+        "symbolic writes are both retained because their indices may alias"
+    );
+
+    let x_eq_y = arena.eq(x, y).unwrap();
+    let loaded_eq_old = arena.eq(loaded, old).unwrap();
+    let loaded_eq_new = arena.eq(loaded, new).unwrap();
+
+    let mut impossible_old = IncrementalBvSolver::new();
+    impossible_old.assert(&arena, x_eq_y).unwrap();
+    impossible_old.assert(&arena, loaded_eq_old).unwrap();
+    assert_eq!(
+        impossible_old.check_with_memory(&mut arena).unwrap(),
+        CheckResult::Unsat,
+        "when x = y, the later y-write must shadow the earlier x-write"
+    );
+
+    let mut possible_new = IncrementalBvSolver::new();
+    possible_new.assert(&arena, x_eq_y).unwrap();
+    possible_new.assert(&arena, loaded_eq_new).unwrap();
+    assert!(
+        matches!(
+            possible_new.check_with_memory(&mut arena).unwrap(),
+            CheckResult::Sat(_)
+        ),
+        "the same aliasing path should accept the later write's value"
+    );
+}
+
+fn count_ite_nodes(arena: &TermArena, root: TermId) -> usize {
+    let mut count = 0;
+    let mut stack = vec![root];
+    let mut seen = std::collections::BTreeSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if *op == Op::Ite {
+                count += 1;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    count
 }
