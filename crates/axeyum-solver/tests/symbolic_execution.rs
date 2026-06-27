@@ -1090,6 +1090,42 @@ fn tiny_bv_assembly_imports_memory_program_and_replays() {
     assert_eq!(hit.witness.inputs[0], 0xCAFE);
     assert_eq!(trace.final_regs[3], 0xCAFE);
     assert_eq!(trace.final_memory, vec![(0x0010, 0xCAFE)]);
+    let mut test_arena = TermArena::new();
+    let generated = program
+        .test_cases_for_label_checked(
+            &mut test_arena,
+            "asm_generated_input",
+            "win_block",
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+        )
+        .unwrap();
+    assert_eq!(generated.status(), TinyBvReachabilityStatus::Reachable);
+    assert!(generated.has_test_cases());
+    assert_eq!(generated.target_pc, 4);
+    assert_eq!(generated.target_labels, vec!["win_block".to_owned()]);
+    assert_eq!(generated.reachability.target_pc, 4);
+    assert_eq!(generated.test_cases.len(), 1);
+    let generated_case = &generated.test_cases[0];
+    assert_eq!(generated_case.target_pc, 4);
+    assert_eq!(generated_case.target_labels, vec!["win_block".to_owned()]);
+    assert_eq!(
+        generated_case.report.trace.outcome,
+        TinyBvConcreteOutcome::Win
+    );
+    assert!(generated_case.report.trace.reaches_pc(4));
+    assert_eq!(generated_case.report.witness.inputs[0], 0xCAFE);
+    assert_eq!(
+        generated_case.report.edge_steps.last().map(|step| (
+            step.edge.from,
+            step.edge.to,
+            step.edge.kind
+        )),
+        Some((3, 4, TinyBvCfgEdgeKind::BranchTrue))
+    );
 
     let lose_witness = TinyBvWitness { inputs: vec![0, 0] };
     let lose_trace = program.concrete_trace(&lose_witness);

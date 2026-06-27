@@ -288,6 +288,43 @@ pub struct TinyBvTraceReport {
     pub edge_steps: Vec<TinyBvTraceEdgeStep>,
 }
 
+/// One replay-checked concrete test case generated for a tiny BV target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TinyBvTestCase {
+    /// Program counter this test case is intended to reach.
+    pub target_pc: usize,
+    /// Assembly labels attached to `target_pc`, in deterministic order.
+    pub target_labels: Vec<String>,
+    /// Concrete witness and replay-derived source/block/edge report.
+    pub report: TinyBvTraceReport,
+}
+
+/// Replay-checked test-generation report for a tiny BV target.
+#[derive(Debug, Clone)]
+pub struct TinyBvTestGenerationReport {
+    /// Program counter being targeted.
+    pub target_pc: usize,
+    /// Assembly labels attached to `target_pc`, in deterministic order.
+    pub target_labels: Vec<String>,
+    /// Underlying checked reachability result, including incomplete-search
+    /// diagnostics when no test case was generated.
+    pub reachability: TinyBvReachabilityReport,
+    /// Concrete-replayed test cases derived from verified reachability hits.
+    pub test_cases: Vec<TinyBvTestCase>,
+}
+
+impl TinyBvTestGenerationReport {
+    /// Classifies the underlying bounded reachability query.
+    pub fn status(&self) -> TinyBvReachabilityStatus {
+        self.reachability.status()
+    }
+
+    /// Whether at least one replay-checked concrete test case was generated.
+    pub fn has_test_cases(&self) -> bool {
+        !self.test_cases.is_empty()
+    }
+}
+
 /// Checked symbolic-execution result for the tiny BV frontend.
 pub type TinyBvExploreOutcome = CfgCheckedOutcome<TinyBvState, TinyBvWitness>;
 
@@ -974,6 +1011,47 @@ impl TinyBvProgram {
         self.reach_pc_checked(arena, input_prefix, target_pc, config)
     }
 
+    /// Generates replay-checked concrete test cases for a target program
+    /// counter.
+    ///
+    /// The returned report preserves the full bounded reachability diagnostics
+    /// and adds one [`TinyBvTestCase`] for each verified symbolic target. If the
+    /// target is unreachable or the search is incomplete, `test_cases` is empty
+    /// and callers can inspect [`TinyBvTestGenerationReport::reachability`] for
+    /// the reason.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] under the same conditions as
+    /// [`Self::reach_pc_checked`].
+    pub fn test_cases_for_pc_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        target_pc: usize,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvTestGenerationReport, SolverError> {
+        let reachability = self.reach_pc_checked(arena, input_prefix, target_pc, config)?;
+        Ok(self.test_generation_report_from_reachability(reachability))
+    }
+
+    /// Generates replay-checked concrete test cases for an assembly label.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Unsupported`] if `label` is not known, or the same
+    /// errors as [`Self::test_cases_for_pc_checked`] after resolving the label.
+    pub fn test_cases_for_label_checked(
+        &self,
+        arena: &mut TermArena,
+        input_prefix: &str,
+        label: &str,
+        config: CfgExploreConfig,
+    ) -> Result<TinyBvTestGenerationReport, SolverError> {
+        let target_pc = self.resolve_label_pc(label)?;
+        self.test_cases_for_pc_checked(arena, input_prefix, target_pc, config)
+    }
+
     /// Checks bounded safety for a forbidden program counter.
     ///
     /// [`TinyBvSafetyStatus::Safe`] means the forbidden counter is unreachable
@@ -1296,6 +1374,34 @@ impl TinyBvProgram {
     fn resolve_label_pc(&self, label: &str) -> Result<usize, SolverError> {
         self.label_pc(label)
             .ok_or_else(|| tiny_bv_error(format!("unknown assembly label `{label}`")))
+    }
+
+    fn test_generation_report_from_reachability(
+        &self,
+        reachability: TinyBvReachabilityReport,
+    ) -> TinyBvTestGenerationReport {
+        let target_pc = reachability.target_pc;
+        let target_labels = self
+            .labels_at_pc(target_pc)
+            .into_iter()
+            .map(ToOwned::to_owned)
+            .collect::<Vec<_>>();
+        let test_cases = reachability
+            .outcome
+            .verified
+            .iter()
+            .map(|hit| TinyBvTestCase {
+                target_pc,
+                target_labels: target_labels.clone(),
+                report: self.trace_report(&hit.witness),
+            })
+            .collect();
+        TinyBvTestGenerationReport {
+            target_pc,
+            target_labels,
+            reachability,
+            test_cases,
+        }
     }
 
     fn effective_config(&self, mut config: CfgExploreConfig) -> CfgExploreConfig {
