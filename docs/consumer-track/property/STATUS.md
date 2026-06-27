@@ -2,6 +2,16 @@
 
 ## Current focus
 
+- **2026-06-27 — Proved baseline comparison landed.**
+  The PROP.6 corpus now checks both sides of the executable-baseline comparison
+  shape. In addition to the minimized wrapping-add counterexample row, it now
+  proves unsigned `u8` wrapping-add commutativity and independently scans the
+  bounded Rust predicate to confirm there is no `x + y != y + x` failure. This
+  gives the SDK corpus one baseline-backed disproved outcome and one
+  baseline-backed proved outcome before the broader external runner exists.
+  Totals are now 10 cases, 3 proved, 7 disproved, 0 unknown, DISAGREE=0, and
+  1/1 Lean-required coverage.
+
 - **2026-06-27 — Baseline comparison first slice landed.**
   The PROP.6 corpus now includes a deterministic proptest-style executable
   baseline comparison for the unsigned `u8` wrapping-add monotonicity property:
@@ -243,7 +253,8 @@
 
 1. Broaden expression construction ergonomics, especially operator-trait or
    builder syntax that still makes fallible term construction visible.
-2. Broaden the baseline runner across more property shapes, including
-   proptest-style random/shrunk witnesses and Kani-style bounded assertions.
+2. Broaden the baseline runner across struct/assumption/replay property shapes,
+   including proptest-style random/shrunk witnesses and Kani-style bounded
+   assertions.
 3. Keep broadening the SDK property corpus across assumptions, structs,
    fixtures, and certificate fragments.

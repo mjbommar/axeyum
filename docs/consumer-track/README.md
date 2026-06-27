@@ -41,8 +41,8 @@
   composition, prelude/setup-aware test skeletons, and helper-rendered
   Boolean/Result replay adapters with deterministic `#[cfg(test)]` module
   assembly plus deterministic multi-case fixture file assembly. The first
-  app-level corpus gate, including a first deterministic proptest-style
-  executable baseline comparison, is committed in
+  app-level corpus gate, including deterministic executable baseline
+  comparisons for proved and disproved outcomes, is committed in
   [`property/SCOREBOARD.md`](property/SCOREBOARD.md), backed by generated
   [`property/corpus.json`](property/corpus.json).
 - `axeyum-wasm` — `solve_smtlib_json` (client-side, the delivery substrate).

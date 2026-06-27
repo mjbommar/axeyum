@@ -54,10 +54,10 @@ The committed v0 slice is intentionally thin and additive:
 - `tests/support/corpus_cases.rs` is the shared graduated SDK corpus. The
   `tests/corpus.rs` gate checks the executed corpus against both committed
   artifacts, and `examples/property_corpus_scoreboard.rs` regenerates
-  `SCOREBOARD.md` plus `corpus.json`: 9 cases, 2 proved, 7 disproved, 0
-  unknown, 0 mismatches, and 1/1 Lean-required case available, including a
-  first deterministic proptest-style executable baseline comparison for a
-  minimized BV counterexample.
+  `SCOREBOARD.md` plus `corpus.json`: 10 cases, 3 proved, 7 disproved, 0
+  unknown, 0 mismatches, and 1/1 Lean-required case available, including
+  deterministic executable baseline comparisons for one minimized BV
+  counterexample and one proved BV assertion.
 
 ## Tasks
 | id | task | exit |
@@ -67,7 +67,7 @@ The committed v0 slice is intentionally thin and additive:
 | PROP.3 | `Symbolic` trait and derive | WIP — scalar Bool/uN/iN/i128 plus 2-/3-tuples declare and lift deterministically; `i8`/`i16`/`i32`/`i64` use two's-complement BV terms and signed counterexample minimization while `i128` remains mathematical Int; `symbolic_struct` covers macro-free named-field bundles; `#[derive(Symbolic)]` supports named/tuple/unit structs |
 | PROP.4 | Counterexample-to-test layer | WIP — native Bool/Int/BV<=128 bindings render as deterministic Rust let-bindings and `#[test]` skeletons, including signed two's-complement Rust literals for signed symbolic BV inputs; direct named/tuple symbolic bundles render Rust aggregate initializer statements; explicit nested aggregate field expressions plus prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, and deterministic multi-case fixture file assembly let frontends compose caller-owned domain replay shapes before assertions |
 | PROP.5 | Lean certificate surface | WIP — `EvidenceReport` is re-exported, `ProofCertificate` exposes proved evidence, `prove_with_certificate` / `prove_minimized_with_certificate` attach best-effort standalone Lean modules, and `ProofCertificate::summary()` surfaces stable evidence/trust/Lean diagnostics |
-| PROP.6 | SDK measurement gate | WIP — committed graduated corpus, generated `SCOREBOARD.md`, and machine-readable `corpus.json` cover 9 cases with DISAGREE=0, 1/1 Lean-required coverage, and a first deterministic proptest-style executable baseline comparison; broader external proptest/Kani-style baseline comparison remains open |
+| PROP.6 | SDK measurement gate | WIP — committed graduated corpus, generated `SCOREBOARD.md`, and machine-readable `corpus.json` cover 10 cases with DISAGREE=0, 1/1 Lean-required coverage, and deterministic executable baseline comparisons for both proved and disproved outcomes; broader external proptest/Kani-style baseline comparison remains open |
 
 ## Guardrails
 - The crate must remain solver-logic-free: it builds terms and delegates.

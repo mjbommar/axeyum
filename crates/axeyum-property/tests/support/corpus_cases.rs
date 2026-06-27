@@ -78,6 +78,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         aggregate_counterexample_rendered()?,
         overflow_helper_counterexample_minimized()?,
         proptest_style_baseline_counterexample_comparison()?,
+        kani_style_baseline_proof_comparison()?,
         derive_symbolic_counterexample_lifted()?,
         explicit_nested_aggregate_replay_rendered()?,
     ])
@@ -91,8 +92,8 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 9,
-        proved: 2,
+        cases: 10,
+        proved: 3,
         disproved: 7,
         unknown: 0,
         mismatches: 0,
@@ -220,7 +221,7 @@ fn write_markdown_intro(out: &mut String) {
         "app-level honesty gate that prevents SDK claims from living only in ad hoc unit\n",
     );
     out.push_str(
-        "tests. It now includes a first deterministic proptest-style baseline comparison;\n",
+        "tests. It now includes deterministic proved and disproved baseline comparisons;\n",
     );
     out.push_str("broader proptest/Kani-style comparison remains the next PROP.6 step.\n\n");
     out.push_str("## Commands\n\n");
@@ -619,6 +620,53 @@ fn first_wrapping_add_monotonicity_failure() -> Option<(u8, u8)> {
     for x in u8::MIN..=u8::MAX {
         for y in u8::MIN..=u8::MAX {
             if x.wrapping_add(y) < x {
+                return Some((x, y));
+            }
+        }
+    }
+    None
+}
+
+fn kani_style_baseline_proof_comparison() -> CorpusResult<CorpusCaseReport> {
+    assert_eq!(
+        first_wrapping_add_commutativity_failure(),
+        None,
+        "bounded executable baseline should find no add-commutativity failure",
+    );
+
+    let mut property = Property::new();
+    let x = property.symbolic::<u8>("x")?;
+    let y = property.symbolic::<u8>("y")?;
+    let xy = x.add(&mut property, y)?;
+    let yx = y.add(&mut property, x)?;
+    let goal = xy.equals(&mut property, yx)?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+    let summary = certificate.summary();
+    assert!(matches!(summary.outcome, ProofOutcomeSummary::Proved));
+    assert!(
+        summary.evidence.is_some(),
+        "proved baseline comparison should expose checked evidence"
+    );
+    let lean_available = summary.lean.status == LeanStatus::Available;
+
+    Ok(CorpusCaseReport {
+        id: "sdk-u8-baseline-proof-compare",
+        tier: "P1",
+        workflow: "bounded baseline comparison for a proved assertion",
+        expected: ExpectedOutcome::Proved,
+        actual: summary.outcome,
+        checks: "executable baseline finds no `x + y != y + x` failure for `u8`; Axeyum proves the same assertion with checked evidence",
+        baseline_analogue: "Kani exhaustive bounded assertion over the same Rust predicate",
+        lean_required: false,
+        lean_available,
+    })
+}
+
+fn first_wrapping_add_commutativity_failure() -> Option<(u8, u8)> {
+    for x in u8::MIN..=u8::MAX {
+        for y in u8::MIN..=u8::MAX {
+            if x.wrapping_add(y) != y.wrapping_add(x) {
                 return Some((x, y));
             }
         }
