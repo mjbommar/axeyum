@@ -4106,6 +4106,88 @@ fn warm_bv_readback_comparison_identities_drop_constant_wrappers() {
 }
 
 #[test]
+fn warm_bv_readback_slice_extension_identities_drop_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bv_slice_ext_value", Sort::BitVec(8))
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 55).unwrap();
+    let zero = arena.bv_const(8, 0).unwrap();
+    let target = arena.bv_const(8, 0xa6).unwrap();
+    let memory = arena.const_array(8, zero).unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+
+    let whole_extract = arena.extract(7, 0, loaded).unwrap();
+    let whole_extract_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, whole_extract);
+    assert_eq!(
+        whole_extract_result, value,
+        "whole-width extract around readback should simplify to the stored BV"
+    );
+
+    let zero_extend_zero = arena.zero_ext(0, loaded).unwrap();
+    let zero_extend_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, zero_extend_zero);
+    assert_eq!(
+        zero_extend_result, value,
+        "zero-width zero_extend around readback should simplify to the stored BV"
+    );
+
+    let sign_extend_zero = arena.sign_ext(0, loaded).unwrap();
+    let sign_extend_result =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, sign_extend_zero);
+    assert_eq!(
+        sign_extend_result, value,
+        "zero-width sign_extend around readback should simplify to the stored BV"
+    );
+
+    let extract_eq_target = arena.eq(whole_extract, target).unwrap();
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, extract_eq_target)
+        .unwrap();
+    assert!(
+        !IncrementalBvSolver::term_needs_deferred_theory(&arena, encoded),
+        "BV slice/extension readback cleanup should simplify to a pure warm assertion"
+    );
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "BV slice/extension readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(
+                model.get(value_sym),
+                Some(Value::Bv {
+                    width: 8,
+                    value: 0xa6
+                })
+            );
+            assert_eq!(
+                eval(&arena, extract_eq_target, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original BV slice memory assertion"
+            );
+        }
+        other => panic!("expected BV slice readback assertion sat, got {other:?}"),
+    }
+
+    let extract_eq_loaded = arena.eq(whole_extract, loaded).unwrap();
+    let extract_ne_loaded = arena.not(extract_eq_loaded).unwrap();
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, extract_ne_loaded)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a whole-width extracted readback cannot differ from the original readback"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

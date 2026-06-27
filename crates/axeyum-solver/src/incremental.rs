@@ -1494,7 +1494,10 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
         | Op::BvSlt
         | Op::BvSle
         | Op::BvSgt
-        | Op::BvSge => collapse_trivial_bv(arena, op, &args),
+        | Op::BvSge
+        | Op::Extract { .. }
+        | Op::ZeroExt { .. }
+        | Op::SignExt { .. } => collapse_trivial_bv(arena, op, &args),
         _ => None,
     }
 }
@@ -1565,13 +1568,15 @@ fn collapse_trivial_bool(arena: &mut TermArena, op: Op, args: &[TermId]) -> Opti
 
 fn collapse_trivial_bv(arena: &mut TermArena, op: Op, args: &[TermId]) -> Option<TermId> {
     match op {
-        Op::BvNot | Op::BvNeg => {
+        Op::BvNot | Op::BvNeg | Op::Extract { .. } | Op::ZeroExt { .. } | Op::SignExt { .. } => {
             let [arg] = args else {
                 return None;
             };
             match op {
                 Op::BvNot => collapse_bv_not(arena, *arg),
                 Op::BvNeg => collapse_bv_neg(arena, *arg),
+                Op::Extract { hi, lo } => collapse_bv_extract(arena, hi, lo, *arg),
+                Op::ZeroExt { by } | Op::SignExt { by } => collapse_bv_extension(arena, by, *arg),
                 _ => unreachable!("outer match restricts BV unary ops"),
             }
         }
@@ -1772,6 +1777,17 @@ fn collapse_bv_neg(arena: &mut TermArena, term: TermId) -> Option<TermId> {
         return None;
     };
     (arena.sort_of(*inner) == sort).then_some(*inner)
+}
+
+fn collapse_bv_extract(arena: &TermArena, hi: u32, lo: u32, term: TermId) -> Option<TermId> {
+    let Sort::BitVec(width) = arena.sort_of(term) else {
+        return None;
+    };
+    (lo == 0 && hi.checked_add(1) == Some(width)).then_some(term)
+}
+
+fn collapse_bv_extension(arena: &TermArena, by: u32, term: TermId) -> Option<TermId> {
+    (by == 0 && matches!(arena.sort_of(term), Sort::BitVec(_))).then_some(term)
 }
 
 fn collapse_bv_add(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {

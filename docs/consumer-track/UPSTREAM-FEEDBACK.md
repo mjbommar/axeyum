@@ -101,6 +101,9 @@ Last reconciled with `main`: 2026-06-27.
   cleanup until zero-divisor guards are explicit. Loaded-value bounds checks
   also shed reflexive comparisons and unsigned endpoint facts such as
   `load <u 0`, `0 <=u load`, `load <=u all_ones`, and `load >=u 0`.
+  Whole-width extracts and zero-bit `zero_extend` / `sign_extend` wrappers
+  around readbacks now collapse too, while partial slices and positive-width
+  extensions stay as ordinary BV terms.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -119,8 +122,8 @@ Last reconciled with `main`: 2026-06-27.
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, conditional read/write-index
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
-  equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison
-  readback cleanup,
+  equality/connective/xor/implication cleanup,
+  BV bitwise/arithmetic/comparison/slice-extension readback cleanup,
   branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
@@ -148,6 +151,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm BV bitwise readback cleanup" /
   "Warm BV arithmetic readback cleanup" /
   "Warm BV comparison readback cleanup" /
+  "Warm BV slice/extension readback cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /
