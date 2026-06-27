@@ -2313,23 +2313,39 @@ exercises, not an unbounded fold-list.
   `axeyum-consumer-bench` deliberately *not* ported (retired-API + duplicative).
 - **I4a** — ✅ DONE (`b774df2`) — reconciled `UPSTREAM-FEEDBACK.md`: U6 is now
   *measured* by the scoreboard (it is the special-case-vs-general arbiter).
-- **I4b** — ⏭ NEXT — make `axeyum-evm`'s memory model optionally use `main`'s
-  warm `SymbolicExecutor` array path instead of the frontend `ite`-fold, and add
-  a warm-vs-`ite`-fold column (ite depth / CNF size / solve time) to the
-  scoreboard. *Path:* `crates/axeyum-evm/src/symbolic.rs` (the `fold_word_writes`
-  read-over-write site) + `examples/measure_evm.rs`. *Exit:* the scoreboard shows
-  both encodings on the symbolic-storage rows with DISAGREE=0, and the
-  unknown/fallback rows name which general capability (U6) to build next.
+- **I4b** — ✅ DONE (`0945c69`, `fad0650`) — `MemoryEncoding::{IteFold (default),
+  WarmArray}` in `axeyum-evm`; WarmArray lowers storage to real `select`/`store`
+  via `SymbolicMemory` + `assume_auto`. Scoreboard gained warm-vs-`ite` + a
+  store-chain depth sweep. **Measured result (refuted the naive hypothesis):**
+  `ite`-fold is *faster* and the gap **grows** with depth (depth 32: ~3 ms vs
+  ~14 ms), because the array path falls to the one-shot memory dispatcher while
+  `ite`-fold stays warm with constant-folding concrete guards. Recorded in
+  `UPSTREAM-FEEDBACK.md` U6: the gap is *incremental-array performance*, not
+  capability — a true warm lazy-array engine (retained state across
+  `enter`/`backtrack`), not one-shot re-dispatch. `ite`-fold stays the default.
 
 **Forward backlog (autonomous continuation — pick the top unblocked item).**
 Each is a self-contained increment under the standing discipline below; do them
 in order unless a dependency says otherwise. Update the STATUS consumer lane +
-this list as each lands.
+this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
+`INVALID` bug class (`db36e0e`); per-app PLAN/STATUS co-located on `main`
+(`a059c6f`).
 
 *App A — `axeyum-evm` (Phase 3):*
-1. **Multi-tx invariants** via `bounded_model_check_with_memory` — a sequence of
-   calls with persistent storage between txs. *Exit:* a worked multi-tx
-   reentrancy/accounting bug + a multi-tx safe case on the scoreboard, DISAGREE=0.
+1. **Multi-tx invariants** — a call sequence with persistent storage between txs.
+   The keystone; sliced for soundness (each slice gated DISAGREE=0):
+   - **A1.1** a 2-tx DFS driver: on a normal halt (`STOP`/`RETURN`) with txs
+     remaining, re-enter at pc 0 with **fresh per-tx calldata**, **persisting
+     storage** but **resetting stack/memory** (EVM tx semantics). *Path:*
+     `symbolic.rs` `run_from`/`walk` + per-tx calldata in `SymEnv`.
+   - **A1.2** **multi-tx concrete replay** in `concrete.rs` (run the witness tx
+     sequence, storage persisting) — the DISAGREE=0 oracle for cross-tx bugs.
+   - **A1.3** a multi-tx `Finding` (a `Vec` of per-tx calldata witnesses) +
+     `analyze_sequence` entry point; a worked *init-then-trigger* bug + a
+     multi-tx safe case on the scoreboard. *Exit:* both decided, DISAGREE=0.
+   - Note: `bounded_model_check_with_memory` needs a full `TransitionSystem`
+     encoding of a whole-contract step — heavier than the DFS re-entry above; the
+     DFS slice is the tractable first route.
 2. **`CALL`/`DELEGATECALL`/`CREATE`/`EXTCODE*` modeling** (havoc return + touched
    storage) so dispatched contracts explore further before `Unknown`. *Exit:*
    fewer `InconclusiveDueToUnknown` rows on a dispatched-call corpus case.
