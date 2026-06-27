@@ -2221,7 +2221,7 @@ untrusted search and validated by small independent checkers.
 | 1 — Engine & Performance | [`track-1-engine/`](docs/plan/track-1-engine/README.md) | SAT inprocessing, preprocessing, SAT-core modernization, e-graph, CDCL(T), theory combination, PBLS, strategy |
 | 2 — Theories & Breadth | [`track-2-theories/`](docs/plan/track-2-theories/README.md) | lazy BV, lazy arrays, EUF, LIA cuts (+ unbounded backstop), NRA/CAD, quantifiers, strings, FP polish, datatypes, **breadth backlog** (sequences/sets/sep-logic/finite-fields/co-datatypes/rec-fun) |
 | 3 — Proofs & Lean | [`track-3-proof-lean/`](docs/plan/track-3-proof-lean/README.md) | trust ledger, LRAT, Alethe IR+emitter, Carcara-checked QF_BV, embedded checker, reduction proofs, Lean kernel + reconstruction, **Craig interpolation** |
-| 4 — Use Cases & Frontend | [`track-4-usecases-frontend/`](docs/plan/track-4-usecases-frontend/README.md) | warm lazy memory, symexec/CFG frontend, OMT/MILP, SMT-LIB command surface, benchmarking & the perf gate, **CHC/Horn (PDR/Spacer)**, **synthesis/abduction**; 2026-06-27 memory-aware incremental assumptions now cover one-shot array/UF branch feasibility through the full dispatcher, and `SymbolicMemory` gives frontends a typed load/store helper |
+| 4 — Use Cases & Frontend | [`track-4-usecases-frontend/`](docs/plan/track-4-usecases-frontend/README.md) | warm lazy memory, symexec/CFG frontend, OMT/MILP, SMT-LIB command surface, benchmarking & the perf gate, **CHC/Horn (PDR/Spacer)**, **synthesis/abduction**; 2026-06-27 memory-aware incremental assumptions now cover one-shot array/UF branch feasibility through the full dispatcher, `SymbolicMemory` gives frontends a typed load/store helper, and `explore_cfg` provides a reusable DFS harness with model-witnessed targets |
 
 Cross-cutting: [`00-north-star.md`](docs/plan/00-north-star.md) (definition of
 done), [`01-dependency-dag.md`](docs/plan/01-dependency-dag.md) (the end-to-end
@@ -2245,8 +2245,11 @@ closes the immediate symbolic-memory/keccak-as-UF branch-query gap:
 and `check_assuming_with_memory` dispatch them through the full pure-Rust solver,
 `SymbolicExecutor` exposes memory-aware assume/branch/status/model calls, and
 `SymbolicMemory` now provides a typed frontend helper for array-backed
-`load`/`store` plus load-equality branch/assume queries. This is still a one-shot
-fallback, not final warm lazy theory incrementality or a full CFG frontend.
+`load`/`store` plus load-equality branch/assume queries. `explore_cfg` now owns
+the DFS solver mechanics for frontend-supplied CFG states: branch feasibility,
+scope push/pop, infeasible pruning, unknown-safe traversal, and replay-checked
+target models. This is still a one-shot fallback for deferred theories, not final
+warm lazy theory incrementality or a complete lifter/concrete-emulation frontend.
 
 > **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
 > below) and the NRA CAD decision side complete, the three categorically-missing

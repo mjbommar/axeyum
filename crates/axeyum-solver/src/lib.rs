@@ -362,7 +362,10 @@ pub use smtlib::{
 };
 pub use solver::{InterpolantOutcome, Solver};
 pub use strategy::{Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy};
-pub use symexec::{Branch, PathStatus, SymbolicExecutor, SymbolicMemory};
+pub use symexec::{
+    Branch, CfgExploreConfig, CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor,
+    SymbolicMemory,
+};
 pub use term_identity::{
     TermIdentityKind, TermIdentityRefutationCertificate, term_identity_refutation,
 };

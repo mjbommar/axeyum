@@ -723,9 +723,12 @@ the active slice through the full pure-Rust solver, and
 methods, and `SymbolicMemory` now gives frontends a typed array-backed
 load/store state plus load-equality branch/assume helpers. This covers the
 immediate angr/KLEE-style path-query need and removes the need for every frontend
-to hand-assemble read-over-write terms. This is not the final warm lazy-array/UF
-engine: deferred theory checks still rebuild through `check_auto`; retained
-learned theory clauses and a full CFG/lifter/explorer stack remain Track 4 work.
+to hand-assemble read-over-write terms. `SymbolicExecutor::explore_cfg` now adds
+the reusable DFS layer over frontend-supplied states: branch feasibility, scope
+management, infeasible pruning, unknown-safe traversal, and replay-checked target
+models. This is not the final warm lazy-array/UF engine: deferred theory checks
+still rebuild through `check_auto`; retained learned theory clauses plus a real
+small-target lifter and concrete-emulation library remain Track 4 work.
 
 ## 4. Reflection on PLAN.md
 

@@ -11,8 +11,8 @@
 
 use axeyum_ir::{ArraySortKey, Sort, SymbolId, TermArena, TermId, Value};
 use axeyum_solver::{
-    AssumptionOutcome, CheckResult, IncrementalBvSolver, PathStatus, SymbolicExecutor,
-    SymbolicMemory,
+    AssumptionOutcome, CfgExploreConfig, CfgStep, CheckResult, IncrementalBvSolver, PathStatus,
+    SymbolicExecutor, SymbolicMemory,
 };
 
 /// A register-machine instruction. Registers are `BV(WIDTH)`; `Branch` forks on
@@ -66,6 +66,13 @@ struct Program {
     inputs: Vec<SymbolId>,
 }
 
+#[derive(Debug, Clone)]
+struct VmState {
+    pc: usize,
+    regs: Vec<TermId>,
+    fuel: usize,
+}
+
 /// One discovered winning path: concrete input values, in input order.
 type WinningInputs = Vec<u128>;
 
@@ -83,6 +90,134 @@ fn symbolically_execute(arena: &mut TermArena, program: &Program) -> Vec<Winning
     let mut wins = Vec::new();
     explore(arena, &mut solver, program, regs, 0, MAX_STEPS, &mut wins);
     wins
+}
+
+/// The public CFG-shaped explorer over [`SymbolicExecutor`]: the frontend
+/// provides the transfer relation, while axeyum owns branch feasibility,
+/// push/pop, pruning, and model-witnessed target reporting.
+fn symbolically_execute_with_cfg_explorer(
+    arena: &mut TermArena,
+    program: &Program,
+) -> Vec<WinningInputs> {
+    let mut regs: Vec<TermId> = program.inputs.iter().map(|&s| arena.var(s)).collect();
+    let zero = arena.bv_const(WIDTH, 0).unwrap();
+    while regs.len() < REG_COUNT {
+        regs.push(zero);
+    }
+    let initial = VmState {
+        pc: 0,
+        regs,
+        fuel: MAX_STEPS,
+    };
+
+    let mut executor = SymbolicExecutor::new();
+    let outcome = executor
+        .explore_cfg(
+            arena,
+            initial,
+            CfgExploreConfig {
+                max_steps: 128,
+                max_targets: 16,
+                memory_aware: false,
+            },
+            |arena, state| {
+                if state.fuel == 0 || state.pc >= program.code.len() {
+                    return Ok(CfgStep::Stop);
+                }
+                let next_fuel = state.fuel - 1;
+                match program.code[state.pc] {
+                    Insn::Const { dst, value } => {
+                        let mut next = state;
+                        next.regs[dst] = arena.bv_const(WIDTH, value & MASK).unwrap();
+                        next.pc += 1;
+                        next.fuel = next_fuel;
+                        Ok(CfgStep::Continue(next))
+                    }
+                    Insn::Add { dst, a, b } => {
+                        let mut next = state;
+                        next.regs[dst] = arena.bv_add(next.regs[a], next.regs[b]).unwrap();
+                        next.pc += 1;
+                        next.fuel = next_fuel;
+                        Ok(CfgStep::Continue(next))
+                    }
+                    Insn::Sub { dst, a, b } => {
+                        let mut next = state;
+                        next.regs[dst] = arena.bv_sub(next.regs[a], next.regs[b]).unwrap();
+                        next.pc += 1;
+                        next.fuel = next_fuel;
+                        Ok(CfgStep::Continue(next))
+                    }
+                    Insn::Mul { dst, a, b } => {
+                        let mut next = state;
+                        next.regs[dst] = arena.bv_mul(next.regs[a], next.regs[b]).unwrap();
+                        next.pc += 1;
+                        next.fuel = next_fuel;
+                        Ok(CfgStep::Continue(next))
+                    }
+                    Insn::Xor { dst, a, b } => {
+                        let mut next = state;
+                        next.regs[dst] = arena.bv_xor(next.regs[a], next.regs[b]).unwrap();
+                        next.pc += 1;
+                        next.fuel = next_fuel;
+                        Ok(CfgStep::Continue(next))
+                    }
+                    Insn::BranchEq {
+                        reg,
+                        value,
+                        then_pc,
+                        else_pc,
+                    } => {
+                        let value_term = arena.bv_const(WIDTH, value & MASK).unwrap();
+                        let condition = arena.eq(state.regs[reg], value_term).unwrap();
+                        let mut if_true = state.clone();
+                        if_true.pc = then_pc;
+                        if_true.fuel = next_fuel;
+                        let mut if_false = state;
+                        if_false.pc = else_pc;
+                        if_false.fuel = next_fuel;
+                        Ok(CfgStep::Branch {
+                            condition,
+                            if_true,
+                            if_false,
+                        })
+                    }
+                    Insn::Win => Ok(CfgStep::Target(state)),
+                    Insn::Lose => Ok(CfgStep::Stop),
+                }
+            },
+        )
+        .unwrap();
+    assert!(
+        !outcome.truncated,
+        "tiny VM exploration should finish within configured limits"
+    );
+    assert_eq!(
+        outcome.undecided_targets, 0,
+        "reported target coverage must be model-decided"
+    );
+
+    outcome
+        .reached
+        .iter()
+        .map(|hit| {
+            assert!(
+                matches!(program.code.get(hit.state.pc), Some(Insn::Win)),
+                "the target frontend state should be the Win instruction"
+            );
+            assert!(
+                !hit.path_condition.is_empty(),
+                "a winning path should carry branch constraints"
+            );
+            program
+                .inputs
+                .iter()
+                .map(|&symbol| match hit.model.get(symbol) {
+                    Some(Value::Bv { value, .. }) => value,
+                    _ => 0,
+                })
+                .collect()
+        })
+        .collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -329,6 +464,48 @@ fn two_stage_conjunction_finds_inputs_satisfying_both_branches() {
         assert_eq!((x + y) & MASK, 0x2f2f, "first branch condition");
         assert_eq!((x ^ y) & MASK, 0x0f0f, "second branch condition");
         assert!(concretely_reaches_win(&program, inputs));
+    }
+}
+
+#[test]
+fn cfg_explorer_finds_winning_paths_and_concrete_witnesses() {
+    // Same shape as the manual DFS case, but exercised through the public
+    // `SymbolicExecutor::explore_cfg` harness. The frontend provides transfer
+    // states and branch conditions; the harness owns solver scopes and pruning.
+    let mut arena = TermArena::new();
+    let inputs = declare_inputs(&mut arena);
+    let program = Program {
+        code: vec![
+            Insn::Add { dst: 2, a: 0, b: 1 },
+            Insn::Xor { dst: 3, a: 0, b: 1 },
+            Insn::BranchEq {
+                reg: 2,
+                value: 0x2f2f,
+                then_pc: 3,
+                else_pc: 5,
+            },
+            Insn::BranchEq {
+                reg: 3,
+                value: 0x0f0f,
+                then_pc: 4,
+                else_pc: 5,
+            },
+            Insn::Win,
+            Insn::Lose,
+        ],
+        inputs,
+    };
+
+    let wins = symbolically_execute_with_cfg_explorer(&mut arena, &program);
+    assert!(!wins.is_empty(), "CFG explorer should find a winning path");
+    for inputs in &wins {
+        let (x, y) = (inputs[0], inputs[1]);
+        assert_eq!((x + y) & MASK, 0x2f2f);
+        assert_eq!((x ^ y) & MASK, 0x0f0f);
+        assert!(
+            concretely_reaches_win(&program, inputs),
+            "solver-found CFG input {inputs:?} must concretely reach Win"
+        );
     }
 }
 

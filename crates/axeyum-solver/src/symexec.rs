@@ -20,6 +20,9 @@
 //!   depth-first and undo a branch.
 //! * [`model`](SymbolicExecutor::model) returns a concrete assignment satisfying
 //!   the current path — a ready-to-run test input.
+//! * [`explore_cfg`](SymbolicExecutor::explore_cfg) is the reusable DFS harness:
+//!   a frontend supplies CFG states and branch terms; the executor handles
+//!   scopes, feasibility pruning, and model-checked target witnesses.
 //!
 //! Soundness is inherited verbatim from the incremental engine: every `model` is
 //! replay-checked against the path constraints by the ground evaluator, and
@@ -271,6 +274,104 @@ impl SymbolicMemory {
         let cond = self.load_eq(arena, index, expected)?;
         executor.branch_with_memory(arena, cond)
     }
+}
+
+/// Resource and routing configuration for [`SymbolicExecutor::explore_cfg`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CfgExploreConfig {
+    /// Maximum number of CFG states whose transfer function may be evaluated.
+    pub max_steps: usize,
+    /// Maximum number of target states to return before stopping exploration.
+    pub max_targets: usize,
+    /// Whether branch/assume/model checks use the memory-aware full dispatcher.
+    /// Set this when path conditions may mention arrays or uninterpreted
+    /// functions.
+    pub memory_aware: bool,
+}
+
+impl Default for CfgExploreConfig {
+    fn default() -> Self {
+        Self {
+            max_steps: 1024,
+            max_targets: usize::MAX,
+            memory_aware: false,
+        }
+    }
+}
+
+/// One target reached by [`SymbolicExecutor::explore_cfg`].
+#[derive(Debug, Clone)]
+pub struct CfgReached<State> {
+    /// Frontend state at the target.
+    pub state: State,
+    /// Replay-checked model witnessing that the current path can reach `state`.
+    pub model: Model,
+    /// Axeyum path condition active when the target was reached.
+    pub path_condition: Vec<TermId>,
+}
+
+/// Exploration result from [`SymbolicExecutor::explore_cfg`].
+#[derive(Debug, Clone)]
+pub struct CfgExploreOutcome<State> {
+    /// Model-witnessed target states found within the configured limits.
+    pub reached: Vec<CfgReached<State>>,
+    /// Number of CFG states whose transfer function was evaluated.
+    pub steps: usize,
+    /// Number of branch/assume directions pruned because they were proved
+    /// infeasible.
+    pub pruned_infeasible: usize,
+    /// Number of branch directions whose feasibility was unknown and therefore
+    /// explored as maybe-feasible.
+    pub unknown_branches: usize,
+    /// Number of target states that could not be reported because final
+    /// feasibility/model extraction was `unknown`.
+    pub undecided_targets: usize,
+    /// Whether exploration stopped because `max_steps` or `max_targets` was
+    /// reached.
+    pub truncated: bool,
+}
+
+impl<State> Default for CfgExploreOutcome<State> {
+    fn default() -> Self {
+        Self {
+            reached: Vec::new(),
+            steps: 0,
+            pruned_infeasible: 0,
+            unknown_branches: 0,
+            undecided_targets: 0,
+            truncated: false,
+        }
+    }
+}
+
+/// A single frontend transfer step consumed by
+/// [`SymbolicExecutor::explore_cfg`].
+#[derive(Debug, Clone)]
+pub enum CfgStep<State> {
+    /// Move to another CFG state without adding a path constraint.
+    Continue(State),
+    /// Add `condition` to the current path and continue with `next` if the
+    /// resulting path is not proved infeasible.
+    Assume {
+        /// Boolean condition to commit.
+        condition: TermId,
+        /// Successor state under the assumption.
+        next: State,
+    },
+    /// Fork on `condition`: `if_true` is explored under `condition`, and
+    /// `if_false` is explored under `not(condition)`.
+    Branch {
+        /// Boolean branch condition.
+        condition: TermId,
+        /// Successor state for the true edge.
+        if_true: State,
+        /// Successor state for the false edge.
+        if_false: State,
+    },
+    /// Report a target state if the active path yields a replay-checked model.
+    Target(State),
+    /// Stop exploring this path without reporting a target.
+    Stop,
 }
 
 /// A symbolic-execution engine over the pure-Rust incremental BV solver.
@@ -532,6 +633,44 @@ impl SymbolicExecutor {
         Ok(inputs)
     }
 
+    /// Explores a frontend CFG depth-first from `initial`.
+    ///
+    /// The caller supplies a transfer function from frontend states to
+    /// [`CfgStep`]s. The executor owns the solver mechanics: it queries branch
+    /// feasibility, opens a scope for each explored edge, commits the edge
+    /// condition, backtracks after the recursive subtree, and reports only target
+    /// states that have a replay-checked [`Model`]. `Unknown` branch directions
+    /// are treated as maybe-feasible and explored; `Unknown` targets are counted
+    /// in [`CfgExploreOutcome::undecided_targets`] rather than reported.
+    ///
+    /// The executor's incoming path condition is preserved when this method
+    /// returns.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] from the transfer function, term construction, or
+    /// solver operations.
+    pub fn explore_cfg<State, F>(
+        &mut self,
+        arena: &mut TermArena,
+        initial: State,
+        config: CfgExploreConfig,
+        step: F,
+    ) -> Result<CfgExploreOutcome<State>, SolverError>
+    where
+        F: FnMut(&mut TermArena, State) -> Result<CfgStep<State>, SolverError>,
+    {
+        let mut search = CfgSearch {
+            executor: self,
+            arena,
+            config,
+            step,
+            outcome: CfgExploreOutcome::default(),
+        };
+        search.visit(initial)?;
+        Ok(search.outcome)
+    }
+
     /// Maximizes the **unsigned** bit-vector `objective` subject to the current
     /// path condition — e.g. the worst-case value a variable can take along this
     /// path. The optimum is certified by the underlying procedure (a witness model
@@ -618,6 +757,148 @@ impl SymbolicExecutor {
         objective: TermId,
     ) -> Result<OptOutcome, SolverError> {
         minimize_lia(arena, &self.path, objective)
+    }
+}
+
+struct CfgSearch<'a, State, F> {
+    executor: &'a mut SymbolicExecutor,
+    arena: &'a mut TermArena,
+    config: CfgExploreConfig,
+    step: F,
+    outcome: CfgExploreOutcome<State>,
+}
+
+impl<State, F> CfgSearch<'_, State, F>
+where
+    F: FnMut(&mut TermArena, State) -> Result<CfgStep<State>, SolverError>,
+{
+    fn visit(&mut self, state: State) -> Result<(), SolverError> {
+        if self.limit_reached() {
+            return Ok(());
+        }
+        if self.outcome.steps >= self.config.max_steps {
+            self.outcome.truncated = true;
+            return Ok(());
+        }
+        self.outcome.steps += 1;
+
+        match (self.step)(self.arena, state)? {
+            CfgStep::Continue(next) => self.visit(next),
+            CfgStep::Assume { condition, next } => self.visit_assumption(condition, next),
+            CfgStep::Branch {
+                condition,
+                if_true,
+                if_false,
+            } => self.visit_branch(condition, if_true, if_false),
+            CfgStep::Target(target) => self.record_target(target),
+            CfgStep::Stop => Ok(()),
+        }
+    }
+
+    fn visit_branch(
+        &mut self,
+        condition: TermId,
+        if_true: State,
+        if_false: State,
+    ) -> Result<(), SolverError> {
+        let branch = if self.config.memory_aware {
+            self.executor.branch_with_memory(self.arena, condition)?
+        } else {
+            self.executor.branch(self.arena, condition)?
+        };
+        self.visit_direction(condition, &branch.if_true, if_true)?;
+        let not_condition = self.arena.not(condition)?;
+        self.visit_direction(not_condition, &branch.if_false, if_false)
+    }
+
+    fn visit_direction(
+        &mut self,
+        assumption: TermId,
+        branch_status: &PathStatus,
+        state: State,
+    ) -> Result<(), SolverError> {
+        match branch_status {
+            PathStatus::Infeasible => {
+                self.outcome.pruned_infeasible += 1;
+                Ok(())
+            }
+            PathStatus::Unknown(_) => {
+                self.outcome.unknown_branches += 1;
+                self.visit_assumption(assumption, state)
+            }
+            PathStatus::Feasible => self.visit_assumption(assumption, state),
+        }
+    }
+
+    fn visit_assumption(&mut self, condition: TermId, state: State) -> Result<(), SolverError> {
+        self.executor.enter()?;
+        let status = if self.config.memory_aware {
+            self.executor.assume_with_memory(self.arena, condition)?
+        } else {
+            self.executor.assume(self.arena, condition)?
+        };
+        if status.is_infeasible() {
+            self.outcome.pruned_infeasible += 1;
+        } else {
+            self.visit(state)?;
+        }
+        if self.executor.backtrack() {
+            Ok(())
+        } else {
+            Err(SolverError::Backend(
+                "CFG exploration scope stack underflow".to_owned(),
+            ))
+        }
+    }
+
+    fn record_target(&mut self, state: State) -> Result<(), SolverError> {
+        match self.current_status()? {
+            PathStatus::Feasible => {
+                if let Some(model) = self.current_model()? {
+                    self.outcome.reached.push(CfgReached {
+                        state,
+                        model,
+                        path_condition: self.executor.path_condition().to_vec(),
+                    });
+                } else {
+                    self.outcome.undecided_targets += 1;
+                }
+                Ok(())
+            }
+            PathStatus::Infeasible => {
+                self.outcome.pruned_infeasible += 1;
+                Ok(())
+            }
+            PathStatus::Unknown(_) => {
+                self.outcome.undecided_targets += 1;
+                Ok(())
+            }
+        }
+    }
+
+    fn current_status(&mut self) -> Result<PathStatus, SolverError> {
+        if self.config.memory_aware {
+            self.executor.status_with_memory(self.arena)
+        } else {
+            self.executor.status(self.arena)
+        }
+    }
+
+    fn current_model(&mut self) -> Result<Option<Model>, SolverError> {
+        if self.config.memory_aware {
+            self.executor.model_with_memory(self.arena)
+        } else {
+            self.executor.model(self.arena)
+        }
+    }
+
+    fn limit_reached(&mut self) -> bool {
+        if self.outcome.reached.len() >= self.config.max_targets {
+            self.outcome.truncated = true;
+            true
+        } else {
+            false
+        }
     }
 }
 
