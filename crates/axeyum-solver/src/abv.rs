@@ -6311,7 +6311,7 @@ fn replay_branch_select_candidate_from_trial(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn replay_branch_select_residual_candidate_from_trial(
     arena: &TermArena,
     originals: &[TermId],
@@ -6324,28 +6324,28 @@ fn replay_branch_select_residual_candidate_from_trial(
     branch_stats: ProjectionRepairStats,
     select_stats: ProjectionRepairStats,
     trial: &Assignment,
-) -> Result<Option<ReplayBranchSelectCandidateDiagnostic>, SolverError> {
+) -> Result<Vec<ReplayBranchSelectCandidateDiagnostic>, SolverError> {
     let Some(global_failure) =
         first_projected_replay_failure(arena, originals, trial, ProjectionRepairStats::default())?
     else {
-        return Ok(None);
+        return Ok(Vec::new());
     };
     if global_failure.conjunct_term != branch_disjunction {
-        return Ok(None);
+        return Ok(Vec::new());
     }
     let Some(or_failure) = global_failure.failed_or else {
-        return Ok(None);
+        return Ok(Vec::new());
     };
     if or_failure.best_branch_ordinal != branch_ordinal
         || or_failure.best_branch_false_literals != 1
     {
-        return Ok(None);
+        return Ok(Vec::new());
     }
     let Some(false_literal) = or_failure.best_branch_first_false_term else {
-        return Ok(None);
+        return Ok(Vec::new());
     };
     let Some(&branch) = branches.get(branch_ordinal) else {
-        return Ok(None);
+        return Ok(Vec::new());
     };
 
     let mut residual_trial = trial.clone();
@@ -6358,7 +6358,7 @@ fn replay_branch_select_residual_candidate_from_trial(
             target,
             &mut residual_stats,
         )? {
-            return Ok(None);
+            return Ok(Vec::new());
         }
         "same_branch_store_target"
     } else {
@@ -6370,14 +6370,14 @@ fn replay_branch_select_residual_candidate_from_trial(
             &mut residual_trial,
             &mut residual_stats,
         )? {
-            return Ok(None);
+            return Ok(Vec::new());
         }
         "same_branch_literal"
     };
     let mut combined_select_stats = select_stats;
     combined_select_stats.absorb(residual_stats);
     let residual_kind = format!("{kind}+{residual_kind}");
-    replay_branch_select_candidate_from_trial(
+    let mut diagnostics = vec![replay_branch_select_candidate_from_trial(
         arena,
         originals,
         current_false,
@@ -6387,8 +6387,56 @@ fn replay_branch_select_residual_candidate_from_trial(
         branch_stats,
         combined_select_stats,
         &residual_trial,
-    )
-    .map(Some)
+    )?];
+
+    let Some(followup_failure) = first_projected_replay_failure(
+        arena,
+        originals,
+        &residual_trial,
+        ProjectionRepairStats::default(),
+    )?
+    else {
+        return Ok(diagnostics);
+    };
+    if followup_failure.conjunct_term == branch_disjunction
+        || !matches!(
+            arena.node(followup_failure.conjunct_term),
+            TermNode::App { op: Op::BoolOr, .. }
+        )
+    {
+        return Ok(diagnostics);
+    }
+    let Some(followup_or) = followup_failure.failed_or else {
+        return Ok(diagnostics);
+    };
+    let mut followup_trial = residual_trial.clone();
+    let Some(followup_stats) = repair_projected_branch_as_candidate(
+        arena,
+        originals,
+        followup_or.best_branch_term,
+        &mut followup_trial,
+    )?
+    else {
+        return Ok(diagnostics);
+    };
+    let mut followup_select_stats = combined_select_stats;
+    followup_select_stats.absorb(followup_stats);
+    let followup_kind = format!(
+        "{residual_kind}+followup_or{}_branch{}",
+        followup_failure.conjunct_ordinal, followup_or.best_branch_ordinal
+    );
+    diagnostics.push(replay_branch_select_candidate_from_trial(
+        arena,
+        originals,
+        current_false,
+        branch_ordinal,
+        select_failure,
+        &followup_kind,
+        branch_stats,
+        followup_select_stats,
+        &followup_trial,
+    )?);
+    Ok(diagnostics)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -6474,7 +6522,7 @@ fn replay_branch_select_candidate_diagnostics(
             if diagnostics.len() >= MAX_BRANCH_SELECT_DIAGNOSTICS {
                 return Ok(diagnostics);
             }
-            if let Some(residual_diagnostic) = replay_branch_select_residual_candidate_from_trial(
+            let residual_diagnostics = replay_branch_select_residual_candidate_from_trial(
                 arena,
                 originals,
                 branch_disjunction,
@@ -6486,8 +6534,9 @@ fn replay_branch_select_candidate_diagnostics(
                 branch_stats,
                 chain_stats,
                 &chain_trial,
-            )? {
-                diagnostics.push(residual_diagnostic);
+            )?;
+            for diagnostic in residual_diagnostics {
+                diagnostics.push(diagnostic);
                 if diagnostics.len() >= MAX_BRANCH_SELECT_DIAGNOSTICS {
                     return Ok(diagnostics);
                 }
@@ -6515,7 +6564,7 @@ fn replay_branch_select_candidate_diagnostics(
             if diagnostics.len() >= MAX_BRANCH_SELECT_DIAGNOSTICS {
                 return Ok(diagnostics);
             }
-            if let Some(residual_diagnostic) = replay_branch_select_residual_candidate_from_trial(
+            let residual_diagnostics = replay_branch_select_residual_candidate_from_trial(
                 arena,
                 originals,
                 branch_disjunction,
@@ -6527,8 +6576,9 @@ fn replay_branch_select_candidate_diagnostics(
                 branch_stats,
                 direct_stats,
                 &direct_trial,
-            )? {
-                diagnostics.push(residual_diagnostic);
+            )?;
+            for diagnostic in residual_diagnostics {
+                diagnostics.push(diagnostic);
                 if diagnostics.len() >= MAX_BRANCH_SELECT_DIAGNOSTICS {
                     return Ok(diagnostics);
                 }
@@ -9183,6 +9233,89 @@ mod tests {
             eval(&arena, c_eq_store, &projected).unwrap(),
             Value::Bool(true)
         );
+    }
+
+    #[test]
+    fn lazy_ext_replay_failure_reports_residual_followup_or_diagnostic() {
+        let mut arena = TermArena::new();
+        let a = arena.array_var("a", 4, 8).unwrap();
+        let c = arena.array_var("c", 4, 8).unwrap();
+        let d = arena.array_var("d", 4, 8).unwrap();
+        let i = arena.bv_var("i", 4).unwrap();
+        let two4 = arena.bv_const(4, 2).unwrap();
+        let three4 = arena.bv_const(4, 3).unwrap();
+        let five8 = arena.bv_const(8, 5).unwrap();
+        let seven8 = arena.bv_const(8, 7).unwrap();
+        let false_term = arena.bool_const(false);
+        let i_eq_two = arena.eq(i, two4).unwrap();
+        let store_a_three = arena.store(a, three4, seven8).unwrap();
+        let c_eq_store = arena.eq(c, store_a_three).unwrap();
+        let store_branch = arena.and(i_eq_two, c_eq_store).unwrap();
+        let blocked_branch = arena.and(false_term, false_term).unwrap();
+        let first_or = arena.or(store_branch, blocked_branch).unwrap();
+        let read_a_i = arena.select(a, i).unwrap();
+        let five_eq_read = arena.eq(five8, read_a_i).unwrap();
+        let d_eq_c = arena.eq(d, c).unwrap();
+        let second_or = arena.or(d_eq_c, blocked_branch).unwrap();
+        let first = arena.and(first_or, five_eq_read).unwrap();
+        let assertion = arena.and(first, second_or).unwrap();
+
+        let TermNode::Symbol(a_symbol) = arena.node(a) else {
+            panic!("a should be a symbol");
+        };
+        let TermNode::Symbol(c_symbol) = arena.node(c) else {
+            panic!("c should be a symbol");
+        };
+        let TermNode::Symbol(d_symbol) = arena.node(d) else {
+            panic!("d should be a symbol");
+        };
+        let TermNode::Symbol(i_symbol) = arena.node(i) else {
+            panic!("i should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(
+            *a_symbol,
+            default_value_for_symbol(&arena, *a_symbol).unwrap(),
+        );
+        projected.set(
+            *c_symbol,
+            default_value_for_symbol(&arena, *c_symbol).unwrap(),
+        );
+        let default_d = default_value_for_symbol(&arena, *d_symbol).unwrap();
+        let d_with_entry = store_value(
+            &default_d,
+            Value::Bv { width: 4, value: 1 },
+            Value::Bv { width: 8, value: 9 },
+        )
+        .unwrap();
+        projected.set(*d_symbol, d_with_entry);
+        projected.set(*i_symbol, Value::Bv { width: 4, value: 1 });
+
+        let originals = [assertion];
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected first OR replay failure");
+        let failure = replay_failure_with_branch_candidate_diagnostics(
+            &arena, &originals, &projected, failure,
+        )
+        .unwrap();
+        let note = failure.note();
+        assert!(
+            note.contains("chain+same_branch_store_target,status=candidate"),
+            "{note}"
+        );
+        assert!(
+            note.contains("chain+same_branch_store_target+followup_or"),
+            "{note}"
+        );
+        assert!(note.contains("target_true=true"), "{note}");
+        assert!(note.contains("total_false=0"), "{note}");
     }
 
     #[test]

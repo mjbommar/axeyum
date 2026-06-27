@@ -1993,6 +1993,17 @@ against competitor source, are now binding:
      `(array default 0 [0 -> 2] [1 -> 3] [2 -> 3])`. The next AUFLIA move is a
      paired OR-210/OR-209 component-array consistency repair, not another
      isolated term-580 target repair.
+     **RESIDUAL FOLLOW-UP OR DIAGNOSTIC LANDED (2026-06-26):** the same
+     diagnostic now tries one best-branch follow-up when the residual state
+     exposes a different generated OR, emitting rows such as
+     `chain+same_branch_store_target+followup_or209_branch3`. On `bug337`,
+     this repairs OR 209 branch 3 locally and preserves select 34, but full
+     replay remains total_false=2 and moves to OR 219 / term 6084. OR 219's
+     best branch 3 has one false literal, term 1402, comparing
+     `(array default 0 [0 -> 1] [1 -> 2] [2 -> 1])` with
+     `(array default 0 [1 -> 2] [2 -> 1])`. The next AUFLIA move is therefore a
+     bounded multi-hop component-array chain repair/diagnostic with explicit
+     replay-improvement gating, not a two-OR special case.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
