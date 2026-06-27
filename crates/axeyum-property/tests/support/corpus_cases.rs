@@ -87,6 +87,7 @@ pub(crate) fn run_property_corpus() -> CorpusResult<Vec<CorpusCaseReport>> {
         overflow_helper_counterexample_minimized()?,
         proptest_style_baseline_counterexample_comparison()?,
         kani_style_baseline_proof_comparison()?,
+        kani_style_assumption_baseline_proof_comparison()?,
         kani_style_struct_baseline_counterexample_comparison()?,
         derive_symbolic_counterexample_lifted()?,
         explicit_nested_aggregate_replay_rendered()?,
@@ -101,8 +102,8 @@ pub(crate) fn assert_reports_match(reports: &[CorpusCaseReport]) {
 
 pub(crate) fn expected_totals() -> CorpusTotals {
     CorpusTotals {
-        cases: 12,
-        proved: 4,
+        cases: 13,
+        proved: 5,
         disproved: 8,
         unknown: 0,
         mismatches: 0,
@@ -294,7 +295,7 @@ fn write_markdown_cases(out: &mut String, reports: &[CorpusCaseReport]) {
 
 fn write_markdown_next_gates(out: &mut String) {
     out.push_str("## Next Gates\n\n");
-    out.push_str("1. Broaden the baseline runner across assumption and replay property shapes,\n");
+    out.push_str("1. Broaden the baseline runner across replay-oriented property shapes,\n");
     out.push_str(
         "   including proptest-style random/shrunk witnesses and Kani-style bounded assertions.\n",
     );
@@ -718,6 +719,49 @@ fn first_wrapping_add_commutativity_failure() -> Option<(u8, u8)> {
         }
     }
     None
+}
+
+fn kani_style_assumption_baseline_proof_comparison() -> CorpusResult<CorpusCaseReport> {
+    assert_eq!(
+        first_assumed_increment_bound_failure(),
+        None,
+        "bounded executable baseline should find no precondition-respecting increment failure",
+    );
+
+    let mut property = Property::new();
+    let x = property.symbolic::<u8>("x")?;
+    let ten = property.bv_const::<8>(10)?;
+    let eleven = property.bv_const::<8>(11)?;
+    let one = property.bv_const::<8>(1)?;
+    let pre = property.bv_ule(x, ten)?;
+    property.assume(pre);
+    let x_plus_one = property.bv_add(x, one)?;
+    let goal = property.bv_ule(x_plus_one, eleven)?;
+
+    let certificate = property.prove_with_certificate(goal)?;
+    let summary = certificate.summary();
+    assert!(matches!(summary.outcome, ProofOutcomeSummary::Proved));
+    assert!(
+        summary.evidence.is_some(),
+        "proved assumption baseline comparison should expose checked evidence"
+    );
+    let lean_available = summary.lean.status == LeanStatus::Available;
+
+    Ok(CorpusCaseReport {
+        id: "sdk-assumption-baseline-proof-compare",
+        tier: "P1",
+        workflow: "bounded baseline comparison under an SDK assumption",
+        expected: ExpectedOutcome::Proved,
+        actual: summary.outcome,
+        checks: "executable baseline finds no `x <= 10 && x + 1 > 11` failure for `u8`; Axeyum proves the assumed assertion with checked evidence",
+        baseline_analogue: "Kani precondition/assertion harness over the same Rust predicate",
+        lean_required: false,
+        lean_available,
+    })
+}
+
+fn first_assumed_increment_bound_failure() -> Option<u8> {
+    (u8::MIN..=u8::MAX).find(|&x| x <= 10 && x.wrapping_add(1) > 11)
 }
 
 fn kani_style_struct_baseline_counterexample_comparison() -> CorpusResult<CorpusCaseReport> {

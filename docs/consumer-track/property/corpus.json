@@ -2,8 +2,8 @@
   "last_updated": "2026-06-27",
   "generated_by": "cargo run -p axeyum-property --example property_corpus_scoreboard -- json docs/consumer-track/property/corpus.json",
   "summary": {
-    "cases": 12,
-    "proved": 4,
+    "cases": 13,
+    "proved": 5,
     "disproved": 8,
     "unknown": 0,
     "mismatches": 0,
@@ -108,6 +108,17 @@
       "actual": "proved",
       "checks": "executable baseline finds no `x + y != y + x` failure for `u8`; Axeyum proves the same assertion with checked evidence",
       "baseline_analogue": "Kani exhaustive bounded assertion over the same Rust predicate",
+      "lean_required": false,
+      "lean_available": true
+    },
+    {
+      "id": "sdk-assumption-baseline-proof-compare",
+      "tier": "P1",
+      "workflow": "bounded baseline comparison under an SDK assumption",
+      "expected": "proved",
+      "actual": "proved",
+      "checks": "executable baseline finds no `x <= 10 && x + 1 > 11` failure for `u8`; Axeyum proves the assumed assertion with checked evidence",
+      "baseline_analogue": "Kani precondition/assertion harness over the same Rust predicate",
       "lean_required": false,
       "lean_available": true
     },
