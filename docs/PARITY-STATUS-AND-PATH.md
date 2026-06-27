@@ -642,8 +642,13 @@ a named mechanism.**
    exposes OR **210** at **total_false=2**. A second-hop OR diagnostic now makes
    this a closed local cycle: OR **210** -> OR **211** -> OR **210**, and OR
    **211** -> OR **210** -> OR **211**, each reported as `returns_first_or`
-   after scalar closure. The next practical AUFLIA step is to derive or learn a
-   constraint that rules out the OR-210/OR-211 toggle family.
+   after scalar closure. A production guard now rejects that two-hop no-progress
+   shape on small replay surfaces (<=64 positive conjuncts) in branch-choice
+   repair and the final single-literal OR fallback. The ungated large-row
+   version was measured/rejected after moving `bug337` backward to OR **210**
+   and about **72.5 s**, so the large row remains diagnostic-only at term
+   **3408**. The next practical AUFLIA step is to derive or learn a constraint
+   that rules out the large OR-210/OR-211 toggle family.
 2. **QF_NRA high-degree** (cvc5 24%). Linear/McCormick → **CAD/nlsat**; high-degree SOS
    needs SDP. The CAD decision side + bignum algebraic path are landing (parallel agent).
 3. **QF_NIA** beyond bounded-box. The bounded synthetic row is now

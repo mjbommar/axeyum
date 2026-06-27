@@ -9363,14 +9363,30 @@ fn repair_projected_replay_failure(
     };
 
     let mut stats = ProjectionRepairStats::default();
+    let mut trial = projected.clone();
     let changed = repair_projected_branch_literal_in_branch(
         arena,
         originals,
         or_failure.best_branch_term,
         false_literal,
-        projected,
+        &mut trial,
         &mut stats,
     )?;
+    if changed
+        && scalar_closure_rejects_branch_candidate(
+            arena,
+            originals,
+            failure.conjunct_term,
+            or_failure.best_branch_term,
+            current_false,
+            &trial,
+        )?
+    {
+        return Ok(None);
+    }
+    if changed {
+        *projected = trial;
+    }
     Ok(changed.then_some(stats))
 }
 
@@ -9772,6 +9788,16 @@ fn repair_projected_replay_branch_choice(
         else {
             continue;
         };
+        if scalar_closure_rejects_branch_candidate(
+            arena,
+            originals,
+            branch_disjunction,
+            branch,
+            current_false,
+            &trial,
+        )? {
+            continue;
+        }
         let total_false = positive_replay_false_count(arena, originals, &trial)?;
         if total_false > current_false {
             continue;
@@ -9920,28 +9946,109 @@ fn scalar_closure_rejects_branch_candidate(
     baseline_false: usize,
     candidate: &Assignment,
 ) -> Result<bool, SolverError> {
+    const MAX_FOLLOWUP_OR_CYCLE_GUARD_CONJUNCTS: usize = 64;
+
     let (closure_steps, closure_trial) =
         replay_scalar_closure_from_trial(arena, originals, branch, candidate)?;
-    if closure_steps.is_empty() {
+    let (final_assignment, final_total_false, final_failure) = if closure_steps.is_empty() {
+        (
+            candidate,
+            positive_replay_false_count(arena, originals, candidate)?,
+            first_projected_replay_failure(
+                arena,
+                originals,
+                candidate,
+                ProjectionRepairStats::default(),
+            )?,
+        )
+    } else {
+        (
+            &closure_trial,
+            positive_replay_false_count(arena, originals, &closure_trial)?,
+            first_projected_replay_failure(
+                arena,
+                originals,
+                &closure_trial,
+                ProjectionRepairStats::default(),
+            )?,
+        )
+    };
+    if final_total_false < baseline_false {
         return Ok(false);
     }
-    let final_total_false = positive_replay_false_count(arena, originals, &closure_trial)?;
+    let Some(final_failure) = final_failure else {
+        return Ok(false);
+    };
+    if final_failure.conjunct_term == disjunction {
+        return Ok(branch_false_literal_count(arena, branch, final_assignment)? > 0);
+    }
+    if positive_replay_conjunct_count(arena, originals) > MAX_FOLLOWUP_OR_CYCLE_GUARD_CONJUNCTS {
+        return Ok(false);
+    }
+    scalar_closure_rejects_followup_or_cycle(
+        arena,
+        originals,
+        disjunction,
+        baseline_false,
+        &final_failure,
+        final_assignment,
+    )
+}
+
+fn scalar_closure_rejects_followup_or_cycle(
+    arena: &TermArena,
+    originals: &[TermId],
+    first_disjunction: TermId,
+    baseline_false: usize,
+    followup_failure: &ReplayFailure,
+    assignment: &Assignment,
+) -> Result<bool, SolverError> {
+    if !matches!(
+        arena.node(followup_failure.conjunct_term),
+        TermNode::App { op: Op::BoolOr, .. }
+    ) {
+        return Ok(false);
+    }
+    let Some(followup_or) = &followup_failure.failed_or else {
+        return Ok(false);
+    };
+
+    let mut followup_trial = assignment.clone();
+    let Some(_) = repair_projected_branch_best_candidate(
+        arena,
+        originals,
+        followup_or.best_branch_term,
+        &mut followup_trial,
+    )?
+    else {
+        return Ok(false);
+    };
+
+    let (closure_steps, closure_trial) = replay_scalar_closure_from_trial(
+        arena,
+        originals,
+        followup_or.best_branch_term,
+        &followup_trial,
+    )?;
+    let final_assignment = if closure_steps.is_empty() {
+        &followup_trial
+    } else {
+        &closure_trial
+    };
+    let final_total_false = positive_replay_false_count(arena, originals, final_assignment)?;
     if final_total_false < baseline_false {
         return Ok(false);
     }
     let Some(final_failure) = first_projected_replay_failure(
         arena,
         originals,
-        &closure_trial,
+        final_assignment,
         ProjectionRepairStats::default(),
     )?
     else {
         return Ok(false);
     };
-    if final_failure.conjunct_term != disjunction {
-        return Ok(false);
-    }
-    Ok(branch_false_literal_count(arena, branch, &closure_trial)? > 0)
+    Ok(final_failure.conjunct_term == first_disjunction)
 }
 
 fn repair_projected_branch_best_candidate_with_scalar_closure_guard(
@@ -11919,6 +12026,80 @@ mod tests {
             )),
             "{note}"
         );
+    }
+
+    #[test]
+    fn lazy_ext_branch_repair_rejects_followup_two_or_cycle() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").unwrap();
+        let y = arena.int_var("y").unwrap();
+        let z = arena.int_var("z").unwrap();
+        let zero = arena.int_const(0);
+        let false_term = arena.bool_const(false);
+        let y_plus_zero = arena.int_add(y, zero).unwrap();
+        let x_plus_zero = arena.int_add(x, zero).unwrap();
+        let x_eq_y = arena.eq(x, y_plus_zero).unwrap();
+        let z_eq_x = arena.eq(z, x_plus_zero).unwrap();
+        let first_or = arena.or(z_eq_x, false_term).unwrap();
+        let z_eq_zero = arena.eq(z, zero).unwrap();
+        let second_or = arena.or(z_eq_zero, false_term).unwrap();
+        let prefix = arena.and(x_eq_y, first_or).unwrap();
+        let assertion = arena.and(prefix, second_or).unwrap();
+
+        let TermNode::Symbol(x_symbol) = arena.node(x) else {
+            panic!("x should be a symbol");
+        };
+        let TermNode::Symbol(y_symbol) = arena.node(y) else {
+            panic!("y should be a symbol");
+        };
+        let TermNode::Symbol(z_symbol) = arena.node(z) else {
+            panic!("z should be a symbol");
+        };
+
+        let mut projected = Assignment::new();
+        projected.set(*x_symbol, Value::Int(1));
+        projected.set(*y_symbol, Value::Int(1));
+        projected.set(*z_symbol, Value::Int(0));
+        let originals = [assertion];
+        assert_eq!(eval(&arena, x_eq_y, &projected).unwrap(), Value::Bool(true));
+        assert_eq!(
+            first_projected_replay_failure(
+                &arena,
+                &originals,
+                &projected,
+                ProjectionRepairStats::default(),
+            )
+            .unwrap()
+            .expect("expected first OR failure")
+            .conjunct_term,
+            first_or
+        );
+        assert_eq!(
+            positive_replay_false_count(&arena, &originals, &projected).unwrap(),
+            1
+        );
+
+        let mut raw = projected.clone();
+        repair_projected_branch_as_candidate(&arena, &originals, z_eq_x, &mut raw)
+            .unwrap()
+            .expect("expected raw first-OR branch repair");
+        assert_eq!(eval(&arena, first_or, &raw).unwrap(), Value::Bool(true));
+        assert_eq!(eval(&arena, second_or, &raw).unwrap(), Value::Bool(false));
+
+        let failure = first_projected_replay_failure(
+            &arena,
+            &originals,
+            &projected,
+            ProjectionRepairStats::default(),
+        )
+        .unwrap()
+        .expect("expected first OR failure");
+        let guarded =
+            repair_projected_replay_failure(&arena, &originals, &mut projected, &failure).unwrap();
+        assert!(guarded.is_none(), "two-OR toggle should be rejected");
+        assert_eq!(projected.get(*x_symbol), Some(Value::Int(1)));
+        assert_eq!(projected.get(*y_symbol), Some(Value::Int(1)));
+        assert_eq!(projected.get(*z_symbol), Some(Value::Int(0)));
     }
 
     #[test]

@@ -2111,9 +2111,14 @@ against competitor source, are now binding:
      exposes OR **210**. A second-hop OR diagnostic now closes this as a local
      cycle: OR **210** -> OR **211** -> OR **210**, and OR **211** -> OR
      **210** -> OR **211**, each reported as `returns_first_or` after scalar
-     closure. The next AUFLIA move is therefore to derive or learn a constraint
-     that rules out the OR-210/OR-211 toggle family, not greedy single-OR
-     forcing or more local branch enumeration.
+     closure. A production guard now rejects this two-hop no-progress shape for
+     small replay surfaces (<=64 positive conjuncts) in branch-choice repair and
+     the final single-literal OR fallback. The ungated large-row version was
+     measured/rejected after moving `bug337` backward to OR **210** and about
+     **72.5 s**, so the large row remains diagnostic-only at term **3408**. The
+     next AUFLIA move is therefore to derive or learn a constraint that rules
+     out the large OR-210/OR-211 toggle family, not greedy single-OR forcing or
+     more local branch enumeration.
    - Pair it with a **single-witness extensionality skolem** for arrays
      (`a≠b ⇒ select(a,k)≠select(b,k)`, one fresh `k` — what Z3/cvc5 do) replacing the
      current **`2^index-bits` enumeration** (`MAX_ARRAY_EQ_INDEX_BITS=8`), which is
