@@ -3608,6 +3608,111 @@ fn warm_bool_readback_connectives_drop_constant_wrappers() {
 }
 
 #[test]
+fn warm_bool_readback_xor_implies_drop_constant_wrappers() {
+    let mut arena = TermArena::new();
+    let value_sym = arena
+        .declare("warm_bool_xor_implies_value", Sort::Bool)
+        .unwrap();
+    let value = arena.var(value_sym);
+    let read_index = arena.bv_const(8, 11).unwrap();
+    let false_value = arena.bool_const(false);
+    let true_value = arena.bool_const(true);
+    let memory = arena
+        .const_array_with_index_sort(Sort::BitVec(8), false_value)
+        .unwrap();
+    let stored = arena.store(memory, read_index, value).unwrap();
+    let loaded = arena.select(stored, read_index).unwrap();
+    let not_value = arena.not(value).unwrap();
+
+    let xor_false = arena.xor(loaded, false_value).unwrap();
+    let simplified_xor_false =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, xor_false);
+    assert_eq!(
+        simplified_xor_false, value,
+        "readback xor false should simplify to the stored Bool"
+    );
+
+    let xor_true = arena.xor(loaded, true_value).unwrap();
+    let simplified_xor_true =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, xor_true);
+    assert_eq!(
+        simplified_xor_true, not_value,
+        "readback xor true should simplify to the negated stored Bool"
+    );
+
+    let xor_self = arena.xor(loaded, loaded).unwrap();
+    let simplified_xor_self =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, xor_self);
+    assert_bool_const(&arena, simplified_xor_self, false);
+
+    let not_loaded = arena.not(loaded).unwrap();
+    let xor_complement = arena.xor(loaded, not_loaded).unwrap();
+    let simplified_xor_complement =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, xor_complement);
+    assert_bool_const(&arena, simplified_xor_complement, true);
+
+    let true_implies = arena.implies(true_value, loaded).unwrap();
+    let simplified_true_implies =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, true_implies);
+    assert_eq!(
+        simplified_true_implies, value,
+        "true implies readback should simplify to the stored Bool"
+    );
+
+    let implies_false = arena.implies(loaded, false_value).unwrap();
+    let simplified_implies_false =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, implies_false);
+    assert_eq!(
+        simplified_implies_false, not_value,
+        "readback implies false should simplify to the negated stored Bool"
+    );
+
+    let implies_true = arena.implies(loaded, true_value).unwrap();
+    let simplified_implies_true =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, implies_true);
+    assert_bool_const(&arena, simplified_implies_true, true);
+
+    let complement_implies = arena.implies(not_loaded, loaded).unwrap();
+    let simplified_complement_implies =
+        IncrementalBvSolver::simplify_memory_for_warm_assertion(&mut arena, complement_implies);
+    assert_eq!(
+        simplified_complement_implies, value,
+        "not(readback) implies readback should simplify to the stored Bool"
+    );
+
+    let mut solver = IncrementalBvSolver::new();
+    let encoded = solver
+        .assert_simplifying_memory(&mut arena, true_implies)
+        .unwrap();
+    assert_eq!(encoded, value);
+    assert!(
+        !solver.has_deferred_theory_assertions(),
+        "Bool xor/implies readback cleanup must stay off the memory dispatcher"
+    );
+    match solver.check(&arena).unwrap() {
+        CheckResult::Sat(model) => {
+            assert_eq!(model.get(value_sym), Some(Value::Bool(true)));
+            assert_eq!(
+                eval(&arena, true_implies, &model.to_assignment()).unwrap(),
+                Value::Bool(true),
+                "model replay must validate the original Bool implication assertion"
+            );
+        }
+        other => panic!("expected Bool implication readback assertion sat, got {other:?}"),
+    }
+
+    let mut impossible = IncrementalBvSolver::new();
+    impossible
+        .assert_simplifying_memory(&mut arena, xor_self)
+        .unwrap();
+    assert_eq!(
+        impossible.check(&arena).unwrap(),
+        CheckResult::Unsat,
+        "a Bool readback cannot differ from itself"
+    );
+}
+
+#[test]
 fn warm_assert_simplifies_symbolic_read_over_write_hit_to_ite() {
     let mut arena = TermArena::new();
     let write_index_sym = arena

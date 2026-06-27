@@ -1545,6 +1545,18 @@ fn collapse_trivial_warm_term(arena: &mut TermArena, term: TermId) -> Option<Ter
             };
             collapse_bool_or(arena, *left, *right)
         }
+        Op::BoolXor => {
+            let [left, right] = args.as_slice() else {
+                return None;
+            };
+            collapse_bool_xor(arena, *left, *right)
+        }
+        Op::BoolImplies => {
+            let [left, right] = args.as_slice() else {
+                return None;
+            };
+            collapse_bool_implies(arena, *left, *right)
+        }
         _ => None,
     }
 }
@@ -1594,6 +1606,45 @@ fn collapse_bool_or(arena: &mut TermArena, left: TermId, right: TermId) -> Optio
         _ => {}
     }
     are_negations(arena, left, right).then(|| arena.bool_const(true))
+}
+
+fn collapse_bool_xor(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    if left == right {
+        return Some(arena.bool_const(false));
+    }
+    match (
+        bool_const_value(arena, left),
+        bool_const_value(arena, right),
+    ) {
+        (Some(left_value), Some(right_value)) => {
+            return Some(arena.bool_const(left_value ^ right_value));
+        }
+        (Some(false), _) => return Some(right),
+        (_, Some(false)) => return Some(left),
+        (Some(true), _) => return arena.not(right).ok(),
+        (_, Some(true)) => return arena.not(left).ok(),
+        _ => {}
+    }
+    are_negations(arena, left, right).then(|| arena.bool_const(true))
+}
+
+fn collapse_bool_implies(arena: &mut TermArena, left: TermId, right: TermId) -> Option<TermId> {
+    if left == right {
+        return Some(arena.bool_const(true));
+    }
+    match (
+        bool_const_value(arena, left),
+        bool_const_value(arena, right),
+    ) {
+        (Some(left_value), Some(right_value)) => {
+            return Some(arena.bool_const(!left_value || right_value));
+        }
+        (Some(false), _) | (_, Some(true)) => return Some(arena.bool_const(true)),
+        (Some(true), _) => return Some(right),
+        (_, Some(false)) => return arena.not(left).ok(),
+        _ => {}
+    }
+    are_negations(arena, left, right).then_some(right)
 }
 
 fn are_negations(arena: &TermArena, left: TermId, right: TermId) -> bool {

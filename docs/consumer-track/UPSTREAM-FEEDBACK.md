@@ -85,13 +85,14 @@ Last reconciled with `main`: 2026-06-27.
   cleanup now distributes equality over Bool/BV-valued `ite`s plus folds
   literal-distinct constant equalities, Boolean identity `ite`s, Boolean
   equality-to-constant wrappers, double negation, and Boolean connective
-  wrappers. Branch reads whose branches simplify to the same value do not keep
-  an irrelevant merge condition, comparisons like `ite(flag, 1, 0) = 1`
-  collapse to `flag`, symbolic Bool readbacks like
-  `select(store(mem, i, p), i) = true` collapse to `p`, and predicate-like
-  readbacks such as `select(store(mem, i, p), i) and true` drop the connective
-  wrapper; the resulting `v = v` tautology, `not true` contradiction, or
-  `p and not p` contradiction is folded before warm encoding.
+  wrappers including `xor` and implication. Branch reads whose branches
+  simplify to the same value do not keep an irrelevant merge condition,
+  comparisons like `ite(flag, 1, 0) = 1` collapse to `flag`, symbolic Bool
+  readbacks like `select(store(mem, i, p), i) = true` collapse to `p`, and
+  predicate-like readbacks such as `select(store(mem, i, p), i) and true` or
+  `true => select(store(mem, i, p), i)` drop the connective wrapper; the
+  resulting `v = v` tautology, `not true` contradiction, `p and not p`
+  contradiction, or `p xor p` contradiction is folded before warm encoding.
   `SymbolicMemory` load-equality helpers now use the same automatic warm/memory
   route, so frontend helper calls benefit from the warm slice without losing
   fallback on memory/UF shapes still outside it.
@@ -110,7 +111,7 @@ Last reconciled with `main`: 2026-06-27.
   reads, simple branch-merged memory reads, reducible symbolic-address memory
   reads with same-index shadowed-store pruning, conditional read/write-index
   paths with scalar equality-over-`ite` cleanup, symbolic Bool readback
-  equality/connective cleanup, branch-merged reads whose selected branches
+  equality/connective/xor/implication cleanup, branch-merged reads whose selected branches
   reduce to the same scalar value plus the reflexive equality/negation cleanup
   exposed by that reduction, plain symbolic-base Bool/BV array loads,
   wide/BV256 storage-style base loads,
@@ -133,6 +134,7 @@ Last reconciled with `main`: 2026-06-27.
   "Warm scalar ITE equality cleanup" /
   "Warm Bool readback equality cleanup" /
   "Warm Bool connective cleanup" /
+  "Warm Bool xor/implication cleanup" /
   "Warm BV-array select-congruence admission" /
   "Warm wide-BV array select projection" /
   "Warm scalar UF congruence admission" /
