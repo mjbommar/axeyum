@@ -2384,7 +2384,7 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    `CounterLoopSystem` with a system *built from the AST*, giving warm-solver reuse
    across unroll depths for deep loops (scalar state; arrays-in-loop-state stay on
    the one-shot `_with_memory` route, off U6). Sliced:
-   - **C4.1** a `GenericLoopSystem` over **N scalar variables**: `state_vars` =
+   - **C4.1** — ✅ DONE (`6c7be0c`) — `ScalarLoopSystem` over **N scalar variables**: `state_vars` =
      one symbol per loop variable per step; `init` = pre-loop values; `trans` =
      `guard ? body-effect : stutter` where the per-variable next-value expressions
      come from lowering the **straight-line** loop body (assignments) against the
