@@ -11,6 +11,22 @@ The atlas is not a marketing surface. It is a planning and audit artifact. A
 fragment row should say "unknown" or "partial" whenever the evidence is not
 strong enough.
 
+## Current Status
+
+The first artifact has landed:
+
+- [smt-fragments.json](../../artifacts/ontology/smt-fragments.json)
+  contains the initial ten rows from A1.
+- [smt-fragments.schema.json](../../artifacts/ontology/smt-fragments.schema.json)
+  defines the row shape.
+- [validate-smt-fragment-atlas.py](../../scripts/validate-smt-fragment-atlas.py)
+  validates JSON syntax, stable row IDs, required evidence fields, local source
+  links, benchmark references, and dominance-audit citations.
+
+A0 and A1 are complete for the incubator MVP. A2 is partially complete: the
+validator exists and runs locally, but negative fixtures and CI wiring remain
+open.
+
 ## Non-Goals
 
 - Replacing the SMT-LIB standard.
@@ -117,6 +133,8 @@ External references should be used for terminology and benchmark context:
 
 ### A0: Schema Sketch
 
+Status: complete for the incubator MVP.
+
 Exit criteria:
 
 - Draft `smt-fragments.schema.json`.
@@ -125,6 +143,8 @@ Exit criteria:
   dominance state without hand-wavy fragment labels.
 
 ### A1: First Ten Rows
+
+Status: complete for the incubator MVP.
 
 Initial rows:
 
@@ -146,6 +166,9 @@ Exit criteria:
 - Rows distinguish "decides", "measured", "certifies", and "dominates".
 
 ### A2: Validation Tool
+
+Status: partial. The local validator exists; negative fixtures and CI wiring are
+still future work.
 
 Add a small validator that checks:
 

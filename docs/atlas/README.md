@@ -1,7 +1,7 @@
 # SMT Fragment Atlas
 
-The SMT Fragment Atlas is the planned machine-readable map of what Axeyum can
-parse, solve, replay, prove, and measure.
+The SMT Fragment Atlas is the machine-readable map of what Axeyum can parse,
+solve, replay, prove, and measure.
 
 It should become the shared source for capability documentation, benchmark
 coverage, proof-route coverage, and planning status. The first version is a
@@ -23,9 +23,17 @@ docs/atlas/
   README.md
   ROADMAP.md
 artifacts/ontology/
-  smt-fragments.json        # planned first machine-readable atlas
-  smt-fragments.schema.json # planned validation schema
+  smt-fragments.json        # first machine-readable atlas
+  smt-fragments.schema.json # validation schema
+scripts/
+  validate-smt-fragment-atlas.py
 ```
+
+The first artifact is live:
+
+- [smt-fragments.json](../../artifacts/ontology/smt-fragments.json)
+- [smt-fragments.schema.json](../../artifacts/ontology/smt-fragments.schema.json)
+- [validate-smt-fragment-atlas.py](../../scripts/validate-smt-fragment-atlas.py)
 
 ## Roadmap
 
@@ -52,3 +60,9 @@ Each row should link to:
 - [trust ledger](../research/08-planning/trust-ledger.md);
 - [dominance scoreboard](../../bench-results/DOMINANCE.md);
 - [parity path](../PARITY-STATUS-AND-PATH.md).
+
+Validate the current atlas with:
+
+```sh
+python3 scripts/validate-smt-fragment-atlas.py
+```

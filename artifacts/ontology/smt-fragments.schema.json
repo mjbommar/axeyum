@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.local/schemas/smt-fragments.schema.json",
+  "title": "Axeyum SMT Fragment Atlas",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "rows"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fragment"
+      }
+    }
+  },
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "audited",
+        "checked",
+        "declined",
+        "dominant-on-audited-row",
+        "measured",
+        "modeled",
+        "none",
+        "partial",
+        "planned",
+        "replay-checked",
+        "sound-incomplete",
+        "unknown",
+        "validated"
+      ]
+    },
+    "sourceList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "fragment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "smtlib_logic",
+        "title",
+        "scope",
+        "sorts",
+        "operators",
+        "parser",
+        "ir",
+        "solver_routes",
+        "model_replay",
+        "proof_routes",
+        "benchmarks",
+        "dominance",
+        "open_gaps",
+        "axeyum_capability_links"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "smtlib_logic": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sorts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "operators": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["supported_public", "partial", "declined"],
+          "properties": {
+            "supported_public": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "partial": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "declined": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "parser": {
+          "$ref": "#/$defs/statusBlock"
+        },
+        "ir": {
+          "$ref": "#/$defs/statusBlock"
+        },
+        "solver_routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/route"
+          }
+        },
+        "model_replay": {
+          "$ref": "#/$defs/statusBlock"
+        },
+        "proof_routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/proofRoute"
+          }
+        },
+        "benchmarks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/benchmark"
+          }
+        },
+        "dominance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "sources", "notes"],
+          "properties": {
+            "status": {"$ref": "#/$defs/status"},
+            "sources": {"$ref": "#/$defs/sourceList"},
+            "notes": {"type": "string", "minLength": 1}
+          }
+        },
+        "open_gaps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "axeyum_capability_links": {
+          "$ref": "#/$defs/sourceList"
+        }
+      }
+    },
+    "statusBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "sources", "notes"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "sources": {"$ref": "#/$defs/sourceList"},
+        "notes": {"type": "string", "minLength": 1}
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "sources", "notes"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "status": {"$ref": "#/$defs/status"},
+        "sources": {"$ref": "#/$defs/sourceList"},
+        "notes": {"type": "string", "minLength": 1}
+      }
+    },
+    "proofRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "checker", "lean_status", "sources", "notes"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "status": {"$ref": "#/$defs/status"},
+        "checker": {"type": "string", "minLength": 1},
+        "lean_status": {"$ref": "#/$defs/status"},
+        "sources": {"$ref": "#/$defs/sourceList"},
+        "notes": {"type": "string", "minLength": 1}
+      }
+    },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "source",
+        "files",
+        "decided",
+        "decided_percent",
+        "disagree",
+        "notes"
+      ],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "status": {"$ref": "#/$defs/status"},
+        "source": {"type": "string", "minLength": 1},
+        "files": {"type": "integer", "minimum": 0},
+        "decided": {"type": "integer", "minimum": 0},
+        "decided_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+        "disagree": {"type": "integer", "minimum": 0},
+        "notes": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

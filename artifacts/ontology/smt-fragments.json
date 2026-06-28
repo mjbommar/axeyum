@@ -1,0 +1,665 @@
+{
+  "schema_version": 1,
+  "rows": [
+    {
+      "id": "qf_bv",
+      "smtlib_logic": "QF_BV",
+      "title": "Quantifier-free fixed-width bit-vectors",
+      "scope": "Bool plus fixed-width BitVec terms, lowered through AIG/CNF/SAT with original-term model replay.",
+      "sorts": ["Bool", "BitVec"],
+      "operators": {
+        "supported_public": ["=", "distinct", "ite", "not", "and", "or", "xor", "=>", "bvnot", "bvand", "bvor", "bvxor", "bvadd", "bvsub", "bvmul", "bvudiv", "bvurem", "bvsdiv", "bvsrem", "bvsmod", "bvshl", "bvlshr", "bvashr", "concat", "extract", "zero_extend", "sign_extend", "bvult", "bvule", "bvugt", "bvuge", "bvslt", "bvsle", "bvsgt", "bvsge"],
+        "partial": ["Lean reconstruction for the full arithmetic/shift operator set"],
+        "declined": []
+      },
+      "parser": {
+        "status": "validated",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "Scalar bit-vector SMT-LIB is accepted and exercised by committed QF_BV benchmark rows."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-bv", "crates/axeyum-cnf"],
+        "notes": "Typed Bool/BV terms lower to AIG and CNF with retained lift maps for model replay."
+      },
+      "solver_routes": [
+        {
+          "name": "bit-blast-to-SAT",
+          "status": "validated",
+          "sources": ["crates/axeyum-bv", "crates/axeyum-cnf", "crates/axeyum-solver"],
+          "notes": "The default pure-Rust finite-domain route bit-blasts supported operators and checks SAT models against original terms."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver"],
+        "notes": "Every reported SAT model is replayed over the original terms rather than trusted from the backend."
+      },
+      "proof_routes": [
+        {
+          "name": "DRAT/LRAT-style SAT certificate after bit-blast",
+          "status": "checked",
+          "checker": "in-tree SAT proof checker",
+          "lean_status": "partial",
+          "sources": ["docs/PARITY-STATUS-AND-PATH.md", "docs/research/08-planning/trust-ledger.md", "crates/axeyum-solver/tests/evidence.rs"],
+          "notes": "UNSAT certificates are independently checked; Lean-kernel reconstruction is complete only for named sub-fragments."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-bv-curated-bvred",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 6,
+          "decided": 6,
+          "decided_percent": 100,
+          "disagree": 0,
+          "notes": "Small audited BV reduction row; hard public p4dfa remains the broader performance frontier."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json"],
+        "notes": "Dominant on the committed curated BV reduction audit row, not a blanket claim for every BV shape."
+      },
+      "open_gaps": ["Hard QF_BV performance on adversarial public slices", "Complete Lean reconstruction for every BV arithmetic and shift route"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/research/08-planning/trust-ledger.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_abv",
+      "smtlib_logic": "QF_ABV",
+      "title": "Quantifier-free arrays over bit-vectors",
+      "scope": "Bounded SMT arrays with BitVec index and element sorts, using read-over-write simplification, Ackermann-style reduction, and replay.",
+      "sorts": ["Bool", "BitVec", "Array"],
+      "operators": {
+        "supported_public": ["select", "store", "const_array", "=", "ite", "Bool/BV operators on indices and elements"],
+        "partial": ["general extensionality proofs", "arbitrary non-BV array component sorts"],
+        "declined": ["unbounded quantifier-heavy array reasoning"]
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "The supported public slice is bounded and intentionally narrower than all SMT-LIB array combinations."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Array values are represented for supported component sorts and projected back for replay."
+      },
+      "solver_routes": [
+        {
+          "name": "array reduction to Bool/BV plus SAT",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+          "notes": "Read-over-write and finite array reductions feed the finite-domain solver when the fragment is supported."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["crates/axeyum-solver/tests/evidence.rs", "docs/research/08-planning/capability-matrix.md"],
+        "notes": "SAT array models are checked against original array assertions after projection."
+      },
+      "proof_routes": [
+        {
+          "name": "array reduction evidence plus SAT certificate",
+          "status": "partial",
+          "checker": "reduction checker plus SAT/evidence checker",
+          "lean_status": "partial",
+          "sources": ["docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md", "crates/axeyum-solver/tests/evidence.rs"],
+          "notes": "Several ROW and finite-array unsat shapes are certified, but broad array elimination is still tracked as partial trust."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-abv-cvc5-bitwuzla-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 193,
+          "decided": 169,
+          "decided_percent": 88,
+          "disagree": 0,
+          "notes": "Strong measured row with no oracle disagreement."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json"],
+        "notes": "Dominant on the audited decided subset; remaining work is classification and wider proof coverage."
+      },
+      "open_gaps": ["Classify array unsats by ROW/congruence/general elimination", "Grow extensionality and non-BV-array proof coverage"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_uf",
+      "smtlib_logic": "QF_UF",
+      "title": "Quantifier-free uninterpreted functions",
+      "scope": "EUF over declared functions and carrier sorts, with congruence closure, model construction, and checked unsat explanations.",
+      "sorts": ["Bool", "UninterpretedSort"],
+      "operators": {
+        "supported_public": ["declare-sort", "declare-fun", "=", "distinct", "function application", "Bool structure"],
+        "partial": ["large/unbounded carrier search", "mixed fragments with hard arithmetic frontiers"],
+        "declined": []
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "Declared sorts and functions are accepted in the supported EUF command surface."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Function applications and uninterpreted carrier values are modeled without exposing backend lifetimes."
+      },
+      "solver_routes": [
+        {
+          "name": "congruence closure / e-graph",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+          "notes": "Backtrackable congruence closure decides the EUF slice and provides explanations for conflicts."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+        "notes": "SAT function interpretations replay against original assertions."
+      },
+      "proof_routes": [
+        {
+          "name": "congruence explanation / Alethe / Lean",
+          "status": "checked",
+          "checker": "independent union-find congruence checker",
+          "lean_status": "checked",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/evidence.rs", "crates/axeyum-solver/tests/lean_crosscheck.rs"],
+          "notes": "Pure EUF unsat explanations are re-derived and reconstructed for covered shapes."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-uf-cvc5-regress-clean-bounded-uninterp-sorts",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 82,
+          "decided": 44,
+          "decided_percent": 54,
+          "disagree": 0,
+          "notes": "Mid measured row after first-class carrier-sort handling."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json"],
+        "notes": "The decided audited subset is dominant; decide-rate remains the practical gap."
+      },
+      "open_gaps": ["Improve decide-rate on broader declared-sort corpora", "Keep Lean audit current as EUF plus mixed-fragment routes expand"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_ufbv",
+      "smtlib_logic": "QF_UFBV",
+      "title": "Uninterpreted functions over bit-vectors",
+      "scope": "EUF terms whose arguments or results are bit-vectors, combined with finite-domain BV solving.",
+      "sorts": ["Bool", "BitVec", "UninterpretedSort"],
+      "operators": {
+        "supported_public": ["function application", "=", "distinct", "Bool structure", "supported QF_BV operators"],
+        "partial": ["proof classification for BV arithmetic-heavy unsats"],
+        "declined": []
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "The parser accepts mixed UF and BV terms in the measured benchmark slices."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Function values can be projected with full Axeyum Value keys, including BV values."
+      },
+      "solver_routes": [
+        {
+          "name": "EUF/Ackermann plus BV solving",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+          "notes": "UF consistency is combined with the BV backend and replayed before returning SAT."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+        "notes": "Projected function interpretations are replayed over the original mixed UF/BV assertions."
+      },
+      "proof_routes": [
+        {
+          "name": "EUF congruence plus BV certificate",
+          "status": "partial",
+          "checker": "congruence checker plus finite-domain evidence checker",
+          "lean_status": "partial",
+          "sources": ["docs/PARITY-STATUS-AND-PATH.md", "crates/axeyum-solver/tests/evidence.rs"],
+          "notes": "Audited rows are certified; wider coverage depends on whether the BV side stays in Lean-covered sub-fragments."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-ufbv-cvc5-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 4,
+          "decided": 4,
+          "decided_percent": 100,
+          "disagree": 0,
+          "notes": "Small measured row with full decided coverage."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json"],
+        "notes": "Dominant on the audited cvc5 row and the small bitwuzla row."
+      },
+      "open_gaps": ["Broaden beyond tiny measured rows", "Separate UF-only proof obligations from BV arithmetic proof gaps"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_lra",
+      "smtlib_logic": "QF_LRA",
+      "title": "Quantifier-free linear real arithmetic",
+      "scope": "Linear constraints over exact rationals/reals, decided by exact simplex with replay and Farkas-style unsat evidence.",
+      "sorts": ["Bool", "Real"],
+      "operators": {
+        "supported_public": ["=", "<", "<=", ">", ">=", "+", "-", "* by rational constant", "to_real", "Bool structure"],
+        "partial": ["nonlinear multiplication promoted to NRA"],
+        "declined": ["transcendental functions"]
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "Linear real arithmetic terms are accepted and routed to the arithmetic solver."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Exact rational arithmetic is modeled in the solver layer while terms remain in the typed IR."
+      },
+      "solver_routes": [
+        {
+          "name": "exact-rational simplex / DPLL(LRA)",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+          "notes": "QF_LRA is complete for the supported linear fragment; Boolean structure is handled by the arithmetic dispatcher."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+        "notes": "SAT arithmetic models are replayed before being returned."
+      },
+      "proof_routes": [
+        {
+          "name": "Farkas / Alethe la_generic / Lean",
+          "status": "checked",
+          "checker": "exact-rational Farkas verifier",
+          "lean_status": "checked",
+          "sources": ["docs/research/08-planning/trust-ledger.md", "docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+          "notes": "Unsat linear-real certificates are independently checked and have Lean/Alethe routes for covered shapes."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-lra-cvc5-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 11,
+          "decided": 9,
+          "decided_percent": 82,
+          "disagree": 0,
+          "notes": "Strong measured row with no disagreement."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json"],
+        "notes": "Dominant on the audited decided row; remaining work is wider corpus depth and proof-route reporting."
+      },
+      "open_gaps": ["Run and expose per-instance Lean reconstruction coverage over larger LRA slices", "Improve performance on harder neutral corpora"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/research/08-planning/trust-ledger.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_lia",
+      "smtlib_logic": "QF_LIA",
+      "title": "Quantifier-free linear integer arithmetic",
+      "scope": "Linear integer constraints with branch-and-bound/cuts, replayed models, and certified sub-fragment refutations.",
+      "sorts": ["Bool", "Int"],
+      "operators": {
+        "supported_public": ["=", "<", "<=", ">", ">=", "+", "-", "* by integer constant", "div", "mod", "abs", "Bool structure"],
+        "partial": ["general Gomory/cut proof reconstruction", "hard nonlinear terms routed to NIA"],
+        "declined": ["underspecified division/modulo by non-syntactic nonzero divisors where required for sound SMT-LIB replay"]
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "Integer arithmetic command and term forms are accepted in the supported fragment."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Integer terms are represented in the IR and solved by arithmetic routes that fail closed to unknown when needed."
+      },
+      "solver_routes": [
+        {
+          "name": "branch-and-bound simplex plus integer cuts",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+          "notes": "The general solver is useful but proof coverage is stronger on named integer infeasibility sub-fragments."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+        "notes": "SAT integer assignments replay against original assertions."
+      },
+      "proof_routes": [
+        {
+          "name": "Diophantine and interval integer certificates",
+          "status": "partial",
+          "checker": "integer-Farkas / Diophantine self-checker",
+          "lean_status": "partial",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/evidence.rs", "crates/axeyum-solver/tests/lean_crosscheck.rs"],
+          "notes": "Equality-system and single-variable interval contradictions are checked; general cut reconstruction remains future work."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-lia-cvc5-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 11,
+          "decided": 10,
+          "decided_percent": 91,
+          "disagree": 0,
+          "notes": "Strong measured row, with one remaining missed decision versus the row size."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json"],
+        "notes": "Dominant on the audited decided row; the atlas keeps general LIA proof coverage separate from sub-fragment certificates."
+      },
+      "open_gaps": ["General integer cut proof reconstruction", "Harder neutral corpora beyond the small cvc5 slice"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_dt",
+      "smtlib_logic": "QF_DT",
+      "title": "Quantifier-free datatypes",
+      "scope": "Datatype constructor/tester/selector reasoning, including axiom-free Lean reconstruction for covered structural contradictions.",
+      "sorts": ["Bool", "Datatype"],
+      "operators": {
+        "supported_public": ["constructors", "selectors", "testers", "=", "distinct", "match desugaring"],
+        "partial": ["multi-step cyclic acyclicity reconstruction", "parametric datatype command surface"],
+        "declined": []
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "Datatype commands and match desugaring exist for the supported command surface."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Datatype constructors, selectors, testers, and structural contradictions are represented in the IR/solver layer."
+      },
+      "solver_routes": [
+        {
+          "name": "datatype structural reasoning",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver"],
+          "notes": "Covered QF_DT rows decide through structural datatype reasoning."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+        "notes": "Datatype SAT and structural UNSAT paths retain original-term checking."
+      },
+      "proof_routes": [
+        {
+          "name": "axiom-free Lean datatype chain",
+          "status": "checked",
+          "checker": "in-tree Lean kernel plus optional real Lean cross-check",
+          "lean_status": "checked",
+          "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver/tests/lean_crosscheck.rs"],
+          "notes": "Constructor distinctness, injectivity, testers, and single-level acyclicity have checked Lean routes."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-dt-cvc5-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 3,
+          "decided": 3,
+          "decided_percent": 100,
+          "disagree": 0,
+          "notes": "Tiny measured row with complete decided coverage."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json"],
+        "notes": "Dominant on the audited QF_DT row, with broader datatype coverage still intentionally scoped."
+      },
+      "open_gaps": ["Broaden measured datatype corpus", "Complete multi-step cycles and parametric datatype edges"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_fp",
+      "smtlib_logic": "QF_FP",
+      "title": "Quantifier-free floating point",
+      "scope": "SMT floating-point operators lowered to BitVec circuits, with differential validation and replay.",
+      "sorts": ["Bool", "FloatingPoint", "BitVec", "RoundingMode"],
+      "operators": {
+        "supported_public": ["fp.add", "fp.sub", "fp.mul", "fp.div", "fp.fma", "fp.sqrt", "fp.rem", "fp.roundToIntegral", "to_fp", "fp.isNaN", "fp.isInfinite", "fp.isZero", "fp.isNormal", "fp.isSubnormal", "fp.eq", "fp.lt", "fp.leq"],
+        "partial": ["some conversions are constant-only", "proofs for FP-to-BV lowering remain partial-trust"],
+        "declined": ["unsupported or unvalidated FP formats"]
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "FP sorts and operators are accepted for supported formats and conversions."
+      },
+      "ir": {
+        "status": "partial",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-ir"],
+        "notes": "FP is lowered through BitVec circuits rather than exposed as a full independent IR sort."
+      },
+      "solver_routes": [
+        {
+          "name": "FP-to-BV circuit lowering",
+          "status": "validated",
+          "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver"],
+          "notes": "Supported FP operations lower to circuits and then reuse finite-domain solving."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/capability-matrix.md", "crates/axeyum-solver/tests/evidence.rs"],
+        "notes": "Models are checked through the original FP semantics supported by the lowering."
+      },
+      "proof_routes": [
+        {
+          "name": "bit-vector certificate modulo FP lowering trust",
+          "status": "partial",
+          "checker": "BV evidence checker plus differential FP lowering tests",
+          "lean_status": "partial",
+          "sources": ["docs/research/08-planning/support-matrix.md", "bench-results/DOMINANCE.md"],
+          "notes": "The audited row is dominant, but FP-to-BV certificate coverage is still tracked separately from pure BV proof coverage."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-fp-bitwuzla-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 16,
+          "decided": 16,
+          "decided_percent": 100,
+          "disagree": 0,
+          "notes": "Strong measured row with full decided coverage."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json"],
+        "notes": "Dominant on the audited row, while FP-to-BV trust holes remain explicit."
+      },
+      "open_gaps": ["Grow FP-to-BV lowering certificates", "Keep nonstandard format support fail-closed"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_nra",
+      "smtlib_logic": "QF_NRA",
+      "title": "Quantifier-free nonlinear real arithmetic",
+      "scope": "Nonlinear real arithmetic with complete routes for selected algebraic/SOS/CAD slices and sound-incomplete fallback elsewhere.",
+      "sorts": ["Bool", "Real"],
+      "operators": {
+        "supported_public": ["=", "<", "<=", ">", ">=", "+", "-", "*", "polynomial terms", "Bool structure"],
+        "partial": ["high-degree coupled nonlinear systems", "general CAD unsat proof reconstruction"],
+        "declined": ["transcendental functions"]
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "NRA terms are accepted and dispatched to exact or sound-incomplete nonlinear routes."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Polynomial real terms and real-algebraic witnesses are represented in the solver layer."
+      },
+      "solver_routes": [
+        {
+          "name": "single-variable algebraic, degree-2 SOS, CAD, and McCormick fallback",
+          "status": "sound-incomplete",
+          "sources": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+          "notes": "Several important slices decide exactly; the hard high-degree tail returns unknown rather than unsound answers."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+        "notes": "SAT witnesses, including algebraic values, are checked by exact sign/evaluation routines before return."
+      },
+      "proof_routes": [
+        {
+          "name": "degree-2 SOS / PSD certificate",
+          "status": "partial",
+          "checker": "SOS/LDL certificate checker",
+          "lean_status": "partial",
+          "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver/tests/lean_crosscheck.rs"],
+          "notes": "Degree-2 SOS has checked evidence and selected Lean coverage; general CAD/NRA unsat certificates remain open."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-nra-synthetic-graduated",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 33,
+          "decided": 30,
+          "decided_percent": 91,
+          "disagree": 0,
+          "notes": "Synthetic graduated row exercises covered nonlinear routes."
+        },
+        {
+          "name": "qf-nra-cvc5-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 38,
+          "decided": 9,
+          "decided_percent": 24,
+          "disagree": 0,
+          "notes": "Harder cvc5 row remains weak and names the high-degree nonlinear frontier."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json"],
+        "notes": "Dominant on the synthetic audited row only; the cvc5 high-degree row is not a dominance claim."
+      },
+      "open_gaps": ["High-degree cvc5-regress nonlinear decision rate", "General CAD/NRA unsat proof reconstruction"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    },
+    {
+      "id": "qf_nia",
+      "smtlib_logic": "QF_NIA",
+      "title": "Quantifier-free nonlinear integer arithmetic",
+      "scope": "Nonlinear integer arithmetic with linear abstraction, guarded bounded bit-blast, exact sub-fragments, replay, and unknown-safe declines.",
+      "sorts": ["Bool", "Int"],
+      "operators": {
+        "supported_public": ["=", "<", "<=", ">", ">=", "+", "-", "*", "polynomial terms", "Bool structure"],
+        "partial": ["general nonlinear-integer unsat", "proofs for bounded bit-blasted boxes"],
+        "declined": ["unbounded hard nonlinear-integer proof obligations"]
+      },
+      "parser": {
+        "status": "accepted",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-smtlib"],
+        "notes": "NIA syntax is accepted and routed through sound-incomplete nonlinear integer procedures."
+      },
+      "ir": {
+        "status": "modeled",
+        "sources": ["crates/axeyum-ir", "crates/axeyum-solver"],
+        "notes": "Nonlinear integer terms are represented exactly; bounded finite routes are guarded to preserve original semantics."
+      },
+      "solver_routes": [
+        {
+          "name": "linear abstraction plus guarded bounded bit-blast and exact sub-fragments",
+          "status": "sound-incomplete",
+          "sources": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+          "notes": "Small SAT witnesses and named exact sub-fragments decide; genuine nonlinear integer unsat may return unknown."
+        }
+      ],
+      "model_replay": {
+        "status": "replay-checked",
+        "sources": ["docs/research/08-planning/support-matrix.md", "crates/axeyum-solver"],
+        "notes": "SAT witnesses are checked over exact integer semantics, not trusted from bounded encodings alone."
+      },
+      "proof_routes": [
+        {
+          "name": "Diophantine/interval sub-fragment certificates",
+          "status": "partial",
+          "checker": "integer certificate checker; fail-closed proof export on guarded blasts",
+          "lean_status": "partial",
+          "sources": ["docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md", "crates/axeyum-solver/tests/evidence.rs"],
+          "notes": "Some integer unsat sub-fragments are certified; bounded nonlinear proof export declines when guards make the certificate non-transferable."
+        }
+      ],
+      "benchmarks": [
+        {
+          "name": "qf-nia-synthetic-graduated",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 32,
+          "decided": 32,
+          "decided_percent": 100,
+          "disagree": 0,
+          "notes": "Synthetic graduated row exercises the covered NIA routes."
+        },
+        {
+          "name": "qf-nia-cvc5-regress-clean",
+          "status": "measured",
+          "source": "bench-results/SCOREBOARD.md",
+          "files": 39,
+          "decided": 21,
+          "decided_percent": 54,
+          "disagree": 0,
+          "notes": "Broader cvc5 row remains mid-tier."
+        }
+      ],
+      "dominance": {
+        "status": "dominant-on-audited-row",
+        "sources": ["bench-results/DOMINANCE.md", "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json"],
+        "notes": "Dominant on the synthetic audited row only; broader NIA remains a frontier."
+      },
+      "open_gaps": ["General nonlinear-integer unsat proof", "Improve broader cvc5-regress decide-rate without weakening guarded replay"],
+      "axeyum_capability_links": ["docs/research/08-planning/capability-matrix.md", "docs/research/08-planning/support-matrix.md", "docs/PARITY-STATUS-AND-PATH.md"]
+    }
+  ]
+}

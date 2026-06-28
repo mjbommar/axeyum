@@ -56,7 +56,7 @@ and graduation criteria.
 
 | Incubator | Folder | Detailed plan | First concrete output |
 |---|---|---|---|
-| SMT Fragment Atlas | [docs/atlas/](atlas/README.md) | [Atlas roadmap](atlas/ROADMAP.md) | `artifacts/ontology/smt-fragments.json` plus schema and generated docs. |
+| SMT Fragment Atlas | [docs/atlas/](atlas/README.md) | [Atlas roadmap](atlas/ROADMAP.md) | [smt-fragments.json](../artifacts/ontology/smt-fragments.json) plus [schema](../artifacts/ontology/smt-fragments.schema.json) and [validator](../scripts/validate-smt-fragment-atlas.py). |
 | Proof Certificate Cookbook | [docs/proof-cookbook/](proof-cookbook/README.md) | [Cookbook roadmap](proof-cookbook/ROADMAP.md) | Route-by-route recipes for tiny proof/evidence examples. |
 | Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) | Tiny rule packs with citations, checks, replayed witnesses, and proof status. |
 
@@ -182,7 +182,9 @@ incubators:
 1. **SMT Fragment Atlas**
    - Folder: [docs/atlas/](atlas/README.md).
    - Plan: [Atlas roadmap](atlas/ROADMAP.md).
-   - First artifact: `artifacts/ontology/smt-fragments.json`.
+   - First artifact: [smt-fragments.json](../artifacts/ontology/smt-fragments.json)
+     plus [schema](../artifacts/ontology/smt-fragments.schema.json) and
+     [validator](../scripts/validate-smt-fragment-atlas.py).
    - Include: logic name, sorts, operators, semantic notes, decision route,
      proof route, benchmark rows, current Axeyum status.
    - Value: makes planning, docs, and capability reporting share one source.
