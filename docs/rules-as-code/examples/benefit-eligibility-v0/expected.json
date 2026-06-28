@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "pack_id": "benefit_eligibility_v0",
+  "parameters": {
+    "change_date": "2026-07-01",
+    "standard_threshold_before": 30000,
+    "standard_threshold_after": 35000,
+    "veteran_bonus": 10000
+  },
+  "sample_domain": {
+    "ages": [17, 18, 65],
+    "incomes": [29999, 30000, 30001, 34999, 35000, 35001, 39999, 40000, 40001, 44999, 45000, 45001],
+    "dates": ["2026-06-30", "2026-07-01"],
+    "booleans": [false, true]
+  },
+  "witnesses": [
+    {
+      "id": "standard_at_new_threshold",
+      "facts": {
+        "age": 18,
+        "income": 35000,
+        "resident": true,
+        "veteran": false,
+        "sanctioned": false,
+        "application_date": "2026-07-01"
+      },
+      "expected_eligible": true,
+      "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(e)"],
+      "explanation": "Adult resident at the new standard threshold is eligible."
+    },
+    {
+      "id": "standard_above_new_threshold",
+      "facts": {
+        "age": 18,
+        "income": 35001,
+        "resident": true,
+        "veteran": false,
+        "sanctioned": false,
+        "application_date": "2026-07-01"
+      },
+      "expected_eligible": false,
+      "source_citations": ["Example Rule 1(b)", "Example Rule 1(e)"],
+      "explanation": "One unit above the new standard threshold is ineligible without an override."
+    },
+    {
+      "id": "veteran_override_at_cap",
+      "facts": {
+        "age": 18,
+        "income": 45000,
+        "resident": true,
+        "veteran": true,
+        "sanctioned": false,
+        "application_date": "2026-07-01"
+      },
+      "expected_eligible": true,
+      "source_citations": ["Example Rule 1(d)", "Example Rule 1(e)"],
+      "explanation": "Veteran override raises the threshold by 10000."
+    },
+    {
+      "id": "sanction_blocks_veteran",
+      "facts": {
+        "age": 65,
+        "income": 1000,
+        "resident": true,
+        "veteran": true,
+        "sanctioned": true,
+        "application_date": "2026-07-01"
+      },
+      "expected_eligible": false,
+      "source_citations": ["Example Rule 1(c)"],
+      "explanation": "Sanction status dominates ordinary eligibility and the veteran override."
+    },
+    {
+      "id": "temporal_before_change",
+      "facts": {
+        "age": 18,
+        "income": 33000,
+        "resident": true,
+        "veteran": false,
+        "sanctioned": false,
+        "application_date": "2026-06-30"
+      },
+      "expected_eligible": false,
+      "source_citations": ["Example Rule 1(b)", "Example Rule 1(e)"],
+      "explanation": "Before the effective date, income 33000 exceeds the old threshold."
+    },
+    {
+      "id": "temporal_after_change",
+      "facts": {
+        "age": 18,
+        "income": 33000,
+        "resident": true,
+        "veteran": false,
+        "sanctioned": false,
+        "application_date": "2026-07-01"
+      },
+      "expected_eligible": true,
+      "source_citations": ["Example Rule 1(b)", "Example Rule 1(e)"],
+      "explanation": "On the effective date, income 33000 is within the new threshold."
+    }
+  ],
+  "checks": [
+    {
+      "id": "consistency",
+      "expected_result": "unsat",
+      "validation": "finite_sample_replay",
+      "proof_status": "proof-gap",
+      "proof_gap": "No dedicated rules-as-code SMT harness yet; intended encoding is Bool/QF_LIA with ineligible defined as not eligible."
+    },
+    {
+      "id": "coverage",
+      "expected_result": "unsat",
+      "validation": "finite_sample_replay",
+      "proof_status": "proof-gap",
+      "proof_gap": "No dedicated rules-as-code SMT harness yet; current validator checks complete fact patterns over the finite sample."
+    },
+    {
+      "id": "threshold_cliff",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["standard_at_new_threshold", "standard_above_new_threshold"],
+      "proof_status": "replayed"
+    },
+    {
+      "id": "monotonicity",
+      "expected_result": "unsat",
+      "validation": "finite_sample_replay",
+      "proof_status": "proof-gap",
+      "proof_gap": "No solver proof yet; validator checks the finite sample that increasing income cannot turn ineligible into eligible with all other facts fixed."
+    },
+    {
+      "id": "temporal_transition",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["temporal_before_change", "temporal_after_change"],
+      "proof_status": "replayed"
+    },
+    {
+      "id": "implementation_equivalence",
+      "expected_result": "sat",
+      "validation": "executable_replay",
+      "proof_status": "replayed",
+      "notes": "scripts/validate-rules-as-code.py is the executable model for the first pack; a separate Axeyum encoding is the next increment."
+    }
+  ]
+}

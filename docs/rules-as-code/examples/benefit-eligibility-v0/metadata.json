@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "benefit_eligibility_v0",
+  "title": "Example Benefit Eligibility With Exceptions",
+  "domain": "benefits",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Rule 1(a)", "uri": "source.md#rule-1a-age-and-residency"},
+    {"label": "Example Rule 1(b)", "uri": "source.md#rule-1b-income-thresholds"},
+    {"label": "Example Rule 1(c)", "uri": "source.md#rule-1c-sanctions"},
+    {"label": "Example Rule 1(d)", "uri": "source.md#rule-1d-veteran-override"},
+    {"label": "Example Rule 1(e)", "uri": "source.md#rule-1e-effective-date"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["applicant", "agency"],
+  "inputs": [
+    {"name": "age", "sort": "Int"},
+    {"name": "income", "sort": "Int"},
+    {"name": "resident", "sort": "Bool"},
+    {"name": "veteran", "sort": "Bool"},
+    {"name": "sanctioned", "sort": "Bool"},
+    {"name": "application_date", "sort": "Date"}
+  ],
+  "outputs": [
+    {"name": "eligible", "sort": "Bool"},
+    {"name": "ineligible", "sort": "Bool"}
+  ],
+  "checks": [
+    "consistency",
+    "coverage",
+    "threshold_cliff",
+    "monotonicity",
+    "temporal_transition",
+    "implementation_equivalence"
+  ],
+  "axeyum_fragments": ["Bool", "QF_LIA"],
+  "proof_expectation": "Replay witnesses now; encode checks as Bool/QF_LIA formulas and add proof-producing Axeyum harness next."
+}

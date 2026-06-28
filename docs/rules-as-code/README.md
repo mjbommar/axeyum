@@ -23,10 +23,15 @@ docs/rules-as-code/
   README.md
   ROADMAP.md
   examples/
-    # planned tiny rule packs
+    benefit-eligibility-v0/
 artifacts/ontology/
-  rules-core.schema.json # planned common rule metadata schema
+  rules-core.schema.json
+scripts/
+  validate-rules-as-code.py
 ```
+
+The first example pack is
+[Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md).
 
 ## Roadmap
 
@@ -45,3 +50,9 @@ Start with a small eligibility rule, not a full statute:
 
 This is enough to exercise the solver without pretending to parse natural
 language law.
+
+Validate the current pack with:
+
+```sh
+python3 scripts/validate-rules-as-code.py
+```

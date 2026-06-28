@@ -20,7 +20,9 @@ rules/law reasoning, and downstream verification apps are tracked in
 [`docs/sibling-projects.md`](docs/sibling-projects.md). The first detailed
 incubator roadmaps live in [`docs/atlas/`](docs/atlas/),
 [`docs/proof-cookbook/`](docs/proof-cookbook/), and
-[`docs/rules-as-code/`](docs/rules-as-code/).
+[`docs/rules-as-code/`](docs/rules-as-code/); their first validated artifacts
+live under [`artifacts/ontology/`](artifacts/ontology/) and the corresponding
+incubator subfolders.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 
@@ -2396,9 +2398,16 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    - **C4.2** — ✅ DONE (`pending-commit`) — nested `if` inside the loop body:
      guarded assignments fold into each variable's next-value via `ite` in the
      `update` closure (demonstrated by an even-counter loop, decided via warm BMC).
-   - **C4.3** route `#[verify]` `while` bodies in fragment to the warm system
-     automatically (deep loops), falling back to unrolling when out of fragment;
-     a deep-loop example that is impractical to unroll but fast under warm BMC.
+   - **C4.3** — ✅ DONE (`pending-commit`) — `loop_system::loop_system(AstLoop)`
+     builds a `ScalarLoopSystem` from AST guard/update/assert exprs, **re-lowering
+     each BMC step against the step's pre-state via the real `lower_pure_expr`** (no
+     duplicated lowering). Update panic classes (overflow/`÷0`) fold into the bad
+     predicate, so safety stays sound. Tested: an AST counter loop finds its
+     assertion violation, proves safe out of reach, and catches an update overflow
+     — all via warm `bounded_model_check`.
+   - **C4.4** (follow-up) auto-detect the `let* ; while` shape in a `#[verify]`
+     `Program` and route it through `loop_system`, with an unroll cross-check;
+     promote nested-`if` body statements to guarded updates from the AST.
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
    demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
 6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).

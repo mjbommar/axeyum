@@ -37,6 +37,22 @@ Axeyum's role is narrower and complementary: proof-oriented checks, model
 replay, minimized counterexamples, and eventually Lean-checkable explanations
 for formalized rule obligations.
 
+## Current Status
+
+The first rule pack has landed:
+
+- [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
+- [metadata.json](examples/benefit-eligibility-v0/metadata.json)
+- [expected.json](examples/benefit-eligibility-v0/expected.json)
+
+The first metadata schema lives at
+[rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
+The local validator
+[validate-rules-as-code.py](../../scripts/validate-rules-as-code.py) checks the
+metadata shape, citation file references, expected check records, concrete
+witness replay, and finite-sample consistency/coverage/monotonicity. Solver
+proof integration is still an explicit proof gap.
+
 ## Audience
 
 | Audience | Need |
@@ -104,6 +120,9 @@ Suggested metadata fields:
 ```
 
 ## First Example Pack: Eligibility With Exceptions
+
+Status: first pack landed as
+[Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md).
 
 Model a tiny benefits rule:
 
@@ -185,6 +204,7 @@ Near-term documentation checks:
 
 ```sh
 ./scripts/check-links.sh
+python3 scripts/validate-rules-as-code.py
 ```
 
 Planned rule-pack checks:
