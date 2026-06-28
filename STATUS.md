@@ -79,8 +79,20 @@ hunter explores past environment opcodes (`GAS`/`BALANCE`/context), external cal
 (adversarial storage after a non-static call — the DAO threat), all as *witnessed
 symbolic inputs* replayed by the concrete oracle (DISAGREE=0). Scoreboard 12/12.
 
-**Next.** A3 (WASM + vs-hevm) is install-gated → deferred. Pivot to **App C**
-(`axeyum-verify`) C4: general CFG→`TransitionSystem` lowering. Forward backlog in
+**C4 verify warm-loop phase — DONE** (`6c7be0c`, `4f9104f`, `babb70b`, `e54a946`,
+`1a23c36`). `axeyum-verify` now has a general AST-loop→warm-`bounded_model_check`
+path: `ScalarLoopSystem` (N-variable engine), `loop_system`/`loop_from_program`
+(AST guard/update/assert → warm system, reusing the real `lower_pure_expr`),
+nested-`if` folding to guarded `ite` updates, and `check_program_loop` auto-routing
+a `let*; while` `#[verify]` Program. Validated by a **cross-check against the
+established unroll route** (`verify_program`): the two agree on buggy and safe
+loops (straight-line and branching). Scalar state only (arrays-in-loop stay
+one-shot, off U6).
+
+**Next.** A3/C5/C6 are install-gated or MIR-toolchain-gated. Build a **verify
+capability scoreboard** (App-C measurement, mirroring the EVM one: construction-
+known programs, verified/counterexample/unknown, warm-vs-unroll agreement,
+DISAGREE=0), then C4.6 (`#[verify]` entry auto-routing). Forward backlog in
 [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
