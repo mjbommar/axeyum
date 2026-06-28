@@ -654,6 +654,66 @@ pub fn lower_program(arena: &mut TermArena, program: &Program) -> Result<Lowered
     })
 }
 
+/// The result of lowering one pure scalar expression against a supplied
+/// environment: the value term, its type, and any panic-class bad predicates the
+/// expression itself contributes (overflow, `÷0`/`%0`), each as a bare predicate
+/// (no path condition — this is one isolated expression).
+pub struct ExprLowering {
+    /// The value term.
+    pub term: TermId,
+    /// The value's scalar type.
+    pub ty: Ty,
+    /// `(label, predicate)` pairs; each predicate is satisfiable exactly when the
+    /// expression hits that panic class.
+    pub bad_predicates: Vec<(String, TermId)>,
+}
+
+/// Lowers a pure scalar [`Expr`] against `env` (variable name → `(term, ty)`),
+/// reusing the same overflow-/signedness-correct lowering as whole-program
+/// verification. The loop→`TransitionSystem` builder (C4.3) uses this to lower a
+/// loop's guard and per-variable update/assert expressions against a BMC step's
+/// pre-state symbols. Arrays are not in scope here (scalar loop fragment only).
+///
+/// # Errors
+///
+/// Returns [`LowerError`] for an out-of-fragment expression or an unknown
+/// variable.
+pub fn lower_pure_expr(
+    arena: &mut TermArena,
+    env: &[(String, TermId, Ty)],
+    e: &Expr,
+) -> Result<ExprLowering, LowerError> {
+    let mut map = HashMap::new();
+    for (name, term, ty) in env {
+        map.insert(
+            name.clone(),
+            SymVal {
+                term: *term,
+                ty: *ty,
+            },
+        );
+    }
+    let mut lowerer = Lowerer {
+        arena,
+        env: map,
+        arrays: HashMap::new(),
+        path: Vec::new(),
+        bad_states: Vec::new(),
+        scopes: Vec::new(),
+    };
+    let val = lowerer.lower_expr(e)?;
+    let bad_predicates = lowerer
+        .bad_states
+        .into_iter()
+        .map(|b| (b.label, b.term))
+        .collect();
+    Ok(ExprLowering {
+        term: val.term,
+        ty: val.ty,
+        bad_predicates,
+    })
+}
+
 fn declare_scalar(arena: &mut TermArena, name: &str, ty: Ty) -> Result<SymbolId, LowerError> {
     let sort = match ty {
         Ty::Int { width, .. } => axeyum_ir::Sort::BitVec(width),

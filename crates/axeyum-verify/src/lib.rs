@@ -60,6 +60,7 @@
 
 pub mod ast;
 pub mod bmc;
+pub mod loop_system;
 pub mod lower;
 pub mod reproduce;
 pub mod verify;
