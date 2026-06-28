@@ -2411,11 +2411,16 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      threaded into per-variable updates + position-correct asserts via expression
      substitution); `check_program_loop` runs it on the warm route. Cross-checked
      against the unroll route (`verify_program`): the two **agree** on a buggy and
-     a safe loop. *Follow-up (C4.5):* fold nested-`if` body statements into guarded
-     updates; wire auto-routing into the `#[verify]` entry (warm for deep loops,
-     unroll fallback).
-   **C4 phase substantially COMPLETE** — verify now has an AST-loop→warm-BMC path
-   that agrees with the unroll route.
+     a safe loop.
+   - **C4.5** — ✅ DONE (`pending-commit`) — nested `if`/`else` in the loop body
+     folds into guarded `ite` updates (`fold_body`): each arm-assigned variable
+     becomes `ite(cond, then-value, else-value)`, and arm asserts are guarded by
+     the (negated) branch condition. Cross-checked vs unroll on a branching loop.
+   - **C4.6** (follow-up) wire auto-routing into the `#[verify]` entry itself
+     (warm for deep loops, unroll fallback out of fragment) + a deep-loop demo
+     impractical to unroll but fast under warm BMC.
+   **C4 phase COMPLETE** (C4.1–C4.5) — verify has an AST-loop→warm-BMC path
+   (straight-line + nested `if`) that agrees with the unroll route.
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
    demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
 6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).

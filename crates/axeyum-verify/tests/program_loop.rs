@@ -104,3 +104,74 @@ fn warm_route_matches_unroll_route_on_a_safe_loop() {
         "warm and unroll routes must agree (both safe)"
     );
 }
+
+/// `fn f(limit: u8) { let mut i = 0; let mut x = 0;
+///    while i < limit { if i < 3 { x += 10 } else { x += 1 } i += 1; assert!(x != bad) } }`
+fn program_if(bad: u128) -> Program {
+    Program {
+        name: "f".to_string(),
+        params: vec![Param {
+            name: "limit".to_string(),
+            ty: U8,
+        }],
+        arrays: vec![],
+        body: vec![
+            Stmt::Let {
+                name: "i".to_string(),
+                ty: U8,
+                value: lit(0),
+            },
+            Stmt::Let {
+                name: "x".to_string(),
+                ty: U8,
+                value: lit(0),
+            },
+            Stmt::While {
+                cond: bin(BinOp::Lt, var("i"), var("limit")),
+                bound: 10,
+                body: vec![
+                    Stmt::If {
+                        cond: bin(BinOp::Lt, var("i"), lit(3)),
+                        then: vec![Stmt::Assign {
+                            name: "x".to_string(),
+                            value: bin(BinOp::Add, var("x"), lit(10)),
+                        }],
+                        els: vec![Stmt::Assign {
+                            name: "x".to_string(),
+                            value: bin(BinOp::Add, var("x"), lit(1)),
+                        }],
+                    },
+                    Stmt::Assign {
+                        name: "i".to_string(),
+                        value: bin(BinOp::Add, var("i"), lit(1)),
+                    },
+                    Stmt::Assert(bin(BinOp::Ne, var("x"), lit(bad))),
+                ],
+            },
+        ],
+    }
+}
+
+#[test]
+fn nested_if_loop_warm_matches_unroll() {
+    // C4.5: the in-loop `if` folds into x' = ite(i<3, x+10, x+1). x hits 30 at
+    // i==3 (10,20,30), so assert!(x != 30) is violated; both routes must agree.
+    let cfg = SolverConfig::default();
+    let prog = program_if(30);
+    let warm = check_program_loop(&prog, 10, &cfg)
+        .expect("in the loop fragment")
+        .expect("no solver error");
+    let warm_bug = matches!(warm, LoopSafety::BugReachable { .. });
+    let unroll_bug = matches!(
+        verify_program(&prog, &cfg).expect("verify"),
+        Verdict::Counterexample { .. }
+    );
+    assert!(
+        warm_bug,
+        "warm route must find the x==30 violation, got {warm:?}"
+    );
+    assert_eq!(
+        warm_bug, unroll_bug,
+        "warm and unroll routes must agree on the nested-if loop"
+    );
+}

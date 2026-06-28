@@ -198,6 +198,78 @@ fn substitute(e: &Expr, env: &HashMap<String, Expr>) -> Expr {
     }
 }
 
+fn not_expr(e: Expr) -> Expr {
+    Expr::Unary {
+        op: crate::ast::UnOp::Not,
+        operand: Box::new(e),
+    }
+}
+
+fn or_expr(l: Expr, r: Expr) -> Expr {
+    Expr::Binary {
+        op: crate::ast::BinOp::Or,
+        lhs: Box::new(l),
+        rhs: Box::new(r),
+    }
+}
+
+/// Threads a loop body's statements into per-variable end-of-iteration
+/// expressions (`current`) and position-correct assertion conditions (`asserts`),
+/// all over the pre-state. Handles straight-line `Assign`/`Assert` and nested
+/// `if`/`else` (C4.5): each variable an arm assigns folds into
+/// `ite(cond, then-value, else-value)`, and an assert inside an arm is guarded by
+/// the (negated) branch condition so it only constrains iterations that take it.
+/// Returns `None` for any other statement (out of the scalar straight-line/`if`
+/// fragment → caller falls back to unrolling).
+fn fold_body(
+    stmts: &[Stmt],
+    current: &mut HashMap<String, Expr>,
+    asserts: &mut Vec<Expr>,
+) -> Option<()> {
+    for s in stmts {
+        match s {
+            Stmt::Assign { name, value } => {
+                if !current.contains_key(name) {
+                    return None;
+                }
+                let v = substitute(value, current);
+                current.insert(name.clone(), v);
+            }
+            Stmt::Assert(c) => asserts.push(substitute(c, current)),
+            Stmt::If { cond, then, els } => {
+                let cond_e = substitute(cond, current);
+                let mut then_cur = current.clone();
+                let mut then_as = Vec::new();
+                fold_body(then, &mut then_cur, &mut then_as)?;
+                let mut els_cur = current.clone();
+                let mut els_as = Vec::new();
+                fold_body(els, &mut els_cur, &mut els_as)?;
+                // Merge each variable's two arm-values under the branch condition.
+                for (name, val) in current.iter_mut() {
+                    let t = then_cur.get(name).cloned().unwrap_or_else(|| val.clone());
+                    let e = els_cur.get(name).cloned().unwrap_or_else(|| val.clone());
+                    *val = Expr::Ite {
+                        cond: Box::new(cond_e.clone()),
+                        then: Box::new(t),
+                        els: Box::new(e),
+                    };
+                }
+                // A then-arm assert must hold only when `cond`; an else-arm assert
+                // only when `¬cond`.
+                for a in then_as {
+                    asserts.push(or_expr(not_expr(cond_e.clone()), a));
+                }
+                for a in els_as {
+                    asserts.push(or_expr(cond_e.clone(), a));
+                }
+            }
+            // Out of the scalar straight-line/`if` fragment.
+            _ => return None,
+        }
+    }
+    Some(())
+}
+
 /// Recognizes the `let* ; while { straight-line body }` shape of a `#[verify]`
 /// [`Program`] and builds the equivalent [`AstLoop`] (C4.4): scalar params are
 /// free initial state, pre-loop `let x = <const>` bindings are pinned initial
@@ -236,21 +308,7 @@ pub fn loop_from_program(program: &Program) -> Option<AstLoop> {
         .map(|(n, _)| (n.clone(), Expr::Var(n.clone())))
         .collect();
     let mut asserts: Vec<Expr> = Vec::new();
-    for s in body {
-        match s {
-            Stmt::Assign { name, value } => {
-                if !current.contains_key(name) {
-                    return None;
-                }
-                let v = substitute(value, &current);
-                current.insert(name.clone(), v);
-            }
-            Stmt::Assert(c) => asserts.push(substitute(c, &current)),
-            // Nested control flow / non-straight-line statements fall back to
-            // unrolling (a later C4 slice can fold `if` into guarded updates).
-            _ => return None,
-        }
-    }
+    fold_body(body, &mut current, &mut asserts)?;
     let updates: Vec<Expr> = vars
         .iter()
         .map(|(n, _)| {
