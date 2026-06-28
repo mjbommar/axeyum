@@ -14,11 +14,13 @@
 //! `guard ∧ (¬assertᵢ ∨ update-panicⱼ)`: an in-loop assertion can only fail on an
 //! iteration that actually runs (the guard holds).
 
-use axeyum_ir::{TermArena, TermId};
-use axeyum_solver::SolverError;
+use std::collections::HashMap;
 
-use crate::ast::{Expr, Ty};
-use crate::bmc::ScalarLoopSystem;
+use axeyum_ir::{TermArena, TermId};
+use axeyum_solver::{SolverConfig, SolverError};
+
+use crate::ast::{Expr, Program, Stmt, Ty};
+use crate::bmc::{LoopSafety, ScalarLoopSystem, run_loop};
 use crate::lower::lower_pure_expr;
 
 /// An AST description of a scalar loop over uniform-width integer variables.
@@ -161,4 +163,125 @@ pub fn loop_system(spec: AstLoop) -> Option<ScalarLoopSystem> {
     Some(ScalarLoopSystem::new(
         width, names, init_fn, guard_fn, update_fn, bad_fn,
     ))
+}
+
+/// Substitutes every `Var(n)` in `e` with `env[n]` (recursively), leaving names
+/// not in `env` untouched — used to thread a loop body's sequential assignments
+/// into each variable's end-of-iteration expression over the pre-state.
+fn substitute(e: &Expr, env: &HashMap<String, Expr>) -> Expr {
+    match e {
+        Expr::Var(n) => env.get(n).cloned().unwrap_or_else(|| e.clone()),
+        Expr::Binary { op, lhs, rhs } => Expr::Binary {
+            op: *op,
+            lhs: Box::new(substitute(lhs, env)),
+            rhs: Box::new(substitute(rhs, env)),
+        },
+        Expr::Unary { op, operand } => Expr::Unary {
+            op: *op,
+            operand: Box::new(substitute(operand, env)),
+        },
+        Expr::Ite { cond, then, els } => Expr::Ite {
+            cond: Box::new(substitute(cond, env)),
+            then: Box::new(substitute(then, env)),
+            els: Box::new(substitute(els, env)),
+        },
+        Expr::Index { array, index, ty } => Expr::Index {
+            array: array.clone(),
+            index: Box::new(substitute(index, env)),
+            ty: *ty,
+        },
+        Expr::UnwrapOption { is_some, value } => Expr::UnwrapOption {
+            is_some: Box::new(substitute(is_some, env)),
+            value: Box::new(substitute(value, env)),
+        },
+        Expr::IntLit { .. } | Expr::BoolLit(_) => e.clone(),
+    }
+}
+
+/// Recognizes the `let* ; while { straight-line body }` shape of a `#[verify]`
+/// [`Program`] and builds the equivalent [`AstLoop`] (C4.4): scalar params are
+/// free initial state, pre-loop `let x = <const>` bindings are pinned initial
+/// state, and the `while` body's sequential `Assign`/`Assert` statements thread
+/// into per-variable update expressions and position-correct assertion conditions
+/// via [`substitute`]. Returns `None` for anything outside this fragment (arrays,
+/// nested control flow in the body, a non-constant `let`, …) — the caller then
+/// falls back to the unroll route.
+#[must_use]
+pub fn loop_from_program(program: &Program) -> Option<AstLoop> {
+    if !program.arrays.is_empty() {
+        return None;
+    }
+    let (last, lets) = program.body.split_last()?;
+    let Stmt::While { cond, body, .. } = last else {
+        return None;
+    };
+    let mut vars: Vec<(String, Ty)> = Vec::new();
+    let mut init: Vec<Option<u128>> = Vec::new();
+    for p in &program.params {
+        vars.push((p.name.clone(), p.ty));
+        init.push(None);
+    }
+    for s in lets {
+        let Stmt::Let { name, ty, value } = s else {
+            return None;
+        };
+        let Expr::IntLit { value: c, .. } = value else {
+            return None;
+        };
+        vars.push((name.clone(), *ty));
+        init.push(Some(*c));
+    }
+    let mut current: HashMap<String, Expr> = vars
+        .iter()
+        .map(|(n, _)| (n.clone(), Expr::Var(n.clone())))
+        .collect();
+    let mut asserts: Vec<Expr> = Vec::new();
+    for s in body {
+        match s {
+            Stmt::Assign { name, value } => {
+                if !current.contains_key(name) {
+                    return None;
+                }
+                let v = substitute(value, &current);
+                current.insert(name.clone(), v);
+            }
+            Stmt::Assert(c) => asserts.push(substitute(c, &current)),
+            // Nested control flow / non-straight-line statements fall back to
+            // unrolling (a later C4 slice can fold `if` into guarded updates).
+            _ => return None,
+        }
+    }
+    let updates: Vec<Expr> = vars
+        .iter()
+        .map(|(n, _)| {
+            current
+                .get(n)
+                .cloned()
+                .unwrap_or_else(|| Expr::Var(n.clone()))
+        })
+        .collect();
+    Some(AstLoop {
+        vars,
+        init,
+        guard: cond.clone(),
+        updates,
+        asserts,
+    })
+}
+
+/// Verifies a `#[verify]` loop [`Program`] via the **warm** BMC route when it is
+/// in the [`loop_from_program`] fragment. Returns `None` (caller falls back to the
+/// unroll route) otherwise.
+///
+/// # Errors
+///
+/// Propagates a hard solver failure; an undecided depth is [`LoopSafety::Unknown`].
+pub fn check_program_loop(
+    program: &Program,
+    bound: usize,
+    config: &SolverConfig,
+) -> Option<Result<LoopSafety, SolverError>> {
+    let spec = loop_from_program(program)?;
+    let system = loop_system(spec)?;
+    Some(run_loop(&system, bound, config))
 }

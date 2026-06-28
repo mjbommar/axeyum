@@ -2405,9 +2405,17 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      predicate, so safety stays sound. Tested: an AST counter loop finds its
      assertion violation, proves safe out of reach, and catches an update overflow
      — all via warm `bounded_model_check`.
-   - **C4.4** (follow-up) auto-detect the `let* ; while` shape in a `#[verify]`
-     `Program` and route it through `loop_system`, with an unroll cross-check;
-     promote nested-`if` body statements to guarded updates from the AST.
+   - **C4.4** — ✅ DONE (`pending-commit`) — `loop_from_program` auto-detects the
+     `let(const)* ; while { straight-line body }` shape and builds an `AstLoop`
+     (params = free state, pre-loop lets = pinned state, body `Assign`/`Assert`
+     threaded into per-variable updates + position-correct asserts via expression
+     substitution); `check_program_loop` runs it on the warm route. Cross-checked
+     against the unroll route (`verify_program`): the two **agree** on a buggy and
+     a safe loop. *Follow-up (C4.5):* fold nested-`if` body statements into guarded
+     updates; wire auto-routing into the `#[verify]` entry (warm for deep loops,
+     unroll fallback).
+   **C4 phase substantially COMPLETE** — verify now has an AST-loop→warm-BMC path
+   that agrees with the unroll route.
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
    demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
 6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).
