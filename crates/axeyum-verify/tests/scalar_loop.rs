@@ -140,3 +140,42 @@ fn accumulator_safe_within_bound() {
         other => panic!("expected SafeWithinBound, got {other:?}"),
     }
 }
+
+#[test]
+fn conditional_update_in_loop_body_folds_to_ite() {
+    // while i < limit { if (i & 1 == 0) { evens += 1 } i += 1 }  with bad i == 4.
+    // The in-loop `if` folds into evens' = ite(i even, evens+1, evens) — C4.2: the
+    // ScalarLoopSystem update closure expresses guarded body assignments directly.
+    let cfg = SolverConfig::default();
+    let system = ScalarLoopSystem::new(
+        W,
+        vec!["i", "evens", "limit"],
+        Box::new(
+            |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
+                let zero = arena.bv_const(W, 0)?;
+                let i0 = arena.eq(v[0], zero)?;
+                let e0 = arena.eq(v[1], zero)?;
+                Ok(arena.and(i0, e0)?)
+            },
+        ),
+        Box::new(|arena, v| Ok(arena.bv_ult(v[0], v[2])?)),
+        Box::new(|arena, v| {
+            let one = arena.bv_const(W, 1)?;
+            // i even  <=>  (i & 1) == 0
+            let lsb = arena.bv_and(v[0], one)?;
+            let zero = arena.bv_const(W, 0)?;
+            let is_even = arena.eq(lsb, zero)?;
+            let evens_inc = arena.bv_add(v[1], one)?;
+            let evens_next = arena.ite(is_even, evens_inc, v[1])?;
+            Ok(vec![arena.bv_add(v[0], one)?, evens_next, v[2]])
+        }),
+        Box::new(|arena, v| {
+            let four = arena.bv_const(W, 4)?;
+            Ok(arena.eq(v[0], four)?)
+        }),
+    );
+    match run_loop(&system, 10, &cfg).expect("conditional-update") {
+        LoopSafety::BugReachable { steps, .. } => assert_eq!(steps, 4, "i reaches 4 in 4 steps"),
+        other => panic!("expected BugReachable, got {other:?}"),
+    }
+}

@@ -2393,8 +2393,9 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      `verify/src/{bmc,lower}.rs`. *Exit:* a multi-variable accumulator loop (e.g.
      `sum += i; i += 1; assert(sum < BAD)`) verified via warm `bounded_model_check`,
      cross-checked against the unroll route (same verdict), DISAGREE=0.
-   - **C4.2** nested `if` inside the loop body (guarded assignments fold into each
-     variable's next-value via `ite`).
+   - **C4.2** — ✅ DONE (`pending-commit`) — nested `if` inside the loop body:
+     guarded assignments fold into each variable's next-value via `ite` in the
+     `update` closure (demonstrated by an even-counter loop, decided via warm BMC).
    - **C4.3** route `#[verify]` `while` bodies in fragment to the warm system
      automatically (deep loops), falling back to unrolling when out of fragment;
      a deep-loop example that is impractical to unroll but fast under warm BMC.
