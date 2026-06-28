@@ -42,7 +42,10 @@ flowchart TD
 Multi-agent sessions should use the
 [worktree collaboration protocol](contributor-guide/multi-agent-worktrees.md).
 Potential educational, ontology, law/rules, and downstream sibling projects are
-tracked in [Sibling Project Notes](sibling-projects.md).
+tracked in [Sibling Project Notes](sibling-projects.md). The first detailed
+incubator plans are the [SMT Fragment Atlas](atlas/README.md),
+[Proof Certificate Cookbook](proof-cookbook/README.md), and
+[Rules-as-Code Verification Lab](rules-as-code/README.md).
 
 ## The honest current state
 

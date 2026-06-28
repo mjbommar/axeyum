@@ -148,6 +148,11 @@ pub struct Finding {
     /// empty for a single-tx bug. The full replay sequence is
     /// `prior_txs` followed by `(calldata_witness, callvalue, caller)`.
     pub prior_txs: Vec<TxCall>,
+    /// Concrete values for the environment opcodes (`GAS`/`BALANCE`/context/…)
+    /// encountered on the path, in execution order — replayed by the concrete
+    /// oracle so the bug reproduces deterministically. Empty when the path used no
+    /// environment opcodes.
+    pub env_inputs: Vec<[u8; 32]>,
     /// How the concrete re-execution of the full sequence halted — the independent
     /// confirmation that the bug is real.
     pub concrete_halt: Halt,
@@ -319,9 +324,11 @@ fn revalidate(
         caller: bug.caller.clone(),
     };
 
-    // Single-tx bug: the original concrete revalidation.
+    let env_inputs: Vec<[u8; 32]> = bug.env_inputs.iter().map(Word::to_be_bytes).collect();
+
+    // Single-tx bug: the original concrete revalidation (replaying any env opcodes).
     if bug.prior_txs.is_empty() {
-        let halt = concrete::run(program, &here, cfg.max_steps);
+        let halt = concrete::run_with_env(program, &here, cfg.max_steps, &bug.env_inputs);
         let reproduces = match bug.kind {
             BugKind::Revert => matches!(halt, Halt::Revert(_)),
             BugKind::Invalid => matches!(halt, Halt::Invalid),
@@ -345,6 +352,7 @@ fn revalidate(
             callvalue: bug.callvalue.to_be_bytes(),
             caller: bug.caller.to_be_bytes(),
             prior_txs: Vec::new(),
+            env_inputs,
             concrete_halt: halt,
         });
     }
@@ -365,7 +373,7 @@ fn revalidate(
         })
         .collect();
     envs.push(here);
-    let halt = concrete::run_sequence(program, &envs, cfg.max_steps);
+    let halt = concrete::run_sequence(program, &envs, cfg.max_steps, &bug.env_inputs);
     let reproduces = match bug.kind {
         BugKind::Revert => matches!(halt, Halt::Revert(_)),
         BugKind::Invalid => matches!(halt, Halt::Invalid),
@@ -390,6 +398,7 @@ fn revalidate(
         callvalue: bug.callvalue.to_be_bytes(),
         caller: bug.caller.to_be_bytes(),
         prior_txs,
+        env_inputs,
         concrete_halt: halt,
     })
 }

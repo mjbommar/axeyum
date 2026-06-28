@@ -17,7 +17,10 @@ and one `main` integration owner. The standing protocol lives in
 [`docs/contributor-guide/multi-agent-worktrees.md`](docs/contributor-guide/multi-agent-worktrees.md).
 Potential sibling/incubator projects around education, ontology artifacts,
 rules/law reasoning, and downstream verification apps are tracked in
-[`docs/sibling-projects.md`](docs/sibling-projects.md).
+[`docs/sibling-projects.md`](docs/sibling-projects.md). The first detailed
+incubator roadmaps live in [`docs/atlas/`](docs/atlas/),
+[`docs/proof-cookbook/`](docs/proof-cookbook/), and
+[`docs/rules-as-code/`](docs/rules-as-code/).
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

@@ -35,11 +35,13 @@ const ISZERO: u8 = 0x15;
 const AND: u8 = 0x16;
 const SHA3: u8 = 0x20;
 const CALLDATALOAD: u8 = 0x35;
+const POP: u8 = 0x50;
 const MLOAD: u8 = 0x51;
 const MSTORE: u8 = 0x52;
 const SLOAD: u8 = 0x54;
 const SSTORE: u8 = 0x55;
 const JUMPI: u8 = 0x57;
+const GAS: u8 = 0x5a;
 const JUMPDEST: u8 = 0x5b;
 const PUSH1: u8 = 0x60;
 const PUSH2: u8 = 0x61;
@@ -63,6 +65,9 @@ enum Shape {
     SymbolicStorage,
     /// `keccak256`-keyed mapping storage (injectivity reasoning).
     KeccakMapping,
+    /// Environment / context opcodes (`GAS`/`BALANCE`/block-context) as witnessed
+    /// symbolic inputs.
+    Environment,
 }
 
 impl Shape {
@@ -73,6 +78,7 @@ impl Shape {
             Shape::Control => "control-flow",
             Shape::SymbolicStorage => "symbolic-storage",
             Shape::KeccakMapping => "keccak-mapping",
+            Shape::Environment => "environment",
         }
     }
 }
@@ -126,8 +132,14 @@ fn witness_reproduces(program: &Program, f: &axeyum_evm::Finding) -> bool {
         callvalue: Word::from_be_bytes(&f.callvalue),
         caller: Word::from_be_bytes(&f.caller),
     };
-    // Multi-tx witness: replay the full transaction sequence (storage persisting)
-    // and confirm the bug fires in the final tx — the independent multi-tx oracle.
+    let env_inputs: Vec<Word> = f
+        .env_inputs
+        .iter()
+        .map(|b| Word::from_be_bytes(b))
+        .collect();
+    // Multi-tx witness: replay the full transaction sequence (storage persisting,
+    // env values consumed in global order) and confirm the bug fires in the final
+    // tx — the independent multi-tx oracle.
     if !f.prior_txs.is_empty() {
         let mut envs: Vec<Env> = f
             .prior_txs
@@ -139,7 +151,7 @@ fn witness_reproduces(program: &Program, f: &axeyum_evm::Finding) -> bool {
             })
             .collect();
         envs.push(env);
-        let halt = concrete::run_sequence(program, &envs, STEP_LIMIT);
+        let halt = concrete::run_sequence(program, &envs, STEP_LIMIT, &env_inputs);
         return match f.kind {
             FindingKind::Revert => matches!(halt, Halt::Revert(_)),
             FindingKind::Invalid => matches!(halt, Halt::Invalid),
@@ -153,8 +165,18 @@ fn witness_reproduces(program: &Program, f: &axeyum_evm::Finding) -> bool {
         FindingKind::MulOverflow => {
             concrete::overflow_reproduces(program, &env, f.pc, true, STEP_LIMIT)
         }
-        FindingKind::Revert => matches!(concrete::run(program, &env, STEP_LIMIT), Halt::Revert(_)),
-        FindingKind::Invalid => matches!(concrete::run(program, &env, STEP_LIMIT), Halt::Invalid),
+        FindingKind::Revert => {
+            matches!(
+                concrete::run_with_env(program, &env, STEP_LIMIT, &env_inputs),
+                Halt::Revert(_)
+            )
+        }
+        FindingKind::Invalid => {
+            matches!(
+                concrete::run_with_env(program, &env, STEP_LIMIT, &env_inputs),
+                Halt::Invalid
+            )
+        }
     }
 }
 
@@ -235,7 +257,7 @@ impl Tally {
 fn corpus() -> Vec<Case> {
     use Expect::{Bug, Safe};
     use FindingKind::{AddOverflow, Invalid, Revert};
-    use Shape::{Arith, ConcreteMem, Control, KeccakMapping, SymbolicStorage};
+    use Shape::{Arith, ConcreteMem, Control, Environment, KeccakMapping, SymbolicStorage};
     vec![
         Case {
             name: "add-overflow-unguarded", shape: Arith, expect: Bug(AddOverflow),
@@ -286,6 +308,17 @@ fn corpus() -> Vec<Case> {
                 PUSH1, 0x99, SLOAD, PUSH2, 0xde, 0xad, EQ, PUSH1, 0x0b, JUMPI, STOP, JUMPDEST,
                 PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
+        },
+        Case {
+            name: "gas-branch-revert", shape: Environment, expect: Bug(Revert),
+            bytecode: vec![
+                GAS, ISZERO, PUSH1, 0x07, JUMPI, STOP, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00,
+                REVERT,
+            ],
+        },
+        Case {
+            name: "reads-gas-safe", shape: Environment, expect: Safe,
+            bytecode: vec![GAS, POP, STOP],
         },
         Case {
             name: "keccak-mapping-alias-revert", shape: KeccakMapping, expect: Bug(Revert),
@@ -632,6 +665,7 @@ fn aggregate(rows: &[(&Case, Outcome)]) -> (Tally, Vec<(Shape, Tally)>) {
         Shape::Control,
         Shape::SymbolicStorage,
         Shape::KeccakMapping,
+        Shape::Environment,
     ];
     let mut overall = Tally::default();
     let mut by_shape: Vec<(Shape, Tally)> = shapes.iter().map(|s| (*s, Tally::default())).collect();

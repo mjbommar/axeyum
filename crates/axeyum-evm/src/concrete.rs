@@ -60,21 +60,55 @@ impl Default for Env {
 /// bounds execution (loops / runaway code) — exceeding it is `Unsupported`.
 #[must_use]
 pub fn run(program: &Program, env: &Env, step_limit: usize) -> Halt {
+    run_with_env(program, env, step_limit, &[])
+}
+
+/// Like [`run`] but replays a witnessed sequence of environment-opcode values
+/// (`Op::Env` — `GAS`/`BALANCE`/context/…) in execution order, so a bug that
+/// branches on environment nondeterminism reproduces deterministically.
+#[must_use]
+pub fn run_with_env(program: &Program, env: &Env, step_limit: usize, env_inputs: &[Word]) -> Halt {
     let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
-    run_core(program, env, step_limit, None, &mut storage).0
+    let mut env_cursor = 0usize;
+    run_core(
+        program,
+        env,
+        step_limit,
+        None,
+        &mut storage,
+        env_inputs,
+        &mut env_cursor,
+    )
+    .0
 }
 
 /// Runs a **sequence** of transactions with persistent storage between them
 /// (memory and the stack are per-tx; storage carries over) — the concrete oracle
-/// for multi-tx witnesses. Returns the halt of the *last* transaction. An earlier
-/// tx that does not halt normally (`Stop`/`Return`) aborts the sequence and its
-/// halt is returned (the sequence could not proceed as the witness intended).
+/// for multi-tx witnesses. `env_inputs` are the path's environment values,
+/// consumed in global order across the whole sequence. Returns the halt of the
+/// *last* transaction. An earlier tx that does not halt normally (`Stop`/`Return`)
+/// aborts the sequence and its halt is returned (the sequence could not proceed).
 #[must_use]
-pub fn run_sequence(program: &Program, envs: &[Env], step_limit: usize) -> Halt {
+pub fn run_sequence(
+    program: &Program,
+    envs: &[Env],
+    step_limit: usize,
+    env_inputs: &[Word],
+) -> Halt {
     let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
+    let mut env_cursor = 0usize;
     let mut last = Halt::Stop;
     for (i, env) in envs.iter().enumerate() {
-        last = run_core(program, env, step_limit, None, &mut storage).0;
+        last = run_core(
+            program,
+            env,
+            step_limit,
+            None,
+            &mut storage,
+            env_inputs,
+            &mut env_cursor,
+        )
+        .0;
         let is_last = i + 1 == envs.len();
         if !is_last && !matches!(last, Halt::Stop | Halt::Return(_)) {
             // A pre-final tx reverted/failed: the intended sequence cannot reach
@@ -92,12 +126,15 @@ pub fn run_sequence(program: &Program, envs: &[Env], step_limit: usize) -> Halt 
 /// overflow-witness check). One interpreter, no divergent second copy.
 #[must_use]
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 fn run_core(
     program: &Program,
     env: &Env,
     step_limit: usize,
     watch: Option<(usize, bool)>,
     storage: &mut BTreeMap<[u8; 32], Word>,
+    env_inputs: &[Word],
+    env_cursor: &mut usize,
 ) -> (Halt, bool) {
     let mut stack: Vec<Word> = Vec::new();
     let mut memory: BTreeMap<usize, u8> = BTreeMap::new();
@@ -450,6 +487,19 @@ fn run_core(
                 );
                 return (halt, overflowed);
             }
+            Op::Env(pops) => {
+                for _ in 0..pops {
+                    let _ = pop!();
+                }
+                // Replay the witnessed environment value for this opcode (same
+                // execution order as the symbolic side); default 0 if exhausted.
+                let value = env_inputs
+                    .get(*env_cursor)
+                    .cloned()
+                    .unwrap_or_else(Word::zero);
+                *env_cursor += 1;
+                stack.push(value);
+            }
             Op::Invalid => return (Halt::Invalid, overflowed),
             Op::Unsupported(b) => {
                 return (
@@ -477,12 +527,15 @@ pub fn overflow_reproduces(
     step_limit: usize,
 ) -> bool {
     let mut storage: BTreeMap<[u8; 32], Word> = BTreeMap::new();
+    let mut env_cursor = 0usize;
     run_core(
         program,
         env,
         step_limit,
         Some((watch_pc, is_mul)),
         &mut storage,
+        &[],
+        &mut env_cursor,
     )
     .1
 }

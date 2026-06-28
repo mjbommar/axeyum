@@ -47,6 +47,19 @@ Split into a separate repository only when the project becomes a standalone
 app, a large corpus, a public course/site, or a library with a separate release
 cycle.
 
+## Detailed First-Incubator Roadmaps
+
+The first step is to turn the top three incubators into concrete, reviewable
+roadmaps before adding data, examples, or code. Each roadmap defines audience,
+content structure, example shape, validation checks, Axeyum capability links,
+and graduation criteria.
+
+| Incubator | Folder | Detailed plan | First concrete output |
+|---|---|---|---|
+| SMT Fragment Atlas | [docs/atlas/](atlas/README.md) | [Atlas roadmap](atlas/ROADMAP.md) | `artifacts/ontology/smt-fragments.json` plus schema and generated docs. |
+| Proof Certificate Cookbook | [docs/proof-cookbook/](proof-cookbook/README.md) | [Cookbook roadmap](proof-cookbook/ROADMAP.md) | Route-by-route recipes for tiny proof/evidence examples. |
+| Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) | Tiny rule packs with citations, checks, replayed witnesses, and proof status. |
+
 ## Families
 
 ### Core Knowledge
@@ -167,19 +180,25 @@ Do not start 30 projects at once. Start with three small, compounding
 incubators:
 
 1. **SMT Fragment Atlas**
+   - Folder: [docs/atlas/](atlas/README.md).
+   - Plan: [Atlas roadmap](atlas/ROADMAP.md).
    - First artifact: `artifacts/ontology/smt-fragments.json`.
    - Include: logic name, sorts, operators, semantic notes, decision route,
      proof route, benchmark rows, current Axeyum status.
    - Value: makes planning, docs, and capability reporting share one source.
 
 2. **Proof Certificate Cookbook**
-   - First artifact: `docs/proof-cookbook/README.md`.
+   - Folder: [docs/proof-cookbook/](proof-cookbook/README.md).
+   - Plan: [Cookbook roadmap](proof-cookbook/ROADMAP.md).
+   - First artifact: `docs/proof-cookbook/recipes/`.
    - Include: one tiny formula per certificate route, the emitted evidence, the
      checker, and the Lean reconstruction status.
    - Value: explains the trusted-small-checking identity better than prose.
 
 3. **Rules-as-Code Verification Lab**
-   - First artifact: `docs/rules-as-code/README.md`.
+   - Folder: [docs/rules-as-code/](rules-as-code/README.md).
+   - Plan: [Rules-as-code roadmap](rules-as-code/ROADMAP.md).
+   - First artifact: `docs/rules-as-code/examples/`.
    - Include: a small eligibility rule with exceptions, temporal versions, and
      executable examples; show consistency checks and counterexample generation.
    - Value: tests whether law/policy reasoning can become a real Axeyum use
@@ -202,4 +221,3 @@ A sibling should split out of this repo only when most of these are true:
 
 Until then, keep it close and boring: Markdown notes, small machine-readable
 artifacts, focused examples, and links from the main docs.
-

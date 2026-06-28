@@ -3,6 +3,12 @@
 [Documentation Hub](README.md)
 
 [Sibling Project Notes](sibling-projects.md)
+- [SMT Fragment Atlas](atlas/README.md)
+  - [Atlas Roadmap](atlas/ROADMAP.md)
+- [Proof Certificate Cookbook](proof-cookbook/README.md)
+  - [Cookbook Roadmap](proof-cookbook/ROADMAP.md)
+- [Rules-as-Code Verification Lab](rules-as-code/README.md)
+  - [Rules-as-Code Roadmap](rules-as-code/ROADMAP.md)
 
 # Learn
 

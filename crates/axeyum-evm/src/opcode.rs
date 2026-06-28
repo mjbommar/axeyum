@@ -119,7 +119,14 @@ pub enum Op {
     Revert,
     /// `INVALID` (0xfe): the designated invalid opcode (legacy assert failure).
     Invalid,
-    /// Any opcode outside the Phase-1 subset (KECCAK256, CALL, GAS, LOG*, …).
+    /// An *environment / context* opcode that pops `pops` stack args and pushes
+    /// one nondeterministic value the contract has no control over: `GAS`,
+    /// `BALANCE`, `EXTCODESIZE`/`EXTCODEHASH`, `RETURNDATASIZE`, and block/tx
+    /// context (`TIMESTAMP`/`NUMBER`/`GASPRICE`/`COINBASE`/…). Modeled as a
+    /// **witnessed symbolic input** (fresh symbol symbolically; replayed from the
+    /// witness concretely) so paths explore past it soundly instead of halting.
+    Env(u8),
+    /// Any opcode outside the Phase-1 subset (KECCAK256, CALL, LOG*, …).
     /// Carries the raw byte so the interpreter can decide to havoc or stop.
     Unsupported(u8),
 }
@@ -169,6 +176,10 @@ impl Op {
             0x57 => Op::Jumpi,
             0x58 => Op::Pc,
             0x5b => Op::Jumpdest,
+            // Environment / context opcodes: pop their address arg(s), push one
+            // nondeterministic value (modeled as a witnessed symbolic input).
+            0x30 | 0x32 | 0x3a | 0x3d | 0x41..=0x48 | 0x5a => Op::Env(0),
+            0x31 | 0x3b | 0x3f => Op::Env(1),
             0x60..=0x7f => Op::Push(byte - 0x5f),
             0x80..=0x8f => Op::Dup(byte - 0x7f),
             0x90..=0x9f => Op::Swap(byte - 0x8f),

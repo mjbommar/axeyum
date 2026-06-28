@@ -82,6 +82,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **First sibling incubator roadmaps drafted.** Added structured roadmaps for
+  the three recommended incubators:
+  [`SMT Fragment Atlas`](docs/atlas/ROADMAP.md),
+  [`Proof Certificate Cookbook`](docs/proof-cookbook/ROADMAP.md), and
+  [`Rules-as-Code Verification Lab`](docs/rules-as-code/ROADMAP.md). Each plan
+  defines audience, schema/content shape, examples, validation checks, Axeyum
+  capability links, and graduation criteria; [`docs/sibling-projects.md`](docs/sibling-projects.md)
+  now links to the detailed plans.
+
 - **Sibling project notes documented.** Added
   [`docs/sibling-projects.md`](docs/sibling-projects.md) with the ranked top-30
   sibling project ideas, family taxonomy, inside-vs-separate-repo guidance,
@@ -8836,6 +8845,16 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-28** — **Sibling incubator roadmaps drafted.**
+  Added structured folders and detailed roadmaps for
+  [`SMT Fragment Atlas`](docs/atlas/ROADMAP.md),
+  [`Proof Certificate Cookbook`](docs/proof-cookbook/ROADMAP.md), and
+  [`Rules-as-Code Verification Lab`](docs/rules-as-code/ROADMAP.md). The plans
+  define audience, schemas/content structures, example slices, validation
+  checks, Axeyum capability links, and graduation criteria. Updated
+  [`docs/sibling-projects.md`](docs/sibling-projects.md), the docs hub, mdBook
+  summary, and PLAN pointer to reference the new detailed plans.
 
 - **2026-06-27** — **Sibling project notes documented.**
   Added `docs/sibling-projects.md` as the incubation note for educational

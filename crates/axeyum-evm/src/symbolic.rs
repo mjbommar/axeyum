@@ -11,8 +11,11 @@
 //! * EVM `DIV`/`MOD`/`SDIV`/`SMOD`-by-0 = 0 via an `ite` guard (NOT SMT-LIB
 //!   all-ones).
 //! * `ADDMOD`/`MULMOD` evaluated at 512 bits then truncated.
-//! * CALL / GAS / unsupported opcodes → **havoc** (a fresh unconstrained
-//!   word), so those paths become sound `Unknown`, never wrong.
+//! * Environment opcodes (`GAS`/`BALANCE`/block-context/…) are **witnessed
+//!   symbolic inputs** (`Op::Env`): a fresh symbol symbolically, replayed from the
+//!   witness concretely, so paths explore past them soundly.
+//! * CALL / LOG / other unsupported opcodes → conservative path `Unknown`
+//!   (never wrong-pruned).
 //! * Symbolic jump offsets that are not concretely resolvable terminate the
 //!   path as `Unknown` (never silently mis-stepped).
 //!
@@ -103,6 +106,10 @@ pub struct PathBug {
     /// single-tx bug). Replayed in order, with storage persisting, before the
     /// bug's transaction — the multi-tx revalidation sequence.
     pub prior_txs: Vec<TxWitness>,
+    /// Concrete values for the environment opcodes (`Op::Env`) on the path, in
+    /// execution order — replayed by the concrete oracle so a bug that branches on
+    /// `gas()`/context reproduces deterministically.
+    pub env_inputs: Vec<crate::word::Word>,
 }
 
 /// Outcome of exploring the program.
@@ -169,6 +176,11 @@ struct State {
     /// The current transaction index (0-based) on this path. Advanced on a normal
     /// halt when more transactions remain; selects which `TxVars` calldata reads.
     tx: usize,
+    /// Environment-input symbols consumed on this path, in execution order (one
+    /// per `Op::Env`). Lifted into the witness so the concrete oracle replays the
+    /// same nondeterministic values. Persists across tx boundaries (whole-path
+    /// order).
+    env_syms: Vec<SymbolId>,
 }
 
 /// A keccak application observed on a path.
@@ -194,6 +206,7 @@ impl State {
             encoding,
             storage_array: None,
             tx: 0,
+            env_syms: Vec::new(),
         }
     }
 
@@ -270,6 +283,8 @@ struct SymEnv {
     txs: Vec<TxVars>,
     /// Monotonic counter for fresh havoc symbols.
     havoc_counter: u64,
+    /// Monotonic counter for fresh environment-input symbols.
+    env_counter: u64,
 }
 
 /// Symbolically explores `program`, returning the first feasible bug (if any).
@@ -355,6 +370,7 @@ fn build_env(arena: &mut TermArena, max_txs: usize) -> Result<SymEnv, SolverErro
     Ok(SymEnv {
         txs,
         havoc_counter: 0,
+        env_counter: 0,
     })
 }
 
@@ -370,6 +386,15 @@ impl SymEnv {
         self.havoc_counter += 1;
         let sym = arena.declare(&name, axeyum_ir::Sort::BitVec(W))?;
         Ok(arena.var(sym))
+    }
+
+    /// A fresh environment-input value plus its symbol, so the caller can record
+    /// it for witness lifting and the concrete oracle can replay it in order.
+    fn fresh_env(&mut self, arena: &mut TermArena) -> Result<(TermId, SymbolId), SolverError> {
+        let name = format!("env!{}", self.env_counter);
+        self.env_counter += 1;
+        let sym = arena.declare(&name, axeyum_ir::Sort::BitVec(W))?;
+        Ok((arena.var(sym), sym))
     }
 }
 
@@ -473,14 +498,30 @@ fn run_from(
             }
             Op::Invalid => {
                 // INVALID is reachable on this (feasible) path; lift a witness.
-                if let Some(bug) = lift_witness(arena, exec, env, state.tx, BugKind::Invalid, pc)? {
+                if let Some(bug) = lift_witness(
+                    arena,
+                    exec,
+                    env,
+                    state.tx,
+                    &state.env_syms,
+                    BugKind::Invalid,
+                    pc,
+                )? {
                     return Ok(Some(bug));
                 }
                 *saw_unknown = true;
                 return Ok(None);
             }
             Op::Revert => {
-                if let Some(bug) = lift_witness(arena, exec, env, state.tx, BugKind::Revert, pc)? {
+                if let Some(bug) = lift_witness(
+                    arena,
+                    exec,
+                    env,
+                    state.tx,
+                    &state.env_syms,
+                    BugKind::Revert,
+                    pc,
+                )? {
                     return Ok(Some(bug));
                 }
                 *saw_unknown = true;
@@ -496,6 +537,7 @@ fn run_from(
                         exec,
                         env,
                         state.tx,
+                        &state.env_syms,
                         ovf,
                         BugKind::AddOverflow,
                         pc,
@@ -517,6 +559,7 @@ fn run_from(
                         exec,
                         env,
                         state.tx,
+                        &state.env_syms,
                         ovf,
                         BugKind::MulOverflow,
                         pc,
@@ -880,8 +923,20 @@ fn run_from(
                 let len = state.stack.len();
                 state.stack.swap(len - 1, len - 1 - n);
             }
+            Op::Env(pops) => {
+                // Pop the (ignored) address arg(s), then push one nondeterministic
+                // environment value as a *witnessed* symbolic input: a fresh symbol
+                // recorded in path order so `lift_witness` can pin it and the
+                // concrete oracle can replay the same value (keeping DISAGREE=0).
+                for _ in 0..pops {
+                    let _ = pop_or_unknown!();
+                }
+                let (value, sym) = env.fresh_env(arena)?;
+                state.env_syms.push(sym);
+                state.stack.push(value);
+            }
             Op::Unsupported(_) => {
-                // KECCAK / CALL / GAS / LOG / … : havoc and continue is unsound for
+                // KECCAK / CALL / LOG / … : havoc and continue is unsound for
                 // control flow, so we conservatively terminate the path as Unknown.
                 *saw_unknown = true;
                 return Ok(None);
@@ -900,12 +955,21 @@ fn lift_witness(
     exec: &mut SymbolicExecutor,
     env: &SymEnv,
     tx: usize,
+    env_syms: &[SymbolId],
     kind: BugKind,
     pc: usize,
 ) -> Result<Option<PathBug>, SolverError> {
     let Some(model) = exec.model(arena)? else {
         return Ok(None);
     };
+    let env_inputs: Vec<crate::word::Word> = env_syms
+        .iter()
+        .map(|&sym| {
+            model
+                .get(sym)
+                .map_or_else(crate::word::Word::zero, |v| crate::value_to_word(&v))
+        })
+        .collect();
     // Lift the inputs of every transaction up to and including the bug's tx, so a
     // cross-tx bug carries the full replayable sequence (txs 0..tx are `prior_txs`,
     // tx is the bug's transaction). For a single-tx bug `prior_txs` is empty and
@@ -939,6 +1003,7 @@ fn lift_witness(
         callvalue: here.callvalue,
         caller: here.caller,
         prior_txs,
+        env_inputs,
     }))
 }
 
@@ -950,6 +1015,7 @@ fn check_overflow(
     exec: &mut SymbolicExecutor,
     env: &SymEnv,
     tx: usize,
+    env_syms: &[SymbolId],
     ovf: TermId,
     kind: BugKind,
     pc: usize,
@@ -960,7 +1026,7 @@ fn check_overflow(
     if branch.if_true.is_feasible() {
         // Commit the overflow condition so model() lifts a witnessing input.
         exec.assume_auto(arena, ovf)?;
-        return lift_witness(arena, exec, env, tx, kind, pc);
+        return lift_witness(arena, exec, env, tx, env_syms, kind, pc);
     }
     if matches!(branch.if_true, PathStatus::Unknown(_)) {
         *saw_unknown = true;
