@@ -23,6 +23,19 @@ where Lean reconstruction is complete or partial.
 | Reviewer | Audit trust boundaries and rejection behavior. |
 | Educator | Teach SAT/SMT certificates with runnable tiny examples. |
 
+## Current Status
+
+First recipe files have landed:
+
+- [QF_BV Bit-Blast Evidence](recipes/qf-bv-bitblast.md)
+- [QF_UF Congruence And Alethe Evidence](recipes/qf-uf-congruence-alethe.md)
+- [QF_LRA Farkas Evidence](recipes/qf-lra-farkas.md)
+- [Array Read-Over-Write Axiom Evidence](recipes/array-row-axiom.md)
+
+Each names a tiny formula, the current evidence artifact, the checker, focused
+test commands, trust boundary, Lean status, and links to the atlas/support/trust
+docs.
+
 ## Recipe Structure
 
 Each recipe should use the same format:
@@ -83,6 +96,9 @@ Exit criteria:
 
 ### R1: QF_BV Bit-Blast Proof
 
+Status: first recipe landed as
+[QF_BV Bit-Blast Evidence](recipes/qf-bv-bitblast.md).
+
 Purpose: show the finite-domain path that most directly expresses Axeyum's
 foundation.
 
@@ -93,6 +109,9 @@ Exit criteria:
 - Names bit-blast proof status and Lean reconstruction status honestly.
 
 ### R2: QF_UF Congruence / Alethe
+
+Status: first recipe landed as
+[QF_UF Congruence And Alethe Evidence](recipes/qf-uf-congruence-alethe.md).
 
 Purpose: explain equality reasoning, congruence, and Alethe reconstruction.
 
@@ -110,6 +129,9 @@ Exit criteria:
 - Lean kernel reconstruction status is explicit.
 
 ### R3: QF_LRA Farkas
+
+Status: first recipe landed as
+[QF_LRA Farkas Evidence](recipes/qf-lra-farkas.md).
 
 Purpose: explain arithmetic certificates independent of SAT traces.
 
@@ -144,6 +166,9 @@ Exit criteria:
 - Lean gap or reconstruction route is stated honestly.
 
 ### R5: Arrays / Read-Over-Write
+
+Status: first recipe landed as
+[Array Read-Over-Write Axiom Evidence](recipes/array-row-axiom.md).
 
 Purpose: explain reduction evidence for array reasoning.
 

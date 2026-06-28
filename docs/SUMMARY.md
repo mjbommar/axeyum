@@ -7,6 +7,10 @@
   - [Atlas Roadmap](atlas/ROADMAP.md)
 - [Proof Certificate Cookbook](proof-cookbook/README.md)
   - [Cookbook Roadmap](proof-cookbook/ROADMAP.md)
+  - [QF_BV Bit-Blast Evidence](proof-cookbook/recipes/qf-bv-bitblast.md)
+  - [QF_UF Congruence And Alethe](proof-cookbook/recipes/qf-uf-congruence-alethe.md)
+  - [QF_LRA Farkas Evidence](proof-cookbook/recipes/qf-lra-farkas.md)
+  - [Array ROW Axiom Evidence](proof-cookbook/recipes/array-row-axiom.md)
 - [Rules-as-Code Verification Lab](rules-as-code/README.md)
   - [Rules-as-Code Roadmap](rules-as-code/ROADMAP.md)
 

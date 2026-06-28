@@ -1,8 +1,8 @@
 # Proof Certificate Cookbook
 
-The Proof Certificate Cookbook is the planned guide to Axeyum's trust story:
-fast search is untrusted, but answers are replayed or independently checked by
-small verifiers.
+The Proof Certificate Cookbook is the guide to Axeyum's trust story: fast
+search is untrusted, but answers are replayed or independently checked by small
+verifiers.
 
 The cookbook should teach proof artifacts by example. Each recipe should start
 with a tiny formula, show the solver route, show the evidence artifact, name the
@@ -22,7 +22,10 @@ docs/proof-cookbook/
   README.md
   ROADMAP.md
   recipes/
-    # planned tiny route-by-route examples
+    qf-bv-bitblast.md
+    qf-uf-congruence-alethe.md
+    qf-lra-farkas.md
+    array-row-axiom.md
 ```
 
 ## Roadmap
@@ -31,12 +34,17 @@ The detailed implementation plan lives in [ROADMAP.md](ROADMAP.md).
 
 ## First Recipe Candidates
 
+First recipes now landed:
+
+- [QF_BV Bit-Blast Evidence](recipes/qf-bv-bitblast.md)
+- [QF_UF Congruence And Alethe Evidence](recipes/qf-uf-congruence-alethe.md)
+- [QF_LRA Farkas Evidence](recipes/qf-lra-farkas.md)
+- [Array Read-Over-Write Axiom Evidence](recipes/array-row-axiom.md)
+
+Remaining initial candidates:
+
 - Boolean CNF unsat with LRAT.
-- QF_BV unsat through bit-blast plus SAT proof.
-- QF_UF unsat through congruence closure / Alethe.
-- QF_LRA unsat through a Farkas certificate.
 - QF_LIA integer infeasibility through a Diophantine certificate.
-- Array read-over-write unsat through checked array elimination.
 - Datatype constructor contradiction through structural evidence.
 
 Each recipe should link back to [trust-ledger](../research/08-planning/trust-ledger.md)
