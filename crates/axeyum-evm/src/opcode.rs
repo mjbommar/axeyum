@@ -123,7 +123,14 @@ pub enum Op {
     /// that pops `pops` stack args (the last is the return-data length) and pushes
     /// a success flag. Modeled as a witnessed env input (success is
     /// nondeterministic; return data is not modeled — see the symbolic handler).
-    Call(u8),
+    /// `may_reenter` is true for non-static calls (the callee may re-enter and
+    /// mutate our storage); `STATICCALL` sets it false.
+    Call {
+        /// Number of stack arguments popped.
+        pops: u8,
+        /// Whether the call may mutate our storage (false only for `STATICCALL`).
+        may_reenter: bool,
+    },
     /// An *environment / context* opcode that pops `pops` stack args and pushes
     /// one nondeterministic value the contract has no control over: `GAS`,
     /// `BALANCE`, `EXTCODESIZE`/`EXTCODEHASH`, `RETURNDATASIZE`, and block/tx
@@ -186,9 +193,20 @@ impl Op {
             0x30 | 0x32 | 0x3a | 0x3d | 0x41..=0x48 | 0x5a => Op::Env(0),
             0x31 | 0x3b | 0x3f => Op::Env(1),
             // External calls: CALL/CALLCODE pop 7 (incl. value), DELEGATECALL/
-            // STATICCALL pop 6; all push a success flag.
-            0xf1 | 0xf2 => Op::Call(7),
-            0xf4 | 0xfa => Op::Call(6),
+            // STATICCALL pop 6; all push a success flag. Only STATICCALL is
+            // state-read-only (cannot re-enter and mutate our storage).
+            0xf1 | 0xf2 => Op::Call {
+                pops: 7,
+                may_reenter: true,
+            },
+            0xf4 => Op::Call {
+                pops: 6,
+                may_reenter: true,
+            },
+            0xfa => Op::Call {
+                pops: 6,
+                may_reenter: false,
+            },
             0x60..=0x7f => Op::Push(byte - 0x5f),
             0x80..=0x8f => Op::Dup(byte - 0x7f),
             0x90..=0x9f => Op::Swap(byte - 0x8f),

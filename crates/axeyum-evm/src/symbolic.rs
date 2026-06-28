@@ -181,6 +181,11 @@ struct State {
     /// same nondeterministic values. Persists across tx boundaries (whole-path
     /// order).
     env_syms: Vec<SymbolId>,
+    /// Set once a may-reenter external call occurs: our storage is then treated as
+    /// **adversarial** (the callee may have changed any slot), so subsequent
+    /// `SLOAD`s read a fresh witnessed value. This is the re-entrancy threat model
+    /// (DAO-style); it never weakens a `SafeUpToBound` proof.
+    storage_dirty: bool,
 }
 
 /// A keccak application observed on a path.
@@ -207,6 +212,7 @@ impl State {
             storage_array: None,
             tx: 0,
             env_syms: Vec::new(),
+            storage_dirty: false,
         }
     }
 
@@ -810,7 +816,15 @@ fn run_from(
             }
             Op::Sload => {
                 let key = pop_or_unknown!();
-                let word = state.storage_load(arena, key)?;
+                let word = if state.storage_dirty {
+                    // Adversarial storage after a re-entrant call: a fresh witnessed
+                    // value (the callee may have set this slot to anything).
+                    let (value, sym) = env.fresh_env(arena)?;
+                    state.env_syms.push(sym);
+                    value
+                } else {
+                    state.storage_load(arena, key)?
+                };
                 state.stack.push(word);
             }
             Op::Sstore => {
@@ -923,7 +937,7 @@ fn run_from(
                 let len = state.stack.len();
                 state.stack.swap(len - 1, len - 1 - n);
             }
-            Op::Call(pops) => {
+            Op::Call { pops, may_reenter } => {
                 // Pop the call args; the last one is the return-data length. Push a
                 // nondeterministic success flag as a witnessed env input, and
                 // continue. Return data is not modeled: if a nonzero (or symbolic)
@@ -939,6 +953,11 @@ fn run_from(
                 }
                 if ret_len.is_none_or(|rl| concrete_usize(arena, rl) != Some(0)) {
                     *saw_unknown = true;
+                }
+                // A non-static call may re-enter and mutate our storage: treat all
+                // subsequent reads as adversarial (the re-entrancy threat model).
+                if may_reenter {
+                    state.storage_dirty = true;
                 }
                 let (success, sym) = env.fresh_env(arena)?;
                 state.env_syms.push(sym);

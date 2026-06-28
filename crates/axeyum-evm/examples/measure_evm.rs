@@ -330,6 +330,17 @@ fn corpus() -> Vec<Case> {
             ],
         },
         Case {
+            // Re-entrancy: a storage slot is cold (0) before an external CALL but
+            // adversarial after it, so the post-call `storage[0] != 0` revert is
+            // reachable (the DAO-style threat model).
+            name: "reentrancy-storage-invariant", shape: Environment, expect: Bug(Revert),
+            bytecode: vec![
+                PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00,
+                PUSH1, 0x00, CALL, POP, PUSH1, 0x00, SLOAD, PUSH1, 0x17, JUMPI, STOP, JUMPDEST,
+                PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
             name: "keccak-mapping-alias-revert", shape: KeccakMapping, expect: Bug(Revert),
             bytecode: vec![
                 PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x00, MSTORE, PUSH1, 0x00, PUSH1, 0x20, MSTORE,

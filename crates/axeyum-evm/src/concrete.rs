@@ -141,6 +141,9 @@ fn run_core(
     let mut pc = 0usize;
     let mut steps = 0usize;
     let mut overflowed = false;
+    // Set after a may-reenter external call: subsequent `SLOAD`s read a witnessed
+    // env value (adversarial storage), mirroring the symbolic re-entrancy model.
+    let mut storage_dirty = false;
 
     macro_rules! pop {
         () => {
@@ -406,10 +409,21 @@ fn run_core(
             }
             Op::Sload => {
                 let key = pop!();
-                let v = storage
-                    .get(&key.to_be_bytes())
-                    .cloned()
-                    .unwrap_or_else(Word::zero);
+                let v = if storage_dirty {
+                    // Adversarial storage after a re-entrant call: replay the
+                    // witnessed value (matches the symbolic side's fresh read).
+                    let value = env_inputs
+                        .get(*env_cursor)
+                        .cloned()
+                        .unwrap_or_else(Word::zero);
+                    *env_cursor += 1;
+                    value
+                } else {
+                    storage
+                        .get(&key.to_be_bytes())
+                        .cloned()
+                        .unwrap_or_else(Word::zero)
+                };
                 stack.push(v);
             }
             Op::Sstore => {
@@ -487,13 +501,27 @@ fn run_core(
                 );
                 return (halt, overflowed);
             }
-            Op::Call(pops) | Op::Env(pops) => {
+            Op::Call { pops, may_reenter } => {
                 for _ in 0..pops {
                     let _ = pop!();
                 }
-                // Replay the witnessed value for this opcode (the env oracle, same
-                // execution order as the symbolic side): a CALL success flag or an
-                // env value. Return data is not modeled. Default 0 if exhausted.
+                if may_reenter {
+                    storage_dirty = true;
+                }
+                // Replay the witnessed success flag (env oracle, in execution
+                // order). Return data is not modeled. Default 0 if exhausted.
+                let value = env_inputs
+                    .get(*env_cursor)
+                    .cloned()
+                    .unwrap_or_else(Word::zero);
+                *env_cursor += 1;
+                stack.push(value);
+            }
+            Op::Env(pops) => {
+                for _ in 0..pops {
+                    let _ = pop!();
+                }
+                // Replay the witnessed env value (in execution order).
                 let value = env_inputs
                     .get(*env_cursor)
                     .cloned()
