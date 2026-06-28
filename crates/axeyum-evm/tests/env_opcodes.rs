@@ -49,3 +49,26 @@ fn contract_using_gas_is_no_longer_unknown_when_safe() {
         report.verdict
     );
 }
+
+const CALL: u8 = 0xf1;
+
+#[test]
+fn revert_on_failed_call_is_found_and_validated() {
+    // success = call(...); if (!success) revert;  with retLen=0 (return data not
+    // needed). The call may fail (success is nondeterministic), so the revert is
+    // reachable and reported with a witness pinning success = 0.
+    #[rustfmt::skip]
+    let bytecode = [
+        // push 7 zero args (gas, addr, value, argsOff, argsLen, retOff, retLen=0)
+        PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00,
+        PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00,            // 0..13
+        CALL, ISZERO, PUSH1, 0x15, JUMPI, STOP, STOP,     // 14..20 (dest = 21)
+        JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,       // 21..26
+    ];
+    let report = analyze(&bytecode, &AnalyzeConfig::default());
+    assert!(
+        report.has_findings(),
+        "the failed-call revert is reachable (was Unknown before A2.2)"
+    );
+    assert_eq!(report.findings[0].kind, FindingKind::Revert);
+}

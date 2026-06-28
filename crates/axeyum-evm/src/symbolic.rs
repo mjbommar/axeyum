@@ -923,6 +923,27 @@ fn run_from(
                 let len = state.stack.len();
                 state.stack.swap(len - 1, len - 1 - n);
             }
+            Op::Call(pops) => {
+                // Pop the call args; the last one is the return-data length. Push a
+                // nondeterministic success flag as a witnessed env input, and
+                // continue. Return data is not modeled: if a nonzero (or symbolic)
+                // amount is requested, flag the path Unknown so we never claim
+                // safety we did not establish — but still explore for bugs that do
+                // not depend on the returned bytes.
+                let mut ret_len = None;
+                for k in 0..pops {
+                    let v = pop_or_unknown!();
+                    if k + 1 == pops {
+                        ret_len = Some(v);
+                    }
+                }
+                if ret_len.is_none_or(|rl| concrete_usize(arena, rl) != Some(0)) {
+                    *saw_unknown = true;
+                }
+                let (success, sym) = env.fresh_env(arena)?;
+                state.env_syms.push(sym);
+                state.stack.push(success);
+            }
             Op::Env(pops) => {
                 // Pop the (ignored) address arg(s), then push one nondeterministic
                 // environment value as a *witnessed* symbolic input: a fresh symbol

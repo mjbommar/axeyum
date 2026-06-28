@@ -487,12 +487,13 @@ fn run_core(
                 );
                 return (halt, overflowed);
             }
-            Op::Env(pops) => {
+            Op::Call(pops) | Op::Env(pops) => {
                 for _ in 0..pops {
                     let _ = pop!();
                 }
-                // Replay the witnessed environment value for this opcode (same
-                // execution order as the symbolic side); default 0 if exhausted.
+                // Replay the witnessed value for this opcode (the env oracle, same
+                // execution order as the symbolic side): a CALL success flag or an
+                // env value. Return data is not modeled. Default 0 if exhausted.
                 let value = env_inputs
                     .get(*env_cursor)
                     .cloned()

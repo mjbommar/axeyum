@@ -2352,9 +2352,28 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    - Note: `bounded_model_check_with_memory` needs a full `TransitionSystem`
      encoding of a whole-contract step — heavier than the DFS re-entry used here.
    **A1 keystone COMPLETE.** Next A-item: **A2 `CALL`/`DELEGATECALL` modeling**.
-2. **`CALL`/`DELEGATECALL`/`CREATE`/`EXTCODE*` modeling** (havoc return + touched
-   storage) so dispatched contracts explore further before `Unknown`. *Exit:*
-   fewer `InconclusiveDueToUnknown` rows on a dispatched-call corpus case.
+2. **`CALL`/`DELEGATECALL`/`CREATE`/`EXTCODE*` + environment modeling** so paths
+   explore *past* these opcodes instead of going `Unknown`. The soundness key
+   (keeps DISAGREE=0): model each as a **witnessed symbolic environment input** —
+   a fresh symbol on the symbolic side, *replayed from the witness* on the
+   concrete side (the env-oracle generalizes calldata to opcode-produced
+   nondeterminism). Sliced:
+   - **A2.1** scalar env opcodes that pop `k`, push one fresh value: `GAS`,
+     `BALANCE`, `EXTCODESIZE`/`EXTCODEHASH`, `RETURNDATASIZE`, and block/context
+     (`TIMESTAMP`/`NUMBER`/`GASPRICE`/`COINBASE`/`CHAINID`/`ADDRESS`/`ORIGIN`/…).
+     *Path:* `opcode.rs` (`Op::Env{pops}`), `symbolic.rs` (env-symbol allocator,
+     recorded per path), `concrete.rs` (env-value oracle consumed in order),
+     witness (`env_inputs`). *Exit:* a contract that branches on `gas()`/context
+     explores past it; a bug after it is reported + replay-validated, DISAGREE=0.
+   - **A2.1** — ✅ DONE (`a695198`) — scalar env opcodes are witnessed inputs;
+     paths explore past them; scoreboard `environment` class, 10/10, DISAGREE=0.
+   - **A2.2** — ⏭ NEXT — `CALL`/`CALLCODE`/`DELEGATECALL`/`STATICCALL` push a
+     success flag (witnessed env input) and continue; if the return-length arg is
+     symbolic or `>0`, set `saw_unknown` (return data unmodeled → no false safe).
+   - **A2.3** re-entrancy: after a non-static external call, conservatively havoc
+     our storage (later `SLOAD`s read fresh) — model the callee mutating state.
+   *Exit (overall):* fewer `InconclusiveDueToUnknown` rows on a dispatched-call
+   corpus case, all still DISAGREE=0.
 3. **WASM in-browser surface** (the delivery differentiator) + the vs-hevm/halmos
    scoreboard once those tools are installable (the `ExternalOracle` seam exists).
 

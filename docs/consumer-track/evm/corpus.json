@@ -1,5 +1,5 @@
 {
-  "total": 10, "bug_found": 6, "safe_proved": 4, "unknown": 0, "disagree": 0,
+  "total": 11, "bug_found": 7, "safe_proved": 4, "unknown": 0, "disagree": 0,
   "cases": [
     { "name": "add-overflow-unguarded", "shape": "arith", "outcome": "bug-found" },
     { "name": "mask-then-store-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
@@ -10,6 +10,7 @@
     { "name": "cold-slot-load-safe", "shape": "symbolic-storage", "outcome": "safe-proved" },
     { "name": "gas-branch-revert", "shape": "environment", "outcome": "bug-found" },
     { "name": "reads-gas-safe", "shape": "environment", "outcome": "safe-proved" },
+    { "name": "revert-on-failed-call", "shape": "environment", "outcome": "bug-found" },
     { "name": "keccak-mapping-alias-revert", "shape": "keccak-mapping", "outcome": "bug-found" }
   ]
 }

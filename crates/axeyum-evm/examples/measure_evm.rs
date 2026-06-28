@@ -45,6 +45,7 @@ const GAS: u8 = 0x5a;
 const JUMPDEST: u8 = 0x5b;
 const PUSH1: u8 = 0x60;
 const PUSH2: u8 = 0x61;
+const CALL: u8 = 0xf1;
 const RETURN: u8 = 0xf3;
 const REVERT: u8 = 0xfd;
 const INVALID: u8 = 0xfe;
@@ -319,6 +320,14 @@ fn corpus() -> Vec<Case> {
         Case {
             name: "reads-gas-safe", shape: Environment, expect: Safe,
             bytecode: vec![GAS, POP, STOP],
+        },
+        Case {
+            name: "revert-on-failed-call", shape: Environment, expect: Bug(Revert),
+            bytecode: vec![
+                PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00, PUSH1, 0x00,
+                PUSH1, 0x00, CALL, ISZERO, PUSH1, 0x15, JUMPI, STOP, STOP, JUMPDEST, PUSH1, 0x00,
+                PUSH1, 0x00, REVERT,
+            ],
         },
         Case {
             name: "keccak-mapping-alias-revert", shape: KeccakMapping, expect: Bug(Revert),
