@@ -1,0 +1,142 @@
+//! C4.1 — the generic `ScalarLoopSystem` over N scalar variables. It (a) subsumes
+//! the hand-written `CounterLoopSystem` (same verdict on the same loop), and (b)
+//! handles a genuine multi-variable accumulator loop — all via the warm
+//! `bounded_model_check` route (not unrolling into one-shot queries).
+
+use axeyum_ir::{TermArena, TermId};
+use axeyum_solver::{SolverConfig, SolverError};
+use axeyum_verify::Ty;
+use axeyum_verify::bmc::{CounterLoopSystem, LoopSafety, ScalarLoopSystem, check_loop, run_loop};
+
+const W: u32 = 8;
+
+/// A generic system replicating `while i < limit { i += 1 }` with bad state
+/// `i == bad`, over state vars `[i, limit]`.
+fn counter_like(bad: u128) -> ScalarLoopSystem {
+    ScalarLoopSystem::new(
+        W,
+        vec!["i", "limit"],
+        // init: i == 0 (limit is a free symbolic input).
+        Box::new(
+            |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
+                let zero = arena.bv_const(W, 0)?;
+                Ok(arena.eq(v[0], zero)?)
+            },
+        ),
+        // guard: i < limit.
+        Box::new(|arena, v| Ok(arena.bv_ult(v[0], v[1])?)),
+        // update: i' = i + 1, limit' = limit.
+        Box::new(|arena, v| {
+            let one = arena.bv_const(W, 1)?;
+            Ok(vec![arena.bv_add(v[0], one)?, v[1]])
+        }),
+        // bad: i == bad.
+        Box::new(move |arena, v| {
+            let b = arena.bv_const(W, bad)?;
+            Ok(arena.eq(v[0], b)?)
+        }),
+    )
+}
+
+#[test]
+fn generic_subsumes_counter_loop() {
+    let cfg = SolverConfig::default();
+    let bad = 3;
+    let specific = CounterLoopSystem::new(
+        Ty::Int {
+            width: 8,
+            signed: false,
+        },
+        bad,
+    )
+    .expect("u8 counter loop");
+    let generic = counter_like(bad);
+
+    let s = check_loop(&specific, 10, &cfg).expect("specific");
+    let g = run_loop(&generic, 10, &cfg).expect("generic");
+
+    match (s, g) {
+        (
+            LoopSafety::BugReachable { steps: s1, .. },
+            LoopSafety::BugReachable { steps: s2, .. },
+        ) => {
+            assert_eq!(
+                s1, s2,
+                "generic and hand-written counter loop must agree on depth"
+            );
+        }
+        other => panic!("expected both BugReachable, got {other:?}"),
+    }
+}
+
+#[test]
+fn multi_variable_accumulator_loop_finds_bug() {
+    // while i < limit { sum += i; i += 1 }  with bad state i == 5 — three state
+    // variables [i, sum, limit]; the bad counter value is reachable.
+    let cfg = SolverConfig::default();
+    let system = ScalarLoopSystem::new(
+        W,
+        vec!["i", "sum", "limit"],
+        Box::new(
+            |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
+                let zero = arena.bv_const(W, 0)?;
+                let i0 = arena.eq(v[0], zero)?;
+                let sum0 = arena.eq(v[1], zero)?;
+                Ok(arena.and(i0, sum0)?)
+            },
+        ),
+        Box::new(|arena, v| Ok(arena.bv_ult(v[0], v[2])?)),
+        Box::new(|arena, v| {
+            let one = arena.bv_const(W, 1)?;
+            // sum' = sum + i, i' = i + 1, limit' = limit
+            Ok(vec![
+                arena.bv_add(v[0], one)?,
+                arena.bv_add(v[1], v[0])?,
+                v[2],
+            ])
+        }),
+        Box::new(|arena, v| {
+            let five = arena.bv_const(W, 5)?;
+            Ok(arena.eq(v[0], five)?)
+        }),
+    );
+    match run_loop(&system, 10, &cfg).expect("multi-var") {
+        LoopSafety::BugReachable { steps, .. } => assert_eq!(steps, 5, "i reaches 5 in 5 steps"),
+        other => panic!("expected BugReachable, got {other:?}"),
+    }
+}
+
+#[test]
+fn accumulator_safe_within_bound() {
+    // Same loop but bad state i == 200: unreachable within a 10-iteration bound.
+    let cfg = SolverConfig::default();
+    let system = ScalarLoopSystem::new(
+        W,
+        vec!["i", "sum", "limit"],
+        Box::new(
+            |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
+                let zero = arena.bv_const(W, 0)?;
+                let i0 = arena.eq(v[0], zero)?;
+                let sum0 = arena.eq(v[1], zero)?;
+                Ok(arena.and(i0, sum0)?)
+            },
+        ),
+        Box::new(|arena, v| Ok(arena.bv_ult(v[0], v[2])?)),
+        Box::new(|arena, v| {
+            let one = arena.bv_const(W, 1)?;
+            Ok(vec![
+                arena.bv_add(v[0], one)?,
+                arena.bv_add(v[1], v[0])?,
+                v[2],
+            ])
+        }),
+        Box::new(|arena, v| {
+            let big = arena.bv_const(W, 200)?;
+            Ok(arena.eq(v[0], big)?)
+        }),
+    );
+    match run_loop(&system, 10, &cfg).expect("safe") {
+        LoopSafety::SafeWithinBound { bound } => assert_eq!(bound, 10),
+        other => panic!("expected SafeWithinBound, got {other:?}"),
+    }
+}

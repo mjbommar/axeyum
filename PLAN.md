@@ -2380,12 +2380,24 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    scoreboard once those tools are installable (the `ExternalOracle` seam exists).
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
-4. **General CFG→`TransitionSystem` lowering** — map every live local of a
-   `#[verify]` body to a step-indexed state var and build `trans` from the body,
-   giving warm-solver reuse across unroll depths for deep loops (scalar state;
-   arrays-in-loop-state stay on the one-shot `_with_memory` route, off U6).
-   *Path:* `crates/axeyum-verify/src/{lower,bmc}.rs`. *Exit:* a deep-loop example
-   verified via the warm BMC route, DISAGREE=0.
+4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
+   `CounterLoopSystem` with a system *built from the AST*, giving warm-solver reuse
+   across unroll depths for deep loops (scalar state; arrays-in-loop-state stay on
+   the one-shot `_with_memory` route, off U6). Sliced:
+   - **C4.1** a `GenericLoopSystem` over **N scalar variables**: `state_vars` =
+     one symbol per loop variable per step; `init` = pre-loop values; `trans` =
+     `guard ? body-effect : stutter` where the per-variable next-value expressions
+     come from lowering the **straight-line** loop body (assignments) against the
+     pre-state symbols; `bad` = the in-loop assertion/overflow predicate. Reuse the
+     `lower` expression machinery seeded with a pre-state env. *Path:*
+     `verify/src/{bmc,lower}.rs`. *Exit:* a multi-variable accumulator loop (e.g.
+     `sum += i; i += 1; assert(sum < BAD)`) verified via warm `bounded_model_check`,
+     cross-checked against the unroll route (same verdict), DISAGREE=0.
+   - **C4.2** nested `if` inside the loop body (guarded assignments fold into each
+     variable's next-value via `ite`).
+   - **C4.3** route `#[verify]` `while` bodies in fragment to the warm system
+     automatically (deep loops), falling back to unrolling when out of fragment;
+     a deep-loop example that is impractical to unroll but fast under warm BMC.
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
    demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
 6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).
