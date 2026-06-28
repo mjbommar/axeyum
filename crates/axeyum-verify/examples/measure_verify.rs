@@ -115,6 +115,7 @@ fn counter_program(bad: u128) -> Program {
     )
 }
 
+#[allow(clippy::too_many_lines)] // a flat data listing of construction-known cases
 fn corpus() -> Vec<Case> {
     vec![
         Case {
@@ -135,6 +136,48 @@ fn corpus() -> Vec<Case> {
                 "mask",
                 vec![param("a")],
                 vec![let_("c", bin(BinOp::BitAnd, var("a"), lit(0x0f)))],
+            ),
+        },
+        Case {
+            name: "signed-add-overflow",
+            class: "overflow",
+            expect: Expect::Bug,
+            program: prog(
+                "sadd",
+                vec![
+                    Param {
+                        name: "a".to_string(),
+                        ty: Ty::Int {
+                            width: 8,
+                            signed: true,
+                        },
+                    },
+                    Param {
+                        name: "b".to_string(),
+                        ty: Ty::Int {
+                            width: 8,
+                            signed: true,
+                        },
+                    },
+                ],
+                vec![Stmt::Let {
+                    name: "c".to_string(),
+                    ty: Ty::Int {
+                        width: 8,
+                        signed: true,
+                    },
+                    value: bin(BinOp::Add, var("a"), var("b")),
+                }],
+            ),
+        },
+        Case {
+            name: "sub-underflow",
+            class: "overflow",
+            expect: Expect::Bug,
+            program: prog(
+                "sub",
+                vec![param("a"), param("b")],
+                vec![let_("c", bin(BinOp::Sub, var("a"), var("b")))],
             ),
         },
         Case {

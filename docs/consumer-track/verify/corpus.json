@@ -1,8 +1,10 @@
 {
-  "total": 7, "disagree": 0,
+  "total": 9, "disagree": 0,
   "cases": [
     { "name": "add-overflow", "class": "overflow", "outcome": "bug-found" },
     { "name": "mask-safe", "class": "overflow", "outcome": "verified" },
+    { "name": "signed-add-overflow", "class": "overflow", "outcome": "bug-found" },
+    { "name": "sub-underflow", "class": "overflow", "outcome": "bug-found" },
     { "name": "div-by-zero", "class": "div0", "outcome": "bug-found" },
     { "name": "assert-violation", "class": "assert", "outcome": "bug-found" },
     { "name": "assert-safe", "class": "assert", "outcome": "verified" },
