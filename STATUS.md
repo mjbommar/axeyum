@@ -73,8 +73,15 @@ persistent-storage concrete-replay oracle (`concrete::run_sequence`); the
 scoreboard has a Multi-transaction section, DISAGREE=0 over 8 cases. This is core
 angr/unicorn-class stateful analysis. Default `max_txs=1` preserves single-tx.
 
-**Next.** Forward backlog in [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main):
-A2 CALL/DELEGATECALL modeling; C4 general CFG→`TransitionSystem` lowering (verify).
+**A2 CALL/environment phase — DONE** (`a695198`, `f3f45c8`, `1cfbf47`). The EVM
+hunter explores past environment opcodes (`GAS`/`BALANCE`/context), external calls
+(`CALL`/`DELEGATECALL`/`STATICCALL` success flag), and models **re-entrancy**
+(adversarial storage after a non-static call — the DAO threat), all as *witnessed
+symbolic inputs* replayed by the concrete oracle (DISAGREE=0). Scoreboard 12/12.
+
+**Next.** A3 (WASM + vs-hevm) is install-gated → deferred. Pivot to **App C**
+(`axeyum-verify`) C4: general CFG→`TransitionSystem` lowering. Forward backlog in
+[PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds

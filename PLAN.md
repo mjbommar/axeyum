@@ -2367,13 +2367,15 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      explores past it; a bug after it is reported + replay-validated, DISAGREE=0.
    - **A2.1** — ✅ DONE (`a695198`) — scalar env opcodes are witnessed inputs;
      paths explore past them; scoreboard `environment` class, 10/10, DISAGREE=0.
-   - **A2.2** — ⏭ NEXT — `CALL`/`CALLCODE`/`DELEGATECALL`/`STATICCALL` push a
-     success flag (witnessed env input) and continue; if the return-length arg is
-     symbolic or `>0`, set `saw_unknown` (return data unmodeled → no false safe).
-   - **A2.3** re-entrancy: after a non-static external call, conservatively havoc
-     our storage (later `SLOAD`s read fresh) — model the callee mutating state.
-   *Exit (overall):* fewer `InconclusiveDueToUnknown` rows on a dispatched-call
-   corpus case, all still DISAGREE=0.
+   - **A2.2** — ✅ DONE (`f3f45c8`) — `CALL`/`CALLCODE`/`DELEGATECALL`/`STATICCALL`
+     push a witnessed success flag and continue; return-length `>0`/symbolic →
+     `saw_unknown` (return data unmodeled, no false safe).
+   - **A2.3** — ✅ DONE (`1cfbf47`) — re-entrancy: after a non-static call, storage
+     is adversarial (later `SLOAD`s read a witnessed value); `STATICCALL` does not
+     dirty. The DAO threat model; SafeUpToBound stays sound.
+   **A2 phase COMPLETE.** Scoreboard 12/12 decided, DISAGREE=0, `environment`
+   class covering env opcodes + CALL + re-entrancy. Next A-item: A3 (WASM +
+   vs-hevm, install-gated) — deferred; pivot to App C (C4) which is fully buildable.
 3. **WASM in-browser surface** (the delivery differentiator) + the vs-hevm/halmos
    scoreboard once those tools are installable (the `ExternalOracle` seam exists).
 
