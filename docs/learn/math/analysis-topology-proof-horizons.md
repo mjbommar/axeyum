@@ -28,6 +28,7 @@ Example packs:
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
+- [finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/)
 - [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/)
@@ -49,7 +50,8 @@ rank checks, fixed Betti-number replay, and bad boundary-sign rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
-operator bounds, Chebyshev recurrence values at fixed points,
+operator bounds, explicit Euler-step replay, finite Euler error tables,
+bad Euler-step rejection, Chebyshev recurrence values at fixed points,
 finite Chebyshev-system interpolation/sign-pattern checks, exact rational
 inner-product Gram matrices, fixed Cauchy-Schwarz/projection/Gram-Schmidt
 replay, finite stochastic transition systems, finite first-hit distributions,
@@ -244,6 +246,20 @@ trace = 0, 2, 4, 6, 8
 The validator checks every transition and then checks the invariant
 `0 <= x(t) <= 8` over the finite trace.
 
+For a finite Euler-method shadow, encode a step size, time grid, state trace,
+and derivative table:
+
+```text
+y' = -y
+h = 1/2
+states = 1, 1/2, 1/4, 1/8
+```
+
+The `finite-euler-method-v0` validator checks every update
+`y_(n+1) = y_n + h*f(t_n,y_n)`, replays a finite exact-error table for
+`y' = 2t` with solution `y = t^2`, checks a nonnegative monotone invariant,
+and rejects a bad one-step claim.
+
 For a finite stochastic transition system, encode a row-stochastic matrix and
 an initial distribution. The `finite-markov-chain-v0` validator applies exact
 row-vector multiplication for a fixed horizon and checks stationary
@@ -290,6 +306,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
@@ -306,6 +323,7 @@ replay, read
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
+[End To End: Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md),
 [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md),
 [End To End: Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),

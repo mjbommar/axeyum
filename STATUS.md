@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite dynamics/Euler end-to-end lesson landed.** Added
+  [`finite-dynamics-euler-end-to-end.md`](docs/learn/math/finite-dynamics-euler-end-to-end.md)
+  as the learner-facing trace for the bounded-dynamics and finite-Euler packs:
+  recurrence replay, finite invariants, threshold reachability, explicit Euler
+  step replay, exact finite error tables, checked bad-step rejection, and the
+  ODE/numerical-analysis Lean horizon. The lesson is linked from the math
+  learning index plus the analysis/topology path.
+
 - **Finite topology/measure end-to-end lesson landed.** Added
   [`finite-topology-measure-end-to-end.md`](docs/learn/math/finite-topology-measure-end-to-end.md)
   as the learner-facing trace for the finite-topology and finite-measure packs:

@@ -24,7 +24,7 @@ Source maps:
 | [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) | `field_graph_theory`, `field_discrete_math` | `counting-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `graph-coloring-v0`, `graph-reachability-v0`, `graph-search-runtime-v0`, `graph-matching-v0`, `graph-d-separation-v0`, `graph-cut-v0`, `proof-methods-refutation-v0` |
 | [Linear Algebra And Optimization](linear-algebra-and-optimization.md) | `curriculum_linear_algebra`, `field_optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `numerical-linear-algebra-v0`, `spectral-linear-algebra-v0`, `matrix-invariants-v0`, `random-matrix-finite-v0`, `least-squares-regression-v0`, `finite-simplicial-homology-v0`, `multivariable-calculus-rational-v0`, `linear-optimization-v0`, `convexity-rational-v0`, `finite-operator-v0`, `finite-chebyshev-systems-v0` |
 | [Probability And Statistics](probability-and-statistics.md) | `field_probability_theory`, `field_statistics` | `finite-probability-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-hitting-times-v0`, `finite-concentration-v0`, `finite-martingales-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-markov-chain-v0`, `descriptive-statistics-v0`, `least-squares-regression-v0`, `exact-statistical-tests-v0`, `finite-measure-v0`, `random-matrix-finite-v0` |
-| [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `real-analysis-rational-v0`, `sequence-limit-shadow-v0`, `metric-continuity-v0`, `finite-compactness-v0`, `finite-connectedness-v0`, `finite-continuous-maps-v0`, `finite-simplicial-homology-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `finite-topology-v0`, `bounded-dynamics-v0`, `finite-markov-chain-v0`, `finite-hitting-times-v0`, `inner-product-spaces-rational-v0`, `finite-operator-v0`, `finite-chebyshev-systems-v0` |
+| [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `real-analysis-rational-v0`, `sequence-limit-shadow-v0`, `metric-continuity-v0`, `finite-compactness-v0`, `finite-connectedness-v0`, `finite-continuous-maps-v0`, `finite-simplicial-homology-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `finite-topology-v0`, `bounded-dynamics-v0`, `finite-euler-method-v0`, `finite-markov-chain-v0`, `finite-hitting-times-v0`, `inner-product-spaces-rational-v0`, `finite-operator-v0`, `finite-chebyshev-systems-v0` |
 
 Each cluster page includes an `Encode / Check Walkthrough` section with
 validated pack data and the repo-root command that replays it.
@@ -188,6 +188,10 @@ validated pack data and the repo-root command that replays it.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology axioms, closure/interior, metric balls,
   sigma-algebra closure, finite additivity, and event-complement replay.
+- [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
+  follows bounded recurrence traces, finite invariants, threshold
+  reachability, explicit Euler replay, finite error tables, and checked bad
+  Euler-step rejection.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, Chebyshev recurrence, and
   finite Chebyshev-system replay.

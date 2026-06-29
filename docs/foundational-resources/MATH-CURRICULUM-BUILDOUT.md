@@ -857,8 +857,9 @@ finite permutation-group replay, finite group-action/Burnside replay, finite
 order/lattice replay, finite cardinality replay, cardinality-principle replay,
 finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
-finite topology/measure, bounded dynamics/operators, and finite
-Chebyshev-system interpolation/alternation, plus spectral-linear-algebra
+finite topology/measure, bounded dynamics/operators, finite
+Euler-step/error replay, and finite Chebyshev-system
+interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
 row through replay result and proof/evidence status, and exact descriptive
@@ -1239,6 +1240,10 @@ general geometry Lean-horizon rows.
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, finite sigma-algebra closure, exact finite additivity,
 event complements, and the topology/measure Lean horizon.
+`bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
+end-to-end lesson for bounded recurrence traces, invariant replay, threshold
+reachability, explicit Euler replay, exact finite error tables, checked bad
+Euler-step rejection, and the ODE/numerical-analysis Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
