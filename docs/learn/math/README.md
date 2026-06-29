@@ -49,6 +49,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md):
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
   counting, and checked bad-action rejection.
+- [Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md):
+  follows `Z/6Z` ideal closure, principal generation, parity-map kernel/image,
+  quotient-ring table replay, and checked bad non-ideal rejection.
 - [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
   random-variable, conditional-expectation, finite stochastic-kernel,

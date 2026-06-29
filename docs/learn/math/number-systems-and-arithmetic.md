@@ -106,8 +106,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
-For a fuller trace through exact rational replay, read
-[End To End: Rational Midpoint](rational-midpoint-end-to-end.md).
+For fuller traces through exact rational replay and modular quotient-ring
+replay, read [End To End: Rational Midpoint](rational-midpoint-end-to-end.md)
+and [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md).
 
 ## Horizon
 

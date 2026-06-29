@@ -179,6 +179,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite ideals and quotient-rings end-to-end lesson landed.** Added
+  [`finite-ideals-quotient-rings-end-to-end.md`](docs/learn/math/finite-ideals-quotient-rings-end-to-end.md)
+  as the learner-facing trace for the finite ideals pack: `Z/6Z` ideal
+  closure, principal ideal generation by `2`, parity-map kernel/image replay,
+  quotient-ring table replay, checked non-ideal rejection, and the Lean horizon
+  for general ideal and quotient-ring theory. The lesson is linked from the
+  math learning index plus the algebra and arithmetic paths.
+
 - **Finite monoid end-to-end lesson landed.** Added
   [`finite-monoids-end-to-end.md`](docs/learn/math/finite-monoids-end-to-end.md)
   as the learner-facing trace for the finite monoid pack: two-point
