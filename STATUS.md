@@ -191,6 +191,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Descriptive-statistics/regression end-to-end lesson landed.** Added
+  [`descriptive-statistics-regression-end-to-end.md`](docs/learn/math/descriptive-statistics-regression-end-to-end.md)
+  as the learner-facing trace for the descriptive-statistics and
+  least-squares-regression packs: exact mean/variance replay,
+  contingency-table margins, Simpson's paradox counts, least-squares normal
+  equations, residual orthogonality, RSS comparison, checked bad-coefficients
+  rejection, and the horizon for inference, asymptotics, and floating-point
+  regression. The lesson is linked from the math learning index plus the
+  probability/statistics and linear-algebra/optimization paths.
+
 - **Numerical-linear-algebra end-to-end lesson landed.** Added
   [`numerical-linear-algebra-end-to-end.md`](docs/learn/math/numerical-linear-algebra-end-to-end.md)
   as the learner-facing trace for the numerical-linear-algebra pack: exact

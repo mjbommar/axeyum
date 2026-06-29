@@ -861,7 +861,9 @@ finite topology/measure, bounded dynamics/operators, and finite
 Chebyshev-system interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
-row through replay result and proof/evidence status.
+row through replay result and proof/evidence status, and exact descriptive
+statistics/regression replay for finite samples, count tables, and normal
+equations.
 
 Deliverables:
 
@@ -1220,6 +1222,11 @@ asymptotic random-matrix/numerical horizon.
 exact residual infinity-norm replay, rational solution-box checking, one-step
 Jacobi contraction replay, checked bad residual-bound rejection, and the
 floating-point/stability/convergence horizon.
+`descriptive-statistics-v0` and `least-squares-regression-v0` now have a
+learner-facing end-to-end lesson for exact mean/variance replay, contingency
+table margins, Simpson's paradox counts, least-squares normal equations,
+residual orthogonality, RSS comparison, checked bad-coefficients rejection,
+and the statistical inference/numerical regression horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

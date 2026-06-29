@@ -20,6 +20,7 @@ Example packs:
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
+- [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
@@ -195,6 +196,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
@@ -203,6 +205,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 
 For a fuller trace through atom-table replay, read
 [End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
+For exact finite statistics and regression replay, read
+[End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 
