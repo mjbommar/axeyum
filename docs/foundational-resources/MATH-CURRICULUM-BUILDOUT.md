@@ -1340,6 +1340,10 @@ theory horizon.
 minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
 checked smaller-cut enumeration, and the general max-flow/min-cut theorem
 horizon.
+`graph-d-separation-v0` now has a learner-facing end-to-end lesson for finite
+active-chain replay, conditioned chain/fork blocking, unconditioned-collider
+blocking, descendant-opened collider replay, and the causal-identification
+proof horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

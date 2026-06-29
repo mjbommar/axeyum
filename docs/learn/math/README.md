@@ -78,6 +78,9 @@ validated pack data and the repo-root command that replays it.
 - [Graph Cut Certificates](graph-cut-end-to-end.md): follows finite
   minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
   and checked smaller-cut enumeration.
+- [DAG D-Separation Checks](graph-d-separation-end-to-end.md): follows finite
+  active chains, conditioned chain/fork blocking, collider blocking, and
+  descendant-opened collider replay.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
   no-counterexample enumeration, and the universal Nat theorem horizon.
