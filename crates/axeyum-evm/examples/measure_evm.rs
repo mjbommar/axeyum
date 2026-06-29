@@ -49,6 +49,7 @@ const SSTORE: u8 = 0x55;
 const JUMPI: u8 = 0x57;
 const GAS: u8 = 0x5a;
 const JUMPDEST: u8 = 0x5b;
+const LOG0: u8 = 0xa0;
 const PUSH1: u8 = 0x60;
 const PUSH2: u8 = 0x61;
 const CALL: u8 = 0xf1;
@@ -332,6 +333,15 @@ fn corpus() -> Vec<Case> {
             name: "signextend-sign-revert", shape: Arith, expect: Bug(Revert),
             bytecode: vec![
                 PUSH1, 0x00, PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x00, SIGNEXTEND, SLT, PUSH1, 0x0d,
+                JUMPI, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
+            // LOG before a bug: the revert after LOG0 must still be found (logs
+            // are no-op pops, not a path terminator).
+            name: "bug-after-log", shape: Control, expect: Bug(Revert),
+            bytecode: vec![
+                PUSH1, 0x00, PUSH1, 0x00, LOG0, PUSH1, 0x00, CALLDATALOAD, ISZERO, PUSH1, 0x0d,
                 JUMPI, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
         },

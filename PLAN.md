@@ -2450,9 +2450,12 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      bytes to memory (over-approximating any callee return) instead of `Unknown`;
      witness replays in the concrete oracle (`58b4fa7`). Symbolic-length/unaligned
      regions stay sound `Unknown`.
+   - **LOG0–LOG4** (0xa0–0xa4) — modeled as no-op pops (logs have no effect on
+     execution state); previously `Unsupported`, which hid every bug *after* a log
+     (`810a6fe`). A major false-`Unknown` source closed — real contracts log on
+     essentially every state change.
    - *Next candidates:* symbolic-exponent EXP (heavy); RETURNDATACOPY/
-     RETURNDATASIZE tied to the modeled return buffer; `LOG*` (currently
-     `Unsupported`).
+     RETURNDATASIZE tied to the modeled return buffer.
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
