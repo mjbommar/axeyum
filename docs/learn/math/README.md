@@ -213,6 +213,10 @@ validated pack data and the repo-root command that replays it.
   filtrations, adaptedness, martingale conditional-expectation equalities,
   square-submartingale inequalities, bounded stopping replay, checked bad
   martingale rejection, and the general martingale Lean horizon.
+- [Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md): follows
+  row-normalized finite kernels, pushforward distributions, joint
+  factorization/disintegration, kernel composition, checked bad kernel-row
+  rejection, and the regular-conditional-probability Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-stochastic-kernels end-to-end lesson landed.** Added
+  [`finite-stochastic-kernels-end-to-end.md`](docs/learn/math/finite-stochastic-kernels-end-to-end.md)
+  as the learner-facing trace for the finite-stochastic-kernels pack:
+  row-normalized finite kernels, pushforward distributions, joint
+  factorization/disintegration, kernel composition, checked bad kernel-row
+  rejection, and the regular-conditional-probability Lean horizon. The lesson
+  is linked from the math learning index plus the probability/statistics path.
+
 - **Finite-martingales end-to-end lesson landed.** Added
   [`finite-martingales-end-to-end.md`](docs/learn/math/finite-martingales-end-to-end.md)
   as the learner-facing trace for the finite-martingales pack: finite

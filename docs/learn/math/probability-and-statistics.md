@@ -104,6 +104,10 @@ nu(walk) = 2/3*3/4 + 1/3*1/5 = 17/30
 The `finite-stochastic-kernels-v0` validator checks row normalization,
 pushforward distributions, joint-table factorization and disintegration, and
 kernel composition.
+
+For a focused finite stochastic-kernel trace, read
+[End To End: Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md).
+
 For finite hitting times in an absorbing Markov chain, it checks:
 
 ```text

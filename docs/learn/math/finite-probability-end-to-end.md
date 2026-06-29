@@ -205,6 +205,9 @@ It also checks row normalization, target marginals, recovery of kernel rows
 from a finite joint table, kernel composition, and a malformed row that sums to
 `6/5`.
 
+For a fuller focused trace, read
+[End To End: Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md).
+
 For concentration, the checker recomputes:
 
 ```text
