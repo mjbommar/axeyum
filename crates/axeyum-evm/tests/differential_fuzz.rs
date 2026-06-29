@@ -41,6 +41,7 @@ const POOL: &[u8] = &[
     0x17, // STOP ADD SUB LT GT EQ ISZERO AND OR
     0x35, 0x51, 0x52, 0x50, 0x56, 0x57,
     0x5b, // CALLDATALOAD MLOAD MSTORE POP JUMP JUMPI JUMPDEST
+    0x1a, // BYTE — exercise the concrete/symbolic-index byte-extraction paths
     0x54, 0x55, // SLOAD SSTORE — exercise the storage paths
     0x31, 0x5a, // BALANCE GAS — exercise the environment paths
     0xf1, 0xfa, // CALL STATICCALL — exercise the external-call paths

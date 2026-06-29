@@ -693,13 +693,28 @@ fn run_from(
                 state.stack.push(arena.bv_ashr(value, shift)?);
             }
             Op::Byte => {
-                // BYTE is rarely needed for the Phase-1 examples; havoc to stay
-                // sound rather than mis-encode the endianness.
-                let _i = pop_or_unknown!();
-                let _x = pop_or_unknown!();
-                let h = env.havoc(arena)?;
-                state.stack.push(h);
-                *saw_unknown = true;
+                // BYTE(i, x): the i-th byte of x counting from the most
+                // significant (byte 0 = bits 255..248); 0 for i >= 32. With a
+                // concrete index this is exact (`(x >> (248 - 8*i)) & 0xff`),
+                // matching the concrete oracle's `to_be_bytes()[i]`. A symbolic
+                // index stays sound via havoc + `saw_unknown`.
+                let i = pop_or_unknown!();
+                let x = pop_or_unknown!();
+                if let Some(idx) = concrete_usize(arena, i) {
+                    let result = if idx >= 32 {
+                        arena.bv_const(W, 0)?
+                    } else {
+                        let shift = arena.bv_const(W, (248 - idx * 8) as u128)?;
+                        let shifted = arena.bv_lshr(x, shift)?;
+                        let mask = arena.bv_const(W, 0xff)?;
+                        arena.bv_and(shifted, mask)?
+                    };
+                    state.stack.push(result);
+                } else {
+                    let h = env.havoc(arena)?;
+                    state.stack.push(h);
+                    *saw_unknown = true;
+                }
             }
             Op::Sha3 => {
                 let off = pop_or_unknown!();
