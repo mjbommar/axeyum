@@ -367,9 +367,11 @@ Exit criteria:
 
 ### Phase M5: Lessons And Learner Paths
 
-Status: learner-path scaffold landed. `docs/learn/math/README.md` now indexes
-the nine required concept clusters, and each cluster page links concept rows,
-validated example packs, current checkable slices, and proof/numerical horizons.
+Status: learner-path scaffold and first walkthrough layer landed.
+`docs/learn/math/README.md` now indexes the nine required concept clusters, and
+each cluster page links concept rows, validated example packs, current
+checkable slices, proof/numerical horizons, and a concrete encode/check
+walkthrough using validated pack data.
 
 Deliverables:
 
@@ -468,8 +470,9 @@ Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
 Progress: items 1-10, Phase M4 items 4-10, and the Phase M5 learner-path
-scaffold have landed for the math seed. Continue Phase M5 by expanding the
-cluster pages into concrete encode/check walkthroughs.
+scaffold plus first encode/check walkthrough layer have landed for the math
+seed. Continue Phase M5 by adding richer end-to-end lessons that show one
+example from data row through replay result and proof/evidence status.
 
 ## Operating Rules
 

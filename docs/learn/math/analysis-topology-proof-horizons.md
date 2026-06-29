@@ -27,6 +27,39 @@ recurrence values at fixed points.
 This is the useful boundary for learners: Axeyum can check a concrete finite
 model and tell you exactly why it passes.
 
+## Encode / Check Walkthrough
+
+For topology, encode a finite space by listing the universe and open sets. In
+`finite-topology-v0`, the validator checks that:
+
+```text
+universe = {a,b,c}
+open_sets = {}, {a}, {a,b}, {a,b,c}
+```
+
+contains the empty set and universe, and is closed under pairwise union and
+intersection. The closure/interior witness then becomes a finite set
+calculation.
+
+For dynamics, encode a bounded recurrence trace:
+
+```text
+x(0) = 0
+x(t+1) = x(t) + 2
+trace = 0, 2, 4, 6, 8
+```
+
+The validator checks every transition and then checks the invariant
+`0 <= x(t) <= 8` over the finite trace.
+
+Run the checks from the repository root:
+
+```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+```
+
 ## Horizon
 
 General epsilon-delta limits, compactness, connectedness, Lebesgue measure,

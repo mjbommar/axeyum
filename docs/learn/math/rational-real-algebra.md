@@ -24,6 +24,37 @@ collinearity determinants, and squared distances.
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
 
+## Encode / Check Walkthrough
+
+For a rational order check, encode:
+
+```text
+a = 1/3
+b = 2/3
+midpoint = 1/2
+```
+
+The validator checks both the ordering and the exact arithmetic identity. For a
+coordinate-geometry check, encode two endpoints and the proposed midpoint:
+
+```text
+A = (0, 0)
+B = (4, 2)
+M = (2, 1)
+```
+
+The checker recomputes both midpoint coordinates. For optimization, encode
+linear constraints and a candidate assignment; the checker evaluates each
+constraint exactly.
+
+Run the checks from the repository root:
+
+```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+```
+
 ## Horizon
 
 Completeness, arbitrary limits, continuity, compactness, integration, and

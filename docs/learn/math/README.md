@@ -26,6 +26,9 @@ Source maps:
 | [Probability And Statistics](probability-and-statistics.md) | `field_probability_theory`, `field_statistics` | `finite-probability-v0`, `descriptive-statistics-v0`, `finite-measure-v0` |
 | [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `finite-topology-v0`, `bounded-dynamics-v0`, `finite-operator-v0` |
 
+Each cluster page includes an `Encode / Check Walkthrough` section with
+validated pack data and the repo-root command that replays it.
+
 ## How To Read These Pages
 
 Use the example packs as the executable source of truth. A lesson can explain a

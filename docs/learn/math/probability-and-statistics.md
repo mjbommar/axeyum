@@ -22,6 +22,29 @@ table margins, and a Simpson's paradox count-table witness.
 
 The trusted checker works over rational arithmetic and finite tables.
 
+## Encode / Check Walkthrough
+
+For finite probability, encode atoms with exact rational mass. In the
+conditional-probability witness:
+
+```text
+P(rain and late) = 1/10
+P(rain and on_time) = 1/5
+P(late | rain) = (1/10) / (1/10 + 1/5) = 1/3
+```
+
+The validator recomputes the numerator, denominator, and quotient. For
+descriptive statistics, it recomputes the mean and population variance of
+`1,2,3,4`, then checks the reported margins of a finite contingency table.
+
+Run the checks from the repository root:
+
+```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+```
+
 ## Horizon
 
 Continuous distributions, stochastic processes, convergence theorems, MCMC,

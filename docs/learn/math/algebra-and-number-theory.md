@@ -23,6 +23,32 @@ polynomial-root witness.
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
 
+## Encode / Check Walkthrough
+
+Start with a witness small enough to check by hand:
+
+```text
+3 * 5 = 15 == 1 mod 7
+```
+
+The `modular-arithmetic-v0` pack encodes that as `a = 3`, `modulus = 7`, and
+`inverse = 5`. The validator recomputes the product modulo `7`; no theorem
+about all moduli is needed to trust this witness.
+
+For a polynomial-flavored algebra example, the complex pack encodes `i` as the
+real pair `[0, 1]`. The validator squares the pair and checks:
+
+```text
+i^2 + 1 = [-1, 0] + [1, 0] = [0, 0]
+```
+
+Run the checks from the repository root:
+
+```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+```
+
 ## Horizon
 
 General group, ring, field, module, and algebraic-number-theory theorems need

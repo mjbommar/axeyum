@@ -23,6 +23,29 @@ This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
 candidate assignment.
 
+## Encode / Check Walkthrough
+
+Encode a finite graph by listing vertices, undirected edges, allowed colors, and
+one assignment:
+
+```text
+vertices = a,b,c
+edges = (a,b), (b,c), (a,c)
+colors = red, green, blue
+assignment = a:red, b:green, c:blue
+```
+
+The validator replays the assignment by checking that every edge has different
+endpoint colors. For the two-colorability refutation of `K3`, the pack fixes
+the same triangle with two colors and the validator exhaustively enumerates the
+finite assignment space.
+
+Run the check from the repository root:
+
+```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
+```
+
 ## Horizon
 
 Reachability, matching, cuts, traversal traces, and d-separation need dedicated

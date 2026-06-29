@@ -152,6 +152,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Math learner walkthrough layer landed.** Expanded all nine
+  [`docs/learn/math/`](docs/learn/math/) cluster pages with concrete
+  encode/check walkthroughs using validated pack data and repo-root validation
+  commands. Continue Phase M5 by adding richer end-to-end lessons that trace one
+  example from data row through replay result and proof/evidence status.
+
 - **Math learner path scaffold landed.** Added
   [`docs/learn/math/README.md`](docs/learn/math/README.md) and the nine Phase
   M5 cluster pages for logic/proof, finite structures, number systems, algebra,
