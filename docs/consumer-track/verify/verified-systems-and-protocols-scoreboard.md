@@ -205,13 +205,19 @@ no-new-deps paths landed:
 |---|---|---|
 | **Finite reflection** (`protocol_toolkit.rs`) | a real idiomatic `fn step(State,Event)->State` over `#[repr(u8)]` enums | capability lifecycle Safe for all traces; **same verdicts** as the hand-encoded `u8` version — faithful |
 | **MIR-text reflection** (`mir_reflection.rs`, prototype) | the *compiled* MIR of a real function → `axeyum-ir` term | reflected term **equals the real Rust on all 256 inputs** (exhaustive cross-check) |
+| **MIR + symbolic proof** (`mir_reflection.rs`) | a property of the reflected *compiled* term, for ALL inputs | `u32` lookup (2³² inputs): `lut32(x) ≤ 9` **Proved in 3 ms**; a false bound `Disproved`; `u8` eval and proof agree |
 
 Finite reflection partial-evaluates the user's real `step` over the finite domain
 (sound + complete for finite state; the same fn is run *and* proven — "two readings
 of one Rust function"). The MIR prototype parses a committed `-Zunpretty=mir`
 fixture (CI-robust: no rustc at test time) and proves the reflected term is exactly
-the function — evidence the MIR pipeline is real. The arbitrary-Rust `stable_mir`
-front end is deferred behind an ADR (it changes the dependency/trust surface).
+the function — evidence the MIR pipeline is real. Crucially, the reflected term is
+then handed to the **solver** and a property is proved *symbolically* for ALL
+inputs (`axeyum_solver::prove` → `Proved`/`Disproved`): on a `u32` function this is
+**3 ms** where enumerating 2³² inputs is infeasible — the payoff of
+reflect-then-prove over reflect-then-enumerate. Arithmetic MIR (overflow-check
+branches) is the next parser frontier; the arbitrary-Rust `stable_mir` front end is
+deferred behind an ADR (it changes the dependency/trust surface).
 
 ## Next
 
