@@ -45,7 +45,8 @@ Classification:
 
 - descriptive-statistics satisfiable witness rows remain finite-model replay;
   future impossible exact-rational statistic constraints use QF_LRA/Farkas, and
-  future inconsistent integer margin/count constraints use QF_LIA/Diophantine;
+  the first inconsistent integer margin/count row now has a resource-backed
+  QF_LIA/Diophantine regression for the bad contingency total;
 - finite-probability satisfiable witness rows remain finite-model replay;
   future impossible normalization, nonnegativity, conditioning, or Bayes-rule
   constraints use QF_LRA/Farkas;

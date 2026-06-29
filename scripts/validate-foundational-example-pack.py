@@ -13777,6 +13777,37 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     if sum(row_sums) != total:
         fail("contingency total does not match row sums")
 
+    qf_lia = checks["qf-lia-bad-contingency-total"]
+    if qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-bad-contingency-total must expect unsat")
+    if qf_lia["proof_status"] != "checked":
+        fail("qf-lia-bad-contingency-total must be checked")
+    if qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-bad-contingency-total must use qf_lia_diophantine_evidence validation")
+    data = qf_lia.get("data", {})
+    qf_table = require_count_matrix("qf-lia bad contingency table", data.get("table"))
+    qf_row_sums = require_nonnegative_int_list("qf-lia bad contingency row_sums", data.get("row_sums"))
+    qf_actual_total = require_nonnegative_int("qf-lia bad contingency actual_total", data.get("actual_total"))
+    qf_claimed_total = require_nonnegative_int("qf-lia bad contingency claimed_total", data.get("claimed_total"))
+    if qf_table != table:
+        fail("qf-lia-bad-contingency-total table must match the contingency witness")
+    if qf_row_sums != [sum(row) for row in qf_table]:
+        fail("qf-lia-bad-contingency-total row sums are incorrect")
+    if qf_row_sums != row_sums:
+        fail("qf-lia-bad-contingency-total row sums must match the contingency witness")
+    if qf_actual_total != sum(qf_row_sums) or qf_actual_total != total:
+        fail("qf-lia-bad-contingency-total actual total is incorrect")
+    if qf_claimed_total == qf_actual_total:
+        fail("qf-lia-bad-contingency-total claimed total unexpectedly matches")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia bad contingency smt2_artifact", smt2_artifact)
+    check_source("qf-lia bad contingency smt2_artifact", smt2_artifact)
+    require_string("qf-lia bad contingency proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-lia bad contingency certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia bad contingency certificate must document checked Diophantine evidence")
+
     simpson = checks["simpson-paradox-witness"]
     if simpson["expected_result"] != "sat":
         fail("simpson-paradox-witness must expect sat")

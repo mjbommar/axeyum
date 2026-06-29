@@ -22,6 +22,7 @@ Concept rows:
 |---|---|---|
 | `mean-variance-identity` | `sat` | replay-only |
 | `contingency-table-margins` | `sat` | replay-only |
+| `qf-lia-bad-contingency-total` | `unsat` | checked |
 | `simpson-paradox-witness` | `sat` | replay-only |
 | `perfect-line-normal-equations` | `sat` | replay-only |
 | `least-squares-residual-orthogonality` | `sat` | replay-only |
@@ -69,6 +70,26 @@ total = 20
 ```
 
 This is integer table arithmetic, not a statistical significance claim.
+
+## Check The Bad Total Certificate
+
+The solver-form row isolates a false margin claim for the same table. The row
+sums force:
+
+```text
+total = 10 + 10 = 20
+```
+
+The bad claim requires:
+
+```text
+total = 19
+```
+
+Axeyum emits an `UnsatDiophantine` certificate for the inconsistent integer
+equalities and checks it independently. The positive table row remains finite
+replay; this negative row is the first checked QF_LIA margin/count certificate
+for descriptive statistics.
 
 ## Replay Simpson's Paradox
 
@@ -215,7 +236,7 @@ pattern:
 
 ```text
 untrusted fast search -> statistic, table, coefficient, or counterexample row
-trusted small checking -> exact rational arithmetic, count tables, matrix replay
+trusted small checking -> exact rational arithmetic, count tables, matrix replay, and Diophantine certificates
 remaining horizon -> inference, asymptotics, floating point, and model theory
 ```
 

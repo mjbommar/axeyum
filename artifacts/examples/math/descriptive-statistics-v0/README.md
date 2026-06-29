@@ -9,6 +9,7 @@ today and future invalid-claim rows to Axeyum's LRA/LIA certificate routes:
 
 - mean and population variance identity for a small data set;
 - contingency-table row, column, and total margins;
+- a QF_LIA/Diophantine certificate for an impossible contingency total;
 - Simpson's paradox witness from integer success/total counts.
 
 ## Concepts
@@ -24,14 +25,15 @@ today and future invalid-claim rows to Axeyum's LRA/LIA certificate routes:
 
 The current validator parses all scalar statistics exactly as rational strings
 and count tables as integers. It recomputes the mean, second moment, population
-variance, margins, and Simpson rate inequalities.
+variance, margins, and Simpson rate inequalities. The promoted bad total row is
+also emitted as a solver-form integer margin contradiction and checked with
+Diophantine evidence.
 
-Current rows are satisfiable witnesses, so finite-model replay is the checked
-evidence. Future impossible exact-rational statistic constraints should
-graduate through QF_LRA/Farkas certificates, and inconsistent integer margin or
-count constraints should graduate through QF_LIA/Diophantine certificates. The
-pack still does not treat statistical inference, floating-point estimation,
-MCMC, or model calibration as proof.
+Positive rows remain finite-model replay. Impossible exact-rational statistic
+constraints should graduate through QF_LRA/Farkas certificates, and
+inconsistent integer margin or count constraints should graduate through
+QF_LIA/Diophantine certificates. The pack still does not treat statistical
+inference, floating-point estimation, MCMC, or model calibration as proof.
 
 Validation:
 

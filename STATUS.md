@@ -202,8 +202,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **`needs-proof-route` cleanup landed.** Classified
   [`descriptive-statistics-v0`](artifacts/examples/math/descriptive-statistics-v0/)
   as finite replay for current SAT witness rows plus QF_LRA/Farkas for future
-  impossible exact-rational statistic constraints and QF_LIA/Diophantine for
-  inconsistent integer margin/count constraints. Classified
+  impossible exact-rational statistic constraints; its first inconsistent
+  integer margin/count row now has a checked QF_LIA/Diophantine regression for
+  the bad contingency total. Classified
   [`finite-probability-v0`](artifacts/examples/math/finite-probability-v0/) as
   finite replay for current SAT witness rows plus QF_LRA/Farkas for future
   impossible probability-table constraints. After dashboard regeneration, the
@@ -331,6 +332,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `6 * 7 = 42` and `2 * 20 + 1 = 41` as `product = 42` and `product = 41`;
   the shared LIA resource regression requires `Evidence::UnsatDiophantine`
   and rechecks the integer certificate independently.
+
+- **Descriptive-statistics QF_LIA/Diophantine regression landed.**
+  [`descriptive-statistics-v0`](artifacts/examples/math/descriptive-statistics-v0/)
+  now has a checked proof-object row for the bad contingency total. The new
+  SMT-LIB artifact encodes row sums `10` and `10`, `total = 10 + 10`, and the
+  false claim `total = 19`; the shared LIA resource regression requires
+  `Evidence::UnsatDiophantine` and rechecks the integer certificate
+  independently.
 
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)

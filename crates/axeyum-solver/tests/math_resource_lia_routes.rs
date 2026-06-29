@@ -22,6 +22,9 @@ const FINITE_SIMPLICIAL_BAD_BOUNDARY_COEFFICIENT: &str = include_str!(
 const INDUCTION_EVEN_PRODUCT_ODD: &str = include_str!(
     "../../../artifacts/examples/math/induction-patterns-v0/smt2/even-product-odd-diophantine-conflict.smt2"
 );
+const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
+    "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-contingency-total-diophantine-conflict.smt2"
+);
 
 #[test]
 fn modular_nonunit_inverse_emits_checked_diophantine_evidence() {
@@ -52,6 +55,14 @@ fn induction_even_product_odd_emits_checked_diophantine_evidence() {
     assert_resource_diophantine(
         "induction-patterns-v0 even product odd obstruction",
         INDUCTION_EVEN_PRODUCT_ODD,
+    );
+}
+
+#[test]
+fn descriptive_stats_bad_contingency_total_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "descriptive-statistics-v0 bad contingency total obstruction",
+        DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL,
     );
 }
 

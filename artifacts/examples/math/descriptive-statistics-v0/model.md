@@ -38,6 +38,8 @@ For the table:
 ```
 
 the pack checks row sums `[10, 10]`, column sums `[9, 11]`, and total `20`.
+The promoted bad-total row turns the impossible claim `total = 19` into a
+checked QF_LIA/Diophantine certificate.
 
 ### Simpson's Paradox
 

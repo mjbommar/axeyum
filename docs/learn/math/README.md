@@ -153,8 +153,9 @@ validated pack data and the repo-root command that replays it.
   contraction replay, bad residual-bound rejection, and the numerical horizon.
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md):
   follows exact mean/variance replay, contingency-table margins, Simpson's
-  paradox counts, least-squares normal equations, residual orthogonality, RSS
-  comparison, and checked bad-coefficients rejection.
+  paradox counts, a QF_LIA/Diophantine bad total-count certificate,
+  least-squares normal equations, residual orthogonality, RSS comparison, and
+  checked bad-coefficients rejection.
 - [Exact Statistical Tests](exact-statistical-tests-end-to-end.md): follows a
   one-sided exact binomial tail, hypergeometric point probability, one-sided
   Fisher tail, checked bad p-value rejection, a QF_LIA/Diophantine bad

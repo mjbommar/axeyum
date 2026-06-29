@@ -41,8 +41,9 @@ concentration/tail-bound replays, finite filtrations, martingale
 conditional-expectation equalities, square submartingale inequalities, bounded
 stopping-time replay, finite product-measure tables, rectangle probabilities,
 marginals, finite Fubini sums, exact
-mean/variance identities, contingency table margins, and a Simpson's paradox
-count-table witness. The d-separation pack adds a finite DAG bridge:
+mean/variance identities, contingency table margins, a checked QF_LIA bad
+contingency-total certificate, and a Simpson's paradox count-table witness.
+The d-separation pack adds a finite DAG bridge:
 it checks whether conditioning blocks or opens paths in small
 causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
@@ -192,7 +193,8 @@ sum_(x,y) f(x,y) R(x,y) = sum_x P(x) * sum_y f(x,y) Q(y) = 3
 ```
 
 For descriptive statistics, it recomputes the mean and population variance of
-`1,2,3,4`, then checks the reported margins of a finite contingency table.
+`1,2,3,4`, checks the reported margins of a finite contingency table, and emits
+a checked `UnsatDiophantine` certificate for the bad total-count row.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact

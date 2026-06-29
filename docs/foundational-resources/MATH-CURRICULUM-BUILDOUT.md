@@ -943,8 +943,10 @@ Priority recipes:
    landed as [QF_LIA Diophantine Evidence](../proof-cookbook/recipes/qf-lia-diophantine.md)
    and promoted in `modular-arithmetic-v0` for the nonunit inverse gcd
    obstruction and in `exact-statistical-tests-v0` for the bad binomial
-   tail-count contradiction, while broader modular and exact-test finite-search
-   rows remain finite replay.
+   tail-count contradiction. The first secondary statistics margin/count row is
+   now promoted in `descriptive-statistics-v0` for the bad contingency total,
+   while broader modular, exact-test, and statistics finite-search rows remain
+   finite replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
    Status: landed as
    [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)
@@ -1382,7 +1384,8 @@ QF_LRA/Farkas graduation routes.
 The QF_LIA/Diophantine proof-upgrade lane now also has
 `exact-statistical-tests-v0` promoted for its bad binomial tail-count row and
 `finite-simplicial-homology-v0` promoted for its bad boundary coefficient row,
-and `induction-patterns-v0` promoted for its finite even-product parity row.
+`induction-patterns-v0` promoted for its finite even-product parity row, and
+`descriptive-statistics-v0` promoted for its bad contingency total row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

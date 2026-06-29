@@ -4,7 +4,7 @@
   "title": "Exact Descriptive Statistics Witnesses",
   "domain": "statistics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "field_statistics",
     "field_probability_theory",
@@ -26,6 +26,7 @@
   "axeyum_fragments": [
     "LRA (exact rationals)",
     "LIA",
+    "QF_LIA / Diophantine",
     "finite enumeration"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0",
@@ -43,6 +44,7 @@
   "expected_results": [
     "mean-variance-identity",
     "contingency-table-margins",
+    "qf-lia-bad-contingency-total",
     "simpson-paradox-witness"
   ],
   "graduation_criteria": [
@@ -50,6 +52,7 @@
     "Replay count-table and finite-data witnesses through Axeyum model evaluation.",
     "Route impossible exact-rational statistic constraints through QF_LRA/Farkas certificates.",
     "Route inconsistent integer margin/count constraints through QF_LIA/Diophantine certificates.",
+    "Keep promoted impossible margin/count rows tied to checked QF_LIA/Diophantine evidence.",
     "Keep statistical inference and numerical estimation under explicit reproducibility metadata, not proof status.",
     "Add exact finite-test examples only after the table helpers are reused by another statistics pack."
   ]

@@ -21,6 +21,15 @@ The validator recomputes row sums, column sums, and total count for the fixed
 Proof route: finite-model replay today. A future inconsistent integer margin
 claim should emit a QF_LIA/Diophantine certificate.
 
+## `qf-lia-bad-contingency-total`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact isolates the false total-count claim for the fixed table.
+The row sums are `10` and `10`, so `total = 10 + 10 = 20`; the bad claim forces
+`total = 19`. Axeyum emits and checks an `UnsatDiophantine` certificate for the
+inconsistent integer equalities.
+
 ## `simpson-paradox-witness`
 
 Expected result: `sat`.
