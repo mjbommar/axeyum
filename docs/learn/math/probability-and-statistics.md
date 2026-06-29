@@ -49,6 +49,10 @@ finite matrix-valued probability tables, exact moments, expected Gram matrices,
 and rank probabilities. The Markov-chain pack checks exact stochastic matrices,
 finite-horizon distribution evolution, stationary distributions, and malformed
 transition rows.
+
+For a focused finite Markov-chain trace, read
+[End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
+
 The exact-test pack checks finite binomial tails, hypergeometric point
 probabilities, and one-sided Fisher p-values as rational finite sums.
 

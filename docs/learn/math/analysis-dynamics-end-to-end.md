@@ -122,6 +122,9 @@ For the Markov-chain row, it checks exact stochastic evolution:
 [1/2,1/2,0] * P = [1/4,1/2,1/4]
 ```
 
+For a fuller trace of the Markov-chain rows, read
+[End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
+
 For the hitting-time row, it carries only not-yet-hit mass forward:
 
 ```text

@@ -265,6 +265,9 @@ an initial distribution. The `finite-markov-chain-v0` validator applies exact
 row-vector multiplication for a fixed horizon and checks stationary
 distributions by recomputing `pi * P`.
 
+For a focused finite Markov-chain trace, read
+[End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
+
 For a finite hitting-time shadow, encode a target set in a finite transition
 matrix. The `finite-hitting-times-v0` validator computes first-hit
 probabilities by carrying only non-hit mass forward, then checks absorption

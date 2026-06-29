@@ -225,6 +225,10 @@ validated pack data and the repo-root command that replays it.
   finite Markov, Chebyshev, and union-bound replay over rational atom tables,
   checked bad concentration-bound rejection, and the general concentration
   Lean horizon.
+- [Finite Markov Chains](finite-markov-chain-end-to-end.md): follows exact
+  row-stochastic transition matrices, finite-horizon distribution replay,
+  stationary distributions, checked bad transition-row rejection, and the
+  Markov-chain convergence Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.

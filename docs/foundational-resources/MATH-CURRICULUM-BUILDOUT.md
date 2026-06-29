@@ -867,8 +867,9 @@ stochastic-kernel replay, finite hitting-time replay, finite concentration
 replay, and finite Chebyshev-system
 interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
-plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
-row through replay result and proof/evidence status, and exact descriptive
+plus finite Markov-chain transition/stationary replay and
+numerical-linear-algebra residual/solution-box/Jacobi replay from data row
+through replay result and proof/evidence status, and exact descriptive
 statistics/regression replay for finite samples, count tables, and normal
 equations, plus coordinate/affine/oriented geometry replay for finite rational
 points, maps, areas, and barycentric coordinates, plus finite topology/measure
@@ -1308,6 +1309,10 @@ general hitting-theory Lean horizon.
 finite Markov, Chebyshev, and union-bound replay over rational atom tables,
 checked bad concentration-bound rejection, and the general concentration Lean
 horizon.
+`finite-markov-chain-v0` now has a learner-facing end-to-end lesson for exact
+row-stochastic transition matrices, finite-horizon distribution replay,
+stationary distributions, checked bad transition-row rejection, and the
+Markov-chain convergence Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
