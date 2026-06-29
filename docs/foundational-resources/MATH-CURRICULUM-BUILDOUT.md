@@ -325,6 +325,8 @@ probability mass tables, conditional probability, and Bayes posterior replay.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
 mean/variance identities, contingency-table margins, and a Simpson's paradox
 count-table witness.
+`artifacts/examples/math/linear-optimization-v0/` now validates LP feasibility
+witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 
 Recommended order:
 
@@ -446,8 +448,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10 have landed for the math seed. Continue Phase M4 with
-`linear-optimization-v0`.
+Progress: items 1-10 and Phase M4 item 4 have landed for the math seed.
+Continue Phase M4 with `coordinate-geometry-v0`.
 
 ## Operating Rules
 

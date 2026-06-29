@@ -144,11 +144,15 @@ one of:
    - Fields: `statistics`, `probability_theory`, `linear_algebra`.
    - Checks: mean/variance identity, contingency-table margins, Simpson's
      paradox count-table witness.
-5. `artifacts/examples/math/modular-arithmetic-v0/`
+5. `artifacts/examples/math/linear-optimization-v0/`
+   - Fields: `optimization_and_convexity`, `linear_algebra`, `real_analysis`.
+   - Checks: LP feasibility witness, objective-threshold replay, Farkas
+     infeasibility certificate.
+6. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-6. `artifacts/examples/math/real-analysis-rational-v0/`
+7. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

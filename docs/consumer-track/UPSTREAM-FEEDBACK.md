@@ -39,13 +39,14 @@ Last reconciled with `main`: 2026-06-27.
     `by`, so only `x.rotate_left(8)`-style constants are expressible. Rust's
     `rotate_*` take a runtime `u32`; a symbolic-amount form needs an IR op
     (rotate-by-term, or the shift-or composition with the `n == 0` edge handled).
-  - **`checked_{add,sub,mul}`** returning `Option`: the bare op is easy
-    (`opt(!overflow, wrapping_op)`), but the fragment has **no first-class
-    `Option`-typed value** that flows through `let`/`match`/`unwrap_or` — only the
-    `opt(is_some, value)` ctor consumed immediately by `.unwrap()`/`.expect()`.
-    `a.checked_add(b).unwrap()` is expressible as a sugar (it equals the checked
-    op with overflow recorded as the unwrap-None panic), but `match
-    a.checked_add(b) { Some(v) => .., None => .. }` needs Option as a lowered type.
+  - **`checked_{add,sub,mul}`** returning `Option`: the immediate-unwrap form
+    `a.checked_add(b).unwrap()`/`.expect(..)` **is now supported** (it desugars to
+    the plain checked op — the unwrap-None panic IS the overflow panic). What
+    remains blocked is **first-class `Option`-typed values** flowing through
+    `let`/`match`/`unwrap_or` (e.g. `match a.checked_add(b) { Some(v) => .., None
+    => .. }` or `.unwrap_or(d)`) — the fragment has no lowered `Option` type, only
+    the `opt(is_some, value)` ctor consumed immediately. That needs an AST/lowering
+    addition (consumer-ownable; no IR dependency).
 - **Why it matters:** these three families cover a large slice of real systems
   Rust (hashing, bit twiddling, overflow-aware arithmetic). They are *capability*
   gaps, not soundness gaps — today they are honest `Unknown`, never wrong.

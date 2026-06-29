@@ -65,6 +65,7 @@ artifacts/examples/math/
   graph-coloring-v0/
   finite-probability-v0/
   descriptive-statistics-v0/
+  linear-optimization-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -316,6 +317,9 @@ Bayes posterior replay.
 [`descriptive-statistics-v0`](../../artifacts/examples/math/descriptive-statistics-v0/)
 validates exact mean/variance identities, contingency-table margins, and a
 Simpson's paradox count-table witness.
+[`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/)
+validates exact LP feasibility witnesses, objective-threshold replay, and a
+tiny checked Farkas infeasibility certificate.
 
 Exit criteria:
 

@@ -65,6 +65,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/descriptive-statistics-v0/`](../../artifacts/examples/math/descriptive-statistics-v0/)
   validates exact mean/variance identities, contingency-table margins, and a
   Simpson's paradox count-table witness.
+- [`artifacts/examples/math/linear-optimization-v0/`](../../artifacts/examples/math/linear-optimization-v0/)
+  validates exact LP feasibility witnesses, objective-threshold replay, and a
+  tiny checked Farkas infeasibility certificate.
 
 Validation commands:
 
@@ -80,6 +83,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 ```
 
 ## Principle

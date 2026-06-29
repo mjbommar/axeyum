@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "linear-optimization-v0",
+  "title": "Exact Linear Optimization Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_optimization_and_convexity",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "linear_algebra",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md"
+  ],
+  "expected_results": [
+    "lp-feasible-point",
+    "objective-threshold-witness",
+    "objective-threshold-farkas-infeasible"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed LP feasibility and threshold checks as deterministic QF_LRA formulas.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Route the infeasible threshold through Axeyum's checked Farkas evidence path.",
+    "Add objective-optimality examples only when the certificate route can state primal/dual evidence explicitly."
+  ]
+}

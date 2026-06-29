@@ -580,6 +580,174 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
         fail("inconsistent scaled rhs must contradict the scaled original rhs")
 
 
+def require_linear_variables(context: str, value: Any) -> list[str]:
+    return require_string_list(context, value)
+
+
+def require_linear_coefficients(
+    context: str,
+    value: Any,
+    variables: list[str],
+) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    variable_set = set(variables)
+    if set(value) != variable_set:
+        missing = sorted(variable_set - set(value))
+        extra = sorted(set(value) - variable_set)
+        fail(f"{context} must cover exactly the variables; missing={missing} extra={extra}")
+    return {
+        variable: require_fraction(f"{context}.{variable}", value[variable])
+        for variable in variables
+    }
+
+
+def require_linear_constraint(
+    context: str,
+    value: Any,
+    variables: list[str],
+) -> tuple[str, dict[str, Fraction], Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    constraint_id = value.get("id")
+    require_string(f"{context}.id", constraint_id)
+    coefficients = require_linear_coefficients(
+        f"{context}.coefficients",
+        value.get("coefficients"),
+        variables,
+    )
+    bound = require_fraction(f"{context}.bound", value.get("bound"))
+    return constraint_id, coefficients, bound
+
+
+def require_linear_constraints(
+    context: str,
+    value: Any,
+    variables: list[str],
+) -> list[tuple[str, dict[str, Fraction], Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty constraint list")
+    constraints = [
+        require_linear_constraint(f"{context}[{index}]", item, variables)
+        for index, item in enumerate(value)
+    ]
+    ids = [constraint_id for constraint_id, _, _ in constraints]
+    if len(set(ids)) != len(ids):
+        fail(f"{context} repeats constraint ids")
+    return constraints
+
+
+def require_linear_assignment(
+    context: str,
+    value: Any,
+    variables: list[str],
+) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    variable_set = set(variables)
+    if set(value) != variable_set:
+        missing = sorted(variable_set - set(value))
+        extra = sorted(set(value) - variable_set)
+        fail(f"{context} must cover exactly the variables; missing={missing} extra={extra}")
+    return {
+        variable: require_fraction(f"{context}.{variable}", value[variable])
+        for variable in variables
+    }
+
+
+def linear_value(coefficients: dict[str, Fraction], assignment: dict[str, Fraction]) -> Fraction:
+    return sum((coefficient * assignment[variable] for variable, coefficient in coefficients.items()), Fraction(0))
+
+
+def validate_constraints_hold(
+    context: str,
+    constraints: list[tuple[str, dict[str, Fraction], Fraction]],
+    assignment: dict[str, Fraction],
+) -> None:
+    for constraint_id, coefficients, bound in constraints:
+        if linear_value(coefficients, assignment) > bound:
+            fail(f"{context} violates linear constraint {constraint_id}")
+
+
+def validate_linear_optimization(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    feasible = checks["lp-feasible-point"]
+    if feasible["expected_result"] != "sat":
+        fail("lp-feasible-point must expect sat")
+    values = single_witness_values(feasible, witnesses)
+    variables = require_linear_variables("lp variables", values.get("variables"))
+    constraints = require_linear_constraints("lp constraints", values.get("constraints"), variables)
+    assignment = require_linear_assignment("lp assignment", values.get("assignment"), variables)
+    validate_constraints_hold("lp-feasible-point", constraints, assignment)
+
+    threshold = checks["objective-threshold-witness"]
+    if threshold["expected_result"] != "sat":
+        fail("objective-threshold-witness must expect sat")
+    values = single_witness_values(threshold, witnesses)
+    variables = require_linear_variables("threshold variables", values.get("variables"))
+    constraints = require_linear_constraints("threshold constraints", values.get("constraints"), variables)
+    assignment = require_linear_assignment("threshold assignment", values.get("assignment"), variables)
+    validate_constraints_hold("objective-threshold-witness", constraints, assignment)
+    threshold_data = values.get("threshold")
+    if not isinstance(threshold_data, dict):
+        fail("threshold data must be an object")
+    threshold_coefficients = require_linear_coefficients(
+        "threshold coefficients",
+        threshold_data.get("coefficients"),
+        variables,
+    )
+    lower_bound = require_fraction("threshold lower_bound", threshold_data.get("lower_bound"))
+    if linear_value(threshold_coefficients, assignment) < lower_bound:
+        fail("objective-threshold-witness assignment does not reach threshold")
+
+    infeasible = checks["objective-threshold-farkas-infeasible"]
+    if infeasible["expected_result"] != "unsat":
+        fail("objective-threshold-farkas-infeasible must expect unsat")
+    data = infeasible.get("data", {})
+    variables = require_linear_variables("farkas variables", data.get("variables"))
+    constraints = require_linear_constraints("farkas constraints", data.get("constraints"), variables)
+    multipliers = data.get("multipliers")
+    if not isinstance(multipliers, dict):
+        fail("farkas multipliers must be an object")
+    constraint_by_id = {
+        constraint_id: (coefficients, bound)
+        for constraint_id, coefficients, bound in constraints
+    }
+    if set(multipliers) != set(constraint_by_id):
+        missing = sorted(set(constraint_by_id) - set(multipliers))
+        extra = sorted(set(multipliers) - set(constraint_by_id))
+        fail(f"farkas multipliers must cover constraints exactly; missing={missing} extra={extra}")
+    combined_coefficients = {variable: Fraction(0) for variable in variables}
+    combined_bound = Fraction(0)
+    for constraint_id, raw_multiplier in multipliers.items():
+        multiplier = require_fraction(f"farkas multiplier {constraint_id}", raw_multiplier)
+        if multiplier < 0:
+            fail(f"farkas multiplier {constraint_id} must be nonnegative")
+        coefficients, bound = constraint_by_id[constraint_id]
+        for variable in variables:
+            combined_coefficients[variable] += multiplier * coefficients[variable]
+        combined_bound += multiplier * bound
+    expected_combination = data.get("expected_combination")
+    if not isinstance(expected_combination, dict):
+        fail("farkas expected_combination must be an object")
+    expected_coefficients = require_linear_coefficients(
+        "farkas expected coefficients",
+        expected_combination.get("coefficients"),
+        variables,
+    )
+    expected_bound = require_fraction("farkas expected bound", expected_combination.get("bound"))
+    if combined_coefficients != expected_coefficients:
+        fail("farkas combined coefficients do not match expected combination")
+    if combined_bound != expected_bound:
+        fail("farkas combined bound does not match expected combination")
+    if any(coefficient != 0 for coefficient in combined_coefficients.values()):
+        fail("farkas certificate must cancel all variables")
+    if combined_bound >= 0:
+        fail("farkas certificate must derive 0 <= negative bound")
+
+
 def require_probability(context: str, value: Any) -> Fraction:
     probability = require_fraction(context, value)
     if probability < 0 or probability > 1:
@@ -811,6 +979,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_graph_coloring(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
+    if metadata["id"] == "linear-optimization-v0":
+        validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "rationals-lra-v0":

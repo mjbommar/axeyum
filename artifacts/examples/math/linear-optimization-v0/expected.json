@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "pack_id": "linear-optimization-v0",
+  "witnesses": [
+    {
+      "id": "base-feasible-point",
+      "description": "A feasible point for the base two-variable LP region.",
+      "values": {
+        "variables": ["x", "y"],
+        "constraints": [
+          {"id": "x-nonnegative", "coefficients": {"x": "-1", "y": "0"}, "bound": "0"},
+          {"id": "y-nonnegative", "coefficients": {"x": "0", "y": "-1"}, "bound": "0"},
+          {"id": "budget", "coefficients": {"x": "1", "y": "1"}, "bound": "4"},
+          {"id": "capacity", "coefficients": {"x": "1", "y": "2"}, "bound": "5"}
+        ],
+        "assignment": {"x": "1", "y": "2"}
+      }
+    },
+    {
+      "id": "threshold-feasible-point",
+      "description": "A feasible point that reaches the x + y >= 4 objective threshold.",
+      "values": {
+        "variables": ["x", "y"],
+        "constraints": [
+          {"id": "x-nonnegative", "coefficients": {"x": "-1", "y": "0"}, "bound": "0"},
+          {"id": "y-nonnegative", "coefficients": {"x": "0", "y": "-1"}, "bound": "0"},
+          {"id": "budget", "coefficients": {"x": "1", "y": "1"}, "bound": "4"},
+          {"id": "capacity", "coefficients": {"x": "1", "y": "2"}, "bound": "5"}
+        ],
+        "assignment": {"x": "3", "y": "1"},
+        "threshold": {
+          "coefficients": {"x": "1", "y": "1"},
+          "lower_bound": "4"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "lp-feasible-point",
+      "claim": "The listed assignment satisfies the base LP region.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lp_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["base-feasible-point"],
+      "notes": "The validator evaluates every linear inequality over exact rationals."
+    },
+    {
+      "id": "objective-threshold-witness",
+      "claim": "The base LP region has a point with objective x + y at least 4.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lp_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["threshold-feasible-point"],
+      "notes": "The validator checks both the base LP constraints and the objective threshold."
+    },
+    {
+      "id": "objective-threshold-farkas-infeasible",
+      "claim": "The base LP region has a point with objective x + y at least 5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_replay",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["x", "y"],
+        "constraints": [
+          {"id": "budget", "coefficients": {"x": "1", "y": "1"}, "bound": "4"},
+          {"id": "threshold-negated", "coefficients": {"x": "-1", "y": "-1"}, "bound": "-5"}
+        ],
+        "multipliers": {
+          "budget": "1",
+          "threshold-negated": "1"
+        },
+        "expected_combination": {
+          "coefficients": {"x": "0", "y": "0"},
+          "bound": "-1"
+        }
+      },
+      "notes": "The validator checks nonnegative multipliers, variable cancellation, and the contradictory bound 0 <= -1."
+    }
+  ]
+}

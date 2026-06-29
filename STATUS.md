@@ -134,13 +134,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Linear optimization pack landed.** Added
+  [`artifacts/examples/math/linear-optimization-v0/`](artifacts/examples/math/linear-optimization-v0/)
+  for exact LP feasibility witnesses, objective-threshold replay, and a tiny
+  checked Farkas infeasibility certificate. The foundational example-pack
+  validator now checks exact rational linear inequalities and nonnegative
+  Farkas multipliers that derive a contradictory bound. Continue Phase M4 with
+  `coordinate-geometry-v0`.
+
 - **Descriptive statistics pack landed.** Added
   [`artifacts/examples/math/descriptive-statistics-v0/`](artifacts/examples/math/descriptive-statistics-v0/)
   for exact mean/variance identities, contingency-table margins, and a
   Simpson's paradox count-table witness. The foundational example-pack
   validator now checks exact rational moments, integer margins, and finite
-  success-rate inequalities. The first ten math-resource commits are complete;
-  continue Phase M4 with `linear-optimization-v0`.
+  success-rate inequalities. The first ten math-resource commits are complete.
 
 - **Finite probability pack landed.** Added
   [`artifacts/examples/math/finite-probability-v0/`](artifacts/examples/math/finite-probability-v0/)
