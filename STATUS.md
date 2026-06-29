@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite random-matrix end-to-end lesson landed.** Added
+  [`random-matrix-finite-end-to-end.md`](docs/learn/math/random-matrix-finite-end-to-end.md)
+  as the learner-facing trace for the random-matrix pack: exact
+  matrix-valued probability tables, trace/determinant moments, expected Gram
+  matrices, rank probabilities, checked bad trace-square rejection, and the
+  horizon for asymptotic random matrix theory and numerical simulation claims.
+  The lesson is linked from the math learning index plus the
+  linear-algebra/optimization and probability/statistics paths.
+
 - **Spectral-linear-algebra end-to-end lesson landed.** Added
   [`spectral-linear-algebra-end-to-end.md`](docs/learn/math/spectral-linear-algebra-end-to-end.md)
   as the learner-facing trace for the spectral pack: exact eigenpair replay,

@@ -859,8 +859,8 @@ finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
 finite topology/measure, bounded dynamics/operators, and finite
 Chebyshev-system interpolation/alternation, plus spectral-linear-algebra
-eigenpair/decomposition replay from data row through replay result and
-proof/evidence status.
+eigenpair/decomposition replay and finite random-matrix moment/rank replay
+from data row through replay result and proof/evidence status.
 
 Deliverables:
 
@@ -1211,6 +1211,10 @@ horizon.
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
 checking, spectral decomposition reconstruction, checked bad-eigenpair
 rejection, and the general spectral/numerical horizon.
+`random-matrix-finite-v0` now has a learner-facing end-to-end lesson for exact
+matrix-valued probability tables, trace/determinant moments, expected Gram
+matrices, rank probabilities, checked bad trace-square rejection, and the
+asymptotic random-matrix/numerical horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

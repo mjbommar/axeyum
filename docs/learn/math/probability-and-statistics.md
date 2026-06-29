@@ -203,6 +203,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 
 For a fuller trace through atom-table replay, read
 [End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
+For finite matrix-valued probability tables, read
+[End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 
 ## Horizon
 

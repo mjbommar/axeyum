@@ -104,6 +104,9 @@ validated pack data and the repo-root command that replays it.
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md): follows
   exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
   checking, spectral decomposition reconstruction, and bad-eigenpair rejection.
+- [Finite Random Matrices](random-matrix-finite-end-to-end.md): follows exact
+  matrix-valued probability tables, trace/determinant moments, expected Gram
+  matrices, rank probabilities, and checked bad trace-square rejection.
 - [Rational Multivariable Calculus](multivariable-calculus-end-to-end.md):
   follows exact polynomial gradient replay, directional derivatives, Jacobian
   chain-rule matrix multiplication, Hessian minor checks, bad-gradient

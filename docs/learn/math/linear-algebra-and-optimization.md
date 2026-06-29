@@ -252,6 +252,7 @@ replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md),
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
+[End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
