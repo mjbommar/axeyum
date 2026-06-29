@@ -68,6 +68,26 @@ impl<F: Fn(u8, u8) -> u8> Fsm<F> {
         bounded_model_check(&mut arena, self, depth, &SolverConfig::default())
             .expect("solver should not hard-error")
     }
+
+    /// The concrete fuzzing oracle: run the `step` table directly over an event
+    /// sequence from `init`, returning whether any prefix lands in a `bad` state.
+    /// Events are taken modulo the alphabet size. Independent of the symbolic
+    /// encoding (`next_under_event`), so disagreement with a `Safe`/`Reachable`
+    /// verdict catches an encoding bug — the soundness cross-check.
+    fn reaches_bad(&self, events: &[u8]) -> bool {
+        let mut state = self.init;
+        if self.bad.contains(&state) {
+            return true;
+        }
+        for &e in events {
+            let event = if self.events == 0 { 0 } else { e % self.events };
+            state = (self.step)(state, event);
+            if self.bad.contains(&state) {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl<F: Fn(u8, u8) -> u8> TransitionSystem for Fsm<F> {
@@ -287,5 +307,100 @@ fn capability_proof_is_fast() {
     eprintln!(
         "capability lifecycle (5 states, 4 events, ~12-line spec): \
          unbounded-safe proof {safe_dt:?}, use-after-revoke refutation {bug_dt:?}"
+    );
+}
+
+// ---- the fuzzing oracle: concrete execution cross-checks the proofs ------------
+
+/// Deterministic LCG event source (no `rand` dependency) — reproducible fuzz.
+fn lcg(state: &mut u32) -> u8 {
+    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+    (*state >> 24) as u8
+}
+
+fn random_trace(rng: &mut u32) -> Vec<u8> {
+    let len = usize::from(lcg(rng) % 12);
+    (0..len).map(|_| lcg(rng)).collect()
+}
+
+fn fuzz_finds_bug<F: Fn(u8, u8) -> u8>(m: &Fsm<F>) -> bool {
+    let mut rng = 0x1234_5678_u32;
+    for _ in 0..50_000 {
+        let trace = random_trace(&mut rng);
+        if m.reaches_bad(&trace) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Soundness cross-check (DISAGREE = 0): fuzzing the PROVEN-safe machines never
+/// reaches a bad state across 50k random traces each — concrete execution agrees
+/// with the symbolic `Safe` proof. A divergence would mean the toolkit's symbolic
+/// encoding (`next_under_event`) misrepresents the `step` table.
+#[test]
+fn fuzz_never_contradicts_a_safe_proof() {
+    let hs = handshake(false);
+    let cap = capability(false);
+    let mut rng = 0x00C0_FFEE_u32;
+    for _ in 0..50_000 {
+        let t = random_trace(&mut rng);
+        assert!(
+            !hs.reaches_bad(&t),
+            "fuzz reached a bad state on a PROVEN-safe handshake: {t:?}"
+        );
+        let t = random_trace(&mut rng);
+        assert!(
+            !cap.reaches_bad(&t),
+            "fuzz reached a bad state on a PROVEN-safe capability: {t:?}"
+        );
+    }
+}
+
+/// Fuzzing independently corroborates the known bugs (cheap mirror of the
+/// symbolic `Reachable`): a random trace reaches each bad state within budget.
+#[test]
+fn fuzz_corroborates_the_known_bugs() {
+    assert!(
+        fuzz_finds_bug(&handshake(true)),
+        "fuzzing must find the handshake-skip bug"
+    );
+    assert!(
+        fuzz_finds_bug(&capability(true)),
+        "fuzzing must find the use-after-revoke bug"
+    );
+}
+
+/// Fuzz vs. proof cost, measured honestly. For these *tiny* FSMs the symbolic
+/// proof is so cheap it actually **beats** 50k fuzz traces — fuzzing's value here
+/// is single-trace latency (one trace is sub-microsecond, ideal for edit-loop
+/// feedback) and scaling to state spaces too large to prove, **not** batch
+/// throughput at this size. Times printed (`--nocapture`).
+#[test]
+fn fuzz_vs_proof_cost() {
+    use std::time::Instant;
+
+    let cap = capability(false);
+    let mut rng = 0x0000_ABCD_u32;
+    let t0 = Instant::now();
+    let mut hits = 0u32;
+    for _ in 0..50_000 {
+        let trace = random_trace(&mut rng);
+        if cap.reaches_bad(&trace) {
+            hits += 1;
+        }
+    }
+    let fuzz_dt = t0.elapsed();
+    assert_eq!(hits, 0, "the safe capability must survive all fuzz traces");
+
+    let t1 = Instant::now();
+    let proof = cap.prove_for_all_traces();
+    let proof_dt = t1.elapsed();
+    assert!(matches!(proof, PdrOutcome::Safe { .. }));
+
+    eprintln!(
+        "capability (tiny FSM): 50k fuzz traces {fuzz_dt:?} vs. one all-traces proof \
+         {proof_dt:?} — the proof wins at this scale; fuzz wins on single-trace \
+         latency and on state spaces too big to prove"
     );
 }
