@@ -527,20 +527,47 @@ fn run_core(
                 return (halt, overflowed);
             }
             Op::Call { pops, may_reenter } => {
-                for _ in 0..pops {
-                    let _ = pop!();
+                // Args (top→bottom): …, retOffset (2nd-to-last), retLength (last).
+                let mut ret_len = None;
+                let mut ret_off = None;
+                for k in 0..pops {
+                    let v = pop!();
+                    if k + 1 == pops {
+                        ret_len = Some(v);
+                    } else if k + 2 == pops {
+                        ret_off = Some(v);
+                    }
                 }
                 if may_reenter {
                     storage_dirty = true;
                 }
                 // Replay the witnessed success flag (env oracle, in execution
-                // order). Return data is not modeled. Default 0 if exhausted.
+                // order). Default 0 if exhausted.
                 let value = env_inputs
                     .get(*env_cursor)
                     .cloned()
                     .unwrap_or_else(Word::zero);
                 *env_cursor += 1;
                 stack.push(value);
+                // Replay witnessed return data into memory, mirroring the symbolic
+                // model (same region condition, same env-order consumption).
+                let rl = ret_len.and_then(|w| w.to_usize());
+                let ro = ret_off.and_then(|w| w.to_usize());
+                if let (Some(len), Some(off)) = (rl, ro) {
+                    if len != 0 && len % 32 == 0 && len / 32 <= crate::symbolic::MAX_RETURN_WORDS {
+                        for k in 0..(len / 32) {
+                            let word = env_inputs
+                                .get(*env_cursor)
+                                .cloned()
+                                .unwrap_or_else(Word::zero);
+                            *env_cursor += 1;
+                            let bytes = word.to_be_bytes();
+                            for (i, &byte) in bytes.iter().enumerate() {
+                                memory.insert(off + 32 * k + i, byte);
+                            }
+                        }
+                    }
+                }
             }
             Op::Env(pops) => {
                 for _ in 0..pops {

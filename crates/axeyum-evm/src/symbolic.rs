@@ -59,6 +59,10 @@ const W: u32 = 256;
 /// Bound on how many `CALLDATALOAD` / `CALLDATASIZE` care about; calldata symbols
 /// past this are still fresh but unconstrained.
 const MAX_CALLDATA_BYTES: usize = 256;
+/// Largest `CALL` return-data region (in 32-byte words) we model as witnessed
+/// fresh bytes written to memory. Larger (or non-32-aligned / symbolic-length)
+/// return regions stay a sound `Unknown`. Most ABI returns are ≤ 2 words.
+pub(crate) const MAX_RETURN_WORDS: usize = 4;
 /// Largest keccak preimage (in bytes) we model symbolically. The dominant
 /// mapping-storage pattern hashes a 32-byte slot or a 64-byte `(key . slot)`
 /// pair; longer preimages are havoc'd to a sound `Unknown`.
@@ -1029,15 +1033,17 @@ fn run_from(
                 // amount is requested, flag the path Unknown so we never claim
                 // safety we did not establish — but still explore for bugs that do
                 // not depend on the returned bytes.
+                // Args (top→bottom): …, retOffset (2nd-to-last), retLength (last).
                 let mut ret_len = None;
+                let mut ret_off = None;
                 for k in 0..pops {
                     let v = pop_or_unknown!();
                     if k + 1 == pops {
                         ret_len = Some(v);
                     }
-                }
-                if ret_len.is_none_or(|rl| concrete_usize(arena, rl) != Some(0)) {
-                    *saw_unknown = true;
+                    if k + 2 == pops {
+                        ret_off = Some(v);
+                    }
                 }
                 // A non-static call may re-enter and mutate our storage: treat all
                 // subsequent reads as adversarial (the re-entrancy threat model).
@@ -1047,6 +1053,33 @@ fn run_from(
                 let (success, sym) = env.fresh_env(arena)?;
                 state.env_syms.push(sym);
                 state.stack.push(success);
+                // Model the returned data as *witnessed fresh bytes* written to
+                // memory when the region is concrete, 32-aligned, and bounded;
+                // otherwise stay a sound `Unknown` (return data unmodeled). The
+                // fresh bytes over-approximate any callee return, so a proof of
+                // safety holds for all returns, and a reported witness pins the
+                // return values (replayed by the concrete oracle in env order).
+                let rl = ret_len.and_then(|t| concrete_usize(arena, t));
+                let ro = ret_off.and_then(|t| concrete_usize(arena, t));
+                match (rl, ro) {
+                    (Some(0), _) => {} // no return data — fully modeled
+                    (Some(len), Some(off))
+                        if len % 32 == 0 && len / 32 <= MAX_RETURN_WORDS =>
+                    {
+                        for k in 0..(len / 32) {
+                            let (val, vsym) = env.fresh_env(arena)?;
+                            state.env_syms.push(vsym);
+                            let at = off + 32 * k;
+                            mem_store(arena, state, at, val)?;
+                            let off_word = arena.bv_const(W, at as u128)?;
+                            state.sym_memory.push(Write {
+                                key: off_word,
+                                value: val,
+                            });
+                        }
+                    }
+                    _ => *saw_unknown = true,
+                }
             }
             Op::Env(pops) => {
                 // Pop the (ignored) address arg(s), then push one nondeterministic
