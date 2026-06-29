@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "sequence-limit-shadow-v0",
+  "title": "Sequence And Limit Shadow",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_sequences_and_limits",
+    "curriculum_reals",
+    "field_real_analysis",
+    "field_topology"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "topology"
+  ],
+  "curriculum_nodes": [
+    "sequences-and-limits",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "bounded epsilon-N templates",
+    "LRA (exact rationals)",
+    "NRA / polynomial constraints",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "reciprocal-tail-bounded-epsilon",
+    "constant-one-limit-counterexample",
+    "monotone-bounded-prefix",
+    "geometric-partial-sum-identity",
+    "bounded-cauchy-tail-no-counterexample",
+    "general-limit-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode bounded epsilon-tail and Cauchy-tail checks as deterministic LRA/NRA queries.",
+    "Replay finite sequence witnesses through Axeyum model evaluation.",
+    "Emit checked arithmetic evidence for bounded UNSAT tail rows.",
+    "Keep general convergence, completeness, and compactness theorems under Lean horizon until no-sorry Lean artifacts exist."
+  ]
+}

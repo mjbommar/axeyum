@@ -43,10 +43,10 @@ plus the independent replay checker.
 
 The foundational example-pack validator replays each supported pack-specific
 model. Examples include Boolean truth tables, finite predicate tables, exact
-rational arithmetic, algebraic real witnesses, graph colorings, finite
-cardinality witnesses, bounded induction obligations, finite topology
-closure/interior, finite measure additivity, recurrence traces, finite operator
-norms, and exact table statistics.
+rational arithmetic, algebraic real witnesses, bounded sequence tails, graph
+colorings, finite cardinality witnesses, bounded induction obligations, finite
+topology closure/interior, finite measure additivity, recurrence traces, finite
+operator norms, and exact table statistics.
 
 The checker rejects malformed data, non-deterministic references, missing
 witnesses, failed arithmetic equalities, violated finite axioms, and claimed
@@ -95,6 +95,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/lo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
@@ -111,5 +112,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 - [Logic Basics pack](../../../artifacts/examples/math/logic-basics-v0/)
 - [Finite Predicate pack](../../../artifacts/examples/math/finite-predicate-v0/)
 - [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
+- [Sequence And Limit Shadow pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [Finite Cardinality pack](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [Induction Obligations pack](../../../artifacts/examples/math/induction-obligations-v0/)

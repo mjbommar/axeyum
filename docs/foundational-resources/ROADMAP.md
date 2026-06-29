@@ -72,6 +72,7 @@ artifacts/examples/math/
   number-theory-v0/
   rationals-lra-v0/
   reals-rcf-shadow-v0/
+  sequence-limit-shadow-v0/
   linear-algebra-rational-v0/
   finite-groups-v0/
   finite-rings-v0/

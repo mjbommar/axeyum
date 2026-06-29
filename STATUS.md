@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Sequence/limit shadow foundations pack landed.** Added
+  [`sequence-limit-shadow-v0`](artifacts/examples/math/sequence-limit-shadow-v0/README.md)
+  with finite reciprocal-tail epsilon replay, a finite counterexample to a
+  proposed limit, monotone bounded prefix replay, a fixed geometric partial-sum
+  identity, bounded Cauchy-tail no-counterexample checking, and a general
+  convergence Lean-horizon row. The foundational example-pack validator now
+  checks exact finite sequence values, bounded epsilon inequalities, finite
+  pairwise tail enumeration, geometric sums, and limit theorem-horizon
+  metadata. Continue by closing the remaining `proof-methods-refutation-v0`
+  CNF/LRAT proof gap or by adding `calculus-algebraic-shadow-v0`.
+
 - **Real algebra / RCF-shadow foundations pack landed.** Added
   [`reals-rcf-shadow-v0`](artifacts/examples/math/reals-rcf-shadow-v0/README.md)
   with exact ordered-field midpoint replay, nonlinear real product replay, a

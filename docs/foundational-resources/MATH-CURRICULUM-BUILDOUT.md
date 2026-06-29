@@ -300,6 +300,8 @@ the first finite-ring core-structure pack lives under
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first algebraic real/RCF-shadow pack lives under
 `artifacts/examples/math/reals-rcf-shadow-v0/`;
+the first bounded sequence/limit shadow pack lives under
+`artifacts/examples/math/sequence-limit-shadow-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
 
@@ -366,9 +368,13 @@ relation asymmetry replay, and a general first-order Lean-horizon row.
 `reals-rcf-shadow-v0` now validates exact ordered-field midpoint replay,
 nonlinear real product replay, a quadratic real-root witness, checked
 `x^2 < 0` infeasibility, checked negative-discriminant no-root infeasibility,
-and a completeness/epsilon-delta Lean-horizon row. Continue by closing the remaining
+and a completeness/epsilon-delta Lean-horizon row. `sequence-limit-shadow-v0`
+now validates finite epsilon-tail replay, finite limit-counterexample replay,
+monotone bounded prefix replay, a fixed geometric partial-sum identity, a
+bounded Cauchy-tail no-counterexample row, and a general convergence
+Lean-horizon row. Continue by closing the remaining
 `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`sequence-limit-shadow-v0`.
+`calculus-algebraic-shadow-v0`.
 
 Recommended order:
 
@@ -407,6 +413,9 @@ Recommended order:
 17. `reals-rcf-shadow-v0` (landed): exact ordered-field replay, small
     nonlinear polynomial constraints, checked quadratic infeasibility rows,
     and real-completeness Lean-horizon metadata.
+18. `sequence-limit-shadow-v0` (landed): bounded epsilon-tail replay, finite
+    counterexamples, monotone bounded prefixes, fixed geometric partial sums,
+    and general convergence Lean-horizon metadata.
 
 Exit criteria:
 

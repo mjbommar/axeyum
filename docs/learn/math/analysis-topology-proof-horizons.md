@@ -13,6 +13,7 @@ Concept rows:
 Example packs:
 
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
+- [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
@@ -22,8 +23,9 @@ Example packs:
 
 The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
-shadows, bounded recurrence traces, finite invariant witnesses, matrix operator
-bounds, and Chebyshev recurrence values at fixed points.
+shadows, bounded sequence tails and prefixes, bounded recurrence traces, finite
+invariant witnesses, matrix operator bounds, and Chebyshev recurrence values at
+fixed points.
 
 This is the useful boundary for learners: Axeyum can check a concrete finite
 model and tell you exactly why it passes.
@@ -42,6 +44,20 @@ contains the empty set and universe, and is closed under pairwise union and
 intersection. The closure/interior witness then becomes a finite set
 calculation.
 
+For a bounded sequence shadow, encode exact rational values and one fixed
+epsilon:
+
+```text
+a_n = 1 / (n + 1)
+epsilon = 1/3
+tail = n = 3..8
+```
+
+The `sequence-limit-shadow-v0` validator checks the finite tail only. It also
+checks a finite counterexample to a proposed limit, a monotone bounded prefix,
+a fixed geometric partial-sum identity, and a finite Cauchy-tail
+no-counterexample row.
+
 For dynamics, encode a bounded recurrence trace:
 
 ```text
@@ -57,6 +73,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
@@ -67,7 +84,7 @@ replay, read [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-
 
 ## Horizon
 
-General epsilon-delta limits, compactness, connectedness, Lebesgue measure,
-integration, convergence theorems, ODE existence and uniqueness, Banach/Hilbert
-space theorems, compact operators, and general Chebyshev spaces remain
-Lean-horizon material.
+General epsilon-delta limits, Cauchy completeness, monotone convergence,
+compactness, connectedness, Lebesgue measure, integration, convergence
+theorems, ODE existence and uniqueness, Banach/Hilbert space theorems, compact
+operators, and general Chebyshev spaces remain Lean-horizon material.

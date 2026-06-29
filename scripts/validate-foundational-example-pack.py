@@ -2094,6 +2094,119 @@ def validate_reals_rcf_shadow(expected: dict[str, Any]) -> None:
     require_string("real completeness future_checker", data.get("future_checker"))
 
 
+def require_fraction_sequence(context: str, value: Any) -> list[Fraction]:
+    return require_fraction_vector(context, value)
+
+
+def require_nonnegative_int(context: str, value: Any) -> int:
+    number = require_int(context, value)
+    if number < 0:
+        fail(f"{context} must be nonnegative")
+    return number
+
+
+def validate_sequence_limit_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    reciprocal = checks["reciprocal-tail-bounded-epsilon"]
+    if reciprocal["expected_result"] != "sat":
+        fail("reciprocal-tail-bounded-epsilon must expect sat")
+    values = single_witness_values(reciprocal, witnesses)
+    limit = require_fraction("reciprocal tail limit", values.get("limit"))
+    epsilon = require_fraction("reciprocal tail epsilon", values.get("epsilon"))
+    start_index = require_nonnegative_int("reciprocal tail start_index", values.get("start_index"))
+    horizon = require_nonnegative_int("reciprocal tail horizon", values.get("horizon"))
+    sequence = require_fraction_sequence("reciprocal tail values", values.get("values"))
+    if epsilon <= 0:
+        fail("reciprocal-tail-bounded-epsilon epsilon must be positive")
+    if start_index > horizon:
+        fail("reciprocal-tail-bounded-epsilon start_index must be <= horizon")
+    if len(sequence) != horizon + 1:
+        fail("reciprocal-tail-bounded-epsilon values must cover indices 0..horizon")
+    for index, value in enumerate(sequence):
+        expected_value = Fraction(1, index + 1)
+        if value != expected_value:
+            fail(f"reciprocal-tail-bounded-epsilon value {index} does not equal 1/(n+1)")
+    for value in sequence[start_index : horizon + 1]:
+        if abs(value - limit) >= epsilon:
+            fail("reciprocal-tail-bounded-epsilon found a finite tail counterexample")
+
+    counterexample = checks["constant-one-limit-counterexample"]
+    if counterexample["expected_result"] != "sat":
+        fail("constant-one-limit-counterexample must expect sat")
+    values = single_witness_values(counterexample, witnesses)
+    limit = require_fraction("constant counterexample limit", values.get("limit"))
+    epsilon = require_fraction("constant counterexample epsilon", values.get("epsilon"))
+    index = require_nonnegative_int("constant counterexample index", values.get("index"))
+    value = require_fraction("constant counterexample value", values.get("value"))
+    if epsilon <= 0:
+        fail("constant-one-limit-counterexample epsilon must be positive")
+    if value != 1:
+        fail("constant-one-limit-counterexample documents the fixed constant-one sequence")
+    if abs(value - limit) < epsilon:
+        fail("constant-one-limit-counterexample is unexpectedly within epsilon")
+
+    monotone = checks["monotone-bounded-prefix"]
+    if monotone["expected_result"] != "sat":
+        fail("monotone-bounded-prefix must expect sat")
+    values = single_witness_values(monotone, witnesses)
+    upper_bound = require_fraction("monotone prefix upper_bound", values.get("upper_bound"))
+    sequence = require_fraction_sequence("monotone prefix values", values.get("values"))
+    if len(sequence) < 2:
+        fail("monotone-bounded-prefix requires at least two values")
+    for index, value in enumerate(sequence):
+        expected_value = Fraction(index, index + 1)
+        if value != expected_value:
+            fail(f"monotone-bounded-prefix value {index} does not equal n/(n+1)")
+        if value >= upper_bound:
+            fail("monotone-bounded-prefix value violates the upper bound")
+    for left, right in zip(sequence, sequence[1:]):
+        if not left < right:
+            fail("monotone-bounded-prefix is not strictly increasing")
+
+    geometric = checks["geometric-partial-sum-identity"]
+    if geometric["expected_result"] != "sat":
+        fail("geometric-partial-sum-identity must expect sat")
+    values = single_witness_values(geometric, witnesses)
+    ratio = require_fraction("geometric ratio", values.get("ratio"))
+    n_value = require_nonnegative_int("geometric n", values.get("n"))
+    partial_sum = require_fraction("geometric partial_sum", values.get("partial_sum"))
+    closed_form = require_fraction("geometric closed_form", values.get("closed_form"))
+    if ratio == 1:
+        fail("geometric-partial-sum-identity requires ratio != 1")
+    computed_sum = sum((ratio**index for index in range(n_value + 1)), Fraction(0))
+    computed_closed = (1 - ratio ** (n_value + 1)) / (1 - ratio)
+    if partial_sum != computed_sum:
+        fail("geometric-partial-sum-identity partial_sum is incorrect")
+    if closed_form != computed_closed:
+        fail("geometric-partial-sum-identity closed_form is incorrect")
+    if partial_sum != closed_form:
+        fail("geometric-partial-sum-identity partial_sum and closed_form differ")
+
+    cauchy = checks["bounded-cauchy-tail-no-counterexample"]
+    if cauchy["expected_result"] != "unsat":
+        fail("bounded-cauchy-tail-no-counterexample must expect unsat")
+    data = cauchy.get("data", {})
+    epsilon = require_fraction("bounded cauchy epsilon", data.get("epsilon"))
+    sequence = require_fraction_sequence("bounded cauchy values", data.get("values"))
+    if epsilon <= 0:
+        fail("bounded-cauchy-tail-no-counterexample epsilon must be positive")
+    for left in sequence:
+        for right in sequence:
+            if abs(left - right) >= epsilon:
+                fail("bounded-cauchy-tail-no-counterexample found a finite pairwise counterexample")
+
+    horizon = checks["general-limit-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-limit-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-limit-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general limit target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general limit future_checker", data.get("future_checker"))
+
+
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -3159,6 +3272,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_reals_rcf_shadow(expected)
     if metadata["id"] == "relations-functions-v0":
         validate_relations_functions(expected)
+    if metadata["id"] == "sequence-limit-shadow-v0":
+        validate_sequence_limit_shadow(expected)
     if metadata["id"] == "linear-algebra-rational-v0":
         validate_linear_algebra_rational(expected)
 
