@@ -25,7 +25,8 @@ Concept rows:
 | `general-real-analysis-lean-horizon` | `not-run` | lean-horizon |
 
 The finite rational witnesses are replayed exactly. The bad-delta row is
-checked by a concrete counterexample. General real-analysis theorem schemas
+checked by a concrete counterexample and a rechecked `UnsatFarkas` certificate
+for the final output-bound contradiction. General real-analysis theorem schemas
 remain Lean-horizon.
 
 ## Replay A Nested Neighborhood
@@ -98,6 +99,16 @@ x = 2/3
 Since `4/3` is not below `1`, the claimed delta is rejected by exact rational
 arithmetic.
 
+The resource regression checks the final contradiction as `QF_LRA`:
+
+```text
+output_distance = 4/3
+output_distance < 1
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Name The Lean Horizon
 
 The final row records the theorem-prover boundary:
@@ -131,7 +142,7 @@ This lesson shows Axeyum's current bounded real-analysis resource pattern:
 
 ```text
 untrusted fast search -> rational neighborhood or delta candidate
-trusted small checking -> exact Fraction replay and counterexample checking
+trusted small checking -> exact Fraction replay, counterexample checking, and Farkas certificates for linear refutations
 remaining horizon -> fully quantified real-analysis proof reconstruction
 ```
 

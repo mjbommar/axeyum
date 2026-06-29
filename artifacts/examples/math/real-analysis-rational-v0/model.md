@@ -50,6 +50,15 @@ counterexample `x = 2/3` satisfies:
 |f(2/3) - f(0)| = 4/3 >= 1
 ```
 
+The final false output-bound claim is linear:
+
+```text
+output_distance = 4/3
+output_distance < 1
+```
+
+The pack keeps this contradiction on the checked `UnsatFarkas` route.
+
 ## Polynomial Side Conditions
 
 The squeeze-style row checks finite samples with `|x| <= 1/10` and verifies:

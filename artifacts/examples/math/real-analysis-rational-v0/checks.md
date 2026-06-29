@@ -27,6 +27,10 @@ for the listed rational samples.
 Rejects the false claim that `delta = 3/4` works for the linear epsilon-delta
 row. The checked counterexample is `x = 2/3`.
 
+The resource-backed Axeyum regression checks the final output-bound
+contradiction as `QF_LRA`: `output_distance = 4/3` and
+`output_distance < 1`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-real-analysis-lean-horizon`
 
 Records that fully quantified real-analysis facts need Lean reconstruction.

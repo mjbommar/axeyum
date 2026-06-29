@@ -276,3 +276,18 @@ fn least_squares_bad_coefficients_emit_checked_farkas() {
         &[beta0_is_one, beta1_is_one, first_normal_equation],
     );
 }
+
+#[test]
+fn real_analysis_bad_linear_delta_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let output_distance = real(&mut arena, "output_distance");
+    let output_distance_is_four_thirds = eq_ratio(&mut arena, output_distance, 4, 3);
+    let epsilon = arena.real_ratio(1, 1);
+    let false_output_bound = arena.real_lt(output_distance, epsilon).unwrap();
+
+    assert_farkas_checked(
+        "real-analysis-rational-v0 bad-linear-delta-rejected",
+        &arena,
+        &[output_distance_is_four_thirds, false_output_bound],
+    );
+}

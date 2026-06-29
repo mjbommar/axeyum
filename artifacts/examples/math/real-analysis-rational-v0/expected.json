@@ -87,9 +87,12 @@
         "claimed_delta": "3/4",
         "counterexample": "2/3",
         "domain_distance": "2/3",
-        "output_distance": "4/3"
+        "output_distance": "4/3",
+        "farkas_output_claim": "output_distance < epsilon",
+        "smt2_artifact": "artifacts/examples/math/real-analysis-rational-v0/smt2/bad-linear-delta-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes real_analysis_bad_linear_delta_emits_checked_farkas"
       },
-      "notes": "The validator checks the counterexample is inside the claimed delta ball while its output distance is not inside the epsilon ball."
+      "notes": "The validator checks the counterexample is inside the claimed delta ball while its output distance is not inside the epsilon ball; the Axeyum regression refutes output_distance = 4/3 together with the false claim output_distance < 1 using rechecked Farkas evidence."
     },
     {
       "id": "general-real-analysis-lean-horizon",

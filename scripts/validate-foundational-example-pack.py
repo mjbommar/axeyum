@@ -7844,6 +7844,18 @@ def validate_real_analysis_rational(expected: dict[str, Any]) -> None:
         fail("bad-linear-delta-rejected counterexample is not inside the claimed delta ball")
     if output_distance < epsilon:
         fail("bad-linear-delta-rejected counterexample unexpectedly satisfies epsilon")
+    output_claim = data.get("farkas_output_claim")
+    require_string("bad linear delta farkas_output_claim", output_claim)
+    if output_claim != "output_distance < epsilon":
+        fail("bad-linear-delta-rejected must document the Farkas output claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad linear delta smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-linear-delta-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad linear delta farkas_regression", regression)
+    if "real_analysis_bad_linear_delta_emits_checked_farkas" not in regression:
+        fail("bad-linear-delta-rejected must link the Farkas regression")
 
     horizon = checks["general-real-analysis-lean-horizon"]
     if horizon["expected_result"] != "not-run":

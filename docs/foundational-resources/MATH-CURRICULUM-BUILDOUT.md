@@ -474,7 +474,8 @@ nonlinear real product replay, a quadratic real-root witness, checked
 and a completeness/epsilon-delta Lean-horizon row. `real-analysis-rational-v0`
 now validates exact rational interval/ball inclusion, a bounded linear
 epsilon-delta sample, finite squeeze-style polynomial side conditions, checked
-rejection of a false delta, and a general real-analysis Lean-horizon row.
+QF_LRA/Farkas rejection of a false delta, and a general real-analysis
+Lean-horizon row.
 `sequence-limit-shadow-v0` now validates finite epsilon-tail replay, finite
 limit-counterexample replay, monotone bounded prefix replay, a fixed geometric
 partial-sum identity, a bounded Cauchy-tail no-counterexample row, and a
@@ -589,8 +590,8 @@ Recommended order:
     calculus Lean-horizon metadata.
 20. `real-analysis-rational-v0` (landed): exact rational interval/ball
     inclusion, bounded epsilon-delta samples, squeeze-style polynomial side
-    conditions, bad-delta rejection, and general real-analysis Lean-horizon
-    metadata.
+    conditions, QF_LRA/Farkas bad-delta rejection, and general real-analysis
+    Lean-horizon metadata.
 
 Exit criteria:
 
@@ -1423,6 +1424,8 @@ checked Farkas evidence path after clearing denominators in the finite linear
 equation.
 `least-squares-regression-v0` now routes its bad coefficient row through the
 same checked Farkas evidence path using the first failed normal equation.
+`real-analysis-rational-v0` now routes its bad linear-delta row through the
+same checked Farkas evidence path using the final output-bound contradiction.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

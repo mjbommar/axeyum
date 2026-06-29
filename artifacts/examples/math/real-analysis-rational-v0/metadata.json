@@ -25,6 +25,7 @@
   ],
   "axeyum_fragments": [
     "LRA (exact rationals)",
+    "QF_LRA",
     "bounded epsilon-delta templates",
     "finite rational neighborhoods",
     "polynomial side conditions",
@@ -39,7 +40,8 @@
     "docs/curriculum/03-destinations/calculus.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "nested-rational-neighborhood-witness",
@@ -51,7 +53,7 @@
   "graduation_criteria": [
     "Encode bounded rational interval, ball, and epsilon-delta checks as exact QF_LRA obligations.",
     "Replay finite SAT witnesses through exact rational arithmetic rather than floating-point tolerances.",
-    "Emit checked counterexample evidence for false bounded delta claims.",
+    "Keep false bounded delta claims on Axeyum's checked Farkas evidence path when the counterexample obligation is linear.",
     "Keep general real-analysis theorems, completeness, and fully quantified limits marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

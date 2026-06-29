@@ -119,8 +119,8 @@ finite domain sample = -1/4, 0, 1/4
 
 The `real-analysis-rational-v0` validator checks interval containment, finite
 linear epsilon-delta replay, finite polynomial side conditions, and a checked
-bad-delta counterexample. It keeps the fully quantified real theorem as a
-Lean-horizon row.
+bad-delta counterexample with `UnsatFarkas` evidence for the final output-bound
+contradiction. It keeps the fully quantified real theorem as a Lean-horizon row.
 
 For a finite epsilon-delta continuity shadow, encode a rational metric-space
 slice and a function table:

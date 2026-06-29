@@ -372,6 +372,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   equation `3*beta0 + 3*beta1 = 7`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Real-analysis-rational QF_LRA/Farkas regression landed.**
+  [`real-analysis-rational-v0`](artifacts/examples/math/real-analysis-rational-v0/)
+  now binds its bad linear-delta counterexample to Axeyum's evidence path. The
+  new SMT-LIB artifact encodes `output_distance = 4/3` and the false claim
+  `output_distance < 1`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

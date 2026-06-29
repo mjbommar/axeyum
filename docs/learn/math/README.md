@@ -113,7 +113,8 @@ validated pack data and the repo-root command that replays it.
   density witness through fraction arithmetic and replay-only evidence status.
 - [Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md):
   follows rational interval/ball replay, bounded epsilon-delta samples,
-  polynomial side conditions, a bad-delta counterexample, and the Lean horizon.
+  polynomial side conditions, a QF_LRA/Farkas bad-delta certificate, and the
+  Lean horizon.
 - [Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md): follows
   finite epsilon-tail replay, a proposed-limit counterexample, monotone-prefix
   checks, geometric partial sums, finite Cauchy-tail enumeration, and the

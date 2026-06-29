@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const output_distance Real)
+(assert (= output_distance (/ 4 3)))
+(assert (< output_distance 1))
+(check-sat)
