@@ -2438,15 +2438,14 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
 4. **Opcode-precision deepening (DONE, ongoing)** — turn `Unknown`-forcing
    havoc/unsupported opcodes into precise models (concrete-operand fast path,
    symbolic→sound `Unknown`), each added to the differential-fuzz pool:
-   - **BYTE** (0x1a) — was havoc'd; concrete index → `(x>>(248-8i))&0xff`
-     (`7b9633b`).
-   - **SIGNEXTEND** (0x0b) — was `Unsupported`; concrete index → `sign_ext`+
-     `extract` (`22bb92e`).
-   - **EXP** (0x0a) — was `Unsupported`; concrete base+exp → constant-fold via
-     `Word::pow` (`74c6b6a`).
-   - *Next candidates:* symbolic-index BYTE/SIGNEXTEND via a bounded 32-way `ite`;
-     symbolic-exponent EXP (heavy); CALL return-data modeling. (The symbolic
-     forms are heavier; the constant fast paths cover most real bytecode.)
+   - **BYTE** (0x1a) — **fully precise** (concrete index → shift+mask; symbolic
+     index → bounded 32-way `ite`) (`7b9633b`, `41af539`).
+   - **SIGNEXTEND** (0x0b) — **fully precise** (concrete → `sign_ext`+`extract`;
+     symbolic → bounded 31-way `ite`) (`22bb92e`, `41af539`).
+   - **EXP** (0x0a) — concrete base+exp → constant-fold via `Word::pow`
+     (`74c6b6a`); symbolic exponent still havocs (a faithful symbolic 256-bit
+     modular pow is heavy).
+   - *Next candidates:* CALL return-data modeling; symbolic-exponent EXP (heavy).
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
