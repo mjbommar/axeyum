@@ -39,6 +39,8 @@ untrusted fast search, trusted small checking
 
 Purpose: one machine-readable map from concepts to prerequisites, decidability,
 Axeyum fragments, example families, proof routes, and source references.
+For mathematics rows, the authoritative field spine is
+[University Math Field Taxonomy](MATH-FIELDS.md).
 
 Near-term files:
 
@@ -76,6 +78,7 @@ Required row fields:
 ### 2. Mathematics Expansion
 
 Current base: [formal mathematics curriculum](../curriculum/README.md).
+Field spine: [University Math Field Taxonomy](MATH-FIELDS.md).
 
 Add depth in four waves:
 
@@ -89,10 +92,14 @@ Add depth in four waves:
 Practical first backlog:
 
 1. `foundational-concepts.json` rows for all existing curriculum nodes.
-2. Rational density and trichotomy examples, backed by LRA evidence.
-3. Finite-field inverse examples over small primes.
-4. Matrix inverse / inconsistent linear system examples with Farkas evidence.
-5. Finite probability examples: total mass, conditional probability table,
+2. `field_id` validation against the 18 fields in
+   [MATH-FIELDS.md](MATH-FIELDS.md).
+3. Graph coloring examples with coloring witnesses and unsat/proof-route status.
+4. Rational density and trichotomy examples, backed by LRA evidence.
+5. Finite-field inverse examples over small primes.
+6. Matrix inverse, LU, and inconsistent linear system examples with Farkas
+   evidence where applicable.
+7. Finite probability examples: total mass, conditional probability table,
    Bayes rule over finite domains.
 
 Boundary:
@@ -252,8 +259,10 @@ Exit criteria:
 Exit criteria:
 
 - Add `foundational-concepts.schema.json`.
-- Generate `foundational-concepts.json` from existing curriculum nodes plus
-  first CS/statistics/logic rows.
+- Generate `foundational-concepts.json` from existing curriculum nodes plus the
+  first math-field rows from [MATH-FIELDS.md](MATH-FIELDS.md) and first
+  CS/statistics/logic rows.
+- Validate math `field_id` values against the university field taxonomy.
 - Add dependency/acyclicity/link validator.
 - Document which rows are decidable, bounded, numerical, or proof-horizon.
 
@@ -305,14 +314,14 @@ Exit criteria:
 | Rank | Item | Domain | Why First |
 |---:|---|---|---|
 | 1 | `foundational-concepts.json` schema and validator | all | Makes every future row checkable and prevents prose drift. |
-| 2 | Finite probability pack | statistics | Adds a missing fourth domain with exact replay and rational checks. |
-| 3 | DFA equivalence pack | CS/logic | Classic finite reasoning; natural SAT/SMT examples with counterexample strings. |
-| 4 | QF_LRA rational examples | math | Reuses mature Farkas evidence and fills a planned curriculum node. |
-| 5 | CNF/LRAT cookbook recipe | logic/proof | Explains trusted-small-checking at the smallest proof-object level. |
-| 6 | Finite-field examples | math/CS | Bridges algebra, cryptography, coding theory, and BV reasoning. |
-| 7 | Descriptive statistics pack | statistics | Exact arithmetic examples before approximate inference. |
-| 8 | Sorting-network verification pack | CS | Compact, visual, finite, and benchmarkable. |
-| 9 | Causal DAG d-separation pack | statistics/logic | Good bridge between graph reasoning, policy, and data science. |
+| 2 | Math field rows from [MATH-FIELDS.md](MATH-FIELDS.md) | math | Grounds the atlas in a university-style undergrad/graduate curriculum before example sprawl. |
+| 3 | Graph coloring pack | math/CS/logic | Direct finite SAT/SMT example with witnesses, unsat claims, and proof-route pressure. |
+| 4 | Finite probability pack | statistics/math | Adds a missing fourth domain with exact replay and rational checks. |
+| 5 | DFA equivalence pack | CS/logic | Classic finite reasoning; natural SAT/SMT examples with counterexample strings. |
+| 6 | QF_LRA rational examples | math | Reuses mature Farkas evidence and fills a planned curriculum node. |
+| 7 | CNF/LRAT cookbook recipe | logic/proof | Explains trusted-small-checking at the smallest proof-object level. |
+| 8 | Finite-field examples | math/CS | Bridges algebra, cryptography, coding theory, and BV reasoning. |
+| 9 | Descriptive statistics pack | statistics | Exact arithmetic examples before approximate inference. |
 | 10 | Generated foundational dashboard | all | Makes coverage and proof gaps visible. |
 
 ## Graduation Criteria

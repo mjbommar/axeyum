@@ -23,6 +23,8 @@ with small checkable artifacts.
 
 | Area | Source | Use For Expansion |
 |---|---|---|
+| Mathematics taxonomy | [MSC2020](https://mathscinet.ams.org/mathscinet/msc/msc2020.html) and [MSC2020 overview](https://msc2020.org/) | Broad field taxonomy for mathematical sciences; useful as a research-level cross-check, not as Axeyum's exact schema. |
+| University curriculum | [MIT Mathematics department overview](https://catalog.mit.edu/schools/science/mathematics/) and [MIT Course 18 catalog](https://catalog.mit.edu/subjects/18/) | Sanity check that the field spine spans undergraduate and graduate pure/applied areas such as algebra, analysis, geometry, topology, combinatorics, numerical analysis, probability, and statistics. |
 | Formal mathematics | [Lean mathlib overview](https://leanprover-community.github.io/mathlib-overview.html) and [mathlib4 docs](https://leanprover-community.github.io/mathlib4_docs/) | Coverage map for algebra, order, topology, analysis, probability, measure theory, tactics, and naming conventions. |
 | Formal math tutorial | [Mathematics in Lean](https://leanprover-community.github.io/mathematics_in_lean/) | Chapter sequence for a proof-assistant-facing bridge from basics to algebra, topology, calculus, integration, and measure. |
 | Formal proof library | [Isabelle Archive of Formal Proofs](https://www.isa-afp.org/) | Large-scale formalization categories and publication-style metadata. |
@@ -73,14 +75,17 @@ committed.
 
 1. The existing Axeyum curriculum has a strong mathematics DAG, but it should
    become one lane inside a broader "foundational resources" ecosystem.
-2. Formal math libraries organize by hierarchy and namespace; Axeyum should
+2. The mathematics lane needs a durable university-style field spine before
+   concept rows sprawl. That spine is now recorded in
+   [University Math Field Taxonomy](MATH-FIELDS.md).
+3. Formal math libraries organize by hierarchy and namespace; Axeyum should
    organize by concept, solver fragment, evidence route, and example family.
-3. CS resources need separate tracks for automata, computability, algorithms,
+4. CS resources need separate tracks for automata, computability, algorithms,
    programming languages, semantics, verification, concurrency, and systems.
-4. Logic resources should bridge SAT/SMT/ATP/proof assistants: benchmark
+5. Logic resources should bridge SAT/SMT/ATP/proof assistants: benchmark
    statuses, proof artifacts, theory support, and proof-reconstruction horizons.
-5. Statistics resources require extra honesty: exact finite probability and
+6. Statistics resources require extra honesty: exact finite probability and
    symbolic checks are near-term; MCMC/VI/inference diagnostics are mostly
    numerical and should be treated as replayable experiments, not proof claims.
-6. Every expansion should have a machine-readable row and a validation command
+7. Every expansion should have a machine-readable row and a validation command
    before becoming user-facing documentation.

@@ -47,7 +47,9 @@ incubator plans are the [SMT Fragment Atlas](atlas/README.md),
 [Proof Certificate Cookbook](proof-cookbook/README.md), and
 [Rules-as-Code Verification Lab](rules-as-code/README.md). A broader researched
 plan for mathematics, computer science, logic, and statistics resources lives in
-[Foundational Resource Expansion](foundational-resources/README.md).
+[Foundational Resource Expansion](foundational-resources/README.md), with the
+mathematics lane grounded by the
+[University Math Field Taxonomy](foundational-resources/MATH-FIELDS.md).
 
 ## The honest current state
 

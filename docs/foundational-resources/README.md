@@ -12,6 +12,8 @@ schemas, examples, and validation workflows.
 
 - [SOURCES.md](SOURCES.md) records the web, GitHub, and shallow-clone research
   used to ground the plan.
+- [MATH-FIELDS.md](MATH-FIELDS.md) defines the university-style mathematics
+  field taxonomy that seeds the Foundational Concept Atlas.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 
 ## Principle

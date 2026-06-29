@@ -70,11 +70,16 @@ and shallow reference clones, then organized into source notes and a concrete
 roadmap:
 
 - [source research ledger](foundational-resources/SOURCES.md);
+- [university math field taxonomy](foundational-resources/MATH-FIELDS.md);
 - [expansion roadmap](foundational-resources/ROADMAP.md).
 
 This plan subsumes the earlier "Math Theory Library For Automation" idea into a
 larger resource ecosystem with schemas, example packs, validators, proof/replay
-status, and graduation criteria.
+status, and graduation criteria. The math lane is now explicitly grounded in
+18 undergraduate/graduate fields, from logic, set theory, discrete math, graph
+theory, number theory, and linear algebra through analysis, topology, measure,
+probability, statistics, optimization, numerical analysis, dynamics, geometry,
+and functional analysis.
 
 ## Families
 
