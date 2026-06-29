@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "pack_id": "complex-algebraic-v0",
+  "witnesses": [
+    {
+      "id": "basic-complex-arithmetic",
+      "description": "Exact real-pair addition and multiplication for 1 + 2i and 3 - i.",
+      "values": {
+        "z": ["1", "2"],
+        "w": ["3", "-1"],
+        "sum": ["4", "1"],
+        "product": ["5", "5"]
+      }
+    },
+    {
+      "id": "conjugate-norm",
+      "description": "The product of 3 + 4i with its conjugate is 25 + 0i.",
+      "values": {
+        "z": ["3", "4"],
+        "conjugate": ["3", "-4"],
+        "product": ["25", "0"],
+        "norm_squared": "25"
+      }
+    },
+    {
+      "id": "i-root-of-x2-plus-one",
+      "description": "The complex number i is a root of x^2 + 1.",
+      "values": {
+        "z": ["0", "1"],
+        "z_squared": ["-1", "0"],
+        "polynomial_value": ["0", "0"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "complex-arithmetic-replay",
+      "claim": "The listed complex sum and product match real-pair complex arithmetic.",
+      "expected_result": "sat",
+      "validation": "exact_rational_complex_pair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["basic-complex-arithmetic"],
+      "notes": "The validator recomputes pair addition and twisted multiplication exactly."
+    },
+    {
+      "id": "conjugate-norm-replay",
+      "claim": "The listed conjugate and norm-squared product match the fixed complex number.",
+      "expected_result": "sat",
+      "validation": "exact_rational_complex_pair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["conjugate-norm"],
+      "notes": "The validator recomputes conjugation and z*conjugate(z) exactly."
+    },
+    {
+      "id": "quadratic-root-witness",
+      "claim": "The listed complex number i is a root of x^2 + 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_complex_polynomial_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["i-root-of-x2-plus-one"],
+      "notes": "The validator recomputes z^2 and z^2 + 1 as exact real-pair arithmetic."
+    }
+  ]
+}

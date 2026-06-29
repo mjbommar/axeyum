@@ -71,6 +71,7 @@ artifacts/examples/math/
   finite-measure-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
+  complex-algebraic-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -339,6 +340,9 @@ threshold reachability replay.
 [`finite-operator-v0`](../../artifacts/examples/math/finite-operator-v0/)
 validates exact finite-dimensional norm, matrix-operator, and Chebyshev
 recurrence checks.
+[`complex-algebraic-v0`](../../artifacts/examples/math/complex-algebraic-v0/)
+validates exact complex arithmetic, conjugate/norm replay, and a fixed
+polynomial-root witness using real-pair algebra.
 
 Exit criteria:
 

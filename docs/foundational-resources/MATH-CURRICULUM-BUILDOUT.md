@@ -339,6 +339,9 @@ recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
+`artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
+arithmetic, conjugate/norm replay, and a fixed polynomial-root witness using
+real-pair algebra.
 
 Recommended order:
 
@@ -460,8 +463,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10 and Phase M4 items 4-9 have landed for the math seed.
-Continue Phase M4 with `complex-algebraic-v0`.
+Progress: items 1-10 and Phase M4 items 4-10 have landed for the math seed.
+Continue Phase M5 with `docs/learn/math/README.md`.
 
 ## Operating Rules
 

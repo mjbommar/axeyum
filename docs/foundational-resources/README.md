@@ -83,6 +83,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-operator-v0/`](../../artifacts/examples/math/finite-operator-v0/)
   validates exact finite-dimensional norm, matrix-operator, and Chebyshev
   recurrence checks.
+- [`artifacts/examples/math/complex-algebraic-v0/`](../../artifacts/examples/math/complex-algebraic-v0/)
+  validates exact complex arithmetic, conjugate/norm replay, and a fixed
+  polynomial-root witness using real-pair algebra.
 
 Validation commands:
 
@@ -104,6 +107,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
 ## Principle

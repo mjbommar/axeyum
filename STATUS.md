@@ -152,12 +152,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex algebraic pack landed.** Added
+  [`artifacts/examples/math/complex-algebraic-v0/`](artifacts/examples/math/complex-algebraic-v0/)
+  for exact complex arithmetic, conjugate/norm replay, and a fixed
+  polynomial-root witness over real-pair algebra. The foundational example-pack
+  validator now checks exact complex pair addition/multiplication, conjugation,
+  norm-squared products, and `i^2 + 1 = 0` replay. Continue Phase M5 with
+  `docs/learn/math/README.md`.
+
 - **Finite operator pack landed.** Added
   [`artifacts/examples/math/finite-operator-v0/`](artifacts/examples/math/finite-operator-v0/)
   for exact finite-dimensional norm, matrix-operator, and Chebyshev recurrence
   checks. The foundational example-pack validator now checks `l1` triangle
   witnesses, infinity-norm row-sum operator bounds, and finite Chebyshev
-  recurrence values. Continue Phase M4 with `complex-algebraic-v0`.
+  recurrence values.
 
 - **Bounded dynamics pack landed.** Added
   [`artifacts/examples/math/bounded-dynamics-v0/`](artifacts/examples/math/bounded-dynamics-v0/)

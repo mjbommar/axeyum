@@ -672,6 +672,87 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
             fail(f"chebyshev T{index + 1} does not match the recurrence")
 
 
+def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:
+    pair = require_fraction_vector(context, value)
+    if len(pair) != 2:
+        fail(f"{context} must be a two-element real/imaginary pair")
+    return pair[0], pair[1]
+
+
+def complex_add(
+    left: tuple[Fraction, Fraction],
+    right: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction]:
+    return left[0] + right[0], left[1] + right[1]
+
+
+def complex_mul(
+    left: tuple[Fraction, Fraction],
+    right: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction]:
+    return left[0] * right[0] - left[1] * right[1], left[0] * right[1] + left[1] * right[0]
+
+
+def complex_conjugate(value: tuple[Fraction, Fraction]) -> tuple[Fraction, Fraction]:
+    return value[0], -value[1]
+
+
+def complex_norm_squared(value: tuple[Fraction, Fraction]) -> Fraction:
+    return value[0] * value[0] + value[1] * value[1]
+
+
+def validate_complex_algebraic(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    arithmetic = checks["complex-arithmetic-replay"]
+    if arithmetic["expected_result"] != "sat":
+        fail("complex-arithmetic-replay must expect sat")
+    values = single_witness_values(arithmetic, witnesses)
+    z_value = require_complex_pair("complex arithmetic z", values.get("z"))
+    w_value = require_complex_pair("complex arithmetic w", values.get("w"))
+    sum_value = require_complex_pair("complex arithmetic sum", values.get("sum"))
+    product_value = require_complex_pair("complex arithmetic product", values.get("product"))
+    if complex_add(z_value, w_value) != sum_value:
+        fail("complex arithmetic sum does not match z + w")
+    if complex_mul(z_value, w_value) != product_value:
+        fail("complex arithmetic product does not match z * w")
+
+    conjugate = checks["conjugate-norm-replay"]
+    if conjugate["expected_result"] != "sat":
+        fail("conjugate-norm-replay must expect sat")
+    values = single_witness_values(conjugate, witnesses)
+    z_value = require_complex_pair("conjugate norm z", values.get("z"))
+    conjugate_value = require_complex_pair("conjugate norm conjugate", values.get("conjugate"))
+    product_value = require_complex_pair("conjugate norm product", values.get("product"))
+    norm_squared = require_fraction("conjugate norm norm_squared", values.get("norm_squared"))
+    if complex_conjugate(z_value) != conjugate_value:
+        fail("conjugate norm conjugate does not match z")
+    if complex_norm_squared(z_value) != norm_squared:
+        fail("conjugate norm norm_squared does not match z")
+    if complex_mul(z_value, conjugate_value) != product_value:
+        fail("conjugate norm product does not match z * conjugate(z)")
+    if product_value != (norm_squared, Fraction(0)):
+        fail("conjugate norm product must be norm_squared + 0i")
+
+    root = checks["quadratic-root-witness"]
+    if root["expected_result"] != "sat":
+        fail("quadratic-root-witness must expect sat")
+    values = single_witness_values(root, witnesses)
+    z_value = require_complex_pair("quadratic root z", values.get("z"))
+    z_squared = require_complex_pair("quadratic root z_squared", values.get("z_squared"))
+    polynomial_value = require_complex_pair(
+        "quadratic root polynomial_value",
+        values.get("polynomial_value"),
+    )
+    if complex_mul(z_value, z_value) != z_squared:
+        fail("quadratic root z_squared does not match z * z")
+    if complex_add(z_squared, (Fraction(1), Fraction(0))) != polynomial_value:
+        fail("quadratic root polynomial_value does not match z^2 + 1")
+    if polynomial_value != (Fraction(0), Fraction(0)):
+        fail("quadratic root polynomial_value must be exactly 0 + 0i")
+
+
 def require_linear_variables(context: str, value: Any) -> list[str]:
     return require_string_list(context, value)
 
@@ -1463,6 +1544,8 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
     if metadata["id"] == "bounded-dynamics-v0":
         validate_bounded_dynamics(expected)
+    if metadata["id"] == "complex-algebraic-v0":
+        validate_complex_algebraic(expected)
     if metadata["id"] == "coordinate-geometry-v0":
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":

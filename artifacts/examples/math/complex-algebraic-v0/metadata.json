@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "complex-algebraic-v0",
+  "title": "Complex Arithmetic As Real-Pair Algebra",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "curriculum_complex",
+    "curriculum_linear_algebra",
+    "curriculum_polynomials",
+    "field_complex_analysis",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "field_abstract_algebra"
+  ],
+  "field_ids": [
+    "complex_analysis",
+    "linear_algebra",
+    "real_analysis",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "complex",
+    "linear-algebra",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "real-pair algebra",
+    "NRA over exact rational pairs",
+    "bounded polynomial identity"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/complex.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md"
+  ],
+  "expected_results": [
+    "complex-arithmetic-replay",
+    "conjugate-norm-replay",
+    "quadratic-root-witness"
+  ],
+  "graduation_criteria": [
+    "Encode real-pair complex arithmetic as deterministic NRA obligations.",
+    "Replay algebraic complex witnesses through Axeyum model evaluation.",
+    "Add polynomial identity and eigenvalue examples before broadening the complex-analysis slice.",
+    "Keep the fundamental theorem of algebra, holomorphy, contour integration, residues, and analytic continuation marked Lean-horizon."
+  ]
+}

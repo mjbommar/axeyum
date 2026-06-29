@@ -176,6 +176,11 @@ one of:
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.
+13. `artifacts/examples/math/complex-algebraic-v0/`
+   - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
+     `abstract_algebra`.
+   - Checks: real-pair complex arithmetic, conjugate norm replay, fixed
+     polynomial-root witness.
 
 ## Graduation Criteria
 

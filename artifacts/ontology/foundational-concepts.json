@@ -759,7 +759,7 @@
       "example_packs": [
         {
           "id": "complex-algebraic-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
           "notes": "Complex arithmetic as real-pair algebraic constraints."
         }
@@ -783,7 +783,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
         "Generated dashboards currently track planned packs, not replayed pack results.",
         "General theorem content requires Lean reconstruction or another proof-assistant route."
       ],
@@ -1624,7 +1624,7 @@
       "example_packs": [
         {
           "id": "complex-algebraic-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
           "notes": "Complex arithmetic as real-pair algebra before analytic proof horizons."
         }
@@ -1647,7 +1647,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate.",
         "Most general field theorems require Lean/mathlib-scale proof reconstruction."
       ],
