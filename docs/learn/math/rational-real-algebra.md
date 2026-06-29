@@ -157,8 +157,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```
 
-For a fuller trace through exact fraction replay, read
-[End To End: Rational Midpoint](rational-midpoint-end-to-end.md).
+For fuller traces through exact fraction replay and bounded rational
+real-analysis evidence, read
+[End To End: Rational Midpoint](rational-midpoint-end-to-end.md) and
+[End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md).
 
 ## Horizon
 

@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded rational real-analysis end-to-end lesson landed.** Added
+  [`real-analysis-rational-end-to-end.md`](docs/learn/math/real-analysis-rational-end-to-end.md)
+  as the learner-facing trace for the real-analysis-rational pack: exact
+  rational interval/ball replay, bounded epsilon-delta sample replay,
+  polynomial side-condition replay, a checked bad-delta counterexample, and
+  the Lean horizon for fully quantified real-analysis theorem schemas. The
+  lesson is linked from the math learning index plus the rational/real and
+  analysis/topology paths.
+
 - **Complex-algebraic end-to-end lesson landed.** Added
   [`complex-algebraic-end-to-end.md`](docs/learn/math/complex-algebraic-end-to-end.md)
   as the learner-facing trace for the complex-algebraic pack: exact rational
