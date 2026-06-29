@@ -581,6 +581,118 @@ def validate_finite_fields(expected: dict[str, Any]) -> None:
         fail(f"element {element} unexpectedly has an inverse modulo {modulus}")
 
 
+def require_cayley_table(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], str, dict[tuple[str, str], str]]:
+    carrier = require_string_list(f"{context}.carrier", values.get("carrier"))
+    carrier_set = set(carrier)
+    identity = values.get("identity")
+    require_string(f"{context}.identity", identity)
+    if identity not in carrier_set:
+        fail(f"{context}.identity must be in the carrier")
+    raw_table = values.get("table")
+    if not isinstance(raw_table, list) or len(raw_table) != len(carrier):
+        fail(f"{context}.table must have one row per carrier element")
+    operation: dict[tuple[str, str], str] = {}
+    for row_index, row in enumerate(raw_table):
+        if not isinstance(row, list) or len(row) != len(carrier):
+            fail(f"{context}.table[{row_index}] must have one entry per carrier element")
+        left = carrier[row_index]
+        for col_index, result in enumerate(row):
+            require_string(f"{context}.table[{row_index}][{col_index}]", result)
+            if result not in carrier_set:
+                fail(f"{context}.table[{row_index}][{col_index}] is outside the carrier")
+            operation[(left, carrier[col_index])] = result
+    return carrier, identity, operation
+
+
+def table_op(operation: dict[tuple[str, str], str], left: str, right: str) -> str:
+    return operation[(left, right)]
+
+
+def group_axiom_failures(
+    carrier: list[str],
+    identity: str,
+    operation: dict[tuple[str, str], str],
+) -> list[str]:
+    failures: list[str] = []
+    for item in carrier:
+        if table_op(operation, identity, item) != item:
+            failures.append(f"left identity fails for {item}")
+        if table_op(operation, item, identity) != item:
+            failures.append(f"right identity fails for {item}")
+    for item in carrier:
+        if not any(
+            table_op(operation, item, candidate) == identity
+            and table_op(operation, candidate, item) == identity
+            for candidate in carrier
+        ):
+            failures.append(f"inverse fails for {item}")
+    for left in carrier:
+        for middle in carrier:
+            for right in carrier:
+                lhs = table_op(operation, table_op(operation, left, middle), right)
+                rhs = table_op(operation, left, table_op(operation, middle, right))
+                if lhs != rhs:
+                    failures.append(f"associativity fails for {(left, middle, right)}")
+                    return failures
+    return failures
+
+
+def require_inverse_table(
+    context: str,
+    value: Any,
+    carrier: list[str],
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    carrier_set = set(carrier)
+    if set(value) != carrier_set:
+        fail(f"{context} must cover exactly the carrier")
+    inverses: dict[str, str] = {}
+    for item, inverse in value.items():
+        require_string(f"{context}.{item}", inverse)
+        if inverse not in carrier_set:
+            fail(f"{context}.{item} must be in the carrier")
+        inverses[item] = inverse
+    return inverses
+
+
+def validate_finite_groups(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    group_table = checks["z4-addition-group-table"]
+    if group_table["expected_result"] != "sat":
+        fail("z4-addition-group-table must expect sat")
+    values = single_witness_values(group_table, witnesses)
+    carrier, identity, operation = require_cayley_table("z4 addition", values)
+    failures = group_axiom_failures(carrier, identity, operation)
+    if failures:
+        fail(f"z4-addition-group-table failed group axioms: {failures[0]}")
+
+    inverse_check = checks["z4-inverse-table"]
+    if inverse_check["expected_result"] != "sat":
+        fail("z4-inverse-table must expect sat")
+    values = single_witness_values(inverse_check, witnesses)
+    carrier, identity, operation = require_cayley_table("z4 inverse table", values)
+    inverses = require_inverse_table("z4 inverses", values.get("inverses"), carrier)
+    for item, inverse in inverses.items():
+        if table_op(operation, item, inverse) != identity:
+            fail(f"z4 inverse table has bad right inverse for {item}")
+        if table_op(operation, inverse, item) != identity:
+            fail(f"z4 inverse table has bad left inverse for {item}")
+
+    bad_group = checks["subtraction-mod3-non-group"]
+    if bad_group["expected_result"] != "unsat":
+        fail("subtraction-mod3-non-group must expect unsat")
+    values = single_witness_values(bad_group, witnesses)
+    carrier, identity, operation = require_cayley_table("subtraction mod 3", values)
+    if not group_axiom_failures(carrier, identity, operation):
+        fail("subtraction-mod3-non-group unexpectedly satisfies the group axioms")
+
+
 def require_counting_int(context: str, value: Any) -> int:
     item = require_int(context, value)
     if item < 0:
@@ -1947,6 +2059,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_sets(expected)
     if metadata["id"] == "finite-fields-v0":
         validate_finite_fields(expected)
+    if metadata["id"] == "finite-groups-v0":
+        validate_finite_groups(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
     if metadata["id"] == "graph-coloring-v0":

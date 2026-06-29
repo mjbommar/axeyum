@@ -275,6 +275,8 @@ the first fixed-degree polynomial core curriculum pack lives under
 `artifacts/examples/math/polynomial-identities-v0/`;
 the first finite-counting core curriculum pack lives under
 `artifacts/examples/math/counting-v0/`;
+the first finite-group core-structure pack lives under
+`artifacts/examples/math/finite-groups-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
@@ -314,8 +316,9 @@ now validates exact coefficient identity replay, a factor-theorem root witness,
 and a checked false rational-root rejection. `counting-v0` now validates fixed
 permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
 refutation. The recommended Phase M3 pack list has landed; continue by closing
-the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding the
-next core-structure packs (`finite-groups-v0` / `finite-rings-v0`).
+the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+`finite-rings-v0`. `finite-groups-v0` now validates finite Cayley-table group
+axioms, inverse-table replay, and a checked non-group operation.
 
 Recommended order:
 
@@ -546,8 +549,7 @@ structures, and analysis/topology horizons. Phase M6 now has cookbook links from
 all current non-template math example packs. Phase M7 now has generated
 pack-level proof-gap rows and a normal foundational-resource check hook.
 Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof
-gap or by adding the next algebraic core-structure packs
-(`finite-groups-v0` / `finite-rings-v0`).
+gap or by adding `finite-rings-v0` as the next algebraic core-structure pack.
 
 ## Operating Rules
 

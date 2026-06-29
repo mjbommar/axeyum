@@ -10,6 +10,7 @@ Concept rows:
 
 Example packs:
 
+- [finite-groups-v0](../../../artifacts/examples/math/finite-groups-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [finite-fields-v0](../../../artifacts/examples/math/finite-fields-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
@@ -17,20 +18,30 @@ Example packs:
 
 ## What Axeyum Checks
 
-The current algebra path is finite and exact. It checks CRT witnesses, modular
-inverses, composite non-units with no inverse, and a Fermat-style finite unit
-enumeration. The finite-fields pack adds a complete inverse table for `F_7`,
-exhaustive distributivity checking in `F_5`, and a `Z/6Z` non-field contrast.
-The polynomial pack adds exact coefficient replay, factor-theorem witnesses, and
-fixed false-root rejection. The complex pack adds algebraic real-pair arithmetic
-and a fixed polynomial-root witness.
+The current algebra path is finite and exact. It checks finite group Cayley
+tables, CRT witnesses, modular inverses, composite non-units with no inverse,
+and a Fermat-style finite unit enumeration. The finite-fields pack adds a
+complete inverse table for `F_7`, exhaustive distributivity checking in `F_5`,
+and a `Z/6Z` non-field contrast. The polynomial pack adds exact coefficient
+replay, factor-theorem witnesses, and fixed false-root rejection. The complex
+pack adds algebraic real-pair arithmetic and a fixed polynomial-root witness.
 
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
 
 ## Encode / Check Walkthrough
 
-Start with a witness small enough to check by hand:
+Start with a finite group table small enough to check by hand:
+
+```text
+Z/4Z under addition
+0 + 1 = 1
+1 + 3 = 0
+2 + 2 = 0
+```
+
+The `finite-groups-v0` pack checks closure, identity, inverses, and
+associativity for the full Cayley table. Then move to a modular inverse witness:
 
 ```text
 3 * 5 = 15 == 1 mod 7
@@ -69,6 +80,7 @@ i^2 + 1 = [-1, 0] + [1, 0] = [0, 0]
 Run the checks from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
@@ -78,6 +90,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 ## Horizon
 
 General group, ring, field, module, and algebraic-number-theory theorems need
-Lean-backed concept rows. Near-term resource gaps are `finite-groups-v0`,
-`finite-rings-v0`, richer polynomial factorization packs, and stronger BV/CNF
-evidence for finite-field and fixed-degree polynomial universal rows.
+Lean-backed concept rows. Near-term resource gaps are `finite-rings-v0`, richer
+polynomial factorization packs, and stronger BV/CNF evidence for finite group,
+finite-field, and fixed-degree polynomial universal rows.

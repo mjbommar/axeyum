@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-groups-v0",
+  "witnesses": [
+    {
+      "id": "z4-addition",
+      "description": "The Cayley table for Z/4Z under addition.",
+      "values": {
+        "carrier": ["0", "1", "2", "3"],
+        "identity": "0",
+        "table": [
+          ["0", "1", "2", "3"],
+          ["1", "2", "3", "0"],
+          ["2", "3", "0", "1"],
+          ["3", "0", "1", "2"]
+        ],
+        "inverses": {
+          "0": "0",
+          "1": "3",
+          "2": "2",
+          "3": "1"
+        }
+      }
+    },
+    {
+      "id": "subtraction-mod3",
+      "description": "Subtraction modulo 3, which is not a group operation.",
+      "values": {
+        "carrier": ["0", "1", "2"],
+        "identity": "0",
+        "table": [
+          ["0", "2", "1"],
+          ["1", "0", "2"],
+          ["2", "1", "0"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "z4-addition-group-table",
+      "claim": "The listed Z/4Z addition table satisfies the finite group axioms.",
+      "expected_result": "sat",
+      "validation": "finite_group_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-addition"],
+      "notes": "The validator checks closure, identity, inverses, and associativity over the full table."
+    },
+    {
+      "id": "z4-inverse-table",
+      "claim": "The listed inverse table is correct for Z/4Z under addition.",
+      "expected_result": "sat",
+      "validation": "finite_group_inverse_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-addition"],
+      "notes": "The validator checks every inverse entry multiplies on both sides to the identity."
+    },
+    {
+      "id": "subtraction-mod3-non-group",
+      "claim": "The listed subtraction modulo 3 table is a group operation with identity 0.",
+      "expected_result": "unsat",
+      "validation": "finite_group_axiom_replay",
+      "proof_status": "checked",
+      "witnesses": ["subtraction-mod3"],
+      "notes": "The validator recomputes the group axioms and confirms the fixed operation fails them."
+    }
+  ]
+}
