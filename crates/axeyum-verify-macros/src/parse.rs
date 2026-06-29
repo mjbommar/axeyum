@@ -1143,10 +1143,51 @@ impl Lowerer {
                     }
                 }
             }
+            // `recv.checked_{add,sub,mul}(arg).unwrap()` (or `.expect(..)`) is
+            // exactly the plain panicking op: checked-then-unwrap panics iff the
+            // op overflows, which is what `BinOp::{Add,Sub,Mul}` already records.
+            if let Expr::MethodCall(inner) = &*mc.receiver {
+                if let Some(op) = match inner.method.to_string().as_str() {
+                    "checked_add" => Some("Add"),
+                    "checked_sub" => Some("Sub"),
+                    "checked_mul" => Some("Mul"),
+                    _ => None,
+                } {
+                    if inner.args.len() != 1 {
+                        return Err(syn::Error::new(
+                            inner.span(),
+                            "axeyum::verify: `checked_*` takes exactly one argument",
+                        ));
+                    }
+                    let (lhs, lty) = self.lower_expr(&inner.receiver)?;
+                    let arg = inner.args.first().unwrap();
+                    let (rhs, _rty) = if is_untyped_int_lit(arg) && lty.width.is_some() {
+                        if let Expr::Lit(el) = arg {
+                            lower_lit_as(&el.lit, lty, el.span())?
+                        } else {
+                            self.lower_expr(arg)?
+                        }
+                    } else {
+                        self.lower_expr(arg)?
+                    };
+                    let op_ident = format_ident!("{}", op);
+                    return Ok((
+                        quote! {
+                            axeyum_verify::ast::Expr::Binary {
+                                op: axeyum_verify::ast::BinOp::#op_ident,
+                                lhs: Box::new(#lhs),
+                                rhs: Box::new(#rhs),
+                            }
+                        },
+                        lty,
+                    ));
+                }
+            }
             return Err(syn::Error::new(
                 mc.span(),
                 "axeyum::verify: `unwrap`/`expect` is supported only on the modeled \
-                 `opt(is_some, value)` Option in Phase 1 (see STATUS.md)",
+                 `opt(is_some, value)` Option or a `checked_{add,sub,mul}(..)` chain \
+                 in Phase 1 (see STATUS.md)",
             ));
         }
         // Wrapping arithmetic `recv.wrapping_{add,sub,mul}(arg)` → a modular
