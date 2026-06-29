@@ -28,6 +28,7 @@ where Lean reconstruction is complete or partial.
 First recipe files have landed:
 
 - [QF_BV Bit-Blast Evidence](recipes/qf-bv-bitblast.md)
+- [Boolean CNF DRAT/LRAT Evidence](recipes/boolean-cnf-lrat.md)
 - [QF_UF Congruence And Alethe Evidence](recipes/qf-uf-congruence-alethe.md)
 - [QF_LRA Farkas Evidence](recipes/qf-lra-farkas.md)
 - [Array Read-Over-Write Axiom Evidence](recipes/array-row-axiom.md)
@@ -79,6 +80,9 @@ Required sections:
 ## Initial Recipes
 
 ### R0: Boolean CNF + LRAT
+
+Status: first recipe landed as
+[Boolean CNF DRAT/LRAT Evidence](recipes/boolean-cnf-lrat.md).
 
 Purpose: smallest proof object and checker story.
 

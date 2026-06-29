@@ -23,6 +23,7 @@ docs/proof-cookbook/
   ROADMAP.md
   recipes/
     qf-bv-bitblast.md
+    boolean-cnf-lrat.md
     qf-uf-congruence-alethe.md
     qf-lra-farkas.md
     array-row-axiom.md
@@ -37,13 +38,13 @@ The detailed implementation plan lives in [ROADMAP.md](ROADMAP.md).
 First recipes now landed:
 
 - [QF_BV Bit-Blast Evidence](recipes/qf-bv-bitblast.md)
+- [Boolean CNF DRAT/LRAT Evidence](recipes/boolean-cnf-lrat.md)
 - [QF_UF Congruence And Alethe Evidence](recipes/qf-uf-congruence-alethe.md)
 - [QF_LRA Farkas Evidence](recipes/qf-lra-farkas.md)
 - [Array Read-Over-Write Axiom Evidence](recipes/array-row-axiom.md)
 
 Remaining initial candidates:
 
-- Boolean CNF unsat with LRAT.
 - QF_LIA integer infeasibility through a Diophantine certificate.
 - Datatype constructor contradiction through structural evidence.
 

@@ -401,6 +401,10 @@ Exit criteria:
 
 ### Phase M6: Proof Cookbook Integration
 
+Status: first integration increment landed. The Boolean CNF DRAT/LRAT recipe
+now exists in the Proof Certificate Cookbook and is linked from the graph
+coloring and proof-by-refutation example packs.
+
 Deliverables:
 
 - Proof recipe links from each example pack.
@@ -478,7 +482,8 @@ scaffold plus first encode/check walkthrough layer have landed for the math
 seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
 linear algebra/optimization, probability/statistics, finite structures, and
 analysis/topology horizons. Continue Phase M6 by linking proof-cookbook recipes
-from example packs and adding missing recipes where repeated proof gaps appear.
+from the remaining example packs and adding missing recipes where repeated
+proof gaps appear.
 
 ## Operating Rules
 

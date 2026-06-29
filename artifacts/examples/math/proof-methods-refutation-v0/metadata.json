@@ -19,6 +19,7 @@
     "docs/curriculum/00-foundations/propositional-logic.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/README.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
   ],
   "expected_results": ["php-2-2-sat", "php-3-2-unsat"],

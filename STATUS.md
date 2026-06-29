@@ -155,6 +155,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof cookbook Boolean CNF recipe landed.** Added
+  [`docs/proof-cookbook/recipes/boolean-cnf-lrat.md`](docs/proof-cookbook/recipes/boolean-cnf-lrat.md)
+  and linked it from `graph-coloring-v0` and
+  `proof-methods-refutation-v0`. Continue Phase M6 by linking cookbook recipes
+  from the remaining example packs and adding missing recipes for repeated
+  evidence gaps.
+
 - **Phase M5 end-to-end lesson coverage completed.** Added finite
   topology/measure and bounded dynamics/operator end-to-end lessons under
   [`docs/learn/math/`](docs/learn/math/), and linked them from the finite

@@ -87,5 +87,6 @@ trusted small checking -> edge-by-edge replay
 
 For the finite `unsat` rows, the current trusted checker is exhaustive
 enumeration. The next graduation step is to add a SAT/CNF encoding and a small
-checked proof artifact for non-colorability claims, then link that proof recipe
-from the proof cookbook.
+checked proof artifact for non-colorability claims using the
+[Boolean CNF DRAT/LRAT Evidence](../../proof-cookbook/recipes/boolean-cnf-lrat.md)
+recipe.
