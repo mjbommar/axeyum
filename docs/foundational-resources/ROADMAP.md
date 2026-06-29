@@ -88,6 +88,11 @@ artifacts/examples/math/
   polynomial-identities-v0/
   counting-v0/
   graph-coloring-v0/
+  graph-reachability-v0/
+  graph-search-runtime-v0/
+  graph-matching-v0/
+  graph-d-separation-v0/
+  graph-cut-v0/
   finite-probability-v0/
   descriptive-statistics-v0/
   linear-optimization-v0/
@@ -412,6 +417,10 @@ exhaustive two-colorability refutation for `K3`.
 [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/)
 validates finite BFS shortest-distance replay, deterministic DFS traversal
 replay, disconnected no-path refutation, and edge-cut separation replay.
+[`graph-search-runtime-v0`](../../artifacts/examples/math/graph-search-runtime-v0/)
+validates finite BFS/DFS target-discovery cost counters, shortcut-tail family
+replay, checked rejection of a false DFS cost bound, and an
+asymptotic-runtime Lean-horizon row.
 [`graph-matching-v0`](../../artifacts/examples/math/graph-matching-v0/)
 validates finite matching witnesses, invalid-overlap rejection, augmenting-path
 flip replay, and a perfect-matching obstruction by exhaustive enumeration.

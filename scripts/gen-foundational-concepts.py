@@ -172,7 +172,7 @@ FIELD_PACKS = {
     "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, and proof-object lessons."),
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, and cardinality checks."),
     "discrete_math": ("counting-v0", "Finite counting and combinatorial witness checks."),
-    "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, matching, cuts, and d-separation."),
+    "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."),

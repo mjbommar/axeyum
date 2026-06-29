@@ -144,6 +144,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/graph-reachability-v0/`](../../artifacts/examples/math/graph-reachability-v0/)
   validates finite BFS shortest-distance replay, deterministic DFS traversal
   replay, disconnected no-path refutation, and edge-cut separation replay.
+- [`artifacts/examples/math/graph-search-runtime-v0/`](../../artifacts/examples/math/graph-search-runtime-v0/)
+  validates finite BFS/DFS target-discovery cost counters, shortcut-tail
+  family replay, checked rejection of a false DFS cost bound, and an
+  asymptotic-runtime Lean-horizon row.
 - [`artifacts/examples/math/graph-matching-v0/`](../../artifacts/examples/math/graph-matching-v0/)
   validates finite matching witnesses, invalid-overlap rejection,
   augmenting-path flip replay, and a perfect-matching obstruction by
@@ -254,6 +258,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-search-runtime-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0

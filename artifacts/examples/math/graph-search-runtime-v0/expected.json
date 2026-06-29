@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "pack_id": "graph-search-runtime-v0",
+  "witnesses": [
+    {
+      "id": "ordered-shortcut-tail-graph",
+      "description": "A finite graph where BFS reaches the target quickly and DFS follows a long ordered tail first.",
+      "values": {
+        "vertices": ["s", "a1", "a2", "a3", "a4", "t"],
+        "edges": [
+          ["s", "a1"],
+          ["s", "t"],
+          ["a1", "a2"],
+          ["a2", "a3"],
+          ["a3", "a4"]
+        ],
+        "source": "s",
+        "target": "t",
+        "shortest_distance": 1,
+        "bfs_order_until_target": ["s", "a1", "t"],
+        "bfs_visited_until_target": 3,
+        "dfs_order_until_target": ["s", "a1", "a2", "a3", "a4", "t"],
+        "dfs_visited_until_target": 6
+      }
+    },
+    {
+      "id": "shortcut-tail-family",
+      "description": "Generated shortcut-tail graphs showing finite visited-count growth.",
+      "values": {
+        "rows": [
+          {
+            "tail_length": 2,
+            "vertex_count": 4,
+            "shortest_distance": 1,
+            "bfs_visited_until_target": 3,
+            "dfs_visited_until_target": 4
+          },
+          {
+            "tail_length": 4,
+            "vertex_count": 6,
+            "shortest_distance": 1,
+            "bfs_visited_until_target": 3,
+            "dfs_visited_until_target": 6
+          },
+          {
+            "tail_length": 8,
+            "vertex_count": 10,
+            "shortest_distance": 1,
+            "bfs_visited_until_target": 3,
+            "dfs_visited_until_target": 10
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "bfs-nearest-target-witness",
+      "claim": "BFS reaches the target through the direct shortcut after three popped vertices.",
+      "expected_result": "sat",
+      "validation": "finite_bfs_runtime_replay",
+      "proof_status": "checked",
+      "witnesses": ["ordered-shortcut-tail-graph"],
+      "notes": "The validator recomputes BFS pop order and the shortest-distance map."
+    },
+    {
+      "id": "dfs-long-tail-target-witness",
+      "claim": "Deterministic DFS follows the ordered tail before reaching the shortcut target.",
+      "expected_result": "sat",
+      "validation": "finite_dfs_runtime_replay",
+      "proof_status": "checked",
+      "witnesses": ["ordered-shortcut-tail-graph"],
+      "notes": "The validator recomputes DFS preorder and the target discovery count."
+    },
+    {
+      "id": "shortcut-tail-family-costs",
+      "claim": "The finite shortcut-tail family has constant BFS visited count and growing DFS visited count for the listed sizes.",
+      "expected_result": "sat",
+      "validation": "finite_graph_search_family_replay",
+      "proof_status": "checked",
+      "witnesses": ["shortcut-tail-family"],
+      "notes": "The validator generates each listed graph and recomputes BFS/DFS cost counters."
+    },
+    {
+      "id": "bad-dfs-cost-bound-rejected",
+      "claim": "DFS reaches the target in at most three visits on the length-four shortcut-tail graph.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_dfs_cost_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "tail_length": 4,
+        "source": "s",
+        "target": "t",
+        "claimed_upper_bound": 3,
+        "actual_dfs_visited_until_target": 6,
+        "actual_bfs_visited_until_target": 3
+      },
+      "notes": "The validator rejects the bound because deterministic DFS visits six vertices before reaching the target."
+    },
+    {
+      "id": "asymptotic-search-runtime-lean-horizon",
+      "claim": "Asymptotic BFS/DFS runtime claims require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Asymptotic BFS/DFS complexity, graph-search lower bounds, average-case runtime, heuristic search, and parallel search",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; asymptotic runtime theory remains a proof-assistant horizon."
+    }
+  ]
+}

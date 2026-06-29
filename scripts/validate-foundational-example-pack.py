@@ -597,6 +597,49 @@ def deterministic_dfs_order(vertices: list[str], edges: list[tuple[str, str]], s
     return order
 
 
+def bfs_pop_order_until_target(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+) -> list[str]:
+    adjacency = graph_adjacency(vertices, edges)
+    seen = {source}
+    queue: deque[str] = deque([source])
+    order: list[str] = []
+    while queue:
+        vertex = queue.popleft()
+        order.append(vertex)
+        if vertex == target:
+            return order
+        for neighbor in adjacency[vertex]:
+            if neighbor not in seen:
+                seen.add(neighbor)
+                queue.append(neighbor)
+    return order
+
+
+def dfs_order_until_target(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+) -> list[str]:
+    order = deterministic_dfs_order(vertices, edges, source)
+    if target not in order:
+        return order
+    return order[: order.index(target) + 1]
+
+
+def shortcut_tail_graph(tail_length: int) -> tuple[list[str], list[tuple[str, str]]]:
+    if tail_length <= 0:
+        fail("shortcut-tail graph tail_length must be positive")
+    vertices = ["s"] + [f"a{index}" for index in range(1, tail_length + 1)] + ["t"]
+    edges = [("s", "a1"), ("s", "t")]
+    edges.extend((f"a{index}", f"a{index + 1}") for index in range(1, tail_length))
+    return vertices, edges
+
+
 def path_is_valid(path: list[str], edges: list[tuple[str, str]]) -> bool:
     edge_set = graph_edge_set(edges)
     return all(tuple(sorted((left, right))) in edge_set for left, right in zip(path, path[1:]))
@@ -713,6 +756,156 @@ def validate_graph_reachability(expected: dict[str, Any]) -> None:
         fail("edge-cut-separates original graph must have an s-t path")
     if target in shortest_distances(vertices, remove_edges(edges, cut_edges), source):
         fail("edge-cut-separates cut edges do not separate source and target")
+
+
+def require_positive_runtime_int(context: str, value: Any) -> int:
+    integer = require_int(context, value)
+    if integer <= 0:
+        fail(f"{context} must be positive")
+    return integer
+
+
+def validate_graph_search_runtime(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    bfs = checks["bfs-nearest-target-witness"]
+    if bfs["expected_result"] != "sat" or bfs.get("proof_status") != "checked":
+        fail("bfs-nearest-target-witness must be a checked sat row")
+    values = single_witness_values(bfs, witnesses)
+    vertices, edges = require_finite_graph("BFS runtime graph", values)
+    source = require_graph_vertex("BFS runtime source", values.get("source"), vertices)
+    target = require_graph_vertex("BFS runtime target", values.get("target"), vertices)
+    shortest_distance = require_int("BFS runtime shortest_distance", values.get("shortest_distance"))
+    if shortest_distance < 0:
+        fail("BFS runtime shortest_distance must be nonnegative")
+    distances = shortest_distances(vertices, edges, source)
+    if distances.get(target) != shortest_distance:
+        fail("bfs-nearest-target-witness shortest_distance is incorrect")
+    listed_bfs_order = require_string_list("BFS order until target", values.get("bfs_order_until_target"))
+    computed_bfs_order = bfs_pop_order_until_target(vertices, edges, source, target)
+    if computed_bfs_order != listed_bfs_order:
+        fail("bfs-nearest-target-witness BFS order is incorrect")
+    bfs_visits = require_positive_runtime_int(
+        "BFS visited_until_target",
+        values.get("bfs_visited_until_target"),
+    )
+    if len(computed_bfs_order) != bfs_visits:
+        fail("bfs-nearest-target-witness visited count does not match BFS order")
+    if not computed_bfs_order or computed_bfs_order[-1] != target:
+        fail("bfs-nearest-target-witness BFS order must end at the target")
+
+    dfs = checks["dfs-long-tail-target-witness"]
+    if dfs["expected_result"] != "sat" or dfs.get("proof_status") != "checked":
+        fail("dfs-long-tail-target-witness must be a checked sat row")
+    values = single_witness_values(dfs, witnesses)
+    vertices, edges = require_finite_graph("DFS runtime graph", values)
+    source = require_graph_vertex("DFS runtime source", values.get("source"), vertices)
+    target = require_graph_vertex("DFS runtime target", values.get("target"), vertices)
+    listed_dfs_order = require_string_list("DFS order until target", values.get("dfs_order_until_target"))
+    computed_dfs_order = dfs_order_until_target(vertices, edges, source, target)
+    if computed_dfs_order != listed_dfs_order:
+        fail("dfs-long-tail-target-witness DFS order is incorrect")
+    dfs_visits = require_positive_runtime_int(
+        "DFS visited_until_target",
+        values.get("dfs_visited_until_target"),
+    )
+    if len(computed_dfs_order) != dfs_visits:
+        fail("dfs-long-tail-target-witness visited count does not match DFS order")
+    bfs_visits = require_positive_runtime_int(
+        "DFS row BFS visited_until_target",
+        values.get("bfs_visited_until_target"),
+    )
+    computed_bfs_order = bfs_pop_order_until_target(vertices, edges, source, target)
+    if len(computed_bfs_order) != bfs_visits:
+        fail("dfs-long-tail-target-witness BFS comparison count is incorrect")
+    if dfs_visits <= bfs_visits:
+        fail("dfs-long-tail-target-witness must witness DFS visiting more vertices than BFS")
+    if not computed_dfs_order or computed_dfs_order[-1] != target:
+        fail("dfs-long-tail-target-witness DFS order must end at the target")
+
+    family = checks["shortcut-tail-family-costs"]
+    if family["expected_result"] != "sat" or family.get("proof_status") != "checked":
+        fail("shortcut-tail-family-costs must be a checked sat row")
+    values = single_witness_values(family, witnesses)
+    rows = values.get("rows")
+    if not isinstance(rows, list) or not rows:
+        fail("shortcut-tail-family-costs rows must be a non-empty list")
+    seen_lengths: set[int] = set()
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            fail(f"shortcut-tail-family-costs rows[{index}] must be an object")
+        tail_length = require_positive_runtime_int(
+            f"shortcut-tail-family-costs rows[{index}].tail_length",
+            row.get("tail_length"),
+        )
+        if tail_length in seen_lengths:
+            fail("shortcut-tail-family-costs repeats a tail_length")
+        seen_lengths.add(tail_length)
+        vertices, edges = shortcut_tail_graph(tail_length)
+        vertex_count = require_positive_runtime_int(
+            f"shortcut-tail-family-costs rows[{index}].vertex_count",
+            row.get("vertex_count"),
+        )
+        shortest_distance = require_int(
+            f"shortcut-tail-family-costs rows[{index}].shortest_distance",
+            row.get("shortest_distance"),
+        )
+        bfs_visits = require_positive_runtime_int(
+            f"shortcut-tail-family-costs rows[{index}].bfs_visited_until_target",
+            row.get("bfs_visited_until_target"),
+        )
+        dfs_visits = require_positive_runtime_int(
+            f"shortcut-tail-family-costs rows[{index}].dfs_visited_until_target",
+            row.get("dfs_visited_until_target"),
+        )
+        if len(vertices) != vertex_count:
+            fail("shortcut-tail-family-costs vertex_count is incorrect")
+        distances = shortest_distances(vertices, edges, "s")
+        if distances.get("t") != shortest_distance:
+            fail("shortcut-tail-family-costs shortest_distance is incorrect")
+        if len(bfs_pop_order_until_target(vertices, edges, "s", "t")) != bfs_visits:
+            fail("shortcut-tail-family-costs BFS visit count is incorrect")
+        if len(dfs_order_until_target(vertices, edges, "s", "t")) != dfs_visits:
+            fail("shortcut-tail-family-costs DFS visit count is incorrect")
+        if dfs_visits != tail_length + 2:
+            fail("shortcut-tail-family-costs DFS visit count must equal tail_length + 2")
+
+    bad = checks["bad-dfs-cost-bound-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-dfs-cost-bound-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    tail_length = require_positive_runtime_int("bad DFS tail_length", data.get("tail_length"))
+    vertices, edges = shortcut_tail_graph(tail_length)
+    source = require_graph_vertex("bad DFS source", data.get("source"), vertices)
+    target = require_graph_vertex("bad DFS target", data.get("target"), vertices)
+    claimed_upper_bound = require_positive_runtime_int(
+        "bad DFS claimed_upper_bound",
+        data.get("claimed_upper_bound"),
+    )
+    actual_dfs = require_positive_runtime_int(
+        "bad DFS actual_dfs_visited_until_target",
+        data.get("actual_dfs_visited_until_target"),
+    )
+    actual_bfs = require_positive_runtime_int(
+        "bad DFS actual_bfs_visited_until_target",
+        data.get("actual_bfs_visited_until_target"),
+    )
+    if len(dfs_order_until_target(vertices, edges, source, target)) != actual_dfs:
+        fail("bad-dfs-cost-bound-rejected actual DFS count is incorrect")
+    if len(bfs_pop_order_until_target(vertices, edges, source, target)) != actual_bfs:
+        fail("bad-dfs-cost-bound-rejected actual BFS count is incorrect")
+    if actual_dfs <= claimed_upper_bound:
+        fail("bad-dfs-cost-bound-rejected claimed upper bound unexpectedly holds")
+
+    horizon = checks["asymptotic-search-runtime-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("asymptotic-search-runtime-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("asymptotic-search-runtime-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("asymptotic search target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("asymptotic search future_checker", data.get("future_checker"))
 
 
 def require_graph_edge_list(
@@ -7843,6 +8036,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_graph_matching(expected)
     if metadata["id"] == "graph-reachability-v0":
         validate_graph_reachability(expected)
+    if metadata["id"] == "graph-search-runtime-v0":
+        validate_graph_search_runtime(expected)
     if metadata["id"] == "induction-obligations-v0":
         validate_induction_obligations(expected)
     if metadata["id"] == "integer-lia-v0":

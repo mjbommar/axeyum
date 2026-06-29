@@ -1918,19 +1918,19 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate combinatorics. First Axeyum slice: Coloring, reachability, matching, cuts, small counterexample graphs, causal d-separation",
+      "summary": "Core undergraduate / graduate combinatorics. First Axeyum slice: Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Coloring, reachability, matching, cuts, small counterexample graphs, causal d-separation"
+        "Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation"
       ],
       "example_packs": [
         {
           "id": "graph-coloring-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-coloring-v0",
-          "notes": "SAT colorings, non-colorability, reachability, matching, cuts, and d-separation."
+          "notes": "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."
         }
       ],
       "proof_routes": [

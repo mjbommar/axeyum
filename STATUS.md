@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph search runtime foundations pack landed.** Added
+  [`graph-search-runtime-v0`](artifacts/examples/math/graph-search-runtime-v0/README.md)
+  as the finite traversal-cost bridge for the BFS-vs-DFS runtime gap in the
+  math field spine. The pack validates BFS and DFS target-discovery
+  visited-count replay, shortcut-tail family counters, checked rejection of a
+  false DFS cost bound, and an asymptotic graph-search Lean-horizon row. The
+  foundational example-pack validator now checks BFS pop order, DFS preorder,
+  generated shortcut-tail graphs, and finite traversal-cost counters.
+
 - **Finite Chebyshev-system foundations pack landed.** Added
   [`finite-chebyshev-systems-v0`](artifacts/examples/math/finite-chebyshev-systems-v0/README.md)
   as the exact finite bridge for the Chebyshev-space gap in the math field
@@ -9594,6 +9603,16 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-29** — **Graph search runtime pack landed.**
+  Added
+  [`artifacts/examples/math/graph-search-runtime-v0/`](artifacts/examples/math/graph-search-runtime-v0/)
+  with finite BFS/DFS target-discovery cost counters, shortcut-tail family
+  replay, checked rejection of a false DFS cost bound, and an asymptotic
+  graph-search Lean-horizon row. Extended
+  [`validate-foundational-example-pack.py`](scripts/validate-foundational-example-pack.py)
+  to recompute BFS pop order, DFS preorder, generated shortcut-tail graphs,
+  and visited-count counters from raw finite graph data.
 
 - **2026-06-29** — **Finite Chebyshev-system pack landed.**
   Added

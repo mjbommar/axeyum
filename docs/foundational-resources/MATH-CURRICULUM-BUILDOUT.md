@@ -206,7 +206,7 @@ losing the curriculum anchor.
 
 | Field | Curriculum Anchor | First New Resource |
 |---|---|---|
-| `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, matching, cuts, and d-separation. |
+| `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, continuous maps, compactness, and connectedness finite checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
@@ -444,6 +444,10 @@ and a tiny exhaustive non-colorability check.
 `artifacts/examples/math/graph-reachability-v0/` now validates finite BFS
 shortest-distance replay, deterministic DFS traversal replay, disconnected
 no-path refutation, and edge-cut separation replay.
+`artifacts/examples/math/graph-search-runtime-v0/` now validates finite BFS and
+DFS target-discovery cost counters, shortcut-tail family replay, checked
+rejection of a false DFS cost bound, and an asymptotic search-runtime
+Lean-horizon row.
 `artifacts/examples/math/graph-matching-v0/` now validates finite matching
 witness replay, invalid-overlap rejection, augmenting-path flip replay, and a
 perfect-matching obstruction by exhaustive enumeration.
@@ -551,10 +555,11 @@ and checked rejection of a false p-value.
 Recommended order:
 
 1. Graph resources landed: `graph-coloring-v0`, `graph-reachability-v0`,
-   `graph-matching-v0`, `graph-d-separation-v0`, and `graph-cut-v0` validate
-   SAT colorings, non-colorability, finite reachability, traversal traces,
-   cut separation, matching witnesses, augmenting paths, finite DAG
-   d-separation, and minimum cut certificates.
+   `graph-search-runtime-v0`, `graph-matching-v0`,
+   `graph-d-separation-v0`, and `graph-cut-v0` validate SAT colorings,
+   non-colorability, finite reachability, traversal traces, finite search
+   cost counters, cut separation, matching witnesses, augmenting paths, finite
+   DAG d-separation, and minimum cut certificates.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule.
 3. `descriptive-statistics-v0`: mean/variance identities, contingency tables,
    Simpson witness.
@@ -771,14 +776,15 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-29, and the Phase M5 learner-path scaffold plus first
-encode/check walkthrough layer have landed for the math seed. End-to-end
-lessons now exist for graph coloring, graph reachability/traversal/matching,
-finite DAG d-separation, finite cut certificates, rational arithmetic, linear
-algebra/optimization, probability/statistics, finite structures, and
-analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs, and `proof-methods-refutation-v0` has a checked
-finite CNF truth-table route for its pigeonhole refutation. Phase M7 now has
+Phase M4 graph-resource group and items 4-29, and the Phase M5 learner-path
+scaffold plus first encode/check walkthrough layer have landed for the math
+seed. End-to-end lessons now exist for graph coloring, graph
+reachability/traversal/search runtime/matching, finite DAG d-separation,
+finite cut certificates, rational arithmetic, linear algebra/optimization,
+probability/statistics, finite structures, and analysis/topology horizons.
+Phase M6 now has cookbook links from all current non-template math example
+packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
+route for its pigeonhole refutation. Phase M7 now has
 generated pack-level proof-gap rows and a normal foundational-resource check
 hook. `numerical-linear-algebra-v0` now adds the first exact residual/error-bound
 numerical-analysis slice, and `random-matrix-finite-v0` adds the first exact

@@ -39,7 +39,7 @@ Use these sources as checks against local taste:
 | `logic_and_proof` | Logic and proof | Foundation for every other field | Propositional logic, SAT, tiny SMT examples, proof object anatomy | Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge. |
 | `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, partitions, small cardinality constraints | ZFC, ordinals, cardinals, choice, and infinite set facts are proof-horizon material. |
 | `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search | General asymptotic enumeration and deep extremal combinatorics usually require theorem proving. |
-| `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
+| `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
 | `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite-field linear algebra | Spectral theorems, general vector-space theorems, and conditioning/stability need proof or numerical tracks. |
 | `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, homomorphism tables, Cayley-table validators | General group/ring/module/category theory belongs in Lean-backed concept rows. |
@@ -122,7 +122,7 @@ one of:
 | Delta-epsilon balls and limits | `real_analysis`, `topology`, `logic_and_proof` | Check bounded rational witnesses/counterexamples, metric-ball inclusions in finite/rational examples, and algebraic side-conditions. | A quantified-real story, Lean-backed limit/topology lemmas, and examples that separate bounded evidence from general epsilon-delta theorems. |
 | Chebyshev spaces | `functional_analysis_and_operator_theory`, `numerical_analysis`, `linear_algebra`, `real_analysis` | Check `finite-chebyshev-systems-v0` finite-dimensional polynomial bases, interpolation matrices, sign-pattern examples, and small approximation identities. | General function-space definitions, Haar/Chebyshev-system theorems, compactness/continuity lemmas, and proof-assistant reconstruction. |
 | Graph coloring | `graph_theory`, `discrete_math`, `logic_and_proof` | Encode finite coloring as SAT/SMT, produce colorings as models, and produce unsat evidence for small non-colorability examples when proof routes exist. | A graph example-pack schema, graph-to-SMT compiler metadata, and proof recipes for unsat coloring certificates. |
-| BFS vs DFS pathological runtime | `discrete_math`, `graph_theory`; companion CS algorithms track | Generate finite graph families, replay traversal traces, compare visited orders/cost counters, and find small worst-case witnesses. | A CS algorithms resource track, executable traversal semantics, asymptotic/runtime-proof rows, and Lean-backed recurrence/asymptotic lemmas. |
+| BFS vs DFS pathological runtime | `discrete_math`, `graph_theory`; companion CS algorithms track | Check `graph-search-runtime-v0` finite shortcut-tail families, replay BFS/DFS target-discovery orders, compare visited-node counters, and reject false finite cost bounds. | A CS algorithms resource track, asymptotic/runtime-proof rows, and Lean-backed recurrence/asymptotic lemmas. |
 | Random matrix theory | `probability_theory`, `statistics`, `linear_algebra`, `functional_analysis_and_operator_theory` | Check exact small random-matrix distributions by enumeration, determinant/rank/eigenvalue constraints for fixed matrices, and finite sampling invariants. | Measure/probability formalization, asymptotic limit-theorem rows, numerical experiment metadata, and clear "not proof" status for simulations. |
 | LU decomposition | `linear_algebra`, `numerical_analysis` | Verify `A = L * U` for exact fixed matrices, find singular/pivoting counterexamples, and check inconsistent linear systems with certificates. | Matrix example packs, pivoting/stability metadata, determinant/rank theorem reconstruction, and numerical error-bound resources. |
 
@@ -132,99 +132,104 @@ one of:
    - Fields: `graph_theory`, `discrete_math`, `logic_and_proof`.
    - Checks: satisfiable coloring witness, unsatisfiable small coloring claim,
      model replay, proof-route status.
-2. `artifacts/examples/math/linear-algebra-rational-v0/`
+2. `artifacts/examples/math/graph-search-runtime-v0/`
+   - Fields: `graph_theory`, `discrete_math`, `logic_and_proof`.
+   - Checks: finite BFS/DFS target-discovery costs, shortcut-tail family
+     counters, bad DFS-bound rejection, and an asymptotic-runtime Lean-horizon
+     row.
+3. `artifacts/examples/math/linear-algebra-rational-v0/`
    - Fields: `linear_algebra`, `numerical_analysis`.
    - Checks: matrix multiplication identity, LU factorization replay,
      inconsistent system certificate.
-3. `artifacts/examples/math/finite-probability-v0/`
+4. `artifacts/examples/math/finite-probability-v0/`
    - Fields: `probability_theory`, `statistics`, `measure_theory`.
    - Checks: total mass, conditional probability, Bayes table, exact rational
      replay.
-4. `artifacts/examples/math/descriptive-statistics-v0/`
+5. `artifacts/examples/math/descriptive-statistics-v0/`
    - Fields: `statistics`, `probability_theory`, `linear_algebra`.
    - Checks: mean/variance identity, contingency-table margins, Simpson's
      paradox count-table witness.
-5. `artifacts/examples/math/linear-optimization-v0/`
+6. `artifacts/examples/math/linear-optimization-v0/`
    - Fields: `optimization_and_convexity`, `linear_algebra`, `real_analysis`.
    - Checks: LP feasibility witness, objective-threshold replay, Farkas
      infeasibility certificate.
-6. `artifacts/examples/math/coordinate-geometry-v0/`
+7. `artifacts/examples/math/coordinate-geometry-v0/`
    - Fields: `geometry`, `linear_algebra`, `real_analysis`.
    - Checks: midpoint, collinearity determinant, squared-distance replay.
-7. `artifacts/examples/math/finite-topology-v0/`
+8. `artifacts/examples/math/finite-topology-v0/`
    - Fields: `topology`, `set_theory_and_foundations`, `real_analysis`.
    - Checks: finite topology axioms, closure/interior, metric-ball replay.
-8. `artifacts/examples/math/finite-measure-v0/`
+9. `artifacts/examples/math/finite-measure-v0/`
    - Fields: `measure_theory`, `probability_theory`, `set_theory_and_foundations`.
    - Checks: finite sigma-algebra axioms, finite additivity, event/complement
      measure replay.
-9. `artifacts/examples/math/finite-product-measure-v0/`
+10. `artifacts/examples/math/finite-product-measure-v0/`
    - Fields: `measure_theory`, `probability_theory`, `statistics`, `real_analysis`.
    - Checks: finite product probability tables, marginals, rectangle measures,
      finite Fubini replay, and bad product-probability rejection.
-10. `artifacts/examples/math/finite-random-variables-v0/`
+11. `artifacts/examples/math/finite-random-variables-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite random-variable pushforwards, expectation through
       pushforward distributions, independence checks, and bad pushforward
       rejection.
-11. `artifacts/examples/math/finite-conditional-expectation-v0/`
+12. `artifacts/examples/math/finite-conditional-expectation-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite partition conditional expectations, law of total
       expectation, tower property replay, and bad conditional-expectation
       rejection.
-12. `artifacts/examples/math/finite-martingales-v0/`
+13. `artifacts/examples/math/finite-martingales-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite filtration adaptedness, martingale conditional
       expectations, square submartingale inequalities, bounded stopping-time
       replay, and bad martingale rejection.
-13. `artifacts/examples/math/finite-stochastic-kernels-v0/`
+14. `artifacts/examples/math/finite-stochastic-kernels-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `linear_algebra`, `differential_equations_and_dynamical_systems`,
       `set_theory_and_foundations`.
     - Checks: finite kernel normalization, pushforward distributions, joint
       factorization/disintegration, kernel composition, and bad kernel-row
       rejection.
-14. `artifacts/examples/math/finite-hitting-times-v0/`
+15. `artifacts/examples/math/finite-hitting-times-v0/`
     - Fields: `probability_theory`, `differential_equations_and_dynamical_systems`,
       `linear_algebra`, `statistics`, `measure_theory`,
       `set_theory_and_foundations`.
     - Checks: finite first-hit distributions, survival probabilities,
       absorption-probability equations, expected hitting-time equations, and
       bad expected-time rejection.
-15. `artifacts/examples/math/finite-concentration-v0/`
+16. `artifacts/examples/math/finite-concentration-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite Markov, Chebyshev, and union-bound replays, bad
       concentration-bound rejection, and a concentration/limit-theorem
       Lean-horizon row.
-16. `artifacts/examples/math/bounded-dynamics-v0/`
+17. `artifacts/examples/math/bounded-dynamics-v0/`
     - Fields: `differential_equations_and_dynamical_systems`,
       `numerical_analysis`, `linear_algebra`.
     - Checks: recurrence trace replay, bounded invariant witness, threshold
       reachability witness.
-17. `artifacts/examples/math/finite-operator-v0/`
+18. `artifacts/examples/math/finite-operator-v0/`
     - Fields: `functional_analysis_and_operator_theory`, `linear_algebra`,
       `numerical_analysis`, `real_analysis`.
     - Checks: finite-dimensional norm replay, matrix operator bound,
       Chebyshev recurrence witness.
-18. `artifacts/examples/math/finite-chebyshev-systems-v0/`
+19. `artifacts/examples/math/finite-chebyshev-systems-v0/`
     - Fields: `functional_analysis_and_operator_theory`, `numerical_analysis`,
       `linear_algebra`, `real_analysis`.
     - Checks: finite Vandermonde unisolvence, interpolation replay,
       alternating residual signs, duplicate-node rejection, and a general
       Chebyshev-system Lean-horizon row.
-19. `artifacts/examples/math/modular-arithmetic-v0/`
+20. `artifacts/examples/math/modular-arithmetic-v0/`
     - Fields: `number_theory`, `abstract_algebra`.
     - Checks: modular inverse examples, small finite-field equations,
       bounded Diophantine examples.
-20. `artifacts/examples/math/real-analysis-rational-v0/`
+21. `artifacts/examples/math/real-analysis-rational-v0/`
     - Fields: `real_analysis`, `logic_and_proof`.
     - Checks: rational inequalities, interval inclusions, bounded
       epsilon-delta templates with proof-horizon labels.
-21. `artifacts/examples/math/complex-algebraic-v0/`
+22. `artifacts/examples/math/complex-algebraic-v0/`
     - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
       `abstract_algebra`.
     - Checks: real-pair complex arithmetic, conjugate norm replay, fixed
