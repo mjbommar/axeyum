@@ -179,6 +179,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite permutation-group end-to-end lesson landed.** Added
+  [`finite-permutation-groups-end-to-end.md`](docs/learn/math/finite-permutation-groups-end-to-end.md)
+  as the learner-facing trace for the finite permutation-group pack:
+  point-map encoding, bijection/group-law replay, composition-table replay,
+  cycle/sign recomputation, sign-homomorphism checking, natural-action
+  orbit/stabilizer replay, bad-nonbijection rejection, and the Lean horizon for
+  general permutation-group theory. The lesson is linked from the math learning
+  index plus the algebra, discrete-reasoning, and finite-structures paths.
+
 - **Finite permutation-group foundations pack landed.** Added
   [`finite-permutation-groups-v0`](artifacts/examples/math/finite-permutation-groups-v0/README.md)
   as the exact bridge from finite functions to group theory and finite
