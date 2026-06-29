@@ -11,6 +11,9 @@ the [University Math Field Taxonomy](MATH-FIELDS.md).
 
 For the current forward work plan, use the
 [Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
+For commit-sized work selection across curriculum nodes, math fields, resource
+gates, and proof routes, use the
+[Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of

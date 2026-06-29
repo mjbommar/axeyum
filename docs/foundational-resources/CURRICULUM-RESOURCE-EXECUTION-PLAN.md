@@ -6,8 +6,10 @@ This is the forward execution plan for turning the
 [formal mathematics curriculum](../curriculum/README.md) into a durable
 resource ecosystem. The companion
 [Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md) records
-the phase contract and landed history; this file says what to build next and
-how to keep the work coherent.
+the phase contract and landed history; the
+[Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
+gives the per-node/per-field build matrix; this file says what to build next
+and how to keep the work coherent.
 
 The invariant is:
 

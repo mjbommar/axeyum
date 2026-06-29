@@ -17,6 +17,9 @@ schemas, examples, and validation workflows.
 - [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) is the detailed
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.
+- [MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
+  is the commit-sized build matrix for every curriculum node, math field,
+  resource gate, and proof route.
 - [CURRICULUM-RESOURCE-EXECUTION-PLAN.md](CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
   is the forward execution plan for moving those resources from validated packs
   into learner paths, proof upgrades, solver feedback, and eventual consumer

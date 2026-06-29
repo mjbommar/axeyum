@@ -607,6 +607,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   eventual consumer/library boundaries. Linked it from the top-level plan,
   foundational-resources index, roadmap, and math buildout phase contract.
 
+- **Math curriculum implementation matrix landed.** Added
+  [`MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
+  as the detailed, commit-sized resource plan: R0-R6 acceptance gates,
+  per-curriculum-node next work, per-field extension work, route-specific build
+  sequences, and the next execution queue. Linked it from `PLAN.md`, the
+  foundational-resources index, mdBook summary, roadmap, buildout plan, and
+  execution plan. Next resource work should pick one row from that matrix and
+  carry it through validation, status update, commit, and push.
+
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact
