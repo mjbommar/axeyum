@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Polynomial-identities end-to-end lesson landed.** Added
+  [`polynomial-identities-end-to-end.md`](docs/learn/math/polynomial-identities-end-to-end.md)
+  as the learner-facing trace for the polynomial-identities pack: coefficient
+  multiplication replay for `(x + 1)^2`, factor-theorem root and quotient
+  checking for `x^2 - 5x + 6`, checked false-root rejection for `x^2 + 1`, and
+  the horizon for broad polynomial theorems. The lesson is linked from the math
+  learning index plus the rational/real and algebra/number-theory paths.
+
 - **Real-algebra RCF-shadow end-to-end lesson landed.** Added
   [`reals-rcf-shadow-end-to-end.md`](docs/learn/math/reals-rcf-shadow-end-to-end.md)
   as the learner-facing trace for the reals-RCF-shadow pack: ordered-field

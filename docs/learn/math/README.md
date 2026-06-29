@@ -92,6 +92,9 @@ validated pack data and the repo-root command that replays it.
 - [Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md): follows ordered
   field and nonlinear product witnesses, a quadratic root replay, square
   nonnegativity, negative-discriminant rejection, and the completeness horizon.
+- [Polynomial Identities](polynomial-identities-end-to-end.md): follows exact
+  coefficient multiplication, factor-theorem root replay, quotient checking,
+  and checked false-root rejection.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
