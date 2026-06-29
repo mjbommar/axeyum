@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Relations/functions end-to-end lesson landed.** Added
+  [`relations-functions-end-to-end.md`](docs/learn/math/relations-functions-end-to-end.md)
+  as the learner-facing trace for the relations/functions pack: finite
+  divisibility partial-order replay, bijective function-table replay, checked
+  rejection of a multi-valued graph, and the Bool/BV or QF_UF graduation route
+  for stronger function-consistency evidence. The lesson is linked from the
+  math learning index plus the sets/relations path.
+
 - **Finite sets end-to-end lesson landed.** Added
   [`finite-sets-end-to-end.md`](docs/learn/math/finite-sets-end-to-end.md)
   as the learner-facing trace for the finite sets pack: explicit finite

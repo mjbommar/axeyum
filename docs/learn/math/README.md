@@ -34,6 +34,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Sets](finite-sets-end-to-end.md): follows finite universe/subset
   replay, union/intersection identity replay, subset transitivity, and a fixed
   malformed-identity rejection.
+- [Relations And Functions](relations-functions-end-to-end.md): follows finite
+  partial-order replay, bijective function-table replay, and checked rejection
+  of a multi-valued graph.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.
