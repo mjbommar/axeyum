@@ -81,6 +81,9 @@ validated pack data and the repo-root command that replays it.
 - [Bounded Number Theory](number-theory-end-to-end.md): follows compatible
   non-coprime CRT replay, quadratic residue and nonresidue checks,
   sum-of-two-squares replay and rejection, and a Diophantine witness.
+- [Complex Algebraic Replay](complex-algebraic-end-to-end.md): follows exact
+  complex real-pair addition, multiplication, conjugate/norm replay, and the
+  fixed `i` root witness for `x^2 + 1`.
 - [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact

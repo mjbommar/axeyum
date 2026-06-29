@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex-algebraic end-to-end lesson landed.** Added
+  [`complex-algebraic-end-to-end.md`](docs/learn/math/complex-algebraic-end-to-end.md)
+  as the learner-facing trace for the complex-algebraic pack: exact rational
+  real-pair addition and multiplication, conjugate/norm replay, the fixed `i`
+  root witness for `x^2 + 1`, and the replay-only boundary for complex-analysis
+  theorem horizons. The lesson is linked from the math learning index plus the
+  number-systems and algebra/number-theory paths.
+
 - **Bounded number-theory end-to-end lesson landed.** Added
   [`number-theory-end-to-end.md`](docs/learn/math/number-theory-end-to-end.md)
   as the learner-facing trace for the number-theory pack: compatible
