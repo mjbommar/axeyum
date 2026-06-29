@@ -336,6 +336,7 @@ finite-dual-space, and module data through replay, read
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
 [End To End: Finite Rings](finite-rings-end-to-end.md),
+[End To End: Finite Fields](finite-fields-end-to-end.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),

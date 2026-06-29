@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite fields end-to-end lesson landed.** Added
+  [`finite-fields-end-to-end.md`](docs/learn/math/finite-fields-end-to-end.md)
+  as the learner-facing trace for the finite fields pack: `F_7` inverse-table
+  replay, exhaustive no-distributivity-counterexample checking in `F_5`,
+  checked no-inverse rejection for `2 mod 6`, and the proof horizon for
+  general field theory. The lesson is linked from the math learning index plus
+  the algebra and arithmetic paths.
+
 - **Finite rings end-to-end lesson landed.** Added
   [`finite-rings-end-to-end.md`](docs/learn/math/finite-rings-end-to-end.md)
   as the learner-facing trace for the finite rings pack: `Z/4Z` ring-table

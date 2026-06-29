@@ -66,6 +66,9 @@ validated pack data and the repo-root command that replays it.
   counting, and checked bad-action rejection.
 - [Finite Rings](finite-rings-end-to-end.md): follows `Z/4Z` ring-table replay,
   zero-divisor witness replay, and checked non-distributive-table rejection.
+- [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table
+  replay, exhaustive no-distributivity-counterexample checking in `F_5`, and
+  checked no-inverse rejection for `2 mod 6`.
 - [Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md):
   follows parity-map preservation, kernel/image recomputation,
   quotient/induced-map replay, ring-homomorphism replay, and checked
