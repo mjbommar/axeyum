@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "pack_id": "cardinality-principles-v0",
+  "witnesses": [
+    {
+      "id": "overlapping-two-set-family",
+      "description": "Two overlapping finite subsets used to replay inclusion-exclusion.",
+      "values": {
+        "universe": ["a", "b", "c", "d", "e"],
+        "A": ["a", "b", "c"],
+        "B": ["b", "c", "d"],
+        "union": ["a", "b", "c", "d"],
+        "intersection": ["b", "c"],
+        "counts": {
+          "A": 3,
+          "B": 3,
+          "union": 4,
+          "intersection": 2
+        }
+      }
+    },
+    {
+      "id": "disjoint-union-family",
+      "description": "Two disjoint finite subsets whose union count is additive.",
+      "values": {
+        "left": ["x0", "x1"],
+        "right": ["y0", "y1", "y2"],
+        "union": ["x0", "x1", "y0", "y1", "y2"],
+        "counts": {
+          "left": 2,
+          "right": 3,
+          "union": 5
+        }
+      }
+    },
+    {
+      "id": "bipartite-edge-incidence-table",
+      "description": "A finite bipartite edge table used for double-counting.",
+      "values": {
+        "left": ["u0", "u1", "u2"],
+        "right": ["v0", "v1"],
+        "edges": [["u0", "v0"], ["u0", "v1"], ["u1", "v0"], ["u2", "v1"]],
+        "left_degrees": {
+          "u0": 2,
+          "u1": 1,
+          "u2": 1
+        },
+        "right_degrees": {
+          "v0": 2,
+          "v1": 2
+        },
+        "edge_count": 4
+      }
+    },
+    {
+      "id": "three-element-powerset-table",
+      "description": "The full powerset of a three-element set.",
+      "values": {
+        "base": ["p", "q", "r"],
+        "subsets": [
+          [],
+          ["p"],
+          ["q"],
+          ["r"],
+          ["p", "q"],
+          ["p", "r"],
+          ["q", "r"],
+          ["p", "q", "r"]
+        ],
+        "subset_count": 8,
+        "expected_count": 8
+      }
+    },
+    {
+      "id": "overlap-additivity-failure",
+      "description": "A concrete overlap counterexample to disjoint-union additivity.",
+      "values": {
+        "universe": ["a", "b", "c", "d", "e"],
+        "A": ["a", "b", "c"],
+        "B": ["b", "c", "d"],
+        "union": ["a", "b", "c", "d"],
+        "intersection": ["b", "c"],
+        "false_disjoint_sum": 6,
+        "true_union_count": 4
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "inclusion-exclusion-two-sets",
+      "claim": "The listed finite sets satisfy two-set inclusion-exclusion.",
+      "expected_result": "sat",
+      "validation": "finite_inclusion_exclusion_replay",
+      "proof_status": "checked",
+      "witnesses": ["overlapping-two-set-family"],
+      "notes": "The validator recomputes the union, intersection, and all listed counts."
+    },
+    {
+      "id": "disjoint-union-additivity",
+      "claim": "The listed disjoint finite sets satisfy additive cardinality.",
+      "expected_result": "sat",
+      "validation": "finite_disjoint_union_replay",
+      "proof_status": "checked",
+      "witnesses": ["disjoint-union-family"],
+      "notes": "The validator checks disjointness and recomputes the union count."
+    },
+    {
+      "id": "double-counting-bipartite-edges",
+      "claim": "The sum of left degrees equals the sum of right degrees and both count the same finite edge set.",
+      "expected_result": "sat",
+      "validation": "finite_double_counting_edges",
+      "proof_status": "checked",
+      "witnesses": ["bipartite-edge-incidence-table"],
+      "notes": "The validator recomputes degrees from the listed edge table."
+    },
+    {
+      "id": "finite-powerset-cardinality",
+      "claim": "The listed powerset of a three-element set has 2^3 elements.",
+      "expected_result": "sat",
+      "validation": "finite_powerset_enumeration",
+      "proof_status": "checked",
+      "witnesses": ["three-element-powerset-table"],
+      "notes": "The validator enumerates all subsets of the base set and compares them to the listed table."
+    },
+    {
+      "id": "overlapping-disjoint-additivity-counterexample",
+      "claim": "The formula |A union B| = |A| + |B| is valid for arbitrary finite sets.",
+      "expected_result": "sat",
+      "validation": "false_disjoint_additivity_counterexample",
+      "proof_status": "checked",
+      "witnesses": ["overlap-additivity-failure"],
+      "notes": "The validator checks the overlap and confirms the false disjoint sum differs from the true union count."
+    },
+    {
+      "id": "cantor-schroeder-bernstein-lean-horizon",
+      "claim": "Arbitrary set cardinality theorems such as Cantor-Schroeder-Bernstein require a theorem-prover route.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem": "cantor_schroeder_bernstein_for_arbitrary_sets",
+        "future_checker": "Lean module proving the theorem without sorryAx"
+      },
+      "notes": "Finite cardinality rows are checked; arbitrary infinite-cardinality theorems remain Lean horizon."
+    }
+  ]
+}

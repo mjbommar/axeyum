@@ -73,11 +73,13 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-sets-v0/`](../../artifacts/examples/math/finite-sets-v0/),
   [`artifacts/examples/math/relations-functions-v0/`](../../artifacts/examples/math/relations-functions-v0/),
   [`artifacts/examples/math/equivalence-classes-v0/`](../../artifacts/examples/math/equivalence-classes-v0/),
-  and [`artifacts/examples/math/finite-cardinality-v0/`](../../artifacts/examples/math/finite-cardinality-v0/)
+  [`artifacts/examples/math/finite-cardinality-v0/`](../../artifacts/examples/math/finite-cardinality-v0/),
+  and [`artifacts/examples/math/cardinality-principles-v0/`](../../artifacts/examples/math/cardinality-principles-v0/)
   validate the finite foundations path: finite set identities, relation and
   function tables, equivalence classes, quotient-map fibers, finite bijections,
-  finite cardinal inequalities, bounded injection/surjection refutations, and
-  an explicit infinite-cardinality Lean-horizon row.
+  finite cardinal inequalities, bounded injection/surjection refutations,
+  inclusion-exclusion, double counting, powersets, and explicit
+  infinite-cardinality Lean-horizon rows.
 - [`artifacts/examples/math/natural-arithmetic-v0/`](../../artifacts/examples/math/natural-arithmetic-v0/),
   [`artifacts/examples/math/integer-lia-v0/`](../../artifacts/examples/math/integer-lia-v0/),
   [`artifacts/examples/math/gcd-bezout-v0/`](../../artifacts/examples/math/gcd-bezout-v0/),
@@ -260,6 +262,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/in
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0

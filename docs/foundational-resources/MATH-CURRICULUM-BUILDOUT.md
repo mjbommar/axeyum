@@ -181,7 +181,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0`, `induction-patterns-v0` | Bounded base/step obligations, weak/strong induction prefixes, loop invariants, bad-step counterexamples; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0` | Membership, subset, union/intersection, finite identities. |
 | `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0` | Finite relation properties, injective/surjective checks, equivalence classes, quotient maps, and EUF slices. |
-| `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0` | Finite bijections/counting; infinite cardinality marked Lean-horizon. |
+| `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0` | Exact rational order/field facts, density, trichotomy, Farkas links. |
@@ -366,7 +366,11 @@ distributivity, successor injectivity by bounded enumeration, zero-not-successor
 and nonnegative-domain checks. `finite-cardinality-v0` now validates finite
 bijection replay, proper-subset injection replay, exhaustive no-injection and
 no-surjection rows, and a Cantor-diagonal theorem target that stays
-Lean-horizon. `induction-obligations-v0` now validates exact prefix-sum
+Lean-horizon. `cardinality-principles-v0` now validates finite
+inclusion-exclusion, disjoint-union additivity, bipartite-edge double
+counting, powerset cardinality, checked false disjoint-additivity rejection,
+and an arbitrary-cardinality Lean-horizon row. `induction-obligations-v0` now
+validates exact prefix-sum
 base-case replay, bounded step-obligation enumeration, bounded conclusion
 checking, a bad-step counterexample witness, and a full-schema Lean-horizon
 row. `induction-patterns-v0` now validates finite weak-induction evenness
@@ -427,8 +431,10 @@ Recommended order:
     interval infeasibility, and GCD-test refutations.
 12. `natural-arithmetic-v0` (landed): bounded successor/addition replay,
     commutativity, distributivity, and Peano-style bounded no-counterexamples.
-13. `finite-cardinality-v0` (landed): finite bijections, finite cardinal
-    inequalities, injection/surjection refutations, and infinite-cardinality
+13. `finite-cardinality-v0` (landed) and
+    `cardinality-principles-v0` (landed): finite bijections, finite cardinal
+    inequalities, injection/surjection refutations, inclusion-exclusion,
+    disjoint unions, double counting, powersets, and infinite-cardinality
     Lean-horizon metadata.
 14. `induction-obligations-v0` (landed) and `induction-patterns-v0` (landed):
     bounded base/step obligations, finite weak and strong induction patterns,
@@ -807,9 +813,9 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `relations-functions-v0`, `equivalence-classes-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
-`finite-cardinality-v0`, `induction-obligations-v0`, `induction-patterns-v0`,
-`logic-basics-v0`, and `real-analysis-rational-v0`, Phase M4 graph-resource
-group and items 4-30, and
+`finite-cardinality-v0`, `cardinality-principles-v0`,
+`induction-obligations-v0`, `induction-patterns-v0`, `logic-basics-v0`, and
+`real-analysis-rational-v0`, Phase M4 graph-resource group and items 4-30, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
 have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
@@ -832,6 +838,10 @@ converse counterexample, and natural-deduction Lean-horizon examples.
 `induction-patterns-v0` now deepens the induction curriculum row with finite
 weak induction, strong induction, loop-invariant replay, invalid-step
 counterexamples, and full-schema Lean-horizon examples.
+`cardinality-principles-v0` now deepens the cardinality curriculum row with
+finite inclusion-exclusion, disjoint-union additivity, bipartite-edge double
+counting, powerset enumeration, invalid additivity counterexamples, and
+infinite-cardinality Lean-horizon examples.
 `equivalence-classes-v0` now deepens the relations/functions curriculum row
 with exact finite equivalence classes, quotient-map fibers, partition
 round-trips, a checked non-transitive counterexample, and an explicit

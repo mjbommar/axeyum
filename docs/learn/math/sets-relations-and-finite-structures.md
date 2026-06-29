@@ -14,6 +14,7 @@ Example packs:
 - [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
 - [equivalence-classes-v0](../../../artifacts/examples/math/equivalence-classes-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
+- [cardinality-principles-v0](../../../artifacts/examples/math/cardinality-principles-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
@@ -31,7 +32,9 @@ checks finite equivalence classes, quotient-map fibers, partition-to-relation
 round trips, rejection of a non-transitive relation, and an explicit QF_UF/Alethe
 proof gap. The finite-cardinality pack checks explicit bijections,
 proper-subset injections, finite injection and surjection refutations, and an
-infinite-cardinality Lean-horizon row. The
+infinite-cardinality Lean-horizon row. The cardinality-principles pack checks
+inclusion-exclusion, disjoint-union additivity, double counting, powerset
+cardinality, and invalid additivity counterexamples. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
 compactness pack checks finite open covers, subcovers, minimal-subcover
@@ -94,6 +97,18 @@ The cardinality validator checks that the graph is total, single-valued,
 injective, and surjective. It also enumerates fixed function spaces to reject an
 injection `4 -> 3` and a surjection `2 -> 3`, while keeping Cantor diagonal as a
 Lean-horizon theorem target.
+For cardinality principles, encode concrete set and incidence tables:
+
+```text
+A = {a,b,c}
+B = {b,c,d}
+A union B = {a,b,c,d}
+A intersect B = {b,c}
+```
+
+The validator checks inclusion-exclusion exactly. It also verifies disjoint
+unions, bipartite edge double-counting, finite powersets, and an overlapping
+counterexample to the false rule `|A union B| = |A| + |B|`.
 
 For topology, the same finite-set discipline scales up to set families:
 
@@ -147,6 +162,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
@@ -159,11 +175,11 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 
 ## Horizon
 
-The finite set, relation/function, equivalence-class, cardinality, topology,
-compactness-shadow, connectedness-shadow, continuous-map, and measure packs are
-now checked finite artifacts. The next finite-structure gaps are stronger
-EUF/Alethe evidence for congruence examples and Lean artifacts for infinite
-theorems. ZFC, ordinals, choice, infinite cardinality, arbitrary topological
-spaces, general compactness, general connectedness,
+The finite set, relation/function, equivalence-class, cardinality,
+cardinality-principles, topology, compactness-shadow, connectedness-shadow,
+continuous-map, and measure packs are now checked finite artifacts. The next
+finite-structure gaps are stronger EUF/Alethe evidence for congruence examples
+and Lean artifacts for infinite theorems. ZFC, ordinals, choice, infinite
+cardinality, arbitrary topological spaces, general compactness, general connectedness,
 continuous-image/homeomorphism theorems, and countable additivity remain
 proof-horizon material.

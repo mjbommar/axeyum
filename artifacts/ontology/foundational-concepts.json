@@ -449,6 +449,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-cardinality-v0",
           "notes": "Finite bijections/counting; infinite cardinality is proof-horizon."
+        },
+        {
+          "id": "cardinality-principles-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/cardinality-principles-v0",
+          "notes": "Finite inclusion-exclusion, disjoint unions, double counting, powersets, and infinite-cardinality Lean horizon."
         }
       ],
       "proof_routes": [
@@ -477,7 +483,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-cardinality-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/finite-cardinality-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]

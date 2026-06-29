@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "cardinality-principles-v0",
+  "title": "Finite Cardinality Principle Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_cardinality",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "field_set_theory_and_foundations",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "set_theory_and_foundations",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "cardinality",
+    "sets",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "finite relations",
+    "finite enumeration",
+    "integer arithmetic replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/cardinality.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "inclusion-exclusion-two-sets",
+    "disjoint-union-additivity",
+    "double-counting-bipartite-edges",
+    "finite-powerset-cardinality",
+    "overlapping-disjoint-additivity-counterexample",
+    "cantor-schroeder-bernstein-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay every finite set count, incidence count, and powerset count from explicit data.",
+    "Represent false finite rules with concrete counterexample evidence.",
+    "Keep arbitrary infinite-cardinality theorems under Lean horizon until no-sorry kernel-checked artifacts exist.",
+    "Promote finite UNSAT variants only after CNF/LRAT or equivalent proof-object evidence checks the same enumerations."
+  ]
+}

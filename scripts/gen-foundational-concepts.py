@@ -87,6 +87,12 @@ CURRICULUM_MAP = {
         "pack": "finite-cardinality-v0",
         "slice": "Finite bijections/counting; infinite cardinality is proof-horizon.",
         "proof": "Finite witness replay now; infinite cardinality requires Lean.",
+        "extra_packs": [
+            (
+                "cardinality-principles-v0",
+                "Finite inclusion-exclusion, disjoint unions, double counting, powersets, and infinite-cardinality Lean horizon.",
+            ),
+        ],
     },
     "naturals": {
         "field_ids": ["number_theory", "discrete_math"],

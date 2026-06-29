@@ -68,6 +68,7 @@ artifacts/examples/math/
   relations-functions-v0/
   equivalence-classes-v0/
   finite-cardinality-v0/
+  cardinality-principles-v0/
   natural-arithmetic-v0/
   integer-lia-v0/
   gcd-bezout-v0/
@@ -377,6 +378,9 @@ relation, and an explicit QF_UF/Alethe proof-object gap.
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality
 Lean-horizon row.
+[`cardinality-principles-v0`](../../artifacts/examples/math/cardinality-principles-v0/)
+validates finite inclusion-exclusion, disjoint-union additivity, bipartite
+edge double counting, powerset enumeration, and false additivity rejection.
 [`modular-arithmetic-v0`](../../artifacts/examples/math/modular-arithmetic-v0/)
 also validates with replayed CRT/inverse witnesses and exhaustive finite
 non-invertibility/Fermat-style checks.

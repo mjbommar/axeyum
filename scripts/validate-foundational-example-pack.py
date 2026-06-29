@@ -2220,6 +2220,165 @@ def validate_finite_cardinality(expected: dict[str, Any]) -> None:
     require_string("cantor future checker", data.get("future_checker"))
 
 
+def require_subset_from_universe(context: str, value: Any, universe: set[str]) -> set[str]:
+    items = require_string_list(context, value, nonempty=False)
+    item_set = set(items)
+    extra = sorted(item_set - universe)
+    if extra:
+        fail(f"{context} contains elements outside the universe: {extra}")
+    return item_set
+
+
+def require_count_table(context: str, value: Any, keys: list[str]) -> dict[str, int]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    expected_keys = set(keys)
+    actual_keys = set(value)
+    if actual_keys != expected_keys:
+        missing = sorted(expected_keys - actual_keys)
+        extra = sorted(actual_keys - expected_keys)
+        fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+    return {
+        key: require_counting_int(f"{context}.{key}", value[key])
+        for key in keys
+    }
+
+
+def finite_powerset(base: list[str]) -> set[frozenset[str]]:
+    return {
+        frozenset(subset)
+        for subset_size in range(len(base) + 1)
+        for subset in combinations(base, subset_size)
+    }
+
+
+def validate_cardinality_principles(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    inclusion = checks["inclusion-exclusion-two-sets"]
+    if inclusion["expected_result"] != "sat" or inclusion.get("proof_status") != "checked":
+        fail("inclusion-exclusion-two-sets must be a checked sat row")
+    values = single_witness_values(inclusion, witnesses)
+    universe = set(require_string_list("inclusion universe", values.get("universe")))
+    a_set = require_subset_from_universe("inclusion A", values.get("A"), universe)
+    b_set = require_subset_from_universe("inclusion B", values.get("B"), universe)
+    union = require_subset_from_universe("inclusion union", values.get("union"), universe)
+    intersection = require_subset_from_universe("inclusion intersection", values.get("intersection"), universe)
+    counts = require_count_table("inclusion counts", values.get("counts"), ["A", "B", "union", "intersection"])
+    if union != a_set | b_set:
+        fail("inclusion-exclusion listed union is wrong")
+    if intersection != a_set & b_set:
+        fail("inclusion-exclusion listed intersection is wrong")
+    if counts["A"] != len(a_set) or counts["B"] != len(b_set):
+        fail("inclusion-exclusion listed set counts are wrong")
+    if counts["union"] != len(union) or counts["intersection"] != len(intersection):
+        fail("inclusion-exclusion listed union/intersection counts are wrong")
+    if counts["union"] != counts["A"] + counts["B"] - counts["intersection"]:
+        fail("inclusion-exclusion identity does not hold")
+
+    disjoint = checks["disjoint-union-additivity"]
+    if disjoint["expected_result"] != "sat" or disjoint.get("proof_status") != "checked":
+        fail("disjoint-union-additivity must be a checked sat row")
+    values = single_witness_values(disjoint, witnesses)
+    left = set(require_string_list("disjoint left", values.get("left")))
+    right = set(require_string_list("disjoint right", values.get("right")))
+    union = set(require_string_list("disjoint union", values.get("union")))
+    counts = require_count_table("disjoint counts", values.get("counts"), ["left", "right", "union"])
+    if left & right:
+        fail("disjoint-union-additivity parts must be disjoint")
+    if union != left | right:
+        fail("disjoint-union-additivity listed union is wrong")
+    if counts["left"] != len(left) or counts["right"] != len(right) or counts["union"] != len(union):
+        fail("disjoint-union-additivity listed counts are wrong")
+    if counts["union"] != counts["left"] + counts["right"]:
+        fail("disjoint-union-additivity identity does not hold")
+
+    double = checks["double-counting-bipartite-edges"]
+    if double["expected_result"] != "sat" or double.get("proof_status") != "checked":
+        fail("double-counting-bipartite-edges must be a checked sat row")
+    values = single_witness_values(double, witnesses)
+    left_vertices = require_string_list("double-counting left", values.get("left"))
+    right_vertices = require_string_list("double-counting right", values.get("right"))
+    edges = require_pair_set(
+        "double-counting edges",
+        values.get("edges"),
+        set(left_vertices),
+        set(right_vertices),
+    )
+    left_degrees = require_count_table("double-counting left_degrees", values.get("left_degrees"), left_vertices)
+    right_degrees = require_count_table("double-counting right_degrees", values.get("right_degrees"), right_vertices)
+    edge_count = require_counting_int("double-counting edge_count", values.get("edge_count"))
+    if edge_count != len(edges):
+        fail("double-counting edge_count does not match the edge table")
+    for vertex in left_vertices:
+        if left_degrees[vertex] != sum(1 for left_vertex, _ in edges if left_vertex == vertex):
+            fail("double-counting left degree table is wrong")
+    for vertex in right_vertices:
+        if right_degrees[vertex] != sum(1 for _, right_vertex in edges if right_vertex == vertex):
+            fail("double-counting right degree table is wrong")
+    if sum(left_degrees.values()) != edge_count or sum(right_degrees.values()) != edge_count:
+        fail("double-counting degree sums do not equal the edge count")
+
+    powerset = checks["finite-powerset-cardinality"]
+    if powerset["expected_result"] != "sat" or powerset.get("proof_status") != "checked":
+        fail("finite-powerset-cardinality must be a checked sat row")
+    values = single_witness_values(powerset, witnesses)
+    base = require_string_list("powerset base", values.get("base"))
+    base_set = set(base)
+    subsets_value = values.get("subsets")
+    if not isinstance(subsets_value, list):
+        fail("powerset subsets must be a list")
+    listed_subsets: set[frozenset[str]] = set()
+    for index, subset_value in enumerate(subsets_value):
+        subset = require_subset_from_universe(f"powerset subsets[{index}]", subset_value, base_set)
+        frozen = frozenset(subset)
+        if frozen in listed_subsets:
+            fail("powerset subsets contains a duplicate subset")
+        listed_subsets.add(frozen)
+    if listed_subsets != finite_powerset(base):
+        fail("powerset subsets do not match the full finite powerset")
+    subset_count = require_counting_int("powerset subset_count", values.get("subset_count"))
+    expected_count = require_counting_int("powerset expected_count", values.get("expected_count"))
+    if expected_count != 2 ** len(base):
+        fail("powerset expected_count does not match 2^|base|")
+    if subset_count != len(listed_subsets) or subset_count != expected_count:
+        fail("powerset listed count is wrong")
+
+    bad_additivity = checks["overlapping-disjoint-additivity-counterexample"]
+    if bad_additivity["expected_result"] != "sat" or bad_additivity.get("proof_status") != "checked":
+        fail("overlapping-disjoint-additivity-counterexample must be a checked sat row")
+    values = single_witness_values(bad_additivity, witnesses)
+    universe = set(require_string_list("bad additivity universe", values.get("universe")))
+    a_set = require_subset_from_universe("bad additivity A", values.get("A"), universe)
+    b_set = require_subset_from_universe("bad additivity B", values.get("B"), universe)
+    union = require_subset_from_universe("bad additivity union", values.get("union"), universe)
+    intersection = require_subset_from_universe("bad additivity intersection", values.get("intersection"), universe)
+    false_sum = require_counting_int("bad additivity false_disjoint_sum", values.get("false_disjoint_sum"))
+    true_union_count = require_counting_int("bad additivity true_union_count", values.get("true_union_count"))
+    if union != a_set | b_set:
+        fail("bad additivity listed union is wrong")
+    if intersection != a_set & b_set:
+        fail("bad additivity listed intersection is wrong")
+    if not intersection:
+        fail("bad additivity counterexample must use overlapping sets")
+    if false_sum != len(a_set) + len(b_set):
+        fail("bad additivity false_disjoint_sum is not |A| + |B|")
+    if true_union_count != len(union):
+        fail("bad additivity true_union_count does not match |A union B|")
+    if false_sum == true_union_count:
+        fail("bad additivity row does not falsify disjoint additivity for overlapping sets")
+
+    horizon = checks["cantor-schroeder-bernstein-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("cantor-schroeder-bernstein-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("cantor-schroeder-bernstein-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("cardinality-principles target theorem", data.get("target_theorem"))
+    require_string("cardinality-principles future checker", data.get("future_checker"))
+
+
 def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -8705,6 +8864,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_exact_statistical_tests(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
+    if metadata["id"] == "cardinality-principles-v0":
+        validate_cardinality_principles(expected)
     if metadata["id"] == "finite-chebyshev-systems-v0":
         validate_finite_chebyshev_systems(expected)
     if metadata["id"] == "finite-compactness-v0":
