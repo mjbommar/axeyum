@@ -277,6 +277,8 @@ the first finite-set core curriculum pack lives under
 `artifacts/examples/math/finite-sets-v0/`;
 the first relation/function core curriculum pack lives under
 `artifacts/examples/math/relations-functions-v0/`;
+the first finite-cardinality foundations pack lives under
+`artifacts/examples/math/finite-cardinality-v0/`;
 the first finite-field core curriculum pack lives under
 `artifacts/examples/math/finite-fields-v0/`;
 the first fixed-degree polynomial core curriculum pack lives under
@@ -339,9 +341,11 @@ replay, linear equation witnesses, checked interval infeasibility, and a fixed
 GCD-test Diophantine obstruction. `natural-arithmetic-v0` now validates
 bounded successor/addition replay, addition commutativity, multiplication
 distributivity, successor injectivity by bounded enumeration, zero-not-successor,
-and nonnegative-domain checks. Continue by closing the remaining
-`proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`finite-cardinality-v0`.
+and nonnegative-domain checks. `finite-cardinality-v0` now validates finite
+bijection replay, proper-subset injection replay, exhaustive no-injection and
+no-surjection rows, and a Cantor-diagonal theorem target that stays
+Lean-horizon. Continue by closing the remaining `proof-methods-refutation-v0`
+CNF/LRAT proof gap or by adding `induction-obligations-v0`.
 
 Recommended order:
 
@@ -366,6 +370,9 @@ Recommended order:
     interval infeasibility, and GCD-test refutations.
 12. `natural-arithmetic-v0` (landed): bounded successor/addition replay,
     commutativity, distributivity, and Peano-style bounded no-counterexamples.
+13. `finite-cardinality-v0` (landed): finite bijections, finite cardinal
+    inequalities, injection/surjection refutations, and infinite-cardinality
+    Lean-horizon metadata.
 
 Exit criteria:
 
@@ -573,16 +580,16 @@ docs link checker clean.
 Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `relations-functions-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
-`number-theory-v0`, `integer-lia-v0`, and `natural-arithmetic-v0`, Phase M4
-items 4-10, and the Phase M5 learner-path scaffold plus first encode/check
-walkthrough layer have landed for the math seed. End-to-end lessons now exist
-for graph coloring, rational arithmetic, linear algebra/optimization,
-probability/statistics, finite structures, and analysis/topology horizons.
-Phase M6 now has cookbook links from all current non-template math example
-packs. Phase M7 now has generated pack-level proof-gap rows and a normal
-foundational-resource check hook. Continue by closing the remaining
-`proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`finite-cardinality-v0`.
+`number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
+`finite-cardinality-v0`, Phase M4 items 4-10, and the Phase M5 learner-path
+scaffold plus first encode/check walkthrough layer have landed for the math
+seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
+linear algebra/optimization, probability/statistics, finite structures, and
+analysis/topology horizons. Phase M6 now has cookbook links from all current
+non-template math example packs. Phase M7 now has generated pack-level
+proof-gap rows and a normal foundational-resource check hook. Continue by
+closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by
+adding `induction-obligations-v0`.
 
 ## Operating Rules
 

@@ -920,6 +920,114 @@ def validate_counting(expected: dict[str, Any]) -> None:
         fail("pigeonhole check unexpectedly found an injective placement")
 
 
+def is_injective_mapping(mapping: dict[str, str]) -> bool:
+    return len(set(mapping.values())) == len(mapping)
+
+
+def is_surjective_mapping(mapping: dict[str, str], codomain: list[str]) -> bool:
+    return set(mapping.values()) == set(codomain)
+
+
+def function_space_size(domain: list[str], codomain: list[str]) -> int:
+    return len(codomain) ** len(domain)
+
+
+def require_small_function_space(context: str, domain: list[str], codomain: list[str]) -> None:
+    size = function_space_size(domain, codomain)
+    if size > 100_000:
+        fail(f"{context} function space is too large for deterministic example-pack enumeration")
+
+
+def has_injective_function(domain: list[str], codomain: list[str]) -> bool:
+    require_small_function_space("injective-function search", domain, codomain)
+    for outputs in product(codomain, repeat=len(domain)):
+        if len(set(outputs)) == len(outputs):
+            return True
+    return False
+
+
+def has_surjective_function(domain: list[str], codomain: list[str]) -> bool:
+    require_small_function_space("surjective-function search", domain, codomain)
+    codomain_set = set(codomain)
+    for outputs in product(codomain, repeat=len(domain)):
+        if set(outputs) == codomain_set:
+            return True
+    return False
+
+
+def require_cardinality_sets(context: str, data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    domain = require_string_list(f"{context}.domain", data.get("domain"))
+    codomain = require_string_list(f"{context}.codomain", data.get("codomain"))
+    require_small_function_space(context, domain, codomain)
+    return domain, codomain
+
+
+def validate_finite_cardinality(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    bijection = checks["finite-bijection-cardinality-witness"]
+    if bijection["expected_result"] != "sat":
+        fail("finite-bijection-cardinality-witness must expect sat")
+    values = single_witness_values(bijection, witnesses)
+    domain, codomain, pairs = require_function_graph_data("finite cardinality bijection", values)
+    if len(domain) != len(codomain):
+        fail("finite-bijection-cardinality-witness must use equal finite sizes")
+    if not is_total_function(domain, pairs):
+        fail("finite-bijection-cardinality-witness graph is not total")
+    if not is_single_valued(domain, pairs):
+        fail("finite-bijection-cardinality-witness graph is not single-valued")
+    mapping = function_mapping(domain, pairs)
+    if not is_injective_mapping(mapping):
+        fail("finite-bijection-cardinality-witness graph is not injective")
+    if not is_surjective_mapping(mapping, codomain):
+        fail("finite-bijection-cardinality-witness graph is not surjective")
+
+    proper_subset = checks["proper-subset-injection-witness"]
+    if proper_subset["expected_result"] != "sat":
+        fail("proper-subset-injection-witness must expect sat")
+    values = single_witness_values(proper_subset, witnesses)
+    domain, codomain, pairs = require_function_graph_data("proper subset injection", values)
+    if not set(domain) < set(codomain):
+        fail("proper-subset-injection-witness domain must be a proper subset of codomain")
+    if not is_total_function(domain, pairs):
+        fail("proper-subset-injection-witness graph is not total")
+    if not is_single_valued(domain, pairs):
+        fail("proper-subset-injection-witness graph is not single-valued")
+    mapping = function_mapping(domain, pairs)
+    if not is_injective_mapping(mapping):
+        fail("proper-subset-injection-witness graph is not injective")
+    if is_surjective_mapping(mapping, codomain):
+        fail("proper-subset-injection-witness graph unexpectedly is surjective")
+
+    no_injection = checks["no-injection-four-to-three"]
+    if no_injection["expected_result"] != "unsat":
+        fail("no-injection-four-to-three must expect unsat")
+    domain, codomain = require_cardinality_sets("no-injection-four-to-three", no_injection.get("data", {}))
+    if len(domain) <= len(codomain):
+        fail("no-injection-four-to-three must use a larger domain than codomain")
+    if has_injective_function(domain, codomain):
+        fail("no-injection-four-to-three unexpectedly found an injective function")
+
+    no_surjection = checks["no-surjection-two-to-three"]
+    if no_surjection["expected_result"] != "unsat":
+        fail("no-surjection-two-to-three must expect unsat")
+    domain, codomain = require_cardinality_sets("no-surjection-two-to-three", no_surjection.get("data", {}))
+    if len(domain) >= len(codomain):
+        fail("no-surjection-two-to-three must use a smaller domain than codomain")
+    if has_surjective_function(domain, codomain):
+        fail("no-surjection-two-to-three unexpectedly found a surjective function")
+
+    cantor = checks["cantor-diagonal-lean-horizon"]
+    if cantor["expected_result"] != "not-run":
+        fail("cantor-diagonal-lean-horizon must be not-run")
+    if cantor["proof_status"] != "lean-horizon":
+        fail("cantor-diagonal-lean-horizon must remain lean-horizon")
+    data = cantor.get("data", {})
+    require_string("cantor target theorem", data.get("target_theorem"))
+    require_string("cantor future checker", data.get("future_checker"))
+
+
 def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -2592,6 +2700,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":
         validate_descriptive_statistics(expected)
+    if metadata["id"] == "finite-cardinality-v0":
+        validate_finite_cardinality(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "finite-cardinality-v0",
+  "title": "Finite Cardinality And Bijection Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_cardinality",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "field_set_theory_and_foundations",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "set_theory_and_foundations",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "cardinality",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite cardinality",
+    "finite functions",
+    "Bool / SAT",
+    "BV / enumeration"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/cardinality.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "finite-bijection-cardinality-witness",
+    "proper-subset-injection-witness",
+    "no-injection-four-to-three",
+    "no-surjection-two-to-three",
+    "cantor-diagonal-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite function, injection, surjection, and bijection constraints as deterministic Bool/BV formulas.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Emit checked CNF/LRAT or equivalent evidence for finite injection and surjection refutations.",
+    "Keep Cantor diagonal, countability, Schroeder-Bernstein, and infinite cardinal arithmetic marked Lean-horizon until a no-sorry Lean route exists."
+  ]
+}

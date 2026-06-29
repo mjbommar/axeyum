@@ -59,9 +59,21 @@ artifacts/ontology/
 artifacts/examples/math/
   template-v0/
   proof-methods-refutation-v0/
+  finite-sets-v0/
+  relations-functions-v0/
+  finite-cardinality-v0/
+  natural-arithmetic-v0/
+  integer-lia-v0/
+  gcd-bezout-v0/
   modular-arithmetic-v0/
+  number-theory-v0/
   rationals-lra-v0/
   linear-algebra-rational-v0/
+  finite-groups-v0/
+  finite-rings-v0/
+  finite-fields-v0/
+  polynomial-identities-v0/
+  counting-v0/
   graph-coloring-v0/
   finite-probability-v0/
   descriptive-statistics-v0/
@@ -305,6 +317,10 @@ Status: example-pack schema and validating template scaffold landed; the first
 substantive pack,
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
 now validates with a SAT witness control case and an explicit UNSAT proof gap.
+[`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
+validates finite bijection replay, proper-subset injection replay, exhaustive
+finite injection/surjection refutations, and an infinite-cardinality
+Lean-horizon row.
 [`modular-arithmetic-v0`](../../artifacts/examples/math/modular-arithmetic-v0/)
 also validates with replayed CRT/inverse witnesses and exhaustive finite
 non-invertibility/Fermat-style checks.

@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cardinality foundations pack landed.** Added
+  [`finite-cardinality-v0`](artifacts/examples/math/finite-cardinality-v0/README.md)
+  with finite bijection replay, proper-subset injection replay, checked
+  no-injection `4 -> 3`, checked no-surjection `2 -> 3`, and a
+  Cantor-diagonal infinite-cardinality row explicitly kept as Lean-horizon. The
+  foundational example-pack validator now checks finite function graphs,
+  injection/surjection/bijection properties, bounded function-space
+  enumeration, and the theorem-horizon metadata row. Continue by closing the
+  remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `induction-obligations-v0`.
+
 - **Natural arithmetic core number-system pack landed.** Added
   [`natural-arithmetic-v0`](artifacts/examples/math/natural-arithmetic-v0/README.md)
   with successor-addition replay, addition commutativity replay,
@@ -167,8 +178,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   foundational example-pack validator now checks nonnegative natural-number
   witnesses and bounded-domain enumeration for Peano-style no-counterexample
   rows; generated dashboards mark the naturals curriculum row's first pack as
-  validated. Continue by closing the remaining `proof-methods-refutation-v0`
-  CNF/LRAT proof gap or by adding `finite-cardinality-v0`.
+  validated. `finite-cardinality-v0` is the follow-on finite foundations pack.
 
 - **Integer LIA core number-system pack landed.** Added
   [`integer-lia-v0`](artifacts/examples/math/integer-lia-v0/README.md) with

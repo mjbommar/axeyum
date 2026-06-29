@@ -49,6 +49,19 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
   is the first substantive math pack: proof-by-refutation over finite
   pigeonhole examples, with the UNSAT proof route still marked as a proof gap.
+- [`artifacts/examples/math/finite-sets-v0/`](../../artifacts/examples/math/finite-sets-v0/),
+  [`artifacts/examples/math/relations-functions-v0/`](../../artifacts/examples/math/relations-functions-v0/),
+  and [`artifacts/examples/math/finite-cardinality-v0/`](../../artifacts/examples/math/finite-cardinality-v0/)
+  validate the finite foundations path: finite set identities, relation and
+  function tables, finite bijections, finite cardinal inequalities, bounded
+  injection/surjection refutations, and an explicit infinite-cardinality
+  Lean-horizon row.
+- [`artifacts/examples/math/natural-arithmetic-v0/`](../../artifacts/examples/math/natural-arithmetic-v0/),
+  [`artifacts/examples/math/integer-lia-v0/`](../../artifacts/examples/math/integer-lia-v0/),
+  [`artifacts/examples/math/gcd-bezout-v0/`](../../artifacts/examples/math/gcd-bezout-v0/),
+  and [`artifacts/examples/math/number-theory-v0/`](../../artifacts/examples/math/number-theory-v0/)
+  validate the core arithmetic path with bounded natural arithmetic, integer
+  LIA witnesses, gcd/Bezout replay, and bounded number-theory checks.
 - [`artifacts/examples/math/modular-arithmetic-v0/`](../../artifacts/examples/math/modular-arithmetic-v0/)
   validates small CRT, modular inverse, composite non-unit, and Fermat-style
   finite checks by replay/exhaustive search.
@@ -58,6 +71,13 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/linear-algebra-rational-v0/`](../../artifacts/examples/math/linear-algebra-rational-v0/)
   validates exact rational matrix-vector solution replay, LU factorization
   replay, and a row-scaling inconsistency certificate for a singular system.
+- [`artifacts/examples/math/finite-groups-v0/`](../../artifacts/examples/math/finite-groups-v0/),
+  [`artifacts/examples/math/finite-rings-v0/`](../../artifacts/examples/math/finite-rings-v0/),
+  [`artifacts/examples/math/finite-fields-v0/`](../../artifacts/examples/math/finite-fields-v0/),
+  [`artifacts/examples/math/polynomial-identities-v0/`](../../artifacts/examples/math/polynomial-identities-v0/),
+  and [`artifacts/examples/math/counting-v0/`](../../artifacts/examples/math/counting-v0/)
+  validate the finite algebra and discrete core: finite group/ring/field table
+  checks, fixed polynomial identities, and finite counting/pigeonhole rows.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
@@ -95,8 +115,10 @@ Validation commands:
 python3 scripts/gen-foundational-concepts.py
 python3 scripts/validate-foundational-concepts.py
 python3 scripts/gen-foundational-dashboards.py
+python3 scripts/validate-foundational-example-pack.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0

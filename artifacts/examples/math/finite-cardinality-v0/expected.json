@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-cardinality-v0",
+  "witnesses": [
+    {
+      "id": "three-to-three-bijection",
+      "description": "A bijection between two explicit three-element finite sets.",
+      "values": {
+        "domain": ["a", "b", "c"],
+        "codomain": ["0", "1", "2"],
+        "pairs": [["a", "1"], ["b", "2"], ["c", "0"]]
+      }
+    },
+    {
+      "id": "two-into-three-proper-subset",
+      "description": "A proper-subset injection from two elements into a three-element set.",
+      "values": {
+        "domain": ["alpha", "beta"],
+        "codomain": ["alpha", "beta", "gamma"],
+        "pairs": [["alpha", "alpha"], ["beta", "beta"]]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-bijection-cardinality-witness",
+      "claim": "The listed three-element finite sets have equal cardinality by the displayed bijection.",
+      "expected_result": "sat",
+      "validation": "finite_bijection_replay",
+      "proof_status": "checked",
+      "witnesses": ["three-to-three-bijection"],
+      "notes": "The validator checks the graph is total, single-valued, injective, and surjective."
+    },
+    {
+      "id": "proper-subset-injection-witness",
+      "claim": "The listed two-element proper subset injects into the listed three-element set without being surjective.",
+      "expected_result": "sat",
+      "validation": "finite_injection_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-into-three-proper-subset"],
+      "notes": "The validator checks proper inclusion, totality, single-valuedness, injectivity, and non-surjectivity."
+    },
+    {
+      "id": "no-injection-four-to-three",
+      "claim": "There exists an injective function from a four-element set to a three-element set.",
+      "expected_result": "unsat",
+      "validation": "finite_function_space_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "domain": ["p0", "p1", "p2", "p3"],
+        "codomain": ["h0", "h1", "h2"]
+      },
+      "notes": "The validator enumerates all 81 functions and confirms none is injective."
+    },
+    {
+      "id": "no-surjection-two-to-three",
+      "claim": "There exists a surjective function from a two-element set onto a three-element set.",
+      "expected_result": "unsat",
+      "validation": "finite_function_space_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "domain": ["x0", "x1"],
+        "codomain": ["y0", "y1", "y2"]
+      },
+      "notes": "The validator enumerates all 9 functions and confirms none is surjective."
+    },
+    {
+      "id": "cantor-diagonal-lean-horizon",
+      "claim": "There is no surjection from the natural numbers onto the powerset of the natural numbers.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem": "no_surjection_nat_to_powerset_nat",
+        "future_checker": "Lean module with no sorryAx dependency"
+      },
+      "notes": "This infinite cardinality theorem is recorded as a theorem-prover target, not as finite evidence."
+    }
+  ]
+}

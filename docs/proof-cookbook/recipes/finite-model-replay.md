@@ -43,8 +43,9 @@ plus the independent replay checker.
 
 The foundational example-pack validator replays each supported pack-specific
 model. Examples include exact rational arithmetic, graph colorings, finite
-topology closure/interior, finite measure additivity, recurrence traces, finite
-operator norms, and exact table statistics.
+cardinality witnesses, finite topology closure/interior, finite measure
+additivity, recurrence traces, finite operator norms, and exact table
+statistics.
 
 The checker rejects malformed data, non-deterministic references, missing
 witnesses, failed arithmetic equalities, violated finite axioms, and claimed
@@ -90,6 +91,7 @@ Focused examples:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 ```
@@ -101,3 +103,4 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [Math Curriculum Resource Buildout](../../foundational-resources/MATH-CURRICULUM-BUILDOUT.md)
 - [example-pack schema](../../../artifacts/ontology/foundational-example-pack.schema.json)
+- [Finite Cardinality pack](../../../artifacts/examples/math/finite-cardinality-v0/)
