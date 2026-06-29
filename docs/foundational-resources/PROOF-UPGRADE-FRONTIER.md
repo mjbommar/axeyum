@@ -127,14 +127,16 @@ First targets:
   (resource-backed Farkas regression landed for the bad stochastic row)
 - [finite-hitting-times-v0](../../artifacts/examples/math/finite-hitting-times-v0/)
   (resource-backed Farkas regression landed for the bad expected-time row)
+- [least-squares-regression-v0](../../artifacts/examples/math/least-squares-regression-v0/)
+  (resource-backed Farkas regression landed for the bad coefficient row)
 
 Secondary targets:
 
 - affine and orientation geometry;
 - inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix packs;
-- Euler shadows, least-squares regression, probability conditioning/Bayes-rule
-  conflicts, and rational real-analysis rows.
+- Euler shadows, probability conditioning/Bayes-rule conflicts, and rational
+  real-analysis rows.
 
 Expected artifact:
 

@@ -253,3 +253,26 @@ fn finite_hitting_times_bad_expected_time_emits_checked_farkas() {
         &[h_start_is_three, h_middle_is_two, cleared_equation],
     );
 }
+
+#[test]
+fn least_squares_bad_coefficients_emit_checked_farkas() {
+    let mut arena = TermArena::new();
+    let beta0 = real(&mut arena, "beta0");
+    let beta1 = real(&mut arena, "beta1");
+    let beta0_is_one = eq_ratio(&mut arena, beta0, 1, 1);
+    let beta1_is_one = eq_ratio(&mut arena, beta1, 1, 1);
+
+    // First normal equation for X = [[1,0],[1,1],[1,2]] and y = [1,2,4]:
+    // 3*beta0 + 3*beta1 = 7. The bad coefficients (1,1) force 6 = 7.
+    let three = arena.real_ratio(3, 1);
+    let three_beta0 = arena.real_mul(three, beta0).unwrap();
+    let three_beta1 = arena.real_mul(three, beta1).unwrap();
+    let lhs = arena.real_add(three_beta0, three_beta1).unwrap();
+    let first_normal_equation = eq_ratio(&mut arena, lhs, 7, 1);
+
+    assert_farkas_checked(
+        "least-squares-regression-v0 bad-regression-coefficients-rejected",
+        &arena,
+        &[beta0_is_one, beta1_is_one, first_normal_equation],
+    );
+}

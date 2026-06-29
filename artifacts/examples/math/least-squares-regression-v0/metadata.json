@@ -38,7 +38,8 @@
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "perfect-line-normal-equations",
@@ -50,7 +51,7 @@
   "graduation_criteria": [
     "Encode fixed least-squares normal-equation checks as deterministic QF_LRA formulas.",
     "Replay regression witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted certificates for bad coefficient rows once LRA proof routes are promoted.",
+    "Keep the bad coefficient row on Axeyum's checked Farkas evidence path.",
     "Keep inference, asymptotics, model selection, and floating-point regression under Lean horizon or numerical-honesty metadata until formal routes exist."
   ]
 }

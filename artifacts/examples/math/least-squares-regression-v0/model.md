@@ -58,4 +58,13 @@ The coefficients `(1, 1)` give fitted values `(1, 2, 3)` and residuals
 `(0, 0, 1)`. Their normal-equation residual is `(1, 2)`, so they do not solve
 the fixed least-squares problem.
 
+The first failed normal equation is linear:
+
+```text
+3*beta0 + 3*beta1 = 7
+```
+
+With `beta0 = beta1 = 1`, this reduces to `6 = 7`; the pack keeps that final
+contradiction on the checked `UnsatFarkas` route.
+
 These rows are exact finite replay targets, not a general regression theory.

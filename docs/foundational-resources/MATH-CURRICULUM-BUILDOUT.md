@@ -630,8 +630,8 @@ mean/variance identities, contingency-table margins, and a Simpson's paradox
 count-table witness.
 `artifacts/examples/math/least-squares-regression-v0/` now validates exact
 least-squares normal equations, residual orthogonality, mean-baseline RSS
-comparison, checked rejection of bad coefficients, and a regression-statistics
-Lean-horizon row.
+comparison, checked QF_LRA/Farkas rejection of bad coefficients, and a
+regression-statistics Lean-horizon row.
 `artifacts/examples/math/linear-optimization-v0/` now validates LP feasibility
 witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 `artifacts/examples/math/convexity-rational-v0/` now validates exact rational
@@ -1175,8 +1175,8 @@ Mobius-transform replay, checked rejection of a false unit-square real-part
 claim, and a complex-analysis Lean-horizon row.
 `least-squares-regression-v0` now adds the next exact finite statistics bridge:
 least-squares normal equations, residual orthogonality, mean-baseline RSS
-comparison, checked rejection of bad coefficients, and a regression-statistics
-Lean-horizon row.
+comparison, checked QF_LRA/Farkas rejection of bad coefficients, and a
+regression-statistics Lean-horizon row.
 `generating-functions-v0` now adds the next exact finite discrete/polynomial
 bridge: coefficient extraction, Cauchy product convolution, Fibonacci
 generating-function prefix replay, checked rejection of a bad convolution
@@ -1264,8 +1264,9 @@ floating-point/stability/convergence horizon.
 `descriptive-statistics-v0` and `least-squares-regression-v0` now have a
 learner-facing end-to-end lesson for exact mean/variance replay, contingency
 table margins, Simpson's paradox counts, least-squares normal equations,
-residual orthogonality, RSS comparison, checked bad-coefficients rejection,
-and the statistical inference/numerical regression horizon.
+residual orthogonality, RSS comparison, checked QF_LRA/Farkas
+bad-coefficients rejection, and the statistical inference/numerical regression
+horizon.
 `coordinate-geometry-v0`, `affine-geometry-v0`, and
 `orientation-area-geometry-v0` now have a learner-facing end-to-end lesson for
 exact midpoint, collinearity, squared-distance, affine-map, signed-area,
@@ -1420,6 +1421,8 @@ the same checked Farkas evidence path after exact replay computes the row sum.
 `finite-hitting-times-v0` now routes its bad expected-time row through the same
 checked Farkas evidence path after clearing denominators in the finite linear
 equation.
+`least-squares-regression-v0` now routes its bad coefficient row through the
+same checked Farkas evidence path using the first failed normal equation.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

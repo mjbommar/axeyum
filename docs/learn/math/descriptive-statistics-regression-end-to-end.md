@@ -196,6 +196,17 @@ X^T*y - X^T*X*beta = [1,2]
 The normal-equation residual is nonzero, so the coefficient claim is checked
 `unsat`.
 
+The resource regression checks the first failed normal equation as `QF_LRA`:
+
+```text
+beta0 = 1
+beta1 = 1
+3*beta0 + 3*beta1 = 7
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Name The Horizon
 
 The packs do not claim broad statistical theory:
@@ -236,7 +247,7 @@ pattern:
 
 ```text
 untrusted fast search -> statistic, table, coefficient, or counterexample row
-trusted small checking -> exact rational arithmetic, count tables, matrix replay, and Diophantine certificates
+trusted small checking -> exact rational arithmetic, count tables, matrix replay, Diophantine certificates, and Farkas certificates
 remaining horizon -> inference, asymptotics, floating point, and model theory
 ```
 

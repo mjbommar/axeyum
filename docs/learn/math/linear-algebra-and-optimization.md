@@ -36,7 +36,10 @@ The linear path uses exact rational matrices. It replays `A*x = b`, checks
 `L*U = A`, validates a row-scaling inconsistency certificate, checks LP
 feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
 replays finite convexity/threshold and finite-dimensional norm/operator
-examples. The finite-vector-space slice adds `F2^2`, subspace/span replay,
+examples. The least-squares regression slice checks normal equations,
+residual orthogonality, RSS comparison, and a checked `UnsatFarkas`
+bad-coefficients certificate. The finite-vector-space slice adds `F2^2`,
+subspace/span replay,
 linear-map kernel/image replay, rank-nullity by finite cardinality, and
 checked non-subspace rejection. The finite-dual-space slice adds covectors as
 finite function tables, pointwise dual operations, dual-basis pairings,

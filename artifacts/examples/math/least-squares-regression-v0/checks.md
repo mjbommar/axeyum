@@ -31,6 +31,10 @@ Expected result: `unsat`.
 The validator rejects the claim that coefficients `(1, 1)` solve the same
 least-squares problem because their normal-equation residual is `(1, 2)`.
 
+The resource-backed Axeyum regression checks the first failed normal equation
+as `QF_LRA`: `beta0 = 1`, `beta1 = 1`, and
+`3*beta0 + 3*beta1 = 7`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-regression-statistics-lean-horizon`
 
 Expected result: `not-run`.

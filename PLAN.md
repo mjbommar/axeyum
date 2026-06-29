@@ -102,8 +102,9 @@ the first secondary statistics margin/count row is now promoted in
 descriptive statistics, and the finite-probability bad-normalization row now
 has a checked QF_LRA/Farkas regression, with finite Markov chains now promoted
 for the bad stochastic-row obstruction and finite hitting times promoted for
-the bad expected-time equation. Prefer the next secondary equality-heavy pack
-that can carry a small checked certificate and a resource-backed regression.
+the bad expected-time equation; least-squares regression is now promoted for
+the bad coefficient row. Prefer the next secondary equality-heavy pack that can
+carry a small checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

@@ -14017,6 +14017,18 @@ def validate_least_squares_regression(expected: dict[str, Any]) -> None:
         fail("bad-regression-coefficients-rejected X^T residual does not match normal residual")
     if all(item == 0 for item in normal_residual):
         fail("bad-regression-coefficients-rejected coefficients unexpectedly satisfy normal equations")
+    equation = data.get("farkas_normal_equation")
+    require_string("bad regression farkas_normal_equation", equation)
+    if equation != "3*beta0 + 3*beta1 = 7":
+        fail("bad-regression-coefficients-rejected must document the Farkas normal equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad regression smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-regression-coefficients-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad regression farkas_regression", regression)
+    if "least_squares_bad_coefficients_emit_checked_farkas" not in regression:
+        fail("bad-regression-coefficients-rejected must link the Farkas regression")
 
     horizon = checks["general-regression-statistics-lean-horizon"]
     if horizon["expected_result"] != "not-run":

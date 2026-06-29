@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const beta0 Real)
+(declare-const beta1 Real)
+(assert (= beta0 1))
+(assert (= beta1 1))
+(assert (= (+ (* 3 beta0) (* 3 beta1)) 7))
+(check-sat)

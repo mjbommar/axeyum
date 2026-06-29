@@ -365,6 +365,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   LRA resource regression requires `Evidence::UnsatFarkas` and rechecks the
   rational certificate independently.
 
+- **Least-squares-regression QF_LRA/Farkas regression landed.**
+  [`least-squares-regression-v0`](artifacts/examples/math/least-squares-regression-v0/)
+  now binds its bad coefficient row to Axeyum's evidence path. The new SMT-LIB
+  artifact encodes `beta0 = 1`, `beta1 = 1`, and the first failed normal
+  equation `3*beta0 + 3*beta1 = 7`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
