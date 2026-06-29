@@ -152,6 +152,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **First math end-to-end lesson landed.** Added
+  [`docs/learn/math/graph-coloring-end-to-end.md`](docs/learn/math/graph-coloring-end-to-end.md)
+  to trace `graph-coloring-v0` from finite data row through replayed `sat`,
+  checked finite `unsat`, and proof/evidence status. Continue Phase M5 with
+  end-to-end lessons for rational arithmetic, linear algebra/optimization, and
+  probability/statistics.
+
 - **Math learner walkthrough layer landed.** Expanded all nine
   [`docs/learn/math/`](docs/learn/math/) cluster pages with concrete
   encode/check walkthroughs using validated pack data and repo-root validation

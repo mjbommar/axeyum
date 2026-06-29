@@ -46,6 +46,9 @@ Run the check from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```
 
+For a fuller trace from data row to replay result and evidence status, read
+[End To End: Triangle Coloring](graph-coloring-end-to-end.md).
+
 ## Horizon
 
 Reachability, matching, cuts, traversal traces, and d-separation need dedicated

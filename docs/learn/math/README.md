@@ -29,6 +29,12 @@ Source maps:
 Each cluster page includes an `Encode / Check Walkthrough` section with
 validated pack data and the repo-root command that replays it.
 
+## End-To-End Lessons
+
+- [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
+  coloring resource from data row through replayed `sat`, checked finite
+  `unsat`, and proof/evidence status.
+
 ## How To Read These Pages
 
 Use the example packs as the executable source of truth. A lesson can explain a
