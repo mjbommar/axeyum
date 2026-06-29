@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc links
+check: fmt clippy test doc foundational-resources links
 
 fmt:
     cargo fmt --all --check
@@ -24,6 +24,9 @@ test-guarded:
 
 doc:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+
+foundational-resources:
+    ./scripts/check-foundational-resources.sh
 
 deny:
     cargo deny check

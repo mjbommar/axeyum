@@ -28,6 +28,7 @@ step clippy cargo clippy --workspace --all-targets --all-features -- -D warnings
 step test   cargo test --workspace --all-features
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
+step foundational-resources ./scripts/check-foundational-resources.sh
 step links  ./scripts/check-links.sh
 
 if [ "$fail" -ne 0 ]; then

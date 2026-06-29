@@ -445,11 +445,14 @@ Exit criteria:
 
 ### Phase M7: Generated Dashboards And CI Hook
 
-Status: first dashboard increment landed. The proof-gap dashboard is still
-generated from the concept atlas, and now also reads math example-pack metadata
-and `expected.json` rows to report pack-level route coverage, validation
-commands, checked/replay/proof-gap counts, and the concrete checks that still
-need stronger evidence.
+Status: first dashboard and check-hook increments landed. The proof-gap
+dashboard is still generated from the concept atlas, and now also reads math
+example-pack metadata and `expected.json` rows to report pack-level route
+coverage, validation commands, checked/replay/proof-gap counts, and the concrete
+checks that still need stronger evidence. `just foundational-resources` and the
+plain-shell fallback now validate the concept atlas, validate all math example
+packs, regenerate dashboards, and fail if generated dashboard files are stale;
+CI runs the same gate before docs link checking.
 
 Deliverables:
 
@@ -462,6 +465,9 @@ Exit criteria:
 
 - Dashboards are deterministic.
 - Validators run in the normal docs/check workflow or have a documented command.
+  Status: landed through `just foundational-resources`,
+  `scripts/check-foundational-resources.sh`, `just check`, `scripts/check.sh`,
+  and the CI docs-resources/docs-links job.
 - Dashboard output names gaps without manual editing.
 
 ### Phase M8: Library Boundary Decision
@@ -507,10 +513,10 @@ scaffold plus first encode/check walkthrough layer have landed for the math
 seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
 linear algebra/optimization, probability/statistics, finite structures, and
 analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs. Continue by turning pack-level proof gaps into
-generated dashboard rows and adding focused recipes when new packs expose a
-repeated evidence route not covered by finite replay, CNF/LRAT, Farkas,
-Diophantine, EUF/Alethe, arrays, or Lean horizon.
+non-template math example packs. Phase M7 now has generated pack-level proof-gap
+rows and a normal foundational-resource check hook. Continue by either closing
+the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or adding the
+next core curriculum pack from Phase M3.
 
 ## Operating Rules
 

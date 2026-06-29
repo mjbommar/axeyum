@@ -65,7 +65,8 @@ PLAN.md and pick the next task.
 ## Commands
 
 ```sh
-just check          # fmt + clippy + test + doc + docs link check (preferred)
+just check          # fmt + clippy + test + doc + foundational resources + docs link check (preferred)
+just foundational-resources  # validates foundational atlas/example packs + generated dashboards
 ./scripts/check.sh  # same aggregate gate without `just` (fresh-machine fallback)
 just bench-micro    # committed SMT-LIB micro corpus through axeyum-bench
 just bench-public-qfbv-sat-bv-compare  # Phase 5 public sat-bv vs Z3 slice

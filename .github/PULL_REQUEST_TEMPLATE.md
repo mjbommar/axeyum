@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] `just check` passes (fmt, clippy, test, doc, links)
+- [ ] `just check` passes (fmt, clippy, test, doc, foundational resources, links)
 - [ ] New transformations ship with their check (evaluator equivalence,
       round trip, lift map) per the evidence rules
 - [ ] No architectural decision made silently — open questions closed via

@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Foundational resource check hook landed.** Added
+  [`scripts/check-foundational-resources.sh`](scripts/check-foundational-resources.sh)
+  and wired it into `just foundational-resources`, `just check`,
+  [`scripts/check.sh`](scripts/check.sh), and the CI docs resources/link job.
+  The gate validates the concept atlas, validates all math example packs,
+  regenerates dashboards, and fails if generated dashboard files are stale.
+  Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof
+  gap or by adding the next Phase M3 core curriculum pack.
+
 - **Pack-level proof-gap dashboard generation landed.** Extended
   [`scripts/gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py)
   so

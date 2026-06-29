@@ -47,7 +47,8 @@ flowchart LR
 ## Validate before you push
 
 ```sh
-just check          # fmt + clippy (-D warnings, pedantic) + test + doc + link check
+just check          # fmt + clippy (-D warnings, pedantic) + test + doc + foundational resources + link check
+just foundational-resources  # validate foundational atlas/example packs + dashboards
 ./scripts/check.sh  # same gate without `just`
 ```
 
