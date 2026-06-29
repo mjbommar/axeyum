@@ -487,9 +487,30 @@ struct Lowerer {
     /// array name → (element type, length). Arrays live at function scope (they
     /// are parameters), so a single map suffices.
     arrays: std::collections::HashMap<String, (Ty, u128)>,
+    /// Scoped `Option`-typed bindings from `let x = a.checked_*(b);` — `x` is
+    /// *virtual* (no IR value), expanded at use sites (`unwrap`/`unwrap_or`/
+    /// `is_some`/`is_none`/`match`). Any other use of `x` is a fragment error
+    /// (sound: rejected, never a wrong verdict). Parallels `scopes`.
+    option_lets: Vec<std::collections::HashMap<String, OptBind>>,
     /// The function-level `#[axeyum::unwind(K)]` bound applied to every loop
     /// (`None` ⇒ loops are rejected; the user must supply a bound).
     unwind: Option<u64>,
+}
+
+/// A virtual `Option` binding: `Some(wrap_op(lhs, rhs))` when `ovf_op(lhs, rhs)`
+/// does not overflow, else `None`. The operand tokens are already lowered.
+#[derive(Clone)]
+struct OptBind {
+    /// `Add`/`Sub`/`Mul` — the overflow predicate operator.
+    ovf_op: &'static str,
+    /// `WrappingAdd`/`WrappingSub`/`WrappingMul` — the carried (real) value op.
+    wrap_op: &'static str,
+    /// Lowered left operand.
+    lhs: TokenStream,
+    /// Lowered right operand.
+    rhs: TokenStream,
+    /// The carried value's integer type.
+    ty: Ty,
 }
 
 impl Lowerer {
@@ -497,8 +518,17 @@ impl Lowerer {
         Lowerer {
             scopes: vec![std::collections::HashMap::new()],
             arrays: std::collections::HashMap::new(),
+            option_lets: vec![std::collections::HashMap::new()],
             unwind,
         }
+    }
+
+    /// Find a virtual `Option` binding by name (innermost scope first).
+    fn lookup_option(&self, name: &str) -> Option<OptBind> {
+        self.option_lets
+            .iter()
+            .rev()
+            .find_map(|s| s.get(name).cloned())
     }
 
     fn declare(&mut self, name: &str, ty: Ty) {
@@ -523,9 +553,11 @@ impl Lowerer {
 
     fn push_scope(&mut self) {
         self.scopes.push(std::collections::HashMap::new());
+        self.option_lets.push(std::collections::HashMap::new());
     }
     fn pop_scope(&mut self) {
         self.scopes.pop();
+        self.option_lets.pop();
     }
 
     /// Lower a block into a `Vec<TokenStream>` of `Stmt`-building expressions.
@@ -549,6 +581,11 @@ impl Lowerer {
     ) -> syn::Result<()> {
         match stmt {
             Stmt::Local(local) => {
+                // `let x = a.checked_*(b);` binds a *virtual* Option (no IR value
+                // / no emitted statement); expanded at use sites.
+                if self.try_record_option_let(local)? {
+                    return Ok(());
+                }
                 let (name, ty, value_tok) = self.lower_let(local)?;
                 let ty_tok = ty.to_tokens();
                 self.declare(&name, ty);
@@ -674,6 +711,149 @@ impl Lowerer {
                 },
             }
         }))
+    }
+
+    /// If `local` is `let x [: T] = a.checked_{add,sub,mul}(b);`, record `x` as a
+    /// virtual `Option` binding and return `true` (no statement emitted). The
+    /// binding is expanded at use sites; any other use of `x` is rejected.
+    fn try_record_option_let(&mut self, local: &Local) -> syn::Result<bool> {
+        let name = match &local.pat {
+            Pat::Ident(pi) => pi.ident.to_string(),
+            Pat::Type(pt) => match &*pt.pat {
+                Pat::Ident(pi) => pi.ident.to_string(),
+                _ => return Ok(false),
+            },
+            _ => return Ok(false),
+        };
+        let Some(init) = &local.init else {
+            return Ok(false);
+        };
+        let Expr::MethodCall(call) = &*init.expr else {
+            return Ok(false);
+        };
+        let Some((ovf_op, wrap_op)) = checked_ops(&call.method.to_string()) else {
+            return Ok(false);
+        };
+        if call.args.len() != 1 {
+            return Err(syn::Error::new(
+                call.span(),
+                "axeyum::verify: `checked_*` takes exactly one argument",
+            ));
+        }
+        let (lhs, lty) = self.lower_expr(&call.receiver)?;
+        let arg = call.args.first().unwrap();
+        let rhs = if is_untyped_int_lit(arg) && lty.width.is_some() {
+            if let Expr::Lit(el) = arg {
+                lower_lit_as(&el.lit, lty, el.span())?.0
+            } else {
+                self.lower_expr(arg)?.0
+            }
+        } else {
+            self.lower_expr(arg)?.0
+        };
+        self.option_lets
+            .last_mut()
+            .expect("at least one option scope")
+            .insert(
+                name,
+                OptBind {
+                    ovf_op,
+                    wrap_op,
+                    lhs,
+                    rhs,
+                    ty: lty,
+                },
+            );
+        Ok(true)
+    }
+
+    /// Expand a method call on a virtual `Option` binding `b`.
+    fn lower_option_method(
+        &mut self,
+        method: &str,
+        mc: &syn::ExprMethodCall,
+        b: &OptBind,
+    ) -> syn::Result<(TokenStream, Ty)> {
+        let OptBind {
+            ovf_op,
+            wrap_op,
+            lhs,
+            rhs,
+            ty,
+        } = b;
+        let ovf_ident = format_ident!("{}", *ovf_op);
+        let wrap_ident = format_ident!("{}", *wrap_op);
+        let overflows = quote! {
+            axeyum_verify::ast::Expr::Overflows {
+                op: axeyum_verify::ast::BinOp::#ovf_ident,
+                lhs: Box::new(#lhs),
+                rhs: Box::new(#rhs),
+            }
+        };
+        match method {
+            // unwrap/expect = the plain checked op (panics on overflow).
+            "unwrap" | "expect" => Ok((
+                quote! {
+                    axeyum_verify::ast::Expr::Binary {
+                        op: axeyum_verify::ast::BinOp::#ovf_ident,
+                        lhs: Box::new(#lhs),
+                        rhs: Box::new(#rhs),
+                    }
+                },
+                *ty,
+            )),
+            // unwrap_or(d) = ite(!overflows, wrapping_op, d).
+            "unwrap_or" => {
+                if mc.args.len() != 1 {
+                    return Err(syn::Error::new(
+                        mc.span(),
+                        "axeyum::verify: `.unwrap_or()` takes exactly one argument",
+                    ));
+                }
+                let arg = mc.args.first().unwrap();
+                let default = if is_untyped_int_lit(arg) && ty.width.is_some() {
+                    if let Expr::Lit(el) = arg {
+                        lower_lit_as(&el.lit, *ty, el.span())?.0
+                    } else {
+                        self.lower_expr(arg)?.0
+                    }
+                } else {
+                    self.lower_expr(arg)?.0
+                };
+                Ok((
+                    quote! {
+                        axeyum_verify::ast::Expr::Ite {
+                            cond: Box::new(axeyum_verify::ast::Expr::Unary {
+                                op: axeyum_verify::ast::UnOp::Not,
+                                operand: Box::new(#overflows),
+                            }),
+                            then: Box::new(axeyum_verify::ast::Expr::Binary {
+                                op: axeyum_verify::ast::BinOp::#wrap_ident,
+                                lhs: Box::new(#lhs),
+                                rhs: Box::new(#rhs),
+                            }),
+                            els: Box::new(#default),
+                        }
+                    },
+                    *ty,
+                ))
+            }
+            // is_some / is_none are the (negated) overflow predicate.
+            "is_some" => Ok((
+                quote! {
+                    axeyum_verify::ast::Expr::Unary {
+                        op: axeyum_verify::ast::UnOp::Not,
+                        operand: Box::new(#overflows),
+                    }
+                },
+                Ty::bool(),
+            )),
+            "is_none" => Ok((overflows, Ty::bool())),
+            other => Err(syn::Error::new(
+                mc.span(),
+                format!("axeyum::verify: unsupported method `.{other}()` on an Option"),
+            )),
+        }
     }
 
     /// `let name: ty = expr;` → (name, Ty, value tokens). Requires a type
@@ -864,34 +1044,43 @@ impl Lowerer {
         &mut self,
         em: &syn::ExprMatch,
     ) -> syn::Result<Option<TokenStream>> {
-        let Expr::MethodCall(call) = &*em.expr else {
-            return Ok(None);
-        };
-        let Some((ovf_op, wrap_op)) = (match call.method.to_string().as_str() {
-            "checked_add" => Some(("Add", "WrappingAdd")),
-            "checked_sub" => Some(("Sub", "WrappingSub")),
-            "checked_mul" => Some(("Mul", "WrappingMul")),
-            _ => None,
-        }) else {
-            return Ok(None);
-        };
-        if call.args.len() != 1 {
-            return Err(syn::Error::new(
-                call.span(),
-                "axeyum::verify: `checked_*` takes exactly one argument",
-            ));
-        }
-        let (lhs, lty) = self.lower_expr(&call.receiver)?;
-        let arg_expr = call.args.first().unwrap();
-        let rhs = if is_untyped_int_lit(arg_expr) && lty.width.is_some() {
-            if let Expr::Lit(el) = arg_expr {
-                lower_lit_as(&el.lit, lty, el.span())?.0
+        // Resolve the Option scrutinee from either a `checked_*` call or a virtual
+        // `Option` binding (`let x = a.checked_*(b)`). Otherwise this isn't an
+        // Option match — fall back to the integer-`match` path.
+        let (ovf_op, wrap_op, lhs, rhs, lty): (&str, &str, TokenStream, TokenStream, Ty) =
+            if let Expr::MethodCall(call) = &*em.expr {
+                let Some((ovf_op, wrap_op)) = checked_ops(&call.method.to_string()) else {
+                    return Ok(None);
+                };
+                if call.args.len() != 1 {
+                    return Err(syn::Error::new(
+                        call.span(),
+                        "axeyum::verify: `checked_*` takes exactly one argument",
+                    ));
+                }
+                let (lhs, lty) = self.lower_expr(&call.receiver)?;
+                let arg_expr = call.args.first().unwrap();
+                let rhs = if is_untyped_int_lit(arg_expr) && lty.width.is_some() {
+                    if let Expr::Lit(el) = arg_expr {
+                        lower_lit_as(&el.lit, lty, el.span())?.0
+                    } else {
+                        self.lower_expr(arg_expr)?.0
+                    }
+                } else {
+                    self.lower_expr(arg_expr)?.0
+                };
+                (ovf_op, wrap_op, lhs, rhs, lty)
+            } else if let Expr::Path(p) = &*em.expr {
+                let Ok(name) = path_ident(p) else {
+                    return Ok(None);
+                };
+                let Some(b) = self.lookup_option(&name) else {
+                    return Ok(None);
+                };
+                (b.ovf_op, b.wrap_op, b.lhs, b.rhs, b.ty)
             } else {
-                self.lower_expr(arg_expr)?.0
-            }
-        } else {
-            self.lower_expr(arg_expr)?.0
-        };
+                return Ok(None);
+            };
 
         if em.arms.len() != 2 {
             return Err(syn::Error::new(
@@ -1151,6 +1340,15 @@ impl Lowerer {
             Expr::Lit(el) => lower_lit(&el.lit, expr.span()),
             Expr::Path(p) => {
                 let name = path_ident(p)?;
+                if self.lookup_option(&name).is_some() {
+                    return Err(syn::Error::new(
+                        p.span(),
+                        format!(
+                            "axeyum::verify: `{name}` is an `Option` — consume it with \
+                             `.unwrap()`/`.unwrap_or(..)`/`.is_some()` or `match`, not as a value"
+                        ),
+                    ));
+                }
                 let ty = self.lookup(&name).ok_or_else(|| {
                     syn::Error::new(
                         p.span(),
@@ -1267,6 +1465,14 @@ impl Lowerer {
     #[allow(clippy::too_many_lines)]
     fn lower_method_call(&mut self, mc: &syn::ExprMethodCall) -> syn::Result<(TokenStream, Ty)> {
         let method = mc.method.to_string();
+        // A method on a virtual `Option` binding (`let x = a.checked_*(b)`).
+        if let Expr::Path(p) = &*mc.receiver {
+            if let Ok(name) = path_ident(p) {
+                if let Some(b) = self.lookup_option(&name) {
+                    return self.lower_option_method(&method, mc, &b);
+                }
+            }
+        }
         if method == "unwrap" || method == "expect" {
             // Receiver must be `opt(is_some, value)` — our recognized Option ctor.
             if let Expr::Call(call) = &*mc.receiver {
@@ -1763,6 +1969,17 @@ fn block_tail_expr(block: &Block) -> syn::Result<&Expr> {
             block.span(),
             "axeyum::verify: an `if`-expression branch must end in a value expression",
         )),
+    }
+}
+
+/// Maps a `checked_*` method name to its (overflow-predicate op, wrapping-value
+/// op) `BinOp` variant names, or `None` if it is not a modeled checked op.
+fn checked_ops(method: &str) -> Option<(&'static str, &'static str)> {
+    match method {
+        "checked_add" => Some(("Add", "WrappingAdd")),
+        "checked_sub" => Some(("Sub", "WrappingSub")),
+        "checked_mul" => Some(("Mul", "WrappingMul")),
+        _ => None,
     }
 }
 
