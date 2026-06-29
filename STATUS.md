@@ -167,10 +167,11 @@ store-chain` over 32-/64-bit indices without `2^iw` enumeration) → **QF_ABV
 173 → 176/177** (gap to z3 −1), DISAGREE=0, abv fuzz DISAGREE=0, rewrite 88/88.
 Grounding + the remaining leads in
 [decide-rate-measured-2026-06-29](docs/plan/decide-rate-measured-2026-06-29.md):
-the **UF+theory combination keystone** (deep; `issue5836-2`/`issue5396`) and a
-newly-found **deadline-robustness defect** (some `check_auto` paths ignore
-`config.timeout` and hang on a few QF_LIA/QF_AUFLIA instances — a consumer-facing
-budget bug to thread the deadline through).
+the **UF+theory combination keystone** (deep; `issue5836-2`/`issue5396`). (A
+suspected `check_auto` deadline-hang was investigated and **ruled out**: every
+QF_LIA instance returns within budget individually; the earlier directory-level
+`explain_corpus` slowness was cumulative scan time + environmental command-kills
+under heavy build load, not a per-instance deadline-ignore.)
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
