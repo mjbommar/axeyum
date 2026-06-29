@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "finite-chebyshev-systems-v0",
+  "title": "Finite Chebyshev-System Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_functional_analysis_and_operator_theory",
+    "field_numerical_analysis",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "curriculum_linear_algebra",
+    "curriculum_polynomials",
+    "curriculum_reals",
+    "curriculum_rationals"
+  ],
+  "field_ids": [
+    "functional_analysis_and_operator_theory",
+    "numerical_analysis",
+    "linear_algebra",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "polynomials",
+    "reals",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite-dimensional linear algebra",
+    "polynomial evaluation",
+    "LRA (exact rationals)",
+    "NRA shadow",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "vandermonde-unisolvence-witness",
+    "interpolation-polynomial-witness",
+    "alternating-residual-witness",
+    "bad-duplicate-node-grid-rejected",
+    "general-chebyshev-system-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite sample grids and polynomial bases as exact rational evaluation matrices.",
+    "Replay determinant, interpolation, and sign-pattern rows by deterministic exact arithmetic.",
+    "Emit checked finite counterexample evidence for degenerate sample grids.",
+    "Keep Haar/Chebyshev-system theorems, minimax approximation, alternation theorems, and infinite-dimensional analysis marked Lean-horizon until no-sorry Lean artifacts exist."
+  ]
+}

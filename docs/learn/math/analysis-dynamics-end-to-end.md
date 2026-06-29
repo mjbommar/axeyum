@@ -4,6 +4,8 @@ This lesson follows bounded analysis-adjacent resources from data row to
 replayed result. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
 [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/),
+the finite Chebyshev-system slice in
+[finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/),
 with the finite stochastic transition slice in
 [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/),
 the finite hitting-time slice in
@@ -32,6 +34,10 @@ Concept rows:
 | `bad-expected-time-rejected` | `unsat` | checked |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
+| `vandermonde-unisolvence-witness` | `sat` | replay-only |
+| `interpolation-polynomial-witness` | `sat` | replay-only |
+| `alternating-residual-witness` | `sat` | replay-only |
+| `bad-duplicate-node-grid-rejected` | `unsat` | checked |
 | `spectral-decomposition-witness` | `sat` | replay-only |
 
 These are bounded finite traces and finite-dimensional algebra checks, not
@@ -60,6 +66,14 @@ A*x = [3,3]
 ||A*x||_infty = 3
 ```
 
+The finite Chebyshev-system witness is a fixed polynomial sample grid:
+
+```text
+x = -1, 0, 1
+basis = 1, x, x^2
+det([[1,-1,1], [1,0,0], [1,1,1]]) = 2
+```
+
 ## Replay
 
 For the dynamics row, the checker verifies every transition:
@@ -85,6 +99,19 @@ T1 = 1/2
 T2 = -1/2
 T3 = -1
 ```
+
+For the finite Chebyshev-system rows, it checks exact finite unisolvence and
+interpolation:
+
+```text
+p(x) = 2 - x + 3*x^2
+p(-1), p(0), p(1) = 6, 2, 4
+r(x) = x^2 - 1/2
+r(-1), r(0), r(1) = 1/2, -1/2, 1/2
+```
+
+It also rejects a duplicate-node grid by recomputing determinant `0` and a
+nonzero null vector.
 
 For the Markov-chain row, it checks exact stochastic evolution:
 
@@ -120,6 +147,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
 
@@ -133,7 +161,8 @@ validated 1 foundational example pack(s)
 
 The trusted checker handles finite traces, exact rational matrices, and finite
 recurrence lists. General limits, ODE existence and uniqueness, stability,
-compact operators, Banach/Hilbert-space theorems, and general Chebyshev spaces
-remain Lean-horizon material. Infinite-dimensional spectral theory,
+compact operators, Banach/Hilbert-space theorems, general Chebyshev spaces,
+Haar-space theorems, and minimax approximation remain Lean-horizon material.
+Infinite-dimensional spectral theory,
 infinite-state Markov chains, recurrence/transience classifications, optional
 stopping, and mixing-time theorems also remain proof-horizon material.

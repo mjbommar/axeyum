@@ -107,6 +107,7 @@ artifacts/examples/math/
   finite-concentration-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
+  finite-chebyshev-systems-v0/
   complex-algebraic-v0/
 scripts/
   gen-foundational-concepts.py
@@ -460,6 +461,9 @@ threshold reachability replay.
 [`finite-operator-v0`](../../artifacts/examples/math/finite-operator-v0/)
 validates exact finite-dimensional norm, matrix-operator, and Chebyshev
 recurrence checks.
+[`finite-chebyshev-systems-v0`](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
+validates exact finite Vandermonde unisolvence, interpolation matrix replay,
+alternating residual signs, and checked rejection of a duplicate-node grid.
 [`complex-algebraic-v0`](../../artifacts/examples/math/complex-algebraic-v0/)
 validates exact complex arithmetic, conjugate/norm replay, and a fixed
 polynomial-root witness using real-pair algebra.

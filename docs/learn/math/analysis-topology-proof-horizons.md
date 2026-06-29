@@ -27,6 +27,7 @@ Example packs:
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
+- [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 
 ## What Axeyum Checks
@@ -40,8 +41,9 @@ finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 polynomial derivative identities, bounded recurrence traces, finite invariant
 witnesses, matrix operator bounds, Chebyshev recurrence values at fixed points,
-finite stochastic transition systems, finite first-hit distributions, and
-expected hitting-time equation checks. The
+finite Chebyshev-system interpolation/sign-pattern checks, finite stochastic
+transition systems, finite first-hit distributions, and expected hitting-time
+equation checks. The
 spectral-linear-algebra pack adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
@@ -203,6 +205,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
 

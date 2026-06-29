@@ -215,6 +215,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-operator-v0/`](../../artifacts/examples/math/finite-operator-v0/)
   validates exact finite-dimensional norm, matrix-operator, and Chebyshev
   recurrence checks.
+- [`artifacts/examples/math/finite-chebyshev-systems-v0/`](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
+  validates exact finite Vandermonde unisolvence, interpolation replay,
+  alternating residual signs, checked rejection of a duplicate-node grid, and a
+  general Chebyshev-system Lean-horizon row.
 - [`artifacts/examples/math/complex-algebraic-v0/`](../../artifacts/examples/math/complex-algebraic-v0/)
   validates exact complex arithmetic, conjugate/norm replay, and a fixed
   polynomial-root witness using real-pair algebra.
@@ -269,6 +273,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 

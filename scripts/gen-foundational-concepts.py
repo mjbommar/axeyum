@@ -186,7 +186,7 @@ FIELD_PACKS = {
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, distance, midpoint, collinearity, and rigid finite configurations."),
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, operator matrices, and Chebyshev polynomial slices."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {

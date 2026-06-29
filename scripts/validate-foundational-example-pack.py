@@ -3293,6 +3293,67 @@ def row_sum_norm(matrix: list[list[Fraction]]) -> Fraction:
     return max(sum((abs(item) for item in row), Fraction(0)) for row in matrix)
 
 
+def matrix_determinant(matrix: list[list[Fraction]]) -> Fraction:
+    require_square_matrix("determinant matrix", matrix)
+    rows = [list(row) for row in matrix]
+    size = len(rows)
+    determinant = Fraction(1)
+    for col_index in range(size):
+        pivot = None
+        for row_index in range(col_index, size):
+            if rows[row_index][col_index] != 0:
+                pivot = row_index
+                break
+        if pivot is None:
+            return Fraction(0)
+        if pivot != col_index:
+            rows[col_index], rows[pivot] = rows[pivot], rows[col_index]
+            determinant = -determinant
+        pivot_value = rows[col_index][col_index]
+        determinant *= pivot_value
+        for row_index in range(col_index + 1, size):
+            factor = rows[row_index][col_index] / pivot_value
+            rows[row_index] = [
+                item - factor * pivot_item
+                for item, pivot_item in zip(rows[row_index], rows[col_index])
+            ]
+    return determinant
+
+
+def polynomial_basis_matrix(points: list[Fraction], degree: int) -> list[list[Fraction]]:
+    return [
+        [point ** power for power in range(degree + 1)]
+        for point in points
+    ]
+
+
+def require_basis_degree(context: str, value: Any) -> int:
+    degree = require_int(context, value)
+    if degree < 0:
+        fail(f"{context} must be nonnegative")
+    return degree
+
+
+def fraction_sign(value: Fraction) -> int:
+    if value < 0:
+        return -1
+    if value > 0:
+        return 1
+    return 0
+
+
+def require_sign_list(context: str, value: Any) -> list[int]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty sign list")
+    signs: list[int] = []
+    for index, item in enumerate(value):
+        sign = require_int(f"{context}[{index}]", item)
+        if sign not in {-1, 0, 1}:
+            fail(f"{context}[{index}] must be -1, 0, or 1")
+        signs.append(sign)
+    return signs
+
+
 def validate_finite_operator(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -3366,6 +3427,122 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         expected_next = 2 * x_value * chebyshev_values[index] - chebyshev_values[index - 1]
         if chebyshev_values[index + 1] != expected_next:
             fail(f"chebyshev T{index + 1} does not match the recurrence")
+
+
+def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    unisolvence = checks["vandermonde-unisolvence-witness"]
+    if unisolvence["expected_result"] != "sat":
+        fail("vandermonde-unisolvence-witness must expect sat")
+    values = single_witness_values(unisolvence, witnesses)
+    points = require_fraction_vector("Vandermonde points", values.get("points"))
+    degree = require_basis_degree("Vandermonde basis_degree", values.get("basis_degree"))
+    matrix = require_fraction_matrix("Vandermonde evaluation_matrix", values.get("evaluation_matrix"))
+    determinant = require_fraction("Vandermonde determinant", values.get("determinant"))
+    if len(points) != degree + 1:
+        fail("vandermonde-unisolvence-witness expects degree + 1 sample points")
+    if polynomial_basis_matrix(points, degree) != matrix:
+        fail("vandermonde-unisolvence-witness evaluation_matrix is incorrect")
+    if matrix_determinant(matrix) != determinant:
+        fail("vandermonde-unisolvence-witness determinant is incorrect")
+    if determinant == 0:
+        fail("vandermonde-unisolvence-witness determinant must be nonzero")
+
+    interpolation = checks["interpolation-polynomial-witness"]
+    if interpolation["expected_result"] != "sat":
+        fail("interpolation-polynomial-witness must expect sat")
+    values = single_witness_values(interpolation, witnesses)
+    points = require_fraction_vector("interpolation points", values.get("points"))
+    degree = require_basis_degree("interpolation basis_degree", values.get("basis_degree"))
+    coefficients = require_fraction_vector("interpolation coefficients", values.get("coefficients"))
+    matrix = require_fraction_matrix("interpolation evaluation_matrix", values.get("evaluation_matrix"))
+    sample_values = require_fraction_vector("interpolation sample_values", values.get("sample_values"))
+    determinant = require_fraction("interpolation determinant", values.get("determinant"))
+    if len(points) != degree + 1:
+        fail("interpolation-polynomial-witness expects degree + 1 sample points")
+    if len(coefficients) != degree + 1:
+        fail("interpolation-polynomial-witness coefficient count must be degree + 1")
+    if polynomial_basis_matrix(points, degree) != matrix:
+        fail("interpolation-polynomial-witness evaluation_matrix is incorrect")
+    if matrix_determinant(matrix) != determinant:
+        fail("interpolation-polynomial-witness determinant is incorrect")
+    if determinant == 0:
+        fail("interpolation-polynomial-witness determinant must be nonzero")
+    if mat_vec(matrix, coefficients) != sample_values:
+        fail("interpolation-polynomial-witness sample values do not match coefficients")
+    for point, sample_value in zip(points, sample_values):
+        if polynomial_eval(coefficients, point) != sample_value:
+            fail("interpolation-polynomial-witness polynomial evaluation does not match sample values")
+
+    alternating = checks["alternating-residual-witness"]
+    if alternating["expected_result"] != "sat":
+        fail("alternating-residual-witness must expect sat")
+    values = single_witness_values(alternating, witnesses)
+    points = require_fraction_vector("alternating points", values.get("points"))
+    residual_polynomial = require_polynomial(
+        "alternating residual_polynomial",
+        values.get("residual_polynomial"),
+    )
+    residual_values = require_fraction_vector("alternating residual_values", values.get("residual_values"))
+    signs = require_sign_list("alternating signs", values.get("signs"))
+    uniform_error = require_fraction("alternating uniform_error", values.get("uniform_error"))
+    if len(points) != len(residual_values) or len(points) != len(signs):
+        fail("alternating-residual-witness points, values, and signs must have equal length")
+    computed_values = [polynomial_eval(residual_polynomial, point) for point in points]
+    if computed_values != residual_values:
+        fail("alternating-residual-witness residual_values are incorrect")
+    computed_signs = [fraction_sign(value) for value in residual_values]
+    if computed_signs != signs:
+        fail("alternating-residual-witness signs are incorrect")
+    if uniform_error <= 0:
+        fail("alternating-residual-witness uniform_error must be positive")
+    if any(abs(value) != uniform_error for value in residual_values):
+        fail("alternating-residual-witness residuals must have common absolute value")
+    for left, right in zip(signs, signs[1:]):
+        if left == 0 or right == 0 or left == right:
+            fail("alternating-residual-witness adjacent signs must be nonzero and alternating")
+
+    bad = checks["bad-duplicate-node-grid-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-duplicate-node-grid-rejected must expect unsat")
+    data = bad.get("data", {})
+    points = require_fraction_vector("bad Chebyshev points", data.get("points"))
+    degree = require_basis_degree("bad Chebyshev basis_degree", data.get("basis_degree"))
+    matrix = require_fraction_matrix("bad Chebyshev evaluation_matrix", data.get("evaluation_matrix"))
+    claimed_determinant = require_fraction("bad Chebyshev claimed_determinant", data.get("claimed_determinant"))
+    actual_determinant = require_fraction("bad Chebyshev actual_determinant", data.get("actual_determinant"))
+    null_coefficients = require_fraction_vector("bad Chebyshev null_coefficients", data.get("null_coefficients"))
+    zero_values = require_fraction_vector("bad Chebyshev zero_values", data.get("zero_values"))
+    if len(points) != degree + 1:
+        fail("bad-duplicate-node-grid-rejected expects degree + 1 sample points")
+    if len(null_coefficients) != degree + 1:
+        fail("bad-duplicate-node-grid-rejected null_coefficients must have degree + 1 entries")
+    if polynomial_basis_matrix(points, degree) != matrix:
+        fail("bad-duplicate-node-grid-rejected evaluation_matrix is incorrect")
+    computed_determinant = matrix_determinant(matrix)
+    if computed_determinant != actual_determinant:
+        fail("bad-duplicate-node-grid-rejected actual_determinant is incorrect")
+    if claimed_determinant == actual_determinant:
+        fail("bad-duplicate-node-grid-rejected must document a false determinant claim")
+    if actual_determinant != 0:
+        fail("bad-duplicate-node-grid-rejected actual determinant must be zero")
+    if all(coefficient == 0 for coefficient in null_coefficients):
+        fail("bad-duplicate-node-grid-rejected null_coefficients must be nonzero")
+    if mat_vec(matrix, null_coefficients) != zero_values:
+        fail("bad-duplicate-node-grid-rejected null_coefficients do not vanish on the grid")
+    if any(value != 0 for value in zero_values):
+        fail("bad-duplicate-node-grid-rejected zero_values must be all zero")
+
+    horizon = checks["general-chebyshev-system-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-chebyshev-system-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-chebyshev-system-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general Chebyshev system target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general Chebyshev system future_checker", data.get("future_checker"))
 
 
 def jacobi_step(matrix: list[list[Fraction]], rhs: list[Fraction], point: list[Fraction]) -> list[Fraction]:
@@ -7632,6 +7809,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_exact_statistical_tests(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
+    if metadata["id"] == "finite-chebyshev-systems-v0":
+        validate_finite_chebyshev_systems(expected)
     if metadata["id"] == "finite-compactness-v0":
         validate_finite_compactness(expected)
     if metadata["id"] == "finite-connectedness-v0":

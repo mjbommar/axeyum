@@ -1799,19 +1799,19 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices",
+      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices"
+        "Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids"
       ],
       "example_packs": [
         {
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norms, operator matrices, and Chebyshev polynomial slices."
+          "notes": "Finite-dimensional norms, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
         }
       ],
       "proof_routes": [

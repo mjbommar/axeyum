@@ -215,7 +215,7 @@ losing the curriculum anchor.
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, incidence, distance, midpoint, collinearity. |
-| `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, norms, matrices as operators, Chebyshev polynomial slices. |
+| `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `finite-chebyshev-systems-v0`, norms, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
 
 ## Phased Build Plan
 
@@ -520,6 +520,10 @@ recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
+`artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
+finite Vandermonde unisolvence, interpolation matrix replay, alternating
+residual sign patterns, checked rejection of a duplicate-node grid, and a
+general Chebyshev-system Lean-horizon row.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
 arithmetic, conjugate/norm replay, and a fixed polynomial-root witness using
 real-pair algebra.
@@ -604,6 +608,9 @@ Recommended order:
     equations, and bad expected-time rejection.
 28. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
+29. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
+    interpolation replay, alternating residual signs, and duplicate-node
+    rejection.
 
 Exit criteria:
 
@@ -764,7 +771,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-28, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-29, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -810,6 +817,9 @@ bridge toward recurrence/transience and potential-theory horizons.
 `finite-concentration-v0` now adds the finite Markov/Chebyshev/union-bound
 tail-probability bridge toward concentration inequalities, limit theorems,
 martingale concentration, and asymptotic statistics.
+`finite-chebyshev-systems-v0` now adds the finite Vandermonde/interpolation
+and alternation-sign bridge toward Chebyshev-system, Haar-space, minimax, and
+approximation-theory horizons.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

@@ -53,7 +53,7 @@ Use these sources as checks against local taste:
 | `numerical_analysis` | Numerical analysis | Undergraduate / graduate applied math | Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows | Stability and convergence theorems need proof support; floating-point experiments need tolerances and seeds. |
 | `differential_equations_and_dynamical_systems` | Differential equations and dynamical systems | Undergraduate / graduate applied math | Bounded transition systems, linear recurrences, invariant checks, discretized systems | Existence/uniqueness, continuous dynamics, chaos, and PDE theory are proof-horizon. |
 | `geometry` | Geometry | Undergraduate / graduate pure and applied math | Coordinate geometry, incidence constraints, distances, rigid small configurations | Differential, algebraic, and global geometry are mostly proof-assistant material. |
-| `functional_analysis_and_operator_theory` | Functional analysis and operator theory | Graduate analysis / numerical analysis foundation | Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices | Banach/Hilbert-space theorems, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support. |
+| `functional_analysis_and_operator_theory` | Functional analysis and operator theory | Graduate analysis / numerical analysis foundation | Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids | Banach/Hilbert-space theorems, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support. |
 
 ## Priority Bands
 
@@ -120,7 +120,7 @@ one of:
 | Question Family | Fields | What Axeyum Can Do First | What We Still Need |
 |---|---|---|---|
 | Delta-epsilon balls and limits | `real_analysis`, `topology`, `logic_and_proof` | Check bounded rational witnesses/counterexamples, metric-ball inclusions in finite/rational examples, and algebraic side-conditions. | A quantified-real story, Lean-backed limit/topology lemmas, and examples that separate bounded evidence from general epsilon-delta theorems. |
-| Chebyshev spaces | `functional_analysis_and_operator_theory`, `numerical_analysis`, `linear_algebra`, `real_analysis` | Check finite-dimensional polynomial bases, interpolation matrices, sign-pattern examples, and small approximation identities. | General function-space definitions, Haar/Chebyshev-system theorems, compactness/continuity lemmas, and proof-assistant reconstruction. |
+| Chebyshev spaces | `functional_analysis_and_operator_theory`, `numerical_analysis`, `linear_algebra`, `real_analysis` | Check `finite-chebyshev-systems-v0` finite-dimensional polynomial bases, interpolation matrices, sign-pattern examples, and small approximation identities. | General function-space definitions, Haar/Chebyshev-system theorems, compactness/continuity lemmas, and proof-assistant reconstruction. |
 | Graph coloring | `graph_theory`, `discrete_math`, `logic_and_proof` | Encode finite coloring as SAT/SMT, produce colorings as models, and produce unsat evidence for small non-colorability examples when proof routes exist. | A graph example-pack schema, graph-to-SMT compiler metadata, and proof recipes for unsat coloring certificates. |
 | BFS vs DFS pathological runtime | `discrete_math`, `graph_theory`; companion CS algorithms track | Generate finite graph families, replay traversal traces, compare visited orders/cost counters, and find small worst-case witnesses. | A CS algorithms resource track, executable traversal semantics, asymptotic/runtime-proof rows, and Lean-backed recurrence/asymptotic lemmas. |
 | Random matrix theory | `probability_theory`, `statistics`, `linear_algebra`, `functional_analysis_and_operator_theory` | Check exact small random-matrix distributions by enumeration, determinant/rank/eigenvalue constraints for fixed matrices, and finite sampling invariants. | Measure/probability formalization, asymptotic limit-theorem rows, numerical experiment metadata, and clear "not proof" status for simulations. |
@@ -210,15 +210,21 @@ one of:
       `numerical_analysis`, `real_analysis`.
     - Checks: finite-dimensional norm replay, matrix operator bound,
       Chebyshev recurrence witness.
-18. `artifacts/examples/math/modular-arithmetic-v0/`
+18. `artifacts/examples/math/finite-chebyshev-systems-v0/`
+    - Fields: `functional_analysis_and_operator_theory`, `numerical_analysis`,
+      `linear_algebra`, `real_analysis`.
+    - Checks: finite Vandermonde unisolvence, interpolation replay,
+      alternating residual signs, duplicate-node rejection, and a general
+      Chebyshev-system Lean-horizon row.
+19. `artifacts/examples/math/modular-arithmetic-v0/`
     - Fields: `number_theory`, `abstract_algebra`.
     - Checks: modular inverse examples, small finite-field equations,
       bounded Diophantine examples.
-19. `artifacts/examples/math/real-analysis-rational-v0/`
+20. `artifacts/examples/math/real-analysis-rational-v0/`
     - Fields: `real_analysis`, `logic_and_proof`.
     - Checks: rational inequalities, interval inclusions, bounded
       epsilon-delta templates with proof-horizon labels.
-20. `artifacts/examples/math/complex-algebraic-v0/`
+21. `artifacts/examples/math/complex-algebraic-v0/`
     - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
       `abstract_algebra`.
     - Checks: real-pair complex arithmetic, conjugate norm replay, fixed

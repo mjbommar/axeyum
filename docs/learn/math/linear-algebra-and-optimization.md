@@ -17,6 +17,7 @@ Example packs:
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
+- [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 
 ## What Axeyum Checks
 
@@ -31,7 +32,10 @@ matrices, and rank distributions. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix. The matrix-invariants
 slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,
-and finite Gershgorin intervals for a fixed rational matrix.
+and finite Gershgorin intervals for a fixed rational matrix. The finite
+Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
+alternating residual signs, and duplicate-node rejection over exact rational
+sample grids.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -67,6 +71,18 @@ For an operator example, the finite-operator pack checks:
 
 using exact rational arithmetic.
 
+For a finite Chebyshev-system example, the validator checks the quadratic
+Vandermonde matrix on sample points `-1, 0, 1`:
+
+```text
+[[1, -1, 1],
+ [1,  0, 0],
+ [1,  1, 1]]
+```
+
+It recomputes determinant `2`, checks interpolation values for
+`2 - x + 3*x^2`, and rejects a duplicate-node grid whose determinant is `0`.
+
 Run the checks from the repository root:
 
 ```sh
@@ -77,6 +93,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 ```
 
 For a fuller trace through exact matrix replay and a checked LP certificate,
@@ -84,6 +101,7 @@ read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
 
 ## Horizon
 
-General spectral theorems, rank theorems, conditioning, numerical stability,
-SDP, general convex analysis, and algorithm convergence need proof routes or
+General spectral theorems, rank theorems, Chebyshev-system/Haar-space
+theorems, minimax approximation, conditioning, numerical stability, SDP,
+general convex analysis, and algorithm convergence need proof routes or
 carefully bounded numerical-experiment metadata.

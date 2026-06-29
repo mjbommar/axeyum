@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-chebyshev-systems-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-vandermonde-grid",
+      "description": "Three distinct rational sample points for the basis 1, x, x^2.",
+      "values": {
+        "points": ["-1", "0", "1"],
+        "basis_degree": 2,
+        "evaluation_matrix": [
+          ["1", "-1", "1"],
+          ["1", "0", "0"],
+          ["1", "1", "1"]
+        ],
+        "determinant": "2"
+      }
+    },
+    {
+      "id": "quadratic-interpolation-table",
+      "description": "Exact coefficient-to-sample replay on the same finite grid.",
+      "values": {
+        "points": ["-1", "0", "1"],
+        "basis_degree": 2,
+        "coefficients": ["2", "-1", "3"],
+        "evaluation_matrix": [
+          ["1", "-1", "1"],
+          ["1", "0", "0"],
+          ["1", "1", "1"]
+        ],
+        "sample_values": ["6", "2", "4"],
+        "determinant": "2"
+      }
+    },
+    {
+      "id": "three-point-alternating-residual",
+      "description": "A small alternating residual table with equal absolute values.",
+      "values": {
+        "points": ["-1", "0", "1"],
+        "residual_polynomial": ["-1/2", "0", "1"],
+        "residual_values": ["1/2", "-1/2", "1/2"],
+        "signs": [1, -1, 1],
+        "uniform_error": "1/2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "vandermonde-unisolvence-witness",
+      "claim": "The listed finite grid is unisolvent for quadratic polynomials.",
+      "expected_result": "sat",
+      "validation": "finite_vandermonde_unisolvence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-vandermonde-grid"],
+      "notes": "The validator recomputes the evaluation matrix and exact determinant."
+    },
+    {
+      "id": "interpolation-polynomial-witness",
+      "claim": "The listed quadratic coefficients produce the listed finite sample values.",
+      "expected_result": "sat",
+      "validation": "finite_polynomial_interpolation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-interpolation-table"],
+      "notes": "The validator recomputes the matrix-vector product from coefficients to sample values."
+    },
+    {
+      "id": "alternating-residual-witness",
+      "claim": "The listed residual alternates signs with equal absolute value on the finite grid.",
+      "expected_result": "sat",
+      "validation": "finite_alternating_residual_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-alternating-residual"],
+      "notes": "The validator recomputes residual values, signs, and common absolute error."
+    },
+    {
+      "id": "bad-duplicate-node-grid-rejected",
+      "claim": "The duplicate-node grid is unisolvent for quadratic polynomials.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_chebyshev_grid_refutation",
+      "proof_status": "checked",
+      "data": {
+        "points": ["0", "0", "1"],
+        "basis_degree": 2,
+        "evaluation_matrix": [
+          ["1", "0", "0"],
+          ["1", "0", "0"],
+          ["1", "1", "1"]
+        ],
+        "claimed_determinant": "1",
+        "actual_determinant": "0",
+        "null_coefficients": ["0", "1", "-1"],
+        "zero_values": ["0", "0", "0"]
+      },
+      "notes": "The validator rejects the grid because the determinant is zero and x - x^2 vanishes on all listed sample points."
+    },
+    {
+      "id": "general-chebyshev-system-lean-horizon",
+      "claim": "General Chebyshev-system and minimax-approximation theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Haar spaces, Chebyshev systems, minimax approximation, alternation theorems, compactness arguments, and infinite-dimensional functional analysis",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general Chebyshev-system theory remains a proof-assistant horizon."
+    }
+  ]
+}
