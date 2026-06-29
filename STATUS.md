@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded number-theory end-to-end lesson landed.** Added
+  [`number-theory-end-to-end.md`](docs/learn/math/number-theory-end-to-end.md)
+  as the learner-facing trace for the number-theory pack: compatible
+  non-coprime CRT replay, quadratic residue and nonresidue checks,
+  sum-of-two-squares replay and mod-4 rejection, Diophantine witness replay,
+  and the Lean horizon for deeper number-theory theorems. The lesson is linked
+  from the math learning index plus the number-systems and algebra/number-theory
+  paths.
+
 - **Modular-arithmetic end-to-end lesson landed.** Added
   [`modular-arithmetic-end-to-end.md`](docs/learn/math/modular-arithmetic-end-to-end.md)
   as the learner-facing trace for the modular-arithmetic pack: CRT witness

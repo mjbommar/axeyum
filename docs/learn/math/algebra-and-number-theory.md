@@ -331,12 +331,13 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
-For fuller traces from gcd/Bezout, modular congruence, transformation-monoid,
-permutation, action-table, finite-group, finite-ring, homomorphism,
-quotient-ring, finite-vector-space, finite-dual-space, and module data through
-replay, read
+For fuller traces from gcd/Bezout, modular congruence, bounded number theory,
+transformation-monoid, permutation, action-table, finite-group, finite-ring,
+homomorphism, quotient-ring, finite-vector-space, finite-dual-space, and module
+data through replay, read
 [End To End: GCD And Bezout](gcd-bezout-end-to-end.md),
 [End To End: Modular Arithmetic](modular-arithmetic-end-to-end.md),
+[End To End: Bounded Number Theory](number-theory-end-to-end.md),
 [End To End: Finite Groups](finite-groups-end-to-end.md),
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
