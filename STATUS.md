@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Logic basics foundations pack landed.** Added
+  [`logic-basics-v0`](artifacts/examples/math/logic-basics-v0/README.md)
+  with SAT witness replay for `p and q`, checked excluded-middle
+  no-counterexample enumeration, checked contradiction UNSAT enumeration,
+  checked De Morgan equivalence enumeration, and a tiny CNF refutation
+  `(p) and (!p or q) and (!q)` by truth-table enumeration. The foundational
+  example-pack validator now checks Boolean assignments, truth-table
+  enumeration, literal/CNF evaluation, and the documented CNF row. Continue by
+  closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by
+  adding `finite-predicate-v0`.
+
 - **Induction obligations foundations pack landed.** Added
   [`induction-obligations-v0`](artifacts/examples/math/induction-obligations-v0/README.md)
   with exact prefix-sum base-case replay, bounded step-obligation
@@ -168,7 +179,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now checks bounded induction limits, exact prefix-sum arithmetic, step and
   conclusion enumeration, and theorem-horizon metadata. Continue by closing the
   remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-  `logic-basics-v0`.
+  `logic-basics-v0`, which is now the propositional-logic follow-on.
 
 - **Finite cardinality foundations pack landed.** Added
   [`finite-cardinality-v0`](artifacts/examples/math/finite-cardinality-v0/README.md)

@@ -58,6 +58,7 @@ artifacts/ontology/
   foundational-example-pack.schema.json
 artifacts/examples/math/
   template-v0/
+  logic-basics-v0/
   proof-methods-refutation-v0/
   induction-obligations-v0/
   finite-sets-v0/
@@ -315,7 +316,10 @@ Exit criteria:
 ### Phase F2: Mathematics Deepening
 
 Status: example-pack schema and validating template scaffold landed; the first
-substantive pack,
+substantive packs,
+[`logic-basics-v0`](../../artifacts/examples/math/logic-basics-v0/),
+validates propositional SAT witness replay, tautology/contradiction truth-table
+checks, De Morgan equivalence, and a tiny CNF refutation.
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
 now validates with a SAT witness control case and an explicit UNSAT proof gap.
 [`induction-obligations-v0`](../../artifacts/examples/math/induction-obligations-v0/)

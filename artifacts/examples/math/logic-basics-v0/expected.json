@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "pack_id": "logic-basics-v0",
+  "witnesses": [
+    {
+      "id": "p-and-q-true",
+      "description": "A satisfying assignment for p and q.",
+      "values": {
+        "assignment": {
+          "p": true,
+          "q": true
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "and-formula-sat-witness",
+      "claim": "The assignment p = true, q = true satisfies p and q.",
+      "expected_result": "sat",
+      "validation": "boolean_assignment_replay",
+      "proof_status": "checked",
+      "witnesses": ["p-and-q-true"],
+      "notes": "The validator evaluates p and q under the listed assignment."
+    },
+    {
+      "id": "excluded-middle-no-counterexample",
+      "claim": "There exists a Boolean assignment falsifying p or not p.",
+      "expected_result": "unsat",
+      "validation": "truth_table_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p"]
+      },
+      "notes": "The validator enumerates the two assignments and finds no excluded-middle counterexample."
+    },
+    {
+      "id": "contradiction-unsat",
+      "claim": "There exists a Boolean assignment satisfying p and not p.",
+      "expected_result": "unsat",
+      "validation": "truth_table_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p"]
+      },
+      "notes": "The validator enumerates the two assignments and finds no satisfying contradiction."
+    },
+    {
+      "id": "demorgan-equivalence-no-counterexample",
+      "claim": "There exists a Boolean assignment separating not (p and q) from (not p) or (not q).",
+      "expected_result": "unsat",
+      "validation": "truth_table_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p", "q"]
+      },
+      "notes": "The validator enumerates all four assignments and finds no De Morgan counterexample."
+    },
+    {
+      "id": "tiny-cnf-refutation",
+      "claim": "There exists a Boolean assignment satisfying (p) and (not p or q) and (not q).",
+      "expected_result": "unsat",
+      "validation": "truth_table_cnf_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p", "q"],
+        "clauses": [["p"], ["!p", "q"], ["!q"]]
+      },
+      "notes": "The validator enumerates all four assignments and finds no satisfying CNF row."
+    }
+  ]
+}

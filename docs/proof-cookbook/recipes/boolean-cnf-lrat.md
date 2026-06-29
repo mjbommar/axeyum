@@ -100,6 +100,7 @@ cargo test -p axeyum-cnf lrat
 Foundational resource examples that currently point at this route:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```
@@ -109,5 +110,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 - [SMT Fragment Atlas](../../atlas/README.md)
 - [support matrix](../../research/08-planning/support-matrix.md)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
+- [Logic Basics pack](../../../artifacts/examples/math/logic-basics-v0/)
 - [Proof Methods By Refutation pack](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 - [Graph Coloring pack](../../../artifacts/examples/math/graph-coloring-v0/)

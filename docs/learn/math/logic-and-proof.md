@@ -10,23 +10,35 @@ Concept rows:
 
 Example packs:
 
+- [logic-basics-v0](../../../artifacts/examples/math/logic-basics-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 - [induction-obligations-v0](../../../artifacts/examples/math/induction-obligations-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
 
 ## What Axeyum Checks
 
-The first proof lesson is refutation: negate the claim, ask whether the negation
-has a model, then replay the result. The proof-methods pack records a small
-pigeonhole SAT witness and an UNSAT pigeonhole claim with an explicit proof gap.
-The induction pack checks bounded base, step, and conclusion obligations while
-keeping the full induction schema under Lean horizon. The graph-coloring pack
-adds a finite non-colorability example that can be exhaustively checked.
+The first proof lesson is Boolean: replay a SAT witness, negate a tautology and
+check no counterexample exists, and enumerate tiny CNF rows. The proof-methods
+pack records a small pigeonhole SAT witness and an UNSAT pigeonhole claim with
+an explicit proof gap. The induction pack checks bounded base, step, and
+conclusion obligations while keeping the full induction schema under Lean
+horizon. The graph-coloring pack adds a finite non-colorability example that can
+be exhaustively checked.
 
 ## Encode / Check Walkthrough
 
-For a SAT witness, encode Boolean choices directly. The `PHP(2,2)` control case
-uses variables like:
+For propositional logic, encode Boolean assignments and formulas directly:
+
+```text
+p = true
+q = true
+formula = p and q
+```
+
+The `logic-basics-v0` validator replays that witness, enumerates truth tables
+for excluded middle, contradiction, and De Morgan equivalence, and checks a tiny
+CNF refutation by enumeration. For a SAT witness in a domain example, encode
+Boolean choices directly. The `PHP(2,2)` control case uses variables like:
 
 ```text
 x_p0_h0 = true
@@ -54,6 +66,7 @@ Lean-horizon row.
 Run the checks from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0

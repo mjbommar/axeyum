@@ -1576,6 +1576,117 @@ def validate_induction_obligations(expected: dict[str, Any]) -> None:
     require_string("induction future checker", data.get("future_checker"))
 
 
+def require_bool_assignment(
+    context: str,
+    value: Any,
+    variables: list[str],
+) -> dict[str, bool]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    variable_set = set(variables)
+    if set(value) != variable_set:
+        missing = sorted(variable_set - set(value))
+        extra = sorted(set(value) - variable_set)
+        fail(f"{context} must cover exactly variables; missing={missing} extra={extra}")
+    return {
+        variable: require_bool(f"{context}.{variable}", value[variable])
+        for variable in variables
+    }
+
+
+def boolean_assignments(variables: list[str]) -> list[dict[str, bool]]:
+    return [
+        dict(zip(variables, values))
+        for values in product([False, True], repeat=len(variables))
+    ]
+
+
+def require_boolean_variables(context: str, data: dict[str, Any], expected: list[str]) -> list[str]:
+    variables = require_string_list(f"{context}.variables", data.get("variables"))
+    if variables != expected:
+        fail(f"{context}.variables must be exactly {expected}")
+    if len(variables) > 16:
+        fail(f"{context}.variables is too large for deterministic truth-table enumeration")
+    return variables
+
+
+def eval_boolean_literal(literal: str, assignment: dict[str, bool]) -> bool:
+    if literal.startswith("!"):
+        variable = literal[1:]
+        if variable not in assignment:
+            fail(f"literal {literal!r} references unknown variable")
+        return not assignment[variable]
+    if literal not in assignment:
+        fail(f"literal {literal!r} references unknown variable")
+    return assignment[literal]
+
+
+def require_cnf_clauses(context: str, value: Any) -> list[list[str]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list")
+    clauses: list[list[str]] = []
+    for clause_index, clause in enumerate(value):
+        literals = require_string_list(f"{context}[{clause_index}]", clause)
+        clauses.append(literals)
+    return clauses
+
+
+def cnf_satisfied(clauses: list[list[str]], assignment: dict[str, bool]) -> bool:
+    return all(any(eval_boolean_literal(literal, assignment) for literal in clause) for clause in clauses)
+
+
+def validate_logic_basics(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    and_witness = checks["and-formula-sat-witness"]
+    if and_witness["expected_result"] != "sat":
+        fail("and-formula-sat-witness must expect sat")
+    values = single_witness_values(and_witness, witnesses)
+    assignment = require_bool_assignment("and witness assignment", values.get("assignment"), ["p", "q"])
+    if not (assignment["p"] and assignment["q"]):
+        fail("and-formula-sat-witness assignment does not satisfy p and q")
+
+    excluded_middle = checks["excluded-middle-no-counterexample"]
+    if excluded_middle["expected_result"] != "unsat":
+        fail("excluded-middle-no-counterexample must expect unsat")
+    variables = require_boolean_variables("excluded-middle-no-counterexample", excluded_middle.get("data", {}), ["p"])
+    for assignment in boolean_assignments(variables):
+        if not (assignment["p"] or not assignment["p"]):
+            fail("excluded-middle-no-counterexample found a counterexample")
+
+    contradiction = checks["contradiction-unsat"]
+    if contradiction["expected_result"] != "unsat":
+        fail("contradiction-unsat must expect unsat")
+    variables = require_boolean_variables("contradiction-unsat", contradiction.get("data", {}), ["p"])
+    for assignment in boolean_assignments(variables):
+        if assignment["p"] and not assignment["p"]:
+            fail("contradiction-unsat found a satisfying assignment")
+
+    demorgan = checks["demorgan-equivalence-no-counterexample"]
+    if demorgan["expected_result"] != "unsat":
+        fail("demorgan-equivalence-no-counterexample must expect unsat")
+    variables = require_boolean_variables("demorgan-equivalence-no-counterexample", demorgan.get("data", {}), ["p", "q"])
+    for assignment in boolean_assignments(variables):
+        left = not (assignment["p"] and assignment["q"])
+        right = (not assignment["p"]) or (not assignment["q"])
+        if left != right:
+            fail("demorgan-equivalence-no-counterexample found a counterexample")
+
+    cnf = checks["tiny-cnf-refutation"]
+    if cnf["expected_result"] != "unsat":
+        fail("tiny-cnf-refutation must expect unsat")
+    data = cnf.get("data", {})
+    variables = require_boolean_variables("tiny-cnf-refutation", data, ["p", "q"])
+    clauses = require_cnf_clauses("tiny-cnf-refutation.clauses", data.get("clauses"))
+    expected_clauses = [["p"], ["!p", "q"], ["!q"]]
+    if clauses != expected_clauses:
+        fail("tiny-cnf-refutation clauses must match the documented CNF")
+    for assignment in boolean_assignments(variables):
+        if cnf_satisfied(clauses, assignment):
+            fail("tiny-cnf-refutation found a satisfying assignment")
+
+
 def require_fraction(context: str, value: Any) -> Fraction:
     if not isinstance(value, str) or not value:
         fail(f"{context} must be a non-empty fraction string")
@@ -2817,6 +2928,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_gcd_bezout(expected)
     if metadata["id"] == "linear-optimization-v0":
         validate_linear_optimization(expected)
+    if metadata["id"] == "logic-basics-v0":
+        validate_logic_basics(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "natural-arithmetic-v0":

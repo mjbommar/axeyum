@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "logic-basics-v0",
+  "title": "Propositional Logic Basics",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_propositional_logic",
+    "field_logic_and_proof"
+  ],
+  "field_ids": [
+    "logic_and_proof"
+  ],
+  "curriculum_nodes": [
+    "propositional-logic"
+  ],
+  "axeyum_fragments": [
+    "Bool / SAT",
+    "truth-table enumeration",
+    "CNF"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/propositional-logic.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md"
+  ],
+  "expected_results": [
+    "and-formula-sat-witness",
+    "excluded-middle-no-counterexample",
+    "contradiction-unsat",
+    "demorgan-equivalence-no-counterexample",
+    "tiny-cnf-refutation"
+  ],
+  "graduation_criteria": [
+    "Encode each Boolean row as deterministic Axeyum Bool terms.",
+    "Replay SAT assignments through Axeyum model evaluation.",
+    "Emit deterministic CNF for UNSAT rows.",
+    "Produce and check DRAT/LRAT evidence for the tiny CNF refutation and tautology-by-negation rows."
+  ]
+}
