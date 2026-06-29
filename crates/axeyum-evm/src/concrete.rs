@@ -610,6 +610,18 @@ fn run_core(
                     }
                 }
             }
+            Op::Create { pops } => {
+                for _ in 0..pops {
+                    let _ = pop!();
+                }
+                storage_dirty = true;
+                let value = env_inputs
+                    .get(*env_cursor)
+                    .cloned()
+                    .unwrap_or_else(Word::zero);
+                *env_cursor += 1;
+                stack.push(value);
+            }
             Op::Log(topics) => {
                 // LOG0..LOG4: pop offset, length, and `topics` topics; no output.
                 for _ in 0..(2 + u32::from(topics)) {

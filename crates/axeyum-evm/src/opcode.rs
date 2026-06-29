@@ -147,6 +147,14 @@ pub enum Op {
     /// memory at `destOffset` (pops destOffset, offset, length). Modeled precisely
     /// (the calldata is already symbolic) for a concrete, 32-aligned, bounded copy.
     CallDataCopy,
+    /// `CREATE` (0xf0) / `CREATE2` (0xf5): deploy a contract; pops `pops` args
+    /// (value, offset, length [, salt]) and pushes the new address (or 0 on
+    /// failure). The deployed constructor may re-enter, so this is modeled like a
+    /// re-entrant call: a witnessed address plus adversarial post-state storage.
+    Create {
+        /// Stack args popped: 3 for `CREATE`, 4 for `CREATE2`.
+        pops: u8,
+    },
     /// `CODECOPY` (0x39): copy `length` bytes of the contract's own code at
     /// `offset` into memory at `destOffset` (pops destOffset, offset, length).
     /// Code is concrete, so this is modeled precisely as constant bytes.
@@ -237,6 +245,8 @@ impl Op {
             0xfe => Op::Invalid,
             0x37 => Op::CallDataCopy,
             0x39 => Op::CodeCopy,
+            0xf0 => Op::Create { pops: 3 },
+            0xf5 => Op::Create { pops: 4 },
             0xa0..=0xa4 => Op::Log(byte - 0xa0),
             other => Op::Unsupported(other),
         }

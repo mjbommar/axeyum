@@ -1159,6 +1159,18 @@ fn run_from(
                     _ => *saw_unknown = true,
                 }
             }
+            Op::Create { pops } => {
+                // Deploy: pop the args, push a witnessed new-contract address. The
+                // deployed constructor may re-enter and mutate our storage, so mark
+                // post-state storage adversarial (the re-entrancy threat model).
+                for _ in 0..pops {
+                    let _ = pop_or_unknown!();
+                }
+                state.storage_dirty = true;
+                let (addr, sym) = env.fresh_env(arena)?;
+                state.env_syms.push(sym);
+                state.stack.push(addr);
+            }
             Op::Log(topics) => {
                 // LOG0..LOG4: pop offset, length, and `topics` topic words; push
                 // nothing. Logs are pure side effects with no effect on execution

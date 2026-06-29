@@ -51,6 +51,7 @@ const POOL: &[u8] = &[
     0x31, 0x5a, // BALANCE GAS — exercise the environment paths
     0x40, 0x59, // BLOCKHASH MSIZE — more witnessed-env opcodes
     0xf1, 0xfa, // CALL STATICCALL — exercise the external-call paths
+    0xf0, 0xf5, // CREATE CREATE2 — exercise the deploy (re-entrant) paths
     0x60, 0x61, 0x80, 0x90, // PUSH1 PUSH2 DUP1 SWAP1
     0xf3, 0xfd, 0xfe, // RETURN REVERT INVALID
     0x00, 0xff, 0x0a, 0x20, // some data/immediate bytes
