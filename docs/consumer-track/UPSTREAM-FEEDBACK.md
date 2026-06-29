@@ -39,14 +39,14 @@ Last reconciled with `main`: 2026-06-27.
     `by`, so only `x.rotate_left(8)`-style constants are expressible. Rust's
     `rotate_*` take a runtime `u32`; a symbolic-amount form needs an IR op
     (rotate-by-term, or the shift-or composition with the `n == 0` edge handled).
-  - **`checked_{add,sub,mul}`** returning `Option`: the immediate-unwrap form
-    `a.checked_add(b).unwrap()`/`.expect(..)` **is now supported** (it desugars to
-    the plain checked op — the unwrap-None panic IS the overflow panic). What
-    remains blocked is **first-class `Option`-typed values** flowing through
-    `let`/`match`/`unwrap_or` (e.g. `match a.checked_add(b) { Some(v) => .., None
-    => .. }` or `.unwrap_or(d)`) — the fragment has no lowered `Option` type, only
-    the `opt(is_some, value)` ctor consumed immediately. That needs an AST/lowering
-    addition (consumer-ownable; no IR dependency).
+  - **`checked_{add,sub,mul}`** returning `Option`: now mostly handled by the
+    consumer with a boolean `Expr::Overflows` node (no IR change). Supported:
+    `a.checked_add(b).unwrap()`/`.expect(..)` (desugars to the plain checked op)
+    `a.checked_add(b).unwrap_or(d)` (desugars to `ite(!Overflows, wrapping_op,
+    d)`), and `match a.checked_add(b) { Some(v) => .., None => .. }` (desugars to
+    an `if !Overflows` with the Some-arm binding `v` = `wrapping_op`). Only
+    remaining: an `Option` flowing through `let`/returns as a first-class value
+    (rarer) — an AST/lowering addition, consumer-ownable, no IR dependency.
 - **Why it matters:** these three families cover a large slice of real systems
   Rust (hashing, bit twiddling, overflow-aware arithmetic). They are *capability*
   gaps, not soundness gaps — today they are honest `Unknown`, never wrong.
