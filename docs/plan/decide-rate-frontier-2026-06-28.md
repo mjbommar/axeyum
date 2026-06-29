@@ -4,8 +4,12 @@
 > are re-measured in [decide-rate-measured-2026-06-29](decide-rate-measured-2026-06-29.md).
 > Key correction: on accessible data **QF_S is already at z3 parity (56/56)** —
 > the string `max_len` lever has no verifiable headroom there — while **QF_UF
-> lags z3 by 4 (37/48 vs 41/48)**, localized to theory-combination routing +
-> uninterpreted-sort Ackermann (the keystone), not a missing bound. Attack QF_UF.
+> lagged z3 by 4 (37/48 vs 41/48)**, localized to theory-combination routing +
+> uninterpreted-sort `ite`/Ackermann. **Landed since:** a `check_auto`
+> robustness fix (never hard-error on a valid QF_UF instance) + equisatisfiable
+> uninterpreted-sort `ite`-elimination for the e-graph path → **QF_UF 37 → 39**
+> (gap to z3 −4 → **−2**), DISAGREE = 0. Remaining QF_UF gap = UF+theory
+> combination routing (the keystone).
 
 The [north star](00-north-star.md) makes **completeness / decide-rate** and
 **measured performance** the two criteria that actually decide Z3/cvc5 parity,

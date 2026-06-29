@@ -147,11 +147,21 @@ concrete oracle (DISAGREE=0), clippy-gated, pushed:
   cases, DISAGREE=0. Full suite passes `clippy --all-features` + `cargo doc -D
   warnings`.
 
-**Next.** A3/C6 stay U8/install-gated. Buildable threads: first-class `Option`
-value flow in verify; RETURNDATACOPY/EXTCODECOPY / symbolic-exponent EXP
-(heavier); an EVM Lean-cert column (needs a small core accessor).
+first-class (let-bound) checked-`Option` flow also landed (unwrap/unwrap_or/
+is_some/match). **Next (consumer):** A3/C6 stay U8/install-gated; remaining
+threads are `Option`-returned-from-fn, RETURNDATACOPY/EXTCODECOPY, symbolic-EXP.
 Forward backlog in
 [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
+
+**Coordinated into core (Track 1) — measured QF_UF decide-rate gain.** Re-measured
+the *accessible* curated corpus (the frontier's numbers are full-NAS): QF_S is
+already at z3 parity (56/56); QF_UF lagged z3 by 4. Localized the gap (uninterp-
+sort `ite`/theory-combination) and landed two solver changes: `check_auto` no
+longer hard-errors on a valid QF_UF instance, and uninterpreted-sort `ite` is
+eliminated equisatisfiably for the e-graph path (pure-UF-confined). **QF_UF
+37/48 → 39/48** (gap to z3 −4 → −2), DISAGREE=0, lib 613/613 + qf_uf fuzz
+DISAGREE=0. Grounding + remaining keystone (UF+theory combination routing) in
+[decide-rate-measured-2026-06-29](docs/plan/decide-rate-measured-2026-06-29.md).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
