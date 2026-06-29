@@ -40,8 +40,10 @@ moat — and a long road of decide-rate, performance, and proof-coverage work le
    without them). This is where Z3/cvc5 parity is actually won. The grounded,
    prioritized per-fragment target list is
    [decide-rate-frontier-2026-06-28](docs/plan/decide-rate-frontier-2026-06-28.md)
-   (headline: **strings coverage is the single largest lever** — ~117 undecided,
-   mostly `Unsupported`; NRA/CAD depth is the genuine catch-up, do it last).
+   (headline: strings are the largest gap *by count* (~117) but a **depth/encoding**
+   gap — bounded length ≤16, not missing operators — so the **best ROI is the
+   uninterpreted-sort IR keystone (QF_UF)**; try the cheap string-bound lever
+   before the big unbounded-string DP; NRA/CAD depth is the genuine catch-up, last).
 2. **Reduction certificates → Lean (Track 3)** — drive the trusted-reduction
    ledger to zero (Alethe emitter → Carcara-checked → per-reduction proofs →
    kernel), and build the Lean tactic backend (P3.7, **fail not `sorry`**).

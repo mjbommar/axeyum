@@ -14,26 +14,42 @@ rather than the loudest.
 
 | Rank | Division(s) | Files | Decide% | Undecided | Dominant cause | Gap class |
 |---|---|---:|---:|---:|---|---|
-| 1 | **QF_S** (strings) | 134 | 44% | ~75 | `Unsupported` (62) | **coverage** (string ops) |
-| 2 | **QF_UF** bounded | 82 | 54% | ~38 | `Unsupported` (24) + `Unknown` (13) | coverage + depth |
-| 3 | **QF_SLIA** | 50 | 30% | ~35 | `Unsupported` (29) | **coverage** (string+int) |
+| 1 | **QF_S** (strings) | 134 | 44% | ~75 | `Unsupported` (62) | **encoding/depth** (bounded length ≤16 + unbounded regex) |
+| 2 | **QF_UF** bounded | 82 | 54% | ~38 | `Unsupported` (24) + `Unknown` (13) | coverage (uninterp sorts) + depth |
+| 3 | **QF_SLIA** | 50 | 30% | ~35 | `Unsupported` (29) | **encoding/depth** (bounded strings + int) |
 | 4 | **QF_NRA** cvc5 | 38 | 24% | ~29 | `Unknown` (27) | **depth** (CAD) |
 | 5 | **QF_NIA** cvc5 | 39 | 54% | ~18 | `Unknown` (10) + `Unsupported` (8) | depth + coverage |
 | 6 | **BV** quantified | 54 | 69% | ~17 | `Unsupported` (11) + `Unknown` (6) | quantified BV |
 | 7 | quantified **LIA / UF** | 17 | 0% | ~17 | `Unsupported`/`Unknown` | quantifier coverage |
 | — | QF_SEQ, QF_AUFBV(cvc5), QF_AUFLIA, QF_FF, QF_UFLIA tails | — | 56–80% | ~30 | mixed | near-strong tails |
 
+> **Correction (grounded in `crates/axeyum-solver/src/strings.rs` +
+> `capabilities.rs`):** a high `Unsupported` count does **not** automatically mean
+> "missing operator." axeyum's string theory already implements nearly the full
+> SMT-LIB string surface (`str.++/len/at/substr/indexof/replace/replace_all/
+> prefixof/suffixof/contains/to_int/from_int/to_code/from_code/to_re/in_re/
+> replace_re*`). Its `Unsupported` comes from the **bounded** encoding: strings are
+> a `(len, content)` pair with **`max_len ≤ 16`** (content ≤ 128-bit BV) and a
+> bounded regex fragment — so instances needing **longer strings or unbounded
+> regex (Kleene star) fall out of fragment**. *Always check the cause, not the
+> count.*
+
 ## The strategic read (what this says)
 
-1. **Strings are the single largest decide-rate lever.** QF_S + QF_SLIA + QF_SEQ
-   ≈ **117 undecided**, overwhelmingly **`Unsupported`** — i.e. *missing string
-   operator coverage*, not failed search. This is **Track-2 breadth** work
-   (extend the string theory's operator/decision coverage), which is far more
-   tractable and higher-ROI than the nonlinear depth gap. **Highest priority.**
-2. **QF_UF (~38)** splits coverage (uninterpreted-sort handling — note the
-   `overbound-uninterp-sorts` rows at 0–67%) and budget (`Unknown`). The IR
-   keystone for first-class uninterpreted sorts (flagged in the gap analysis as
-   *itself dominance-eligible*) is the unlock here.
+1. **Strings are the single largest decide-rate gap by count (~117 across
+   QF_S/QF_SLIA/QF_SEQ), but it is a *depth/encoding* gap, not a cheap coverage
+   win.** The operators exist; the bound (`max_len ≤ 16`, content ≤ 128-bit) and
+   the bounded-regex fragment are the wall. Two routes, both real Track-2 work:
+   (a) **raise the bound** — widen `content` past 128-bit (wider BV → bit-blast
+   cost grows, so pair with reduction/SAT-core wins); cheap to try, bounded
+   payoff; (b) **an unbounded/length-aware string DP** (the cvc5/Z3 approach) —
+   large effort, the real fix. *Measure route (a) first* (it's a config/encoding
+   change) before committing to (b).
+2. **QF_UF (~38)** is the more tractable lever: it splits *coverage*
+   (uninterpreted-sort handling — the `overbound-uninterp-sorts` rows sit at
+   0–67%) and budget (`Unknown`). The **first-class uninterpreted-sort IR
+   keystone** is flagged in the gap analysis as *itself dominance-eligible* — a
+   cheap IR change that wins a row. Likely the best ROI on this list.
 3. **QF_NRA (~29) is the genuine 15-year catch-up** — `Unknown`-dominated = CAD
    depth (`nra_degree` frontier = 2). High effort, low near-term ROI; *do not*
    spend the decide-rate budget here first. Match Z3's *practical* rate, accept
@@ -41,18 +57,20 @@ rather than the loudest.
 4. **Quantifiers (BV/LIA/UF quantified ≈ 34 undecided, several rows at 0%)** are a
    coherent cluster — the e-matching/MBQI + quantified-BV path needs depth. Tied
    to the **e-graph + CDCL(T) keystone** (Track 1, P1.4/P1.5).
-5. **`Unsupported` vs `Unknown` is the triage axis.** `Unsupported` = a missing
-   operator/feature (a *coverage* fix, usually bounded and certifiable);
-   `Unknown` = the decision procedure ran and gave up (a *depth/budget* fix,
-   usually harder). The scoreboard's per-row `Unsup`/`Unknown` split is the
-   cheapest signal for where to aim.
+5. **`Unsupported` vs `Unknown` is the triage axis, but verify the cause.**
+   `Unsupported` *usually* = a missing feature, but (per the correction above) can
+   also mean "outside a bounded fragment." `Unknown` = the decision procedure ran
+   and gave up (depth/budget). Read the actual rejected instances, not just the
+   count.
 
-## Recommended decide-rate order (grounded, not loudest-first)
+## Recommended decide-rate order (grounded, corrected)
 
-1. **Strings coverage (QF_S/QF_SLIA `Unsupported`)** — Track 2. Biggest absolute
-   win; each newly-supported operator is measurable on the committed slice.
-2. **Uninterpreted-sort IR keystone (QF_UF)** — Track 1/2; the gap analysis notes
-   it is *itself* dominance-eligible (a cheap IR change that also wins a row).
+1. **Uninterpreted-sort IR keystone (QF_UF, ~38)** — Track 1/2; the gap analysis
+   notes it is *itself* dominance-eligible (a cheap IR change that also wins a
+   row). Best ROI / effort on this list.
+2. **Strings — try the cheap encoding lever first (QF_S/QF_SLIA, ~110):** raise
+   `max_len` / widen `content` and *re-measure* before deciding whether the larger
+   unbounded-string DP investment is warranted. Biggest count, but a depth gap.
 3. **Quantifier depth (e-matching/MBQI + quantified-BV)** — Track 1 keystone
    (e-graph + CDCL(T)) then Track 2.
 4. **NIA before NRA** — `iand`/bounded NIA (`Unsupported`/budget) is more
