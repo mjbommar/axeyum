@@ -56,16 +56,17 @@
       "id": "singular-system-inconsistent",
       "claim": "The system x + y = 1 and 2x + 2y = 3 has no rational solution.",
       "expected_result": "unsat",
-      "validation": "exact_rational_row_scaling_certificate",
-      "proof_status": "replay-only",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
       "data": {
         "row": ["1", "1"],
         "rhs": "1",
         "multiple": "2",
         "scaled_row": ["2", "2"],
-        "scaled_rhs": "3"
+        "scaled_rhs": "3",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas"
       },
-      "notes": "The validator checks that the left-hand side scales by 2 while the right-hand side does not, which proves this fixed system inconsistent."
+      "notes": "The validator checks that the left-hand side scales by 2 while the right-hand side does not; the Axeyum regression refutes the same fixed system with rechecked Farkas evidence."
     }
   ]
 }

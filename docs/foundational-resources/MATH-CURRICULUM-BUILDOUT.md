@@ -1377,6 +1377,8 @@ The QF_LRA/Farkas lane now has its first resource-backed proof regression:
 `rationals-lra-v0` closes the fixed trichotomy impossible branches and the
 fixed order-transitivity violating branch with Axeyum `UnsatFarkas` evidence
 that is independently rechecked.
+`linear-algebra-rational-v0` now also routes its singular inconsistent system
+through the same checked Farkas evidence path.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

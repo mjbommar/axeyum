@@ -99,3 +99,24 @@ fn rationals_order_transitivity_fixed_unsat_emits_checked_farkas() {
         ],
     );
 }
+
+#[test]
+fn linear_algebra_singular_system_inconsistent_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+
+    let x_plus_y = arena.real_add(x, y).unwrap();
+    let first_row = eq_ratio(&mut arena, x_plus_y, 1, 1);
+
+    let two_x = arena.real_add(x, x).unwrap();
+    let two_y = arena.real_add(y, y).unwrap();
+    let two_x_plus_two_y = arena.real_add(two_x, two_y).unwrap();
+    let second_row = eq_ratio(&mut arena, two_x_plus_two_y, 3, 1);
+
+    assert_farkas_checked(
+        "linear-algebra-rational-v0 singular-system-inconsistent",
+        &arena,
+        &[first_row, second_row],
+    );
+}

@@ -59,8 +59,16 @@ x + y = 1
 is inconsistent because the second left-hand row is exactly `2` times the first
 left-hand row, but the right-hand side is not `2` times the first right-hand
 side. This is a tiny replay certificate for inconsistency, not yet a general
-Farkas certificate.
+Farkas certificate by itself. The Axeyum regression also checks the same fixed
+system as a conjunctive `QF_LRA` query:
+
+```text
+x + y = 1
+2*x + 2*y = 3
+```
+
+That query emits `UnsatFarkas` evidence, and the certificate arithmetic is
+rechecked independently.
 
 These fixed checks are not general theorem proofs. They are exact replay
-targets that should later graduate to QF_LRA encodings and Farkas evidence for
-UNSAT linear systems.
+targets; the listed inconsistent linear system now has QF_LRA/Farkas evidence.

@@ -4,7 +4,7 @@
   "title": "Exact Rational Linear Algebra Witnesses",
   "domain": "mathematics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "curriculum_linear_algebra",
     "curriculum_fields",
@@ -35,7 +35,8 @@
     "docs/curriculum/BACKLOG.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "matrix-vector-solution",
@@ -45,7 +46,7 @@
   "graduation_criteria": [
     "Encode the matrix equations as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation.",
-    "Add Farkas certificates for inconsistent linear systems.",
+    "Keep the inconsistent linear-system row on Axeyum's checked Farkas evidence path.",
     "Promote common exact matrix helpers into a reusable example-pack utility only after more packs need them."
   ]
 }

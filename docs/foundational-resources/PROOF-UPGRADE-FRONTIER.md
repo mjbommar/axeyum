@@ -110,6 +110,8 @@ First targets:
   (first resource-backed Farkas regression landed for fixed trichotomy and
   order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
+  (resource-backed Farkas regression landed for the singular inconsistent
+  system)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../artifacts/examples/math/convexity-rational-v0/)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)

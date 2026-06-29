@@ -16,11 +16,12 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `matrix-vector-solution` | `sat` | replay-only |
-| `singular-system-inconsistent` | `unsat` | replay-only |
+| `singular-system-inconsistent` | `unsat` | checked |
 | `objective-threshold-farkas-infeasible` | `unsat` | checked |
 
-The first two rows are exact arithmetic replay. The LP threshold row carries a
-tiny checked Farkas-style certificate.
+The matrix-vector row is exact arithmetic replay. The inconsistent system and
+LP threshold rows carry checked Farkas evidence for fixed linear rational
+systems.
 
 ## Encode
 
@@ -42,6 +43,17 @@ threshold-negated: -x - y <= -5
 ```
 
 with multipliers `1` and `1`.
+
+The singular linear-system row is:
+
+```text
+x + y = 1
+2*x + 2*y = 3
+```
+
+The row-scaling replay observes that the second left-hand side is twice the
+first while `3 != 2*1`. The solver regression builds the same equations as
+`QF_LRA` and requires rechecked `UnsatFarkas` evidence.
 
 ## Replay
 
@@ -68,6 +80,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -80,4 +93,4 @@ validated 1 foundational example pack(s)
 
 The untrusted side can search for vectors, LU factors, feasible points, or
 certificates. The trusted checker recomputes matrix products, evaluates linear
-constraints, and verifies certificate arithmetic over exact rationals.
+constraints, and verifies Farkas certificate arithmetic over exact rationals.
