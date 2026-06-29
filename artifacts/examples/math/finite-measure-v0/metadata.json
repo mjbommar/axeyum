@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "finite-measure-v0",
+  "title": "Finite Sigma-Algebra And Measure Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_measure_theory",
+    "field_probability_theory",
+    "field_set_theory_and_foundations",
+    "curriculum_sets",
+    "curriculum_rationals",
+    "curriculum_counting"
+  ],
+  "field_ids": [
+    "measure_theory",
+    "probability_theory",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "rationals",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "Bool",
+    "LRA (exact rationals)"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md"
+  ],
+  "expected_results": [
+    "finite-sigma-algebra-axioms",
+    "finite-measure-additivity",
+    "event-complement-measure"
+  ],
+  "graduation_criteria": [
+    "Encode finite sigma-algebra membership and closure checks as deterministic Bool formulas.",
+    "Encode finite measure equalities as exact QF_LRA formulas.",
+    "Replay finite measure witnesses through Axeyum model evaluation.",
+    "Keep countable additivity, Lebesgue measure, integration, and convergence theorems marked Lean-horizon."
+  ]
+}

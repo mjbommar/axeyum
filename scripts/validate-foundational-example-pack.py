@@ -957,6 +957,136 @@ def validate_finite_topology(expected: dict[str, Any]) -> None:
         fail("metric-ball witness does not match finite metric")
 
 
+def require_sigma_algebra_data(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], set[frozenset[str]]]:
+    universe = require_string_list(f"{context}.universe", values.get("universe"))
+    measurable_sets = require_set_family(
+        f"{context}.measurable_sets",
+        values.get("measurable_sets"),
+        universe,
+    )
+    validate_sigma_algebra_axioms(context, universe, measurable_sets)
+    return universe, measurable_sets
+
+
+def validate_sigma_algebra_axioms(
+    context: str,
+    universe: list[str],
+    measurable_sets: set[frozenset[str]],
+) -> None:
+    empty = frozenset()
+    full = frozenset(universe)
+    if empty not in measurable_sets:
+        fail(f"{context} measurable sets must include the empty set")
+    if full not in measurable_sets:
+        fail(f"{context} measurable sets must include the universe")
+    for subset in measurable_sets:
+        if frozenset(full - subset) not in measurable_sets:
+            fail(f"{context} measurable sets are not closed under complement")
+    for left in measurable_sets:
+        for right in measurable_sets:
+            if frozenset(left | right) not in measurable_sets:
+                fail(f"{context} measurable sets are not closed under pairwise union")
+
+
+def require_measure_table(
+    context: str,
+    value: Any,
+    universe: list[str],
+    measurable_sets: set[frozenset[str]],
+) -> dict[frozenset[str], Fraction]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty measure table")
+    measures: dict[frozenset[str], Fraction] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        subset = require_subset(f"{context}[{index}].set", item.get("set"), universe)
+        if subset not in measurable_sets:
+            fail(f"{context}[{index}].set is not measurable")
+        if subset in measures:
+            fail(f"{context} repeats measure for set {sorted(subset)}")
+        measure = require_fraction(f"{context}[{index}].measure", item.get("measure"))
+        if measure < 0:
+            fail(f"{context}[{index}].measure must be nonnegative")
+        measures[subset] = measure
+    if set(measures) != measurable_sets:
+        missing = sorted(sorted(subset) for subset in measurable_sets - set(measures))
+        extra = sorted(sorted(subset) for subset in set(measures) - measurable_sets)
+        fail(f"{context} must cover measurable sets exactly; missing={missing} extra={extra}")
+    return measures
+
+
+def validate_finite_measure_table(
+    context: str,
+    universe: list[str],
+    measurable_sets: set[frozenset[str]],
+    measures: dict[frozenset[str], Fraction],
+) -> None:
+    empty = frozenset()
+    full = frozenset(universe)
+    if measures[empty] != 0:
+        fail(f"{context} must have measure(empty) = 0")
+    if measures[full] != 1:
+        fail(f"{context} currently expects normalized total measure 1")
+    for left in measurable_sets:
+        for right in measurable_sets:
+            if left & right:
+                continue
+            union = frozenset(left | right)
+            if union in measurable_sets and measures[union] != measures[left] + measures[right]:
+                fail(f"{context} violates finite additivity")
+
+
+def validate_finite_measure(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    sigma = checks["finite-sigma-algebra-axioms"]
+    if sigma["expected_result"] != "sat":
+        fail("finite-sigma-algebra-axioms must expect sat")
+    values = single_witness_values(sigma, witnesses)
+    require_sigma_algebra_data("finite sigma algebra", values)
+
+    additivity = checks["finite-measure-additivity"]
+    if additivity["expected_result"] != "sat":
+        fail("finite-measure-additivity must expect sat")
+    values = single_witness_values(additivity, witnesses)
+    universe, measurable_sets = require_sigma_algebra_data("finite measure sigma algebra", values)
+    measures = require_measure_table("finite measure table", values.get("measures"), universe, measurable_sets)
+    validate_finite_measure_table("finite-measure-additivity", universe, measurable_sets, measures)
+
+    complement = checks["event-complement-measure"]
+    if complement["expected_result"] != "sat":
+        fail("event-complement-measure must expect sat")
+    values = single_witness_values(complement, witnesses)
+    universe, measurable_sets = require_sigma_algebra_data("event complement sigma algebra", values)
+    measures = require_measure_table("event complement measure table", values.get("measures"), universe, measurable_sets)
+    validate_finite_measure_table("event-complement-measure", universe, measurable_sets, measures)
+    universe_set = frozenset(universe)
+    event = require_subset("event complement event", values.get("event"), universe)
+    expected_event_measure = require_fraction("event complement event_measure", values.get("event_measure"))
+    expected_complement = require_subset("event complement complement", values.get("complement"), universe)
+    expected_complement_measure = require_fraction(
+        "event complement complement_measure",
+        values.get("complement_measure"),
+    )
+    expected_total_measure = require_fraction("event complement total_measure", values.get("total_measure"))
+    actual_complement = frozenset(universe_set - event)
+    if actual_complement != expected_complement:
+        fail("event-complement witness complement does not match event")
+    if measures[event] != expected_event_measure:
+        fail("event-complement witness event measure does not match table")
+    if measures[actual_complement] != expected_complement_measure:
+        fail("event-complement witness complement measure does not match table")
+    if measures[event] + measures[actual_complement] != expected_total_measure:
+        fail("event-complement witness measures do not sum to total")
+    if measures[universe_set] != expected_total_measure:
+        fail("event-complement witness total measure does not match universe")
+
+
 def require_probability(context: str, value: Any) -> Fraction:
     probability = require_fraction(context, value)
     if probability < 0 or probability > 1:
@@ -1188,6 +1318,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_descriptive_statistics(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
+    if metadata["id"] == "finite-measure-v0":
+        validate_finite_measure(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
     if metadata["id"] == "finite-probability-v0":

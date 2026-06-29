@@ -2114,7 +2114,7 @@
       "example_packs": [
         {
           "id": "finite-measure-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
           "notes": "Finite sigma-algebras, finite measures, and exact probability foundations."
         }
@@ -2137,7 +2137,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate.",
         "Most general field theorems require Lean/mathlib-scale proof reconstruction."
       ],

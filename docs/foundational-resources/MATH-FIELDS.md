@@ -154,11 +154,15 @@ one of:
 7. `artifacts/examples/math/finite-topology-v0/`
    - Fields: `topology`, `set_theory_and_foundations`, `real_analysis`.
    - Checks: finite topology axioms, closure/interior, metric-ball replay.
-8. `artifacts/examples/math/modular-arithmetic-v0/`
+8. `artifacts/examples/math/finite-measure-v0/`
+   - Fields: `measure_theory`, `probability_theory`, `set_theory_and_foundations`.
+   - Checks: finite sigma-algebra axioms, finite additivity, event/complement
+     measure replay.
+9. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-9. `artifacts/examples/math/real-analysis-rational-v0/`
+10. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

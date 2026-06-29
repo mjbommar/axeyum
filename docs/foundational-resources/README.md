@@ -74,6 +74,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
   validates finite topology axioms, closure/interior computation, and exact
   finite metric-ball replay.
+- [`artifacts/examples/math/finite-measure-v0/`](../../artifacts/examples/math/finite-measure-v0/)
+  validates finite sigma-algebra axioms, exact finite additivity, and
+  event/complement measure replay.
 
 Validation commands:
 
@@ -92,6 +95,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/de
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
 ## Principle

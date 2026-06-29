@@ -331,6 +331,9 @@ witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 collinearity, and squared-distance coordinate checks.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
 axioms, closure/interior computation, and exact finite metric-ball replay.
+`artifacts/examples/math/finite-measure-v0/` now validates finite
+sigma-algebra axioms, exact finite additivity, and event/complement measure
+replay.
 
 Recommended order:
 
@@ -452,8 +455,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10 and Phase M4 items 4-6 have landed for the math seed.
-Continue Phase M4 with `finite-measure-v0`.
+Progress: items 1-10 and Phase M4 items 4-7 have landed for the math seed.
+Continue Phase M4 with `bounded-dynamics-v0`.
 
 ## Operating Rules
 

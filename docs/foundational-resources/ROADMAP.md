@@ -68,6 +68,7 @@ artifacts/examples/math/
   linear-optimization-v0/
   coordinate-geometry-v0/
   finite-topology-v0/
+  finite-measure-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -327,6 +328,9 @@ validates exact midpoint, collinearity, and squared-distance coordinate checks.
 [`finite-topology-v0`](../../artifacts/examples/math/finite-topology-v0/)
 validates finite topology axioms, closure/interior computation, and exact finite
 metric-ball replay.
+[`finite-measure-v0`](../../artifacts/examples/math/finite-measure-v0/)
+validates finite sigma-algebra axioms, exact finite additivity, and
+event/complement measure replay.
 
 Exit criteria:
 

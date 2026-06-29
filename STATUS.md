@@ -134,13 +134,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite measure pack landed.** Added
+  [`artifacts/examples/math/finite-measure-v0/`](artifacts/examples/math/finite-measure-v0/)
+  for finite sigma-algebra axioms, exact finite additivity, and
+  event/complement measure replay. The foundational example-pack validator now
+  checks finite measurable families, complement/union closure, rational measure
+  tables, normalization, and additivity over disjoint measurable sets. Continue
+  Phase M4 with `bounded-dynamics-v0`.
+
 - **Finite topology pack landed.** Added
   [`artifacts/examples/math/finite-topology-v0/`](artifacts/examples/math/finite-topology-v0/)
   for finite topology axioms, closure/interior computation, and exact finite
   metric-ball replay. The foundational example-pack validator now checks finite
   set families, topology closure under union/intersection, closure/interior via
-  complements, and rational finite metric balls. Continue Phase M4 with
-  `finite-measure-v0`.
+  complements, and rational finite metric balls.
 
 - **Coordinate geometry pack landed.** Added
   [`artifacts/examples/math/coordinate-geometry-v0/`](artifacts/examples/math/coordinate-geometry-v0/)
