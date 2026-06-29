@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections import deque
 from fractions import Fraction
 from itertools import product
 from math import gcd
@@ -504,6 +505,214 @@ def validate_graph_coloring(expected: dict[str, Any]) -> None:
         fail("triangle-not-2-colorable must use K3 with exactly two colors")
     if has_proper_coloring(vertices, edges, colors):
         fail("triangle-not-2-colorable found a proper 2-coloring unexpectedly")
+
+
+def require_finite_graph(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]]]:
+    vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
+    edge_values = values.get("edges")
+    if not isinstance(edge_values, list):
+        fail(f"{context}.edges must be a list")
+    vertex_set = set(vertices)
+    edges: list[tuple[str, str]] = []
+    seen_edges: set[tuple[str, str]] = set()
+    for index, edge in enumerate(edge_values):
+        if not isinstance(edge, list) or len(edge) != 2:
+            fail(f"{context}.edges[{index}] must be a two-element list")
+        left, right = edge
+        require_string(f"{context}.edges[{index}][0]", left)
+        require_string(f"{context}.edges[{index}][1]", right)
+        if left == right:
+            fail(f"{context}.edges[{index}] must not be a self-loop")
+        if left not in vertex_set or right not in vertex_set:
+            fail(f"{context}.edges[{index}] references a missing vertex")
+        normalized = tuple(sorted((left, right)))
+        if normalized in seen_edges:
+            fail(f"{context}.edges repeats undirected edge {normalized}")
+        seen_edges.add(normalized)
+        edges.append((left, right))
+    return vertices, edges
+
+
+def require_graph_vertex(context: str, value: Any, vertices: list[str]) -> str:
+    require_string(context, value)
+    if value not in set(vertices):
+        fail(f"{context} references a missing vertex")
+    return value
+
+
+def require_graph_path(context: str, value: Any, vertices: list[str]) -> list[str]:
+    path = require_string_list(context, value)
+    vertex_set = set(vertices)
+    for vertex in path:
+        if vertex not in vertex_set:
+            fail(f"{context} references missing vertex {vertex!r}")
+    return path
+
+
+def graph_edge_set(edges: list[tuple[str, str]]) -> set[tuple[str, str]]:
+    return {tuple(sorted(edge)) for edge in edges}
+
+
+def graph_adjacency(vertices: list[str], edges: list[tuple[str, str]]) -> dict[str, list[str]]:
+    order = {vertex: index for index, vertex in enumerate(vertices)}
+    adjacency = {vertex: [] for vertex in vertices}
+    for left, right in edges:
+        adjacency[left].append(right)
+        adjacency[right].append(left)
+    for vertex in vertices:
+        adjacency[vertex].sort(key=lambda item: order[item])
+    return adjacency
+
+
+def shortest_distances(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+) -> dict[str, int]:
+    adjacency = graph_adjacency(vertices, edges)
+    distances = {source: 0}
+    queue: deque[str] = deque([source])
+    while queue:
+        vertex = queue.popleft()
+        for neighbor in adjacency[vertex]:
+            if neighbor not in distances:
+                distances[neighbor] = distances[vertex] + 1
+                queue.append(neighbor)
+    return distances
+
+
+def deterministic_dfs_order(vertices: list[str], edges: list[tuple[str, str]], start: str) -> list[str]:
+    adjacency = graph_adjacency(vertices, edges)
+    seen: set[str] = set()
+    order: list[str] = []
+
+    def visit(vertex: str) -> None:
+        seen.add(vertex)
+        order.append(vertex)
+        for neighbor in adjacency[vertex]:
+            if neighbor not in seen:
+                visit(neighbor)
+
+    visit(start)
+    return order
+
+
+def path_is_valid(path: list[str], edges: list[tuple[str, str]]) -> bool:
+    edge_set = graph_edge_set(edges)
+    return all(tuple(sorted((left, right))) in edge_set for left, right in zip(path, path[1:]))
+
+
+def require_distance_map(context: str, value: Any, vertices: list[str]) -> dict[str, int]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    vertex_set = set(vertices)
+    if set(value) != vertex_set:
+        missing = sorted(vertex_set - set(value))
+        extra = sorted(set(value) - vertex_set)
+        fail(f"{context} must cover exactly the graph vertices; missing={missing} extra={extra}")
+    distances: dict[str, int] = {}
+    for vertex in vertices:
+        distance = require_int(f"{context}.{vertex}", value[vertex])
+        if distance < 0:
+            fail(f"{context}.{vertex} must be nonnegative")
+        distances[vertex] = distance
+    return distances
+
+
+def require_cut_edges(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    graph_edges: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    cut_edges = require_finite_graph(context, {"vertices": vertices, "edges": value})[1]
+    graph_edge_set_value = graph_edge_set(graph_edges)
+    for edge in cut_edges:
+        if tuple(sorted(edge)) not in graph_edge_set_value:
+            fail(f"{context} contains an edge that is not in the graph")
+    return cut_edges
+
+
+def remove_edges(
+    edges: list[tuple[str, str]],
+    removed: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    removed_set = graph_edge_set(removed)
+    return [edge for edge in edges if tuple(sorted(edge)) not in removed_set]
+
+
+def validate_graph_reachability(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    bfs = checks["bfs-shortest-distance-witness"]
+    if bfs["expected_result"] != "sat" or bfs.get("proof_status") != "checked":
+        fail("bfs-shortest-distance-witness must be a checked sat row")
+    values = single_witness_values(bfs, witnesses)
+    vertices, edges = require_finite_graph("bfs shortest path", values)
+    source = require_graph_vertex("bfs shortest path source", values.get("source"), vertices)
+    target = require_graph_vertex("bfs shortest path target", values.get("target"), vertices)
+    path = require_graph_path("bfs shortest path path", values.get("path"), vertices)
+    if path[0] != source or path[-1] != target:
+        fail("bfs-shortest-distance-witness path endpoints do not match source/target")
+    if not path_is_valid(path, edges):
+        fail("bfs-shortest-distance-witness path contains a non-edge")
+    claimed_distance = require_int("bfs shortest path distance", values.get("distance"))
+    if claimed_distance < 0:
+        fail("bfs shortest path distance must be nonnegative")
+    if len(path) - 1 != claimed_distance:
+        fail("bfs-shortest-distance-witness distance does not match path length")
+    computed_distances = shortest_distances(vertices, edges, source)
+    if computed_distances.get(target) != claimed_distance:
+        fail("bfs-shortest-distance-witness distance is not shortest")
+    listed_distances = require_distance_map("bfs shortest path distances", values.get("distances"), vertices)
+    if listed_distances != computed_distances:
+        fail("bfs-shortest-distance-witness distance map does not match BFS")
+
+    dfs = checks["dfs-long-tail-order-replay"]
+    if dfs["expected_result"] != "sat" or dfs.get("proof_status") != "checked":
+        fail("dfs-long-tail-order-replay must be a checked sat row")
+    values = single_witness_values(dfs, witnesses)
+    vertices, edges = require_finite_graph("dfs long-tail order", values)
+    start = require_graph_vertex("dfs long-tail start", values.get("start"), vertices)
+    target = require_graph_vertex("dfs long-tail target", values.get("target"), vertices)
+    order = require_string_list("dfs long-tail order", values.get("order"))
+    expected_order = deterministic_dfs_order(vertices, edges, start)
+    if order != expected_order:
+        fail("dfs-long-tail-order-replay order does not match deterministic DFS")
+    if target not in order:
+        fail("dfs-long-tail-order-replay target is not reached")
+    target_index = require_int("dfs target_discovery_index", values.get("target_discovery_index"))
+    if target_index != order.index(target):
+        fail("dfs-long-tail-order-replay target discovery index is wrong")
+    distances = shortest_distances(vertices, edges, start)
+    if target not in distances:
+        fail("dfs-long-tail-order-replay target must be BFS-reachable")
+    if target_index <= distances[target]:
+        fail("dfs-long-tail-order-replay must witness DFS doing more work than BFS distance")
+
+    unreachable = checks["disconnected-no-path"]
+    if unreachable["expected_result"] != "unsat" or unreachable.get("proof_status") != "checked":
+        fail("disconnected-no-path must be a checked unsat row")
+    data = unreachable.get("data", {})
+    vertices, edges = require_finite_graph("disconnected no path", data)
+    source = require_graph_vertex("disconnected source", data.get("source"), vertices)
+    target = require_graph_vertex("disconnected target", data.get("target"), vertices)
+    if target in shortest_distances(vertices, edges, source):
+        fail("disconnected-no-path unexpectedly has a source-to-target path")
+
+    cut = checks["edge-cut-separates"]
+    if cut["expected_result"] != "sat" or cut.get("proof_status") != "checked":
+        fail("edge-cut-separates must be a checked sat row")
+    data = cut.get("data", {})
+    vertices, edges = require_finite_graph("edge cut", data)
+    source = require_graph_vertex("edge cut source", data.get("source"), vertices)
+    target = require_graph_vertex("edge cut target", data.get("target"), vertices)
+    cut_edges = require_cut_edges("edge cut cut_edges", data.get("cut_edges"), vertices, edges)
+    if target not in shortest_distances(vertices, edges, source):
+        fail("edge-cut-separates original graph must have an s-t path")
+    if target in shortest_distances(vertices, remove_edges(edges, cut_edges), source):
+        fail("edge-cut-separates cut edges do not separate source and target")
 
 
 def has_mod_inverse(a: int, modulus: int) -> bool:
@@ -3473,6 +3682,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_predicate(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "graph-reachability-v0":
+        validate_graph_reachability(expected)
     if metadata["id"] == "induction-obligations-v0":
         validate_induction_obligations(expected)
     if metadata["id"] == "integer-lia-v0":

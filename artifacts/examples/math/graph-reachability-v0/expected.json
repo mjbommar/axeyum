@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "pack_id": "graph-reachability-v0",
+  "witnesses": [
+    {
+      "id": "direct-edge-bfs-witness",
+      "description": "BFS finds the target through a direct edge even though a long tail also reaches it.",
+      "values": {
+        "vertices": ["s", "a", "b", "c", "d", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "b"],
+          ["b", "c"],
+          ["c", "d"],
+          ["d", "t"],
+          ["s", "t"]
+        ],
+        "source": "s",
+        "target": "t",
+        "path": ["s", "t"],
+        "distance": 1,
+        "distances": {
+          "s": 0,
+          "a": 1,
+          "b": 2,
+          "c": 3,
+          "d": 2,
+          "t": 1
+        }
+      }
+    },
+    {
+      "id": "long-tail-dfs-witness",
+      "description": "Deterministic DFS follows the long tail before discovering the direct target.",
+      "values": {
+        "vertices": ["s", "a", "b", "c", "d", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "b"],
+          ["b", "c"],
+          ["c", "d"],
+          ["d", "t"],
+          ["s", "t"]
+        ],
+        "start": "s",
+        "target": "t",
+        "order": ["s", "a", "b", "c", "d", "t"],
+        "target_discovery_index": 5
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "bfs-shortest-distance-witness",
+      "claim": "The shortest path from s to t in the listed graph has length 1.",
+      "expected_result": "sat",
+      "validation": "finite_bfs_distance_replay",
+      "proof_status": "checked",
+      "witnesses": ["direct-edge-bfs-witness"],
+      "notes": "The validator checks the path edge-by-edge and recomputes the complete BFS distance map."
+    },
+    {
+      "id": "dfs-long-tail-order-replay",
+      "claim": "With vertices used as neighbor order, deterministic DFS discovers t only after the long tail.",
+      "expected_result": "sat",
+      "validation": "deterministic_dfs_preorder_replay",
+      "proof_status": "checked",
+      "witnesses": ["long-tail-dfs-witness"],
+      "notes": "The validator recomputes DFS preorder and confirms the target discovery index is worse than the BFS distance."
+    },
+    {
+      "id": "disconnected-no-path",
+      "claim": "There is an s-to-t path in the disconnected graph.",
+      "expected_result": "unsat",
+      "validation": "finite_reachability_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["s", "a", "b", "t"],
+        "edges": [
+          ["s", "a"],
+          ["b", "t"]
+        ],
+        "source": "s",
+        "target": "t"
+      },
+      "notes": "The validator computes the reachable component from s and confirms t is absent."
+    },
+    {
+      "id": "edge-cut-separates",
+      "claim": "Removing the listed edge cut separates s from t.",
+      "expected_result": "sat",
+      "validation": "finite_edge_cut_replay",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["s", "a", "b", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "b"],
+          ["b", "t"]
+        ],
+        "source": "s",
+        "target": "t",
+        "cut_edges": [
+          ["a", "b"]
+        ]
+      },
+      "notes": "The validator checks that s reaches t before the cut and cannot reach t after the cut edge is removed."
+    }
+  ]
+}

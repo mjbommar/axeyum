@@ -346,6 +346,9 @@ row-scaling inconsistency certificate for a singular system.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.
+[`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/)
+validates finite BFS shortest-distance replay, deterministic DFS traversal
+replay, disconnected no-path refutation, and edge-cut separation replay.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
 validates exact finite probability mass tables, conditional probability, and
 Bayes posterior replay.

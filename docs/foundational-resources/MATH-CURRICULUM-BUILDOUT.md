@@ -441,6 +441,9 @@ Add the fields users naturally expect from an undergraduate/graduate math map.
 Status: first field-extension packs landed.
 `artifacts/examples/math/graph-coloring-v0/` now validates coloring witnesses
 and a tiny exhaustive non-colorability check.
+`artifacts/examples/math/graph-reachability-v0/` now validates finite BFS
+shortest-distance replay, deterministic DFS traversal replay, disconnected
+no-path refutation, and edge-cut separation replay.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, and Bayes posterior replay.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
@@ -466,7 +469,9 @@ real-pair algebra.
 
 Recommended order:
 
-1. `graph-coloring-v0`: SAT colorings, non-colorability, certificate status.
+1. `graph-coloring-v0` (landed) and `graph-reachability-v0` (landed): SAT
+   colorings, non-colorability, finite reachability, traversal traces, and
+   cut separation.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule.
 3. `descriptive-statistics-v0`: mean/variance identities, contingency tables,
    Simpson witness.
@@ -640,14 +645,16 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
 Phase M4 items 4-10, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
-lessons now exist for graph coloring, rational arithmetic, linear
-algebra/optimization, probability/statistics, finite structures, and
-analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs, and `proof-methods-refutation-v0` has a checked
-finite CNF truth-table route for its pigeonhole refutation. Phase M7 now has
-generated pack-level proof-gap rows and a normal foundational-resource check
-hook. Continue by adding the next curriculum pack or by replacing finite CNF
-enumeration routes with emitted, checked proof objects where appropriate.
+lessons now exist for graph coloring, graph reachability/traversal, rational
+arithmetic, linear algebra/optimization, probability/statistics, finite
+structures, and analysis/topology horizons. Phase M6 now has cookbook links
+from all current non-template math example packs, and
+`proof-methods-refutation-v0` has a checked finite CNF truth-table route for its
+pigeonhole refutation. Phase M7 now has generated pack-level proof-gap rows and
+a normal foundational-resource check hook. Continue by adding the next graph
+slice (matching, cuts beyond single-edge witnesses, or d-separation), by adding
+the next curriculum-adjacent pack, or by replacing finite enumeration routes
+with emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 

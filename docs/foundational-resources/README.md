@@ -106,6 +106,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
+- [`artifacts/examples/math/graph-reachability-v0/`](../../artifacts/examples/math/graph-reachability-v0/)
+  validates finite BFS shortest-distance replay, deterministic DFS traversal
+  replay, disconnected no-path refutation, and edge-cut separation replay.
 - [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
   validates exact finite probability mass tables, conditional probability, and
   Bayes posterior replay.
@@ -154,6 +157,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/se
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0

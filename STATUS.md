@@ -159,6 +159,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph reachability foundations pack landed.** Added
+  [`graph-reachability-v0`](artifacts/examples/math/graph-reachability-v0/README.md)
+  as the second graph-theory resource after coloring. The pack validates finite
+  BFS shortest-distance replay, deterministic DFS traversal replay, a checked
+  disconnected no-path refutation, and edge-cut separation replay. The
+  foundational example-pack validator now recomputes graph reachability,
+  traversal order, distance maps, and cut separation from the raw finite graph.
+
 - **Proof-methods finite CNF route landed.** Updated
   [`proof-methods-refutation-v0`](artifacts/examples/math/proof-methods-refutation-v0/README.md)
   from an explicit proof-gap pack to checked finite evidence: the validator now
