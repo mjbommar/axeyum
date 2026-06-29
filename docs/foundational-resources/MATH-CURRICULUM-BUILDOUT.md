@@ -416,8 +416,8 @@ checked bad-homomorphism rejection, and a general isomorphism-theorem
 Lean-horizon row. `finite-vector-spaces-v0` now
 bridges finite fields into linear algebra with `F2^2` vector-space table
 replay, subspace/span checks, linear-map kernel/image replay, rank-nullity
-replay, checked non-subspace rejection, and a general vector-space/module
-Lean-horizon row. `finite-modules-v0` now adds the finite ring-to-linear-algebra
+replay, checked QF_UF/Alethe non-subspace rejection, and a general
+vector-space/module Lean-horizon row. `finite-modules-v0` now adds the finite ring-to-linear-algebra
 bridge with `Z/4Z` module table replay, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay,
 checked non-submodule rejection, and a general module-theory Lean-horizon row.
@@ -1209,8 +1209,8 @@ congruence, checked bad-homomorphism rejection, and an isomorphism-theorem
 Lean-horizon row.
 `finite-vector-spaces-v0` now adds the exact finite linear-algebra bridge over
 `F2`: vector-space laws, subspace/span replay, linear-map kernel/image replay,
-rank-nullity by finite cardinality, checked non-subspace rejection, and a
-vector-space/module Lean-horizon row.
+rank-nullity by finite cardinality, checked QF_UF/Alethe non-subspace
+rejection, and a vector-space/module Lean-horizon row.
 `finite-dual-spaces-v0` now adds the exact finite dual-space bridge over `F2`:
 covector linearity, pointwise dual operations, dual-basis pairing,
 annihilator recomputation, transpose-map replay, checked bad-covector

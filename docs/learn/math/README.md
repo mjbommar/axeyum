@@ -185,7 +185,8 @@ validated pack data and the repo-root command that replays it.
   certificate.
 - [Finite Vector Spaces](finite-vector-spaces-end-to-end.md): follows `F2^2`
   table replay, subspace/span recomputation, linear-map kernel/image replay,
-  rank-nullity by finite cardinality, and checked bad-subspace rejection.
+  rank-nullity by finite cardinality, and checked QF_UF/Alethe bad-subspace
+  rejection.
 - [Finite Dual Spaces](finite-dual-spaces-end-to-end.md): follows covector
   linearity, pointwise dual operations, dual-basis pairing, annihilator replay,
   transpose-map replay, and checked bad-covector rejection.

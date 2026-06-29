@@ -3919,6 +3919,21 @@ def validate_finite_vector_spaces(expected: dict[str, Any]) -> None:
         fail("bad-subspace-rejected actual_sum is incorrect")
     if actual_sum in subset:
         fail("bad-subspace-rejected actual_sum unexpectedly belongs to the subset")
+    alethe_claim = data.get("alethe_closure_claim")
+    require_string("bad subspace alethe_closure_claim", alethe_claim)
+    if alethe_claim != f"in_subset(add({left},{right})) = present":
+        fail("bad-subspace-rejected must document the Alethe additive-closure membership claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad subspace smt2_artifact", smt2_artifact)
+    check_source("bad subspace smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad subspace proof_regression", proof_regression)
+    if "finite_vector_spaces_bad_subspace_emits_checked_alethe" not in proof_regression:
+        fail("bad-subspace-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad subspace certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-subspace-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-vector-space-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

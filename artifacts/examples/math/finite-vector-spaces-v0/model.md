@@ -68,3 +68,24 @@ dim(kernel) = 1
 dim(image) = 1
 2 = 1 + 1
 ```
+
+## Bad Subspace Certificate
+
+For the rejected subset, exact replay computes:
+
+```text
+10 in S
+01 in S
+10 + 01 = 11
+11 not in S
+```
+
+Additive closure of a subspace would require:
+
+```text
+in_subset(add(10,01)) = present
+```
+
+The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
+The resource regression checks that Axeyum emits independently rechecked
+`UnsatAletheProof` evidence with no trusted reduction step.

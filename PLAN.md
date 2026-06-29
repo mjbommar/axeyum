@@ -91,8 +91,9 @@ proof upgrades, solver feedback, and consumer boundaries is
 Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, and finite monoids.
-Finite order lattices and finite permutation groups now add secondary
-equality-heavy promotions for bad antisymmetry and bad nonbijection rows.
+Finite order lattices, finite permutation groups, and finite vector spaces now
+add secondary equality-heavy promotions for bad antisymmetry, bad
+nonbijection, and bad subspace-closure rows.
 Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),

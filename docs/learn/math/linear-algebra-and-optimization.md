@@ -41,7 +41,7 @@ residual orthogonality, RSS comparison, and a checked `UnsatFarkas`
 bad-coefficients certificate. The finite-vector-space slice adds `F2^2`,
 subspace/span replay,
 linear-map kernel/image replay, rank-nullity by finite cardinality, and
-checked non-subspace rejection. The finite-dual-space slice adds covectors as
+checked QF_UF/Alethe non-subspace rejection. The finite-dual-space slice adds covectors as
 finite function tables, pointwise dual operations, dual-basis pairings,
 annihilator recomputation, transpose-map replay, and checked bad-covector
 rejection. The exact rational inner-product slice adds symmetric
@@ -108,7 +108,8 @@ image(projection_to_first_coordinate) = {00, 10}
 
 The `finite-vector-spaces-v0` validator checks vector-space laws by
 enumeration, recomputes spans, verifies linear-map preservation, and checks
-rank-nullity as `dim(domain) = dim(kernel) + dim(image)`.
+rank-nullity as `dim(domain) = dim(kernel) + dim(image)`. Its bad subspace row
+links the missing-sum closure failure to checked QF_UF/Alethe evidence.
 
 For dual spaces, keep the same carrier and encode each covector by evaluation:
 

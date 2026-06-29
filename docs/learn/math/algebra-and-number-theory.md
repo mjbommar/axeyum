@@ -55,7 +55,8 @@ rejection. The finite-ideals pack checks finite ideals,
 principal ideal generation, ring-homomorphism kernels, and quotient-ring
 tables over modular rings. The finite-vector-spaces pack checks finite fields
 acting on finite additive groups, subspaces, spans, linear maps, kernels,
-images, and rank-nullity. The finite-dual-spaces pack checks covectors as
+images, rank-nullity, and a checked QF_UF/Alethe bad-subspace row. The
+finite-dual-spaces pack checks covectors as
 finite field-valued function tables, pointwise dual operations, dual-basis
 pairing, annihilator recomputation, transpose maps, and bad-covector
 refutations. The finite-modules pack checks finite rings acting on finite

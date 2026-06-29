@@ -28,6 +28,7 @@
     "finite vector spaces",
     "finite functions",
     "Bool / enumeration",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0",
@@ -39,7 +40,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "f2-plane-vector-space",
@@ -52,7 +54,7 @@
   "graduation_criteria": [
     "Encode fixed finite vector-space tables as deterministic finite-function and equality obligations.",
     "Replay subspace, span, linear-map, kernel, image, and rank-nullity witnesses through Axeyum model evaluation.",
-    "Add emitted EUF/Alethe or finite-table certificates for bad-subspace and bad-linear-map rows once proof routes are promoted.",
+    "Route bad finite subspace-closure conflicts through checked QF_UF/Alethe evidence once exact table replay identifies the missing sum.",
     "Keep general vector-space, module, basis-extension, dimension, quotient-space, and linear-map theorems under Lean horizon until formal routes exist."
   ]
 }

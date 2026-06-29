@@ -201,11 +201,13 @@ First targets:
   (resource-backed QF_UF/Alethe regression landed for the bad antisymmetry conflict)
 - [finite-permutation-groups-v0](../../artifacts/examples/math/finite-permutation-groups-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad nonbijection conflict)
+- [finite-vector-spaces-v0](../../artifacts/examples/math/finite-vector-spaces-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad subspace-closure conflict)
 
 Secondary targets:
 
-- vector spaces, dual spaces, modules, ideals, and tensor products where the
-  finite table problem is equality-heavy.
+- dual spaces, modules, ideals, and tensor products where the finite table
+  problem is equality-heavy.
 
 Expected artifact:
 

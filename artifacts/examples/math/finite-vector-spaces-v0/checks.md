@@ -33,7 +33,8 @@ The validator derives dimensions from finite cardinalities over `F2` and checks
 Expected result: `unsat`.
 
 The validator rejects `{00, 10, 01}` because `10 + 01 = 11`, and `11` is not in
-the subset.
+the subset. The linked `QF_UF` artifact turns the failed additive-closure
+membership claim into a checked Alethe refutation.
 
 ## `general-vector-space-theory-lean-horizon`
 
