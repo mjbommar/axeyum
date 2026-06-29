@@ -4569,6 +4569,182 @@ def validate_finite_groups(expected: dict[str, Any]) -> None:
         fail("subtraction-mod3-non-group unexpectedly satisfies the group axioms")
 
 
+def monoid_axiom_failures(
+    carrier: list[str],
+    identity: str,
+    operation: dict[tuple[str, str], str],
+) -> list[str]:
+    failures: list[str] = []
+    for item in carrier:
+        if table_op(operation, identity, item) != item:
+            failures.append(f"left identity fails for {item}")
+        if table_op(operation, item, identity) != item:
+            failures.append(f"right identity fails for {item}")
+    for left in carrier:
+        for middle in carrier:
+            for right in carrier:
+                lhs = table_op(operation, table_op(operation, left, middle), right)
+                rhs = table_op(operation, left, table_op(operation, middle, right))
+                if lhs != rhs:
+                    failures.append(f"associativity fails for {(left, middle, right)}")
+                    return failures
+    return failures
+
+
+def require_monoid_table(
+    context: str,
+    values: Any,
+) -> tuple[list[str], str, dict[tuple[str, str], str]]:
+    if not isinstance(values, dict):
+        fail(f"{context} must be an object")
+    carrier, identity, operation = require_cayley_table(context, values)
+    failures = monoid_axiom_failures(carrier, identity, operation)
+    if failures:
+        fail(f"{context} is not a monoid: {failures[0]}")
+    return carrier, identity, operation
+
+
+def require_transformation_monoid_values(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], list[str], str, dict[tuple[str, str], str], dict[str, dict[str, str]]]:
+    points = require_string_list(f"{context}.points", values.get("points"))
+    carrier, identity, operation = require_monoid_table(context, values)
+    raw_functions = values.get("functions")
+    if not isinstance(raw_functions, dict) or set(raw_functions) != set(carrier):
+        fail(f"{context}.functions must contain exactly one function per carrier element")
+    functions = {
+        element: require_mapping_object(f"{context}.functions.{element}", raw_functions[element], points, points)
+        for element in carrier
+    }
+    return points, carrier, identity, operation, functions
+
+
+def compose_endomorphism(
+    points: list[str],
+    left_after: dict[str, str],
+    right_first: dict[str, str],
+) -> dict[str, str]:
+    return {point: left_after[right_first[point]] for point in points}
+
+
+def matching_transformation_label(
+    context: str,
+    functions: dict[str, dict[str, str]],
+    mapping: dict[str, str],
+) -> str:
+    matches = [name for name, candidate in functions.items() if candidate == mapping]
+    if len(matches) != 1:
+        fail(f"{context} must match exactly one listed transformation")
+    return matches[0]
+
+
+def validate_finite_monoids(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    laws = checks["two-point-transformation-monoid-laws"]
+    if laws["expected_result"] != "sat" or laws.get("proof_status") != "checked":
+        fail("two-point-transformation-monoid-laws must be a checked sat row")
+    values = single_witness_values(laws, witnesses)
+    points, carrier, identity, operation, functions = require_transformation_monoid_values(
+        "two-point transformation monoid",
+        values,
+    )
+    identity_map = {point: point for point in points}
+    if functions[identity] != identity_map:
+        fail("two-point-transformation-monoid-laws identity function is incorrect")
+
+    composition = checks["function-composition-table-replay"]
+    if composition["expected_result"] != "sat" or composition.get("proof_status") != "checked":
+        fail("function-composition-table-replay must be a checked sat row")
+    values = single_witness_values(composition, witnesses)
+    points, carrier, identity, operation, functions = require_transformation_monoid_values(
+        "composition transformation monoid",
+        values,
+    )
+    for left in carrier:
+        for right in carrier:
+            computed = compose_endomorphism(points, functions[left], functions[right])
+            computed_label = matching_transformation_label(
+                f"function-composition-table-replay {left} after {right}",
+                functions,
+                computed,
+            )
+            if table_op(operation, left, right) != computed_label:
+                fail("function-composition-table-replay table entry does not match function composition")
+
+    units = checks["units-and-idempotents-replay"]
+    if units["expected_result"] != "sat" or units.get("proof_status") != "checked":
+        fail("units-and-idempotents-replay must be a checked sat row")
+    values = single_witness_values(units, witnesses)
+    points, carrier, identity, operation, functions = require_transformation_monoid_values(
+        "units transformation monoid",
+        values,
+    )
+    listed_units = set(require_string_list("monoid units", values.get("units")))
+    listed_idempotents = set(require_string_list("monoid idempotents", values.get("idempotents")))
+    carrier_set = set(carrier)
+    if not listed_units <= carrier_set:
+        fail("units-and-idempotents-replay units contain elements outside the carrier")
+    if not listed_idempotents <= carrier_set:
+        fail("units-and-idempotents-replay idempotents contain elements outside the carrier")
+    actual_units = {
+        element
+        for element in carrier
+        if any(
+            table_op(operation, element, candidate) == identity
+            and table_op(operation, candidate, element) == identity
+            for candidate in carrier
+        )
+    }
+    actual_idempotents = {element for element in carrier if table_op(operation, element, element) == element}
+    if listed_units != actual_units:
+        fail("units-and-idempotents-replay listed units are incorrect")
+    if listed_idempotents != actual_idempotents:
+        fail("units-and-idempotents-replay listed idempotents are incorrect")
+
+    bad = checks["bad-nonassociative-table-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-nonassociative-table-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if not isinstance(data, dict):
+        fail("bad-nonassociative-table-rejected data must be an object")
+    carrier, identity, operation = require_cayley_table("bad monoid table", data)
+    failures = monoid_axiom_failures(carrier, identity, operation)
+    if not failures:
+        fail("bad-nonassociative-table-rejected unexpectedly satisfies the monoid axioms")
+    failing_triple = data.get("failing_triple")
+    if not isinstance(failing_triple, list) or len(failing_triple) != 3:
+        fail("bad-nonassociative-table-rejected failing_triple must have three elements")
+    left, middle, right = failing_triple
+    for index, item in enumerate(failing_triple):
+        require_string(f"bad monoid failing_triple[{index}]", item)
+        if item not in set(carrier):
+            fail("bad-nonassociative-table-rejected failing_triple references an element outside the carrier")
+    left_associated = table_op(operation, table_op(operation, left, middle), right)
+    right_associated = table_op(operation, left, table_op(operation, middle, right))
+    expected_left = data.get("left_associated")
+    expected_right = data.get("right_associated")
+    require_string("bad monoid left_associated", expected_left)
+    require_string("bad monoid right_associated", expected_right)
+    if left_associated != expected_left:
+        fail("bad-nonassociative-table-rejected left_associated is incorrect")
+    if right_associated != expected_right:
+        fail("bad-nonassociative-table-rejected right_associated is incorrect")
+    if left_associated == right_associated:
+        fail("bad-nonassociative-table-rejected failing_triple is not an associativity failure")
+
+    horizon = checks["general-monoid-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-monoid-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-monoid-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general monoid target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general monoid future_checker", data.get("future_checker"))
+
+
 def require_action_table(
     context: str,
     group: list[str],
@@ -13753,6 +13929,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_groups(expected)
     if metadata["id"] == "finite-group-actions-v0":
         validate_finite_group_actions(expected)
+    if metadata["id"] == "finite-monoids-v0":
+        validate_finite_monoids(expected)
     if metadata["id"] == "finite-integration-v0":
         validate_finite_integration(expected)
     if metadata["id"] == "finite-measure-v0":

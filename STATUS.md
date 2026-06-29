@@ -179,6 +179,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite monoid foundations pack landed.** Added
+  [`finite-monoids-v0`](artifacts/examples/math/finite-monoids-v0/README.md)
+  as the exact finite bridge between functions and algebraic structures. The
+  pack validates the full transformation monoid on a two-point set, monoid
+  identity/associativity replay, composition-table replay from finite
+  functions, unit and idempotent recomputation, checked rejection of a
+  non-associative table, and a general monoid/semigroup Lean-horizon row. The
+  foundational example-pack validator, concept atlas, resource docs, and
+  learner-facing finite-structure/algebra pages now include the new pack.
+
 - **Finite group-action end-to-end lesson landed.** Added
   [`finite-group-actions-end-to-end.md`](docs/learn/math/finite-group-actions-end-to-end.md)
   as the learner-facing trace for the finite group-action pack: action-table

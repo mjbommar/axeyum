@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-monoids-v0",
+  "witnesses": [
+    {
+      "id": "two-point-transformation-monoid",
+      "description": "All total functions on a two-point set under composition.",
+      "values": {
+        "points": ["0", "1"],
+        "carrier": ["id", "flip", "zero", "one"],
+        "identity": "id",
+        "functions": {
+          "id": {
+            "0": "0",
+            "1": "1"
+          },
+          "flip": {
+            "0": "1",
+            "1": "0"
+          },
+          "zero": {
+            "0": "0",
+            "1": "0"
+          },
+          "one": {
+            "0": "1",
+            "1": "1"
+          }
+        },
+        "table": [
+          ["id", "flip", "zero", "one"],
+          ["flip", "id", "one", "zero"],
+          ["zero", "zero", "zero", "zero"],
+          ["one", "one", "one", "one"]
+        ],
+        "units": ["id", "flip"],
+        "idempotents": ["id", "zero", "one"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "two-point-transformation-monoid-laws",
+      "claim": "The listed transformation table is a monoid with identity id.",
+      "expected_result": "sat",
+      "validation": "finite_monoid_table_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-point-transformation-monoid"],
+      "notes": "The validator checks closure, identity, and associativity over the full table."
+    },
+    {
+      "id": "function-composition-table-replay",
+      "claim": "The listed monoid multiplication table equals finite function composition.",
+      "expected_result": "sat",
+      "validation": "finite_transformation_composition_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-point-transformation-monoid"],
+      "notes": "The validator recomputes f after g for each row/column pair from the function maps."
+    },
+    {
+      "id": "units-and-idempotents-replay",
+      "claim": "The units are id and flip, and the idempotents are id, zero, and one.",
+      "expected_result": "sat",
+      "validation": "finite_monoid_units_idempotents_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-point-transformation-monoid"],
+      "notes": "The validator recomputes two-sided inverses and x*x=x table entries."
+    },
+    {
+      "id": "bad-nonassociative-table-rejected",
+      "claim": "The malformed table with identity e is an associative monoid.",
+      "expected_result": "unsat",
+      "validation": "finite_monoid_axiom_refutation",
+      "proof_status": "checked",
+      "data": {
+        "carrier": ["e", "a", "b"],
+        "identity": "e",
+        "table": [
+          ["e", "a", "b"],
+          ["a", "a", "a"],
+          ["b", "b", "a"]
+        ],
+        "failing_triple": ["b", "b", "b"],
+        "left_associated": "a",
+        "right_associated": "b"
+      },
+      "notes": "The validator checks that (b*b)*b differs from b*(b*b)."
+    },
+    {
+      "id": "general-monoid-theory-lean-horizon",
+      "claim": "General semigroup and monoid theory requires a proof-assistant route.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Associativity theorems for arbitrary carrier types, submonoids, quotient monoids, free monoids, presentations, Green's relations, transformation semigroups, and category-theoretic monoid objects.",
+        "future_checker": "Lean/mathlib algebraic hierarchy plus Axeyum evidence import for fixed finite table subgoals."
+      },
+      "notes": "The finite rows are exact table checks; the general theory remains proof-assistant territory."
+    }
+  ]
+}

@@ -401,6 +401,12 @@
           "notes": "Finite function composition, image/preimage, inverse tables, associativity, and function-law Lean horizon."
         },
         {
+          "id": "finite-monoids-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-monoids-v0",
+          "notes": "Finite monoids as closed function-composition tables, with unit and idempotent replay."
+        },
+        {
           "id": "finite-group-actions-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-group-actions-v0",
@@ -1039,6 +1045,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
           "notes": "Finite group homomorphism tables, kernel/image replay, quotient maps, and first-isomorphism shadows."
+        },
+        {
+          "id": "finite-monoids-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-monoids-v0",
+          "notes": "Finite monoid tables, transformation composition replay, units, idempotents, and bad-table rejection."
         },
         {
           "id": "finite-group-actions-v0",
@@ -1763,7 +1775,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators",
       "prerequisites": [],
       "unlocks": [
         "curriculum_fields",
@@ -1774,14 +1786,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite groups, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators"
+        "Finite groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators"
       ],
       "example_packs": [
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
-          "notes": "Finite groups, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."
+          "notes": "Finite groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."
         },
         {
           "id": "complex-algebraic-v0",
@@ -1830,6 +1842,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
           "notes": "Exact Finite Module Checks"
+        },
+        {
+          "id": "finite-monoids-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-monoids-v0",
+          "notes": "Finite Monoid Checks"
         },
         {
           "id": "finite-rings-v0",
@@ -1888,7 +1906,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General group/ring/ideal/module/duality/tensor/category, arbitrary group-action theory, and arbitrary-field factorization theory belongs in Lean-backed concept rows.",
+          "name": "General group/monoid/ring/ideal/module/duality/tensor/category, arbitrary group-action theory, and arbitrary-field factorization theory belongs in Lean-backed concept rows.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2108,7 +2126,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate bridge into CS and proof. First Axeyum slice: Finite counting identities, group-action orbit counts, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search",
+      "summary": "Core undergraduate bridge into CS and proof. First Axeyum slice: Finite counting identities, finite transformation monoids, group-action orbit counts, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search",
       "prerequisites": [],
       "unlocks": [
         "curriculum_cardinality",
@@ -2118,14 +2136,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite counting identities, group-action orbit counts, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search"
+        "Finite counting identities, finite transformation monoids, group-action orbit counts, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search"
       ],
       "example_packs": [
         {
           "id": "counting-v0",
           "status": "validated",
           "path": "artifacts/examples/math/counting-v0",
-          "notes": "Finite counting, group-action orbits, order/lattice, and combinatorial witness checks."
+          "notes": "Finite counting, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."
         },
         {
           "id": "cardinality-principles-v0",
@@ -2156,6 +2174,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-group-actions-v0",
           "notes": "Finite Group Action Checks"
+        },
+        {
+          "id": "finite-monoids-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-monoids-v0",
+          "notes": "Finite Monoid Checks"
         },
         {
           "id": "finite-order-lattices-v0",
@@ -3754,7 +3778,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, group actions as function tables, equivalence classes, partitions, order/lattice tables, small cardinality constraints",
+      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, monoids as closed function-composition tables, group actions as function tables, equivalence classes, partitions, order/lattice tables, small cardinality constraints",
       "prerequisites": [],
       "unlocks": [
         "curriculum_cardinality",
@@ -3764,14 +3788,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite sets, relations, functions, group actions as function tables, equivalence classes, partitions, order/lattice tables, small cardinality constraints"
+        "Finite sets, relations, functions, monoids as closed function-composition tables, group actions as function tables, equivalence classes, partitions, order/lattice tables, small cardinality constraints"
       ],
       "example_packs": [
         {
           "id": "finite-sets-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-sets-v0",
-          "notes": "Finite set, relation, function, group-action, order, lattice, and cardinality checks."
+          "notes": "Finite set, relation, function, monoid/function-composition, group-action, order, lattice, and cardinality checks."
         },
         {
           "id": "cardinality-principles-v0",
@@ -3868,6 +3892,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
           "notes": "Exact Finite Module Checks"
+        },
+        {
+          "id": "finite-monoids-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-monoids-v0",
+          "notes": "Finite Monoid Checks"
         },
         {
           "id": "finite-order-lattices-v0",

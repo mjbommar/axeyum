@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "finite-monoids-v0",
+  "title": "Finite Monoid Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_relations_and_functions",
+    "curriculum_groups",
+    "field_abstract_algebra",
+    "field_discrete_math",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "discrete_math",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "relations-and-functions",
+    "groups"
+  ],
+  "axeyum_fragments": [
+    "finite functions",
+    "finite algebraic structures",
+    "finite table replay",
+    "QF_UF horizon",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/groups.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "two-point-transformation-monoid-laws",
+    "function-composition-table-replay",
+    "units-and-idempotents-replay",
+    "bad-nonassociative-table-rejected",
+    "general-monoid-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite monoids as deterministic table obligations.",
+    "Replay transformation-monoid multiplication from finite function tables.",
+    "Add proof-object routes for finite associativity and identity obligations once finite-function/EUF evidence is promoted.",
+    "Keep free monoids, presentations, Green's relations, and general semigroup/monoid theory under Lean horizon until formal routes exist."
+  ]
+}

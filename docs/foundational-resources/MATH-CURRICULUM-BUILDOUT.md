@@ -180,7 +180,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Negate-and-decide examples, direct proof, contrapositive, proof by cases, contradiction, and invalid-proof counterexamples. |
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0`, `induction-patterns-v0` | Bounded base/step obligations, weak/strong induction prefixes, loop invariants, bad-step counterexamples; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0`, `finite-order-lattices-v0` | Membership, subset, union/intersection, finite identities, finite Boolean lattices, and order-theoretic set structure. |
-| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`, `finite-group-actions-v0`, `finite-order-lattices-v0` | Finite relation properties, partial orders, lattices, monotone maps, injective/surjective checks, function composition, group actions as function tables, image/preimage, inverse tables, equivalence classes, quotient maps, and EUF slices. |
+| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`, `finite-monoids-v0`, `finite-group-actions-v0`, `finite-order-lattices-v0` | Finite relation properties, partial orders, lattices, monotone maps, injective/surjective checks, function composition, closed transformation monoids, group actions as function tables, image/preimage, inverse tables, equivalence classes, quotient maps, and EUF slices. |
 | `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets, finite Boolean lattices; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
@@ -189,7 +189,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, modular ring ideals, and quotient rings. |
-| `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
+| `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection, coefficient extraction, and finite convolution. |
@@ -307,6 +307,8 @@ the first finite-group core-structure pack lives under
 `artifacts/examples/math/finite-groups-v0/`;
 the first finite group-action pack lives under
 `artifacts/examples/math/finite-group-actions-v0/`;
+the first finite monoid pack lives under
+`artifacts/examples/math/finite-monoids-v0/`;
 the first finite-ring core-structure pack lives under
 `artifacts/examples/math/finite-rings-v0/`;
 the first finite algebra homomorphism pack lives under
@@ -390,7 +392,10 @@ now validates finite Cayley-table group axioms, inverse-table replay, and a
 checked non-group operation. `finite-group-actions-v0` now validates finite
 action laws, orbit/stabilizer replay, orbit-stabilizer cardinality,
 Burnside fixed-point counting, checked bad-action rejection, and a general
-group-action Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
+group-action Lean-horizon row. `finite-monoids-v0` now validates finite monoid
+identity/associativity, transformation-composition table replay from finite
+functions, units/idempotents, checked non-associative table rejection, and a
+general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
 zero-divisor replay, and a checked non-distributive table.
 `finite-algebra-homomorphisms-v0` now extends the algebra core with finite
 group-homomorphism replay, kernel/image recomputation, quotient and induced-map
@@ -485,10 +490,11 @@ Recommended order:
    remains the stronger proof-object graduation route.
 2. `finite-sets-v0` (landed), `relations-functions-v0` (landed),
    `equivalence-classes-v0` (landed), `function-composition-v0` (landed),
-   and `finite-order-lattices-v0` (landed): finite set identities, relation
-   properties, partial orders, lattice meet/join tables, monotone maps,
-   function properties, composition, image/preimage, inverse tables,
-   equivalence classes, partitions, and quotient maps.
+   `finite-monoids-v0` (landed), and `finite-order-lattices-v0` (landed):
+   finite set identities, relation properties, partial orders, lattice
+   meet/join tables, monotone maps, function properties, composition,
+   image/preimage, inverse tables, closed transformation monoids, equivalence
+   classes, partitions, and quotient maps.
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0` and `finite-ideals-v0`: CRT, modular inverse,
@@ -497,13 +503,15 @@ Recommended order:
 5. `finite-fields-v0` (landed), `finite-algebra-homomorphisms-v0`
    (landed), `finite-ideals-v0` (landed), `finite-vector-spaces-v0`
    (landed), `finite-dual-spaces-v0` (landed), `finite-modules-v0`
-   (landed), `finite-group-actions-v0` (landed), and
+   (landed), `finite-monoids-v0` (landed), `finite-group-actions-v0`
+   (landed), and
    `finite-tensor-products-v0` (landed): prime-field axioms,
    composite-modulus counterexample, finite homomorphism tables, kernel/image
-   replay, quotient maps, quotient rings, induced-map checks, finite group
-   actions, orbit/stabilizer replay, Burnside counting, finite vector spaces
-   over `F2`, finite dual spaces and covectors, finite modules over `Z/4Z`,
-   bilinear maps, and tensor product replay.
+   replay, quotient maps, quotient rings, induced-map checks, finite monoids,
+   unit/idempotent replay, finite group actions, orbit/stabilizer replay,
+   Burnside counting, finite vector spaces over `F2`, finite dual spaces and
+   covectors, finite modules over `Z/4Z`, bilinear maps, and tensor product
+   replay.
 6. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
 7. `linear-algebra-rational-v0`, `finite-vector-spaces-v0`,
    `finite-dual-spaces-v0`, `finite-modules-v0`,
@@ -950,9 +958,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 82 non-template math example packs validate.
+  Status: 83 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 70 non-template packs have at least one `checked` expected-result row.
+  Status: 71 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -979,6 +987,7 @@ docs link checker clean.
 
 Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`,
+`finite-monoids-v0`,
 `finite-order-lattices-v0`,
 `finite-fields-v0`, `finite-algebra-homomorphisms-v0`,
 `finite-group-actions-v0`,
@@ -1115,6 +1124,10 @@ rejection, and a duality/functional-analysis Lean-horizon row.
 action-law replay, orbit/stabilizer recomputation, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked bad-action rejection, and
 a group-action Lean-horizon row.
+`finite-monoids-v0` now adds the exact finite function/algebra bridge:
+monoid identity/associativity replay, transformation-composition table replay,
+unit and idempotent recomputation, checked non-associative table rejection, and
+a monoid/semigroup Lean-horizon row.
 `inner-product-spaces-rational-v0` now adds the exact rational
 inner-product-space bridge: Gram matrices, positive-definite minors,
 Cauchy-Schwarz replay, orthogonal projections, Gram-Schmidt residuals,

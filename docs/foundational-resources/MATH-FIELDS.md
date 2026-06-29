@@ -37,12 +37,12 @@ Use these sources as checks against local taste:
 | ID | Field | Curriculum Role | First Axeyum Slice | Proof Horizon / Limits |
 |---|---|---|---|---|
 | `logic_and_proof` | Logic and proof | Foundation for every other field | Propositional logic, SAT, finite proof-pattern checks, finite order counterexamples, tiny SMT examples, proof object anatomy | Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge. |
-| `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, group actions as function tables, equivalence classes, partitions, order/lattice tables, small cardinality constraints | ZFC, ordinals, cardinals, choice, infinite set facts, and complete-lattice theorems are proof-horizon material. |
-| `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, group-action orbit counts, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search | General asymptotic enumeration and deep extremal/order-theoretic combinatorics usually require theorem proving. |
+| `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, monoids as closed function-composition tables, group actions as function tables, equivalence classes, partitions, order/lattice tables, small cardinality constraints | ZFC, ordinals, cardinals, choice, infinite set facts, and complete-lattice theorems are proof-horizon material. |
+| `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, finite transformation monoids, group-action orbit counts, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search | General asymptotic enumeration and deep extremal/order-theoretic combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
 | `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, exact rational inner products, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians | Spectral theorems, general vector-space/dual-space/inner-product/module/tensor theorems, and conditioning/stability need proof or numerical tracks. |
-| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators | General group/ring/ideal/module/duality/tensor/category, arbitrary group-action theory, and arbitrary-field factorization theory belongs in Lean-backed concept rows. |
+| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators | General group/monoid/ring/ideal/module/duality/tensor/category, arbitrary group-action theory, and arbitrary-field factorization theory belongs in Lean-backed concept rows. |
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, rational polynomial factorization shadows, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows | General completeness, limits, continuity, compactness, differentiability, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, rational factorization shadows, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, analytic continuation, and algebraic closure need proof-horizon support. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay | General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon. |
@@ -315,6 +315,13 @@ one of:
       recomputation, orbit-stabilizer cardinality replay, Burnside fixed-point
       average replay, bad-action rejection, and a general group-action
       Lean-horizon row.
+35. `artifacts/examples/math/finite-monoids-v0/`
+    - Fields: `abstract_algebra`, `discrete_math`,
+      `set_theory_and_foundations`.
+    - Checks: finite monoid identity/associativity replay, transformation
+      composition table replay from finite functions, unit and idempotent
+      recomputation, bad non-associative table rejection, and a general
+      monoid/semigroup Lean-horizon row.
 
 ## Graduation Criteria
 

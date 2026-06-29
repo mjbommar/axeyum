@@ -92,6 +92,10 @@ CURRICULUM_MAP = {
                 "Finite function composition, image/preimage, inverse tables, associativity, and function-law Lean horizon.",
             ),
             (
+                "finite-monoids-v0",
+                "Finite monoids as closed function-composition tables, with unit and idempotent replay.",
+            ),
+            (
                 "finite-group-actions-v0",
                 "Finite group actions as function tables, orbit/stabilizer replay, and Burnside counting.",
             ),
@@ -186,6 +190,10 @@ CURRICULUM_MAP = {
             (
                 "finite-algebra-homomorphisms-v0",
                 "Finite group homomorphism tables, kernel/image replay, quotient maps, and first-isomorphism shadows.",
+            ),
+            (
+                "finite-monoids-v0",
+                "Finite monoid tables, transformation composition replay, units, idempotents, and bad-table rejection.",
             ),
             (
                 "finite-group-actions-v0",
@@ -345,12 +353,12 @@ CURRICULUM_MAP = {
 
 FIELD_PACKS = {
     "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."),
-    "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, group-action, order, lattice, and cardinality checks."),
-    "discrete_math": ("counting-v0", "Finite counting, group-action orbits, order/lattice, and combinatorial witness checks."),
+    "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, monoid/function-composition, group-action, order, lattice, and cardinality checks."),
+    "discrete_math": ("counting-v0", "Finite counting, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),

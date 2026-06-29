@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [finite-groups-v0](../../../artifacts/examples/math/finite-groups-v0/)
+- [finite-monoids-v0](../../../artifacts/examples/math/finite-monoids-v0/)
 - [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [finite-rings-v0](../../../artifacts/examples/math/finite-rings-v0/)
 - [finite-algebra-homomorphisms-v0](../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
@@ -33,7 +34,9 @@ The current algebra path is finite and exact. It checks finite group Cayley
 tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
 modular inverses, composite non-units with no inverse, and a Fermat-style finite
 unit enumeration. The finite-rings pack adds distributivity checks and a `Z/4Z`
-zero-divisor witness. The finite-group-actions pack checks a finite group
+zero-divisor witness. The finite-monoids pack checks a finite transformation
+monoid under function composition, recomputes its units and idempotents, and
+rejects a non-associative table. The finite-group-actions pack checks a finite group
 acting on a finite set, recomputes orbits and stabilizers, replays the
 orbit-stabilizer cardinality equation, and checks Burnside fixed-point
 averaging for the same action. The finite-algebra-homomorphisms pack adds exact
@@ -80,6 +83,23 @@ Z/4Z under addition
 
 The `finite-groups-v0` pack checks closure, identity, inverses, and
 associativity for the full Cayley table.
+
+For a finite monoid example, use all total functions on `{0,1}` under
+composition:
+
+```text
+id, flip, zero, one
+flip after flip = id
+zero after flip = zero
+one after zero = one
+units = {id, flip}
+idempotents = {id, zero, one}
+```
+
+The `finite-monoids-v0` pack checks identity and associativity, recomputes the
+composition table from the four finite functions, recomputes units and
+idempotents, and rejects a malformed table with a concrete associativity
+failure.
 
 For a finite group-action example, let `C2 = {e,s}` act on two-bit strings by
 swapping the middle strings:
@@ -268,6 +288,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-groups-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0
@@ -291,10 +312,10 @@ Burnside counting, read
 
 ## Horizon
 
-General group, group-action, ring, field, module, isomorphism-theorem, quotient, and
+General group, monoid, group-action, ring, field, module, isomorphism-theorem, quotient, and
 algebraic-number-theory theorems need Lean-backed concept rows. Near-term
 resource gaps are stronger BV/CNF or EUF/Alethe evidence for finite group,
-finite group-action, finite ring, finite homomorphism,
+finite monoid, finite group-action, finite ring, finite homomorphism,
 finite ideal, finite vector-space, finite dual-space, finite-field, finite-module,
 gcd/Diophantine, bounded number-theory, and fixed-degree polynomial universal
 rows.

@@ -99,6 +99,7 @@ artifacts/examples/math/
   finite-markov-chain-v0/
   exact-statistical-tests-v0/
   finite-groups-v0/
+  finite-monoids-v0/
   finite-group-actions-v0/
   finite-rings-v0/
   finite-fields-v0/
@@ -185,7 +186,7 @@ Add depth in four waves:
 | Wave | Content | Axeyum Slice | First Artifacts |
 |---|---|---|---|
 | M1 | Rational and real algebra | LRA, NRA, exact rational witnesses | rationals and reals example packs; Farkas/SOS proof links |
-| M2 | Algebraic hierarchy | finite groups/rings/fields, finite fields | Cayley-table validators; finite-field examples |
+| M2 | Algebraic hierarchy | finite groups/monoids/rings/fields, finite fields | Cayley-table validators; transformation-monoid and finite-field examples |
 | M3 | Linear algebra | fixed matrices over `Q` and finite fields | matrix identity and linear-system packs |
 | M4 | Probability and measure foundations | finite probability first; measure theory as proof horizon | finite distribution examples; statistics bridge |
 
