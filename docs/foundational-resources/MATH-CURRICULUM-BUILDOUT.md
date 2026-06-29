@@ -1023,8 +1023,11 @@ Status: initial decision landed in
 [Foundational Resource Library Boundary Decision](LIBRARY-BOUNDARY-DECISION.md).
 The resource lane stays in-repo for now. The stable boundary is the committed
 JSON/schema/metadata contract plus generated dashboards, smoke-tested by
-`scripts/consume-foundational-resources.py`; crates or repo splits are deferred
-until external consumers, generated typed APIs, or shared encoders require them.
+`scripts/consume-foundational-resources.py`. The generated dashboards now also
+surface conservative R0-R6 gate and next-gate columns, so pack-level
+solver-reuse and consumer-boundary progress is visible without manual scans;
+crates or repo splits are deferred until external consumers, generated typed
+APIs, or shared encoders require them.
 
 Possible boundaries:
 
@@ -1049,7 +1052,8 @@ Exit criteria:
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
   and example-pack JSON files directly without importing generator or validator
-  internals.
+  internals, and generated dashboards expose gate/next-gate status derived from
+  that same committed data boundary.
 
 ## First Ten Commits To Make
 

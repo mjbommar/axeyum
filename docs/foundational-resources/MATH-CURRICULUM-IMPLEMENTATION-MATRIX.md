@@ -198,7 +198,8 @@ Build sequence:
 6. Recurring exact-rational infeasibility conflicts now have the
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
-7. Add generated dashboard columns for gate level R0-R6 and "next gate".
+7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
+   in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
 8. Tag selected packs as solver-regression candidates only after evidence and
    replay are deterministic.
 9. Add consumer-facing sample queries over the JSON data contract.

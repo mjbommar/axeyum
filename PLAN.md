@@ -107,6 +107,9 @@ The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
 backed by the 21-test `math_resource_lra_routes` regression and scoped to
 the optimization/Farkas proof-route lane.
+The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
+now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
+solver-reuse candidates visible without hand-maintained scans.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

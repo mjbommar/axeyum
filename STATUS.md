@@ -669,6 +669,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `optimization_and_convexity` as the LP/Farkas proof-route lane rather than
   claiming full subject-field coverage for every referenced pack.
 
+- **Generated R0-R6 gate columns landed.**
+  [`gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py)
+  now derives conservative acceptance-gate levels and next gates for concept
+  rows and example packs. The generated coverage, field, proof-gap, and
+  learner/proof-upgrade dashboards now expose `Gate` / `Next Gate` columns so
+  the resource lane can distinguish row-level R4 proof/evidence coverage from
+  pack-level R6 consumer-boundary rows that already have source-linked solver
+  regressions. The current pack split is 42 `R6 consumer boundary` rows and
+  42 `R4 checked evidence` rows, making the next solver-reuse queue explicit.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

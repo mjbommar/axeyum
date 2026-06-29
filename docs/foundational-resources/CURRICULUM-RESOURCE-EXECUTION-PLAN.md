@@ -73,6 +73,8 @@ Concrete work:
   of broader theory, even when the first pack validates.
 - Add a generated "needs learner page" and "needs proof upgrade" view instead
   of relying on manual scans.
+- Add generated R0-R6 "gate" and "next gate" columns so solver-reuse and
+  consumer-boundary candidates are visible without manual row audits.
 - Keep all status changes generated from `curriculum.toml`,
   [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md), and pack metadata.
 
@@ -342,6 +344,9 @@ Next buildout:
    Status: the first high-use learner-page route-note pass now names these
    routes and their trust boundaries; `family_finite_algebra_alethe` now groups
    the recurring checked finite-algebra EUF/Alethe conflicts.
+   Dashboard status: generated R0-R6 gate and next-gate columns now make
+   R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
+   and learner/proof-upgrade dashboards.
 9. Promote selected packs into solver regression/fuzz corpora with back-links to
    the resource pack.
 10. Add a rules/law reasoning resource plan that explicitly reuses finite
