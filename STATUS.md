@@ -191,6 +191,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **GCD/Bezout end-to-end lesson landed.** Added
+  [`gcd-bezout-end-to-end.md`](docs/learn/math/gcd-bezout-end-to-end.md)
+  as the learner-facing trace for the gcd/Bezout pack: gcd/common-divisor
+  replay, Bezout coefficient checking, divisibility quotient replay, and the
+  fixed Diophantine gcd obstruction. The lesson is linked from the math
+  learning index plus the number-systems and algebra/number-theory paths.
+
 - **Integer-LIA end-to-end lesson landed.** Added
   [`integer-lia-end-to-end.md`](docs/learn/math/integer-lia-end-to-end.md)
   as the learner-facing trace for the integer-LIA pack: signed trichotomy and

@@ -107,10 +107,11 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 ```
 
 For fuller traces through bounded natural arithmetic, signed integer LIA,
-exact rational replay, prime-field residue replay, and modular quotient-ring
-replay, read
+gcd/Bezout replay, exact rational replay, prime-field residue replay, and
+modular quotient-ring replay, read
 [End To End: Natural Arithmetic](natural-arithmetic-end-to-end.md),
 [End To End: Integer Linear Arithmetic](integer-lia-end-to-end.md),
+[End To End: GCD And Bezout](gcd-bezout-end-to-end.md),
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md), and
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md).
