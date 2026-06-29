@@ -837,6 +837,148 @@ EXAMPLE_FAMILIES = [
             ],
         },
     },
+    {
+        "id": "family_exact_rational_farkas",
+        "title": "Exact Rational Farkas Infeasibility Family",
+        "field_ids": ["optimization_and_convexity"],
+        "resource_status": "validated",
+        "summary": (
+            "Recurring exact-rational contradictions that reduce to small "
+            "linear equalities or inequalities and recheck as certified "
+            "QF_LRA/Farkas evidence."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "bridge_bounded_theorem_shadow",
+            "curriculum_rationals",
+            "curriculum_reals",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": ["field_optimization_and_convexity"],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "Farkas certificate",
+            "exact rational arithmetic",
+            "finite model replay",
+        ],
+        "example_packs": [
+            (
+                "rationals-lra-v0",
+                "Fixed trichotomy and order-transitivity contradictions over exact rationals.",
+            ),
+            (
+                "linear-algebra-rational-v0",
+                "Singular inconsistent linear system rejected by exact rational infeasibility.",
+            ),
+            (
+                "linear-optimization-v0",
+                "Objective-threshold infeasibility for a tiny linear program.",
+            ),
+            (
+                "convexity-rational-v0",
+                "Bad midpoint-convexity claim reduced to a linear inequality conflict.",
+            ),
+            (
+                "finite-concentration-v0",
+                "Bad finite tail-bound inequality rejected after exact replay.",
+            ),
+            (
+                "finite-probability-v0",
+                "Bad normalization and Bayes-posterior rows rejected by exact rational constraints.",
+            ),
+            (
+                "finite-markov-chain-v0",
+                "Malformed stochastic-row equation rejected after row-sum replay.",
+            ),
+            (
+                "finite-hitting-times-v0",
+                "Bad expected-time equation rejected after clearing denominators.",
+            ),
+            (
+                "least-squares-regression-v0",
+                "Bad regression coefficients rejected through a normal-equation conflict.",
+            ),
+            (
+                "real-analysis-rational-v0",
+                "Bad bounded linear epsilon-delta claim rejected as a rational bound conflict.",
+            ),
+            (
+                "finite-conditional-expectation-v0",
+                "Bad block-expectation table rejected after exact averaging replay.",
+            ),
+            (
+                "finite-euler-method-v0",
+                "Bad explicit-Euler step rejected after exact derivative replay.",
+            ),
+            (
+                "orientation-area-geometry-v0",
+                "False orientation claim rejected after signed-area replay.",
+            ),
+            (
+                "numerical-linear-algebra-v0",
+                "False residual-bound claim rejected as a rational inequality conflict.",
+            ),
+            (
+                "random-matrix-finite-v0",
+                "Bad trace-square moment rejected after finite exact-moment replay.",
+            ),
+            (
+                "affine-geometry-v0",
+                "False distance-preservation claim rejected after squared-distance replay.",
+            ),
+            (
+                "inner-product-spaces-rational-v0",
+                "Bad negative-norm row rejected as an exact rational order conflict.",
+            ),
+            (
+                "spectral-linear-algebra-v0",
+                "False eigenpair component rejected after matrix-vector replay.",
+            ),
+            (
+                "matrix-invariants-v0",
+                "Bad characteristic-polynomial value rejected after witness-root replay.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_LRA/Farkas rational infeasibility family",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "Each referenced pack keeps finite replay separate from "
+                    "the Farkas proof artifact; the regression constructs the "
+                    "exact rational contradiction, requires Evidence::UnsatFarkas, "
+                    "and independently rechecks the certified trust step."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "The family certifies fixed exact-rational infeasibility rows, not nonlinear analysis or optimization theorems.",
+            "New rational packs should join this family only after they have a source-linked example row and a checked math_resource_lra_routes regression.",
+            "Lean reconstruction remains partial at the family level until the QF_LRA/Farkas proof route is kernel-checked for every recurring shape.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every family pack row links a concrete exact-rational artifact or source-backed regression.",
+                "cargo test -p axeyum-solver --test math_resource_lra_routes passes.",
+                "Learner pages keep finite replay separate from the checked Farkas certificate.",
+            ],
+        },
+    },
 ]
 
 

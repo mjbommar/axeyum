@@ -103,6 +103,10 @@ probability/statistics, and algebra/number theory.
 The first example-family row now groups the recurring finite-algebra
 QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
 backed by the 13-case `math_resource_uf_routes` regression.
+The second example-family row now groups recurring exact-rational
+QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
+backed by the 21-test `math_resource_lra_routes` regression and scoped to
+the optimization/Farkas proof-route lane.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

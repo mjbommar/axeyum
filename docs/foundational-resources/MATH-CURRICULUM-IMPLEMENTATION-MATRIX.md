@@ -195,8 +195,9 @@ Build sequence:
 5. Recurring finite algebra equality conflicts now have the
    `family_finite_algebra_alethe` example-family row, backed by the shared
    `math_resource_uf_routes` regression.
-6. Turn recurring rational infeasibility rows into a small Farkas example family
-   with shared test helpers.
+6. Recurring exact-rational infeasibility conflicts now have the
+   `family_exact_rational_farkas` example-family row, backed by the shared
+   `math_resource_lra_routes` regression.
 7. Add generated dashboard columns for gate level R0-R6 and "next gate".
 8. Tag selected packs as solver-regression candidates only after evidence and
    replay are deterministic.

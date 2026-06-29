@@ -2280,6 +2280,188 @@
       }
     },
     {
+      "id": "family_exact_rational_farkas",
+      "kind": "example-family",
+      "title": "Exact Rational Farkas Infeasibility Family",
+      "domain": "mathematics",
+      "field_ids": [
+        "optimization_and_convexity"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Recurring exact-rational contradictions that reduce to small linear equalities or inequalities and recheck as certified QF_LRA/Farkas evidence.",
+      "prerequisites": [
+        "bridge_counterexample_proof",
+        "bridge_bounded_theorem_shadow",
+        "curriculum_rationals",
+        "curriculum_reals",
+        "curriculum_linear_algebra"
+      ],
+      "unlocks": [
+        "field_optimization_and_convexity"
+      ],
+      "decidability": "decidable",
+      "axeyum_fragments": [
+        "QF_LRA",
+        "Farkas certificate",
+        "exact rational arithmetic",
+        "finite model replay"
+      ],
+      "example_packs": [
+        {
+          "id": "rationals-lra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rationals-lra-v0",
+          "notes": "Fixed trichotomy and order-transitivity contradictions over exact rationals."
+        },
+        {
+          "id": "linear-algebra-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/linear-algebra-rational-v0",
+          "notes": "Singular inconsistent linear system rejected by exact rational infeasibility."
+        },
+        {
+          "id": "linear-optimization-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/linear-optimization-v0",
+          "notes": "Objective-threshold infeasibility for a tiny linear program."
+        },
+        {
+          "id": "convexity-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/convexity-rational-v0",
+          "notes": "Bad midpoint-convexity claim reduced to a linear inequality conflict."
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Bad finite tail-bound inequality rejected after exact replay."
+        },
+        {
+          "id": "finite-probability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-probability-v0",
+          "notes": "Bad normalization and Bayes-posterior rows rejected by exact rational constraints."
+        },
+        {
+          "id": "finite-markov-chain-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-markov-chain-v0",
+          "notes": "Malformed stochastic-row equation rejected after row-sum replay."
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Bad expected-time equation rejected after clearing denominators."
+        },
+        {
+          "id": "least-squares-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/least-squares-regression-v0",
+          "notes": "Bad regression coefficients rejected through a normal-equation conflict."
+        },
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Bad bounded linear epsilon-delta claim rejected as a rational bound conflict."
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Bad block-expectation table rejected after exact averaging replay."
+        },
+        {
+          "id": "finite-euler-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-euler-method-v0",
+          "notes": "Bad explicit-Euler step rejected after exact derivative replay."
+        },
+        {
+          "id": "orientation-area-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/orientation-area-geometry-v0",
+          "notes": "False orientation claim rejected after signed-area replay."
+        },
+        {
+          "id": "numerical-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/numerical-linear-algebra-v0",
+          "notes": "False residual-bound claim rejected as a rational inequality conflict."
+        },
+        {
+          "id": "random-matrix-finite-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/random-matrix-finite-v0",
+          "notes": "Bad trace-square moment rejected after finite exact-moment replay."
+        },
+        {
+          "id": "affine-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/affine-geometry-v0",
+          "notes": "False distance-preservation claim rejected after squared-distance replay."
+        },
+        {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Bad negative-norm row rejected as an exact rational order conflict."
+        },
+        {
+          "id": "spectral-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/spectral-linear-algebra-v0",
+          "notes": "False eigenpair component rejected after matrix-vector replay."
+        },
+        {
+          "id": "matrix-invariants-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/matrix-invariants-v0",
+          "notes": "Bad characteristic-polynomial value rejected after witness-root replay."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "QF_LRA/Farkas rational infeasibility family",
+          "status": "checked",
+          "checker": "cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "Each referenced pack keeps finite replay separate from the Farkas proof artifact; the regression constructs the exact rational contradiction, requires Evidence::UnsatFarkas, and independently rechecks the certified trust step."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "The family certifies fixed exact-rational infeasibility rows, not nonlinear analysis or optimization theorems.",
+        "New rational packs should join this family only after they have a source-linked example row and a checked math_resource_lra_routes regression.",
+        "Lean reconstruction remains partial at the family level until the QF_LRA/Farkas proof route is kernel-checked for every recurring shape."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Every family pack row links a concrete exact-rational artifact or source-backed regression.",
+          "cargo test -p axeyum-solver --test math_resource_lra_routes passes.",
+          "Learner pages keep finite replay separate from the checked Farkas certificate."
+        ]
+      }
+    },
+    {
       "id": "field_abstract_algebra",
       "kind": "field",
       "title": "Abstract algebra",

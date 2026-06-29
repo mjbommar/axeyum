@@ -653,8 +653,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`math_resource_uf_routes`](crates/axeyum-solver/tests/math_resource_uf_routes.rs)
   regression. The row is scoped to `abstract_algebra` to avoid broad
   cross-field dashboard pollution; field dashboards now show the family as a
-  validated decidable algebra row. Next analogous resource-family work is the
-  recurring QF_LRA/Farkas rational infeasibility family.
+  validated decidable algebra row.
+
+- **Exact-rational Farkas example-family row landed.**
+  [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
+  now includes `family_exact_rational_farkas`, a generated `example-family`
+  row for recurring exact-rational QF_LRA/Farkas contradictions across
+  rationals, linear algebra, LP thresholds, convexity, probability,
+  Markov/hitting-time equations, regression, real-analysis bounds, Euler
+  steps, affine/orientation geometry, numerical residuals, random matrices,
+  inner products, spectral rows, and matrix invariants. The row is tied to
+  [`math_resource_lra_routes`](crates/axeyum-solver/tests/math_resource_lra_routes.rs),
+  which requires `Evidence::UnsatFarkas`, independently rechecks the evidence,
+  and records the certified Farkas trust step. It is scoped to
+  `optimization_and_convexity` as the LP/Farkas proof-route lane rather than
+  claiming full subject-field coverage for every referenced pack.
 
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a

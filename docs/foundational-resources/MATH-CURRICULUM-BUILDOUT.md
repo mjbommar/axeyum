@@ -1037,10 +1037,10 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 46 atlas rows validate, including generated bridge-concept rows for
+  Status: 47 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows, and Lean
-  horizons, plus the first example-family row for recurring finite-algebra
-  QF_UF/Alethe conflicts.
+  horizons, plus example-family rows for recurring finite-algebra QF_UF/Alethe
+  conflicts and exact-rational QF_LRA/Farkas infeasibility rows.
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
@@ -1475,6 +1475,10 @@ through the same checked Farkas evidence path after exact negative-norm replay.
 checked Farkas evidence path after exact matrix-vector replay.
 `matrix-invariants-v0` now routes its bad characteristic-polynomial row through
 the same checked Farkas evidence path after exact witness-root replay.
+The structured atlas now records these recurring exact-rational contradictions
+as `family_exact_rational_farkas`, scoped to the optimization/Farkas
+proof-route lane and backed by the shared
+`math_resource_lra_routes` regression.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
