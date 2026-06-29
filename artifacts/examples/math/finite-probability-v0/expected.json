@@ -53,6 +53,24 @@
       "notes": "The validator checks every atom mass is in range and the total mass is exactly one."
     },
     {
+      "id": "bad-normalization-rejected",
+      "claim": "A two-atom fair-coin table has total mass 3/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_normalization_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "heads", "probability": "1/2"},
+          {"id": "tails", "probability": "1/2"}
+        ],
+        "actual_total": "1",
+        "claimed_total": "3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-probability-v0/smt2/bad-normalization-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_normalization_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes the atom total as 1 and rejects the claimed total 3/2; the Axeyum regression refutes total = heads + tails, heads = 1/2, tails = 1/2, total = 3/2 with rechecked Farkas evidence."
+    },
+    {
       "id": "conditional-probability-witness",
       "claim": "The listed joint table has P(late | rain) = 1/3.",
       "expected_result": "sat",

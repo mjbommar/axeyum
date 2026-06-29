@@ -26,6 +26,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `pmf-total-mass` | `sat` | replay-only |
+| `bad-normalization-rejected` | `unsat` | checked |
 | `conditional-probability-witness` | `sat` | replay-only |
 | `bayes-posterior-witness` | `sat` | replay-only |
 | `pushforward-distribution-witness` | `sat` | replay-only |
@@ -73,6 +74,15 @@ The claimed query is:
 
 ```text
 P(late | rain) = 1/3
+```
+
+The bad normalization row is a direct exact-rational contradiction:
+
+```text
+P(heads) = 1/2
+P(tails) = 1/2
+total = P(heads) + P(tails)
+total = 3/2
 ```
 
 The finite integration witness is a three-atom table:
@@ -151,6 +161,10 @@ P(late | rain) = (1/10) / (3/10) = 1/3
 
 It also checks that the table is normalized and that every atom probability is
 in `[0,1]`.
+
+For the bad normalization row, the validator recomputes `1/2 + 1/2 = 1`. The
+solver regression checks the same final obligation as `QF_LRA` and requires
+`Evidence::UnsatFarkas` to pass `Evidence::check`.
 
 For the integration row, the checker recomputes:
 

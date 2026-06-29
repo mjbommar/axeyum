@@ -4,7 +4,7 @@
   "title": "Exact Finite Probability Tables",
   "domain": "statistics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "field_probability_theory",
     "field_statistics",
@@ -37,10 +37,12 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/00-foundations/sets.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "pmf-total-mass",
+    "bad-normalization-rejected",
     "conditional-probability-witness",
     "bayes-posterior-witness"
   ],

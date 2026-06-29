@@ -623,7 +623,8 @@ colliders.
 and vertex-cut certificates, plus checked rejection of non-separating one-edge
 and one-vertex cuts.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
-probability mass tables, conditional probability, and Bayes posterior replay.
+probability mass tables, conditional probability, Bayes posterior replay, and a
+checked QF_LRA/Farkas rejection of a false normalization claim.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
 mean/variance identities, contingency-table margins, and a Simpson's paradox
 count-table witness.
@@ -1410,6 +1411,8 @@ division-free linear form.
 `finite-concentration-v0` now routes its bad finite tail-bound row through the
 same checked Farkas evidence path after finite replay computes the tail
 probability.
+`finite-probability-v0` now routes its bad normalization row through the same
+checked Farkas evidence path after exact replay computes the atom total.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

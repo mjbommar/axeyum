@@ -22,6 +22,19 @@ The validator computes event probabilities by summing atom probabilities.
 The fair die table has six atoms, each with mass `1/6`, so the total mass is
 exactly `1`.
 
+The checked bad-normalization row uses the same finite-table shape but asserts a
+false total:
+
+```text
+P(heads) = 1/2
+P(tails) = 1/2
+total = P(heads) + P(tails)
+total = 3/2
+```
+
+The contradiction is linear over exact rationals, so the solver regression
+expects an independently rechecked `UnsatFarkas` certificate.
+
 ### Conditional Probability
 
 The four-atom rain/late table is:

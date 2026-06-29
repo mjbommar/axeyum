@@ -30,7 +30,8 @@ Example packs:
 
 The statistics path is exact and finite. It checks probability mass tables,
 conditional probability, Bayes replay, finite sigma-algebra axioms, finite
-additivity, event complements, finite simple-function integrals, indicator
+additivity, event complements, a checked QF_LRA bad-normalization certificate,
+finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, finite partition conditional
 expectations, the law of total expectation, tower property replay, finite
@@ -72,7 +73,9 @@ P(late | rain) = (1/10) / (1/10 + 1/5) = 1/3
 ```
 
 The validator recomputes the numerator, denominator, and quotient. For finite
-random variables, it checks pushforwards and expectations such as:
+probability it also rejects a false normalization row, `1/2 + 1/2 = 3/2`, with
+checked `UnsatFarkas` evidence. For finite random variables, it checks
+pushforwards and expectations such as:
 
 ```text
 P(clear) = 1/2, P(rain) = 1/4, P(storm) = 1/4

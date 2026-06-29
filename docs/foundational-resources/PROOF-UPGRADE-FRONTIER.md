@@ -121,14 +121,17 @@ First targets:
   row)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
   (resource-backed Farkas regression landed for the bad finite tail-bound row)
+- [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
+  (resource-backed Farkas regression landed for the bad normalization row)
 
 Secondary targets:
 
 - affine and orientation geometry;
 - inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix packs;
-- Markov chains, hitting times, Euler shadows, least-squares regression, and
-  rational real-analysis rows.
+- Markov chains, hitting times, Euler shadows, least-squares regression,
+  probability conditioning/Bayes-rule conflicts, and rational real-analysis
+  rows.
 
 Expected artifact:
 

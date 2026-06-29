@@ -181,3 +181,27 @@ fn finite_concentration_bad_tail_bound_emits_checked_farkas() {
         &[tail_is_quarter, false_tail_bound],
     );
 }
+
+#[test]
+fn finite_probability_bad_normalization_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let heads = real(&mut arena, "heads");
+    let tails = real(&mut arena, "tails");
+    let total = real(&mut arena, "total");
+    let heads_is_half = eq_ratio(&mut arena, heads, 1, 2);
+    let tails_is_half = eq_ratio(&mut arena, tails, 1, 2);
+    let mass_sum = arena.real_add(heads, tails).unwrap();
+    let total_matches_sum = arena.eq(total, mass_sum).unwrap();
+    let total_is_three_halves = eq_ratio(&mut arena, total, 3, 2);
+
+    assert_farkas_checked(
+        "finite-probability-v0 bad-normalization-rejected",
+        &arena,
+        &[
+            heads_is_half,
+            tails_is_half,
+            total_matches_sum,
+            total_is_three_halves,
+        ],
+    );
+}

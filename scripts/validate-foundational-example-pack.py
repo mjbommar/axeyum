@@ -11382,6 +11382,29 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
     atoms = require_probability_atoms("pmf atoms", values.get("atoms"), require_events=False)
     require_normalized_atoms("pmf-total-mass", atoms)
 
+    bad = checks["bad-normalization-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-normalization-rejected must expect unsat")
+    if bad["proof_status"] != "checked":
+        fail("bad-normalization-rejected must be checked")
+    data = bad.get("data", {})
+    atoms = require_probability_atoms("bad normalization atoms", data.get("atoms"), require_events=False)
+    actual_total = require_fraction("bad normalization actual_total", data.get("actual_total"))
+    claimed_total = require_fraction("bad normalization claimed_total", data.get("claimed_total"))
+    computed_total = sum((probability for _, probability, _ in atoms), Fraction(0))
+    if computed_total != actual_total:
+        fail("bad-normalization-rejected actual_total is incorrect")
+    if actual_total == claimed_total:
+        fail("bad-normalization-rejected must document a false total")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad normalization smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-normalization-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad normalization farkas_regression", regression)
+    if "finite_probability_bad_normalization_emits_checked_farkas" not in regression:
+        fail("bad-normalization-rejected must link the Farkas regression")
+
     conditional = checks["conditional-probability-witness"]
     if conditional["expected_result"] != "sat":
         fail("conditional-probability-witness must expect sat")

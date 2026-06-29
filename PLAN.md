@@ -99,8 +99,10 @@ tail-count row, with finite simplicial homology now promoted for its bad
 boundary coefficient and induction patterns promoted for a finite even-product
 parity obstruction. The QF_LIA/Diophantine first-target set is now covered;
 the first secondary statistics margin/count row is now promoted in
-descriptive statistics. Prefer the next secondary equality-heavy pack that can
-carry a small checked certificate and a resource-backed regression.
+descriptive statistics, and the finite-probability bad-normalization row now
+has a checked QF_LRA/Farkas regression. Prefer the next secondary equality-heavy
+pack that can carry a small checked certificate and a resource-backed
+regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

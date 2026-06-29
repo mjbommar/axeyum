@@ -9,6 +9,7 @@ replay today and future invalid probability constraints to Axeyum's LRA
 certificate route:
 
 - probability mass table sums to one;
+- impossible normalization rejected with checked QF_LRA/Farkas evidence;
 - conditional probability replay from an atom table;
 - Bayes posterior replay for a small diagnostic-test table.
 
@@ -25,10 +26,10 @@ certificate route:
 
 The current validator parses probabilities exactly as rational strings, checks
 that mass tables are normalized and nonnegative, and recomputes conditional and
-Bayes probabilities. Current rows are satisfiable finite-table witnesses, so
-finite-model replay is the checked evidence. Future impossible normalization,
-nonnegativity, conditioning, or Bayes-rule constraints should graduate through
-QF_LRA/Farkas certificates.
+Bayes probabilities. Satisfiable finite-table rows remain finite-model replay.
+The bad normalization row is a small `QF_LRA` contradiction and must emit
+checked `UnsatFarkas` evidence. Future impossible nonnegativity, conditioning,
+or Bayes-rule constraints should use the same QF_LRA/Farkas route.
 
 Validation:
 

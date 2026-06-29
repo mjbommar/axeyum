@@ -206,10 +206,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   integer margin/count row now has a checked QF_LIA/Diophantine regression for
   the bad contingency total. Classified
   [`finite-probability-v0`](artifacts/examples/math/finite-probability-v0/) as
-  finite replay for current SAT witness rows plus QF_LRA/Farkas for future
-  impossible probability-table constraints. After dashboard regeneration, the
-  generated proof-upgrade queue has no `needs-proof-route` rows; QF_LRA/Farkas
-  now covers 22 packs and QF_LIA/Diophantine covers 5.
+  finite replay for current SAT witness rows plus QF_LRA/Farkas for impossible
+  probability-table constraints; its first bad normalization row now has a
+  checked QF_LRA/Farkas regression. After dashboard regeneration, the generated
+  proof-upgrade queue has no `needs-proof-route` rows; `finite-probability-v0`
+  is now `checked-evidence` with one checked row and three replay rows.
 
 - **First Boolean CNF/LRAT resource proof regression landed.**
   [`graph-coloring-v0`](artifacts/examples/math/graph-coloring-v0/) now has a
@@ -340,6 +341,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   false claim `total = 19`; the shared LIA resource regression requires
   `Evidence::UnsatDiophantine` and rechecks the integer certificate
   independently.
+
+- **Finite-probability QF_LRA/Farkas regression landed.**
+  [`finite-probability-v0`](artifacts/examples/math/finite-probability-v0/)
+  now has a checked proof-object row for bad normalization. The new SMT-LIB
+  artifact encodes `heads = 1/2`, `tails = 1/2`, `total = heads + tails`, and
+  the false claim `total = 3/2`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)

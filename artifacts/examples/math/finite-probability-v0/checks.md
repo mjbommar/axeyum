@@ -10,6 +10,17 @@ checks each mass is in `[0, 1]` and the total is exactly `1`.
 Proof route: finite-model replay today. A future invalid normalization or
 nonnegativity claim should emit a QF_LRA/Farkas certificate.
 
+## `bad-normalization-rejected`
+
+Expected result: `unsat`.
+
+The row fixes `heads = 1/2`, `tails = 1/2`, and `total = heads + tails`, then
+claims `total = 3/2`. The validator recomputes the atom total as `1` and rejects
+the false claim.
+
+The resource-backed Axeyum regression checks the final linear obligation as
+`QF_LRA`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `conditional-probability-witness`
 
 Expected result: `sat`.
