@@ -13,6 +13,7 @@ Example packs:
 - [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
+- [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 
 ## What Axeyum Checks
 
@@ -21,7 +22,9 @@ conditional probability, Bayes replay, finite sigma-algebra axioms, finite
 additivity, event complements, exact mean/variance identities, contingency
 table margins, and a Simpson's paradox count-table witness. The d-separation
 pack adds a finite DAG bridge: it checks whether conditioning blocks or opens
-paths in small causal-graph-shaped examples.
+paths in small causal-graph-shaped examples. The random-matrix pack checks
+finite matrix-valued probability tables, exact moments, expected Gram matrices,
+and rank probabilities.
 
 The trusted checker works over rational arithmetic and finite tables.
 
@@ -40,7 +43,9 @@ The validator recomputes the numerator, denominator, and quotient. For
 descriptive statistics, it recomputes the mean and population variance of
 `1,2,3,4`, then checks the reported margins of a finite contingency table.
 For DAG examples, the validator enumerates simple skeleton paths and applies
-the collider/non-collider conditioning rules.
+the collider/non-collider conditioning rules. For random matrices, it
+recomputes weighted trace, determinant, Gram, and rank claims from exact
+matrix-valued atoms.
 
 Run the checks from the repository root:
 
@@ -49,6 +54,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 ```
 
 For a fuller trace through atom-table replay, read
@@ -56,8 +62,8 @@ For a fuller trace through atom-table replay, read
 
 ## Horizon
 
-Continuous distributions, stochastic processes, convergence theorems, MCMC,
-HMC, variational inference, calibration, causal identification, do-calculus, and
-floating-point diagnostics are not proof claims. They need either Lean-backed
-probability/measure formalization or explicit reproducibility metadata with
-seeds and tolerances.
+Continuous distributions, stochastic processes, convergence theorems, random
+matrix spectral laws, concentration bounds, MCMC, HMC, variational inference,
+calibration, causal identification, do-calculus, and floating-point diagnostics
+are not proof claims. They need either Lean-backed probability/measure
+formalization or explicit reproducibility metadata with seeds and tolerances.

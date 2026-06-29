@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite random-matrix foundations pack landed.** Added
+  [`random-matrix-finite-v0`](artifacts/examples/math/random-matrix-finite-v0/README.md)
+  as the first exact random-matrix bridge across linear algebra, probability,
+  statistics, and numerical analysis. The pack validates normalized
+  matrix-valued probability tables, exact trace/determinant moments, expected
+  Gram matrices, exact rank probabilities, and checked rejection of a false
+  trace-square moment. The foundational example-pack validator now checks
+  finite matrix distributions, exact weighted matrix expectations, rational row
+  reduction rank, and moment refutations without asymptotic or floating-point
+  claims.
+
 - **Numerical linear algebra foundations pack landed.** Added
   [`numerical-linear-algebra-v0`](artifacts/examples/math/numerical-linear-algebra-v0/README.md)
   as the first exact numerical-analysis error-bound resource. The pack validates

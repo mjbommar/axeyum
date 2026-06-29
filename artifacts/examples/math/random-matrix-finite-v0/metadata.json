@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "random-matrix-finite-v0",
+  "title": "Finite Random Matrix Moment Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_statistics",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "statistics",
+    "linear_algebra",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite enumeration",
+    "finite matrices",
+    "LRA (exact rationals)",
+    "QF_LRA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+  ],
+  "expected_results": [
+    "sign-diagonal-moments",
+    "expected-gram-matrix",
+    "rank-mixture-probabilities",
+    "bad-trace-moment-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode finite matrix-valued probability distributions as deterministic QF_LRA table checks.",
+    "Replay moment, Gram, determinant, and rank claims through exact rational matrix evaluation.",
+    "Add covariance and concentration-style finite counterexample packs before claiming random-matrix-theory coverage.",
+    "Keep asymptotic spectral laws, floating-point simulations, and high-dimensional limit claims under proof/numerical horizon metadata."
+  ]
+}

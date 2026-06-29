@@ -76,6 +76,7 @@ artifacts/examples/math/
   calculus-algebraic-shadow-v0/
   linear-algebra-rational-v0/
   numerical-linear-algebra-v0/
+  random-matrix-finite-v0/
   finite-groups-v0/
   finite-rings-v0/
   finite-fields-v0/
@@ -348,6 +349,9 @@ row-scaling inconsistency certificate for a singular system.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of a false residual bound.
+[`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
+validates exact finite random-matrix moments, expected Gram matrices, rank
+probabilities, and checked rejection of a false trace-square moment.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.
@@ -419,6 +423,8 @@ Exit criteria:
 
 - Finite probability and Bayes-table packs validate.
 - Descriptive-statistics invariants validate exactly.
+- The first finite random-matrix bridge validates exact matrix-valued
+  probability tables without asymptotic or floating-point claims.
 - Numerical/probabilistic-programming material has an explicit "not proof"
   status and reproducibility metadata.
 

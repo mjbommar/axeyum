@@ -16,7 +16,7 @@ from fractions import Fraction
 from itertools import combinations, product
 from math import gcd
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -4191,6 +4191,223 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
         fail("bayes posterior witness does not match Bayes rule")
 
 
+def require_matrix_distribution(
+    context: str,
+    value: Any,
+) -> list[tuple[str, Fraction, list[list[Fraction]]]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty matrix distribution")
+    atoms: list[tuple[str, Fraction, list[list[Fraction]]]] = []
+    seen_ids: set[str] = set()
+    shape: tuple[int, int] | None = None
+    for index, atom in enumerate(value):
+        if not isinstance(atom, dict):
+            fail(f"{context}[{index}] must be an object")
+        atom_id = atom.get("id")
+        require_string(f"{context}[{index}].id", atom_id)
+        if atom_id in seen_ids:
+            fail(f"{context} repeats atom id {atom_id!r}")
+        seen_ids.add(atom_id)
+        probability = require_probability(f"{context}[{index}].probability", atom.get("probability"))
+        matrix = require_fraction_matrix(f"{context}[{index}].matrix", atom.get("matrix"))
+        atom_shape = (len(matrix), len(matrix[0]))
+        if shape is None:
+            shape = atom_shape
+        elif atom_shape != shape:
+            fail(f"{context} matrices must all have shape {shape}")
+        atoms.append((atom_id, probability, matrix))
+    total = sum((probability for _, probability, _ in atoms), Fraction(0))
+    if total != 1:
+        fail(f"{context} probabilities must sum to exactly 1")
+    return atoms
+
+
+def matrix_trace(matrix: list[list[Fraction]]) -> Fraction:
+    require_square_matrix("matrix trace", matrix)
+    return sum((matrix[index][index] for index in range(len(matrix))), Fraction(0))
+
+
+def matrix_det_2x2(matrix: list[list[Fraction]]) -> Fraction:
+    require_square_matrix("matrix determinant", matrix)
+    if len(matrix) != 2:
+        fail("matrix determinant currently expects 2x2 matrices")
+    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
+
+def matrix_transpose(matrix: list[list[Fraction]]) -> list[list[Fraction]]:
+    return [list(column) for column in zip(*matrix)]
+
+
+def matrix_rank(matrix: list[list[Fraction]]) -> int:
+    rows = [list(row) for row in matrix]
+    if not rows:
+        return 0
+    height = len(rows)
+    width = len(rows[0])
+    rank = 0
+    for col_index in range(width):
+        pivot = None
+        for row_index in range(rank, height):
+            if rows[row_index][col_index] != 0:
+                pivot = row_index
+                break
+        if pivot is None:
+            continue
+        rows[rank], rows[pivot] = rows[pivot], rows[rank]
+        pivot_value = rows[rank][col_index]
+        rows[rank] = [entry / pivot_value for entry in rows[rank]]
+        for row_index in range(height):
+            if row_index == rank:
+                continue
+            factor = rows[row_index][col_index]
+            if factor == 0:
+                continue
+            rows[row_index] = [
+                entry - factor * pivot_entry
+                for entry, pivot_entry in zip(rows[row_index], rows[rank])
+            ]
+        rank += 1
+        if rank == height:
+            break
+    return rank
+
+
+def expected_scalar(
+    atoms: list[tuple[str, Fraction, list[list[Fraction]]]],
+    evaluator: Callable[[list[list[Fraction]]], Fraction],
+) -> Fraction:
+    return sum((probability * evaluator(matrix) for _, probability, matrix in atoms), Fraction(0))
+
+
+def expected_matrix(
+    atoms: list[tuple[str, Fraction, list[list[Fraction]]]],
+    evaluator: Callable[[list[list[Fraction]]], list[list[Fraction]]],
+) -> list[list[Fraction]]:
+    evaluated = [evaluator(matrix) for _, _, matrix in atoms]
+    height = len(evaluated[0])
+    width = len(evaluated[0][0])
+    total = [[Fraction(0) for _ in range(width)] for _ in range(height)]
+    for (_, probability, _), matrix in zip(atoms, evaluated):
+        if len(matrix) != height or len(matrix[0]) != width:
+            fail("expected matrix terms must all have the same shape")
+        for row_index, row in enumerate(matrix):
+            for col_index, entry in enumerate(row):
+                total[row_index][col_index] += probability * entry
+    return total
+
+
+def rank_probabilities(
+    atoms: list[tuple[str, Fraction, list[list[Fraction]]]],
+) -> dict[int, Fraction]:
+    probabilities: dict[int, Fraction] = {}
+    for _, probability, matrix in atoms:
+        rank = matrix_rank(matrix)
+        probabilities[rank] = probabilities.get(rank, Fraction(0)) + probability
+    return probabilities
+
+
+def require_rank_probability_map(context: str, value: Any) -> dict[int, Fraction]:
+    if not isinstance(value, dict) or not value:
+        fail(f"{context} must be a non-empty rank probability object")
+    probabilities: dict[int, Fraction] = {}
+    for rank_key, raw_probability in value.items():
+        require_string(f"{context} key", rank_key)
+        try:
+            rank = int(rank_key)
+        except ValueError as error:
+            fail(f"{context} key {rank_key!r} is not an integer rank: {error}")
+        if rank < 0:
+            fail(f"{context} rank keys must be nonnegative")
+        probabilities[rank] = require_probability(f"{context}.{rank_key}", raw_probability)
+    return probabilities
+
+
+def validate_random_matrix_finite(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    moments = checks["sign-diagonal-moments"]
+    if moments["expected_result"] != "sat":
+        fail("sign-diagonal-moments must expect sat")
+    values = single_witness_values(moments, witnesses)
+    atoms = require_matrix_distribution("sign diagonal atoms", values.get("atoms"))
+    expected_trace = require_fraction("sign diagonal expected_trace", values.get("expected_trace"))
+    expected_trace_square = require_fraction(
+        "sign diagonal expected_trace_square",
+        values.get("expected_trace_square"),
+    )
+    expected_determinant = require_fraction(
+        "sign diagonal expected_determinant",
+        values.get("expected_determinant"),
+    )
+    invertible_probability = require_probability(
+        "sign diagonal invertible_probability",
+        values.get("invertible_probability"),
+    )
+    if expected_scalar(atoms, matrix_trace) != expected_trace:
+        fail("sign-diagonal-moments expected_trace is incorrect")
+    if expected_scalar(atoms, lambda matrix: matrix_trace(matrix) ** 2) != expected_trace_square:
+        fail("sign-diagonal-moments expected_trace_square is incorrect")
+    if expected_scalar(atoms, matrix_det_2x2) != expected_determinant:
+        fail("sign-diagonal-moments expected_determinant is incorrect")
+    actual_invertible_probability = sum(
+        (
+            probability
+            for _, probability, matrix in atoms
+            if len(matrix) == len(matrix[0]) and matrix_rank(matrix) == len(matrix)
+        ),
+        Fraction(0),
+    )
+    if actual_invertible_probability != invertible_probability:
+        fail("sign-diagonal-moments invertible_probability is incorrect")
+
+    gram = checks["expected-gram-matrix"]
+    if gram["expected_result"] != "sat":
+        fail("expected-gram-matrix must expect sat")
+    values = single_witness_values(gram, witnesses)
+    atoms = require_matrix_distribution("expected Gram atoms", values.get("atoms"))
+    expected_gram = require_fraction_matrix("expected Gram matrix", values.get("expected_gram"))
+    computed_gram = expected_matrix(
+        atoms,
+        lambda matrix: mat_mul(matrix_transpose(matrix), matrix),
+    )
+    if computed_gram != expected_gram:
+        fail("expected-gram-matrix expected_gram is incorrect")
+
+    ranks = checks["rank-mixture-probabilities"]
+    if ranks["expected_result"] != "sat":
+        fail("rank-mixture-probabilities must expect sat")
+    values = single_witness_values(ranks, witnesses)
+    atoms = require_matrix_distribution("rank mixture atoms", values.get("atoms"))
+    expected_rank = require_fraction("rank mixture expected_rank", values.get("expected_rank"))
+    expected_rank_probabilities = require_rank_probability_map(
+        "rank mixture probabilities",
+        values.get("rank_probabilities"),
+    )
+    actual_rank_probabilities = rank_probabilities(atoms)
+    if actual_rank_probabilities != expected_rank_probabilities:
+        fail("rank-mixture-probabilities rank distribution is incorrect")
+    actual_expected_rank = sum(
+        (Fraction(rank) * probability for rank, probability in actual_rank_probabilities.items()),
+        Fraction(0),
+    )
+    if actual_expected_rank != expected_rank:
+        fail("rank-mixture-probabilities expected_rank is incorrect")
+
+    bad_moment = checks["bad-trace-moment-rejected"]
+    if bad_moment["expected_result"] != "unsat":
+        fail("bad-trace-moment-rejected must expect unsat")
+    data = bad_moment.get("data", {})
+    atoms = require_matrix_distribution("bad trace atoms", data.get("atoms"))
+    claimed = require_fraction("bad trace claimed_expected_trace_square", data.get("claimed_expected_trace_square"))
+    actual = require_fraction("bad trace actual_expected_trace_square", data.get("actual_expected_trace_square"))
+    computed = expected_scalar(atoms, lambda matrix: matrix_trace(matrix) ** 2)
+    if computed != actual:
+        fail("bad-trace-moment-rejected actual moment is incorrect")
+    if claimed == actual:
+        fail("bad-trace-moment-rejected claimed moment unexpectedly matches")
+
+
 def require_nonnegative_int(context: str, value: Any) -> int:
     integer = require_int(context, value)
     if integer < 0:
@@ -4420,6 +4637,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_logic_basics(expected)
     if metadata["id"] == "proof-methods-refutation-v0":
         validate_proof_methods_refutation(expected)
+    if metadata["id"] == "random-matrix-finite-v0":
+        validate_random_matrix_finite(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "natural-arithmetic-v0":
