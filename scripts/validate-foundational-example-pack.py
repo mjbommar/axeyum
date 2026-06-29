@@ -900,6 +900,242 @@ def validate_graph_matching(expected: dict[str, Any]) -> None:
         fail("triangle-no-perfect-matching unexpectedly has a perfect matching")
 
 
+def require_directed_acyclic_graph(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], list[tuple[str, str]]]:
+    vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
+    edge_values = values.get("directed_edges")
+    if not isinstance(edge_values, list):
+        fail(f"{context}.directed_edges must be a list")
+    vertex_set = set(vertices)
+    directed_edges: list[tuple[str, str]] = []
+    seen_edges: set[tuple[str, str]] = set()
+    for index, edge in enumerate(edge_values):
+        if not isinstance(edge, list) or len(edge) != 2:
+            fail(f"{context}.directed_edges[{index}] must be a two-element list")
+        parent, child = edge
+        require_string(f"{context}.directed_edges[{index}][0]", parent)
+        require_string(f"{context}.directed_edges[{index}][1]", child)
+        if parent == child:
+            fail(f"{context}.directed_edges[{index}] must not be a self-loop")
+        if parent not in vertex_set or child not in vertex_set:
+            fail(f"{context}.directed_edges[{index}] references a missing vertex")
+        directed_edge = (parent, child)
+        if directed_edge in seen_edges:
+            fail(f"{context}.directed_edges repeats edge {directed_edge}")
+        seen_edges.add(directed_edge)
+        directed_edges.append(directed_edge)
+    if not is_dag(vertices, directed_edges):
+        fail(f"{context} must be acyclic")
+    return vertices, directed_edges
+
+
+def is_dag(vertices: list[str], directed_edges: list[tuple[str, str]]) -> bool:
+    indegree = {vertex: 0 for vertex in vertices}
+    children = {vertex: [] for vertex in vertices}
+    for parent, child in directed_edges:
+        children[parent].append(child)
+        indegree[child] += 1
+    queue = deque([vertex for vertex in vertices if indegree[vertex] == 0])
+    visited = 0
+    while queue:
+        vertex = queue.popleft()
+        visited += 1
+        for child in children[vertex]:
+            indegree[child] -= 1
+            if indegree[child] == 0:
+                queue.append(child)
+    return visited == len(vertices)
+
+
+def require_vertex_set(context: str, value: Any, vertices: list[str], *, nonempty: bool = False) -> set[str]:
+    items = require_string_list(context, value, nonempty=nonempty)
+    vertex_set = set(vertices)
+    for item in items:
+        if item not in vertex_set:
+            fail(f"{context} references missing vertex {item!r}")
+    return set(items)
+
+
+def directed_edge_set(directed_edges: list[tuple[str, str]]) -> set[tuple[str, str]]:
+    return set(directed_edges)
+
+
+def dag_skeleton_edges(directed_edges: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    skeleton: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for parent, child in directed_edges:
+        edge = tuple(sorted((parent, child)))
+        if edge not in seen:
+            seen.add(edge)
+            skeleton.append((parent, child))
+    return skeleton
+
+
+def dag_descendants(vertices: list[str], directed_edges: list[tuple[str, str]]) -> dict[str, set[str]]:
+    children = {vertex: [] for vertex in vertices}
+    for parent, child in directed_edges:
+        children[parent].append(child)
+    descendants: dict[str, set[str]] = {}
+    for root in vertices:
+        seen: set[str] = set()
+        stack = list(children[root])
+        while stack:
+            vertex = stack.pop()
+            if vertex in seen:
+                continue
+            seen.add(vertex)
+            stack.extend(children[vertex])
+        descendants[root] = seen
+    return descendants
+
+
+def is_collider(prev_vertex: str, middle: str, next_vertex: str, edge_set: set[tuple[str, str]]) -> bool:
+    return (prev_vertex, middle) in edge_set and (next_vertex, middle) in edge_set
+
+
+def dag_path_is_valid(path: list[str], directed_edges: list[tuple[str, str]]) -> bool:
+    skeleton = graph_edge_set(dag_skeleton_edges(directed_edges))
+    return all(tuple(sorted((left, right))) in skeleton for left, right in zip(path, path[1:]))
+
+
+def active_dag_path(
+    vertices: list[str],
+    directed_edges: list[tuple[str, str]],
+    path: list[str],
+    conditioned: set[str],
+) -> bool:
+    if len(path) < 2:
+        fail("d-separation path must contain at least two vertices")
+    if len(set(path)) != len(path):
+        fail("d-separation path must be simple")
+    if not all(vertex in set(vertices) for vertex in path):
+        fail("d-separation path references a missing vertex")
+    if not dag_path_is_valid(path, directed_edges):
+        fail("d-separation path contains a non-edge")
+    edge_set = directed_edge_set(directed_edges)
+    descendants = dag_descendants(vertices, directed_edges)
+    for prev_vertex, middle, next_vertex in zip(path, path[1:], path[2:]):
+        if is_collider(prev_vertex, middle, next_vertex, edge_set):
+            if middle not in conditioned and descendants[middle].isdisjoint(conditioned):
+                return False
+        elif middle in conditioned:
+            return False
+    return True
+
+
+def enumerate_simple_skeleton_paths(
+    vertices: list[str],
+    directed_edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+) -> list[list[str]]:
+    adjacency = graph_adjacency(vertices, dag_skeleton_edges(directed_edges))
+    paths: list[list[str]] = []
+
+    def visit(vertex: str, path: list[str], seen: set[str]) -> None:
+        if vertex == target:
+            paths.append(list(path))
+            return
+        for neighbor in adjacency[vertex]:
+            if neighbor in seen:
+                continue
+            path.append(neighbor)
+            visit(neighbor, path, seen | {neighbor})
+            path.pop()
+
+    visit(source, [source], {source})
+    return paths
+
+
+def d_connected(
+    vertices: list[str],
+    directed_edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+    conditioned: set[str],
+) -> bool:
+    return any(
+        active_dag_path(vertices, directed_edges, path, conditioned)
+        for path in enumerate_simple_skeleton_paths(vertices, directed_edges, source, target)
+    )
+
+
+def validate_active_path_witness(context: str, values: dict[str, Any]) -> None:
+    vertices, directed_edges = require_directed_acyclic_graph(context, values)
+    source = require_graph_vertex(f"{context}.source", values.get("source"), vertices)
+    target = require_graph_vertex(f"{context}.target", values.get("target"), vertices)
+    conditioned = require_vertex_set(
+        f"{context}.conditioning_set",
+        values.get("conditioning_set", []),
+        vertices,
+        nonempty=False,
+    )
+    path = require_graph_path(f"{context}.path", values.get("path"), vertices)
+    if path[0] != source or path[-1] != target:
+        fail(f"{context} path endpoints must match source and target")
+    if not active_dag_path(vertices, directed_edges, path, conditioned):
+        fail(f"{context} path is not active under the conditioning set")
+    if not d_connected(vertices, directed_edges, source, target, conditioned):
+        fail(f"{context} source and target should be d-connected")
+
+
+def validate_blocked_dag_query(context: str, data: dict[str, Any]) -> None:
+    vertices, directed_edges = require_directed_acyclic_graph(context, data)
+    source = require_graph_vertex(f"{context}.source", data.get("source"), vertices)
+    target = require_graph_vertex(f"{context}.target", data.get("target"), vertices)
+    conditioned = require_vertex_set(
+        f"{context}.conditioning_set",
+        data.get("conditioning_set", []),
+        vertices,
+        nonempty=False,
+    )
+    expected_paths = data.get("all_simple_paths")
+    if expected_paths is not None:
+        if not isinstance(expected_paths, list):
+            fail(f"{context}.all_simple_paths must be a list")
+        listed_paths = [
+            require_graph_path(f"{context}.all_simple_paths[{index}]", path, vertices)
+            for index, path in enumerate(expected_paths)
+        ]
+        computed_paths = enumerate_simple_skeleton_paths(vertices, directed_edges, source, target)
+        if listed_paths != computed_paths:
+            fail(f"{context}.all_simple_paths does not match skeleton-path enumeration")
+    if d_connected(vertices, directed_edges, source, target, conditioned):
+        fail(f"{context} unexpectedly has an active path")
+
+
+def validate_graph_d_separation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    chain_active = checks["chain-active-without-conditioning"]
+    if chain_active["expected_result"] != "sat" or chain_active.get("proof_status") != "checked":
+        fail("chain-active-without-conditioning must be a checked sat row")
+    validate_active_path_witness("chain-active-without-conditioning", single_witness_values(chain_active, witnesses))
+
+    chain_blocked = checks["chain-conditioned-blocks"]
+    if chain_blocked["expected_result"] != "unsat" or chain_blocked.get("proof_status") != "checked":
+        fail("chain-conditioned-blocks must be a checked unsat row")
+    validate_blocked_dag_query("chain-conditioned-blocks", chain_blocked.get("data", {}))
+
+    fork_blocked = checks["fork-conditioned-blocks"]
+    if fork_blocked["expected_result"] != "unsat" or fork_blocked.get("proof_status") != "checked":
+        fail("fork-conditioned-blocks must be a checked unsat row")
+    validate_blocked_dag_query("fork-conditioned-blocks", fork_blocked.get("data", {}))
+
+    collider_blocked = checks["collider-unconditioned-blocks"]
+    if collider_blocked["expected_result"] != "unsat" or collider_blocked.get("proof_status") != "checked":
+        fail("collider-unconditioned-blocks must be a checked unsat row")
+    validate_blocked_dag_query("collider-unconditioned-blocks", collider_blocked.get("data", {}))
+
+    collider_open = checks["collider-descendant-opens"]
+    if collider_open["expected_result"] != "sat" or collider_open.get("proof_status") != "checked":
+        fail("collider-descendant-opens must be a checked sat row")
+    validate_active_path_witness("collider-descendant-opens", single_witness_values(collider_open, witnesses))
+
+
 def has_mod_inverse(a: int, modulus: int) -> bool:
     return any((a * candidate) % modulus == 1 for candidate in range(modulus))
 
@@ -3867,6 +4103,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_predicate(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "graph-d-separation-v0":
+        validate_graph_d_separation(expected)
     if metadata["id"] == "graph-matching-v0":
         validate_graph_matching(expected)
     if metadata["id"] == "graph-reachability-v0":

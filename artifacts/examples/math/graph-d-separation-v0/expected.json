@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "pack_id": "graph-d-separation-v0",
+  "witnesses": [
+    {
+      "id": "chain-active-path",
+      "description": "In a -> b -> c, the path from a to c is active with no conditioning.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "directed_edges": [
+          ["a", "b"],
+          ["b", "c"]
+        ],
+        "source": "a",
+        "target": "c",
+        "conditioning_set": [],
+        "path": ["a", "b", "c"]
+      }
+    },
+    {
+      "id": "collider-opened-by-descendant",
+      "description": "In a -> b <- c and b -> d, conditioning on d opens the collider at b.",
+      "values": {
+        "vertices": ["a", "b", "c", "d"],
+        "directed_edges": [
+          ["a", "b"],
+          ["c", "b"],
+          ["b", "d"]
+        ],
+        "source": "a",
+        "target": "c",
+        "conditioning_set": ["d"],
+        "path": ["a", "b", "c"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "chain-active-without-conditioning",
+      "claim": "a and c are d-connected in the chain a -> b -> c with no conditioning.",
+      "expected_result": "sat",
+      "validation": "active_dag_path_replay",
+      "proof_status": "checked",
+      "witnesses": ["chain-active-path"],
+      "notes": "The validator checks the DAG, the path, and the non-collider rule for an empty conditioning set."
+    },
+    {
+      "id": "chain-conditioned-blocks",
+      "claim": "a and c are d-connected in the chain a -> b -> c after conditioning on b.",
+      "expected_result": "unsat",
+      "validation": "finite_d_separation_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "directed_edges": [
+          ["a", "b"],
+          ["b", "c"]
+        ],
+        "source": "a",
+        "target": "c",
+        "conditioning_set": ["b"],
+        "all_simple_paths": [
+          ["a", "b", "c"]
+        ]
+      },
+      "notes": "The validator enumerates skeleton paths and confirms the only path is blocked by conditioning on the non-collider b."
+    },
+    {
+      "id": "fork-conditioned-blocks",
+      "claim": "a and c are d-connected in the fork a <- b -> c after conditioning on b.",
+      "expected_result": "unsat",
+      "validation": "finite_d_separation_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "directed_edges": [
+          ["b", "a"],
+          ["b", "c"]
+        ],
+        "source": "a",
+        "target": "c",
+        "conditioning_set": ["b"],
+        "all_simple_paths": [
+          ["a", "b", "c"]
+        ]
+      },
+      "notes": "The validator confirms the fork path is blocked because b is a conditioned non-collider."
+    },
+    {
+      "id": "collider-unconditioned-blocks",
+      "claim": "a and c are d-connected in the collider a -> b <- c with no conditioning.",
+      "expected_result": "unsat",
+      "validation": "finite_d_separation_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "directed_edges": [
+          ["a", "b"],
+          ["c", "b"]
+        ],
+        "source": "a",
+        "target": "c",
+        "conditioning_set": [],
+        "all_simple_paths": [
+          ["a", "b", "c"]
+        ]
+      },
+      "notes": "The validator confirms the only path is blocked because b is an unconditioned collider with no conditioned descendant."
+    },
+    {
+      "id": "collider-descendant-opens",
+      "claim": "a and c are d-connected when conditioning on a descendant of the collider.",
+      "expected_result": "sat",
+      "validation": "active_dag_path_replay",
+      "proof_status": "checked",
+      "witnesses": ["collider-opened-by-descendant"],
+      "notes": "The validator checks that conditioning on d opens the collider at b because d is a descendant of b."
+    }
+  ]
+}

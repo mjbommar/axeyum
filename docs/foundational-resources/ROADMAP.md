@@ -352,6 +352,9 @@ replay, disconnected no-path refutation, and edge-cut separation replay.
 [`graph-matching-v0`](../../artifacts/examples/math/graph-matching-v0/)
 validates finite matching witnesses, invalid-overlap rejection, augmenting-path
 flip replay, and a perfect-matching obstruction by exhaustive enumeration.
+[`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/)
+validates finite DAG d-separation checks for chains, forks, colliders, and
+descendant-opened colliders.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
 validates exact finite probability mass tables, conditional probability, and
 Bayes posterior replay.

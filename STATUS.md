@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph d-separation foundations pack landed.** Added
+  [`graph-d-separation-v0`](artifacts/examples/math/graph-d-separation-v0/README.md)
+  as the next graph/probability bridge resource. The pack validates active
+  chain replay, chain/fork blocking by conditioned non-colliders, unconditioned
+  collider blocking, and descendant-conditioned collider opening. The
+  foundational example-pack validator now checks finite DAG acyclicity,
+  skeleton-path enumeration, collider detection, descendant activation, and
+  d-separation by exhaustive path blocking.
+
 - **Graph matching foundations pack landed.** Added
   [`graph-matching-v0`](artifacts/examples/math/graph-matching-v0/README.md)
   as the next graph-theory resource after reachability. The pack validates
