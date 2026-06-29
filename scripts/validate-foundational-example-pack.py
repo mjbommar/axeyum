@@ -6566,6 +6566,340 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
         fail("bad-stochastic-row-rejected bad row unexpectedly sums to 1")
 
 
+def require_finite_kernel(
+    context: str,
+    value: Any,
+    source_ids: list[str],
+    target_ids: list[str],
+    *,
+    normalized: bool,
+) -> dict[str, dict[str, Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty kernel row list")
+    source_set = set(source_ids)
+    kernel: dict[str, dict[str, Fraction]] = {}
+    for index, row in enumerate(value):
+        if not isinstance(row, dict):
+            fail(f"{context}[{index}] must be an object")
+        source = row.get("source")
+        require_string(f"{context}[{index}].source", source)
+        if source not in source_set:
+            fail(f"{context}[{index}].source is not in the source set")
+        if source in kernel:
+            fail(f"{context} repeats source row {source!r}")
+        probabilities = require_probability_value_map(
+            f"{context}[{index}].probabilities",
+            row.get("probabilities"),
+            target_ids,
+        )
+        if normalized and sum(probabilities.values(), Fraction(0)) != 1:
+            fail(f"{context}[{index}].probabilities must sum to exactly 1")
+        kernel[source] = probabilities
+    if set(kernel) != source_set:
+        missing = sorted(source_set - set(kernel))
+        extra = sorted(set(kernel) - source_set)
+        fail(f"{context} must cover exactly source rows; missing={missing} extra={extra}")
+    return kernel
+
+
+def kernel_row_sums(
+    kernel: dict[str, dict[str, Fraction]],
+    source_ids: list[str],
+) -> dict[str, Fraction]:
+    return {
+        source: sum(kernel[source].values(), Fraction(0))
+        for source in source_ids
+    }
+
+
+def finite_kernel_pushforward(
+    source_distribution: dict[str, Fraction],
+    kernel: dict[str, dict[str, Fraction]],
+    source_ids: list[str],
+    target_ids: list[str],
+) -> dict[str, Fraction]:
+    return {
+        target: sum(
+            (
+                source_distribution[source] * kernel[source][target]
+                for source in source_ids
+            ),
+            Fraction(0),
+        )
+        for target in target_ids
+    }
+
+
+def require_joint_distribution(
+    context: str,
+    value: Any,
+    source_ids: list[str],
+    target_ids: list[str],
+) -> dict[tuple[str, str], Fraction]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty joint distribution list")
+    source_set = set(source_ids)
+    target_set = set(target_ids)
+    distribution: dict[tuple[str, str], Fraction] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        source = item.get("source")
+        target = item.get("target")
+        require_string(f"{context}[{index}].source", source)
+        require_string(f"{context}[{index}].target", target)
+        if source not in source_set:
+            fail(f"{context}[{index}].source is not in the source set")
+        if target not in target_set:
+            fail(f"{context}[{index}].target is not in the target set")
+        pair = (source, target)
+        if pair in distribution:
+            fail(f"{context} repeats pair {pair!r}")
+        distribution[pair] = require_probability(f"{context}[{index}].probability", item.get("probability"))
+    expected_pairs = {
+        (source, target)
+        for source in source_ids
+        for target in target_ids
+    }
+    if set(distribution) != expected_pairs:
+        missing = sorted(expected_pairs - set(distribution))
+        extra = sorted(set(distribution) - expected_pairs)
+        fail(f"{context} must cover the Cartesian product exactly; missing={missing} extra={extra}")
+    if sum(distribution.values(), Fraction(0)) != 1:
+        fail(f"{context} probabilities must sum to exactly 1")
+    return distribution
+
+
+def finite_kernel_joint_distribution(
+    source_distribution: dict[str, Fraction],
+    kernel: dict[str, dict[str, Fraction]],
+    source_ids: list[str],
+    target_ids: list[str],
+) -> dict[tuple[str, str], Fraction]:
+    return {
+        (source, target): source_distribution[source] * kernel[source][target]
+        for source in source_ids
+        for target in target_ids
+    }
+
+
+def finite_joint_target_marginal(
+    joint_distribution: dict[tuple[str, str], Fraction],
+    source_ids: list[str],
+    target_ids: list[str],
+) -> dict[str, Fraction]:
+    return {
+        target: sum(
+            (
+                joint_distribution[(source, target)]
+                for source in source_ids
+            ),
+            Fraction(0),
+        )
+        for target in target_ids
+    }
+
+
+def finite_disintegrated_kernel(
+    joint_distribution: dict[tuple[str, str], Fraction],
+    source_distribution: dict[str, Fraction],
+    source_ids: list[str],
+    target_ids: list[str],
+) -> dict[str, dict[str, Fraction]]:
+    kernel: dict[str, dict[str, Fraction]] = {}
+    for source in source_ids:
+        source_probability = source_distribution[source]
+        if source_probability == 0:
+            fail("finite disintegration requires positive source probabilities in this pack")
+        kernel[source] = {
+            target: joint_distribution[(source, target)] / source_probability
+            for target in target_ids
+        }
+    return kernel
+
+
+def finite_kernel_composition(
+    left_kernel: dict[str, dict[str, Fraction]],
+    right_kernel: dict[str, dict[str, Fraction]],
+    source_ids: list[str],
+    middle_ids: list[str],
+    target_ids: list[str],
+) -> dict[str, dict[str, Fraction]]:
+    return {
+        source: {
+            target: sum(
+                (
+                    left_kernel[source][middle] * right_kernel[middle][target]
+                    for middle in middle_ids
+                ),
+                Fraction(0),
+            )
+            for target in target_ids
+        }
+        for source in source_ids
+    }
+
+
+def validate_finite_stochastic_kernels(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    normalization = checks["kernel-normalization-witness"]
+    if normalization["expected_result"] != "sat":
+        fail("kernel-normalization-witness must expect sat")
+    values = single_witness_values(normalization, witnesses)
+    source_ids = require_string_list("kernel normalization source", values.get("source"))
+    target_ids = require_string_list("kernel normalization target", values.get("target"))
+    kernel = require_finite_kernel(
+        "kernel normalization kernel",
+        values.get("kernel"),
+        source_ids,
+        target_ids,
+        normalized=True,
+    )
+    listed_row_sums = require_atom_value_table("kernel normalization row_sums", values.get("row_sums"), source_ids)
+    if kernel_row_sums(kernel, source_ids) != listed_row_sums:
+        fail("kernel-normalization-witness row_sums do not match kernel rows")
+
+    pushforward = checks["kernel-pushforward-witness"]
+    if pushforward["expected_result"] != "sat":
+        fail("kernel-pushforward-witness must expect sat")
+    values = single_witness_values(pushforward, witnesses)
+    source_ids = require_string_list("kernel pushforward source", values.get("source"))
+    target_ids = require_string_list("kernel pushforward target", values.get("target"))
+    source_distribution = require_probability_value_map(
+        "kernel pushforward source_distribution",
+        values.get("source_distribution"),
+        source_ids,
+    )
+    require_normalized_probability_map("kernel-pushforward-witness source_distribution", source_distribution)
+    kernel = require_finite_kernel(
+        "kernel pushforward kernel",
+        values.get("kernel"),
+        source_ids,
+        target_ids,
+        normalized=True,
+    )
+    target_distribution = require_probability_value_map(
+        "kernel pushforward target_distribution",
+        values.get("target_distribution"),
+        target_ids,
+    )
+    require_normalized_probability_map("kernel-pushforward-witness target_distribution", target_distribution)
+    if finite_kernel_pushforward(source_distribution, kernel, source_ids, target_ids) != target_distribution:
+        fail("kernel-pushforward-witness target_distribution is incorrect")
+
+    joint = checks["joint-disintegration-witness"]
+    if joint["expected_result"] != "sat":
+        fail("joint-disintegration-witness must expect sat")
+    values = single_witness_values(joint, witnesses)
+    source_ids = require_string_list("joint disintegration source", values.get("source"))
+    target_ids = require_string_list("joint disintegration target", values.get("target"))
+    source_distribution = require_probability_value_map(
+        "joint disintegration source_distribution",
+        values.get("source_distribution"),
+        source_ids,
+    )
+    require_normalized_probability_map("joint-disintegration-witness source_distribution", source_distribution)
+    kernel = require_finite_kernel(
+        "joint disintegration kernel",
+        values.get("kernel"),
+        source_ids,
+        target_ids,
+        normalized=True,
+    )
+    joint_distribution = require_joint_distribution(
+        "joint disintegration joint_distribution",
+        values.get("joint_distribution"),
+        source_ids,
+        target_ids,
+    )
+    if finite_kernel_joint_distribution(source_distribution, kernel, source_ids, target_ids) != joint_distribution:
+        fail("joint-disintegration-witness joint_distribution is incorrect")
+    target_marginal = require_probability_value_map(
+        "joint disintegration target_marginal",
+        values.get("target_marginal"),
+        target_ids,
+    )
+    require_normalized_probability_map("joint-disintegration-witness target_marginal", target_marginal)
+    if finite_joint_target_marginal(joint_distribution, source_ids, target_ids) != target_marginal:
+        fail("joint-disintegration-witness target_marginal is incorrect")
+    recovered_kernel = require_finite_kernel(
+        "joint disintegration recovered_kernel",
+        values.get("recovered_kernel"),
+        source_ids,
+        target_ids,
+        normalized=True,
+    )
+    if finite_disintegrated_kernel(joint_distribution, source_distribution, source_ids, target_ids) != recovered_kernel:
+        fail("joint-disintegration-witness recovered_kernel is incorrect")
+    if recovered_kernel != kernel:
+        fail("joint-disintegration-witness recovered kernel does not match original kernel")
+
+    composition = checks["kernel-composition-witness"]
+    if composition["expected_result"] != "sat":
+        fail("kernel-composition-witness must expect sat")
+    values = single_witness_values(composition, witnesses)
+    source_ids = require_string_list("kernel composition source", values.get("source"))
+    middle_ids = require_string_list("kernel composition middle", values.get("middle"))
+    target_ids = require_string_list("kernel composition target", values.get("target"))
+    left_kernel = require_finite_kernel(
+        "kernel composition left_kernel",
+        values.get("left_kernel"),
+        source_ids,
+        middle_ids,
+        normalized=True,
+    )
+    right_kernel = require_finite_kernel(
+        "kernel composition right_kernel",
+        values.get("right_kernel"),
+        middle_ids,
+        target_ids,
+        normalized=True,
+    )
+    composed_kernel = require_finite_kernel(
+        "kernel composition composed_kernel",
+        values.get("composed_kernel"),
+        source_ids,
+        target_ids,
+        normalized=True,
+    )
+    if finite_kernel_composition(left_kernel, right_kernel, source_ids, middle_ids, target_ids) != composed_kernel:
+        fail("kernel-composition-witness composed_kernel is incorrect")
+
+    bad = checks["bad-kernel-row-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-kernel-row-rejected must expect unsat")
+    data = bad.get("data", {})
+    source_ids = require_string_list("bad kernel source", data.get("source"))
+    target_ids = require_string_list("bad kernel target", data.get("target"))
+    kernel = require_finite_kernel(
+        "bad kernel kernel",
+        data.get("kernel"),
+        source_ids,
+        target_ids,
+        normalized=False,
+    )
+    row_sums = require_atom_value_table("bad kernel row_sums", data.get("row_sums"), source_ids)
+    if kernel_row_sums(kernel, source_ids) != row_sums:
+        fail("bad-kernel-row-rejected row_sums do not match kernel rows")
+    bad_source = data.get("bad_source")
+    require_string("bad kernel bad_source", bad_source)
+    if bad_source not in set(source_ids):
+        fail("bad-kernel-row-rejected bad_source is not in the source set")
+    if row_sums[bad_source] == 1:
+        fail("bad-kernel-row-rejected bad row unexpectedly sums to 1")
+
+    horizon = checks["general-kernel-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-kernel-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-kernel-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general kernel target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general kernel future_checker", data.get("future_checker"))
+
+
 def require_nonnegative_int(context: str, value: Any) -> int:
     integer = require_int(context, value)
     if integer < 0:
@@ -6933,6 +7267,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_random_variables(expected)
     if metadata["id"] == "finite-markov-chain-v0":
         validate_finite_markov_chain(expected)
+    if metadata["id"] == "finite-stochastic-kernels-v0":
+        validate_finite_stochastic_kernels(expected)
     if metadata["id"] == "finite-operator-v0":
         validate_finite_operator(expected)
     if metadata["id"] == "finite-rings-v0":

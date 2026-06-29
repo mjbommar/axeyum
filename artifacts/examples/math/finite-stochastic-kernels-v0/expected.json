@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-stochastic-kernels-v0",
+  "witnesses": [
+    {
+      "id": "weather-commute-kernel",
+      "description": "A finite kernel from weather states to commute choices.",
+      "values": {
+        "source": ["sunny", "rainy"],
+        "target": ["walk", "bus"],
+        "kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "1/5", "bus": "4/5"}}
+        ],
+        "row_sums": {"sunny": "1", "rainy": "1"}
+      }
+    },
+    {
+      "id": "weather-pushforward",
+      "description": "A source distribution pushed through the weather-to-commute kernel.",
+      "values": {
+        "source": ["sunny", "rainy"],
+        "target": ["walk", "bus"],
+        "source_distribution": {"sunny": "2/3", "rainy": "1/3"},
+        "kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "1/5", "bus": "4/5"}}
+        ],
+        "target_distribution": {"walk": "17/30", "bus": "13/30"}
+      }
+    },
+    {
+      "id": "weather-joint-disintegration",
+      "description": "A joint table factored into a source distribution and finite kernel.",
+      "values": {
+        "source": ["sunny", "rainy"],
+        "target": ["walk", "bus"],
+        "source_distribution": {"sunny": "2/3", "rainy": "1/3"},
+        "kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "1/5", "bus": "4/5"}}
+        ],
+        "joint_distribution": [
+          {"source": "sunny", "target": "walk", "probability": "1/2"},
+          {"source": "sunny", "target": "bus", "probability": "1/6"},
+          {"source": "rainy", "target": "walk", "probability": "1/15"},
+          {"source": "rainy", "target": "bus", "probability": "4/15"}
+        ],
+        "target_marginal": {"walk": "17/30", "bus": "13/30"},
+        "recovered_kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "1/5", "bus": "4/5"}}
+        ]
+      }
+    },
+    {
+      "id": "weather-arrival-composition",
+      "description": "A two-step kernel composition from weather to arrival state through commute choice.",
+      "values": {
+        "source": ["sunny", "rainy"],
+        "middle": ["walk", "bus"],
+        "target": ["early", "late"],
+        "left_kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "1/5", "bus": "4/5"}}
+        ],
+        "right_kernel": [
+          {"source": "walk", "probabilities": {"early": "2/3", "late": "1/3"}},
+          {"source": "bus", "probabilities": {"early": "1/5", "late": "4/5"}}
+        ],
+        "composed_kernel": [
+          {"source": "sunny", "probabilities": {"early": "11/20", "late": "9/20"}},
+          {"source": "rainy", "probabilities": {"early": "22/75", "late": "53/75"}}
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "kernel-normalization-witness",
+      "claim": "The weather-to-commute table is a finite stochastic kernel.",
+      "expected_result": "sat",
+      "validation": "finite_kernel_normalization_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["weather-commute-kernel"],
+      "notes": "The validator checks every row is a normalized probability distribution."
+    },
+    {
+      "id": "kernel-pushforward-witness",
+      "claim": "Pushing the source distribution through the kernel gives the listed target distribution.",
+      "expected_result": "sat",
+      "validation": "finite_kernel_pushforward_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["weather-pushforward"],
+      "notes": "The validator recomputes nu(y) = sum_x mu(x) K(x,y)."
+    },
+    {
+      "id": "joint-disintegration-witness",
+      "claim": "The joint table factors through the source distribution and kernel, and recovers the same finite kernel.",
+      "expected_result": "sat",
+      "validation": "finite_joint_disintegration_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["weather-joint-disintegration"],
+      "notes": "The validator recomputes joint probabilities, marginals, and finite conditional rows."
+    },
+    {
+      "id": "kernel-composition-witness",
+      "claim": "The listed weather-to-arrival kernel is the composition of two finite kernels.",
+      "expected_result": "sat",
+      "validation": "finite_kernel_composition_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["weather-arrival-composition"],
+      "notes": "The validator recomputes M(x,z) = sum_y K(x,y) L(y,z)."
+    },
+    {
+      "id": "bad-kernel-row-rejected",
+      "claim": "The malformed weather-to-commute table is a stochastic kernel.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_kernel_row_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source": ["sunny", "rainy"],
+        "target": ["walk", "bus"],
+        "kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "3/5", "bus": "3/5"}}
+        ],
+        "row_sums": {"sunny": "1", "rainy": "6/5"},
+        "bad_source": "rainy"
+      },
+      "notes": "The validator rejects the row because its probabilities sum to 6/5."
+    },
+    {
+      "id": "general-kernel-lean-horizon",
+      "claim": "General regular conditional probability and disintegration require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "regular conditional probabilities, disintegration theorems, measurable Markov kernels, and stochastic-process convergence",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general stochastic-kernel theory remains a proof-assistant horizon."
+    }
+  ]
+}

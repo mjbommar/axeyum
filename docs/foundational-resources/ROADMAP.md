@@ -102,6 +102,7 @@ artifacts/examples/math/
   finite-random-variables-v0/
   finite-conditional-expectation-v0/
   finite-martingales-v0/
+  finite-stochastic-kernels-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -160,7 +161,8 @@ Practical first backlog:
    applicable.
 7. Finite probability examples: total mass, conditional probability table,
    Bayes rule over finite domains, finite random variables, finite conditional
-   expectations, and finite martingale/stopping-time replay.
+   expectations, finite stochastic kernels, and finite martingale/stopping-time
+   replay.
 
 Boundary:
 

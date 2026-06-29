@@ -1,11 +1,13 @@
-# End To End: Conditional Probability, Random Variables, Conditional Expectation, Martingales, And Product Measures
+# End To End: Conditional Probability, Random Variables, Kernels, Martingales, And Product Measures
 
 This lesson follows finite probability resources from atom tables to replayed
 conditional probability, finite random variables, conditional expectation,
-finite martingales, exact product measures, and finite expectations. It uses the
+finite stochastic kernels, finite martingales, exact product measures, and
+finite expectations. It uses the
 [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
 [finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/),
 [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/),
+[finite-stochastic-kernels-v0](../../../artifacts/examples/math/finite-stochastic-kernels-v0/),
 [finite-martingales-v0](../../../artifacts/examples/math/finite-martingales-v0/),
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
@@ -33,6 +35,11 @@ Concept rows:
 | `law-total-expectation-witness` | `sat` | replay-only |
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
+| `kernel-normalization-witness` | `sat` | replay-only |
+| `kernel-pushforward-witness` | `sat` | replay-only |
+| `joint-disintegration-witness` | `sat` | replay-only |
+| `kernel-composition-witness` | `sat` | replay-only |
+| `bad-kernel-row-rejected` | `unsat` | checked |
 | `finite-martingale-witness` | `sat` | replay-only |
 | `square-submartingale-witness` | `sat` | replay-only |
 | `bounded-stopping-replay` | `sat` | replay-only |
@@ -96,6 +103,16 @@ X(a), X(b), X(c), X(d) = 0, 2, 4, 8
 G = {a,b}, {c,d}
 ```
 
+The stochastic-kernel witness maps weather states to commute choices:
+
+```text
+K(sunny, walk) = 3/4
+K(sunny, bus) = 1/4
+K(rainy, walk) = 1/5
+K(rainy, bus) = 4/5
+mu(sunny), mu(rainy) = 2/3, 1/3
+```
+
 The martingale witness uses a two-step fair walk and its natural filtration:
 
 ```text
@@ -153,6 +170,19 @@ E[E[X | G]] = E[X] = 7/2
 It also checks a finite tower-property row for a two-block partition refining
 the one-block partition.
 
+For the finite stochastic-kernel row, the checker recomputes:
+
+```text
+nu(walk) = 2/3*3/4 + 1/3*1/5 = 17/30
+nu(bus) = 2/3*1/4 + 1/3*4/5 = 13/30
+P(sunny, walk) = mu(sunny) * K(sunny, walk) = 1/2
+K(sunny, walk) = P(sunny, walk) / mu(sunny) = 3/4
+```
+
+It also checks row normalization, target marginals, recovery of kernel rows
+from a finite joint table, kernel composition, and a malformed row that sums to
+`6/5`.
+
 For the finite martingale row, the checker recomputes:
 
 ```text
@@ -191,6 +221,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
@@ -207,6 +238,7 @@ validated 1 foundational example pack(s)
 The search side may propose a probability table or posterior. The trusted side
 only recomputes finite sums and exact rational divisions. Continuous
 probability, general product measures, Fubini/Tonelli, Lebesgue integration,
-conditional expectation, general martingale convergence, optional stopping,
-Doob inequalities, stochastic kernels, convergence theorems, and statistical
-inference are outside this proof claim.
+conditional expectation, regular conditional probabilities, disintegration
+theorems, general Markov kernels, general martingale convergence, optional
+stopping, Doob inequalities, convergence theorems, and statistical inference
+are outside this proof claim.

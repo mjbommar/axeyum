@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite stochastic-kernel foundations pack landed.** Added
+  [`finite-stochastic-kernels-v0`](artifacts/examples/math/finite-stochastic-kernels-v0/README.md)
+  as the exact finite conditional-distribution bridge across probability,
+  measure, Markov chains, and stochastic-process reasoning. The pack validates
+  finite kernel row normalization, pushforward distributions, joint-table
+  factorization and disintegration, finite kernel composition, checked
+  rejection of a malformed kernel row, and a regular-conditional-probability
+  Lean-horizon row. The foundational example-pack validator now checks labeled
+  finite kernels, exact row sums, kernel pushforwards, joint marginals,
+  kernel recovery by finite disintegration, and kernel composition.
+
 - **Finite martingale foundations pack landed.** Added
   [`finite-martingales-v0`](artifacts/examples/math/finite-martingales-v0/README.md)
   as the exact finite filtration bridge from conditional expectation into

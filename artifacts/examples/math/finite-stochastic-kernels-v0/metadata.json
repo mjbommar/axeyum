@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "finite-stochastic-kernels-v0",
+  "title": "Finite Stochastic Kernel Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_measure_theory",
+    "field_statistics",
+    "field_linear_algebra",
+    "field_differential_equations_and_dynamical_systems",
+    "field_set_theory_and_foundations",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_rationals",
+    "curriculum_counting",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "measure_theory",
+    "statistics",
+    "linear_algebra",
+    "differential_equations_and_dynamical_systems",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "rationals",
+    "counting",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "finite functions",
+    "finite probability",
+    "finite matrices",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "kernel-normalization-witness",
+    "kernel-pushforward-witness",
+    "joint-disintegration-witness",
+    "kernel-composition-witness",
+    "bad-kernel-row-rejected",
+    "general-kernel-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite kernels as labeled source-to-target probability tables.",
+    "Replay kernel normalization, pushforward, joint factorization, disintegration, and composition by exact rational sums.",
+    "Emit checked finite counterexample evidence for malformed kernel rows.",
+    "Keep regular conditional probabilities, disintegration theorems, and general Markov kernels on measurable spaces marked Lean-horizon until no-sorry Lean artifacts exist."
+  ]
+}
