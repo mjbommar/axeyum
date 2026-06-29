@@ -670,8 +670,8 @@ continuous-map Lean-horizon row.
 `artifacts/examples/math/finite-simplicial-homology-v0/` now validates finite
 simplicial-complex closure, oriented-boundary replay, the finite
 `boundary^2 = 0` chain-complex identity, fixed Betti-rank replay over `Q`,
-checked rejection of a bad boundary sign, and a general homology
-Lean-horizon row.
+checked rejection of a bad boundary sign, a checked QF_LIA bad boundary
+coefficient obstruction, and a general homology Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, and event/complement measure
 replay.
@@ -811,7 +811,7 @@ Recommended order:
     preimages, homeomorphism replay, and bad-map rejection.
 23. `finite-simplicial-homology-v0`: finite simplicial-complex closure,
     oriented-boundary replay, `boundary^2 = 0`, fixed Betti-rank replay, and
-    bad-boundary rejection.
+    bad-boundary rejection with a checked QF_LIA bad-coefficient certificate.
 24. `finite-integration-v0`: finite simple-function integrals, indicator
     integrals, exact linearity, and bad-expectation rejection.
 25. `finite-product-measure-v0`: finite product probability tables,
@@ -1130,8 +1130,9 @@ bridge to the connectedness horizon. `finite-continuous-maps-v0` now adds the
 finite preimage/homeomorphism bridge connecting continuity to compactness and
 connectedness horizons. `finite-simplicial-homology-v0` now adds the exact
 finite algebraic-topology bridge: simplicial closure, oriented boundaries,
-`boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, and a
-homology Lean-horizon row. `finite-integration-v0` now adds the exact finite
+`boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, a checked
+QF_LIA/Diophantine bad-coefficient row, and a homology Lean-horizon row.
+`finite-integration-v0` now adds the exact finite
 simple-function integral bridge between finite measure, probability, and
 statistics. `finite-product-measure-v0` now adds the exact finite product
 measure, marginalization, and Fubini bridge toward general measure/probability
@@ -1296,8 +1297,8 @@ bad-continuity rejection, checked bad-homeomorphism rejection, and the
 continuous-map Lean horizon.
 `finite-simplicial-homology-v0` now has a learner-facing end-to-end lesson for
 finite simplicial-complex closure, oriented-boundary replay, `boundary^2 = 0`,
-Betti-rank replay over `Q`, checked bad-boundary rejection, and the homology
-Lean horizon.
+Betti-rank replay over `Q`, checked bad-boundary rejection, a checked QF_LIA
+bad-coefficient certificate, and the homology Lean horizon.
 `finite-integration-v0` now has a learner-facing end-to-end lesson for finite
 simple-function integrals, indicator integrals, integral linearity, checked bad
 expectation rejection, and the Lebesgue-integration Lean horizon.
@@ -1377,7 +1378,8 @@ statistics points to finite replay plus QF_LRA/Farkas and QF_LIA/Diophantine
 graduation routes, and finite probability points to finite replay plus
 QF_LRA/Farkas graduation routes.
 The QF_LIA/Diophantine proof-upgrade lane now also has
-`exact-statistical-tests-v0` promoted for its bad binomial tail-count row.
+`exact-statistical-tests-v0` promoted for its bad binomial tail-count row and
+`finite-simplicial-homology-v0` promoted for its bad boundary coefficient row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

@@ -22,6 +22,7 @@ Concept rows:
 | `boundary-squared-zero` | `sat` | replay-only |
 | `betti-rank-replay` | `sat` | replay-only |
 | `bad-boundary-rejected` | `unsat` | checked |
+| `qf-lia-bad-boundary-coefficient` | `unsat` | checked |
 | `general-homology-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is finite set and exact integer/rational linear-algebra
@@ -153,6 +154,26 @@ actual coefficient = -1
 
 So the false boundary-sign row is rejected by exact integer coefficient replay.
 
+## Check The Boundary Coefficient Certificate
+
+The solver-form row isolates the same sign error as integer equalities. The
+actual coefficient of `[a,c]` is:
+
+```text
+coeff_ac = -1
+```
+
+The bad claim requires:
+
+```text
+coeff_ac = 1
+```
+
+Axeyum emits an `UnsatDiophantine` certificate for those inconsistent
+equalities and checks it independently. That keeps the educational boundary
+replay tied to the project identity: search can propose a boundary row, but
+the accepted negative claim has a small checked integer certificate.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -164,6 +185,7 @@ boundary squared zero for a fixed simplex
 boundary-matrix rank replay over Q
 Betti-number replay for a fixed circle
 bad boundary-sign refutation
+QF_LIA boundary-coefficient contradiction
 ```
 
 The following remain proof-assistant targets:
@@ -199,7 +221,7 @@ This lesson shows Axeyum's current finite homology resource pattern:
 
 ```text
 untrusted fast search -> complex, boundary, rank, cycle, or bad-boundary row
-trusted small checking -> finite face enumeration and exact linear algebra
+trusted small checking -> finite face enumeration, exact linear algebra, and Diophantine certificates
 remaining horizon -> general algebraic-topology theorems
 ```
 

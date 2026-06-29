@@ -10626,6 +10626,42 @@ def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
     if claimed_coefficient == actual_coefficient:
         fail("bad-boundary-rejected mismatch coefficients are equal")
 
+    qf_lia = checks["qf-lia-bad-boundary-coefficient"]
+    if qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-bad-boundary-coefficient must expect unsat")
+    if qf_lia["proof_status"] != "checked":
+        fail("qf-lia-bad-boundary-coefficient must be checked")
+    if qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-bad-boundary-coefficient must use qf_lia_diophantine_evidence validation")
+    data = qf_lia.get("data", {})
+    qf_vertices = require_string_list("qf-lia bad boundary vertices", data.get("vertices"))
+    qf_simplex = require_simplex("qf-lia bad boundary simplex", data.get("simplex"), qf_vertices)
+    qf_mismatch = require_simplex(
+        "qf-lia bad boundary mismatch_simplex",
+        data.get("mismatch_simplex"),
+        qf_vertices,
+    )
+    qf_actual = require_fraction("qf-lia bad boundary actual_coefficient", data.get("actual_coefficient"))
+    qf_claimed = require_fraction("qf-lia bad boundary claimed_coefficient", data.get("claimed_coefficient"))
+    if qf_simplex != simplex:
+        fail("qf-lia-bad-boundary-coefficient simplex must match the rejected boundary row")
+    if qf_mismatch != mismatch_simplex:
+        fail("qf-lia-bad-boundary-coefficient mismatch simplex must match the rejected boundary row")
+    if qf_actual != actual_coefficient or qf_actual != oriented_boundary(qf_simplex).get(qf_mismatch, Fraction(0)):
+        fail("qf-lia-bad-boundary-coefficient actual coefficient is incorrect")
+    if qf_claimed != claimed_coefficient:
+        fail("qf-lia-bad-boundary-coefficient claimed coefficient must match the rejected boundary row")
+    if qf_claimed == qf_actual:
+        fail("qf-lia-bad-boundary-coefficient claimed coefficient unexpectedly matches")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia bad boundary smt2_artifact", smt2_artifact)
+    check_source("qf-lia bad boundary smt2_artifact", smt2_artifact)
+    require_string("qf-lia bad boundary proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-lia bad boundary certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia bad boundary certificate must document checked Diophantine evidence")
+
     horizon = checks["general-homology-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-homology-lean-horizon must be not-run")

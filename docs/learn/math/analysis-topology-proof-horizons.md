@@ -191,7 +191,8 @@ cycle = [a,b] - [a,c] + [b,c]
 The `finite-simplicial-homology-v0` validator checks face closure, recomputes
 oriented boundaries, verifies `boundary^2 = 0`, builds exact rational boundary
 matrices, checks the three-edge circle has `b0 = 1` and `b1 = 1`, and rejects a
-false boundary sign for `[a,b,c]`.
+false boundary sign for `[a,b,c]` with a checked QF_LIA/Diophantine coefficient
+certificate.
 
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:

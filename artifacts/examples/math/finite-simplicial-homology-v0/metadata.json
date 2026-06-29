@@ -29,6 +29,7 @@
     "finite sets",
     "integer linear algebra",
     "finite chain complexes",
+    "QF_LIA / Diophantine",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0",
@@ -48,11 +49,13 @@
     "boundary-squared-zero",
     "betti-rank-replay",
     "bad-boundary-rejected",
+    "qf-lia-bad-boundary-coefficient",
     "general-homology-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite simplicial complexes as deterministic finite-set and integer-linear-algebra obligations.",
     "Replay boundary, chain-complex, and Betti-rank rows through Axeyum model evaluation rather than pack-local Python only.",
+    "Keep promoted bad boundary coefficient rows tied to checked QF_LIA/Diophantine evidence.",
     "Add emitted certificates for false-boundary and rank rows once finite matrix proof routes are promoted.",
     "Keep homology invariance, exact sequences, homotopy equivalence, cohomology, and general algebraic-topology theorems under Lean horizon until formal routes exist."
   ]

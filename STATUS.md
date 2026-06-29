@@ -316,6 +316,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression requires `Evidence::UnsatDiophantine` and rechecks the integer
   certificate independently.
 
+- **Finite-simplicial-homology QF_LIA/Diophantine regression landed.**
+  [`finite-simplicial-homology-v0`](artifacts/examples/math/finite-simplicial-homology-v0/)
+  now has a checked proof-object row for the bad boundary coefficient
+  contradiction. The new SMT-LIB artifact encodes the `[a,c]` boundary
+  coefficient as both `-1` and `1`; the shared LIA resource regression requires
+  `Evidence::UnsatDiophantine` and rechecks the integer certificate
+  independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -484,9 +492,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the learner-facing trace for the finite-simplicial-homology pack:
   finite simplicial-complex closure, oriented-boundary replay,
   `boundary^2 = 0`, Betti-rank replay over `Q`, checked bad-boundary
-  rejection, and the homology Lean horizon. The lesson is linked from the math
-  learning index plus the finite-structures, analysis/topology, and
-  linear-algebra paths.
+  rejection, a checked QF_LIA bad-coefficient certificate, and the homology
+  Lean horizon. The lesson is linked from the math learning index plus the
+  finite-structures, analysis/topology, and linear-algebra paths.
 
 - **Finite continuous-map end-to-end lesson landed.** Added
   [`finite-continuous-maps-end-to-end.md`](docs/learn/math/finite-continuous-maps-end-to-end.md)
@@ -1073,10 +1081,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   data, linear algebra, and abstract algebra. The pack validates
   simplicial-complex closure, oriented-boundary replay, `boundary^2 = 0`,
   Betti-rank replay for a three-edge circle over `Q`, checked rejection of a
-  bad boundary sign, and a general homology Lean-horizon row. The foundational
-  example-pack validator now checks these rows by exact face enumeration,
-  chain normalization, boundary-matrix rank replay, and rational Gaussian
-  elimination.
+  bad boundary sign, a checked QF_LIA/Diophantine bad boundary coefficient
+  row, and a general homology Lean-horizon row. The foundational example-pack
+  validator now checks these rows by exact face enumeration, chain
+  normalization, boundary-matrix rank replay, rational Gaussian elimination,
+  and solver-form Diophantine certificate metadata for the promoted
+  coefficient contradiction.
 
 - **Finite Euler method foundations pack landed.** Added
   [`finite-euler-method-v0`](artifacts/examples/math/finite-euler-method-v0/README.md)

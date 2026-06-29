@@ -282,8 +282,9 @@ validated pack data and the repo-root command that replays it.
   rejection, and the continuous-map Lean horizon.
 - [Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md):
   follows finite simplicial-complex closure, oriented boundary replay,
-  `boundary^2 = 0`, Betti-rank replay, bad-boundary rejection, and the
-  homology Lean horizon.
+  `boundary^2 = 0`, Betti-rank replay, bad-boundary rejection, a
+  QF_LIA/Diophantine bad-coefficient certificate, and the homology Lean
+  horizon.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked bad

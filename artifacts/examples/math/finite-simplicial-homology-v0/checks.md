@@ -36,6 +36,15 @@ Expected result: `unsat`.
 The validator rejects the false boundary because the coefficient of `[a,c]`
 must be `-1`, not `1`.
 
+## `qf-lia-bad-boundary-coefficient`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact isolates the same sign error as an integer equality
+contradiction: the coefficient of `[a,c]` is forced to be both `-1` and `1`.
+Axeyum emits and checks an `UnsatDiophantine` certificate for those
+inconsistent equalities.
+
 ## `general-homology-lean-horizon`
 
 Expected result: `not-run`.

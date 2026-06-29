@@ -305,8 +305,10 @@ The finite set, relation/function, equivalence-class, function-composition,
 finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
 cardinality-principles, topology, compactness-shadow, connectedness-shadow, continuous-map,
 finite-simplicial-homology, and measure packs are now checked finite artifacts.
-The next finite-structure gaps are stronger EUF/Alethe evidence for congruence
-examples and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
+The finite-simplicial-homology pack now also carries a checked
+QF_LIA/Diophantine certificate for its bad boundary coefficient. The next
+finite-structure gaps are stronger EUF/Alethe evidence for congruence examples
+and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
 infinite cardinality, general monoid, permutation-group, and group-action theorems,
 complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,
