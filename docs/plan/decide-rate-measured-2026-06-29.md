@@ -114,19 +114,42 @@ errored** ("bounded extensionality supports indices up to 8 bits") because
 (gap to z3 −2 → **−1**), DISAGREE = 0. Validated: axeyum-rewrite 88/88, solver lib
 613/613, `abv_differential_fuzz` DISAGREE = 0.
 
-## Recommended next core step (focused session)
+## State after this session — accessible bounded wins harvested
 
-1. **Uninterpreted-sort Ackermann in the BV/auto route** so `ite3`-style
-   (uninterp sort threaded through `ite`/`=`) decides instead of erroring. The
-   `replays()` / model-eval guards keep it sound — improving model construction
-   can only turn `Unknown → Sat` for genuinely-sat instances.
-2. **UF + theory combination** (`issue5396` UF+BV, `issue5836-2` UF+arrays):
-   route mixed UF instances through the combination solver (or Ackermannize the
-   UF then hand to the theory backend) rather than letting the pure e-graph path
-   own them. Verify each `Sat` replays and each `Unsat` carries the skeleton.
-3. **Re-measure this curated slice** after each step — the target is QF_UF
-   37 → 41 (match z3) on accessible data, `DISAGREE = 0`, with the relevant
-   differential fuzz (`uflia`/`abv`) green.
+The two clean accessible decide-rate gains above are landed (QF_UF 37→39, QF_ABV
+173→176, both DISAGREE=0). Surveying the rest of the accessible curated corpus
+(`measure_corpus` per division, `explain_corpus` per file):
+
+- **At/near parity** on accessible data: QF_S (56/56), QF_UFBV (6/6), QF_DT (3/3),
+  QF_ALIA (5/5); QF_SEQ axeyum *beats* z3 (16 vs 14).
+- **Remaining small gaps are deep, not bounded:**
+  - **QF_UF −2** (`issue5396` pure-int that LIA declines + int-blast finds no
+    model; `issue5836-2` real+int+uf+arrays) — the **UF+theory-combination
+    keystone**, the genuine remaining lever (deep, soundness-critical).
+  - **QF_ABV −1** (`issue5925` lazy-ext replay incompleteness; `rw34` budget) —
+    deep/budget.
+  - **QF_AUFLIA −2** (`bug337` unknown; **`bug330` hangs** — a *pre-existing*
+    deadline-robustness defect, verified independent of the write-index change:
+    bug330 runs 25 s under a 2 s cap, spinning **upstream of the backend** in
+    `check_qf_abv_lazy_row`'s `eliminate_arrays` (read-over-write / `O(n²)`
+    Ackermann pairing) or `substitute_array_definitions`. Thread the deadline
+    through that loop → graceful `Unknown`.).
+  - **Not a lever:** raising the int-blast width ladder (`issue5396`) — maintainers
+    deliberately narrowed it for performance; widening it is a net loss.
+
+## Recommended next core step (focused, clean-environment session)
+
+1. **UF + theory combination keystone** (`issue5396`/`issue5836-2`): the real
+   remaining decide-rate lever — route mixed UF+theory instances through the
+   combination solver (or Ackermannize the UF then hand to the theory backend)
+   rather than the pure e-graph path. Verify each `Sat` replays, each `Unsat`
+   carries the skeleton; `uflia`/`abv` fuzzes green.
+2. **`bug330` deadline-robustness:** `eprintln`-trace `eliminate_arrays` vs
+   `substitute_array_definitions` vs the CEGAR loop on bug330 (stderr → a file;
+   `eprintln!` is unbuffered, so it survives a kill), find the unguarded loop,
+   thread `config.timeout` through it.
+3. **Re-measure** after each step — `DISAGREE = 0`, relevant differential fuzz
+   green, no decided instance regresses.
 
 ## Why this note exists
 

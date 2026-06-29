@@ -38,6 +38,9 @@ validated pack data and the repo-root command that replays it.
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
+- [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
+  follows exact Gram-matrix replay, fixed Cauchy-Schwarz, orthogonal
+  projection, Gram-Schmidt, and checked bad-inner-product rejection.
 - [Finite Vector Spaces](finite-vector-spaces-end-to-end.md): follows `F2^2`
   table replay, subspace/span recomputation, linear-map kernel/image replay,
   rank-nullity by finite cardinality, and checked bad-subspace rejection.

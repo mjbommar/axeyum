@@ -182,6 +182,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rational inner-product end-to-end lesson landed.** Added
+  [`inner-product-spaces-end-to-end.md`](docs/learn/math/inner-product-spaces-end-to-end.md)
+  as the learner-facing trace for the exact rational inner-product pack:
+  Gram-matrix/dot-product replay, positive-definite principal-minor checks,
+  fixed Cauchy-Schwarz replay, orthogonal projection, Gram-Schmidt residuals,
+  checked bad-inner-product rejection, and the Lean horizon for general
+  inner-product and Hilbert-space theory. The lesson is linked from the math
+  learning index plus the linear-algebra and analysis paths.
+
 - **Finite tensor-products end-to-end lesson landed.** Added
   [`finite-tensor-products-end-to-end.md`](docs/learn/math/finite-tensor-products-end-to-end.md)
   as the learner-facing trace for the finite tensor-products pack: finite

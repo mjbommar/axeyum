@@ -298,8 +298,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
 
-For a fuller trace through bounded dynamics and finite-dimensional operator
-replay, read [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md).
+For fuller traces through exact rational inner products, bounded dynamics, and
+finite-dimensional operator replay, read
+[End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md)
+and [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md).
 
 ## Horizon
 
