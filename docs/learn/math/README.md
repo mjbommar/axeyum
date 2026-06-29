@@ -44,6 +44,9 @@ validated pack data and the repo-root command that replays it.
 - [Proof Method Patterns](proof-methods-patterns-end-to-end.md): follows
   direct proof, contrapositive, proof by cases, contradiction, invalid-converse
   counterexample, and the natural-deduction Lean horizon.
+- [Induction Obligations](induction-obligations-end-to-end.md): follows
+  prefix-sum base, bounded step and conclusion checks, a bad-step
+  counterexample, and the induction-schema Lean horizon.
 - [Finite Sets](finite-sets-end-to-end.md): follows finite universe/subset
   replay, union/intersection identity replay, subset transitivity, and a fixed
   malformed-identity rejection.

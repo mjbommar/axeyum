@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Induction-obligations end-to-end lesson landed.** Added
+  [`induction-obligations-end-to-end.md`](docs/learn/math/induction-obligations-end-to-end.md)
+  as the learner-facing trace for the induction-obligations pack: prefix-sum
+  base-case replay, bounded step and conclusion enumeration, a bad-step
+  counterexample for `n = 0`, and the Lean horizon for the full natural-number
+  induction schema. The lesson is linked from the math learning index plus the
+  logic/proof path.
+
 - **Proof-method patterns end-to-end lesson landed.** Added
   [`proof-methods-patterns-end-to-end.md`](docs/learn/math/proof-methods-patterns-end-to-end.md)
   as the learner-facing trace for the proof-methods patterns pack: direct
