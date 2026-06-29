@@ -231,6 +231,11 @@ Exit criteria:
 
 ### Phase M1: Atlas Schema And Seed Rows
 
+Status: first seed landed for the mathematics lane. The repository now has a
+schema, deterministic generator, validator, committed JSON atlas, and generated
+dashboards covering all 23 curriculum nodes and all 18 math fields. Validated
+example packs remain future phases.
+
 Deliverables:
 
 - `artifacts/ontology/foundational-concepts.schema.json`.
@@ -422,6 +427,9 @@ Exit criteria:
 
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
+
+Progress: items 1-3 have landed for the math seed. Continue with item 4:
+`foundational-example-pack.schema.json` and a validating template pack.
 
 ## Operating Rules
 

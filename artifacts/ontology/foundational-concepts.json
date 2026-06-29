@@ -1,0 +1,2656 @@
+{
+  "schema_version": 1,
+  "generated_from": [
+    "docs/curriculum/curriculum.toml",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+  ],
+  "rows": [
+    {
+      "id": "curriculum_propositional_logic",
+      "kind": "curriculum-node",
+      "title": "Propositional Logic",
+      "domain": "mathematics",
+      "field_ids": [
+        "logic_and_proof"
+      ],
+      "curriculum_node": "propositional-logic",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "covered",
+      "curriculum_family": "Logic",
+      "resource_status": "seeded",
+      "summary": "Boolean variables, connectives, validity and satisfiability.",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_predicate_logic",
+        "curriculum_proof_methods"
+      ],
+      "decidability": "decidable",
+      "axeyum_fragments": [
+        "Bool / SAT"
+      ],
+      "example_packs": [
+        {
+          "id": "logic-basics-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/logic-basics-v0",
+          "notes": "SAT/UNSAT Boolean formulas, truth tables, and CNF refutations."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "SAT model replay and CNF refutation evidence.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "SAT/UNSAT Boolean formulas, truth tables, and CNF refutations."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/propositional-logic.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Logic still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/logic-basics-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_predicate_logic",
+      "kind": "curriculum-node",
+      "title": "Predicate Logic",
+      "domain": "mathematics",
+      "field_ids": [
+        "logic_and_proof",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": "predicate-logic",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "covered",
+      "curriculum_family": "Predicate",
+      "resource_status": "seeded",
+      "summary": "Quantifiers over a domain; validity is undecidable in general, decidable over finite domains.",
+      "prerequisites": [
+        "curriculum_propositional_logic",
+        "curriculum_sets"
+      ],
+      "unlocks": [
+        "curriculum_proof_methods"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Quantifiers (finite domain)"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-predicate-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-predicate-v0",
+          "notes": "Finite-domain quantifier expansion and counterexamples."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite expansion replay with proof gap for general first-order logic.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Finite-domain quantifier expansion and counterexamples."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/predicate-logic.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Predicate still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-predicate-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_proof_methods",
+      "kind": "curriculum-node",
+      "title": "Proof Methods",
+      "domain": "mathematics",
+      "field_ids": [
+        "logic_and_proof"
+      ],
+      "curriculum_node": "proof-methods",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "planned",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Direct, contrapositive, and contradiction proofs; refutation is exactly what a solver does.",
+      "prerequisites": [
+        "curriculum_propositional_logic",
+        "curriculum_predicate_logic"
+      ],
+      "unlocks": [
+        "curriculum_induction"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Refutation (negate-and-decide)"
+      ],
+      "example_packs": [
+        {
+          "id": "proof-methods-refutation-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/proof-methods-refutation-v0",
+          "notes": "Negate-and-decide examples; proof by contradiction as UNSAT."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "CNF/LRAT or Alethe evidence, initially tracked as a proof gap.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Negate-and-decide examples; proof by contradiction as UNSAT."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/proof-methods.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/proof-methods-refutation-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_induction",
+      "kind": "curriculum-node",
+      "title": "Mathematical Induction",
+      "domain": "mathematics",
+      "field_ids": [
+        "logic_and_proof",
+        "number_theory"
+      ],
+      "curriculum_node": "induction",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "planned",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "The induction schema is undecidable; individual base/step obligations are decidable.",
+      "prerequisites": [
+        "curriculum_proof_methods",
+        "curriculum_naturals"
+      ],
+      "unlocks": [
+        "curriculum_number_theory"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "LIA / BV (base + step instances)"
+      ],
+      "example_packs": [
+        {
+          "id": "induction-obligations-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/induction-obligations-v0",
+          "notes": "Bounded base/step obligations; general induction remains Lean-horizon."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Bounded obligation replay now; induction schema requires Lean.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Bounded base/step obligations; general induction remains Lean-horizon."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/induction.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/induction-obligations-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_sets",
+      "kind": "curriculum-node",
+      "title": "Sets",
+      "domain": "mathematics",
+      "field_ids": [
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": "sets",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "covered",
+      "curriculum_family": "Sets",
+      "resource_status": "seeded",
+      "summary": "Membership, subset, union/intersection; finite-set identities are exhaustively checkable.",
+      "prerequisites": [
+        "curriculum_propositional_logic"
+      ],
+      "unlocks": [
+        "curriculum_relations_and_functions",
+        "curriculum_predicate_logic"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "BV / enumeration (finite sets)"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-sets-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-sets-v0",
+          "notes": "Membership, subset, union/intersection, and finite identities."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite enumeration replay and SAT evidence for refutations.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Membership, subset, union/intersection, and finite identities."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/sets.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Sets still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-sets-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_relations_and_functions",
+      "kind": "curriculum-node",
+      "title": "Relations & Functions",
+      "domain": "mathematics",
+      "field_ids": [
+        "set_theory_and_foundations",
+        "discrete_math"
+      ],
+      "curriculum_node": "relations-and-functions",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "planned",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Relations, equivalence, functions; properties (injective/surjective) decidable on finite domains.",
+      "prerequisites": [
+        "curriculum_sets"
+      ],
+      "unlocks": [
+        "curriculum_cardinality",
+        "curriculum_groups",
+        "curriculum_linear_algebra"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "BV / EUF (finite domains)"
+      ],
+      "example_packs": [
+        {
+          "id": "relations-functions-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/relations-functions-v0",
+          "notes": "Finite relation properties, injective/surjective checks, and EUF slices."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite replay plus EUF/Alethe route for equality-heavy examples.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Finite relation properties, injective/surjective checks, and EUF slices."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/relations-and-functions.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/relations-functions-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_cardinality",
+      "kind": "curriculum-node",
+      "title": "Cardinality",
+      "domain": "mathematics",
+      "field_ids": [
+        "set_theory_and_foundations",
+        "discrete_math"
+      ],
+      "curriculum_node": "cardinality",
+      "curriculum_layer": 0,
+      "curriculum_area": "foundations",
+      "curriculum_status": "lean-horizon",
+      "curriculum_family": "",
+      "resource_status": "proof-horizon",
+      "summary": "Counting and bijections; finite cardinality is checkable, infinite cardinality is Lean-horizon.",
+      "prerequisites": [
+        "curriculum_relations_and_functions"
+      ],
+      "unlocks": [],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Counting / enumeration"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-cardinality-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-cardinality-v0",
+          "notes": "Finite bijections/counting; infinite cardinality is proof-horizon."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite witness replay now; infinite cardinality requires Lean.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Finite bijections/counting; infinite cardinality is proof-horizon."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/00-foundations/cardinality.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "General theorem content requires Lean reconstruction or another proof-assistant route."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-cardinality-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_naturals",
+      "kind": "curriculum-node",
+      "title": "Natural Numbers (Peano)",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory",
+        "discrete_math"
+      ],
+      "curriculum_node": "naturals",
+      "curriculum_layer": 1,
+      "curriculum_area": "number-systems",
+      "curriculum_status": "covered",
+      "curriculum_family": "NumberSystem",
+      "resource_status": "seeded",
+      "summary": "Peano successor arithmetic; concrete arithmetic decidable, the induction axiom is not.",
+      "prerequisites": [
+        "curriculum_sets"
+      ],
+      "unlocks": [
+        "curriculum_integers",
+        "curriculum_induction"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "LIA / BV"
+      ],
+      "example_packs": [
+        {
+          "id": "natural-arithmetic-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/natural-arithmetic-v0",
+          "notes": "Bounded Peano arithmetic and LIA/BV arithmetic identities."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "LIA/BV replay and certificate routes for bounded obligations.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Bounded Peano arithmetic and LIA/BV arithmetic identities."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/01-number-systems/naturals.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family NumberSystem still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/natural-arithmetic-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_integers",
+      "kind": "curriculum-node",
+      "title": "Integers",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory"
+      ],
+      "curriculum_node": "integers",
+      "curriculum_layer": 1,
+      "curriculum_area": "number-systems",
+      "curriculum_status": "covered",
+      "curriculum_family": "NumberSystem",
+      "resource_status": "seeded",
+      "summary": "Signed arithmetic and ordering; linear integer facts decided by simplex + branch-and-bound.",
+      "prerequisites": [
+        "curriculum_naturals"
+      ],
+      "unlocks": [
+        "curriculum_rationals",
+        "curriculum_divisibility_and_euclid",
+        "curriculum_rings"
+      ],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "LIA / BV"
+      ],
+      "example_packs": [
+        {
+          "id": "integer-lia-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/integer-lia-v0",
+          "notes": "Linear integer equations/inequalities and witnesses."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "LIA witness replay and future Diophantine/Farkas-style evidence.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Linear integer equations/inequalities and witnesses."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/01-number-systems/integers.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family NumberSystem still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/integer-lia-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_rationals",
+      "kind": "curriculum-node",
+      "title": "Rational Numbers",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "linear_algebra"
+      ],
+      "curriculum_node": "rationals",
+      "curriculum_layer": 1,
+      "curriculum_area": "number-systems",
+      "curriculum_status": "planned",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Exact fractions; linear rational facts decided by the exact-rational simplex.",
+      "prerequisites": [
+        "curriculum_integers"
+      ],
+      "unlocks": [
+        "curriculum_reals",
+        "curriculum_fields"
+      ],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "LRA (exact rationals)"
+      ],
+      "example_packs": [
+        {
+          "id": "rationals-lra-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/rationals-lra-v0",
+          "notes": "Exact rational order/field facts, density, trichotomy, and Farkas links."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Exact rational LRA with Farkas certificates where available.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Exact rational order/field facts, density, trichotomy, and Farkas links."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/01-number-systems/rationals.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/rationals-lra-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_reals",
+      "kind": "curriculum-node",
+      "title": "Real Numbers",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "optimization_and_convexity"
+      ],
+      "curriculum_node": "reals",
+      "curriculum_layer": 1,
+      "curriculum_area": "number-systems",
+      "curriculum_status": "planned",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Ordered complete field; the elementary (algebraic) theory is decidable (Tarski), completeness is not.",
+      "prerequisites": [
+        "curriculum_rationals"
+      ],
+      "unlocks": [
+        "curriculum_sequences_and_limits",
+        "curriculum_calculus",
+        "curriculum_complex"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "LRA / NRA (real-closed fields)"
+      ],
+      "example_packs": [
+        {
+          "id": "reals-rcf-shadow-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/reals-rcf-shadow-v0",
+          "notes": "Algebraic real constraints through LRA/NRA; completeness remains horizon."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "LRA/NRA replay and future SOS/RCF certificates.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Algebraic real constraints through LRA/NRA; completeness remains horizon."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/01-number-systems/reals.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/reals-rcf-shadow-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_complex",
+      "kind": "curriculum-node",
+      "title": "Complex Numbers",
+      "domain": "mathematics",
+      "field_ids": [
+        "complex_analysis",
+        "linear_algebra"
+      ],
+      "curriculum_node": "complex",
+      "curriculum_layer": 1,
+      "curriculum_area": "number-systems",
+      "curriculum_status": "lean-horizon",
+      "curriculum_family": "",
+      "resource_status": "proof-horizon",
+      "summary": "Pairs of reals with field structure; algebraic identities checkable, analysis is Lean-horizon.",
+      "prerequisites": [
+        "curriculum_reals"
+      ],
+      "unlocks": [],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "NRA over pairs"
+      ],
+      "example_packs": [
+        {
+          "id": "complex-algebraic-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/complex-algebraic-v0",
+          "notes": "Complex arithmetic as real-pair algebraic constraints."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Real-pair algebra replay; analytic complex analysis requires Lean.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Complex arithmetic as real-pair algebraic constraints."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/01-number-systems/complex.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "General theorem content requires Lean reconstruction or another proof-assistant route."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/complex-algebraic-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_divisibility_and_euclid",
+      "kind": "curriculum-node",
+      "title": "Divisibility & the Euclidean Algorithm",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory"
+      ],
+      "curriculum_node": "divisibility-and-euclid",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "NumberTheory",
+      "resource_status": "seeded",
+      "summary": "Divisibility, gcd, B\u00e9zout's identity, unique factorization; gcd/B\u00e9zout are compute-and-check.",
+      "prerequisites": [
+        "curriculum_integers"
+      ],
+      "unlocks": [
+        "curriculum_modular_arithmetic",
+        "curriculum_number_theory"
+      ],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "BV / LIA + GCD test"
+      ],
+      "example_packs": [
+        {
+          "id": "gcd-bezout-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/gcd-bezout-v0",
+          "notes": "GCD, Bezout witness replay, and divisibility checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Compute-and-check replay of gcd and Bezout witnesses.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "GCD, Bezout witness replay, and divisibility checks."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/divisibility-and-euclid.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family NumberTheory still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/gcd-bezout-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_modular_arithmetic",
+      "kind": "curriculum-node",
+      "title": "Modular Arithmetic & Congruences",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory",
+        "abstract_algebra"
+      ],
+      "curriculum_node": "modular-arithmetic",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "NumberTheory",
+      "resource_status": "seeded",
+      "summary": "Congruences mod n, inverses, CRT; modular identities exhaustively checkable over fixed moduli.",
+      "prerequisites": [
+        "curriculum_divisibility_and_euclid"
+      ],
+      "unlocks": [
+        "curriculum_number_theory",
+        "curriculum_fields"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "BV / LIA"
+      ],
+      "example_packs": [
+        {
+          "id": "modular-arithmetic-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/modular-arithmetic-v0",
+          "notes": "Congruences, inverses, CRT, and fixed-modulus enumeration."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "BV/LIA replay and finite exhaustive checks.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Congruences, inverses, CRT, and fixed-modulus enumeration."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/modular-arithmetic.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family NumberTheory still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/modular-arithmetic-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_groups",
+      "kind": "curriculum-node",
+      "title": "Groups",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra"
+      ],
+      "curriculum_node": "groups",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "Algebra",
+      "resource_status": "seeded",
+      "summary": "Closure/associativity/identity/inverse; finite-group axiom checks via Cayley tables.",
+      "prerequisites": [
+        "curriculum_relations_and_functions"
+      ],
+      "unlocks": [
+        "curriculum_rings"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "BV / enumeration (finite groups)"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-groups-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-groups-v0",
+          "notes": "Cayley-table closure, identity, inverse, and associativity checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite table replay; general group theory is Lean-horizon.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Cayley-table closure, identity, inverse, and associativity checks."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/groups.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Algebra still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-groups-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_rings",
+      "kind": "curriculum-node",
+      "title": "Rings",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra"
+      ],
+      "curriculum_node": "rings",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "Algebra",
+      "resource_status": "seeded",
+      "summary": "Two operations with distributivity; finite-ring identities checkable; \u2124 as the motivating ring.",
+      "prerequisites": [
+        "curriculum_groups",
+        "curriculum_integers"
+      ],
+      "unlocks": [
+        "curriculum_fields",
+        "curriculum_polynomials"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "BV / enumeration"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-rings-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-rings-v0",
+          "notes": "Two-operation table checks and distributivity."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite table replay; structure theory is Lean-horizon.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Two-operation table checks and distributivity."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/rings.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Algebra still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-rings-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_fields",
+      "kind": "curriculum-node",
+      "title": "Fields",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "number_theory"
+      ],
+      "curriculum_node": "fields",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "Algebra",
+      "resource_status": "seeded",
+      "summary": "Rings with multiplicative inverses; \u211a and \ud835\udd3d\u209a give concrete, checkable arithmetic.",
+      "prerequisites": [
+        "curriculum_rings",
+        "curriculum_rationals",
+        "curriculum_modular_arithmetic"
+      ],
+      "unlocks": [
+        "curriculum_linear_algebra",
+        "curriculum_polynomials"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "LRA (\u211a) / BV (\ud835\udd3d\u209a)"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-fields-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-fields-v0",
+          "notes": "Field axioms over small prime fields and composite-modulus counterexamples."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite table replay and BV enumeration.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field axioms over small prime fields and composite-modulus counterexamples."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/fields.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Algebra still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-fields-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_polynomials",
+      "kind": "curriculum-node",
+      "title": "Polynomials",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "real_analysis",
+        "complex_analysis"
+      ],
+      "curriculum_node": "polynomials",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "Polynomial",
+      "resource_status": "seeded",
+      "summary": "Polynomial arithmetic, identities, roots, factoring; fixed-degree identities are decidable.",
+      "prerequisites": [
+        "curriculum_rings",
+        "curriculum_fields"
+      ],
+      "unlocks": [
+        "curriculum_calculus",
+        "curriculum_linear_algebra"
+      ],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "BV (fixed-degree) / NRA"
+      ],
+      "example_packs": [
+        {
+          "id": "polynomial-identities-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/polynomial-identities-v0",
+          "notes": "Fixed-degree identities, factor theorem, and root witness replay."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Fixed-degree algebra replay; broad polynomial theory remains partial.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Fixed-degree identities, factor theorem, and root witness replay."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/polynomials.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Polynomial still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/polynomial-identities-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_sequences_and_limits",
+      "kind": "curriculum-node",
+      "title": "Sequences & Limits",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "topology"
+      ],
+      "curriculum_node": "sequences-and-limits",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "lean-horizon",
+      "curriculum_family": "",
+      "resource_status": "proof-horizon",
+      "summary": "Convergence and limits; specific algebraic limit values are checkable, the \u03b5\u2013N definition is Lean-horizon.",
+      "prerequisites": [
+        "curriculum_reals"
+      ],
+      "unlocks": [
+        "curriculum_calculus"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "LRA / NRA"
+      ],
+      "example_packs": [
+        {
+          "id": "sequence-limit-shadow-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/sequence-limit-shadow-v0",
+          "notes": "Bounded epsilon/N templates and algebraic sequence checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Bounded arithmetic replay; general limits require Lean.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Bounded epsilon/N templates and algebraic sequence checks."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/sequences-and-limits.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "General theorem content requires Lean reconstruction or another proof-assistant route."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/sequence-limit-shadow-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_counting",
+      "kind": "curriculum-node",
+      "title": "Counting & Combinatorics",
+      "domain": "mathematics",
+      "field_ids": [
+        "discrete_math",
+        "probability_theory"
+      ],
+      "curriculum_node": "counting",
+      "curriculum_layer": 2,
+      "curriculum_area": "structures",
+      "curriculum_status": "covered",
+      "curriculum_family": "Counting",
+      "resource_status": "seeded",
+      "summary": "Permutations, combinations, the pigeonhole principle; finite counting identities are checkable.",
+      "prerequisites": [
+        "curriculum_sets",
+        "curriculum_naturals"
+      ],
+      "unlocks": [
+        "curriculum_number_theory"
+      ],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "LIA / enumeration"
+      ],
+      "example_packs": [
+        {
+          "id": "counting-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/counting-v0",
+          "notes": "Permutations, combinations, and pigeonhole finite instances."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Finite enumeration, SAT refutation, and LRAT gap tracking.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Permutations, combinations, and pigeonhole finite instances."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/02-structures/counting.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family Counting still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/counting-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_number_theory",
+      "kind": "curriculum-node",
+      "title": "Number Theory",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory"
+      ],
+      "curriculum_node": "number-theory",
+      "curriculum_layer": 3,
+      "curriculum_area": "destinations",
+      "curriculum_status": "covered",
+      "curriculum_family": "NumberTheory",
+      "resource_status": "seeded",
+      "summary": "Primes, factorization, congruences, Diophantine equations; bounded instances are self-checkable.",
+      "prerequisites": [
+        "curriculum_divisibility_and_euclid",
+        "curriculum_modular_arithmetic",
+        "curriculum_induction",
+        "curriculum_counting"
+      ],
+      "unlocks": [],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "BV / LIA"
+      ],
+      "example_packs": [
+        {
+          "id": "number-theory-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/number-theory-v0",
+          "notes": "CRT, quadratic residues, sum of squares, and bounded Diophantine checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "BV/LIA replay plus future bounded arithmetic proof recipes.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "CRT, quadratic residues, sum of squares, and bounded Diophantine checks."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/03-destinations/number-theory.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family NumberTheory still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/number-theory-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_linear_algebra",
+      "kind": "curriculum-node",
+      "title": "Linear Algebra",
+      "domain": "mathematics",
+      "field_ids": [
+        "linear_algebra",
+        "numerical_analysis",
+        "optimization_and_convexity"
+      ],
+      "curriculum_node": "linear-algebra",
+      "curriculum_layer": 3,
+      "curriculum_area": "destinations",
+      "curriculum_status": "covered",
+      "curriculum_family": "LinearAlgebra",
+      "resource_status": "seeded",
+      "summary": "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over \u211a are decidable.",
+      "prerequisites": [
+        "curriculum_fields",
+        "curriculum_relations_and_functions",
+        "curriculum_polynomials"
+      ],
+      "unlocks": [],
+      "decidability": "computable",
+      "axeyum_fragments": [
+        "BV (fixed-size) / LRA / NRA"
+      ],
+      "example_packs": [
+        {
+          "id": "linear-algebra-rational-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/linear-algebra-rational-v0",
+          "notes": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Exact replay plus Farkas certificates for infeasible LRA systems.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/03-destinations/linear-algebra.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "Existing curriculum family LinearAlgebra still needs migration into example-pack metadata."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/linear-algebra-rational-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "curriculum_calculus",
+      "kind": "curriculum-node",
+      "title": "Calculus",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "differential_equations_and_dynamical_systems",
+        "numerical_analysis"
+      ],
+      "curriculum_node": "calculus",
+      "curriculum_layer": 3,
+      "curriculum_area": "destinations",
+      "curriculum_status": "lean-horizon",
+      "curriculum_family": "",
+      "resource_status": "proof-horizon",
+      "summary": "Limits, derivatives, integrals, series; derivative-rule and polynomial-identity checks are decidable, \u03b5\u2013\u03b4 is Lean-horizon.",
+      "prerequisites": [
+        "curriculum_reals",
+        "curriculum_sequences_and_limits",
+        "curriculum_polynomials"
+      ],
+      "unlocks": [],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "NRA"
+      ],
+      "example_packs": [
+        {
+          "id": "calculus-algebraic-shadow-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
+          "notes": "Polynomial derivative identities and algebraic inequalities."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Algebraic LRA/NRA replay; epsilon-delta and integration require Lean.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Polynomial derivative identities and algebraic inequalities."
+        }
+      ],
+      "source_refs": [
+        "docs/curriculum/curriculum.toml",
+        "docs/curriculum/03-destinations/calculus.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Dedicated foundational example pack is not yet validated.",
+        "Generated dashboards currently track planned packs, not replayed pack results.",
+        "General theorem content requires Lean reconstruction or another proof-assistant route."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/calculus-algebraic-shadow-v0.",
+          "Replay SAT witnesses against the original mathematical claim.",
+          "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
+        ]
+      }
+    },
+    {
+      "id": "field_abstract_algebra",
+      "kind": "field",
+      "title": "Abstract algebra",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, homomorphism tables, Cayley-table validators",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_fields",
+        "curriculum_groups",
+        "curriculum_modular_arithmetic",
+        "curriculum_polynomials",
+        "curriculum_rings"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Finite groups, rings, fields, homomorphism tables, Cayley-table validators"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-fields-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-fields-v0",
+          "notes": "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "General group/ring/module/category theory belongs in Lean-backed concept rows.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-fields-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_complex_analysis",
+      "kind": "field",
+      "title": "Complex analysis",
+      "domain": "mathematics",
+      "field_ids": [
+        "complex_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Graduate bridge from real analysis and algebra. First Axeyum slice: Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_complex",
+        "curriculum_polynomials"
+      ],
+      "decidability": "proof-horizon",
+      "axeyum_fragments": [
+        "Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts"
+      ],
+      "example_packs": [
+        {
+          "id": "complex-algebraic-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/complex-algebraic-v0",
+          "notes": "Complex arithmetic as real-pair algebra before analytic proof horizons."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate.",
+        "Most general field theorems require Lean/mathlib-scale proof reconstruction."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/complex-algebraic-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_differential_equations_and_dynamical_systems",
+      "kind": "field",
+      "title": "Differential equations and dynamical systems",
+      "domain": "mathematics",
+      "field_ids": [
+        "differential_equations_and_dynamical_systems"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Undergraduate / graduate applied math. First Axeyum slice: Bounded transition systems, linear recurrences, invariant checks, discretized systems",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_calculus"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Bounded transition systems, linear recurrences, invariant checks, discretized systems"
+      ],
+      "example_packs": [
+        {
+          "id": "bounded-dynamics-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/bounded-dynamics-v0",
+          "notes": "Recurrence systems, discretized dynamics, and invariant checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Existence/uniqueness, continuous dynamics, chaos, and PDE theory are proof-horizon.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/bounded-dynamics-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_discrete_math",
+      "kind": "field",
+      "title": "Discrete mathematics and combinatorics",
+      "domain": "mathematics",
+      "field_ids": [
+        "discrete_math"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Core undergraduate bridge into CS and proof. First Axeyum slice: Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_cardinality",
+        "curriculum_counting",
+        "curriculum_naturals",
+        "curriculum_relations_and_functions"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search"
+      ],
+      "example_packs": [
+        {
+          "id": "counting-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/counting-v0",
+          "notes": "Finite counting and combinatorial witness checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "General asymptotic enumeration and deep extremal combinatorics usually require theorem proving.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/counting-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_functional_analysis_and_operator_theory",
+      "kind": "field",
+      "title": "Functional analysis and operator theory",
+      "domain": "mathematics",
+      "field_ids": [
+        "functional_analysis_and_operator_theory"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices",
+      "prerequisites": [],
+      "unlocks": [],
+      "decidability": "proof-horizon",
+      "axeyum_fragments": [
+        "Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-operator-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-operator-v0",
+          "notes": "Finite-dimensional norms, operator matrices, and Chebyshev polynomial slices."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Banach/Hilbert-space theorems, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate.",
+        "Most general field theorems require Lean/mathlib-scale proof reconstruction."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-operator-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_geometry",
+      "kind": "field",
+      "title": "Geometry",
+      "domain": "mathematics",
+      "field_ids": [
+        "geometry"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Undergraduate / graduate pure and applied math. First Axeyum slice: Coordinate geometry, incidence constraints, distances, rigid small configurations",
+      "prerequisites": [],
+      "unlocks": [],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Coordinate geometry, incidence constraints, distances, rigid small configurations"
+      ],
+      "example_packs": [
+        {
+          "id": "coordinate-geometry-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/coordinate-geometry-v0",
+          "notes": "Incidence, distance, midpoint, collinearity, and rigid finite configurations."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Differential, algebraic, and global geometry are mostly proof-assistant material.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/coordinate-geometry-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_graph_theory",
+      "kind": "field",
+      "title": "Graph theory",
+      "domain": "mathematics",
+      "field_ids": [
+        "graph_theory"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Core undergraduate / graduate combinatorics. First Axeyum slice: Coloring, reachability, matching, cuts, small counterexample graphs, causal d-separation",
+      "prerequisites": [],
+      "unlocks": [],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Coloring, reachability, matching, cuts, small counterexample graphs, causal d-separation"
+      ],
+      "example_packs": [
+        {
+          "id": "graph-coloring-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/graph-coloring-v0",
+          "notes": "SAT colorings, non-colorability, reachability, matching, cuts, and d-separation."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/graph-coloring-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_linear_algebra",
+      "kind": "field",
+      "title": "Linear algebra",
+      "domain": "mathematics",
+      "field_ids": [
+        "linear_algebra"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite-field linear algebra",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_complex",
+        "curriculum_linear_algebra",
+        "curriculum_rationals"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite-field linear algebra"
+      ],
+      "example_packs": [
+        {
+          "id": "linear-algebra-rational-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/linear-algebra-rational-v0",
+          "notes": "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Spectral theorems, general vector-space theorems, and conditioning/stability need proof or numerical tracks.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/linear-algebra-rational-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_logic_and_proof",
+      "kind": "field",
+      "title": "Logic and proof",
+      "domain": "mathematics",
+      "field_ids": [
+        "logic_and_proof"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Foundation for every other field. First Axeyum slice: Propositional logic, SAT, tiny SMT examples, proof object anatomy",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_induction",
+        "curriculum_predicate_logic",
+        "curriculum_proof_methods",
+        "curriculum_propositional_logic"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Propositional logic, SAT, tiny SMT examples, proof object anatomy"
+      ],
+      "example_packs": [
+        {
+          "id": "proof-methods-refutation-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/proof-methods-refutation-v0",
+          "notes": "Negation-as-query, CNF/LRAT, and proof-object lessons."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/proof-methods-refutation-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_measure_theory",
+      "kind": "field",
+      "title": "Measure theory",
+      "domain": "mathematics",
+      "field_ids": [
+        "measure_theory"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks over finite universes, exact finite probability",
+      "prerequisites": [],
+      "unlocks": [],
+      "decidability": "proof-horizon",
+      "axeyum_fragments": [
+        "Finite measures, sigma-algebra sanity checks over finite universes, exact finite probability"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-measure-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-measure-v0",
+          "notes": "Finite sigma-algebras, finite measures, and exact probability foundations."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Lebesgue measure, integration, convergence theorems, and almost-everywhere reasoning need Lean.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate.",
+        "Most general field theorems require Lean/mathlib-scale proof reconstruction."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-measure-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_number_theory",
+      "kind": "field",
+      "title": "Number theory",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Core undergraduate / graduate algebra and arithmetic. First Axeyum slice: Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_divisibility_and_euclid",
+        "curriculum_fields",
+        "curriculum_induction",
+        "curriculum_integers",
+        "curriculum_modular_arithmetic",
+        "curriculum_naturals",
+        "curriculum_number_theory"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks"
+      ],
+      "example_packs": [
+        {
+          "id": "modular-arithmetic-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/modular-arithmetic-v0",
+          "notes": "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Analytic and algebraic number theory are not near-term SMT targets.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/modular-arithmetic-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_numerical_analysis",
+      "kind": "field",
+      "title": "Numerical analysis",
+      "domain": "mathematics",
+      "field_ids": [
+        "numerical_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Undergraduate / graduate applied math. First Axeyum slice: Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_calculus",
+        "curriculum_linear_algebra"
+      ],
+      "decidability": "numerical",
+      "axeyum_fragments": [
+        "Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows"
+      ],
+      "example_packs": [
+        {
+          "id": "numerical-linear-algebra-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/numerical-linear-algebra-v0",
+          "notes": "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Stability and convergence theorems need proof support; floating-point experiments need tolerances and seeds.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/numerical-linear-algebra-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_optimization_and_convexity",
+      "kind": "field",
+      "title": "Optimization and convexity",
+      "domain": "mathematics",
+      "field_ids": [
+        "optimization_and_convexity"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Undergraduate / graduate applied math. First Axeyum slice: LP feasibility, linear certificates, small quadratic/convexity checks, monotonicity/threshold examples",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_linear_algebra",
+        "curriculum_reals"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "LP feasibility, linear certificates, small quadratic/convexity checks, monotonicity/threshold examples"
+      ],
+      "example_packs": [
+        {
+          "id": "linear-optimization-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/linear-optimization-v0",
+          "notes": "LP feasibility, threshold cliffs, and Farkas-style certificates."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "General convex analysis, SDP, duality theorems, and algorithm convergence need broader proof support.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/linear-optimization-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_probability_theory",
+      "kind": "field",
+      "title": "Probability theory",
+      "domain": "mathematics",
+      "field_ids": [
+        "probability_theory"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, conditional probability, Bayes rule, exact discrete distributions",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_counting"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Finite probability tables, conditional probability, Bayes rule, exact discrete distributions"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-probability-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-probability-v0",
+          "notes": "Finite mass tables, conditioning, Bayes rule, and exact discrete distributions."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Continuous distributions, stochastic processes, and limit theorems are mostly proof or numerical-honesty tracks.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-probability-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_real_analysis",
+      "kind": "field",
+      "title": "Real analysis",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Core proof-based undergraduate / graduate analysis. First Axeyum slice: Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_calculus",
+        "curriculum_polynomials",
+        "curriculum_rationals",
+        "curriculum_reals",
+        "curriculum_sequences_and_limits"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates"
+      ],
+      "example_packs": [
+        {
+          "id": "reals-rcf-shadow-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/reals-rcf-shadow-v0",
+          "notes": "Rational/real algebraic shadows of order, limits, and inequalities."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/reals-rcf-shadow-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_set_theory_and_foundations",
+      "kind": "field",
+      "title": "Set theory and foundations",
+      "domain": "mathematics",
+      "field_ids": [
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, partitions, small cardinality constraints",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_cardinality",
+        "curriculum_predicate_logic",
+        "curriculum_relations_and_functions",
+        "curriculum_sets"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "Finite sets, relations, functions, partitions, small cardinality constraints"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-sets-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-sets-v0",
+          "notes": "Finite set, relation, function, and cardinality checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "ZFC, ordinals, cardinals, choice, and infinite set facts are proof-horizon material.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-sets-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_statistics",
+      "kind": "field",
+      "title": "Statistics",
+      "domain": "mathematics",
+      "field_ids": [
+        "statistics"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Undergraduate / graduate applied math and data science. First Axeyum slice: Descriptive statistics, contingency tables, exact finite tests, small Bayesian tables",
+      "prerequisites": [],
+      "unlocks": [],
+      "decidability": "numerical",
+      "axeyum_fragments": [
+        "Descriptive statistics, contingency tables, exact finite tests, small Bayesian tables"
+      ],
+      "example_packs": [
+        {
+          "id": "descriptive-statistics-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/descriptive-statistics-v0",
+          "notes": "Mean/variance identities, contingency tables, exact tests, and Simpson witnesses."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "Floating-point inference, MCMC, VI, and model calibration are reproducibility claims, not proof claims.",
+          "status": "planned",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "planned",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/descriptive-statistics-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    },
+    {
+      "id": "field_topology",
+      "kind": "field",
+      "title": "Topology",
+      "domain": "mathematics",
+      "field_ids": [
+        "topology"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "seeded",
+      "summary": "Graduate bridge for analysis and geometry. First Axeyum slice: Finite topologies, metric-ball examples, closure/interior checks in finite spaces",
+      "prerequisites": [],
+      "unlocks": [
+        "curriculum_sequences_and_limits"
+      ],
+      "decidability": "proof-horizon",
+      "axeyum_fragments": [
+        "Finite topologies, metric-ball examples, closure/interior checks in finite spaces"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-topology-v0",
+          "status": "planned",
+          "path": "artifacts/examples/math/finite-topology-v0",
+          "notes": "Finite topologies, metric balls, closure, and interior checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "General topological spaces, compactness, connectedness, and homotopy are proof-horizon.",
+          "status": "lean-horizon",
+          "checker": "planned foundational example-pack validator",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/README.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+          ],
+          "notes": "Field-level proof route is a planning row until a concrete example pack validates."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+      ],
+      "open_gaps": [
+        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Concept rows still need generated dashboard coverage before field status can graduate.",
+        "Most general field theorems require Lean/mathlib-scale proof reconstruction."
+      ],
+      "graduation": {
+        "status": "planned",
+        "criteria": [
+          "Create and validate artifacts/examples/math/finite-topology-v0.",
+          "Add at least one concept row or curriculum row that exercises the field.",
+          "Generate field-dashboard coverage from committed metadata."
+        ]
+      }
+    }
+  ]
+}

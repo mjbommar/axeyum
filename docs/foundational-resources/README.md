@@ -18,6 +18,34 @@ schemas, examples, and validation workflows.
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
+- [generated/math-coverage.md](generated/math-coverage.md) is generated
+  curriculum-node coverage from the current concept atlas.
+- [generated/math-field-dashboard.md](generated/math-field-dashboard.md) is
+  generated field coverage from the current concept atlas.
+- [generated/proof-gap-dashboard.md](generated/proof-gap-dashboard.md) is the
+  generated proof/evidence gap view.
+
+## Current Machine-Readable Artifacts
+
+- [`artifacts/ontology/foundational-concepts.schema.json`](../../artifacts/ontology/foundational-concepts.schema.json)
+  defines the seed concept-atlas row shape.
+- [`artifacts/ontology/foundational-concepts.json`](../../artifacts/ontology/foundational-concepts.json)
+  currently contains 23 curriculum rows and 18 math-field rows.
+- [`scripts/gen-foundational-concepts.py`](../../scripts/gen-foundational-concepts.py)
+  regenerates the seed atlas from the curriculum DAG and field/buildout maps.
+- [`scripts/validate-foundational-concepts.py`](../../scripts/validate-foundational-concepts.py)
+  validates row shape, curriculum alignment, field IDs, links, and proof/pack
+  metadata.
+- [`scripts/gen-foundational-dashboards.py`](../../scripts/gen-foundational-dashboards.py)
+  regenerates the Markdown dashboards under `generated/`.
+
+Validation commands:
+
+```sh
+python3 scripts/gen-foundational-concepts.py
+python3 scripts/validate-foundational-concepts.py
+python3 scripts/gen-foundational-dashboards.py
+```
 
 ## Principle
 

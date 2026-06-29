@@ -48,12 +48,17 @@ Near-term files:
 docs/foundational-resources/
   README.md
   SOURCES.md
+  MATH-FIELDS.md
+  MATH-CURRICULUM-BUILDOUT.md
   ROADMAP.md
+  generated/
 artifacts/ontology/
-  foundational-concepts.schema.json    # planned
-  foundational-concepts.json           # planned
+  foundational-concepts.schema.json
+  foundational-concepts.json
 scripts/
-  validate-foundational-concepts.py    # planned
+  gen-foundational-concepts.py
+  validate-foundational-concepts.py
+  gen-foundational-dashboards.py
 ```
 
 Seed from:
@@ -258,15 +263,23 @@ Exit criteria:
 
 ### Phase F1: Foundational Concept Atlas MVP
 
+Status: first math seed landed. The atlas currently validates 23 curriculum
+rows and 18 math-field rows; example-pack schemas and validated packs are still
+Phase F2 work.
+
 Exit criteria:
 
-- Add `foundational-concepts.schema.json`.
+- Add `foundational-concepts.schema.json`. **Done for the math seed.**
 - Generate `foundational-concepts.json` from existing curriculum nodes plus the
   first math-field rows from [MATH-FIELDS.md](MATH-FIELDS.md) and first
-  CS/statistics/logic rows.
+  CS/statistics/logic rows. **Done for the 23 curriculum rows and 18 math-field
+  rows; CS/statistics-specific non-math rows remain future work.**
 - Validate math `field_id` values against the university field taxonomy.
-- Add dependency/acyclicity/link validator.
+  **Done.**
+- Add dependency/acyclicity/link validator. **Done for atlas row links and
+  curriculum prerequisites/unlocks.**
 - Document which rows are decidable, bounded, numerical, or proof-horizon.
+  **Done in the JSON and generated dashboards.**
 
 ### Phase F2: Mathematics Deepening
 

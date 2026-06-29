@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.local/schemas/foundational-concepts.schema.json",
+  "title": "Axeyum Foundational Concept Atlas",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_from", "rows"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_from": {
+      "$ref": "#/$defs/sourceList"
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/conceptRow"
+      }
+    }
+  },
+  "$defs": {
+    "sourceList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "conceptRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "domain",
+        "field_ids",
+        "curriculum_node",
+        "curriculum_layer",
+        "curriculum_area",
+        "curriculum_status",
+        "curriculum_family",
+        "resource_status",
+        "summary",
+        "prerequisites",
+        "unlocks",
+        "decidability",
+        "axeyum_fragments",
+        "example_packs",
+        "proof_routes",
+        "source_refs",
+        "open_gaps",
+        "graduation"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["curriculum-node", "field", "bridge-concept", "example-family"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "type": "string",
+          "enum": ["mathematics", "computer-science", "logic", "statistics"]
+        },
+        "field_ids": {
+          "$ref": "#/$defs/sourceList"
+        },
+        "curriculum_node": {
+          "type": ["string", "null"]
+        },
+        "curriculum_layer": {
+          "type": ["integer", "null"]
+        },
+        "curriculum_area": {
+          "type": ["string", "null"]
+        },
+        "curriculum_status": {
+          "type": "string",
+          "enum": ["covered", "planned", "lean-horizon", "extension"]
+        },
+        "curriculum_family": {
+          "type": "string"
+        },
+        "resource_status": {
+          "type": "string",
+          "enum": ["seeded", "planned", "validated", "proof-horizon"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "uniqueItems": true
+        },
+        "unlocks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "uniqueItems": true
+        },
+        "decidability": {
+          "type": "string",
+          "enum": ["decidable", "computable", "bounded", "numerical", "proof-horizon"]
+        },
+        "axeyum_fragments": {
+          "$ref": "#/$defs/sourceList"
+        },
+        "example_packs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/examplePack"
+          }
+        },
+        "proof_routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/proofRoute"
+          }
+        },
+        "source_refs": {
+          "$ref": "#/$defs/sourceList"
+        },
+        "open_gaps": {
+          "$ref": "#/$defs/sourceList"
+        },
+        "graduation": {
+          "$ref": "#/$defs/graduation"
+        }
+      }
+    },
+    "examplePack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "path", "notes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["planned", "validated", "deprecated"]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "proofRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "checker", "lean_status", "sources", "notes"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["planned", "checked", "replay-only", "proof-gap", "lean-horizon"]
+        },
+        "checker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lean_status": {
+          "type": "string",
+          "enum": ["not-required", "planned", "partial", "required", "checked"]
+        },
+        "sources": {
+          "$ref": "#/$defs/sourceList"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "graduation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "criteria"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["seeded", "planned", "validated", "proof-horizon"]
+        },
+        "criteria": {
+          "$ref": "#/$defs/sourceList"
+        }
+      }
+    }
+  }
+}
