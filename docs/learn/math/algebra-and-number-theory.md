@@ -14,6 +14,7 @@ Example packs:
 - [finite-rings-v0](../../../artifacts/examples/math/finite-rings-v0/)
 - [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
+- [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
 - [finite-fields-v0](../../../artifacts/examples/math/finite-fields-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
@@ -25,9 +26,10 @@ tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
 modular inverses, composite non-units with no inverse, and a Fermat-style finite
 unit enumeration. The finite-rings pack adds distributivity checks and a `Z/4Z`
 zero-divisor witness. The gcd/Bezout pack adds exact divisibility and fixed
-linear Diophantine checks. The finite-fields pack adds a complete inverse table
-for `F_7`, exhaustive distributivity checking in `F_5`, and a `Z/6Z` non-field
-contrast.
+linear Diophantine checks. The number-theory pack adds bounded CRT
+compatibility, quadratic residues, sum-of-two-squares, and Diophantine replay.
+The finite-fields pack adds a complete inverse table for `F_7`, exhaustive
+distributivity checking in `F_5`, and a `Z/6Z` non-field contrast.
 The polynomial pack adds exact coefficient replay, factor-theorem witnesses, and
 fixed false-root rejection. The complex pack adds algebraic real-pair arithmetic
 and a fixed polynomial-root witness.
@@ -73,6 +75,17 @@ The `modular-arithmetic-v0` pack encodes that as `a = 3`, `modulus = 7`, and
 `inverse = 5`. The validator recomputes the product modulo `7`; no theorem
 about all moduli is needed to trust this witness.
 
+The bounded destination pack adds fixed number-theory shapes:
+
+```text
+4^2 == 5 mod 11
+65 = 1^2 + 8^2
+14*(-1) + 21*1 = 7
+```
+
+The `number-theory-v0` pack also checks that no residue squares to `3 mod 7`
+and that no sum of two integer squares equals `7`.
+
 For a field-flavored example, the `finite-fields-v0` pack lists every nonzero
 inverse in `F_7`:
 
@@ -106,6 +119,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
@@ -115,6 +129,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 
 General group, ring, field, module, and algebraic-number-theory theorems need
 Lean-backed concept rows. Near-term resource gaps are richer polynomial
-factorization packs, `number-theory-v0`, and stronger BV/CNF evidence for finite
-group, finite ring, finite-field, gcd/Diophantine, and fixed-degree polynomial
-universal rows.
+factorization packs and stronger BV/CNF evidence for finite group, finite ring,
+finite-field, gcd/Diophantine, bounded number-theory, and fixed-degree
+polynomial universal rows.

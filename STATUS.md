@@ -159,6 +159,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded number-theory destination pack landed.** Added
+  [`number-theory-v0`](artifacts/examples/math/number-theory-v0/README.md)
+  with a compatible non-coprime CRT witness, quadratic-residue witness,
+  checked quadratic nonresidue, sum-of-two-squares witness, checked mod-4
+  two-squares obstruction, and bounded linear Diophantine witness. The
+  foundational example-pack validator now checks CRT compatibility, finite
+  residue-square enumeration, square-sum replay, the mod-4 obstruction, and
+  exact Diophantine replay; generated dashboards mark the number-theory
+  curriculum row's first pack as validated. Continue by closing the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding another
+  remaining core arithmetic/foundation pack such as `natural-arithmetic-v0` or
+  `integer-lia-v0`.
+
 - **GCD/Bezout core arithmetic pack landed.** Added
   [`gcd-bezout-v0`](artifacts/examples/math/gcd-bezout-v0/README.md) with exact
   `gcd(252,198)` common-divisor replay, Bezout coefficient replay, a direct
@@ -167,8 +180,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   gcd/common-divisor lists, Bezout equations, quotient divisibility, and the
   fixed gcd non-divisibility criterion; generated dashboards mark the
   divisibility-and-Euclid curriculum row's first pack as validated. Continue
-  with `number-theory-v0` or close the remaining
-  `proof-methods-refutation-v0` CNF/LRAT proof gap.
+  with `number-theory-v0` as the bounded destination pack.
 
 - **Finite rings core-structure pack landed.** Added
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/README.md) with

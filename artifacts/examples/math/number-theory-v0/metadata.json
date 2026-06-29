@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "number-theory-v0",
+  "title": "Bounded Number Theory Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_number_theory",
+    "curriculum_divisibility_and_euclid",
+    "curriculum_modular_arithmetic",
+    "field_number_theory"
+  ],
+  "field_ids": [
+    "number_theory"
+  ],
+  "curriculum_nodes": [
+    "number-theory",
+    "divisibility-and-euclid",
+    "modular-arithmetic"
+  ],
+  "axeyum_fragments": [
+    "BV / LIA",
+    "finite-domain enumeration",
+    "LIA / divisibility",
+    "QF_BV",
+    "QF_LIA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/number-theory.md",
+    "docs/curriculum/02-structures/divisibility-and-euclid.md",
+    "docs/curriculum/02-structures/modular-arithmetic.md",
+    "docs/curriculum/BACKLOG.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+  ],
+  "expected_results": [
+    "crt-compatible-noncoprime-witness",
+    "quadratic-residue-witness",
+    "quadratic-nonresidue-rejected",
+    "sum-two-squares-witness",
+    "sum-two-squares-mod4-rejected",
+    "bounded-diophantine-witness"
+  ],
+  "graduation_criteria": [
+    "Encode fixed residue searches as deterministic BV/enumeration obligations.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Emit checked BV/CNF or LIA evidence for bounded UNSAT rows.",
+    "Keep quadratic reciprocity, the full two-squares theorem, unique factorization, and infinitude of primes marked Lean-horizon."
+  ]
+}

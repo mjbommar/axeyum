@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "pack_id": "number-theory-v0",
+  "witnesses": [
+    {
+      "id": "crt-x-8-noncoprime",
+      "description": "A compatible CRT witness for non-coprime moduli 6 and 10.",
+      "values": {
+        "x": 8,
+        "congruences": [
+          {"remainder": 2, "modulus": 6},
+          {"remainder": 8, "modulus": 10}
+        ]
+      }
+    },
+    {
+      "id": "qr-5-mod-11",
+      "description": "A square root witnessing that 5 is a quadratic residue modulo 11.",
+      "values": {
+        "modulus": 11,
+        "residue": 5,
+        "root": 4
+      }
+    },
+    {
+      "id": "two-squares-65",
+      "description": "A representation of 65 as a sum of two squares.",
+      "values": {
+        "n": 65,
+        "a": 1,
+        "b": 8
+      }
+    },
+    {
+      "id": "diophantine-14-21-7",
+      "description": "An integer solution for 14*x + 21*y = 7.",
+      "values": {
+        "coefficients": [14, 21],
+        "solution": [-1, 1],
+        "target": 7
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "crt-compatible-noncoprime-witness",
+      "claim": "There exists x satisfying x == 2 mod 6 and x == 8 mod 10.",
+      "expected_result": "sat",
+      "validation": "crt_compatibility_replay",
+      "proof_status": "checked",
+      "witnesses": ["crt-x-8-noncoprime"],
+      "notes": "The validator checks both congruences and verifies pairwise compatibility modulo gcd(6,10)."
+    },
+    {
+      "id": "quadratic-residue-witness",
+      "claim": "The residue 5 is a quadratic residue modulo 11.",
+      "expected_result": "sat",
+      "validation": "quadratic_residue_replay",
+      "proof_status": "checked",
+      "witnesses": ["qr-5-mod-11"],
+      "notes": "The validator checks 4^2 == 5 modulo 11."
+    },
+    {
+      "id": "quadratic-nonresidue-rejected",
+      "claim": "There exists x such that x^2 == 3 mod 7.",
+      "expected_result": "unsat",
+      "validation": "quadratic_nonresidue_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 7,
+        "residue": 3
+      },
+      "notes": "The validator enumerates all residues modulo 7 and confirms none square to 3."
+    },
+    {
+      "id": "sum-two-squares-witness",
+      "claim": "The integer 65 is a sum of two squares.",
+      "expected_result": "sat",
+      "validation": "sum_two_squares_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-squares-65"],
+      "notes": "The validator checks 65 = 1^2 + 8^2 exactly."
+    },
+    {
+      "id": "sum-two-squares-mod4-rejected",
+      "claim": "There exist integers a and b such that a^2 + b^2 = 7.",
+      "expected_result": "unsat",
+      "validation": "sum_two_squares_mod4_refutation",
+      "proof_status": "checked",
+      "data": {
+        "n": 7
+      },
+      "notes": "The validator checks n == 3 mod 4 and uses the fixed square-mod-4 obstruction."
+    },
+    {
+      "id": "bounded-diophantine-witness",
+      "claim": "There exist integers x and y such that 14*x + 21*y = 7.",
+      "expected_result": "sat",
+      "validation": "linear_diophantine_replay",
+      "proof_status": "checked",
+      "witnesses": ["diophantine-14-21-7"],
+      "notes": "The validator checks the listed integer solution satisfies the equation exactly."
+    }
+  ]
+}

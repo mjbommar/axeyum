@@ -3,7 +3,7 @@
 Concept rows:
 
 - `curriculum_divisibility_and_euclid`, `curriculum_modular_arithmetic`,
-  `curriculum_rationals`, and `curriculum_complex` in the
+  `curriculum_number_theory`, `curriculum_rationals`, and `curriculum_complex` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_number_theory`, `field_real_analysis`, and `field_complex_analysis`
   in the [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
@@ -12,6 +12,7 @@ Example packs:
 
 - [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
+- [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 
@@ -19,8 +20,9 @@ Example packs:
 
 The arithmetic path starts with exact replay. It checks gcd and Bezout
 witnesses, divisibility quotient witnesses, congruences, CRT witnesses, modular
-inverses, rational density witnesses, trichotomy and order transitivity fixed
-cases, and algebraic complex arithmetic as real-pair data.
+inverses, bounded quadratic-residue and sum-of-two-squares checks, rational
+density witnesses, trichotomy and order transitivity fixed cases, and algebraic
+complex arithmetic as real-pair data.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.
@@ -46,6 +48,17 @@ x == 3 mod 5
 ```
 
 The validator checks both congruences and confirms the moduli are coprime. For
+the destination number-theory slice, encode bounded residue and square-sum
+witnesses:
+
+```text
+4^2 == 5 mod 11
+65 = 1^2 + 8^2
+14*(-1) + 21*1 = 7
+```
+
+The `number-theory-v0` pack also rejects `x^2 == 3 mod 7` by enumeration and
+rejects `7 = a^2 + b^2` by the fixed mod-4 obstruction. For
 rational density, encode `a = 1/3`, `b = 2/3`, and `midpoint = 1/2`; the checker
 verifies `a < midpoint < b` and `midpoint = (a + b) / 2`.
 
@@ -57,6 +70,7 @@ Run the checks from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```

@@ -1070,6 +1070,121 @@ def validate_gcd_bezout(expected: dict[str, Any]) -> None:
         fail("diophantine-gcd-obstruction data is satisfiable by the gcd criterion")
 
 
+def require_residue(context: str, value: Any, modulus: int) -> int:
+    residue = require_int(context, value)
+    if residue < 0 or residue >= modulus:
+        fail(f"{context} must be a residue in [0, {modulus})")
+    return residue
+
+
+def require_congruences(context: str, value: Any) -> list[dict[str, int]]:
+    if not isinstance(value, list) or len(value) < 2:
+        fail(f"{context} must contain at least two congruences")
+    congruences: list[dict[str, int]] = []
+    for index, congruence in enumerate(value):
+        if not isinstance(congruence, dict):
+            fail(f"{context}[{index}] must be an object")
+        modulus = require_modulus(
+            f"{context}[{index}].modulus",
+            congruence.get("modulus"),
+        )
+        remainder = require_int(f"{context}[{index}].remainder", congruence.get("remainder"))
+        congruences.append({"remainder": remainder, "modulus": modulus})
+    return congruences
+
+
+def has_square_root_mod(residue: int, modulus: int) -> bool:
+    return any(
+        (candidate * candidate) % modulus == residue % modulus
+        for candidate in range(modulus)
+    )
+
+
+def validate_number_theory(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    crt = checks["crt-compatible-noncoprime-witness"]
+    if crt["expected_result"] != "sat":
+        fail("crt-compatible-noncoprime-witness must expect sat")
+    values = single_witness_values(crt, witnesses)
+    x = require_int("number theory CRT x", values.get("x"))
+    congruences = require_congruences("number theory CRT congruences", values.get("congruences"))
+    has_noncoprime_pair = False
+    for congruence in congruences:
+        if x % congruence["modulus"] != congruence["remainder"] % congruence["modulus"]:
+            fail("crt-compatible-noncoprime-witness does not satisfy all congruences")
+    for left_index, left in enumerate(congruences):
+        for right in congruences[left_index + 1 :]:
+            divisor = gcd(left["modulus"], right["modulus"])
+            if divisor > 1:
+                has_noncoprime_pair = True
+            if (left["remainder"] - right["remainder"]) % divisor != 0:
+                fail("crt-compatible-noncoprime-witness has incompatible congruences")
+    if not has_noncoprime_pair:
+        fail("crt-compatible-noncoprime-witness must include a non-coprime modulus pair")
+
+    residue = checks["quadratic-residue-witness"]
+    if residue["expected_result"] != "sat":
+        fail("quadratic-residue-witness must expect sat")
+    values = single_witness_values(residue, witnesses)
+    modulus = require_modulus("quadratic residue modulus", values.get("modulus"))
+    if not is_prime(modulus):
+        fail("quadratic residue modulus must be prime")
+    target = require_residue("quadratic residue target", values.get("residue"), modulus)
+    root = require_residue("quadratic residue root", values.get("root"), modulus)
+    if (root * root) % modulus != target:
+        fail("quadratic-residue-witness root does not square to the target")
+
+    nonresidue = checks["quadratic-nonresidue-rejected"]
+    if nonresidue["expected_result"] != "unsat":
+        fail("quadratic-nonresidue-rejected must expect unsat")
+    data = nonresidue.get("data", {})
+    modulus = require_modulus("quadratic nonresidue modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("quadratic nonresidue modulus must be prime")
+    target = require_residue("quadratic nonresidue target", data.get("residue"), modulus)
+    if has_square_root_mod(target, modulus):
+        fail("quadratic-nonresidue-rejected found a square root unexpectedly")
+
+    sum_squares = checks["sum-two-squares-witness"]
+    if sum_squares["expected_result"] != "sat":
+        fail("sum-two-squares-witness must expect sat")
+    values = single_witness_values(sum_squares, witnesses)
+    n_value = require_int("sum two squares n", values.get("n"))
+    left = require_int("sum two squares a", values.get("a"))
+    right = require_int("sum two squares b", values.get("b"))
+    if n_value < 0:
+        fail("sum-two-squares-witness n must be nonnegative")
+    if left * left + right * right != n_value:
+        fail("sum-two-squares-witness does not match a^2 + b^2")
+
+    mod4 = checks["sum-two-squares-mod4-rejected"]
+    if mod4["expected_result"] != "unsat":
+        fail("sum-two-squares-mod4-rejected must expect unsat")
+    data = mod4.get("data", {})
+    n_value = require_int("sum two squares mod4 n", data.get("n"))
+    if n_value < 0:
+        fail("sum-two-squares-mod4-rejected n must be nonnegative")
+    square_residues = {candidate * candidate % 4 for candidate in range(4)}
+    possible_sums = {(left + right) % 4 for left, right in product(square_residues, repeat=2)}
+    if n_value % 4 in possible_sums:
+        fail("sum-two-squares-mod4-rejected data is not ruled out by mod-4 squares")
+
+    diophantine = checks["bounded-diophantine-witness"]
+    if diophantine["expected_result"] != "sat":
+        fail("bounded-diophantine-witness must expect sat")
+    values = single_witness_values(diophantine, witnesses)
+    coefficients = require_int_list("bounded diophantine coefficients", values.get("coefficients"))
+    solution = require_int_list("bounded diophantine solution", values.get("solution"))
+    target = require_int("bounded diophantine target", values.get("target"))
+    if len(coefficients) != len(solution):
+        fail("bounded-diophantine-witness coefficients and solution must have the same length")
+    total = sum(coefficient * value for coefficient, value in zip(coefficients, solution))
+    if total != target:
+        fail("bounded-diophantine-witness solution does not satisfy the equation")
+
+
 def require_fraction(context: str, value: Any) -> Fraction:
     if not isinstance(value, str) or not value:
         fail(f"{context} must be a non-empty fraction string")
@@ -2307,6 +2422,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
+    if metadata["id"] == "number-theory-v0":
+        validate_number_theory(expected)
     if metadata["id"] == "polynomial-identities-v0":
         validate_polynomial_identities(expected)
     if metadata["id"] == "rationals-lra-v0":
