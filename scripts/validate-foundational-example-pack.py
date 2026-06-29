@@ -5546,6 +5546,337 @@ def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
     require_string("general conditional expectation future_checker", data.get("future_checker"))
 
 
+def require_filtration(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[int, list[tuple[str, set[str]]]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty filtration list")
+    filtration: dict[int, list[tuple[str, set[str]]]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        time = require_nonnegative_int(f"{context}[{index}].time", item.get("time"))
+        if time in filtration:
+            fail(f"{context} repeats time {time}")
+        filtration[time] = require_atom_partition(
+            f"{context}[{index}].partition",
+            item.get("partition"),
+            atom_ids,
+        )
+    return filtration
+
+
+def require_full_filtration(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[int, list[tuple[str, set[str]]]]:
+    filtration = require_filtration(context, value, atom_ids)
+    times = sorted(filtration)
+    expected_times = list(range(times[0], times[-1] + 1))
+    if times[0] != 0 or times != expected_times:
+        fail(f"{context} must use consecutive times starting at 0")
+    for current_time, next_time in zip(times, times[1:]):
+        if not partition_refines(filtration[next_time], filtration[current_time]):
+            fail(f"{context} partition at time {next_time} must refine time {current_time}")
+    return filtration
+
+
+def require_timed_atom_value_tables(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[int, dict[str, Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty timed value list")
+    timed_values: dict[int, dict[str, Fraction]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        time = require_nonnegative_int(f"{context}[{index}].time", item.get("time"))
+        if time in timed_values:
+            fail(f"{context} repeats time {time}")
+        timed_values[time] = require_atom_value_table(
+            f"{context}[{index}].values",
+            item.get("values"),
+            atom_ids,
+        )
+    return timed_values
+
+
+def require_conditional_expectation_rows(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[tuple[int, int], dict[str, Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty conditional-expectation row list")
+    rows: dict[tuple[int, int], dict[str, Fraction]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        from_time = require_nonnegative_int(f"{context}[{index}].from_time", item.get("from_time"))
+        to_time = require_nonnegative_int(f"{context}[{index}].to_time", item.get("to_time"))
+        if to_time <= from_time:
+            fail(f"{context}[{index}].to_time must be greater than from_time")
+        key = (from_time, to_time)
+        if key in rows:
+            fail(f"{context} repeats row {key}")
+        rows[key] = require_atom_value_table(
+            f"{context}[{index}].values",
+            item.get("values"),
+            atom_ids,
+        )
+    return rows
+
+
+def require_stopping_time(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+    times: set[int],
+) -> dict[str, int]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    atom_set = set(atom_ids)
+    if set(value) != atom_set:
+        missing = sorted(atom_set - set(value))
+        extra = sorted(set(value) - atom_set)
+        fail(f"{context} must cover exactly atoms; missing={missing} extra={extra}")
+    stopping_time: dict[str, int] = {}
+    for atom_id in atom_ids:
+        time = require_nonnegative_int(f"{context}.{atom_id}", value[atom_id])
+        if time not in times:
+            fail(f"{context}.{atom_id} must be one of the filtration times")
+        stopping_time[atom_id] = time
+    return stopping_time
+
+
+def validate_values_adapted(
+    context: str,
+    values: dict[str, Fraction],
+    partition: list[tuple[str, set[str]]],
+) -> None:
+    for block_id, block_atoms in partition:
+        ordered_atoms = sorted(block_atoms)
+        representative = values[ordered_atoms[0]]
+        for atom_id in ordered_atoms[1:]:
+            if values[atom_id] != representative:
+                fail(f"{context} is not constant on filtration block {block_id!r}")
+
+
+def validate_timed_process_adapted(
+    context: str,
+    timed_values: dict[int, dict[str, Fraction]],
+    filtration: dict[int, list[tuple[str, set[str]]]],
+) -> None:
+    if set(timed_values) != set(filtration):
+        fail(f"{context} timed values must cover exactly the filtration times")
+    for time, values in timed_values.items():
+        validate_values_adapted(f"{context} time {time}", values, filtration[time])
+
+
+def validate_finite_martingale_equalities(
+    context: str,
+    atoms: list[tuple[str, Fraction, set[str]]],
+    filtration: dict[int, list[tuple[str, set[str]]]],
+    process_values: dict[int, dict[str, Fraction]],
+) -> None:
+    times = sorted(filtration)
+    for current_time, next_time in zip(times, times[1:]):
+        computed = finite_conditional_expectation(
+            atoms,
+            process_values[next_time],
+            filtration[current_time],
+        )
+        if computed != process_values[current_time]:
+            fail(f"{context} violates E[M_{next_time} | F_{current_time}] = M_{current_time}")
+
+
+def stopping_time_event_is_measurable(
+    stopping_time: dict[str, int],
+    time: int,
+    partition: list[tuple[str, set[str]]],
+) -> bool:
+    event = {
+        atom_id
+        for atom_id, stopping_value in stopping_time.items()
+        if stopping_value <= time
+    }
+    return all(block_atoms <= event or block_atoms.isdisjoint(event) for _, block_atoms in partition)
+
+
+def validate_stopping_time(
+    context: str,
+    stopping_time: dict[str, int],
+    filtration: dict[int, list[tuple[str, set[str]]]],
+) -> None:
+    for time, partition in filtration.items():
+        if not stopping_time_event_is_measurable(stopping_time, time, partition):
+            fail(f"{context} event tau <= {time} is not measurable in F_{time}")
+
+
+def stopped_process_values(
+    process_values: dict[int, dict[str, Fraction]],
+    stopping_time: dict[str, int],
+) -> dict[str, Fraction]:
+    return {
+        atom_id: process_values[time][atom_id]
+        for atom_id, time in stopping_time.items()
+    }
+
+
+def validate_finite_martingales(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    martingale = checks["finite-martingale-witness"]
+    if martingale["expected_result"] != "sat":
+        fail("finite-martingale-witness must expect sat")
+    values = single_witness_values(martingale, witnesses)
+    atoms = require_probability_atoms("martingale atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("finite-martingale-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    filtration = require_full_filtration("martingale filtration", values.get("filtration"), atom_ids)
+    process_values = require_timed_atom_value_tables(
+        "martingale process_values",
+        values.get("process_values"),
+        atom_ids,
+    )
+    validate_timed_process_adapted("finite-martingale-witness", process_values, filtration)
+    validate_finite_martingale_equalities("finite-martingale-witness", atoms, filtration, process_values)
+
+    square = checks["square-submartingale-witness"]
+    if square["expected_result"] != "sat":
+        fail("square-submartingale-witness must expect sat")
+    values = single_witness_values(square, witnesses)
+    atoms = require_probability_atoms("square submartingale atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("square-submartingale-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    filtration = require_full_filtration("square submartingale filtration", values.get("filtration"), atom_ids)
+    process_values = require_timed_atom_value_tables(
+        "square submartingale process_values",
+        values.get("process_values"),
+        atom_ids,
+    )
+    square_values = require_timed_atom_value_tables(
+        "square submartingale square_values",
+        values.get("square_values"),
+        atom_ids,
+    )
+    conditional_rows = require_conditional_expectation_rows(
+        "square submartingale conditional_square_expectations",
+        values.get("conditional_square_expectations"),
+        atom_ids,
+    )
+    validate_timed_process_adapted("square-submartingale-witness process", process_values, filtration)
+    validate_finite_martingale_equalities("square-submartingale-witness process", atoms, filtration, process_values)
+    validate_timed_process_adapted("square-submartingale-witness", square_values, filtration)
+    if set(square_values) != set(process_values):
+        fail("square-submartingale-witness square values must cover the process times")
+    for time, values_at_time in square_values.items():
+        for atom_id, square_value in values_at_time.items():
+            if square_value != process_values[time][atom_id] ** 2:
+                fail("square-submartingale-witness square_values must equal process_values squared")
+    times = sorted(filtration)
+    expected_row_keys = set(zip(times, times[1:]))
+    if set(conditional_rows) != expected_row_keys:
+        fail("square-submartingale-witness must list exactly adjacent conditional expectation rows")
+    for current_time, next_time in zip(times, times[1:]):
+        computed = finite_conditional_expectation(
+            atoms,
+            square_values[next_time],
+            filtration[current_time],
+        )
+        listed = conditional_rows[(current_time, next_time)]
+        if computed != listed:
+            fail("square-submartingale-witness conditional square expectation is incorrect")
+        for atom_id, expected_value in computed.items():
+            if expected_value < square_values[current_time][atom_id]:
+                fail("square-submartingale-witness violates the pointwise submartingale inequality")
+
+    stopped = checks["bounded-stopping-replay"]
+    if stopped["expected_result"] != "sat":
+        fail("bounded-stopping-replay must expect sat")
+    values = single_witness_values(stopped, witnesses)
+    atoms = require_probability_atoms("bounded stopping atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("bounded-stopping-replay", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    filtration = require_full_filtration("bounded stopping filtration", values.get("filtration"), atom_ids)
+    process_values = require_timed_atom_value_tables(
+        "bounded stopping process_values",
+        values.get("process_values"),
+        atom_ids,
+    )
+    validate_timed_process_adapted("bounded-stopping-replay", process_values, filtration)
+    validate_finite_martingale_equalities("bounded-stopping-replay", atoms, filtration, process_values)
+    stopping_time = require_stopping_time(
+        "bounded stopping stopping_time",
+        values.get("stopping_time"),
+        atom_ids,
+        set(filtration),
+    )
+    validate_stopping_time("bounded-stopping-replay", stopping_time, filtration)
+    listed_stopped_values = require_atom_value_table(
+        "bounded stopping stopped_values",
+        values.get("stopped_values"),
+        atom_ids,
+    )
+    computed_stopped_values = stopped_process_values(process_values, stopping_time)
+    if computed_stopped_values != listed_stopped_values:
+        fail("bounded-stopping-replay stopped values are incorrect")
+    initial_expectation = require_fraction("bounded stopping initial_expectation", values.get("initial_expectation"))
+    stopped_expectation = require_fraction("bounded stopping stopped_expectation", values.get("stopped_expectation"))
+    if finite_expected_value(atoms, process_values[min(filtration)]) != initial_expectation:
+        fail("bounded-stopping-replay initial expectation is incorrect")
+    if finite_expected_value(atoms, listed_stopped_values) != stopped_expectation:
+        fail("bounded-stopping-replay stopped expectation is incorrect")
+    if initial_expectation != stopped_expectation:
+        fail("bounded-stopping-replay expectations do not match")
+
+    bad = checks["bad-martingale-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-martingale-rejected must expect unsat")
+    data = bad.get("data", {})
+    atoms = require_probability_atoms("bad martingale atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-martingale-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    filtration = require_filtration("bad martingale filtration", data.get("filtration"), atom_ids)
+    if set(filtration) != {1}:
+        fail("bad-martingale-rejected must document the time-1 partition")
+    current_values = require_atom_value_table(
+        "bad martingale current_values",
+        data.get("current_values"),
+        atom_ids,
+    )
+    next_values = require_atom_value_table(
+        "bad martingale next_values",
+        data.get("next_values"),
+        atom_ids,
+    )
+    actual = require_atom_value_table(
+        "bad martingale actual_conditional_expectation",
+        data.get("actual_conditional_expectation"),
+        atom_ids,
+    )
+    computed = finite_conditional_expectation(atoms, next_values, filtration[1])
+    if computed != actual:
+        fail("bad-martingale-rejected actual conditional expectation is incorrect")
+    if actual == current_values:
+        fail("bad-martingale-rejected must document a false martingale equality")
+
+    horizon = checks["general-martingale-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-martingale-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-martingale-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general martingale target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general martingale future_checker", data.get("future_checker"))
+
+
 def validate_finite_random_variables(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -6596,6 +6927,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_product_measure(expected)
     if metadata["id"] == "finite-conditional-expectation-v0":
         validate_finite_conditional_expectation(expected)
+    if metadata["id"] == "finite-martingales-v0":
+        validate_finite_martingales(expected)
     if metadata["id"] == "finite-random-variables-v0":
         validate_finite_random_variables(expected)
     if metadata["id"] == "finite-markov-chain-v0":

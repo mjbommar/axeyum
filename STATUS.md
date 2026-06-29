@@ -159,6 +159,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite martingale foundations pack landed.** Added
+  [`finite-martingales-v0`](artifacts/examples/math/finite-martingales-v0/README.md)
+  as the exact finite filtration bridge from conditional expectation into
+  stochastic-process reasoning. The pack validates finite adaptedness,
+  martingale conditional-expectation equalities, square-submartingale
+  inequalities, bounded stopping-time expectation replay, checked rejection of
+  a false martingale table, and a general martingale Lean-horizon row. The
+  foundational example-pack validator now checks finite filtrations,
+  filtration refinement, adaptedness, martingale equalities, finite
+  submartingale inequalities, stopping-time measurability, and stopped
+  expectations.
+
 - **Finite conditional-expectation foundations pack landed.** Added
   [`finite-conditional-expectation-v0`](artifacts/examples/math/finite-conditional-expectation-v0/README.md)
   as the exact finite partition-conditioning bridge between finite random

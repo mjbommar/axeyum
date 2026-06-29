@@ -208,9 +208,9 @@ losing the curriculum anchor.
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, continuous maps, compactness, and connectedness finite checks. |
-| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, and `finite-conditional-expectation-v0` over finite universes; Lebesgue theory remains horizon. |
-| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, product tables, exact discrete distributions. |
-| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests. |
+| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, and `finite-martingales-v0` over finite universes; Lebesgue theory remains horizon. |
+| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite martingales, product tables, exact discrete distributions. |
+| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests, finite martingale checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, LP feasibility, dual/Farkas certificates, threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
@@ -498,6 +498,11 @@ exact finite partition conditional expectations, the law of total expectation,
 the finite tower property over nested partitions, checked rejection of a false
 conditional-expectation table, and a general conditional-expectation/martingale
 Lean-horizon row.
+`artifacts/examples/math/finite-martingales-v0/` now validates exact finite
+filtrations, adaptedness, martingale conditional-expectation equalities,
+finite square-submartingale inequalities, bounded stopping-time replay, checked
+rejection of a false martingale table, and a general martingale Lean-horizon
+row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
@@ -576,6 +581,9 @@ Recommended order:
 24. `finite-conditional-expectation-v0`: finite partition conditional
     expectations, law of total expectation, tower property replay, and bad
     conditional-expectation rejection.
+25. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
+    equalities, square submartingale inequalities, bounded stopping replay, and
+    bad martingale rejection.
 
 Exit criteria:
 
@@ -736,7 +744,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-24, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-25, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -771,7 +779,10 @@ theory. `finite-random-variables-v0` now adds the exact finite random-variable
 pushforward, expectation, and independence bridge toward probability/statistics
 and measure-theory semantics. `finite-conditional-expectation-v0` now adds the
 finite partition conditional-expectation, total-expectation, and tower-property
-bridge toward martingales and general conditional expectation. Continue by
+bridge toward martingales and general conditional expectation.
+`finite-martingales-v0` now adds the exact finite filtration, martingale,
+submartingale, and bounded-stopping bridge toward stochastic-process theory.
+Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
 

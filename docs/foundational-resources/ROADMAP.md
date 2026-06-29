@@ -101,6 +101,7 @@ artifacts/examples/math/
   finite-product-measure-v0/
   finite-random-variables-v0/
   finite-conditional-expectation-v0/
+  finite-martingales-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -158,7 +159,8 @@ Practical first backlog:
    replay, and inconsistent linear system examples with Farkas evidence where
    applicable.
 7. Finite probability examples: total mass, conditional probability table,
-   Bayes rule over finite domains.
+   Bayes rule over finite domains, finite random variables, finite conditional
+   expectations, and finite martingale/stopping-time replay.
 
 Boundary:
 

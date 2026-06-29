@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-martingales-v0",
+  "witnesses": [
+    {
+      "id": "two-step-fair-walk-martingale",
+      "description": "A two-step fair random walk with its natural finite filtration.",
+      "values": {
+        "atoms": [
+          {"id": "uu", "probability": "1/4"},
+          {"id": "ud", "probability": "1/4"},
+          {"id": "du", "probability": "1/4"},
+          {"id": "dd", "probability": "1/4"}
+        ],
+        "filtration": [
+          {"time": 0, "partition": [{"id": "root", "atoms": ["uu", "ud", "du", "dd"]}]},
+          {"time": 1, "partition": [
+            {"id": "up", "atoms": ["uu", "ud"]},
+            {"id": "down", "atoms": ["du", "dd"]}
+          ]},
+          {"time": 2, "partition": [
+            {"id": "uu", "atoms": ["uu"]},
+            {"id": "ud", "atoms": ["ud"]},
+            {"id": "du", "atoms": ["du"]},
+            {"id": "dd", "atoms": ["dd"]}
+          ]}
+        ],
+        "process_values": [
+          {"time": 0, "values": {"uu": "0", "ud": "0", "du": "0", "dd": "0"}},
+          {"time": 1, "values": {"uu": "1", "ud": "1", "du": "-1", "dd": "-1"}},
+          {"time": 2, "values": {"uu": "2", "ud": "0", "du": "0", "dd": "-2"}}
+        ]
+      }
+    },
+    {
+      "id": "two-step-square-submartingale",
+      "description": "The square of the two-step fair walk is a finite submartingale.",
+      "values": {
+        "atoms": [
+          {"id": "uu", "probability": "1/4"},
+          {"id": "ud", "probability": "1/4"},
+          {"id": "du", "probability": "1/4"},
+          {"id": "dd", "probability": "1/4"}
+        ],
+        "filtration": [
+          {"time": 0, "partition": [{"id": "root", "atoms": ["uu", "ud", "du", "dd"]}]},
+          {"time": 1, "partition": [
+            {"id": "up", "atoms": ["uu", "ud"]},
+            {"id": "down", "atoms": ["du", "dd"]}
+          ]},
+          {"time": 2, "partition": [
+            {"id": "uu", "atoms": ["uu"]},
+            {"id": "ud", "atoms": ["ud"]},
+            {"id": "du", "atoms": ["du"]},
+            {"id": "dd", "atoms": ["dd"]}
+          ]}
+        ],
+        "process_values": [
+          {"time": 0, "values": {"uu": "0", "ud": "0", "du": "0", "dd": "0"}},
+          {"time": 1, "values": {"uu": "1", "ud": "1", "du": "-1", "dd": "-1"}},
+          {"time": 2, "values": {"uu": "2", "ud": "0", "du": "0", "dd": "-2"}}
+        ],
+        "square_values": [
+          {"time": 0, "values": {"uu": "0", "ud": "0", "du": "0", "dd": "0"}},
+          {"time": 1, "values": {"uu": "1", "ud": "1", "du": "1", "dd": "1"}},
+          {"time": 2, "values": {"uu": "4", "ud": "0", "du": "0", "dd": "4"}}
+        ],
+        "conditional_square_expectations": [
+          {"from_time": 0, "to_time": 1, "values": {"uu": "1", "ud": "1", "du": "1", "dd": "1"}},
+          {"from_time": 1, "to_time": 2, "values": {"uu": "2", "ud": "2", "du": "2", "dd": "2"}}
+        ]
+      }
+    },
+    {
+      "id": "bounded-stopping-time-two-step-walk",
+      "description": "The first hit of +1, capped at time 2, replayed as a finite stopping time.",
+      "values": {
+        "atoms": [
+          {"id": "uu", "probability": "1/4"},
+          {"id": "ud", "probability": "1/4"},
+          {"id": "du", "probability": "1/4"},
+          {"id": "dd", "probability": "1/4"}
+        ],
+        "filtration": [
+          {"time": 0, "partition": [{"id": "root", "atoms": ["uu", "ud", "du", "dd"]}]},
+          {"time": 1, "partition": [
+            {"id": "up", "atoms": ["uu", "ud"]},
+            {"id": "down", "atoms": ["du", "dd"]}
+          ]},
+          {"time": 2, "partition": [
+            {"id": "uu", "atoms": ["uu"]},
+            {"id": "ud", "atoms": ["ud"]},
+            {"id": "du", "atoms": ["du"]},
+            {"id": "dd", "atoms": ["dd"]}
+          ]}
+        ],
+        "process_values": [
+          {"time": 0, "values": {"uu": "0", "ud": "0", "du": "0", "dd": "0"}},
+          {"time": 1, "values": {"uu": "1", "ud": "1", "du": "-1", "dd": "-1"}},
+          {"time": 2, "values": {"uu": "2", "ud": "0", "du": "0", "dd": "-2"}}
+        ],
+        "stopping_time": {"uu": 1, "ud": 1, "du": 2, "dd": 2},
+        "stopped_values": {"uu": "1", "ud": "1", "du": "0", "dd": "-2"},
+        "initial_expectation": "0",
+        "stopped_expectation": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-martingale-witness",
+      "claim": "The two-step fair walk is a martingale for the listed finite filtration.",
+      "expected_result": "sat",
+      "validation": "finite_martingale_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-fair-walk-martingale"],
+      "notes": "The validator checks adaptedness and recomputes E[M_{t+1}|F_t] = M_t exactly."
+    },
+    {
+      "id": "square-submartingale-witness",
+      "claim": "The square of the two-step fair walk is a finite submartingale.",
+      "expected_result": "sat",
+      "validation": "finite_submartingale_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-square-submartingale"],
+      "notes": "The validator recomputes conditional square expectations and checks the pointwise inequality."
+    },
+    {
+      "id": "bounded-stopping-replay",
+      "claim": "The bounded stopping time replay has E[M_tau] = E[M0] = 0.",
+      "expected_result": "sat",
+      "validation": "finite_bounded_stopping_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["bounded-stopping-time-two-step-walk"],
+      "notes": "The validator checks stopping-time measurability and recomputes the stopped expectation exactly."
+    },
+    {
+      "id": "bad-martingale-rejected",
+      "claim": "The malformed terminal table still defines a martingale.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_martingale_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "uu", "probability": "1/4"},
+          {"id": "ud", "probability": "1/4"},
+          {"id": "du", "probability": "1/4"},
+          {"id": "dd", "probability": "1/4"}
+        ],
+        "filtration": [
+          {"time": 1, "partition": [
+            {"id": "up", "atoms": ["uu", "ud"]},
+            {"id": "down", "atoms": ["du", "dd"]}
+          ]}
+        ],
+        "current_values": {"uu": "1", "ud": "1", "du": "-1", "dd": "-1"},
+        "next_values": {"uu": "3", "ud": "0", "du": "0", "dd": "-2"},
+        "actual_conditional_expectation": {"uu": "3/2", "ud": "3/2", "du": "-1", "dd": "-1"}
+      },
+      "notes": "The validator rejects the claim because the up block conditional expectation is 3/2, not 1."
+    },
+    {
+      "id": "general-martingale-lean-horizon",
+      "claim": "General martingale convergence and stopping theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "martingale convergence, optional stopping, Doob inequalities, stochastic integration, and continuous-time martingales",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general martingale theory remains a proof-assistant horizon."
+    }
+  ]
+}

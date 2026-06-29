@@ -1,11 +1,12 @@
-# End To End: Conditional Probability, Random Variables, Conditional Expectation, And Product Measures
+# End To End: Conditional Probability, Random Variables, Conditional Expectation, Martingales, And Product Measures
 
 This lesson follows finite probability resources from atom tables to replayed
 conditional probability, finite random variables, conditional expectation,
-exact product measures, and finite expectations. It uses the
+finite martingales, exact product measures, and finite expectations. It uses the
 [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
 [finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/),
 [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/),
+[finite-martingales-v0](../../../artifacts/examples/math/finite-martingales-v0/),
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 packs.
@@ -32,6 +33,10 @@ Concept rows:
 | `law-total-expectation-witness` | `sat` | replay-only |
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
+| `finite-martingale-witness` | `sat` | replay-only |
+| `square-submartingale-witness` | `sat` | replay-only |
+| `bounded-stopping-replay` | `sat` | replay-only |
+| `bad-martingale-rejected` | `unsat` | checked |
 | `product-measure-table-witness` | `sat` | replay-only |
 | `marginalization-witness` | `sat` | replay-only |
 | `finite-fubini-witness` | `sat` | replay-only |
@@ -91,6 +96,18 @@ X(a), X(b), X(c), X(d) = 0, 2, 4, 8
 G = {a,b}, {c,d}
 ```
 
+The martingale witness uses a two-step fair walk and its natural filtration:
+
+```text
+atoms = uu, ud, du, dd
+F0 = {uu, ud, du, dd}
+F1 = {uu, ud}, {du, dd}
+F2 = {uu}, {ud}, {du}, {dd}
+M0 = 0
+M1 = 1 on {uu,ud}, -1 on {du,dd}
+M2(uu), M2(ud), M2(du), M2(dd) = 2, 0, 0, -2
+```
+
 ## Replay
 
 The checker recomputes:
@@ -136,6 +153,18 @@ E[E[X | G]] = E[X] = 7/2
 It also checks a finite tower-property row for a two-block partition refining
 the one-block partition.
 
+For the finite martingale row, the checker recomputes:
+
+```text
+E[M1 | F0] = 0 = M0
+E(M2 | F1, {uu,ud}) = 1 = M1 on {uu,ud}
+E(M2 | F1, {du,dd}) = -1 = M1 on {du,dd}
+```
+
+It also checks that `M_t` is adapted to `F_t`, that `M_t^2` is a finite
+submartingale, and that the bounded stopping time `tau = first hit +1 capped at
+2` satisfies `E[M_tau] = E[M0] = 0` by exact rational summation.
+
 For the product-measure row, the checker recomputes:
 
 ```text
@@ -162,6 +191,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 ```
@@ -177,5 +207,6 @@ validated 1 foundational example pack(s)
 The search side may propose a probability table or posterior. The trusted side
 only recomputes finite sums and exact rational divisions. Continuous
 probability, general product measures, Fubini/Tonelli, Lebesgue integration,
-conditional expectation, martingales, stochastic kernels, convergence theorems,
-and statistical inference are outside this proof claim.
+conditional expectation, general martingale convergence, optional stopping,
+Doob inequalities, stochastic kernels, convergence theorems, and statistical
+inference are outside this proof claim.

@@ -190,6 +190,11 @@ schemas, examples, and validation workflows.
   expectation, tower property replay, checked rejection of a false
   conditional-expectation table, and a general conditional-expectation
   Lean-horizon row.
+- [`artifacts/examples/math/finite-martingales-v0/`](../../artifacts/examples/math/finite-martingales-v0/)
+  validates exact finite filtrations, adapted process values, martingale
+  conditional-expectation equalities, square submartingale inequalities,
+  bounded stopping-time replay, checked rejection of a false martingale table,
+  and a general martingale Lean-horizon row.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
@@ -244,6 +249,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

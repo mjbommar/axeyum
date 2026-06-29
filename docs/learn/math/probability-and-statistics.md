@@ -12,6 +12,7 @@ Example packs:
 - [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/)
 - [finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/)
 - [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/)
+- [finite-martingales-v0](../../../artifacts/examples/math/finite-martingales-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
@@ -29,6 +30,8 @@ additivity, event complements, finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, finite partition conditional
 expectations, the law of total expectation, tower property replay, finite
+filtrations, martingale conditional-expectation equalities, square
+submartingale inequalities, bounded stopping-time replay, finite
 product-measure tables, rectangle probabilities, marginals, finite Fubini sums,
 exact mean/variance identities, contingency table margins, and a Simpson's
 paradox count-table witness. The d-separation pack adds a finite DAG bridge:
@@ -79,6 +82,20 @@ E[X | {c,d}] = 6
 
 The `finite-conditional-expectation-v0` validator recomputes block averages,
 `E[E[X|G]] = E[X]`, and a finite tower-property row for nested partitions.
+For finite martingales, it checks a two-step fair walk against its natural
+filtration:
+
+```text
+M0 = 0
+M1(up) = 1, M1(down) = -1
+M2(uu), M2(ud), M2(du), M2(dd) = 2, 0, 0, -2
+E(M2 | F1, up) = 1
+E(M2 | F1, down) = -1
+```
+
+The `finite-martingales-v0` validator checks adaptedness, recomputes each
+martingale equality, checks the square submartingale inequalities, and replays
+a bounded stopping time by exact expectation.
 For finite integration, it checks exact weighted sums such as:
 
 ```text
@@ -116,6 +133,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
@@ -134,8 +152,9 @@ For a fuller trace through atom-table replay, read
 Continuous distributions, stochastic processes, convergence theorems, random
 matrix spectral laws, concentration bounds, Lebesgue integration, monotone and
 dominated convergence, general product measures, Fubini/Tonelli, conditional
-expectation, martingales, stochastic kernels, MCMC, HMC, variational
-inference, asymptotic statistical tests, calibration, causal identification,
-do-calculus, and floating-point diagnostics are not proof claims. They need
-either Lean-backed probability/measure formalization or explicit
-reproducibility metadata with seeds and tolerances.
+expectation, general martingale convergence, optional stopping, Doob
+inequalities, stochastic kernels, MCMC, HMC, variational inference, asymptotic
+statistical tests, calibration, causal identification, do-calculus, and
+floating-point diagnostics are not proof claims. They need either Lean-backed
+probability/measure formalization or explicit reproducibility metadata with
+seeds and tolerances.
