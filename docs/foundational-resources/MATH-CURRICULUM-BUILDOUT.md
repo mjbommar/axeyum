@@ -1351,6 +1351,11 @@ enumeration, and the Boolean CNF/LRAT proof-upgrade route.
 finite epsilon-tail replay, proposed-limit counterexample replay, monotone
 bounded prefix checks, geometric partial sums, finite Cauchy-tail
 enumeration, and the general limit Lean horizon.
+`calculus-algebraic-shadow-v0` and `calculus-riemann-sum-v0` now have a
+combined learner-facing end-to-end lesson for polynomial derivative replay,
+product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
+replay, checked false derivative/integral rejection, and the differentiability,
+integrability, and fundamental-theorem Lean horizons.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

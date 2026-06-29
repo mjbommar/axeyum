@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-calculus-shadows end-to-end lesson landed.** Added
+  [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
+  as the combined learner-facing trace for the calculus-algebraic-shadow and
+  calculus-Riemann-sum packs: polynomial derivative replay, product-rule and
+  tangent checks, finite Riemann sums, antiderivative endpoint replay, checked
+  false derivative/integral rejection, and the differentiability,
+  integrability, and fundamental-theorem Lean horizons. The lesson is linked
+  from the math learning index plus the analysis/topology path.
+
 - **Sequence-limit-shadow end-to-end lesson landed.** Added
   [`sequence-limit-shadow-end-to-end.md`](docs/learn/math/sequence-limit-shadow-end-to-end.md)
   as the learner-facing trace for the sequence-limit-shadow pack: finite
@@ -261,7 +270,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 82 focused learner links, 2 path-only
+  generated queue: 84 non-template packs, 84 focused learner links, 0 path-only
   links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added

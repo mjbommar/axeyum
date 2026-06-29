@@ -115,6 +115,10 @@ validated pack data and the repo-root command that replays it.
   finite epsilon-tail replay, a proposed-limit counterexample, monotone-prefix
   checks, geometric partial sums, finite Cauchy-tail enumeration, and the
   general limit Lean horizon.
+- [Finite Calculus Shadows](calculus-shadows-end-to-end.md): follows
+  polynomial derivative replay, product-rule and tangent checks, finite
+  Riemann sums, antiderivative endpoint replay, false derivative/integral
+  rejection, and the calculus Lean horizons.
 - [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
   table replay, finite Lipschitz checks, epsilon-delta containment,
   open-ball preimage replay, bad-delta rejection, and the continuity Lean
