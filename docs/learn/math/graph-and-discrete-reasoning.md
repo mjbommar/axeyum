@@ -241,6 +241,25 @@ For a fuller trace from data row to replay result and evidence status, read
 For coefficient-level finite recurrence and convolution replay, read
 [End To End: Generating Functions](generating-functions-end-to-end.md).
 
+## Proof Upgrade Notes
+
+Finite witnesses for colors, paths, traversal orders, matchings, cuts, or
+coefficient lists stay on
+[Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
+the checker recomputes the finite graph or polynomial claim from the source
+data. Boolean impossibility claims such as pigeonhole and graph non-colorability
+should use
+[Boolean CNF DRAT/LRAT Evidence](../../proof-cookbook/recipes/boolean-cnf-lrat.md)
+once a deterministic CNF is the source artifact. Fixed-width graph encodings,
+such as the one-bit triangle two-coloring obstruction, belong to
+[QF_BV Bit-Blast Evidence](../../proof-cookbook/recipes/qf-bv-bitblast.md)
+only when the finite width is part of the lesson. Traversal-cost counters and
+finite counting equalities can graduate through
+[QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md)
+when the row is an integer obstruction rather than a graph replay. Asymptotic
+runtime, extremal graph theory, and closed-form combinatorics remain
+[Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) targets.
+
 ## Horizon
 
 The current pigeonhole refutation is checked by finite enumeration; deterministic

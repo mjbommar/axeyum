@@ -388,6 +388,25 @@ data through replay, read
 [End To End: Finite Modules](finite-modules-end-to-end.md). For multilinear
 data, read [End To End: Finite Tensor Products](finite-tensor-products-end-to-end.md).
 
+## Proof Upgrade Notes
+
+Finite group, ring, field, module, ideal, tensor, polynomial, and complex
+examples start as
+[Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
+the validator recomputes operation tables, finite maps, coefficients, and
+residue arithmetic from the source data. Equality-heavy algebra conflicts such
+as bad associativity, non-bijection, homomorphism preservation,
+submodule/ideal closure, and bilinear-map additivity use
+[QF_UF / Alethe Congruence Evidence](../../proof-cookbook/recipes/qf-uf-congruence-alethe.md).
+Fixed finite residue arithmetic and finite ring or field table contradictions
+use [QF_BV Bit-Blast Evidence](../../proof-cookbook/recipes/qf-bv-bitblast.md)
+when the width is part of the educational claim. Divisibility, modular inverse,
+GCD, and bounded Diophantine obstructions use
+[QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
+General structure theorems, infinite algebra, algebraic number theory, and
+arbitrary-field polynomial theory remain
+[Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) work.
+
 ## Horizon
 
 General group, permutation-group, monoid, group-action, ring, field, module, isomorphism-theorem, quotient, and

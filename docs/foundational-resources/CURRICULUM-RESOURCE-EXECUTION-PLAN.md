@@ -335,6 +335,8 @@ Next buildout:
    and linear-system examples.
 8. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
+   Status: the first high-use learner-page route-note pass now names these
+   routes and their trust boundaries.
 9. Promote selected packs into solver regression/fuzz corpora with back-links to
    the resource pack.
 10. Add a rules/law reasoning resource plan that explicitly reuses finite

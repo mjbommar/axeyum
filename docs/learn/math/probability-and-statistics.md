@@ -257,6 +257,26 @@ For finite DAG d-separation path replay, read
 For finite sigma-algebras and exact measure tables, read
 [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
+## Proof Upgrade Notes
+
+Finite probability tables, random variables, kernels, martingales, product
+measures, Markov chains, d-separation rows, exact statistics, and random-matrix
+moments first use
+[Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
+the validator recomputes exact atom-table sums and finite path conditions.
+Malformed probability normalization, Bayes-posterior rows, conditional
+expectation tables, stochastic rows, expected hitting-time equations, tail
+bounds, regression coefficients, and random-matrix moment rows graduate through
+[QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
+Discrete count contradictions such as contingency totals and exact tail counts
+use
+[QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
+General measure-theory, stochastic-process, concentration, asymptotic
+statistics, and causal-identification results remain under the
+[Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) route or
+need explicit numerical reproducibility metadata before they become resource
+claims.
+
 ## Horizon
 
 Continuous distributions, stochastic processes, convergence theorems, random

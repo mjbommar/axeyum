@@ -285,6 +285,26 @@ multilinear replay, read
 finite Chebyshev-system interpolation and alternation replay, read
 [End To End: Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md).
 
+## Proof Upgrade Notes
+
+Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
+moments, and finite-dimensional operator rows start as
+[Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
+Infeasible rational systems, LP thresholds, bad residual bounds, malformed
+eigenpairs, bad characteristic-polynomial rows, and negative-norm examples
+graduate through
+[QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
+Finite vector-space, dual-space, module, ideal, and tensor-product equality
+conflicts use
+[QF_UF / Alethe Congruence Evidence](../../proof-cookbook/recipes/qf-uf-congruence-alethe.md)
+when the key step is functional consistency or congruence. Integer boundary
+matrix coefficient conflicts use
+[QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
+Rank-nullity, spectral theorems, Hilbert-space projection, Riesz
+representation, conditioning, and convergence of numerical algorithms remain
+[Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) or
+explicit numerical-honesty work, not consequences of these finite rows.
+
 ## Horizon
 
 General spectral theorems, rank theorems, vector-space dimension theorems,

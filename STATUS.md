@@ -629,6 +629,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   route-specific learner/proof notes or reusable example families rather than
   duplicating the bridge taxonomy.
 
+- **High-use learner proof-route notes landed.** Added concise
+  `Proof Upgrade Notes` sections to
+  [`logic-and-proof.md`](docs/learn/math/logic-and-proof.md),
+  [`graph-and-discrete-reasoning.md`](docs/learn/math/graph-and-discrete-reasoning.md),
+  [`linear-algebra-and-optimization.md`](docs/learn/math/linear-algebra-and-optimization.md),
+  [`probability-and-statistics.md`](docs/learn/math/probability-and-statistics.md),
+  and [`algebra-and-number-theory.md`](docs/learn/math/algebra-and-number-theory.md).
+  The notes map finite replay, CNF/LRAT, QF_BV/DRAT, QF_LIA/Diophantine,
+  QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon routes to the pack families
+  actually shown on each page. Next resource work can turn recurring Farkas or
+  Alethe patterns into reusable example families, or promote selected
+  resource-backed rows into solver regression corpora.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

@@ -139,6 +139,23 @@ For fuller traces, read:
 - [End To End: Induction Patterns](induction-patterns-end-to-end.md)
 - [End To End: Triangle Coloring](graph-coloring-end-to-end.md)
 
+## Proof Upgrade Notes
+
+Use the generated bridge rows `bridge_finite_model_replay`,
+`bridge_counterexample_proof`, `bridge_bounded_theorem_shadow`, and
+`bridge_lean_horizon` as the status vocabulary for this page. SAT witnesses and
+finite truth-table rows stay on
+[Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
+Boolean refutations such as proof-by-contradiction, pigeonhole, and triangle
+non-colorability graduate through
+[Boolean CNF DRAT/LRAT Evidence](../../proof-cookbook/recipes/boolean-cnf-lrat.md)
+when they have a deterministic CNF and checked certificate. Bounded arithmetic
+obstructions in induction patterns use
+[QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
+General first-order soundness, natural-deduction metatheory, and the full
+induction schema remain under the
+[Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) route.
+
 ## Horizon
 
 General first-order reasoning over arbitrary domains, the universal induction

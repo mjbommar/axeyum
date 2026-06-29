@@ -189,9 +189,9 @@ Build sequence:
 3. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.
-4. Add route-specific proof-upgrade notes to the highest-use learner pages:
-   logic/proof, graph/discrete, linear algebra/optimization, probability, and
-   algebra.
+4. First route-specific proof-upgrade note pass landed on the highest-use
+   learner pages: logic/proof, graph/discrete, linear algebra/optimization,
+   probability/statistics, and algebra/number theory.
 5. Turn recurring finite algebra equality conflicts into a small Alethe example
    family with shared test helpers.
 6. Turn recurring rational infeasibility rows into a small Farkas example family

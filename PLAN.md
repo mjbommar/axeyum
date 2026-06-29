@@ -97,6 +97,9 @@ The foundational concept atlas now also includes four generated R1 bridge rows
 for finite model replay, counterexample proof, bounded theorem shadows, and
 Lean horizons, so resource packs can point at shared evidence taxonomy instead
 of repeating that vocabulary locally.
+The first route-note pass has also landed on the high-use learner cluster
+pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
+probability/statistics, and algebra/number theory.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,
