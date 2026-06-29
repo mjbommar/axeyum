@@ -211,6 +211,8 @@ First targets:
   (resource-backed QF_LIA/Diophantine regression landed for the bad boundary
   coefficient row)
 - [induction-patterns-v0](../../artifacts/examples/math/induction-patterns-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the finite
+  even-product parity obstruction)
 
 Reference packs already on the route:
 

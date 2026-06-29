@@ -24,6 +24,7 @@
   "axeyum_fragments": [
     "bounded induction obligations",
     "integer arithmetic replay",
+    "QF_LIA / Diophantine",
     "finite-domain enumeration",
     "loop invariant checking",
     "Lean horizon"
@@ -40,6 +41,7 @@
   ],
   "expected_results": [
     "weak-induction-even-sum-prefix",
+    "qf-lia-even-product-odd-obstruction",
     "strong-induction-fibonacci-bound-prefix",
     "loop-invariant-prefix-sum-trace",
     "bad-induction-step-rejected",
@@ -47,6 +49,7 @@
   ],
   "graduation_criteria": [
     "Replay weak-induction, strong-induction, and invariant traces exactly from listed integer witnesses.",
+    "Keep promoted finite-prefix arithmetic obstructions tied to checked QF_LIA/Diophantine evidence.",
     "Reject invalid induction steps with concrete counterexample evidence, not prose.",
     "Keep universal induction claims under Lean horizon until kernel-checked artifacts exist.",
     "Promote to proof-object evidence only after the finite arithmetic rows have LRAT/Alethe/Lean certificate routes."

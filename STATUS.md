@@ -324,6 +324,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `Evidence::UnsatDiophantine` and rechecks the integer certificate
   independently.
 
+- **Induction-patterns QF_LIA/Diophantine regression landed.**
+  [`induction-patterns-v0`](artifacts/examples/math/induction-patterns-v0/)
+  now has a checked proof-object row for the finite even-product parity
+  obstruction. The new SMT-LIB artifact encodes the evaluated bad witness
+  `6 * 7 = 42` and `2 * 20 + 1 = 41` as `product = 42` and `product = 41`;
+  the shared LIA resource regression requires `Evidence::UnsatDiophantine`
+  and rechecks the integer certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -725,10 +733,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Induction-patterns end-to-end lesson landed.** Added
   [`induction-patterns-end-to-end.md`](docs/learn/math/induction-patterns-end-to-end.md)
   as the learner-facing trace for the induction-patterns pack: finite weak
-  induction replay, strong-induction Fibonacci-bound replay, loop-invariant
-  trace replay, invalid-step counterexample checking, and the Lean horizon for
-  the general induction schema. The lesson is linked from the math learning
-  index plus the logic/proof path.
+  induction replay, a checked QF_LIA even-product certificate,
+  strong-induction Fibonacci-bound replay, loop-invariant trace replay,
+  invalid-step counterexample checking, and the Lean horizon for the general
+  induction schema. The lesson is linked from the math learning index plus the
+  logic/proof path.
 
 - **Induction-obligations end-to-end lesson landed.** Added
   [`induction-obligations-end-to-end.md`](docs/learn/math/induction-obligations-end-to-end.md)
@@ -1194,10 +1203,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`induction-patterns-v0`](artifacts/examples/math/induction-patterns-v0/README.md)
   as the finite weak/strong induction and loop-invariant bridge for the
   induction curriculum row. The pack validates even-product weak-induction
-  prefixes, Fibonacci strong-induction bounds, prefix-sum loop-invariant trace
-  replay, checked bad-step counterexample evidence, and a full-schema
-  Lean-horizon row. The foundational example-pack validator now checks these
-  patterns by exact integer replay over fixed finite prefixes.
+  prefixes, a checked QF_LIA/Diophantine even-product parity obstruction,
+  Fibonacci strong-induction bounds, prefix-sum loop-invariant trace replay,
+  checked bad-step counterexample evidence, and a full-schema Lean-horizon row.
+  The foundational example-pack validator now checks these patterns by exact
+  integer replay over fixed finite prefixes and solver-form Diophantine
+  certificate metadata for the promoted parity contradiction.
 
 - **Proof-method patterns foundations pack landed.** Added
   [`proof-methods-patterns-v0`](artifacts/examples/math/proof-methods-patterns-v0/README.md)

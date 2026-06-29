@@ -456,8 +456,9 @@ validates exact prefix-sum
 base-case replay, bounded step-obligation enumeration, bounded conclusion
 checking, a bad-step counterexample witness, and a full-schema Lean-horizon
 row. `induction-patterns-v0` now validates finite weak-induction evenness
-prefixes, strong-induction Fibonacci bounds, loop-invariant trace replay,
-checked bad-step rejection, and a full-schema Lean-horizon row.
+prefixes, a checked QF_LIA finite even-product parity obstruction,
+strong-induction Fibonacci bounds, loop-invariant trace replay, checked
+bad-step rejection, and a full-schema Lean-horizon row.
 `logic-basics-v0` now validates SAT witness replay, tautology and
 contradiction truth-table checks, De Morgan equivalence, and a tiny CNF
 refutation by enumeration. `proof-methods-patterns-v0` now validates finite
@@ -565,8 +566,8 @@ Recommended order:
     infinite-cardinality Lean-horizon metadata.
 14. `induction-obligations-v0` (landed) and `induction-patterns-v0` (landed):
     bounded base/step obligations, finite weak and strong induction patterns,
-    loop-invariant replay, bad-step witnesses, and full-schema Lean-horizon
-    metadata.
+    a checked QF_LIA finite even-product parity obstruction, loop-invariant
+    replay, bad-step witnesses, and full-schema Lean-horizon metadata.
 15. `logic-basics-v0` (landed): SAT witness replay, tautology and
     contradiction checks, De Morgan equivalence, and tiny CNF refutation.
 16. `finite-predicate-v0` (landed): finite-domain quantifier expansion,
@@ -1096,8 +1097,9 @@ QF_LIA/Diophantine bad tail-count row.
 finite direct proof, contrapositive, proof-by-cases, contradiction, invalid
 converse counterexample, and natural-deduction Lean-horizon examples.
 `induction-patterns-v0` now deepens the induction curriculum row with finite
-weak induction, strong induction, loop-invariant replay, invalid-step
-counterexamples, and full-schema Lean-horizon examples.
+weak induction, a checked QF_LIA finite even-product parity obstruction, strong
+induction, loop-invariant replay, invalid-step counterexamples, and
+full-schema Lean-horizon examples.
 `cardinality-principles-v0` now deepens the cardinality curriculum row with
 finite inclusion-exclusion, disjoint-union additivity, bipartite-edge double
 counting, powerset enumeration, invalid additivity counterexamples, and
@@ -1379,7 +1381,8 @@ graduation routes, and finite probability points to finite replay plus
 QF_LRA/Farkas graduation routes.
 The QF_LIA/Diophantine proof-upgrade lane now also has
 `exact-statistical-tests-v0` promoted for its bad binomial tail-count row and
-`finite-simplicial-homology-v0` promoted for its bad boundary coefficient row.
+`finite-simplicial-homology-v0` promoted for its bad boundary coefficient row,
+and `induction-patterns-v0` promoted for its finite even-product parity row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

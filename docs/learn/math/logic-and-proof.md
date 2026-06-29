@@ -32,8 +32,9 @@ contrapositive, proof by cases, contradiction, and invalid converse examples
 by assignment replay and truth-table enumeration. The induction pack checks
 bounded base, step, and conclusion obligations while keeping the full induction
 schema under Lean horizon. The induction-patterns pack checks finite weak
-induction, strong induction, loop invariants, and invalid-step rejection. The
-graph-coloring pack adds a finite non-colorability example that can be
+induction, a checked QF_LIA/Diophantine even-product obstruction, strong
+induction, loop invariants, and invalid-step rejection. The graph-coloring
+pack adds a finite non-colorability example that can be
 exhaustively checked.
 
 ## Encode / Check Walkthrough

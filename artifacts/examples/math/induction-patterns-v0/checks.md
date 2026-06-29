@@ -8,6 +8,15 @@ The validator replays the prefix table for `n * (n + 1)` over `0..6`. It checks
 that the base value is even, every listed finite step adds `2 * (k + 1)`, and no
 listed value is odd.
 
+## `qf-lia-even-product-odd-obstruction`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact isolates a false oddness witness for
+`6 * (6 + 1) = 42`: after evaluating the bad witness `2*20 + 1` to `41`, the
+same integer product is forced to be both `42` and `41`. Axeyum emits and
+checks an `UnsatDiophantine` certificate for the inconsistent equalities.
+
 ## `strong-induction-fibonacci-bound-prefix`
 
 Expected result: `unsat`.

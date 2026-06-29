@@ -6354,6 +6354,39 @@ def validate_induction_patterns(expected: dict[str, Any]) -> None:
         if table[k_value + 1] - table[k_value] != listed_difference:
             fail("weak induction values do not match listed step difference")
 
+    qf_lia = checks["qf-lia-even-product-odd-obstruction"]
+    if qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-even-product-odd-obstruction must expect unsat")
+    if qf_lia["proof_status"] != "checked":
+        fail("qf-lia-even-product-odd-obstruction must be checked")
+    if qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-even-product-odd-obstruction must use qf_lia_diophantine_evidence validation")
+    data = qf_lia.get("data", {})
+    n_value = require_natural("qf-lia even product n", data.get("n"))
+    if n_value > n_max:
+        fail("qf-lia-even-product-odd-obstruction n must be inside the weak-induction prefix")
+    product = require_natural("qf-lia even product product", data.get("product"))
+    if product != table[n_value] or product != n_value * (n_value + 1):
+        fail("qf-lia-even-product-odd-obstruction product is incorrect")
+    if product % 2 != 0:
+        fail("qf-lia-even-product-odd-obstruction product must be even")
+    claimed_half = require_natural("qf-lia even product claimed_half", data.get("claimed_half"))
+    rhs = require_natural("qf-lia even product odd_equation_rhs", data.get("odd_equation_rhs"))
+    if rhs != 2 * claimed_half + 1:
+        fail("qf-lia-even-product-odd-obstruction odd_equation_rhs must equal 2*claimed_half + 1")
+    if rhs != product - 1:
+        fail("qf-lia-even-product-odd-obstruction odd_equation_rhs must be the adjacent odd claim below product")
+    if rhs % 2 == 0:
+        fail("qf-lia-even-product-odd-obstruction rhs must be odd")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia even product smt2_artifact", smt2_artifact)
+    check_source("qf-lia even product smt2_artifact", smt2_artifact)
+    require_string("qf-lia even product proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-lia even product certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia even product certificate must document checked Diophantine evidence")
+
     strong = checks["strong-induction-fibonacci-bound-prefix"]
     if strong["expected_result"] != "unsat" or strong.get("proof_status") != "checked":
         fail("strong-induction-fibonacci-bound-prefix must be a checked unsat row")

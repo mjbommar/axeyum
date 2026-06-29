@@ -18,6 +18,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `weak-induction-even-sum-prefix` | `unsat` | checked |
+| `qf-lia-even-product-odd-obstruction` | `unsat` | checked |
 | `strong-induction-fibonacci-bound-prefix` | `unsat` | checked |
 | `loop-invariant-prefix-sum-trace` | `sat` | checked |
 | `bad-induction-step-rejected` | `sat` | checked |
@@ -46,6 +47,31 @@ step differences: 2, 4, 6, 8, 10, 12
 The validator recomputes each product, checks that every product is even, and
 checks that each listed step adds `2 * (k + 1)`. It accepts the row as checked
 `unsat` because there is no finite-prefix odd-product counterexample.
+
+## Check The Even-Product Certificate
+
+The solver-form row focuses on the last prefix value:
+
+```text
+6 * (6 + 1) = 42
+```
+
+A bad oddness witness claims:
+
+```text
+42 = 2 * 20 + 1 = 41
+```
+
+The SMT-LIB artifact records the evaluated contradiction:
+
+```text
+product = 42
+product = 41
+```
+
+Axeyum emits an `UnsatDiophantine` certificate and checks it independently.
+The full finite-prefix replay still checks all rows; this certificate pins one
+representative rejected parity witness to the solver evidence path.
 
 ## Encode Strong Induction
 
@@ -146,7 +172,7 @@ This lesson shows Axeyum's resource pattern for induction styles:
 
 ```text
 untrusted fast search -> finite-prefix failure candidate or replay trace
-trusted small checking -> exact integer replay over listed rows
+trusted small checking -> exact integer replay over listed rows and Diophantine certificates
 ```
 
 The universal theorem remains outside the finite checker until a proof route

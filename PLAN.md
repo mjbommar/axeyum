@@ -96,9 +96,10 @@ math-resource proof upgrades from
 where the first QF_LIA/Diophantine row now promotes modular arithmetic's
 nonunit inverse obstruction and exact statistical tests' bad binomial
 tail-count row, with finite simplicial homology now promoted for its bad
-boundary coefficient. Prefer the next QF_LIA/Diophantine first target or a
-secondary equality-heavy pack that can carry a small checked certificate and a
-resource-backed regression.
+boundary coefficient and induction patterns promoted for a finite even-product
+parity obstruction. The QF_LIA/Diophantine first-target set is now covered;
+prefer the next secondary equality-heavy pack that can carry a small checked
+certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

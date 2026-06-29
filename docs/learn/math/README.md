@@ -48,8 +48,9 @@ validated pack data and the repo-root command that replays it.
   prefix-sum base, bounded step and conclusion checks, a bad-step
   counterexample, and the induction-schema Lean horizon.
 - [Induction Patterns](induction-patterns-end-to-end.md): follows finite weak
-  induction, strong induction, loop-invariant replay, invalid-step rejection,
-  and the general induction-schema Lean horizon.
+  induction, a QF_LIA/Diophantine even-product certificate, strong induction,
+  loop-invariant replay, invalid-step rejection, and the general
+  induction-schema Lean horizon.
 - [Finite Sets](finite-sets-end-to-end.md): follows finite universe/subset
   replay, union/intersection identity replay, subset transitivity, and a fixed
   malformed-identity rejection.

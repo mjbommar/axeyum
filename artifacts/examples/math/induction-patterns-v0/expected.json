@@ -58,6 +58,23 @@
       "notes": "The validator recomputes n * (n + 1), the step differences, and evenness over the finite prefix."
     },
     {
+      "id": "qf-lia-even-product-odd-obstruction",
+      "claim": "The finite prefix product 6 * (6 + 1) can equal 2 * 20 + 1.",
+      "expected_result": "unsat",
+      "validation": "qf_lia_diophantine_evidence",
+      "proof_status": "checked",
+      "data": {
+        "n": 6,
+        "product": 42,
+        "claimed_half": 20,
+        "odd_equation_rhs": 41,
+        "smt2_artifact": "artifacts/examples/math/induction-patterns-v0/smt2/even-product-odd-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes induction_even_product_odd_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check for the evaluated integer parity contradiction product = 42 and product = 41"
+      },
+      "notes": "The SMT-LIB artifact isolates a false oddness witness for 6 * 7 = 42 after evaluating 2*20 + 1 to 41. Axeyum emits a Diophantine certificate for the contradiction product = 42 and product = 41."
+    },
+    {
       "id": "strong-induction-fibonacci-bound-prefix",
       "claim": "There is no n <= 8 where fib(n) > 2^n, using the recurrence as a finite strong-induction step.",
       "expected_result": "unsat",
