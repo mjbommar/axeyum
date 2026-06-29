@@ -124,8 +124,9 @@ The two clean accessible decide-rate gains above are landed (QF_UF 37→39, QF_A
   QF_ALIA (5/5); QF_SEQ axeyum *beats* z3 (16 vs 14).
 - **Remaining small gaps are deep, not bounded:**
   - **QF_UF −2** (`issue5396` pure-int that LIA declines + int-blast finds no
-    model; `issue5836-2` real+int+uf+arrays) — the **UF+theory-combination
-    keystone**, the genuine remaining lever (deep, soundness-critical).
+    model; `issue5836-2` is actually **QF_UFNRA** — UF + *nonlinear* real
+    arithmetic, the deepest combination, frontier "NRA last" territory) — **not a
+    clean combination-routing slice**; both residuals are genuinely hard.
   - **QF_ABV −1** (`issue5925` lazy-ext replay incompleteness; `rw34` budget) —
     deep/budget.
   - **QF_AUFLIA −2** (`bug337` unknown; **`bug330` hangs** — a *pre-existing*
@@ -137,13 +138,23 @@ The two clean accessible decide-rate gains above are landed (QF_UF 37→39, QF_A
   - **Not a lever:** raising the int-blast width ladder (`issue5396`) — maintainers
     deliberately narrowed it for performance; widening it is a net loss.
 
+## Headline: accessible-corpus bounded wins are exhausted
+
+After this session, **on the accessible curated corpus axeyum is at or near z3
+parity across the board** — most divisions tie, QF_SEQ leads, and the residual
+gaps are the *known-hard frontier* (UF+NRA, deep array extensionality, budget),
+not cheap bounded wins. The large remaining decide-rate work lives on the **full
+NAS corpus** (e.g. strings ~117 by count → the unbounded-string DP; NRA/CAD
+depth) — genuine multi-week *engine* work, gated on NAS-corpus access for
+measurement. That, not more accessible-slice triage, is where Z3/cvc5 parity is
+next won.
+
 ## Recommended next core step (focused, clean-environment session)
 
-1. **UF + theory combination keystone** (`issue5396`/`issue5836-2`): the real
-   remaining decide-rate lever — route mixed UF+theory instances through the
-   combination solver (or Ackermannize the UF then hand to the theory backend)
-   rather than the pure e-graph path. Verify each `Sat` replays, each `Unsat`
-   carries the skeleton; `uflia`/`abv` fuzzes green.
+1. **Engine depth on the full NAS corpus** (the real lever): unbounded/length-
+   aware string DP (QF_S ~117), NRA/CAD depth, and SAT-core/word-level reduction —
+   each gated by the committed scoreboard re-run (no parity claim without the
+   number). Needs NAS-corpus access.
 2. **`bug330` deadline-robustness:** `eprintln`-trace `eliminate_arrays` vs
    `substitute_array_definitions` vs the CEGAR loop on bug330 (stderr → a file;
    `eprintln!` is unbuffered, so it survives a kill), find the unguarded loop,
