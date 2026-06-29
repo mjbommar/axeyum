@@ -10,6 +10,7 @@ The examples are:
 - a hypergeometric point probability for a fixed `2x2` table;
 - a one-sided Fisher exact-test p-value under fixed margins;
 - checked rejection of a false binomial p-value.
+- a QF_LIA/Diophantine certificate for the rejected binomial tail numerator.
 
 ## Concepts
 
@@ -27,10 +28,11 @@ as finite nonnegative integers. It recomputes binomial coefficients,
 hypergeometric point probabilities, one-sided finite tails, and bad p-value
 refutations exactly.
 
-This is checked finite evidence for the bad p-value row and replay-only
-evidence for the positive witnesses. Asymptotic tests, normal approximations,
-floating-point statistical libraries, calibration, and model-selection claims
-remain numerical-honesty material.
+This is checked finite evidence for the bad p-value row, plus solver-form
+Diophantine evidence for the rejected binomial tail count. Positive witnesses
+remain replay-only. Asymptotic tests, normal approximations, floating-point
+statistical libraries, calibration, and model-selection claims remain
+numerical-honesty material.
 
 Validation:
 

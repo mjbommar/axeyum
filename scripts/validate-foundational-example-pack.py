@@ -14,7 +14,7 @@ import sys
 from collections import deque
 from fractions import Fraction
 from itertools import combinations, product
-from math import gcd
+from math import comb, gcd
 from pathlib import Path
 from typing import Any, Callable
 
@@ -14005,6 +14005,48 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
         fail("bad-binomial-pvalue-rejected actual_p_value is incorrect")
     if claimed == actual:
         fail("bad-binomial-pvalue-rejected claimed p-value unexpectedly matches")
+
+    qf_lia = checks["qf-lia-bad-binomial-tail-count"]
+    if qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-bad-binomial-tail-count must expect unsat")
+    if qf_lia["proof_status"] != "checked":
+        fail("qf-lia-bad-binomial-tail-count must be checked")
+    if qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-bad-binomial-tail-count must use qf_lia_diophantine_evidence validation")
+    data = qf_lia.get("data", {})
+    trials = require_positive_int("qf-lia bad binomial trials", data.get("trials"))
+    successes = require_nonnegative_int("qf-lia bad binomial observed_successes", data.get("observed_successes"))
+    tail = require_tail_kind("qf-lia bad binomial tail", data.get("tail"))
+    if successes > trials:
+        fail("qf-lia bad binomial observed_successes must not exceed trials")
+    terms = data.get("terms")
+    if not isinstance(terms, list) or not terms:
+        fail("qf-lia bad binomial terms must be a non-empty list")
+    actual_tail_count = require_nonnegative_int("qf-lia bad binomial actual_tail_count", data.get("actual_tail_count"))
+    claimed_tail_count = require_nonnegative_int("qf-lia bad binomial claimed_tail_count", data.get("claimed_tail_count"))
+    denominator = require_positive_int("qf-lia bad binomial denominator", data.get("denominator"))
+    expected_successes = (
+        range(successes, trials + 1)
+        if tail == "greater_equal"
+        else range(0, successes + 1)
+    )
+    expected_terms = [{"successes": index, "count": comb(trials, index)} for index in expected_successes]
+    if terms != expected_terms:
+        fail("qf-lia-bad-binomial-tail-count terms do not match binomial coefficients")
+    if actual_tail_count != sum(term["count"] for term in expected_terms):
+        fail("qf-lia-bad-binomial-tail-count actual_tail_count is incorrect")
+    if denominator != 2**trials:
+        fail("qf-lia-bad-binomial-tail-count denominator must be 2^trials for p0=1/2")
+    if claimed_tail_count == actual_tail_count:
+        fail("qf-lia-bad-binomial-tail-count claimed count unexpectedly matches")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia bad binomial smt2_artifact", smt2_artifact)
+    check_source("qf-lia bad binomial smt2_artifact", smt2_artifact)
+    require_string("qf-lia bad binomial proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-lia bad binomial certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia bad binomial certificate must document checked Diophantine evidence")
 
 
 def require_recurrence_trace(context: str, values: dict[str, Any]) -> list[Fraction]:

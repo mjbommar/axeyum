@@ -19,6 +19,7 @@ Concept rows:
 | `hypergeometric-point-probability` | `sat` | replay-only |
 | `fisher-left-tail-pvalue` | `sat` | replay-only |
 | `bad-binomial-pvalue-rejected` | `unsat` | checked |
+| `qf-lia-bad-binomial-tail-count` | `unsat` | checked |
 
 Every row is exact finite arithmetic over integer counts and rational
 probabilities. The pack does not claim asymptotic tests, normal
@@ -118,6 +119,36 @@ and rejects the false claim because:
 This is the important trust pattern for statistical resources: the search side
 may propose a p-value, but the trusted side recomputes it from finite counts.
 
+## Check The Tail Count Certificate
+
+The solver-form row strips the same rejected p-value down to integer counts:
+
+```text
+C(4,3) = 4
+C(4,4) = 1
+tail_count = 4 + 1 = 5
+```
+
+A claimed p-value of `1/4` over denominator `16` would require:
+
+```text
+tail_count = 4
+```
+
+The SMT-LIB artifact asserts both facts as integer equalities:
+
+```text
+c3 = 4
+c4 = 1
+tail_count = c3 + c4
+tail_count = 4
+```
+
+Axeyum derives an `UnsatDiophantine` certificate for the inconsistent linear
+integer system and checks that certificate independently. This upgrades the
+bad p-value row from finite replay to a concrete QF_LIA proof-object route for
+the count contradiction.
+
 ## Name The Horizon
 
 The pack intentionally covers exact finite tests only:
@@ -127,6 +158,7 @@ binomial finite tails
 hypergeometric point probabilities
 one-sided Fisher tails
 bad p-value refutations
+QF_LIA tail-count contradictions
 ```
 
 The following remain outside this proof claim:
@@ -164,7 +196,7 @@ This lesson shows Axeyum's current exact-statistics resource pattern:
 
 ```text
 untrusted fast search -> p-value or table claim
-trusted small checking -> exact finite counts and rational sums
+trusted small checking -> exact finite counts, rational sums, and Diophantine certificates
 remaining horizon -> asymptotics, policy choices, and floating-point statistics
 ```
 

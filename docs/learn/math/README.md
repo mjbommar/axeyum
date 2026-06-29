@@ -156,8 +156,8 @@ validated pack data and the repo-root command that replays it.
   comparison, and checked bad-coefficients rejection.
 - [Exact Statistical Tests](exact-statistical-tests-end-to-end.md): follows a
   one-sided exact binomial tail, hypergeometric point probability, one-sided
-  Fisher tail, checked bad p-value rejection, and the statistical
-  numerical-honesty horizon.
+  Fisher tail, checked bad p-value rejection, a QF_LIA/Diophantine bad
+  tail-count certificate, and the statistical numerical-honesty horizon.
 - [Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md):
   follows exact midpoint, collinearity, distance, affine-map, area-scaling,
   barycentric, bad-distance, and bad-orientation checks.

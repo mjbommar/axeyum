@@ -54,7 +54,8 @@ For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
 
 The exact-test pack checks finite binomial tails, hypergeometric point
-probabilities, and one-sided Fisher p-values as rational finite sums.
+probabilities, one-sided Fisher p-values as rational finite sums, and a checked
+QF_LIA/Diophantine certificate for a rejected binomial tail-count claim.
 
 The trusted checker works over rational arithmetic and finite tables.
 
@@ -198,7 +199,8 @@ recomputes weighted trace, determinant, Gram, and rank claims from exact
 matrix-valued atoms. For Markov chains, it applies exact row-vector transition
 multiplication and checks stationarity by `pi * P = pi`.
 For exact tests, it recomputes binomial coefficients and fixed-margin
-hypergeometric sums directly.
+hypergeometric sums directly; the bad tail-count row also emits a checked
+`UnsatDiophantine` certificate for the inconsistent integer equalities.
 
 Run the checks from the repository root:
 

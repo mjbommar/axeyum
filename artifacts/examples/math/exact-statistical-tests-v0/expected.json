@@ -72,6 +72,29 @@
         "actual_p_value": "5/16"
       },
       "notes": "The validator recomputes the exact tail probability as 5/16, so the claimed value 1/4 is rejected."
+    },
+    {
+      "id": "qf-lia-bad-binomial-tail-count",
+      "claim": "The Binomial(4, 1/2) right-tail numerator for X >= 3 can be 4.",
+      "expected_result": "unsat",
+      "validation": "qf_lia_diophantine_evidence",
+      "proof_status": "checked",
+      "data": {
+        "trials": 4,
+        "observed_successes": 3,
+        "tail": "greater_equal",
+        "terms": [
+          {"successes": 3, "count": 4},
+          {"successes": 4, "count": 1}
+        ],
+        "actual_tail_count": 5,
+        "claimed_tail_count": 4,
+        "denominator": 16,
+        "smt2_artifact": "artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-binomial-tail-count-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check for the integer count contradiction tail_count = 4 + 1 and tail_count = 4"
+      },
+      "notes": "The SMT-LIB artifact encodes the rejected p-value numerator as an integer count contradiction. Axeyum emits a Diophantine certificate for the inconsistent equalities."
     }
   ]
 }

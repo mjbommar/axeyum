@@ -308,6 +308,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `2*b - 6*k = 1`; the shared LIA resource regression requires
   `Evidence::UnsatDiophantine` and rechecks the gcd certificate independently.
 
+- **Exact-statistical-tests QF_LIA/Diophantine regression landed.**
+  [`exact-statistical-tests-v0`](artifacts/examples/math/exact-statistical-tests-v0/)
+  now has a checked proof-object row for the bad binomial tail-count
+  contradiction. The new SMT-LIB artifact encodes `C(4,3) = 4`, `C(4,4) = 1`,
+  `tail_count = 4 + 1`, and `tail_count = 4`; the shared LIA resource
+  regression requires `Evidence::UnsatDiophantine` and rechecks the integer
+  certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -516,9 +524,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`exact-statistical-tests-end-to-end.md`](docs/learn/math/exact-statistical-tests-end-to-end.md)
   as the learner-facing trace for the exact-statistical-tests pack: exact
   binomial-tail replay, hypergeometric point probability, one-sided Fisher
-  tail replay, checked bad p-value rejection, and the statistical
-  numerical-honesty horizon. The lesson is linked from the math learning index
-  plus the probability/statistics path.
+  tail replay, checked bad p-value rejection, a checked QF_LIA bad tail-count
+  certificate, and the statistical numerical-honesty horizon. The lesson is
+  linked from the math learning index plus the probability/statistics path.
 
 - **Complex-plane transform end-to-end lesson landed.** Added
   [`complex-plane-transforms-end-to-end.md`](docs/learn/math/complex-plane-transforms-end-to-end.md)
@@ -1390,10 +1398,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`exact-statistical-tests-v0`](artifacts/examples/math/exact-statistical-tests-v0/README.md)
   as the first exact finite statistical-test resource. The pack validates a
   binomial right-tail p-value, a hypergeometric point probability, a one-sided
-  Fisher exact-test p-value, and checked rejection of a false p-value. The
-  foundational example-pack validator now checks binomial and hypergeometric
-  p-values as rational finite sums over integer counts, without asymptotic or
-  floating-point approximations.
+  Fisher exact-test p-value, checked rejection of a false p-value, and a
+  checked QF_LIA/Diophantine bad tail-count row. The foundational example-pack
+  validator now checks binomial and hypergeometric p-values as rational finite
+  sums over integer counts, requires the solver-form SMT-LIB artifact and
+  regression metadata for the bad tail-count certificate, and stays clear of
+  asymptotic or floating-point approximations.
 
 - **Finite Markov-chain foundations pack landed.** Added
   [`finite-markov-chain-v0`](artifacts/examples/math/finite-markov-chain-v0/README.md)

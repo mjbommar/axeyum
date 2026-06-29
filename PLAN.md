@@ -94,8 +94,9 @@ groups, function composition, and finite algebra homomorphisms. Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
 where the first QF_LIA/Diophantine row now promotes modular arithmetic's
-nonunit inverse obstruction. Prefer the next QF_LIA/Diophantine first target or
-a secondary equality-heavy pack that can carry a small checked certificate and a
+nonunit inverse obstruction and exact statistical tests' bad binomial
+tail-count row. Prefer the next QF_LIA/Diophantine first target or a secondary
+equality-heavy pack that can carry a small checked certificate and a
 resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed

@@ -27,7 +27,8 @@
     "finite enumeration",
     "LIA finite counts",
     "LRA (exact rationals)",
-    "QF_LRA"
+    "QF_LRA",
+    "QF_LIA / Diophantine"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0",
   "source_refs": [
@@ -43,11 +44,13 @@
     "binomial-tail-pvalue",
     "hypergeometric-point-probability",
     "fisher-left-tail-pvalue",
-    "bad-binomial-pvalue-rejected"
+    "bad-binomial-pvalue-rejected",
+    "qf-lia-bad-binomial-tail-count"
   ],
   "graduation_criteria": [
     "Encode exact finite p-value claims as deterministic finite-count and rational-arithmetic obligations.",
     "Replay binomial and hypergeometric witnesses through exact combinatorics.",
+    "Keep promoted bad finite-count rows tied to checked QF_LIA/Diophantine evidence.",
     "Add two-sided Fisher and exact multinomial tests before claiming broader exact-test coverage.",
     "Keep asymptotic tests, normal approximations, floating-point libraries, and model-selection claims under numerical-honesty metadata."
   ]

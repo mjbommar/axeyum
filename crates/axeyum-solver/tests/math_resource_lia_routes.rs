@@ -13,12 +13,23 @@ use axeyum_solver::{
 const MODULAR_NONUNIT_DIOPHANTINE: &str = include_str!(
     "../../../artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2"
 );
+const EXACT_STATS_BAD_BINOMIAL_TAIL_COUNT: &str = include_str!(
+    "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-binomial-tail-count-diophantine-conflict.smt2"
+);
 
 #[test]
 fn modular_nonunit_inverse_emits_checked_diophantine_evidence() {
     assert_resource_diophantine(
         "modular-arithmetic-v0 nonunit inverse Diophantine obstruction",
         MODULAR_NONUNIT_DIOPHANTINE,
+    );
+}
+
+#[test]
+fn exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "exact-statistical-tests-v0 bad binomial tail-count obstruction",
+        EXACT_STATS_BAD_BINOMIAL_TAIL_COUNT,
     );
 }
 

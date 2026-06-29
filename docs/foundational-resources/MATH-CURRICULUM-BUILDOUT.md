@@ -752,7 +752,8 @@ stationary-distribution replay, and checked rejection of a malformed transition
 row.
 `artifacts/examples/math/exact-statistical-tests-v0/` now validates exact
 binomial tails, hypergeometric point probabilities, one-sided Fisher p-values,
-and checked rejection of a false p-value.
+checked rejection of a false p-value, and a checked QF_LIA bad tail-count
+obstruction.
 
 Recommended order:
 
@@ -795,7 +796,7 @@ Recommended order:
 15. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
     distribution replay, stationary distributions, and bad transition rows.
 16. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
-    for finite statistical tests.
+    for finite statistical tests, plus a checked QF_LIA bad-count certificate.
 17. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
     Rayleigh quotients, and finite spectral decomposition.
 18. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
@@ -940,7 +941,9 @@ Priority recipes:
 4. Bounded arithmetic/Diophantine route for number-theory packs. Status:
    landed as [QF_LIA Diophantine Evidence](../proof-cookbook/recipes/qf-lia-diophantine.md)
    and promoted in `modular-arithmetic-v0` for the nonunit inverse gcd
-   obstruction, while broader modular finite-search rows remain finite replay.
+   obstruction and in `exact-statistical-tests-v0` for the bad binomial
+   tail-count contradiction, while broader modular and exact-test finite-search
+   rows remain finite replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
    Status: landed as
    [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)
@@ -1087,7 +1090,8 @@ finite random-matrix bridge across linear algebra, probability, statistics, and
 numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics. `exact-statistical-tests-v0` now adds the first exact finite
-statistical-test slice for p-values as rational finite sums.
+statistical-test slice for p-values as rational finite sums, with a checked
+QF_LIA/Diophantine bad tail-count row.
 `proof-methods-patterns-v0` now deepens the proof-methods curriculum row with
 finite direct proof, contrapositive, proof-by-cases, contradiction, invalid
 converse counterexample, and natural-deduction Lean-horizon examples.
@@ -1273,8 +1277,8 @@ replay, checked bad unit-square rejection, and the complex-analysis Lean
 horizon.
 `exact-statistical-tests-v0` now has a learner-facing end-to-end lesson for
 one-sided exact binomial tails, hypergeometric point probability, one-sided
-Fisher tail replay, checked bad p-value rejection, and the statistical
-numerical-honesty horizon.
+Fisher tail replay, checked bad p-value rejection, a checked QF_LIA bad
+tail-count certificate, and the statistical numerical-honesty horizon.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked bad-delta rejection, and the continuity Lean
@@ -1372,6 +1376,8 @@ The current `needs-proof-route` cleanup is now classified: descriptive
 statistics points to finite replay plus QF_LRA/Farkas and QF_LIA/Diophantine
 graduation routes, and finite probability points to finite replay plus
 QF_LRA/Farkas graduation routes.
+The QF_LIA/Diophantine proof-upgrade lane now also has
+`exact-statistical-tests-v0` promoted for its bad binomial tail-count row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and
