@@ -63,6 +63,7 @@ artifacts/examples/math/
   proof-methods-refutation-v0/
   proof-methods-patterns-v0/
   induction-obligations-v0/
+  induction-patterns-v0/
   finite-sets-v0/
   relations-functions-v0/
   equivalence-classes-v0/
@@ -365,6 +366,9 @@ a natural-deduction Lean-horizon row.
 [`induction-obligations-v0`](../../artifacts/examples/math/induction-obligations-v0/)
 validates bounded induction base, step, and conclusion obligations with the
 full induction schema kept as a Lean-horizon row.
+[`induction-patterns-v0`](../../artifacts/examples/math/induction-patterns-v0/)
+validates finite weak induction, strong induction, loop-invariant replay, and
+checked bad-step rejection while keeping the full schema as a Lean-horizon row.
 [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/)
 validates finite equivalence relations, quotient-map fibers,
 partition-to-relation round trips, checked rejection of a non-transitive

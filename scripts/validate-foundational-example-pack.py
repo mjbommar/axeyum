@@ -2768,6 +2768,135 @@ def validate_induction_obligations(expected: dict[str, Any]) -> None:
     require_string("induction future checker", data.get("future_checker"))
 
 
+def require_bool_list(context: str, value: Any) -> list[bool]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty boolean list")
+    return [require_bool(f"{context}[{index}]", item) for index, item in enumerate(value)]
+
+
+def validate_induction_patterns(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    weak = checks["weak-induction-even-sum-prefix"]
+    if weak["expected_result"] != "unsat" or weak.get("proof_status") != "checked":
+        fail("weak-induction-even-sum-prefix must be a checked unsat row")
+    values = single_witness_values(weak, witnesses)
+    n_max = require_natural("weak induction n_max", values.get("n_max"))
+    if n_max > 1024:
+        fail("weak induction prefix is too large for deterministic replay")
+    table = require_int_list("weak induction values", values.get("values"))
+    differences = require_int_list("weak induction step_differences", values.get("step_differences"))
+    if len(table) != n_max + 1:
+        fail("weak induction values length must equal n_max + 1")
+    if len(differences) != n_max:
+        fail("weak induction step_differences length must equal n_max")
+    for n_value, listed in enumerate(table):
+        expected_value = n_value * (n_value + 1)
+        if listed != expected_value:
+            fail("weak induction value table does not match n * (n + 1)")
+        if listed % 2 != 0:
+            fail("weak induction value table contains an odd value")
+    if table[0] != 0:
+        fail("weak induction base value must be zero")
+    for k_value, listed_difference in enumerate(differences):
+        expected_difference = 2 * (k_value + 1)
+        if listed_difference != expected_difference:
+            fail("weak induction listed step difference is wrong")
+        if table[k_value + 1] - table[k_value] != listed_difference:
+            fail("weak induction values do not match listed step difference")
+
+    strong = checks["strong-induction-fibonacci-bound-prefix"]
+    if strong["expected_result"] != "unsat" or strong.get("proof_status") != "checked":
+        fail("strong-induction-fibonacci-bound-prefix must be a checked unsat row")
+    values = single_witness_values(strong, witnesses)
+    n_max = require_natural("strong induction n_max", values.get("n_max"))
+    if n_max < 2:
+        fail("strong induction prefix must include at least the two Fibonacci base cases and one step")
+    if n_max > 64:
+        fail("strong induction prefix is too large for deterministic replay")
+    fib = require_int_list("strong induction fib", values.get("fib"))
+    powers = require_int_list("strong induction powers_of_two", values.get("powers_of_two"))
+    if len(fib) != n_max + 1:
+        fail("strong induction fib length must equal n_max + 1")
+    if len(powers) != n_max + 1:
+        fail("strong induction powers_of_two length must equal n_max + 1")
+    if fib[0] != 0 or fib[1] != 1:
+        fail("strong induction Fibonacci base cases must be fib(0)=0 and fib(1)=1")
+    for n_value in range(n_max + 1):
+        if powers[n_value] != 2**n_value:
+            fail("strong induction powers_of_two table is wrong")
+        if fib[n_value] > powers[n_value]:
+            fail("strong induction Fibonacci bound is violated")
+    for n_value in range(2, n_max + 1):
+        if fib[n_value] != fib[n_value - 1] + fib[n_value - 2]:
+            fail("strong induction Fibonacci recurrence is wrong")
+        if fib[n_value - 1] + fib[n_value - 2] > powers[n_value]:
+            fail("strong induction finite step bound is violated")
+
+    invariant = checks["loop-invariant-prefix-sum-trace"]
+    if invariant["expected_result"] != "sat" or invariant.get("proof_status") != "checked":
+        fail("loop-invariant-prefix-sum-trace must be a checked sat row")
+    values = single_witness_values(invariant, witnesses)
+    n_limit = require_natural("loop invariant n", values.get("n"))
+    trace_value = values.get("trace")
+    if not isinstance(trace_value, list) or not trace_value:
+        fail("loop invariant trace must be a non-empty list")
+    if len(trace_value) != n_limit + 1:
+        fail("loop invariant trace length must equal n + 1")
+    previous_i: int | None = None
+    previous_acc: int | None = None
+    for index, row in enumerate(trace_value):
+        if not isinstance(row, dict):
+            fail(f"loop invariant trace[{index}] must be an object")
+        i_value = require_natural(f"loop invariant trace[{index}].i", row.get("i"))
+        acc_value = require_natural(f"loop invariant trace[{index}].acc", row.get("acc"))
+        if i_value != index:
+            fail("loop invariant trace indices must increase by one from zero")
+        if acc_value != i_value * (i_value + 1) // 2:
+            fail("loop invariant trace row violates acc = i * (i + 1) / 2")
+        if previous_i is not None and previous_acc is not None:
+            if i_value != previous_i + 1:
+                fail("loop invariant transition does not increment i by one")
+            if acc_value != previous_acc + i_value:
+                fail("loop invariant transition does not add the new i to acc")
+        previous_i = i_value
+        previous_acc = acc_value
+
+    bad_step = checks["bad-induction-step-rejected"]
+    if bad_step["expected_result"] != "sat" or bad_step.get("proof_status") != "checked":
+        fail("bad-induction-step-rejected must be a checked sat row")
+    values = single_witness_values(bad_step, witnesses)
+    property_name = values.get("property")
+    require_string("bad induction property", property_name)
+    if property_name != "n_lt_3":
+        fail("bad-induction-step-rejected must use property n_lt_3")
+    threshold = require_natural("bad induction threshold", values.get("threshold"))
+    if threshold != 3:
+        fail("bad-induction-step-rejected must use threshold 3")
+    n_max = require_natural("bad induction n_max", values.get("n_max"))
+    table = require_bool_list("bad induction values", values.get("values"))
+    if len(table) != n_max + 1:
+        fail("bad induction values length must equal n_max + 1")
+    for n_value, listed in enumerate(table):
+        if listed != (n_value < threshold):
+            fail("bad induction predicate table does not match n < 3")
+    failing_k = require_natural("bad induction failing_k", values.get("failing_k"))
+    if failing_k + 1 > n_max:
+        fail("bad induction failing_k must have a successor in the listed table")
+    if not table[failing_k] or table[failing_k + 1]:
+        fail("bad induction row does not witness P(k) true and P(k + 1) false")
+
+    schema = checks["general-induction-schema-lean-horizon"]
+    if schema["expected_result"] != "not-run":
+        fail("general-induction-schema-lean-horizon must be not-run")
+    if schema["proof_status"] != "lean-horizon":
+        fail("general-induction-schema-lean-horizon must remain lean-horizon")
+    data = schema.get("data", {})
+    require_string("general induction target theorem", data.get("target_theorem"))
+    require_string("general induction future checker", data.get("future_checker"))
+
+
 def require_bool_assignment(
     context: str,
     value: Any,
@@ -8614,6 +8743,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_graph_search_runtime(expected)
     if metadata["id"] == "induction-obligations-v0":
         validate_induction_obligations(expected)
+    if metadata["id"] == "induction-patterns-v0":
+        validate_induction_patterns(expected)
     if metadata["id"] == "integer-lia-v0":
         validate_integer_lia(expected)
     if metadata["id"] == "finite-probability-v0":

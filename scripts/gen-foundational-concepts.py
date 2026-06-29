@@ -57,6 +57,12 @@ CURRICULUM_MAP = {
         "pack": "induction-obligations-v0",
         "slice": "Bounded base/step obligations; general induction remains Lean-horizon.",
         "proof": "Bounded obligation replay now; induction schema requires Lean.",
+        "extra_packs": [
+            (
+                "induction-patterns-v0",
+                "Finite weak induction, strong induction, loop-invariant replay, and bad-step counterexamples.",
+            ),
+        ],
     },
     "sets": {
         "field_ids": ["set_theory_and_foundations"],

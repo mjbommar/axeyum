@@ -16,6 +16,7 @@ Example packs:
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 - [proof-methods-patterns-v0](../../../artifacts/examples/math/proof-methods-patterns-v0/)
 - [induction-obligations-v0](../../../artifacts/examples/math/induction-obligations-v0/)
+- [induction-patterns-v0](../../../artifacts/examples/math/induction-patterns-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
 
 ## What Axeyum Checks
@@ -30,8 +31,10 @@ CNF truth-table enumeration. The proof-patterns pack checks direct proof,
 contrapositive, proof by cases, contradiction, and invalid converse examples
 by assignment replay and truth-table enumeration. The induction pack checks
 bounded base, step, and conclusion obligations while keeping the full induction
-schema under Lean horizon. The graph-coloring pack adds a finite
-non-colorability example that can be exhaustively checked.
+schema under Lean horizon. The induction-patterns pack checks finite weak
+induction, strong induction, loop invariants, and invalid-step rejection. The
+graph-coloring pack adds a finite non-colorability example that can be
+exhaustively checked.
 
 ## Encode / Check Walkthrough
 
@@ -100,6 +103,18 @@ step: P(k) -> P(k + 1), for k <= 8
 The validator replays the base case, enumerates bounded step and conclusion
 counterexamples, and keeps the full `for all n` induction schema as a
 Lean-horizon row.
+For induction patterns, encode the replay table that supports the finite
+obligation:
+
+```text
+weak induction:   P(n): n * (n + 1) is even, n = 0..6
+strong induction: fib(n) <= 2^n, n = 0..8
+loop invariant:   acc = i * (i + 1) / 2
+bad step:         P(n): n < 3, with P(2) true and P(3) false
+```
+
+The validator recomputes the arithmetic tables and accepts the bad-step row
+only because it is a real induction-step counterexample.
 
 Run the checks from the repository root:
 
@@ -109,6 +124,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```
 

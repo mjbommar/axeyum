@@ -178,7 +178,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `propositional-logic` | `logic_and_proof` | `logic-basics-v0` | SAT/UNSAT Boolean formulas, truth tables, CNF refutations. |
 | `predicate-logic` | `logic_and_proof`, `set_theory_and_foundations` | `finite-predicate-v0` | Finite-domain quantifier expansion and counterexamples. |
 | `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Negate-and-decide examples, direct proof, contrapositive, proof by cases, contradiction, and invalid-proof counterexamples. |
-| `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0` | Bounded base/step obligations; general induction marked Lean-horizon. |
+| `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0`, `induction-patterns-v0` | Bounded base/step obligations, weak/strong induction prefixes, loop invariants, bad-step counterexamples; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0` | Membership, subset, union/intersection, finite identities. |
 | `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0` | Finite relation properties, injective/surjective checks, equivalence classes, quotient maps, and EUF slices. |
 | `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0` | Finite bijections/counting; infinite cardinality marked Lean-horizon. |
@@ -269,6 +269,8 @@ propositional-logic pack lives under
 the first replay-checked
 bounded induction pack lives under
 `artifacts/examples/math/induction-obligations-v0/`;
+the finite induction-pattern pack lives under
+`artifacts/examples/math/induction-patterns-v0/`;
 the first finite predicate-logic pack lives under
 `artifacts/examples/math/finite-predicate-v0/`;
 the first replay-checked number-theory pack lives under
@@ -367,7 +369,10 @@ no-surjection rows, and a Cantor-diagonal theorem target that stays
 Lean-horizon. `induction-obligations-v0` now validates exact prefix-sum
 base-case replay, bounded step-obligation enumeration, bounded conclusion
 checking, a bad-step counterexample witness, and a full-schema Lean-horizon
-row. `logic-basics-v0` now validates SAT witness replay, tautology and
+row. `induction-patterns-v0` now validates finite weak-induction evenness
+prefixes, strong-induction Fibonacci bounds, loop-invariant trace replay,
+checked bad-step rejection, and a full-schema Lean-horizon row.
+`logic-basics-v0` now validates SAT witness replay, tautology and
 contradiction truth-table checks, De Morgan equivalence, and a tiny CNF
 refutation by enumeration. `proof-methods-patterns-v0` now validates finite
 direct-proof/modus-ponens replay, contrapositive equivalence, proof by cases,
@@ -425,9 +430,10 @@ Recommended order:
 13. `finite-cardinality-v0` (landed): finite bijections, finite cardinal
     inequalities, injection/surjection refutations, and infinite-cardinality
     Lean-horizon metadata.
-14. `induction-obligations-v0` (landed): bounded base/step obligations,
-    bounded conclusion checking, bad-step witnesses, and full-schema
-    Lean-horizon metadata.
+14. `induction-obligations-v0` (landed) and `induction-patterns-v0` (landed):
+    bounded base/step obligations, finite weak and strong induction patterns,
+    loop-invariant replay, bad-step witnesses, and full-schema Lean-horizon
+    metadata.
 15. `logic-basics-v0` (landed): SAT witness replay, tautology and
     contradiction checks, De Morgan equivalence, and tiny CNF refutation.
 16. `finite-predicate-v0` (landed): finite-domain quantifier expansion,
@@ -801,8 +807,9 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `relations-functions-v0`, `equivalence-classes-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
-`finite-cardinality-v0`, `induction-obligations-v0`, `logic-basics-v0`, and
-`real-analysis-rational-v0`, Phase M4 graph-resource group and items 4-30, and
+`finite-cardinality-v0`, `induction-obligations-v0`, `induction-patterns-v0`,
+`logic-basics-v0`, and `real-analysis-rational-v0`, Phase M4 graph-resource
+group and items 4-30, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
 have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
@@ -822,6 +829,9 @@ statistical-test slice for p-values as rational finite sums.
 `proof-methods-patterns-v0` now deepens the proof-methods curriculum row with
 finite direct proof, contrapositive, proof-by-cases, contradiction, invalid
 converse counterexample, and natural-deduction Lean-horizon examples.
+`induction-patterns-v0` now deepens the induction curriculum row with finite
+weak induction, strong induction, loop-invariant replay, invalid-step
+counterexamples, and full-schema Lean-horizon examples.
 `equivalence-classes-v0` now deepens the relations/functions curriculum row
 with exact finite equivalence classes, quotient-map fibers, partition
 round-trips, a checked non-transitive counterexample, and an explicit

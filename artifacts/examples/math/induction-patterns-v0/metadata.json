@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "induction-patterns-v0",
+  "title": "Finite Induction Pattern Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_induction",
+    "curriculum_proof_methods",
+    "curriculum_naturals",
+    "field_logic_and_proof",
+    "field_number_theory"
+  ],
+  "field_ids": [
+    "logic_and_proof",
+    "number_theory"
+  ],
+  "curriculum_nodes": [
+    "induction",
+    "proof-methods",
+    "naturals"
+  ],
+  "axeyum_fragments": [
+    "bounded induction obligations",
+    "integer arithmetic replay",
+    "finite-domain enumeration",
+    "loop invariant checking",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/induction.md",
+    "docs/curriculum/00-foundations/proof-methods.md",
+    "docs/curriculum/01-number-systems/naturals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "weak-induction-even-sum-prefix",
+    "strong-induction-fibonacci-bound-prefix",
+    "loop-invariant-prefix-sum-trace",
+    "bad-induction-step-rejected",
+    "general-induction-schema-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay weak-induction, strong-induction, and invariant traces exactly from listed integer witnesses.",
+    "Reject invalid induction steps with concrete counterexample evidence, not prose.",
+    "Keep universal induction claims under Lean horizon until kernel-checked artifacts exist.",
+    "Promote to proof-object evidence only after the finite arithmetic rows have LRAT/Alethe/Lean certificate routes."
+  ]
+}

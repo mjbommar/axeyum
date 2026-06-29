@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "pack_id": "induction-patterns-v0",
+  "witnesses": [
+    {
+      "id": "even-product-prefix-table",
+      "description": "Finite weak-induction prefix for the evenness of n * (n + 1).",
+      "values": {
+        "n_max": 6,
+        "values": [0, 2, 6, 12, 20, 30, 42],
+        "step_differences": [2, 4, 6, 8, 10, 12]
+      }
+    },
+    {
+      "id": "fibonacci-bound-prefix-table",
+      "description": "Finite strong-induction prefix for fib(n) <= 2^n.",
+      "values": {
+        "n_max": 8,
+        "fib": [0, 1, 1, 2, 3, 5, 8, 13, 21],
+        "powers_of_two": [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      }
+    },
+    {
+      "id": "prefix-sum-loop-trace",
+      "description": "Loop trace for summing 1..5 with a prefix-sum invariant.",
+      "values": {
+        "n": 5,
+        "trace": [
+          {"i": 0, "acc": 0},
+          {"i": 1, "acc": 1},
+          {"i": 2, "acc": 3},
+          {"i": 3, "acc": 6},
+          {"i": 4, "acc": 10},
+          {"i": 5, "acc": 15}
+        ]
+      }
+    },
+    {
+      "id": "n-less-than-three-step-failure",
+      "description": "A counterexample showing that P(n) := n < 3 has a base case but fails the induction step.",
+      "values": {
+        "property": "n_lt_3",
+        "threshold": 3,
+        "n_max": 5,
+        "values": [true, true, true, false, false, false],
+        "failing_k": 2
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "weak-induction-even-sum-prefix",
+      "claim": "There is no n <= 6 where n * (n + 1) is odd, and every listed step adds 2 * (k + 1).",
+      "expected_result": "unsat",
+      "validation": "weak_induction_even_product_prefix",
+      "proof_status": "checked",
+      "witnesses": ["even-product-prefix-table"],
+      "notes": "The validator recomputes n * (n + 1), the step differences, and evenness over the finite prefix."
+    },
+    {
+      "id": "strong-induction-fibonacci-bound-prefix",
+      "claim": "There is no n <= 8 where fib(n) > 2^n, using the recurrence as a finite strong-induction step.",
+      "expected_result": "unsat",
+      "validation": "strong_induction_fibonacci_bound_prefix",
+      "proof_status": "checked",
+      "witnesses": ["fibonacci-bound-prefix-table"],
+      "notes": "The validator recomputes the Fibonacci prefix, powers of two, and the strong-step bound."
+    },
+    {
+      "id": "loop-invariant-prefix-sum-trace",
+      "claim": "The listed loop trace maintains acc = i * (i + 1) / 2 while summing 1..5.",
+      "expected_result": "sat",
+      "validation": "loop_invariant_prefix_sum_replay",
+      "proof_status": "checked",
+      "witnesses": ["prefix-sum-loop-trace"],
+      "notes": "The validator checks the invariant at every row and the transition between adjacent rows."
+    },
+    {
+      "id": "bad-induction-step-rejected",
+      "claim": "The predicate n < 3 has a concrete induction-step counterexample.",
+      "expected_result": "sat",
+      "validation": "bad_induction_step_counterexample",
+      "proof_status": "checked",
+      "witnesses": ["n-less-than-three-step-failure"],
+      "notes": "The validator checks that P(2) is true and P(3) is false for P(n) := n < 3."
+    },
+    {
+      "id": "general-induction-schema-lean-horizon",
+      "claim": "The full natural-number induction schema turns a base proof and step proof into a theorem for all n.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem": "nat_induction_schema_for_arbitrary_predicates",
+        "future_checker": "Lean module proving the induction principle and exported example theorems without sorryAx"
+      },
+      "notes": "Finite prefix checks do not prove the universal induction schema."
+    }
+  ]
+}

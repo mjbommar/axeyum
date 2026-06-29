@@ -241,6 +241,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/induction-obligations-v0",
           "notes": "Bounded base/step obligations; general induction remains Lean-horizon."
+        },
+        {
+          "id": "induction-patterns-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/induction-patterns-v0",
+          "notes": "Finite weak induction, strong induction, loop-invariant replay, and bad-step counterexamples."
         }
       ],
       "proof_routes": [
@@ -268,7 +274,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/induction-obligations-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/induction-obligations-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]

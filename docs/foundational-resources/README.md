@@ -67,6 +67,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/induction-obligations-v0/`](../../artifacts/examples/math/induction-obligations-v0/)
   validates bounded induction base, step, and conclusion obligations while
   keeping the full induction schema under Lean horizon.
+- [`artifacts/examples/math/induction-patterns-v0/`](../../artifacts/examples/math/induction-patterns-v0/)
+  validates finite weak-induction, strong-induction, and loop-invariant
+  patterns, plus checked rejection of an invalid induction step.
 - [`artifacts/examples/math/finite-sets-v0/`](../../artifacts/examples/math/finite-sets-v0/),
   [`artifacts/examples/math/relations-functions-v0/`](../../artifacts/examples/math/relations-functions-v0/),
   [`artifacts/examples/math/equivalence-classes-v0/`](../../artifacts/examples/math/equivalence-classes-v0/),
@@ -254,6 +257,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
