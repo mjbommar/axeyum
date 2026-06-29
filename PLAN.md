@@ -2459,9 +2459,12 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    - **CALLDATACOPY** (0x37) — *precise* calldata→memory copy for a concrete,
      32-aligned, bounded region (the calldata is already symbolic, so the witness
      replays) (`a5894be`). In essentially every ABI dispatcher.
-   - *Next candidates:* CODECOPY (0x39, copy concrete code bytes — precise);
-     RETURNDATACOPY/RETURNDATASIZE tied to the modeled return buffer;
-     symbolic-exponent EXP (heavy).
+   - **CODECOPY** (0x39) — *precise* code→memory copy (code is concrete →
+     constant words; raw bytecode now retained on `Program.code`) (`9a68459`).
+   - *Next candidates:* RETURNDATACOPY tied to a modeled return buffer;
+     EXTCODECOPY (external code genuinely unknown → fresh-witnessed both sides);
+     symbolic-exponent EXP (heavy). **Common runtime opcodes are now covered** —
+     the remaining gaps are rarer or genuinely nondeterministic.
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
