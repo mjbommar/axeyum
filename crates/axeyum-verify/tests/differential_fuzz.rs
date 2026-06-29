@@ -216,6 +216,123 @@ fn reachable_signed_arithmetic_panic_is_never_verified() {
     );
 }
 
+/// Build the nested if/else *dispatch* chain that `match scrut { k => .., _ => .. }`
+/// desugars to: a right-fold where each literal arm is `if scrut == k { body }
+/// else { <rest> }` and the wildcard is the innermost else. Each arm body is a
+/// single `let c = a <op> b;` (the op that may panic). `scrut` is a concrete let,
+/// so exactly one arm is reachable.
+fn dispatch_program(
+    w: u32,
+    scrut: u128,
+    arms: &[(u128, BinOp, u128, u128)],
+    wild: (BinOp, u128, u128),
+) -> Program {
+    let ty = Ty::Int {
+        width: w,
+        signed: false,
+    };
+    let arm_body = |op: BinOp, a: u128, b: u128| -> Vec<Stmt> {
+        vec![Stmt::Let {
+            name: "c".to_string(),
+            ty,
+            value: Expr::Binary {
+                op,
+                lhs: Box::new(Expr::IntLit { value: a, ty }),
+                rhs: Box::new(Expr::IntLit { value: b, ty }),
+            },
+        }]
+    };
+    // Innermost else = wildcard; fold the literal arms outward (as the macro does).
+    let (wop, wa, wb) = wild;
+    let mut els: Vec<Stmt> = arm_body(wop, wa, wb);
+    for &(k, op, a, b) in arms.iter().rev() {
+        let if_stmt = Stmt::If {
+            cond: Expr::Binary {
+                op: BinOp::Eq,
+                lhs: Box::new(Expr::Var("s".to_string())),
+                rhs: Box::new(Expr::IntLit { value: k, ty }),
+            },
+            then: arm_body(op, a, b),
+            els,
+        };
+        els = vec![if_stmt];
+    }
+    Program {
+        name: "f".to_string(),
+        params: vec![],
+        arrays: vec![],
+        body: {
+            let mut body = vec![Stmt::Let {
+                name: "s".to_string(),
+                ty,
+                value: Expr::IntLit { value: scrut, ty },
+            }];
+            body.extend(els);
+            body
+        },
+    }
+}
+
+#[test]
+fn reachable_panic_in_dispatch_arm_is_never_verified() {
+    // The soundness floor for the `match`-on-int desugar: if the concretely-selected
+    // arm's op panics, verify must never return Verified. Exercises the nested
+    // if/else chain + per-branch panic-predicate folding the macro produces.
+    let cfg = SolverConfig::default();
+    let mut rng = Rng(0x_3a7c_4a7c_0000_0011);
+    let mut checked = 0u32;
+    for _ in 0..400 {
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let mask: u128 = (1u128 << w) - 1;
+        // 2–3 distinct literal keys plus a wildcard.
+        let n_arms = 2 + (rng.next() as usize) % 2;
+        let mk_arm = |rng: &mut Rng, k: u128| {
+            let op = OPS[(rng.next() as usize) % OPS.len()];
+            let mut a = u128::from(rng.next()) & mask;
+            let mut b = u128::from(rng.next()) & mask;
+            if rng.next() % 3 == 0 {
+                b = 0; // force ÷0 / underflow edges
+            }
+            if rng.next() % 3 == 0 {
+                a = a.min(b);
+            }
+            (k, op, a, b)
+        };
+        let arms: Vec<(u128, BinOp, u128, u128)> =
+            (0..n_arms).map(|i| mk_arm(&mut rng, i as u128 + 1)).collect();
+        let wild = {
+            let (_, op, a, b) = mk_arm(&mut rng, 0);
+            (op, a, b)
+        };
+        // Scrutinee: sometimes hit a key, sometimes fall through to the wildcard.
+        let scrut = if rng.next() % 2 == 0 {
+            arms[(rng.next() as usize) % arms.len()].0
+        } else {
+            (n_arms as u128) + 5 // distinct from all keys → wildcard
+        };
+        // Oracle: which arm is selected, and does its op panic?
+        let (sel_op, sel_a, sel_b) = arms
+            .iter()
+            .find(|&&(k, ..)| k == scrut)
+            .map_or(wild, |&(_, op, a, b)| (op, a, b));
+        if !panics(sel_op, w, sel_a, sel_b) {
+            continue;
+        }
+        checked += 1;
+        let prog = dispatch_program(w, scrut, &arms, wild);
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong-safe (dispatch): scrut={scrut} selects {sel_a} {sel_op:?} {sel_b} (u{w}) \
+             which panics, but verify returned {verdict:?}"
+        );
+    }
+    assert!(
+        checked >= 10,
+        "dispatch fuzz exercised too few panicking selections ({checked})"
+    );
+}
+
 #[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index
