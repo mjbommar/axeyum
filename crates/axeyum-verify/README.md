@@ -11,10 +11,13 @@ params and locals, arithmetic/bitwise/comparison, `if`/`match`-on-int, fixed
 arrays + indexing, compound assignment, and `#[unwind(K)]`-bounded `while`/`for`.
 Common integer methods are modeled exactly: `wrapping_{add,sub,mul}` (modular, no
 overflow class), `saturating_{add,sub,mul}` (clamp to the type bound via `ite`
-over the overflow predicate, signed and unsigned), and `min`/`max` (a
-signedness-correct select). It lowers each panic class to an explicit *bad-state*
-boolean term and asks the solver whether any is reachable — a model is a concrete
-bug witness; `unsat` is a bounded safety proof.
+over the overflow predicate, signed and unsigned), `min`/`max` (a
+signedness-correct select), `abs` (with its `iN::MIN` overflow panic), `pow(N)`
+for a constant exponent (folded to checked `Mul`s), and the `checked_{add,sub,mul}`
+Option idiom (`.unwrap()`/`.expect()`, `.unwrap_or(d)`, and `match … { Some(v) =>
+.., None => .. }`). It lowers each panic class to an explicit *bad-state* boolean
+term and asks the solver whether any is reachable — a model is a concrete bug
+witness; `unsat` is a bounded safety proof.
 
 ## Soundness — `DISAGREE = 0`
 
