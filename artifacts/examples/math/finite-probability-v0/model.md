@@ -68,6 +68,21 @@ The pack checks:
 P(disease | positive) = 2/13
 ```
 
+The bad Bayes row keeps the same diagnostic-test parameters but asserts the
+false posterior `1/5`. After exact replay computes:
+
+```text
+disease_and_positive_probability = 9/1000
+evidence_probability = 117/2000
+```
+
+the checked linear contradiction is:
+
+```text
+evidence_probability * posterior = disease_and_positive_probability
+posterior = 1/5
+```
+
 These fixed checks are not claims about continuous distributions, sampling, or
 statistical inference. They are exact finite-table replay targets.
 

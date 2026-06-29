@@ -394,6 +394,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `next_state = 3/4`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Finite-probability Bayes QF_LRA/Farkas regression landed.**
+  [`finite-probability-v0`](artifacts/examples/math/finite-probability-v0/)
+  now binds a bad diagnostic-test posterior to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `(117/2000)*posterior = 9/1000` and the false claim
+  `posterior = 1/5`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

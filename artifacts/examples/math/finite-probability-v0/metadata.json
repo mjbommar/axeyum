@@ -44,7 +44,8 @@
     "pmf-total-mass",
     "bad-normalization-rejected",
     "conditional-probability-witness",
-    "bayes-posterior-witness"
+    "bayes-posterior-witness",
+    "bad-bayes-posterior-rejected"
   ],
   "graduation_criteria": [
     "Encode finite probability mass constraints as deterministic QF_LRA formulas.",

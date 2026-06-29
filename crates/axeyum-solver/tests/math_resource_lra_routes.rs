@@ -207,6 +207,26 @@ fn finite_probability_bad_normalization_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_probability_bad_bayes_posterior_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let posterior = real(&mut arena, "posterior");
+
+    // For prior=1/100, sensitivity=9/10, and false_positive_rate=1/20:
+    // P(disease and positive)=9/1000 and P(positive)=117/2000. Bayes requires
+    // (117/2000)*posterior = 9/1000. The bad row claims posterior=1/5.
+    let evidence_probability = arena.real_ratio(117, 2000);
+    let weighted_posterior = arena.real_mul(evidence_probability, posterior).unwrap();
+    let bayes_equation = eq_ratio(&mut arena, weighted_posterior, 9, 1000);
+    let false_posterior = eq_ratio(&mut arena, posterior, 1, 5);
+
+    assert_farkas_checked(
+        "finite-probability-v0 bad-bayes-posterior-rejected",
+        &arena,
+        &[bayes_equation, false_posterior],
+    );
+}
+
+#[test]
 fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let p10 = real(&mut arena, "p10");

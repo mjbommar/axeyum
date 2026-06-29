@@ -29,6 +29,7 @@ Concept rows:
 | `bad-normalization-rejected` | `unsat` | checked |
 | `conditional-probability-witness` | `sat` | replay-only |
 | `bayes-posterior-witness` | `sat` | replay-only |
+| `bad-bayes-posterior-rejected` | `unsat` | checked |
 | `pushforward-distribution-witness` | `sat` | replay-only |
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
@@ -83,6 +84,30 @@ P(heads) = 1/2
 P(tails) = 1/2
 total = P(heads) + P(tails)
 total = 3/2
+```
+
+The Bayes posterior witness uses:
+
+```text
+P(disease) = 1/100
+P(positive | disease) = 9/10
+P(positive | not disease) = 1/20
+P(disease | positive) = 2/13
+```
+
+The bad Bayes row keeps the same diagnostic-test parameters but claims
+posterior `1/5`. Exact replay computes:
+
+```text
+disease_and_positive_probability = 9/1000
+evidence_probability = 117/2000
+```
+
+The checked `QF_LRA` contradiction is:
+
+```text
+evidence_probability * posterior = disease_and_positive_probability
+posterior = 1/5
 ```
 
 The finite integration witness is a three-atom table:
@@ -296,7 +321,8 @@ validated 1 foundational example pack(s)
 ## Trust Boundary
 
 The search side may propose a probability table or posterior. The trusted side
-only recomputes finite sums and exact rational divisions. Continuous
+only recomputes finite sums, exact rational divisions, and small Farkas
+certificates for linear probability refutations. Continuous
 probability, general product measures, Fubini/Tonelli, Lebesgue integration,
 conditional expectation, regular conditional probabilities, disintegration
 theorems, general Markov kernels, general concentration inequalities,

@@ -30,7 +30,8 @@ Example packs:
 
 The statistics path is exact and finite. It checks probability mass tables,
 conditional probability, Bayes replay, finite sigma-algebra axioms, finite
-additivity, event complements, a checked QF_LRA bad-normalization certificate,
+additivity, event complements, checked QF_LRA bad-normalization and bad-Bayes
+certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, finite partition conditional

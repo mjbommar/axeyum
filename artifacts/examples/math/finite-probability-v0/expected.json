@@ -87,6 +87,26 @@
       "proof_status": "replay-only",
       "witnesses": ["diagnostic-bayes"],
       "notes": "The validator recomputes Bayes rule exactly from the prior, sensitivity, and false-positive rate."
+    },
+    {
+      "id": "bad-bayes-posterior-rejected",
+      "claim": "The same diagnostic-test parameters imply posterior P(disease | positive) = 1/5.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_bayes_posterior_refutation",
+      "proof_status": "checked",
+      "data": {
+        "prior": "1/100",
+        "sensitivity": "9/10",
+        "false_positive_rate": "1/20",
+        "disease_and_positive_probability": "9/1000",
+        "evidence_probability": "117/2000",
+        "actual_posterior": "2/13",
+        "claimed_posterior": "1/5",
+        "farkas_bayes_equation": "evidence_probability * posterior = disease_and_positive_probability",
+        "smt2_artifact": "artifacts/examples/math/finite-probability-v0/smt2/bad-bayes-posterior-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_bayes_posterior_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes the evidence probability as 117/2000 and the disease-positive probability as 9/1000; the Axeyum regression refutes evidence_probability * posterior = disease_and_positive_probability together with posterior = 1/5 using rechecked Farkas evidence."
     }
   ]
 }

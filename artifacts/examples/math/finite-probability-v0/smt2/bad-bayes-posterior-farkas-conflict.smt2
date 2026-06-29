@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const posterior Real)
+(assert (= (* (/ 117 2000) posterior) (/ 9 1000)))
+(assert (= posterior (/ 1 5)))
+(check-sat)

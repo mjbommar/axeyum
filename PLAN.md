@@ -106,8 +106,9 @@ the bad expected-time equation; least-squares regression is now promoted for
 the bad coefficient row, and bounded rational real analysis for the bad
 linear-delta row, with finite conditional expectation now promoted for the bad
 high-block table and finite Euler method now promoted for the bad fixed-step
-transition. Prefer the next secondary equality-heavy pack that can carry a
-small checked certificate and a resource-backed regression.
+transition, and finite probability now promoted for a bad Bayes-posterior
+conflict. Prefer the next secondary equality-heavy pack that can carry a small
+checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

@@ -11453,6 +11453,53 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
     if numerator / denominator != posterior:
         fail("bayes posterior witness does not match Bayes rule")
 
+    bad_bayes = checks["bad-bayes-posterior-rejected"]
+    if bad_bayes["expected_result"] != "unsat":
+        fail("bad-bayes-posterior-rejected must expect unsat")
+    if bad_bayes["proof_status"] != "checked":
+        fail("bad-bayes-posterior-rejected must be checked")
+    data = bad_bayes.get("data", {})
+    prior = require_probability("bad Bayes prior", data.get("prior"))
+    sensitivity = require_probability("bad Bayes sensitivity", data.get("sensitivity"))
+    false_positive_rate = require_probability(
+        "bad Bayes false_positive_rate",
+        data.get("false_positive_rate"),
+    )
+    disease_and_positive_probability = require_probability(
+        "bad Bayes disease_and_positive_probability",
+        data.get("disease_and_positive_probability"),
+    )
+    evidence_probability = require_probability(
+        "bad Bayes evidence_probability",
+        data.get("evidence_probability"),
+    )
+    actual_posterior = require_probability("bad Bayes actual_posterior", data.get("actual_posterior"))
+    claimed_posterior = require_probability("bad Bayes claimed_posterior", data.get("claimed_posterior"))
+    computed_disease_and_positive = prior * sensitivity
+    computed_evidence = computed_disease_and_positive + (1 - prior) * false_positive_rate
+    if computed_evidence == 0:
+        fail("bad-bayes-posterior-rejected evidence probability must be nonzero")
+    if disease_and_positive_probability != computed_disease_and_positive:
+        fail("bad-bayes-posterior-rejected disease_and_positive_probability is incorrect")
+    if evidence_probability != computed_evidence:
+        fail("bad-bayes-posterior-rejected evidence_probability is incorrect")
+    if actual_posterior != disease_and_positive_probability / evidence_probability:
+        fail("bad-bayes-posterior-rejected actual_posterior is incorrect")
+    if claimed_posterior == actual_posterior:
+        fail("bad-bayes-posterior-rejected must document a false posterior")
+    farkas_bayes_equation = data.get("farkas_bayes_equation")
+    require_string("bad Bayes farkas_bayes_equation", farkas_bayes_equation)
+    if farkas_bayes_equation != "evidence_probability * posterior = disease_and_positive_probability":
+        fail("bad-bayes-posterior-rejected must document the Farkas Bayes equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Bayes smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-bayes-posterior-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad Bayes farkas_regression", regression)
+    if "finite_probability_bad_bayes_posterior_emits_checked_farkas" not in regression:
+        fail("bad-bayes-posterior-rejected must link the Farkas regression")
+
 
 def require_atom_value_table(
     context: str,

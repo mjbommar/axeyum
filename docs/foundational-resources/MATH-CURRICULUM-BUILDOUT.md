@@ -625,7 +625,8 @@ and vertex-cut certificates, plus checked rejection of non-separating one-edge
 and one-vertex cuts.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, Bayes posterior replay, and a
-checked QF_LRA/Farkas rejection of a false normalization claim.
+checked QF_LRA/Farkas rejection of false normalization and Bayes-posterior
+claims.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
 mean/variance identities, contingency-table margins, and a Simpson's paradox
 count-table witness.
@@ -768,7 +769,8 @@ Recommended order:
    non-colorability, finite reachability, traversal traces, finite search
    cost counters, cut separation, matching witnesses, augmenting paths, finite
    DAG d-separation, and minimum cut certificates.
-2. `finite-probability-v0`: probability mass, conditioning, Bayes rule.
+2. `finite-probability-v0`: probability mass, conditioning, Bayes rule, and
+   checked bad normalization/Bayes-posterior certificates.
 3. `descriptive-statistics-v0` and `least-squares-regression-v0`:
    mean/variance identities, contingency tables, Simpson witness,
    least-squares normal equations, residual orthogonality, and bad-coefficient
@@ -1420,6 +1422,9 @@ same checked Farkas evidence path after finite replay computes the tail
 probability.
 `finite-probability-v0` now routes its bad normalization row through the same
 checked Farkas evidence path after exact replay computes the atom total.
+It also routes a bad diagnostic-test Bayes posterior through the same checked
+Farkas evidence path after exact replay computes the disease-positive and
+evidence probabilities.
 `finite-markov-chain-v0` now routes its bad stochastic-row rejection through
 the same checked Farkas evidence path after exact replay computes the row sum.
 `finite-hitting-times-v0` now routes its bad expected-time row through the same

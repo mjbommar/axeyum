@@ -38,5 +38,17 @@ Expected result: `sat`.
 The witness gives a prior, sensitivity, false-positive rate, and posterior.
 The validator recomputes Bayes rule exactly and checks the posterior is `2/13`.
 
-Proof route: finite-model replay today. A future impossible Bayes-rule
-constraint should emit a QF_LRA/Farkas certificate.
+Proof route: finite-model replay today. Impossible Bayes-rule constraints
+belong on the QF_LRA/Farkas route.
+
+## `bad-bayes-posterior-rejected`
+
+Expected result: `unsat`.
+
+The row fixes the same diagnostic-test parameters but claims posterior
+`P(disease | positive) = 1/5`. The validator recomputes the evidence
+probability as `117/2000` and the disease-positive probability as `9/1000`.
+
+The resource-backed Axeyum regression checks the final linear Bayes equation as
+`QF_LRA`: `evidence_probability * posterior = disease_and_positive_probability`
+and `posterior = 1/5`, requiring rechecked `UnsatFarkas` evidence.

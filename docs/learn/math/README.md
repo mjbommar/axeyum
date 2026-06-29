@@ -228,9 +228,9 @@ validated pack data and the repo-root command that replays it.
   quotient-ring table replay, and checked bad non-ideal rejection.
 - [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
-  random-variable, conditional-expectation, finite stochastic-kernel,
-  concentration, finite martingale, product-measure, and simple-function
-  integral replay.
+  checked Bayes-posterior refutation, random-variable, conditional-expectation,
+  finite stochastic-kernel, concentration, finite martingale, product-measure,
+  and simple-function integral replay.
 - [Finite Integration](finite-integration-end-to-end.md): follows finite
   simple-function integrals, indicator integrals, integral linearity, checked
   bad-expectation rejection, and the Lebesgue-integration Lean horizon.
