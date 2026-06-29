@@ -15,6 +15,7 @@ Example packs:
 - [finite-algebra-homomorphisms-v0](../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
 - [finite-ideals-v0](../../../artifacts/examples/math/finite-ideals-v0/)
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
+- [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
@@ -37,9 +38,12 @@ bad-homomorphism rejection. The finite-ideals pack checks finite ideals,
 principal ideal generation, ring-homomorphism kernels, and quotient-ring
 tables over modular rings. The finite-vector-spaces pack checks finite fields
 acting on finite additive groups, subspaces, spans, linear maps, kernels,
-images, and rank-nullity. The finite-modules pack checks finite rings acting on
-finite additive groups, generated submodules, module homomorphisms, quotient
-module tables, kernels, images, and bad-submodule refutations. The
+images, and rank-nullity. The finite-dual-spaces pack checks covectors as
+finite field-valued function tables, pointwise dual operations, dual-basis
+pairing, annihilator recomputation, transpose maps, and bad-covector
+refutations. The finite-modules pack checks finite rings acting on finite
+additive groups, generated submodules, module homomorphisms, quotient module
+tables, kernels, images, and bad-submodule refutations. The
 finite-tensor-products pack checks finite tensor-product basis/dimension
 replay, bilinear maps, factorization through a tensor map, Kronecker products,
 and bad-bilinear-map refutations. The gcd/Bezout
@@ -117,6 +121,22 @@ projection(11) = 10
 The `finite-vector-spaces-v0` pack checks the scalar action laws, recomputes
 the span of `10`, checks the projection is linear, recomputes kernel and image,
 and verifies rank-nullity as `2 = 1 + 1`.
+
+For a finite dual-space example, represent covectors on `F2^2` as tables:
+
+```text
+x(10) = 1
+x(01) = 0
+y(10) = 0
+y(01) = 1
+annihilator({00,10}) = {zero,y}
+```
+
+The `finite-dual-spaces-v0` pack checks that each covector is linear, dual
+addition and scalar multiplication are pointwise, `x,y` pair with the primal
+basis as the identity matrix, the annihilator is exactly the covectors that
+vanish on the listed subspace, and the transpose map satisfies
+`(T* phi)(v) = phi(Tv)`.
 
 For a finite module example, use `Z/4Z` acting on itself:
 
@@ -208,6 +228,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
@@ -224,6 +245,6 @@ General group, ring, field, module, isomorphism-theorem, quotient, and
 algebraic-number-theory theorems need Lean-backed concept rows. Near-term
 resource gaps are richer polynomial factorization packs and stronger BV/CNF or
 EUF/Alethe evidence for finite group, finite ring, finite homomorphism,
-finite ideal, finite vector-space, finite-field, finite-module,
+finite ideal, finite vector-space, finite dual-space, finite-field, finite-module,
 gcd/Diophantine, bounded number-theory, and fixed-degree polynomial universal
 rows.

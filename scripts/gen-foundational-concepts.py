@@ -182,6 +182,10 @@ CURRICULUM_MAP = {
                 "Finite vector-space tables, subspaces, spans, linear maps, kernels, images, and rank-nullity replay.",
             ),
             (
+                "finite-dual-spaces-v0",
+                "Finite dual-space covectors, dual-basis pairings, annihilators, transpose maps, and bad-covector rejection.",
+            ),
+            (
                 "finite-modules-v0",
                 "Finite module tables over rings, submodules, generated submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
@@ -220,6 +224,10 @@ CURRICULUM_MAP = {
             (
                 "finite-vector-spaces-v0",
                 "Finite vector-space tables over F2, subspaces, spans, and linear maps.",
+            ),
+            (
+                "finite-dual-spaces-v0",
+                "Finite dual spaces over F2, covector linearity, dual bases, annihilators, and transpose maps.",
             ),
             (
                 "finite-tensor-products-v0",
@@ -262,6 +270,10 @@ CURRICULUM_MAP = {
                 "Finite vector spaces over F2, subspaces, spans, linear maps, kernels, images, and rank-nullity replay.",
             ),
             (
+                "finite-dual-spaces-v0",
+                "Finite dual spaces over F2, dual-basis pairings, annihilators, transpose maps, and covector counterexamples.",
+            ),
+            (
                 "finite-modules-v0",
                 "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
@@ -299,8 +311,8 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, and Cayley-table validation."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
@@ -315,7 +327,7 @@ FIELD_PACKS = {
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, distance, midpoint, collinearity, and rigid finite configurations."),
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {

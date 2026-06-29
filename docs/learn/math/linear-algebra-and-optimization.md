@@ -12,6 +12,7 @@ Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
+- [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
@@ -33,14 +34,16 @@ feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
 replays finite convexity/threshold and finite-dimensional norm/operator
 examples. The finite-vector-space slice adds `F2^2`, subspace/span replay,
 linear-map kernel/image replay, rank-nullity by finite cardinality, and
-checked non-subspace rejection. The finite-module slice adds ring actions on
-finite additive groups, generated submodules, module homomorphisms,
-kernel/image replay, quotient-module tables, and checked non-submodule
-rejection. The finite-tensor-product slice adds bilinear maps, finite
-universal-factorization shadows, Kronecker products, and bad-bilinear-map
-rejection over `F2`. The numerical-linear-algebra slice adds exact residual bounds,
-rational interval boxes for solutions, and a one-step Jacobi contraction
-check. The finite random-matrix slice adds exact
+checked non-subspace rejection. The finite-dual-space slice adds covectors as
+finite function tables, pointwise dual operations, dual-basis pairings,
+annihilator recomputation, transpose-map replay, and checked bad-covector
+rejection. The finite-module slice adds ring actions on finite additive groups,
+generated submodules, module homomorphisms, kernel/image replay, quotient-module
+tables, and checked non-submodule rejection. The finite-tensor-product slice
+adds bilinear maps, finite universal-factorization shadows, Kronecker products,
+and bad-bilinear-map rejection over `F2`. The numerical-linear-algebra slice
+adds exact residual bounds, rational interval boxes for solutions, and a
+one-step Jacobi contraction check. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, and rank distributions. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
@@ -90,6 +93,20 @@ image(projection_to_first_coordinate) = {00, 10}
 The `finite-vector-spaces-v0` validator checks vector-space laws by
 enumeration, recomputes spans, verifies linear-map preservation, and checks
 rank-nullity as `dim(domain) = dim(kernel) + dim(image)`.
+
+For dual spaces, keep the same carrier and encode each covector by evaluation:
+
+```text
+x(00)=0, x(10)=1, x(01)=0, x(11)=1
+y(00)=0, y(10)=0, y(01)=1, y(11)=1
+dual_basis = x, y
+annihilator({00,10}) = {zero,y}
+```
+
+The `finite-dual-spaces-v0` validator checks that `x`, `y`, and `x+y` are
+linear functionals, dual addition is pointwise, the listed dual basis pairs
+with `10,01` as the identity matrix, annihilators are recomputed from the
+evaluation table, and transpose maps satisfy `(T* phi)(v) = phi(Tv)`.
 
 For module-flavored linear algebra, encode `Z/4Z` as a module over itself:
 
@@ -179,6 +196,7 @@ Run the checks from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
@@ -199,7 +217,7 @@ read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
 ## Horizon
 
 General spectral theorems, rank theorems, vector-space dimension theorems,
-module theory, Chebyshev-system/Haar-space theorems, minimax approximation,
-conditioning, numerical stability, SDP,
-general convex analysis, and algorithm convergence need proof routes or
-carefully bounded numerical-experiment metadata.
+duality and bidual theorems, topological duals, module theory,
+Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
+numerical stability, SDP, general convex analysis, and algorithm convergence
+need proof routes or carefully bounded numerical-experiment metadata.

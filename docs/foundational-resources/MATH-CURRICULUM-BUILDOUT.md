@@ -189,14 +189,14 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, modular ring ideals, and quotient rings. |
-| `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-vector-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, vector-addition groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
+| `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
-| `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-tensor-products-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, bilinear maps, and tensor-product replay. |
+| `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, and tensor-product replay. |
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, coefficient extraction, and finite convolution. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
-| `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0` | Fixed rational matrices, finite vector spaces and modules, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, and Hessians. |
+| `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, and Hessians. |
 | `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, and algebraic inequalities; general integration marked Lean-horizon. |
 
 ## Field Extensions Beyond The Current Curriculum
@@ -311,6 +311,8 @@ the first finite ideal and quotient-ring pack lives under
 `artifacts/examples/math/finite-ideals-v0/`;
 the first finite vector-space pack lives under
 `artifacts/examples/math/finite-vector-spaces-v0/`;
+the first finite dual-space pack lives under
+`artifacts/examples/math/finite-dual-spaces-v0/`;
 the first finite module pack lives under
 `artifacts/examples/math/finite-modules-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
@@ -390,6 +392,10 @@ Lean-horizon row. `finite-modules-v0` now adds the finite ring-to-linear-algebra
 bridge with `Z/4Z` module table replay, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay,
 checked non-submodule rejection, and a general module-theory Lean-horizon row.
+`finite-dual-spaces-v0` now adds the finite dual-space bridge with `F2^2`
+covector linearity replay, pointwise dual operations, dual-basis pairing,
+annihilator recomputation, transpose-map replay, checked bad-covector
+rejection, and a general duality/functional-analysis Lean-horizon row.
 `finite-tensor-products-v0` now adds the finite multilinear-algebra bridge:
 `F2^2 tensor F2` basis/dimension replay, finite bilinear-map table replay,
 universal-factorization shadow through a linear map, Kronecker-product matrix
@@ -479,20 +485,23 @@ Recommended order:
    ring-homomorphism kernel/image checks.
 5. `finite-fields-v0` (landed), `finite-algebra-homomorphisms-v0`
    (landed), `finite-ideals-v0` (landed), `finite-vector-spaces-v0`
-   (landed), `finite-modules-v0` (landed), and
+   (landed), `finite-dual-spaces-v0` (landed), `finite-modules-v0`
+   (landed), and
    `finite-tensor-products-v0` (landed): prime-field axioms,
    composite-modulus counterexample, finite homomorphism tables, kernel/image
    replay, quotient maps, quotient rings, induced-map checks, finite vector
-   spaces over `F2`, finite modules over `Z/4Z`, bilinear maps, and tensor
-   product replay.
+   spaces over `F2`, finite dual spaces and covectors, finite modules over
+   `Z/4Z`, bilinear maps, and tensor product replay.
 6. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
 7. `linear-algebra-rational-v0`, `finite-vector-spaces-v0`,
-   `finite-modules-v0`, `finite-tensor-products-v0`, and
+   `finite-dual-spaces-v0`, `finite-modules-v0`,
+   `finite-tensor-products-v0`, and
    `multivariable-calculus-rational-v0` (landed): fixed matrices, finite
    vector spaces over `F2`, finite modules over `Z/4Z`, subspaces, spans,
-   quotient modules, tensor products, bilinear maps, Kronecker products,
-   linear maps, rank-nullity replay, LU replay, Jacobian/Hessian matrix
-   replay, and inconsistent systems with Farkas evidence where available.
+   dual bases, annihilators, transpose maps, quotient modules, tensor
+   products, bilinear maps, Kronecker products, linear maps, rank-nullity
+   replay, LU replay, Jacobian/Hessian matrix replay, and inconsistent systems
+   with Farkas evidence where available.
 8. `polynomial-identities-v0` and `generating-functions-v0` (landed): factor
    theorem, fixed-degree identities, finite coefficient extraction, Cauchy
    products, and bounded recurrence/generating-function prefixes.
@@ -917,9 +926,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 78 non-template math example packs validate.
+  Status: 79 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 66 non-template packs have at least one `checked` expected-result row.
+  Status: 67 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -949,7 +958,8 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `finite-order-lattices-v0`,
 `finite-fields-v0`, `finite-algebra-homomorphisms-v0`,
 `finite-ideals-v0`,
-`finite-vector-spaces-v0`, `finite-tensor-products-v0`,
+`finite-vector-spaces-v0`, `finite-dual-spaces-v0`,
+`finite-tensor-products-v0`,
 `finite-modules-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
@@ -1066,6 +1076,10 @@ rejection, and an isomorphism-theorem Lean-horizon row.
 `F2`: vector-space laws, subspace/span replay, linear-map kernel/image replay,
 rank-nullity by finite cardinality, checked non-subspace rejection, and a
 vector-space/module Lean-horizon row.
+`finite-dual-spaces-v0` now adds the exact finite dual-space bridge over `F2`:
+covector linearity, pointwise dual operations, dual-basis pairing,
+annihilator recomputation, transpose-map replay, checked bad-covector
+rejection, and a duality/functional-analysis Lean-horizon row.
 `finite-modules-v0` now adds the exact finite algebra/linear-algebra bridge
 over `Z/4Z`: module laws, submodule/span replay, module-homomorphism
 kernel/image replay, quotient-module tables, checked non-submodule rejection,

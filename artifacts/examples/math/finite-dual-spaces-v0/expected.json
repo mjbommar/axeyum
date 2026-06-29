@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-dual-spaces-v0",
+  "witnesses": [
+    {
+      "id": "f2-plane-dual",
+      "description": "The dual space of F2^2 as four linear functionals into F2.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "primal_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "dual_space": {
+          "vectors": ["zero", "x", "y", "x+y"],
+          "zero": "zero",
+          "add": [
+            ["zero", "x", "y", "x+y"],
+            ["x", "zero", "x+y", "y"],
+            ["y", "x+y", "zero", "x"],
+            ["x+y", "y", "x", "zero"]
+          ],
+          "scalar_mul": {
+            "0": {"zero": "zero", "x": "zero", "y": "zero", "x+y": "zero"},
+            "1": {"zero": "zero", "x": "x", "y": "y", "x+y": "x+y"}
+          },
+          "dimension": 2
+        },
+        "evaluation": [
+          {"covector": "zero", "vector": "00", "value": "0"},
+          {"covector": "zero", "vector": "10", "value": "0"},
+          {"covector": "zero", "vector": "01", "value": "0"},
+          {"covector": "zero", "vector": "11", "value": "0"},
+          {"covector": "x", "vector": "00", "value": "0"},
+          {"covector": "x", "vector": "10", "value": "1"},
+          {"covector": "x", "vector": "01", "value": "0"},
+          {"covector": "x", "vector": "11", "value": "1"},
+          {"covector": "y", "vector": "00", "value": "0"},
+          {"covector": "y", "vector": "10", "value": "0"},
+          {"covector": "y", "vector": "01", "value": "1"},
+          {"covector": "y", "vector": "11", "value": "1"},
+          {"covector": "x+y", "vector": "00", "value": "0"},
+          {"covector": "x+y", "vector": "10", "value": "1"},
+          {"covector": "x+y", "vector": "01", "value": "1"},
+          {"covector": "x+y", "vector": "11", "value": "0"}
+        ],
+        "basis_vectors": ["10", "01"],
+        "dual_basis": ["x", "y"],
+        "pairing_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "annihilator_subspace": ["00", "10"],
+        "annihilator": ["zero", "y"],
+        "annihilator_dimension": 1
+      }
+    },
+    {
+      "id": "projection-transpose",
+      "description": "The transpose of the first-coordinate projection on F2^2.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "domain_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "codomain_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "domain_dual": {
+          "vectors": ["zero", "x", "y", "x+y"],
+          "zero": "zero",
+          "add": [
+            ["zero", "x", "y", "x+y"],
+            ["x", "zero", "x+y", "y"],
+            ["y", "x+y", "zero", "x"],
+            ["x+y", "y", "x", "zero"]
+          ],
+          "scalar_mul": {
+            "0": {"zero": "zero", "x": "zero", "y": "zero", "x+y": "zero"},
+            "1": {"zero": "zero", "x": "x", "y": "y", "x+y": "x+y"}
+          },
+          "dimension": 2
+        },
+        "codomain_dual": {
+          "vectors": ["zero", "x", "y", "x+y"],
+          "zero": "zero",
+          "add": [
+            ["zero", "x", "y", "x+y"],
+            ["x", "zero", "x+y", "y"],
+            ["y", "x+y", "zero", "x"],
+            ["x+y", "y", "x", "zero"]
+          ],
+          "scalar_mul": {
+            "0": {"zero": "zero", "x": "zero", "y": "zero", "x+y": "zero"},
+            "1": {"zero": "zero", "x": "x", "y": "y", "x+y": "x+y"}
+          },
+          "dimension": 2
+        },
+        "domain_evaluation": [
+          {"covector": "zero", "vector": "00", "value": "0"},
+          {"covector": "zero", "vector": "10", "value": "0"},
+          {"covector": "zero", "vector": "01", "value": "0"},
+          {"covector": "zero", "vector": "11", "value": "0"},
+          {"covector": "x", "vector": "00", "value": "0"},
+          {"covector": "x", "vector": "10", "value": "1"},
+          {"covector": "x", "vector": "01", "value": "0"},
+          {"covector": "x", "vector": "11", "value": "1"},
+          {"covector": "y", "vector": "00", "value": "0"},
+          {"covector": "y", "vector": "10", "value": "0"},
+          {"covector": "y", "vector": "01", "value": "1"},
+          {"covector": "y", "vector": "11", "value": "1"},
+          {"covector": "x+y", "vector": "00", "value": "0"},
+          {"covector": "x+y", "vector": "10", "value": "1"},
+          {"covector": "x+y", "vector": "01", "value": "1"},
+          {"covector": "x+y", "vector": "11", "value": "0"}
+        ],
+        "codomain_evaluation": [
+          {"covector": "zero", "vector": "00", "value": "0"},
+          {"covector": "zero", "vector": "10", "value": "0"},
+          {"covector": "zero", "vector": "01", "value": "0"},
+          {"covector": "zero", "vector": "11", "value": "0"},
+          {"covector": "x", "vector": "00", "value": "0"},
+          {"covector": "x", "vector": "10", "value": "1"},
+          {"covector": "x", "vector": "01", "value": "0"},
+          {"covector": "x", "vector": "11", "value": "1"},
+          {"covector": "y", "vector": "00", "value": "0"},
+          {"covector": "y", "vector": "10", "value": "0"},
+          {"covector": "y", "vector": "01", "value": "1"},
+          {"covector": "y", "vector": "11", "value": "1"},
+          {"covector": "x+y", "vector": "00", "value": "0"},
+          {"covector": "x+y", "vector": "10", "value": "1"},
+          {"covector": "x+y", "vector": "01", "value": "1"},
+          {"covector": "x+y", "vector": "11", "value": "0"}
+        ],
+        "map": {
+          "00": "00",
+          "10": "10",
+          "01": "00",
+          "11": "10"
+        },
+        "transpose_map": {
+          "zero": "zero",
+          "x": "x",
+          "y": "zero",
+          "x+y": "x"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "dual-space-table-replay",
+      "claim": "The listed covectors form the dual vector space of F2^2 under pointwise operations.",
+      "expected_result": "sat",
+      "validation": "finite_dual_space_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["f2-plane-dual"],
+      "notes": "The validator checks every covector is linear and that dual addition/scalar multiplication agree pointwise."
+    },
+    {
+      "id": "dual-basis-pairing-replay",
+      "claim": "The listed dual basis pairs with the primal basis as the identity matrix.",
+      "expected_result": "sat",
+      "validation": "finite_dual_basis_pairing_replay",
+      "proof_status": "checked",
+      "witnesses": ["f2-plane-dual"],
+      "notes": "The validator recomputes the basis pairing matrix from the evaluation table."
+    },
+    {
+      "id": "annihilator-replay",
+      "claim": "The annihilator of span(10) is the listed one-dimensional dual subspace.",
+      "expected_result": "sat",
+      "validation": "finite_annihilator_replay",
+      "proof_status": "checked",
+      "witnesses": ["f2-plane-dual"],
+      "notes": "The validator recomputes covectors that vanish on the listed subspace and checks the finite dimension."
+    },
+    {
+      "id": "transpose-map-replay",
+      "claim": "The listed transpose map satisfies (T*phi)(v) = phi(Tv) for every finite covector and vector.",
+      "expected_result": "sat",
+      "validation": "finite_transpose_map_replay",
+      "proof_status": "checked",
+      "witnesses": ["projection-transpose"],
+      "notes": "The validator checks T is linear, the transpose map is linear, and the evaluation identity holds for every finite pair."
+    },
+    {
+      "id": "bad-covector-rejected",
+      "claim": "The listed function F2^2 -> F2 is a covector.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_covector_refutation",
+      "proof_status": "checked",
+      "data": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "primal_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "functional": [
+          {"vector": "00", "value": "0"},
+          {"vector": "10", "value": "1"},
+          {"vector": "01", "value": "1"},
+          {"vector": "11", "value": "1"}
+        ],
+        "failing_additivity": {
+          "left": "10",
+          "right": "01",
+          "claimed": "1",
+          "actual_sum": "0"
+        }
+      },
+      "notes": "The validator checks f(10 + 01) differs from f(10) + f(01), so the function is not linear."
+    },
+    {
+      "id": "general-duality-theory-lean-horizon",
+      "claim": "General duality, bidual theorems, adjoints, and topological duals require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "finite-dimensional duality, bidual isomorphism, adjoint maps, annihilator identities, topological duals, Hahn-Banach, and weak-star compactness",
+        "future_checker": "Lean modules for linear duals, adjoints, annihilators, normed-space duals, and proof reconstruction from finite covector certificates"
+      },
+      "notes": "The finite rows are checked by exact table replay; general duality and functional analysis remain proof-assistant territory."
+    }
+  ]
+}

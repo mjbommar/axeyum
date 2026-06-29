@@ -41,8 +41,8 @@ Use these sources as checks against local taste:
 | `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search | General asymptotic enumeration and deep extremal/order-theoretic combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
-| `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians | Spectral theorems, general vector-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks. |
-| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, Cayley-table validators | General group/ring/ideal/module/tensor/category theory belongs in Lean-backed concept rows. |
+| `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians | Spectral theorems, general vector-space/dual-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks. |
+| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, Cayley-table validators | General group/ring/ideal/module/duality/tensor/category theory belongs in Lean-backed concept rows. |
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows | General completeness, limits, continuity, compactness, differentiability, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay | General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon. |
@@ -53,7 +53,7 @@ Use these sources as checks against local taste:
 | `numerical_analysis` | Numerical analysis | Undergraduate / graduate applied math | Interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, floating-point sanity checks, exact rational shadows | Stability and convergence theorems need proof support; floating-point experiments need tolerances and seeds. |
 | `differential_equations_and_dynamical_systems` | Differential equations and dynamical systems | Undergraduate / graduate applied math | Bounded transition systems, linear recurrences, invariant checks, discretized systems | Existence/uniqueness, continuous dynamics, chaos, and PDE theory are proof-horizon. |
 | `geometry` | Geometry | Undergraduate / graduate pure and applied math | Coordinate geometry, incidence constraints, distances, rigid small configurations | Differential, algebraic, and global geometry are mostly proof-assistant material. |
-| `functional_analysis_and_operator_theory` | Functional analysis and operator theory | Graduate analysis / numerical analysis foundation | Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids | Banach/Hilbert-space theorems, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support. |
+| `functional_analysis_and_operator_theory` | Functional analysis and operator theory | Graduate analysis / numerical analysis foundation | Finite-dimensional normed spaces, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids | Banach/Hilbert-space theorems, topological duals, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support. |
 
 ## Priority Bands
 
@@ -287,6 +287,14 @@ one of:
       bilinear-map table replay, universal-factorization shadow through a
       linear map, Kronecker-product replay, bad-bilinear-map rejection, and a
       general tensor-theory Lean-horizon row.
+31. `artifacts/examples/math/finite-dual-spaces-v0/`
+    - Fields: `linear_algebra`, `abstract_algebra`,
+      `set_theory_and_foundations`,
+      `functional_analysis_and_operator_theory`.
+    - Checks: finite dual-space covector linearity over `F2`, pointwise dual
+      operations, dual-basis pairings, annihilator recomputation,
+      transpose-map replay, bad-covector rejection, and a general
+      duality/functional-analysis Lean-horizon row.
 
 ## Graduation Criteria
 

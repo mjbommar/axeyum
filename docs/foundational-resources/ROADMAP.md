@@ -87,6 +87,7 @@ artifacts/examples/math/
   multivariable-calculus-rational-v0/
   linear-algebra-rational-v0/
   finite-vector-spaces-v0/
+  finite-dual-spaces-v0/
   finite-modules-v0/
   finite-tensor-products-v0/
   finite-ideals-v0/
@@ -101,6 +102,7 @@ artifacts/examples/math/
   finite-fields-v0/
   finite-algebra-homomorphisms-v0/
   finite-vector-spaces-v0/
+  finite-dual-spaces-v0/
   finite-modules-v0/
   finite-ideals-v0/
   polynomial-identities-v0/
@@ -406,6 +408,10 @@ rejection, and an isomorphism-theorem Lean-horizon row.
 validates finite vector-space laws over `F2`, subspace/span replay, linear-map
 kernel/image replay, rank-nullity replay, checked bad-subspace rejection, and a
 vector-space/module Lean-horizon row.
+[`finite-dual-spaces-v0`](../../artifacts/examples/math/finite-dual-spaces-v0/)
+validates finite dual-space covectors over `F2`, pointwise dual operations,
+dual-basis pairing, annihilator recomputation, transpose-map replay, checked
+bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
 [`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
 validates finite module laws over `Z/4Z`, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay, checked
@@ -450,6 +456,9 @@ row-scaling inconsistency certificate for a singular system.
 adds the finite-field linear algebra bridge: vector-space tables over `F2`,
 subspaces, spans, linear maps, kernels, images, rank-nullity, and bad-subspace
 rejection.
+[`finite-dual-spaces-v0`](../../artifacts/examples/math/finite-dual-spaces-v0/)
+adds the finite dual-space bridge: covector linearity, dual-basis pairings,
+annihilators, transpose maps, and bad-covector rejection over `F2`.
 [`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
 adds the finite module bridge from rings into linear algebra: `Z/4Z` action
 tables, generated submodules, module homomorphisms, kernel/image replay,

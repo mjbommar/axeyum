@@ -2938,6 +2938,460 @@ def kronecker_product(
     return result
 
 
+def require_evaluation_table(
+    context: str,
+    value: Any,
+    covectors: list[str],
+    vectors: list[str],
+    field_carrier: list[str],
+) -> dict[tuple[str, str], str]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    covector_set = set(covectors)
+    vector_set = set(vectors)
+    field_set = set(field_carrier)
+    table: dict[tuple[str, str], str] = {}
+    for index, row in enumerate(value):
+        if not isinstance(row, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", row, {"covector", "vector", "value"})
+        covector = row["covector"]
+        vector = row["vector"]
+        output = row["value"]
+        require_string(f"{context}[{index}].covector", covector)
+        require_string(f"{context}[{index}].vector", vector)
+        require_string(f"{context}[{index}].value", output)
+        if covector not in covector_set:
+            fail(f"{context}[{index}].covector references a missing covector")
+        if vector not in vector_set:
+            fail(f"{context}[{index}].vector references a missing vector")
+        if output not in field_set:
+            fail(f"{context}[{index}].value is outside the field")
+        key = (covector, vector)
+        if key in table:
+            fail(f"{context} repeats evaluation pair {key}")
+        table[key] = output
+    expected = {(covector, vector) for covector in covectors for vector in vectors}
+    if set(table) != expected:
+        missing = sorted(expected - set(table))
+        extra = sorted(set(table) - expected)
+        fail(f"{context} must cover every covector/vector pair; missing={missing} extra={extra}")
+    return table
+
+
+def require_functional_table(
+    context: str,
+    value: Any,
+    vectors: list[str],
+    field_carrier: list[str],
+) -> dict[str, str]:
+    vector_set = set(vectors)
+    field_set = set(field_carrier)
+    functional: dict[str, str] = {}
+    if isinstance(value, dict):
+        if set(value) != vector_set:
+            missing = sorted(vector_set - set(value))
+            extra = sorted(set(value) - vector_set)
+            fail(f"{context} must cover exactly the vectors; missing={missing} extra={extra}")
+        for vector in vectors:
+            output = value[vector]
+            require_string(f"{context}.{vector}", output)
+            if output not in field_set:
+                fail(f"{context}.{vector} is outside the field")
+            functional[vector] = output
+        return functional
+    if not isinstance(value, list):
+        fail(f"{context} must be an object or row list")
+    for index, row in enumerate(value):
+        if not isinstance(row, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", row, {"vector", "value"})
+        vector = row["vector"]
+        output = row["value"]
+        require_string(f"{context}[{index}].vector", vector)
+        require_string(f"{context}[{index}].value", output)
+        if vector not in vector_set:
+            fail(f"{context}[{index}].vector references a missing vector")
+        if output not in field_set:
+            fail(f"{context}[{index}].value is outside the field")
+        if vector in functional:
+            fail(f"{context} repeats vector {vector!r}")
+        functional[vector] = output
+    if set(functional) != vector_set:
+        missing = sorted(vector_set - set(functional))
+        extra = sorted(set(functional) - vector_set)
+        fail(f"{context} must cover exactly the vectors; missing={missing} extra={extra}")
+    return functional
+
+
+def functional_linearity_failures(
+    field_carrier: list[str],
+    field_add: dict[tuple[str, str], str],
+    field_mul: dict[tuple[str, str], str],
+    vectors: list[str],
+    vector_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+    functional: dict[str, str],
+) -> list[str]:
+    for left in vectors:
+        for right in vectors:
+            vector_sum = table_op(vector_add, left, right)
+            lhs = functional[vector_sum]
+            rhs = table_op(field_add, functional[left], functional[right])
+            if lhs != rhs:
+                return [f"additivity fails for {(left, right)}"]
+    for scalar in field_carrier:
+        for vector in vectors:
+            scaled = table_op(scalar_mul, scalar, vector)
+            lhs = functional[scaled]
+            rhs = table_op(field_mul, scalar, functional[vector])
+            if lhs != rhs:
+                return [f"scalar preservation fails for {(scalar, vector)}"]
+    return []
+
+
+def dual_operation_failures(
+    field_carrier: list[str],
+    field_add: dict[tuple[str, str], str],
+    field_mul: dict[tuple[str, str], str],
+    primal_vectors: list[str],
+    dual_vectors: list[str],
+    dual_add: dict[tuple[str, str], str],
+    dual_scalar_mul: dict[tuple[str, str], str],
+    evaluation: dict[tuple[str, str], str],
+) -> list[str]:
+    for left in dual_vectors:
+        for right in dual_vectors:
+            dual_sum = table_op(dual_add, left, right)
+            for vector in primal_vectors:
+                lhs = evaluation[(dual_sum, vector)]
+                rhs = table_op(field_add, evaluation[(left, vector)], evaluation[(right, vector)])
+                if lhs != rhs:
+                    return [f"dual addition is not pointwise for {(left, right, vector)}"]
+    for scalar in field_carrier:
+        for covector in dual_vectors:
+            scaled_covector = table_op(dual_scalar_mul, scalar, covector)
+            for vector in primal_vectors:
+                lhs = evaluation[(scaled_covector, vector)]
+                rhs = table_op(field_mul, scalar, evaluation[(covector, vector)])
+                if lhs != rhs:
+                    return [f"dual scalar action is not pointwise for {(scalar, covector, vector)}"]
+    return []
+
+
+def validate_finite_dual_spaces(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    table = checks["dual-space-table-replay"]
+    if table["expected_result"] != "sat":
+        fail("dual-space-table-replay must expect sat")
+    values = single_witness_values(table, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("dual table field", values.get("field"))
+    primal_vectors, _, primal_add, primal_scalar_mul, _ = require_checked_vector_space(
+        "dual table primal_space",
+        values.get("primal_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    dual_vectors, _, dual_add, dual_scalar_mul, _ = require_checked_vector_space(
+        "dual table dual_space",
+        values.get("dual_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    evaluation = require_evaluation_table(
+        "dual table evaluation",
+        values.get("evaluation"),
+        dual_vectors,
+        primal_vectors,
+        field_carrier,
+    )
+    for covector in dual_vectors:
+        functional = {vector: evaluation[(covector, vector)] for vector in primal_vectors}
+        failures = functional_linearity_failures(
+            field_carrier,
+            field_add,
+            field_mul,
+            primal_vectors,
+            primal_add,
+            primal_scalar_mul,
+            functional,
+        )
+        if failures:
+            fail(f"dual-space-table-replay covector {covector!r} is not linear: {failures[0]}")
+    failures = dual_operation_failures(
+        field_carrier,
+        field_add,
+        field_mul,
+        primal_vectors,
+        dual_vectors,
+        dual_add,
+        dual_scalar_mul,
+        evaluation,
+    )
+    if failures:
+        fail(f"dual-space-table-replay failed pointwise dual operations: {failures[0]}")
+
+    basis = checks["dual-basis-pairing-replay"]
+    if basis["expected_result"] != "sat" or basis.get("proof_status") != "checked":
+        fail("dual-basis-pairing-replay must be a checked sat row")
+    values = single_witness_values(basis, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("dual basis field", values.get("field"))
+    primal_vectors, _, _, _, _ = require_checked_vector_space(
+        "dual basis primal_space",
+        values.get("primal_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    dual_vectors, _, _, _, _ = require_checked_vector_space(
+        "dual basis dual_space",
+        values.get("dual_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    evaluation = require_evaluation_table(
+        "dual basis evaluation",
+        values.get("evaluation"),
+        dual_vectors,
+        primal_vectors,
+        field_carrier,
+    )
+    basis_vectors = require_string_list("dual basis basis_vectors", values.get("basis_vectors"))
+    dual_basis = require_string_list("dual basis dual_basis", values.get("dual_basis"))
+    if len(basis_vectors) != len(dual_basis):
+        fail("dual-basis-pairing-replay basis and dual_basis must have equal length")
+    if set(basis_vectors) - set(primal_vectors):
+        fail("dual-basis-pairing-replay basis_vectors contains missing primal vectors")
+    if set(dual_basis) - set(dual_vectors):
+        fail("dual-basis-pairing-replay dual_basis contains missing covectors")
+    pairing_matrix = require_field_matrix("dual basis pairing_matrix", values.get("pairing_matrix"), field_carrier)
+    expected_pairing = [
+        [evaluation[(covector, vector)] for vector in basis_vectors]
+        for covector in dual_basis
+    ]
+    if pairing_matrix != expected_pairing:
+        fail("dual-basis-pairing-replay pairing matrix does not match evaluation")
+    identity = [
+        [field_one if row == column else field_zero for column in range(len(basis_vectors))]
+        for row in range(len(dual_basis))
+    ]
+    if pairing_matrix != identity:
+        fail("dual-basis-pairing-replay pairing matrix is not the identity")
+
+    annihilator = checks["annihilator-replay"]
+    if annihilator["expected_result"] != "sat" or annihilator.get("proof_status") != "checked":
+        fail("annihilator-replay must be a checked sat row")
+    values = single_witness_values(annihilator, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("annihilator field", values.get("field"))
+    primal_vectors, primal_zero, primal_add, primal_scalar_mul, _ = require_checked_vector_space(
+        "annihilator primal_space",
+        values.get("primal_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    dual_vectors, dual_zero, dual_add, dual_scalar_mul, _ = require_checked_vector_space(
+        "annihilator dual_space",
+        values.get("dual_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    evaluation = require_evaluation_table(
+        "annihilator evaluation",
+        values.get("evaluation"),
+        dual_vectors,
+        primal_vectors,
+        field_carrier,
+    )
+    subspace = require_vector_subset("annihilator annihilator_subspace", values.get("annihilator_subspace"), primal_vectors)
+    if not is_vector_subspace(subspace, field_carrier, primal_zero, primal_add, primal_scalar_mul):
+        fail("annihilator-replay listed primal subspace is not a subspace")
+    listed_annihilator = require_vector_subset("annihilator annihilator", values.get("annihilator"), dual_vectors)
+    computed_annihilator = {
+        covector
+        for covector in dual_vectors
+        if all(evaluation[(covector, vector)] == field_zero for vector in subspace)
+    }
+    if listed_annihilator != computed_annihilator:
+        fail(
+            "annihilator-replay listed annihilator is incorrect: "
+            f"expected={sorted(computed_annihilator)} actual={sorted(listed_annihilator)}"
+        )
+    if not is_vector_subspace(listed_annihilator, field_carrier, dual_zero, dual_add, dual_scalar_mul):
+        fail("annihilator-replay listed annihilator is not a dual subspace")
+    dimension = require_nonnegative_int("annihilator annihilator_dimension", values.get("annihilator_dimension"))
+    if finite_dimension_from_size("annihilator dimension", len(field_carrier), len(listed_annihilator)) != dimension:
+        fail("annihilator-replay listed annihilator_dimension is incorrect")
+
+    transpose = checks["transpose-map-replay"]
+    if transpose["expected_result"] != "sat" or transpose.get("proof_status") != "checked":
+        fail("transpose-map-replay must be a checked sat row")
+    values = single_witness_values(transpose, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("transpose field", values.get("field"))
+    domain_vectors, _, domain_add, domain_scalar_mul, _ = require_checked_vector_space(
+        "transpose domain_space",
+        values.get("domain_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    codomain_vectors, _, codomain_add, codomain_scalar_mul, _ = require_checked_vector_space(
+        "transpose codomain_space",
+        values.get("codomain_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    domain_dual_vectors, _, domain_dual_add, domain_dual_scalar_mul, _ = require_checked_vector_space(
+        "transpose domain_dual",
+        values.get("domain_dual"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    codomain_dual_vectors, _, codomain_dual_add, codomain_dual_scalar_mul, _ = require_checked_vector_space(
+        "transpose codomain_dual",
+        values.get("codomain_dual"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    domain_evaluation = require_evaluation_table(
+        "transpose domain_evaluation",
+        values.get("domain_evaluation"),
+        domain_dual_vectors,
+        domain_vectors,
+        field_carrier,
+    )
+    codomain_evaluation = require_evaluation_table(
+        "transpose codomain_evaluation",
+        values.get("codomain_evaluation"),
+        codomain_dual_vectors,
+        codomain_vectors,
+        field_carrier,
+    )
+    mapping = require_mapping_object("transpose map", values.get("map"), domain_vectors, codomain_vectors)
+    failures = linear_map_failures(
+        field_carrier,
+        domain_vectors,
+        domain_add,
+        domain_scalar_mul,
+        codomain_add,
+        codomain_scalar_mul,
+        mapping,
+    )
+    if failures:
+        fail(f"transpose-map-replay map is not linear: {failures[0]}")
+    transpose_mapping = require_mapping_object(
+        "transpose transpose_map",
+        values.get("transpose_map"),
+        codomain_dual_vectors,
+        domain_dual_vectors,
+    )
+    failures = linear_map_failures(
+        field_carrier,
+        codomain_dual_vectors,
+        codomain_dual_add,
+        codomain_dual_scalar_mul,
+        domain_dual_add,
+        domain_dual_scalar_mul,
+        transpose_mapping,
+    )
+    if failures:
+        fail(f"transpose-map-replay transpose_map is not linear: {failures[0]}")
+    for covector in codomain_dual_vectors:
+        for vector in domain_vectors:
+            lhs = domain_evaluation[(transpose_mapping[covector], vector)]
+            rhs = codomain_evaluation[(covector, mapping[vector])]
+            if lhs != rhs:
+                fail(f"transpose-map-replay transpose equation fails for {(covector, vector)}")
+
+    bad = checks["bad-covector-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-covector-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("bad covector field", data.get("field"))
+    primal_vectors, _, primal_add, primal_scalar_mul, _ = require_checked_vector_space(
+        "bad covector primal_space",
+        data.get("primal_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    functional = require_functional_table("bad covector functional", data.get("functional"), primal_vectors, field_carrier)
+    failures = functional_linearity_failures(
+        field_carrier,
+        field_add,
+        field_mul,
+        primal_vectors,
+        primal_add,
+        primal_scalar_mul,
+        functional,
+    )
+    if not failures:
+        fail("bad-covector-rejected functional unexpectedly is linear")
+    failure = data.get("failing_additivity")
+    if not isinstance(failure, dict):
+        fail("bad-covector-rejected failing_additivity must be an object")
+    left = failure.get("left")
+    right = failure.get("right")
+    claimed = failure.get("claimed")
+    actual_sum = failure.get("actual_sum")
+    require_string("bad covector failing_additivity.left", left)
+    require_string("bad covector failing_additivity.right", right)
+    require_string("bad covector failing_additivity.claimed", claimed)
+    require_string("bad covector failing_additivity.actual_sum", actual_sum)
+    if left not in set(primal_vectors) or right not in set(primal_vectors):
+        fail("bad-covector-rejected failing_additivity references a missing vector")
+    if claimed not in set(field_carrier) or actual_sum not in set(field_carrier):
+        fail("bad-covector-rejected failing_additivity values must be field elements")
+    vector_sum = table_op(primal_add, left, right)
+    if functional[vector_sum] != claimed:
+        fail("bad-covector-rejected claimed value does not match f(left + right)")
+    computed_sum = table_op(field_add, functional[left], functional[right])
+    if computed_sum != actual_sum:
+        fail("bad-covector-rejected actual_sum does not match f(left) + f(right)")
+    if claimed == actual_sum:
+        fail("bad-covector-rejected failing_additivity unexpectedly agrees")
+
+    horizon = checks["general-duality-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-duality-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-duality-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general duality target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general duality future_checker", data.get("future_checker"))
+
+
 def validate_finite_tensor_products(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12647,6 +13101,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":
         validate_finite_continuous_maps(expected)
+    if metadata["id"] == "finite-dual-spaces-v0":
+        validate_finite_dual_spaces(expected)
     if metadata["id"] == "finite-euler-method-v0":
         validate_finite_euler_method(expected)
     if metadata["id"] == "function-composition-v0":

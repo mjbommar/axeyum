@@ -1035,6 +1035,12 @@
           "notes": "Finite vector-space tables, subspaces, spans, linear maps, kernels, images, and rank-nullity replay."
         },
         {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Finite dual-space covectors, dual-basis pairings, annihilators, transpose maps, and bad-covector rejection."
+        },
+        {
           "id": "finite-modules-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
@@ -1205,6 +1211,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
           "notes": "Finite vector-space tables over F2, subspaces, spans, and linear maps."
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Finite dual spaces over F2, covector linearity, dual bases, annihilators, and transpose maps."
         },
         {
           "id": "finite-tensor-products-v0",
@@ -1554,6 +1566,12 @@
           "notes": "Finite vector spaces over F2, subspaces, spans, linear maps, kernels, images, and rank-nullity replay."
         },
         {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Finite dual spaces over F2, dual-basis pairings, annihilators, transpose maps, and covector counterexamples."
+        },
+        {
           "id": "finite-modules-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
@@ -1697,7 +1715,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, Cayley-table validators",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, Cayley-table validators",
       "prerequisites": [],
       "unlocks": [
         "curriculum_fields",
@@ -1708,14 +1726,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, Cayley-table validators"
+        "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, Cayley-table validators"
       ],
       "example_packs": [
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
-          "notes": "Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, and Cayley-table validation."
+          "notes": "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, and Cayley-table validation."
         },
         {
           "id": "complex-algebraic-v0",
@@ -1734,6 +1752,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
           "notes": "Exact Finite Algebra Homomorphism Checks"
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Exact Finite Dual Space Checks"
         },
         {
           "id": "finite-groups-v0",
@@ -1804,7 +1828,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General group/ring/ideal/module/tensor/category theory belongs in Lean-backed concept rows.",
+          "name": "General group/ring/ideal/module/duality/tensor/category theory belongs in Lean-backed concept rows.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2178,25 +2202,31 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids",
+      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite-dimensional normed spaces, operator matrices, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids"
+        "Finite-dimensional normed spaces, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids"
       ],
       "example_packs": [
         {
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norms, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
+          "notes": "Finite-dimensional norms, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
         },
         {
           "id": "finite-chebyshev-systems-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
           "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Exact Finite Dual Space Checks"
         },
         {
           "id": "spectral-linear-algebra-v0",
@@ -2207,7 +2237,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Banach/Hilbert-space theorems, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support.",
+          "name": "Banach/Hilbert-space theorems, topological duals, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support.",
           "status": "lean-horizon",
           "checker": "planned foundational example-pack validator",
           "lean_status": "required",
@@ -2410,7 +2440,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -2419,14 +2449,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians"
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians"
       ],
       "example_packs": [
         {
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -2475,6 +2505,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
           "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Exact Finite Dual Space Checks"
         },
         {
           "id": "finite-hitting-times-v0",
@@ -2581,7 +2617,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Spectral theorems, general vector-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks.",
+          "name": "Spectral theorems, general vector-space/dual-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -3682,6 +3718,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-continuous-maps-v0",
           "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Exact Finite Dual Space Checks"
         },
         {
           "id": "finite-hitting-times-v0",

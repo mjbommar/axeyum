@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "finite-dual-spaces-v0",
+  "title": "Exact Finite Dual Space Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_fields",
+    "curriculum_groups",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "field_set_theory_and_foundations",
+    "field_functional_analysis_and_operator_theory"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "abstract_algebra",
+    "set_theory_and_foundations",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "fields",
+    "groups"
+  ],
+  "axeyum_fragments": [
+    "finite fields",
+    "finite vector spaces",
+    "finite dual spaces",
+    "finite functions",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/02-structures/groups.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "dual-space-table-replay",
+    "dual-basis-pairing-replay",
+    "annihilator-replay",
+    "transpose-map-replay",
+    "bad-covector-rejected",
+    "general-duality-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite dual-space, pairing, annihilator, and transpose-map rows as deterministic finite-function obligations.",
+    "Replay covector linearity, pointwise dual operations, dual-basis pairings, annihilators, and transpose maps through Axeyum model evaluation.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-covector rows once proof routes are promoted.",
+    "Keep general duality, bidual theorems, adjoints, topological duals, Hahn-Banach, and functional analysis under Lean horizon until formal routes exist."
+  ]
+}
