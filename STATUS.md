@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex-plane transform end-to-end lesson landed.** Added
+  [`complex-plane-transforms-end-to-end.md`](docs/learn/math/complex-plane-transforms-end-to-end.md)
+  as the learner-facing trace for the complex-plane transform pack: unit-root
+  cycle replay, conjugation/product replay, rational Mobius-transform replay,
+  checked bad unit-square rejection, and the complex-analysis Lean horizon. The
+  lesson is linked from the math learning index plus the number-systems and
+  algebra paths.
+
 - **Finite dynamics/Euler end-to-end lesson landed.** Added
   [`finite-dynamics-euler-end-to-end.md`](docs/learn/math/finite-dynamics-euler-end-to-end.md)
   as the learner-facing trace for the bounded-dynamics and finite-Euler packs:

@@ -848,8 +848,9 @@ induction-pattern replay, graph coloring, bounded natural-arithmetic replay,
 signed integer-LIA replay, gcd/Bezout replay, modular-arithmetic replay,
 bounded number-theory replay, complex real-pair replay, rational midpoint
 replay, bounded rational real-analysis replay, real-algebra RCF-shadow replay,
-polynomial-identity replay, rational polynomial-factorization replay,
-matrix-invariant replay, linear-system/LP replay, finite conditional
+polynomial-identity replay, rational polynomial-factorization replay, complex
+plane transform replay, matrix-invariant replay, linear-system/LP replay,
+finite conditional
 probability, rational multivariable-calculus replay, rational inner-product
 replay, finite set and relation/function replay, equivalence-class replay,
 function-composition replay, finite group table replay, finite monoid replay,
@@ -1244,6 +1245,10 @@ event complements, and the topology/measure Lean horizon.
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
 reachability, explicit Euler replay, exact finite error tables, checked bad
 Euler-step rejection, and the ODE/numerical-analysis Lean horizon.
+`complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
+unit-root cycle replay, conjugation over products, rational Mobius-transform
+replay, checked bad unit-square rejection, and the complex-analysis Lean
+horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

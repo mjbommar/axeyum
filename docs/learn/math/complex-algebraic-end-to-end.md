@@ -4,6 +4,8 @@ This lesson follows one complex-number resource from exact real-pair arithmetic
 to polynomial-root replay. It uses the
 [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 pack.
+For finite complex-plane transform replay, read
+[End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md).
 
 Concept rows:
 

@@ -19,6 +19,7 @@ Example packs:
 - [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
+- [complex-plane-transforms-v0](../../../artifacts/examples/math/complex-plane-transforms-v0/)
 
 ## What Axeyum Checks
 
@@ -29,7 +30,9 @@ integer equations, interval infeasibility, gcd and Bezout witnesses,
 divisibility quotient witnesses, congruences, CRT witnesses, modular inverses,
 bounded quadratic-residue and sum-of-two-squares checks, rational density
 witnesses, trichotomy and order transitivity fixed cases, and algebraic
-complex arithmetic as real-pair data.
+complex arithmetic as real-pair data. The complex-plane pack adds unit-root
+cycles, conjugation/product replay, exact rational Mobius transforms, and a
+checked counterexample to a false unit-complex-square claim.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.
@@ -93,6 +96,15 @@ verifies `a < midpoint < b` and `midpoint = (a + b) / 2`.
 
 For complex arithmetic, encode `1 + 2i` as `[1, 2]` and `3 - i` as `[3, -1]`.
 The checker recomputes pair addition and twisted multiplication.
+For a complex-plane transform, encode `z = 2 + i` as `[2, 1]` and replay:
+
+```text
+T(z) = (z - 1) / (z + 1) = 2/5 + (1/5)i
+```
+
+The `complex-plane-transforms-v0` validator recomputes the numerator,
+denominator, denominator norm, division result, and a checked counterexample
+using `i^2 = -1`.
 
 Run the checks from the repository root:
 
@@ -104,6 +116,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
 ```
 
 For fuller traces through bounded natural arithmetic, signed integer LIA,
@@ -116,6 +129,7 @@ modular quotient-ring replay, read
 [End To End: Modular Arithmetic](modular-arithmetic-end-to-end.md),
 [End To End: Bounded Number Theory](number-theory-end-to-end.md),
 [End To End: Complex Algebraic Replay](complex-algebraic-end-to-end.md),
+[End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md),
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md), and
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md).

@@ -28,6 +28,7 @@ Example packs:
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
+- [complex-plane-transforms-v0](../../../artifacts/examples/math/complex-plane-transforms-v0/)
 
 ## What Axeyum Checks
 
@@ -69,7 +70,9 @@ fixed false-root rejection. The rational polynomial-factorization pack adds
 factor-list product replay, polynomial long division, Euclidean GCD replay,
 square-free decomposition replay, and a checked irreducible-quadratic rejection.
 The complex pack adds algebraic real-pair arithmetic and a fixed polynomial-root
-witness.
+witness. The complex-plane pack adds unit-root cycles, conjugation over
+products, rational Mobius-transform replay, and a checked false unit-square
+claim.
 
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
@@ -308,6 +311,16 @@ squares the pair and checks:
 i^2 + 1 = [-1, 0] + [1, 0] = [0, 0]
 ```
 
+The complex-plane pack reuses the same representation for exact transform
+checks:
+
+```text
+T(2+i) = ((2+i) - 1) / ((2+i) + 1) = 2/5 + (1/5)i
+```
+
+It also rejects the false claim that every square of a unit complex number has
+nonnegative real part, using `i^2 = -1`.
+
 Run the checks from the repository root:
 
 ```sh
@@ -329,6 +342,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
 ```
 
 For fuller traces from gcd/Bezout, modular congruence, bounded number theory,
@@ -340,6 +354,7 @@ data through replay, read
 [End To End: Modular Arithmetic](modular-arithmetic-end-to-end.md),
 [End To End: Bounded Number Theory](number-theory-end-to-end.md),
 [End To End: Complex Algebraic Replay](complex-algebraic-end-to-end.md),
+[End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md),
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md),
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md),
 [End To End: Finite Groups](finite-groups-end-to-end.md),
