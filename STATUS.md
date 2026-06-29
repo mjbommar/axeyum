@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite predicate logic end-to-end lesson landed.** Added
+  [`finite-predicate-end-to-end.md`](docs/learn/math/finite-predicate-end-to-end.md)
+  as the learner-facing trace for the finite-predicate pack: finite universal
+  and existential predicate replay, bounded `forall -> exists` valuation
+  enumeration, `exists`-but-not-`forall` counterexample replay, binary-relation
+  symmetry counterexample, and the Lean horizon for arbitrary-domain
+  first-order validity. The lesson is linked from the math learning index plus
+  the logic/proof path.
+
 - **Logic basics end-to-end lesson landed.** Added
   [`logic-basics-end-to-end.md`](docs/learn/math/logic-basics-end-to-end.md)
   as the learner-facing trace for the logic-basics pack: Boolean SAT witness

@@ -34,6 +34,10 @@ validated pack data and the repo-root command that replays it.
 - [Logic Basics](logic-basics-end-to-end.md): follows Boolean assignment replay,
   excluded-middle and contradiction truth-table checks, De Morgan equivalence,
   and a tiny CNF refutation.
+- [Finite Predicate Logic](finite-predicate-end-to-end.md): follows finite
+  universal/existential predicate replay, bounded quantifier implication
+  enumeration, relation symmetry counterexamples, and the first-order Lean
+  horizon.
 - [Finite Sets](finite-sets-end-to-end.md): follows finite universe/subset
   replay, union/intersection identity replay, subset transitivity, and a fixed
   malformed-identity rejection.
