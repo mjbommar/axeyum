@@ -59,6 +59,7 @@ artifacts/ontology/
 artifacts/examples/math/
   template-v0/
   logic-basics-v0/
+  finite-predicate-v0/
   proof-methods-refutation-v0/
   induction-obligations-v0/
   finite-sets-v0/

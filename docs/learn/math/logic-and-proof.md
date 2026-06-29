@@ -3,14 +3,16 @@
 Concept rows:
 
 - `curriculum_proof_methods`, `curriculum_propositional_logic`,
+  `curriculum_predicate_logic`,
   `curriculum_induction`, and `field_logic_and_proof` in the
   [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
-- `proof-methods` and `induction` in the
+- `predicate-logic`, `proof-methods`, and `induction` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 
 Example packs:
 
 - [logic-basics-v0](../../../artifacts/examples/math/logic-basics-v0/)
+- [finite-predicate-v0](../../../artifacts/examples/math/finite-predicate-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 - [induction-obligations-v0](../../../artifacts/examples/math/induction-obligations-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
@@ -18,12 +20,14 @@ Example packs:
 ## What Axeyum Checks
 
 The first proof lesson is Boolean: replay a SAT witness, negate a tautology and
-check no counterexample exists, and enumerate tiny CNF rows. The proof-methods
-pack records a small pigeonhole SAT witness and an UNSAT pigeonhole claim with
-an explicit proof gap. The induction pack checks bounded base, step, and
-conclusion obligations while keeping the full induction schema under Lean
-horizon. The graph-coloring pack adds a finite non-colorability example that can
-be exhaustively checked.
+check no counterexample exists, and enumerate tiny CNF rows. The predicate
+logic pack expands finite-domain quantifiers into explicit predicate-table
+checks, including finite universal/existential replay and relation
+counterexamples. The proof-methods pack records a small pigeonhole SAT witness
+and an UNSAT pigeonhole claim with an explicit proof gap. The induction pack
+checks bounded base, step, and conclusion obligations while keeping the full
+induction schema under Lean horizon. The graph-coloring pack adds a finite
+non-colorability example that can be exhaustively checked.
 
 ## Encode / Check Walkthrough
 
@@ -51,6 +55,20 @@ The validator checks that every pigeon chooses one hole and no hole receives
 two pigeons. For the `PHP(3,2)` UNSAT row, the pack deliberately records the
 missing certificate route as a proof gap. That distinction is part of the
 lesson: a replayed model and a checked UNSAT proof are different artifacts.
+For predicate logic, keep the universe finite and make predicate values
+explicit:
+
+```text
+U = {a,b}
+P(a) = true
+P(b) = false
+```
+
+The `finite-predicate-v0` validator checks that `exists x. P(x)` holds,
+`forall x. P(x)` fails, and a binary relation with `R(a,b)` but not `R(b,a)`
+violates symmetry. It also enumerates every unary predicate over a non-empty
+two-element universe to reject a counterexample to `forall x. P(x) -> exists
+x. P(x)`.
 For induction, encode the finite obligations for a specific property:
 
 ```text
@@ -67,6 +85,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
@@ -74,7 +93,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 
 ## Horizon
 
-General first-order reasoning, the universal induction schema, and proof
-assistant automation need Lean or another kernel-checked route. For UNSAT
-examples, the resource is not done until the certificate route is named and
-checked or the proof gap stays explicit.
+General first-order reasoning over arbitrary domains, the universal induction
+schema, and proof assistant automation need Lean or another kernel-checked
+route. For UNSAT examples, the resource is not done until the certificate route
+is named and checked or the proof gap stays explicit.

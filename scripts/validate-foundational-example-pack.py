@@ -1635,6 +1635,118 @@ def cnf_satisfied(clauses: list[list[str]], assignment: dict[str, bool]) -> bool
     return all(any(eval_boolean_literal(literal, assignment) for literal in clause) for clause in clauses)
 
 
+def require_predicate_table(context: str, universe: list[str], value: Any) -> dict[str, bool]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    universe_set = set(universe)
+    keys = set(value)
+    missing = sorted(universe_set - keys)
+    extra = sorted(keys - universe_set)
+    if missing or extra:
+        fail(f"{context} must cover exactly the universe; missing={missing} extra={extra}")
+    return {
+        element: require_bool(f"{context}.{element}", value[element])
+        for element in universe
+    }
+
+
+def predicate_valuations(universe: list[str]) -> list[dict[str, bool]]:
+    if len(universe) > 16:
+        fail("finite predicate valuation universe is too large for deterministic enumeration")
+    return [
+        dict(zip(universe, values))
+        for values in product([False, True], repeat=len(universe))
+    ]
+
+
+def validate_finite_predicate(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    forall = checks["forall-predicate-finite-replay"]
+    if forall["expected_result"] != "sat":
+        fail("forall-predicate-finite-replay must expect sat")
+    values = single_witness_values(forall, witnesses)
+    universe = require_string_list("forall predicate universe", values.get("universe"))
+    predicate = require_predicate_table("forall predicate table", universe, values.get("predicate"))
+    if not all(predicate[element] for element in universe):
+        fail("forall-predicate-finite-replay predicate table does not satisfy forall x. P(x)")
+
+    exists = checks["exists-predicate-finite-replay"]
+    if exists["expected_result"] != "sat":
+        fail("exists-predicate-finite-replay must expect sat")
+    values = single_witness_values(exists, witnesses)
+    universe = require_string_list("exists predicate universe", values.get("universe"))
+    predicate = require_predicate_table("exists predicate table", universe, values.get("predicate"))
+    witness = values.get("witness_element")
+    require_string("exists predicate witness_element", witness)
+    if witness not in universe:
+        fail("exists-predicate-finite-replay witness_element is outside the universe")
+    if not predicate[witness]:
+        fail("exists-predicate-finite-replay witness_element does not satisfy P")
+    if not any(predicate[element] for element in universe):
+        fail("exists-predicate-finite-replay predicate table does not satisfy exists x. P(x)")
+
+    implication = checks["forall-implies-exists-finite"]
+    if implication["expected_result"] != "unsat":
+        fail("forall-implies-exists-finite must expect unsat")
+    universe = require_string_list("forall-implies-exists-finite.universe", implication.get("data", {}).get("universe"))
+    if not universe:
+        fail("forall-implies-exists-finite universe must be non-empty")
+    for valuation in predicate_valuations(universe):
+        if all(valuation[element] for element in universe) and not any(valuation[element] for element in universe):
+            fail("forall-implies-exists-finite found a finite counterexample")
+
+    not_forall = checks["exists-not-forall-counterexample"]
+    if not_forall["expected_result"] != "sat":
+        fail("exists-not-forall-counterexample must expect sat")
+    values = single_witness_values(not_forall, witnesses)
+    universe = require_string_list("exists-not-forall universe", values.get("universe"))
+    predicate = require_predicate_table("exists-not-forall predicate table", universe, values.get("predicate"))
+    witness = values.get("witness_element")
+    counterexample = values.get("counterexample_element")
+    require_string("exists-not-forall witness_element", witness)
+    require_string("exists-not-forall counterexample_element", counterexample)
+    if witness not in universe or counterexample not in universe:
+        fail("exists-not-forall witness/counterexample element is outside the universe")
+    if not predicate[witness]:
+        fail("exists-not-forall witness_element does not satisfy P")
+    if predicate[counterexample]:
+        fail("exists-not-forall counterexample_element unexpectedly satisfies P")
+    if not any(predicate[element] for element in universe):
+        fail("exists-not-forall predicate table does not satisfy exists x. P(x)")
+    if all(predicate[element] for element in universe):
+        fail("exists-not-forall predicate table unexpectedly satisfies forall x. P(x)")
+
+    asymmetry = checks["binary-relation-symmetry-counterexample"]
+    if asymmetry["expected_result"] != "sat":
+        fail("binary-relation-symmetry-counterexample must expect sat")
+    values = single_witness_values(asymmetry, witnesses)
+    universe = require_string_list("binary relation universe", values.get("universe"))
+    pairs = require_pair_set("binary relation pairs", values.get("pairs"), set(universe), set(universe))
+    pair_value = values.get("counterexample_pair")
+    if not isinstance(pair_value, list) or len(pair_value) != 2:
+        fail("binary relation counterexample_pair must be a two-element list")
+    left, right = pair_value
+    require_string("binary relation counterexample_pair[0]", left)
+    require_string("binary relation counterexample_pair[1]", right)
+    if left not in universe or right not in universe:
+        fail("binary relation counterexample_pair references an element outside the universe")
+    if (left, right) not in pairs:
+        fail("binary-relation-symmetry-counterexample pair is not present")
+    if (right, left) in pairs:
+        fail("binary-relation-symmetry-counterexample reverse pair is present")
+
+    horizon = checks["general-first-order-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-first-order-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-first-order-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general-first-order target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general-first-order future_checker", data.get("future_checker"))
+
+
 def validate_logic_basics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -2912,6 +3024,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_groups(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
+    if metadata["id"] == "finite-predicate-v0":
+        validate_finite_predicate(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
     if metadata["id"] == "induction-obligations-v0":

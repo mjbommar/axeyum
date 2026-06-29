@@ -16,7 +16,7 @@ Source maps:
 
 | Path | Start With | First Checkable Packs |
 |---|---|---|
-| [Logic And Proof](logic-and-proof.md) | `curriculum_propositional_logic`, `curriculum_proof_methods`, `curriculum_induction`, `field_logic_and_proof` | `logic-basics-v0`, `proof-methods-refutation-v0`, `induction-obligations-v0`, `graph-coloring-v0` |
+| [Logic And Proof](logic-and-proof.md) | `curriculum_propositional_logic`, `curriculum_predicate_logic`, `curriculum_proof_methods`, `curriculum_induction`, `field_logic_and_proof` | `logic-basics-v0`, `finite-predicate-v0`, `proof-methods-refutation-v0`, `induction-obligations-v0`, `graph-coloring-v0` |
 | [Sets, Relations, And Finite Structures](sets-relations-and-finite-structures.md) | `curriculum_sets`, `curriculum_relations_and_functions`, `curriculum_cardinality`, `field_set_theory_and_foundations` | `finite-sets-v0`, `relations-functions-v0`, `finite-cardinality-v0`, `finite-topology-v0` |
 | [Number Systems And Arithmetic](number-systems-and-arithmetic.md) | `curriculum_naturals`, `curriculum_integers`, `curriculum_divisibility_and_euclid`, `curriculum_modular_arithmetic`, `curriculum_number_theory`, `curriculum_rationals`, `curriculum_complex` | `natural-arithmetic-v0`, `integer-lia-v0`, `gcd-bezout-v0`, `modular-arithmetic-v0`, `number-theory-v0`, `rationals-lra-v0`, `complex-algebraic-v0` |
 | [Algebra And Number Theory](algebra-and-number-theory.md) | `field_abstract_algebra`, `field_number_theory` | `gcd-bezout-v0`, `number-theory-v0`, `finite-groups-v0`, `finite-rings-v0`, `finite-fields-v0` |

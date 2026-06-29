@@ -50,6 +50,10 @@ schemas, examples, and validation workflows.
   validates propositional SAT witness replay, tautology/contradiction
   truth-table checks, De Morgan equivalence, and a tiny CNF refutation by
   enumeration.
+- [`artifacts/examples/math/finite-predicate-v0/`](../../artifacts/examples/math/finite-predicate-v0/)
+  validates finite-domain universal and existential predicate replay, a bounded
+  non-empty `forall -> exists` enumeration row, finite relation asymmetry, and a
+  general first-order Lean-horizon row.
 - [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
   is the first substantive math pack: proof-by-refutation over finite
   pigeonhole examples, with the UNSAT proof route still marked as a proof gap.
@@ -125,6 +129,7 @@ python3 scripts/gen-foundational-dashboards.py
 python3 scripts/validate-foundational-example-pack.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0

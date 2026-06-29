@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-predicate-v0",
+  "witnesses": [
+    {
+      "id": "all-marked",
+      "description": "Every element in a three-element universe satisfies P.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "predicate": {
+          "a": true,
+          "b": true,
+          "c": true
+        }
+      }
+    },
+    {
+      "id": "one-marked",
+      "description": "A finite predicate with exactly one listed true witness.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "predicate": {
+          "a": false,
+          "b": true,
+          "c": false
+        },
+        "witness_element": "b"
+      }
+    },
+    {
+      "id": "exists-but-not-forall",
+      "description": "A finite predicate where an existential statement holds but a universal statement fails.",
+      "values": {
+        "universe": ["a", "b"],
+        "predicate": {
+          "a": true,
+          "b": false
+        },
+        "witness_element": "a",
+        "counterexample_element": "b"
+      }
+    },
+    {
+      "id": "asymmetric-binary-relation",
+      "description": "A binary predicate table with R(a, b) true and R(b, a) false.",
+      "values": {
+        "universe": ["a", "b"],
+        "pairs": [
+          ["a", "b"]
+        ],
+        "counterexample_pair": ["a", "b"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "forall-predicate-finite-replay",
+      "claim": "The listed finite predicate table satisfies forall x. P(x).",
+      "expected_result": "sat",
+      "validation": "finite_unary_predicate_replay",
+      "proof_status": "checked",
+      "witnesses": ["all-marked"],
+      "notes": "The validator checks every universe element has predicate value true."
+    },
+    {
+      "id": "exists-predicate-finite-replay",
+      "claim": "The listed finite predicate table satisfies exists x. P(x).",
+      "expected_result": "sat",
+      "validation": "finite_unary_predicate_replay",
+      "proof_status": "checked",
+      "witnesses": ["one-marked"],
+      "notes": "The validator checks the listed witness element is in the universe and has predicate value true."
+    },
+    {
+      "id": "forall-implies-exists-finite",
+      "claim": "There exists a unary predicate over the non-empty finite universe such that forall x. P(x) holds and exists x. P(x) fails.",
+      "expected_result": "unsat",
+      "validation": "finite_predicate_valuation_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "universe": ["a", "b"]
+      },
+      "notes": "The validator enumerates every unary predicate valuation over the non-empty finite universe and finds no counterexample."
+    },
+    {
+      "id": "exists-not-forall-counterexample",
+      "claim": "There is a finite predicate table where exists x. P(x) holds but forall x. P(x) fails.",
+      "expected_result": "sat",
+      "validation": "finite_unary_predicate_replay",
+      "proof_status": "checked",
+      "witnesses": ["exists-but-not-forall"],
+      "notes": "The validator checks the true witness and the false counterexample element."
+    },
+    {
+      "id": "binary-relation-symmetry-counterexample",
+      "claim": "There is a finite binary predicate table that violates symmetry.",
+      "expected_result": "sat",
+      "validation": "finite_binary_predicate_replay",
+      "proof_status": "checked",
+      "witnesses": ["asymmetric-binary-relation"],
+      "notes": "The validator checks R(a, b) is present and R(b, a) is absent."
+    },
+    {
+      "id": "general-first-order-lean-horizon",
+      "claim": "General first-order validity over arbitrary domains requires a future proof-assistant resource.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "first-order semantic validity and completeness over arbitrary domains",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; arbitrary-domain first-order validity remains a proof-assistant horizon."
+    }
+  ]
+}

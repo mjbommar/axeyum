@@ -100,7 +100,7 @@
       "example_packs": [
         {
           "id": "finite-predicate-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/finite-predicate-v0",
           "notes": "Finite-domain quantifier expansion and counterexamples."
         }
@@ -124,8 +124,8 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
-        "Generated dashboards keep this pack planned until a validating example pack lands.",
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
         "Existing curriculum family Predicate still needs migration into example-pack metadata."
       ],
       "graduation": {

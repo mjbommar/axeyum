@@ -269,6 +269,8 @@ propositional-logic pack lives under
 the first replay-checked
 bounded induction pack lives under
 `artifacts/examples/math/induction-obligations-v0/`;
+the first finite predicate-logic pack lives under
+`artifacts/examples/math/finite-predicate-v0/`;
 the first replay-checked number-theory pack lives under
 `artifacts/examples/math/modular-arithmetic-v0/`;
 the first gcd/Bezout core arithmetic pack lives under
@@ -355,9 +357,13 @@ base-case replay, bounded step-obligation enumeration, bounded conclusion
 checking, a bad-step counterexample witness, and a full-schema Lean-horizon
 row. `logic-basics-v0` now validates SAT witness replay, tautology and
 contradiction truth-table checks, De Morgan equivalence, and a tiny CNF
-refutation by enumeration. Continue by closing the remaining
+refutation by enumeration. `finite-predicate-v0` now validates finite-domain
+universal/existential predicate replay, an exhaustive non-empty finite
+`forall -> exists` row, an `exists`-not-`forall` counterexample, binary
+relation asymmetry replay, and a general first-order Lean-horizon row.
+Continue by closing the remaining
 `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`finite-predicate-v0`.
+`reals-rcf-shadow-v0`.
 
 Recommended order:
 
@@ -390,6 +396,9 @@ Recommended order:
     Lean-horizon metadata.
 15. `logic-basics-v0` (landed): SAT witness replay, tautology and
     contradiction checks, De Morgan equivalence, and tiny CNF refutation.
+16. `finite-predicate-v0` (landed): finite-domain quantifier expansion,
+    universal/existential predicate replay, finite relation counterexamples,
+    and general first-order Lean-horizon metadata.
 
 Exit criteria:
 

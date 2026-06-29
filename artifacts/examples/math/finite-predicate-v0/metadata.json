@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "finite-predicate-v0",
+  "title": "Finite Predicate Logic",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_predicate_logic",
+    "curriculum_relations_and_functions",
+    "field_logic_and_proof",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "logic_and_proof",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "predicate-logic",
+    "relations-and-functions"
+  ],
+  "axeyum_fragments": [
+    "finite predicate logic",
+    "finite-domain quantifier expansion",
+    "Bool / SAT",
+    "finite relations"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/predicate-logic.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "forall-predicate-finite-replay",
+    "exists-predicate-finite-replay",
+    "forall-implies-exists-finite",
+    "exists-not-forall-counterexample",
+    "binary-relation-symmetry-counterexample",
+    "general-first-order-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite quantifier expansion as deterministic Axeyum Bool/SAT terms.",
+    "Replay finite witnesses and counterexamples through Axeyum model evaluation.",
+    "Emit checked CNF/LRAT or Alethe evidence for finite UNSAT rows.",
+    "Keep unbounded first-order validity and semantic completeness under a Lean-horizon route until a kernel-checked artifact exists."
+  ]
+}

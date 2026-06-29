@@ -159,6 +159,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite predicate-logic foundations pack landed.** Added
+  [`finite-predicate-v0`](artifacts/examples/math/finite-predicate-v0/README.md)
+  with finite-domain universal and existential predicate replay, exhaustive
+  non-empty finite `forall -> exists` checking, an `exists`-not-`forall`
+  counterexample, finite binary-relation asymmetry replay, and a general
+  first-order Lean-horizon row. The foundational example-pack validator now
+  checks finite unary predicate tables, finite quantifier expansion by
+  enumeration, binary predicate counterexamples, and the first-order
+  theorem-horizon metadata. Continue by closing the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `reals-rcf-shadow-v0`.
+
 - **Logic basics foundations pack landed.** Added
   [`logic-basics-v0`](artifacts/examples/math/logic-basics-v0/README.md)
   with SAT witness replay for `p and q`, checked excluded-middle
