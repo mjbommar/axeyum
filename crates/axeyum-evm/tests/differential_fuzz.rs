@@ -47,6 +47,7 @@ const POOL: &[u8] = &[
     0xa0, 0xa3, // LOG0 / LOG3 — exercise the no-op-pop log paths
     0x54, 0x55, // SLOAD SSTORE — exercise the storage paths
     0x31, 0x5a, // BALANCE GAS — exercise the environment paths
+    0x40, 0x59, // BLOCKHASH MSIZE — more witnessed-env opcodes
     0xf1, 0xfa, // CALL STATICCALL — exercise the external-call paths
     0x60, 0x61, 0x80, 0x90, // PUSH1 PUSH2 DUP1 SWAP1
     0xf3, 0xfd, 0xfe, // RETURN REVERT INVALID

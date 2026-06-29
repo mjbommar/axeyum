@@ -45,6 +45,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/de
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
+For a fuller trace through atom-table replay, read
+[End To End: Conditional Probability](finite-probability-end-to-end.md).
+
 ## Horizon
 
 Continuous distributions, stochastic processes, convergence theorems, MCMC,

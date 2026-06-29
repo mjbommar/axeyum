@@ -55,6 +55,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 ```
 
+For a fuller trace through exact fraction replay, read
+[End To End: Rational Midpoint](rational-midpoint-end-to-end.md).
+
 ## Horizon
 
 Completeness, arbitrary limits, continuity, compactness, integration, and

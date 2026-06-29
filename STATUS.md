@@ -155,6 +155,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Math end-to-end lesson set widened.** Added rational midpoint,
+  linear-system/LP, and finite conditional-probability end-to-end lessons under
+  [`docs/learn/math/`](docs/learn/math/), and linked them from the relevant
+  cluster pages. These trace validated pack data through exact replay and
+  proof/evidence status. Continue Phase M5 with finite-structures and
+  analysis/topology end-to-end lessons.
+
 - **First math end-to-end lesson landed.** Added
   [`docs/learn/math/graph-coloring-end-to-end.md`](docs/learn/math/graph-coloring-end-to-end.md)
   to trace `graph-coloring-v0` from finite data row through replayed `sat`,

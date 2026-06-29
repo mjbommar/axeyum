@@ -372,9 +372,10 @@ lesson landed.
 `docs/learn/math/README.md` now indexes the nine required concept clusters, and
 each cluster page links concept rows, validated example packs, current
 checkable slices, proof/numerical horizons, and a concrete encode/check
-walkthrough using validated pack data. `docs/learn/math/graph-coloring-end-to-end.md`
-traces a graph-coloring example from data row through replay result and
-proof/evidence status.
+walkthrough using validated pack data. The first end-to-end lessons now trace
+graph coloring, rational midpoint replay, linear-system/LP replay, and finite
+conditional probability from data row through replay result and proof/evidence
+status.
 
 Deliverables:
 
@@ -474,9 +475,9 @@ docs link checker clean.
 
 Progress: items 1-10, Phase M4 items 4-10, and the Phase M5 learner-path
 scaffold plus first encode/check walkthrough layer have landed for the math
-seed. The first richer end-to-end lesson is `graph-coloring-end-to-end.md`.
-Continue Phase M5 by adding more end-to-end lessons for rational arithmetic,
-linear algebra/optimization, and probability/statistics.
+seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
+linear algebra/optimization, and probability/statistics. Continue Phase M5 by
+adding richer lesson pages for finite structures and analysis/topology horizons.
 
 ## Operating Rules
 

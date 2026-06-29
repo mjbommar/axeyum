@@ -34,6 +34,12 @@ validated pack data and the repo-root command that replays it.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.
+- [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
+  density witness through fraction arithmetic and replay-only evidence status.
+- [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
+  matrix replay and a tiny checked Farkas-style LP certificate.
+- [Conditional Probability](finite-probability-end-to-end.md): follows a finite
+  atom table through exact conditional-probability replay.
 
 ## How To Read These Pages
 

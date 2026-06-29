@@ -201,8 +201,11 @@ impl Op {
             0x5b => Op::Jumpdest,
             // Environment / context opcodes: pop their address arg(s), push one
             // nondeterministic value (modeled as a witnessed symbolic input).
-            0x30 | 0x32 | 0x3a | 0x3d | 0x41..=0x48 | 0x5a => Op::Env(0),
-            0x31 | 0x3b | 0x3f => Op::Env(1),
+            // `MSIZE` (0x59) is exactly deterministic but tracking it precisely is
+            // not worth it; a witnessed value is sound (over-approximate).
+            0x30 | 0x32 | 0x3a | 0x3d | 0x41..=0x48 | 0x59 | 0x5a => Op::Env(0),
+            // `BLOCKHASH` (0x40) pops the block number, pushes its (witnessed) hash.
+            0x31 | 0x3b | 0x3f | 0x40 => Op::Env(1),
             // External calls: CALL/CALLCODE pop 7 (incl. value), DELEGATECALL/
             // STATICCALL pop 6; all push a success flag. Only STATICCALL is
             // state-read-only (cannot re-enter and mutate our storage).

@@ -56,6 +56,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 ```
 
+For a fuller trace through exact matrix replay and a checked LP certificate,
+read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
+
 ## Horizon
 
 Rank theorems, spectral theorems, conditioning, numerical stability, SDP,
