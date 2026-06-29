@@ -8,6 +8,7 @@ macro:
 - `crates/axeyum-verify/tests/systems_examples.rs` (Block B)
 - `crates/axeyum-verify/tests/protocol_fsm_examples.rs` (Block C — bounded protocol FSMs)
 - `crates/axeyum-verify/tests/protocol_unbounded.rs` (rung 4 — *unbounded* protocol safety)
+- `crates/axeyum-verify/tests/protocol_toolkit.rs` (ergonomic declarative FSM toolkit)
 - `crates/axeyum-verify/tests/spec_oracle_gradient.rs` (the fuzz↔proof gradient)
 
 Reproduce: `cargo test -p axeyum-verify --test network_examples --test
@@ -147,6 +148,31 @@ k-induction is stronger and closed it at `k=1`, so this example does **not** sho
 the k-induction-vs-PDR gap (the solver's own `tests/pdr.rs` `StuckCounter` does).
 Comments were corrected to match what was measured. The unbounded certificate is
 **DRAT**, not yet Lean — consistent with the 1/7 coverage above.
+
+## Ergonomic protocol toolkit (`protocol_toolkit.rs`)
+
+The *"natural, easy to use"* layer (design:
+[`protocol-toolkit.md`](protocol-toolkit.md)). A declarative `Fsm` (states, init,
+events, a transition closure, a bad-state set) compiles to a generic
+`TransitionSystem`; `prove_for_all_traces` (PDR) and `find_bug` (BMC) are the
+entry points. Defining + proving a protocol is **~10–12 lines** vs. the ~50-line
+hand-written `TransitionSystem`. Temporal properties use state-splitting (fold the
+safety automaton into the state). 6 tests green.
+
+| Protocol (declarative) | Property | Result | Time |
+|---|---|---|---|
+| handshake (correct) | no `ESTABLISHED` without handshake | **Safe** (all traces, PDR) | < 5 ms |
+| handshake (blind-injection bug) | — | **Reachable** (PDR + BMC) | < 6 ms |
+| **capability lifecycle** (correct) | *"a revoked capability is never used"* | **Safe** (all traces, PDR) | **8.3 ms** |
+| capability lifecycle (use-after-revoke bug) | — | **Reachable** (PDR + BMC) | **9.3 ms** |
+
+The seL4-flavored capability machine (5 states `EMPTY`/`ALLOCATED`/`GRANTED`/
+`REVOKED`/`USE_AFTER_REVOKE`, 4 events) is a ~12-line `step` table; its unbounded
+safety proof and its buggy-variant refutation each run in **under 10 ms**. The
+headline ergonomics result: a stack author writes the state diagram and gets an
+all-traces proof (or a concrete misuse trace) in milliseconds. The toolkit
+re-derives the same verdicts as the hand-written rung-4 `TransitionSystem` — it
+adds ergonomics, not unsoundness.
 
 ## Next
 

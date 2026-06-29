@@ -13,6 +13,9 @@
 //! the temporal properties protocols care about — no ghost plumbing in the toolkit.
 
 #![allow(clippy::similar_names)]
+// Transition tables intentionally keep semantically-distinct arms separate for
+// readability, even when two transitions share a target state.
+#![allow(clippy::match_same_arms)]
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{
@@ -192,5 +195,97 @@ fn declarative_handshake_safe_has_no_bounded_bug() {
     assert!(
         matches!(bmc, BmcOutcome::UnreachableWithinBound { .. }),
         "the correct handshake must have no bug within bound, got {bmc:?}"
+    );
+}
+
+// ---- seL4-flavored capability lifecycle ----------------------------------------
+//
+// A capability moves EMPTY -> ALLOCATED -> GRANTED, may be REVOKED from any live
+// state, and (correctly) a USE on a REVOKED capability is a no-op. The safety
+// property — *"a revoked capability is never used"* — is the dedicated bad state
+// USE_AFTER_REVOKE, which the correct table never enters and a buggy one does.
+
+// capability states
+const EMPTY: u8 = 0;
+const ALLOCATED: u8 = 1;
+const GRANTED: u8 = 2;
+const REVOKED: u8 = 3;
+const USE_AFTER_REVOKE: u8 = 4; // the safety automaton's violation state
+// capability events
+const ALLOC: u8 = 0;
+const GRANT: u8 = 1;
+const USE: u8 = 2;
+const REVOKE: u8 = 3;
+
+/// The capability transition table. `buggy` routes `USE` on a `REVOKED`
+/// capability to `USE_AFTER_REVOKE` instead of ignoring it (a use-after-revoke).
+fn capability_step(buggy: bool) -> impl Fn(u8, u8) -> u8 {
+    move |state, event| match (state, event) {
+        (EMPTY, ALLOC) => ALLOCATED,
+        (ALLOCATED, GRANT) => GRANTED,
+        (GRANTED, USE) => GRANTED, // using a live cap is fine
+        (REVOKED, USE) if buggy => USE_AFTER_REVOKE, // BUG: use-after-revoke
+        (REVOKED, USE) => REVOKED, // correct: ignored, no-op
+        (_, REVOKE) => REVOKED,    // revoke from any state
+        (s, _) => s,               // else stay
+    }
+}
+
+fn capability(buggy: bool) -> Fsm<impl Fn(u8, u8) -> u8> {
+    Fsm {
+        states: 5,
+        init: EMPTY,
+        events: 4, // ALLOC, GRANT, USE, REVOKE
+        step: capability_step(buggy),
+        bad: vec![USE_AFTER_REVOKE],
+    }
+}
+
+/// *"A revoked capability is never used"* — proven for ALL event sequences. The
+/// whole protocol is the ~12-line `capability_step` table; the proof is one call.
+#[test]
+fn capability_no_use_after_revoke_for_all_traces() {
+    let outcome = capability(false).prove_for_all_traces();
+    assert!(
+        matches!(outcome, PdrOutcome::Safe { .. }),
+        "a correct capability must never be used after revocation, got {outcome:?}"
+    );
+}
+
+/// The use-after-revoke bug is caught as a concrete misuse trace — unbounded
+/// `Reachable` (PDR), cross-checked by bounded `Reachable` (BMC).
+#[test]
+fn capability_use_after_revoke_bug_is_reachable() {
+    let outcome = capability(true).prove_for_all_traces();
+    assert!(
+        matches!(outcome, PdrOutcome::Reachable { .. }),
+        "the use-after-revoke bug must be reachable, got {outcome:?}"
+    );
+    let bmc = capability(true).find_bug(4);
+    assert!(
+        matches!(bmc, BmcOutcome::Reachable { .. }),
+        "BMC must independently reach use-after-revoke, got {bmc:?}"
+    );
+}
+
+/// Toolkit ergonomics + speed: a declarative protocol proves (or refutes) for all
+/// traces in well under a second. Times are printed (`--nocapture`), not asserted.
+#[test]
+fn capability_proof_is_fast() {
+    use std::time::Instant;
+
+    let t = Instant::now();
+    let safe = capability(false).prove_for_all_traces();
+    let safe_dt = t.elapsed();
+    assert!(matches!(safe, PdrOutcome::Safe { .. }));
+
+    let t = Instant::now();
+    let bug = capability(true).prove_for_all_traces();
+    let bug_dt = t.elapsed();
+    assert!(matches!(bug, PdrOutcome::Reachable { .. }));
+
+    eprintln!(
+        "capability lifecycle (5 states, 4 events, ~12-line spec): \
+         unbounded-safe proof {safe_dt:?}, use-after-revoke refutation {bug_dt:?}"
     );
 }
