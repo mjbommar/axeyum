@@ -19,5 +19,14 @@ zero divisor:   nonzero a,b with a*b = 0
 
 ## Axeyum Route
 
-The intended Axeyum route is bounded BV/enumeration over table indices. The
-current pack stays at independent finite-table replay.
+The Axeyum route is bounded BV/enumeration over table indices. The satisfiable
+`Z/4Z` rows still use independent finite-table replay. The bad distributivity
+row now also carries a QF_BV artifact for the failing triple `(1,0,0)`:
+
+```text
+left distributivity wants: a*(b+c) = (a*b)+(a*c)
+source table computes:     1       = 0
+```
+
+The SMT-LIB artifact encodes this table-derived conflict as a one-bit BV
+contradiction so the generated CNF can be refuted by checked DRAT evidence.

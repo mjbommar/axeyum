@@ -18,10 +18,13 @@ Concept rows:
 | `z4-ring-table` | `sat` | replay-only |
 | `z4-zero-divisor-witness` | `sat` | replay-only |
 | `non-distributive-table-rejected` | `unsat` | checked |
+| `non-distributive-table-qf-bv-drat` | `unsat` | checked DRAT |
 
-The checked rows are finite table replay rows. The pack does not claim ideal
-theory, Noetherian/PID/UFD structure, integral-domain theory in general, or
-quantified ring theory.
+The checked rows start from finite table replay. The QF_BV row additionally
+records the bad distributivity counterexample as a fixed-width bit-vector
+contradiction whose generated CNF carries a rechecked DRAT certificate. The pack
+does not claim ideal theory, Noetherian/PID/UFD structure, integral-domain
+theory in general, or quantified ring theory.
 
 ## Encode
 
@@ -114,12 +117,28 @@ a*b + a*c = 1*0 + 1*0 = 1 + 1 = 0
 Because `1 != 0`, the fixed claim that this table satisfies distributivity is
 rejected.
 
+## Check The Bit-Blast Certificate
+
+The pack also records the same failing table row as a QF_BV artifact:
+
+```text
+artifacts/examples/math/finite-rings-v0/smt2/non-distributive-table-bitblast-conflict.smt2
+```
+
+The formula asserts that the same one-bit table cell is both `#b1` and `#b0`.
+The resource regression parses that SMT-LIB file, proves it `unsat`, exports the
+bit-blasted DIMACS plus DRAT refutation, and runs `UnsatProof::recheck` on the
+saved text. This checks the clausal refutation; the finite table-to-term
+lowering and bit-blast/Tseitin lowering remain named trust steps until a Lean
+reconstruction covers the original formula directly.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_distributivity_emits_checked_drat
 ```
 
 Expected output:
@@ -135,6 +154,7 @@ This lesson shows Axeyum's resource pattern for finite algebraic structures:
 ```text
 untrusted fast search -> candidate addition table, multiplication table, witness
 trusted small checking -> ring axioms, zero-divisor replay, counterexample row
+trusted small checking -> DIMACS/DRAT recheck for the bit-blasted contradiction
 ```
 
 General ideal theory, quotient-ring theorems, domain/field structure theorems,

@@ -26,3 +26,18 @@ Expected result: `unsat`.
 The checked query is the fixed false claim that the listed two-operation table
 satisfies distributivity. The validator enumerates all triples and finds a
 counterexample.
+
+## `non-distributive-table-qf-bv-drat`
+
+Expected result: `unsat`.
+
+For the failing triple `(a=1,b=0,c=0)`, the finite table computes:
+
+```text
+a*(b+c)       = 1
+(a*b)+(a*c)   = 0
+```
+
+The QF_BV artifact records the resulting fixed-width contradiction. The solver
+regression parses that artifact, proves it `unsat`, exports the bit-blasted
+CNF with a DRAT refutation, and rechecks the certificate independently.

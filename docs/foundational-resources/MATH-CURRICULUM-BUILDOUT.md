@@ -411,7 +411,8 @@ general group-action Lean-horizon row. `finite-monoids-v0` now validates finite 
 identity/associativity, transformation-composition table replay from finite
 functions, units/idempotents, a checked QF_UF/Alethe non-associative table
 rejection, and a general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
-zero-divisor replay, and a checked non-distributive table.
+zero-divisor replay, a checked non-distributive table, and a resource-backed
+QF_BV/DRAT proof-route row for the bad distributivity conflict.
 `finite-algebra-homomorphisms-v0` now extends the algebra core with finite
 group-homomorphism replay, kernel/image recomputation, quotient and induced-map
 checks, ring-homomorphism replay, a QF_UF/Alethe homomorphism-preservation row,

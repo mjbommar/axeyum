@@ -27,12 +27,18 @@ zero-divisor row is accepted only after replaying a nonzero product to the
 additive identity. The negative row is accepted only because distributivity
 fails on the listed finite table.
 
-This pack does not yet emit Axeyum BV terms or proof certificates. The
-graduation route is deterministic finite-table lowering plus checked evidence
-for failed axiom claims and universal table identities.
+The bad distributivity row also has a QF_BV proof-route artifact:
+[`smt2/non-distributive-table-bitblast-conflict.smt2`](smt2/non-distributive-table-bitblast-conflict.smt2).
+For the failing triple `(a=1,b=0,c=0)`, the source table computes
+`a*(b+c)=1` and `(a*b)+(a*c)=0`; the artifact records the resulting one-bit BV
+contradiction, and the solver regression exports a DIMACS/DRAT certificate that
+`UnsatProof::recheck` validates. The finite table-to-term lowering and
+bit-blast/Tseitin steps remain explicit trust steps until Lean reconstruction
+covers the original formula.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_distributivity_emits_checked_drat
 ```

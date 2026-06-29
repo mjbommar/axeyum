@@ -616,6 +616,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   execution plan. Next resource work should pick one row from that matrix and
   carry it through validation, status update, commit, and push.
 
+- **First QF_BV resource proof-route row landed.**
+  [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
+  source-linked SMT-LIB artifact for its bad distributivity row:
+  [`non-distributive-table-bitblast-conflict.smt2`](artifacts/examples/math/finite-rings-v0/smt2/non-distributive-table-bitblast-conflict.smt2).
+  The new `math_resource_bv_routes` regression parses it, proves it `unsat`,
+  exports the bit-blasted DIMACS plus DRAT refutation, and rechecks the
+  certificate. The pack validator now enforces the concrete table
+  counterexample, artifact path, regression command, and bit-blast/Tseitin
+  trust-boundary note. Next QF_BV resource targets are `finite-fields-v0` and
+  the BV side of `graph-coloring-v0`.
+
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact

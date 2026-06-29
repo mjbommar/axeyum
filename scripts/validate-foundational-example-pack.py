@@ -5527,6 +5527,48 @@ def validate_finite_rings(expected: dict[str, Any]) -> None:
     if not distributivity_failures(carrier, add_op, mul_op):
         fail("non-distributive-table-rejected must fail distributivity specifically")
 
+    qf_bv = checks["non-distributive-table-qf-bv-drat"]
+    if qf_bv["expected_result"] != "unsat":
+        fail("non-distributive-table-qf-bv-drat must expect unsat")
+    if qf_bv["proof_status"] != "checked":
+        fail("non-distributive-table-qf-bv-drat must be checked")
+    if qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("non-distributive-table-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    values = single_witness_values(qf_bv, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables(
+        "non-distributive QF_BV table", values
+    )
+    data = qf_bv.get("data", {})
+    counterexample = data.get("counterexample")
+    if not isinstance(counterexample, dict):
+        fail("non-distributive-table-qf-bv-drat counterexample must be an object")
+    a = counterexample.get("a")
+    b = counterexample.get("b")
+    c = counterexample.get("c")
+    lhs = counterexample.get("lhs")
+    rhs = counterexample.get("rhs")
+    for label, value in (("a", a), ("b", b), ("c", c), ("lhs", lhs), ("rhs", rhs)):
+        require_string(f"non-distributive-table-qf-bv-drat counterexample {label}", value)
+        if value not in set(carrier):
+            fail(f"non-distributive-table-qf-bv-drat counterexample {label} not in carrier")
+    computed_lhs = table_op(mul_op, a, table_op(add_op, b, c))
+    computed_rhs = table_op(add_op, table_op(mul_op, a, b), table_op(mul_op, a, c))
+    if computed_lhs != lhs or computed_rhs != rhs:
+        fail("non-distributive-table-qf-bv-drat counterexample values do not match tables")
+    if lhs == rhs:
+        fail("non-distributive-table-qf-bv-drat counterexample must be a real conflict")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("non-distributive-table-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("non-distributive-table-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("non-distributive-table-qf-bv-drat proof_regression", proof_regression)
+    if "finite_rings_bad_distributivity_emits_checked_drat" not in proof_regression:
+        fail("non-distributive-table-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("non-distributive-table-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("non-distributive-table-qf-bv-drat certificate must document DRAT and lowering trust")
+
 
 def require_counting_int(context: str, value: Any) -> int:
     item = require_int(context, value)

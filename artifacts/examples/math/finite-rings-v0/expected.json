@@ -71,6 +71,27 @@
       "proof_status": "checked",
       "witnesses": ["bad-distributive-table"],
       "notes": "The validator enumerates all triples and confirms distributivity fails."
+    },
+    {
+      "id": "non-distributive-table-qf-bv-drat",
+      "claim": "The bad distributivity row lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "witnesses": ["bad-distributive-table"],
+      "data": {
+        "counterexample": {
+          "a": "1",
+          "b": "0",
+          "c": "0",
+          "lhs": "1",
+          "rhs": "0"
+        },
+        "smt2_artifact": "artifacts/examples/math/finite-rings-v0/smt2/non-distributive-table-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_distributivity_emits_checked_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while finite table lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "For a=1,b=0,c=0 the source table computes a*(b+c)=1 and (a*b)+(a*c)=0. The SMT-LIB artifact records that conflict as a one-bit BV contradiction whose DIMACS/DRAT pair is rechecked by the regression."
     }
   ]
 }

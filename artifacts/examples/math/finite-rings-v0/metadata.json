@@ -34,12 +34,13 @@
   "expected_results": [
     "z4-ring-table",
     "z4-zero-divisor-witness",
-    "non-distributive-table-rejected"
+    "non-distributive-table-rejected",
+    "non-distributive-table-qf-bv-drat"
   ],
   "graduation_criteria": [
-    "Encode finite ring tables as deterministic BV or finite-function formulas.",
+    "Encode finite ring tables as deterministic BV or finite-function formulas; the first bad distributivity row now has a checked QF_BV/DRAT artifact.",
     "Replay finite ring witnesses through Axeyum model evaluation.",
-    "Add checked proof/evidence routes for failed axiom and universal table claims.",
+    "Continue adding checked proof/evidence routes for failed axiom and universal table claims.",
     "Keep ideal theory, Noetherian/PID/UFD structure, and quantified ring theory marked Lean-horizon."
   ]
 }

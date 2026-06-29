@@ -296,6 +296,7 @@ Graduation:
 First targets:
 
 - [finite-rings-v0](../../artifacts/examples/math/finite-rings-v0/)
+  (resource-backed QF_BV/DRAT regression landed for the bad distributivity row)
 - [finite-fields-v0](../../artifacts/examples/math/finite-fields-v0/)
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
 
@@ -309,6 +310,7 @@ Expected artifact:
 Validation:
 
 ```sh
+cargo test -p axeyum-solver --test math_resource_bv_routes
 cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
 cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
 ./scripts/check-foundational-resources.sh
