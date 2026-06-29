@@ -125,6 +125,9 @@ The `finite-hitting-times-v0` validator carries only not-yet-hit mass forward,
 checks the survival mass, and verifies the absorption-probability and expected
 hitting-time linear equations.
 
+For a focused finite hitting-time trace, read
+[End To End: Finite Hitting Times](finite-hitting-times-end-to-end.md).
+
 For finite concentration checks, it recomputes exact tail probabilities and
 standard finite inequalities:
 

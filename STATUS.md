@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-hitting-times end-to-end lesson landed.** Added
+  [`finite-hitting-times-end-to-end.md`](docs/learn/math/finite-hitting-times-end-to-end.md)
+  as the learner-facing trace for the finite-hitting-times pack: finite
+  absorbing-chain first-hit distributions, survival mass, absorption
+  equations, expected hitting-time equations, checked bad expected-time
+  rejection, and the general hitting-theory Lean horizon. The lesson is linked
+  from the math learning index plus the probability/statistics and
+  analysis/dynamics paths.
+
 - **Finite-stochastic-kernels end-to-end lesson landed.** Added
   [`finite-stochastic-kernels-end-to-end.md`](docs/learn/math/finite-stochastic-kernels-end-to-end.md)
   as the learner-facing trace for the finite-stochastic-kernels pack:

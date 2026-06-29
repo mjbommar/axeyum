@@ -132,6 +132,9 @@ P(T > 4) = 5/16
 h(start) = 1 + 1/2*h(start) + 1/2*h(middle) = 4
 ```
 
+For a fuller trace of the hitting-time rows, read
+[End To End: Finite Hitting Times](finite-hitting-times-end-to-end.md).
+
 For the spectral row, it checks exact rational eigenpair and decomposition
 arithmetic:
 

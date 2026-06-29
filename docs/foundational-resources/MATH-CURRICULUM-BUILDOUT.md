@@ -863,7 +863,8 @@ Euler-step/error replay, finite compactness/connectedness/continuous-map
 replay, finite simplicial-homology replay, finite integration replay, finite
 product-measure/Fubini replay, finite random-variable replay, and finite
 conditional-expectation replay, finite martingale replay, and finite
-stochastic-kernel replay, and finite Chebyshev-system
+stochastic-kernel replay, finite hitting-time replay, and finite
+Chebyshev-system
 interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
@@ -1299,6 +1300,10 @@ martingale rejection, and the general martingale Lean horizon.
 row-normalized finite kernels, pushforward distributions, joint
 factorization/disintegration, kernel composition, checked bad kernel-row
 rejection, and the regular-conditional-probability Lean horizon.
+`finite-hitting-times-v0` now has a learner-facing end-to-end lesson for finite
+absorbing-chain first-hit distributions, survival mass, absorption equations,
+expected hitting-time equations, checked bad expected-time rejection, and the
+general hitting-theory Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

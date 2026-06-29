@@ -270,6 +270,9 @@ matrix. The `finite-hitting-times-v0` validator computes first-hit
 probabilities by carrying only non-hit mass forward, then checks absorption
 probability and expected hitting-time equations over exact rationals.
 
+For a focused finite hitting-time trace, read
+[End To End: Finite Hitting Times](finite-hitting-times-end-to-end.md).
+
 For finite integration, encode a finite atom table and a rational-valued simple
 function. The `finite-integration-v0` validator recomputes weighted sums,
 indicator integrals, linearity, and a false expectation counterexample using

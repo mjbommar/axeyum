@@ -217,6 +217,10 @@ validated pack data and the repo-root command that replays it.
   row-normalized finite kernels, pushforward distributions, joint
   factorization/disintegration, kernel composition, checked bad kernel-row
   rejection, and the regular-conditional-probability Lean horizon.
+- [Finite Hitting Times](finite-hitting-times-end-to-end.md): follows finite
+  absorbing-chain first-hit distributions, survival mass, absorption
+  equations, expected hitting-time equations, checked bad expected-time
+  rejection, and the general hitting-theory Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
