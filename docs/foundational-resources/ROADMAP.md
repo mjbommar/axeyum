@@ -106,6 +106,7 @@ artifacts/examples/math/
   linear-optimization-v0/
   convexity-rational-v0/
   coordinate-geometry-v0/
+  affine-geometry-v0/
   finite-topology-v0/
   finite-compactness-v0/
   finite-connectedness-v0/

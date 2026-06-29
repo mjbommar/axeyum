@@ -202,6 +202,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks.
+- [`artifacts/examples/math/affine-geometry-v0/`](../../artifacts/examples/math/affine-geometry-v0/)
+  validates exact affine point-image replay, midpoint preservation,
+  collinearity preservation, checked rejection of false distance preservation,
+  and an affine-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
   validates finite topology axioms, closure/interior computation, and exact
   finite metric-ball replay.

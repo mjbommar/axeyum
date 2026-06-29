@@ -169,6 +169,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Affine geometry foundations pack landed.** Added
+  [`affine-geometry-v0`](artifacts/examples/math/affine-geometry-v0/README.md)
+  as the exact finite affine-map bridge after coordinate geometry. The pack
+  validates affine point-image replay, midpoint preservation, collinearity
+  preservation under an invertible affine map, checked rejection of false
+  Euclidean distance preservation, and a general affine-geometry Lean-horizon
+  row. The foundational example-pack validator now checks the affine map,
+  determinant, midpoint, collinearity, and distance counterexample rows by
+  exact rational replay.
+
 - **Foundational resource library-boundary decision landed.** Added
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
   for Phase M8: keep the foundational resources in-repo for now, expose the

@@ -28,15 +28,15 @@ The Phase M8 threshold is met for size and repeated structure:
 | Requirement | Current Evidence |
 |---|---|
 | At least 40 validated concept rows | 41 atlas rows: 23 curriculum rows and 18 field rows. |
-| At least 12 validated example packs | 64 non-template math packs are listed through the atlas data contract. |
-| At least 6 packs with checked proof/evidence routes | 52 non-template packs contain at least one `checked` expected-result row. |
+| At least 12 validated example packs | 65 non-template math packs are listed through the atlas data contract. |
+| At least 6 packs with checked proof/evidence routes | 53 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage. |
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 128 expected-result rows
-- `replay-only`: 128 expected-result rows
-- `lean-horizon`: 27 expected-result rows
+- `checked`: 129 expected-result rows
+- `replay-only`: 131 expected-result rows
+- `lean-horizon`: 28 expected-result rows
 - `proof-gap`: 1 expected-result row
 
 That distribution argues for keeping the resource lane close to the proof

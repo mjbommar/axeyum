@@ -5637,6 +5637,40 @@ def require_point2(context: str, value: Any) -> tuple[Fraction, Fraction]:
     return vector[0], vector[1]
 
 
+def require_matrix2(context: str, value: Any) -> list[list[Fraction]]:
+    matrix = require_fraction_matrix(context, value)
+    if len(matrix) != 2 or any(len(row) != 2 for row in matrix):
+        fail(f"{context} must be a two-by-two matrix")
+    return matrix
+
+
+def affine_image(
+    matrix: list[list[Fraction]],
+    translation: tuple[Fraction, Fraction],
+    point: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction]:
+    vector = mat_vec(matrix, [point[0], point[1]])
+    return vector[0] + translation[0], vector[1] + translation[1]
+
+
+def midpoint2(left: tuple[Fraction, Fraction], right: tuple[Fraction, Fraction]) -> tuple[Fraction, Fraction]:
+    return (left[0] + right[0]) / 2, (left[1] + right[1]) / 2
+
+
+def collinearity_determinant(
+    a: tuple[Fraction, Fraction],
+    b: tuple[Fraction, Fraction],
+    c: tuple[Fraction, Fraction],
+) -> Fraction:
+    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
+
+def distance_squared2(left: tuple[Fraction, Fraction], right: tuple[Fraction, Fraction]) -> Fraction:
+    dx = right[0] - left[0]
+    dy = right[1] - left[1]
+    return dx * dx + dy * dy
+
+
 def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -5671,6 +5705,115 @@ def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     claimed = require_fraction("distance squared", values.get("distance_squared"))
     if (qx - px) * (qx - px) + (qy - py) * (qy - py) != claimed:
         fail("distance-squared witness does not match point coordinates")
+
+
+def validate_affine_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    point_image = checks["affine-map-point-witness"]
+    if point_image["expected_result"] != "sat":
+        fail("affine-map-point-witness must expect sat")
+    values = single_witness_values(point_image, witnesses)
+    matrix = require_matrix2("affine point matrix", values.get("matrix"))
+    translation = require_point2("affine point translation", values.get("translation"))
+    point = require_point2("affine point", values.get("point"))
+    image = require_point2("affine point image", values.get("image"))
+    if affine_image(matrix, translation, point) != image:
+        fail("affine-map-point-witness image does not equal A*p + b")
+
+    midpoint = checks["affine-midpoint-preservation"]
+    if midpoint["expected_result"] != "sat":
+        fail("affine-midpoint-preservation must expect sat")
+    values = single_witness_values(midpoint, witnesses)
+    matrix = require_matrix2("affine midpoint matrix", values.get("matrix"))
+    translation = require_point2("affine midpoint translation", values.get("translation"))
+    a = require_point2("affine midpoint a", values.get("a"))
+    b = require_point2("affine midpoint b", values.get("b"))
+    midpoint_point = require_point2("affine midpoint midpoint", values.get("midpoint"))
+    image_a = require_point2("affine midpoint image_a", values.get("image_a"))
+    image_b = require_point2("affine midpoint image_b", values.get("image_b"))
+    image_midpoint = require_point2("affine midpoint image_midpoint", values.get("image_midpoint"))
+    midpoint_of_images = require_point2("affine midpoint midpoint_of_images", values.get("midpoint_of_images"))
+    if midpoint2(a, b) != midpoint_point:
+        fail("affine-midpoint-preservation listed midpoint is incorrect")
+    if affine_image(matrix, translation, a) != image_a:
+        fail("affine-midpoint-preservation image_a is incorrect")
+    if affine_image(matrix, translation, b) != image_b:
+        fail("affine-midpoint-preservation image_b is incorrect")
+    if affine_image(matrix, translation, midpoint_point) != image_midpoint:
+        fail("affine-midpoint-preservation image_midpoint is incorrect")
+    if midpoint2(image_a, image_b) != midpoint_of_images:
+        fail("affine-midpoint-preservation midpoint_of_images is incorrect")
+    if image_midpoint != midpoint_of_images:
+        fail("affine-midpoint-preservation fails for the listed segment")
+
+    collinear = checks["affine-collinearity-preservation"]
+    if collinear["expected_result"] != "sat":
+        fail("affine-collinearity-preservation must expect sat")
+    values = single_witness_values(collinear, witnesses)
+    matrix = require_matrix2("affine collinearity matrix", values.get("matrix"))
+    translation = require_point2("affine collinearity translation", values.get("translation"))
+    determinant = require_fraction("affine collinearity determinant", values.get("determinant"))
+    if matrix_determinant(matrix) != determinant:
+        fail("affine-collinearity-preservation determinant does not match matrix")
+    if determinant == 0:
+        fail("affine-collinearity-preservation should use an invertible affine map")
+    raw_points = values.get("points")
+    raw_images = values.get("images")
+    if not isinstance(raw_points, list) or not isinstance(raw_images, list):
+        fail("affine-collinearity-preservation points and images must be lists")
+    points = [
+        require_point2(f"affine collinearity points[{index}]", point)
+        for index, point in enumerate(raw_points)
+    ]
+    images = [
+        require_point2(f"affine collinearity images[{index}]", image)
+        for index, image in enumerate(raw_images)
+    ]
+    if len(points) != 3 or len(images) != 3:
+        fail("affine-collinearity-preservation requires exactly three source points and three images")
+    if [affine_image(matrix, translation, point) for point in points] != images:
+        fail("affine-collinearity-preservation images do not match A*p + b")
+    if collinearity_determinant(points[0], points[1], points[2]) != 0:
+        fail("affine-collinearity-preservation source points are not collinear")
+    if collinearity_determinant(images[0], images[1], images[2]) != 0:
+        fail("affine-collinearity-preservation image points are not collinear")
+
+    bad_distance = checks["bad-distance-preservation-rejected"]
+    if bad_distance["expected_result"] != "unsat" or bad_distance.get("proof_status") != "checked":
+        fail("bad-distance-preservation-rejected must be a checked unsat row")
+    data = bad_distance.get("data", {})
+    matrix = require_matrix2("bad distance matrix", data.get("matrix"))
+    translation = require_point2("bad distance translation", data.get("translation"))
+    p = require_point2("bad distance p", data.get("p"))
+    q = require_point2("bad distance q", data.get("q"))
+    image_p = require_point2("bad distance image_p", data.get("image_p"))
+    image_q = require_point2("bad distance image_q", data.get("image_q"))
+    original_distance = require_fraction("bad distance original_distance_squared", data.get("original_distance_squared"))
+    transformed_distance = require_fraction(
+        "bad distance transformed_distance_squared",
+        data.get("transformed_distance_squared"),
+    )
+    if affine_image(matrix, translation, p) != image_p:
+        fail("bad-distance-preservation-rejected image_p is incorrect")
+    if affine_image(matrix, translation, q) != image_q:
+        fail("bad-distance-preservation-rejected image_q is incorrect")
+    if distance_squared2(p, q) != original_distance:
+        fail("bad-distance-preservation-rejected original distance is incorrect")
+    if distance_squared2(image_p, image_q) != transformed_distance:
+        fail("bad-distance-preservation-rejected transformed distance is incorrect")
+    if original_distance == transformed_distance:
+        fail("bad-distance-preservation-rejected unexpectedly preserves distance")
+
+    horizon = checks["general-affine-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-affine-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-affine-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general affine geometry target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general affine geometry future_checker", data.get("future_checker"))
 
 
 def require_subset(context: str, value: Any, universe: list[str]) -> frozenset[str]:
@@ -9216,6 +9359,8 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
 
 
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
+    if metadata["id"] == "affine-geometry-v0":
+        validate_affine_geometry(expected)
     if metadata["id"] == "bounded-dynamics-v0":
         validate_bounded_dynamics(expected)
     if metadata["id"] == "calculus-algebraic-shadow-v0":

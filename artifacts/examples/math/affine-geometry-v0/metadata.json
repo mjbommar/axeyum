@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "affine-geometry-v0",
+  "title": "Exact Affine Geometry Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_geometry",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "curriculum_reals",
+    "curriculum_linear_algebra",
+    "curriculum_polynomials"
+  ],
+  "field_ids": [
+    "geometry",
+    "linear_algebra",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "linear-algebra",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite coordinate replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "affine-map-point-witness",
+    "affine-midpoint-preservation",
+    "affine-collinearity-preservation",
+    "bad-distance-preservation-rejected",
+    "general-affine-geometry-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed affine-map and incidence checks as deterministic QF_LRA formulas.",
+    "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted certificates for the false distance-preservation row once the LRA/NRA proof routes are promoted.",
+    "Keep projective, differential, and synthetic geometry theorems under Lean horizon until formal proof routes exist."
+  ]
+}

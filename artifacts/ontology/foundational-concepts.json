@@ -2077,6 +2077,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/coordinate-geometry-v0",
           "notes": "Incidence, distance, midpoint, collinearity, and rigid finite configurations."
+        },
+        {
+          "id": "affine-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/affine-geometry-v0",
+          "notes": "Exact Affine Geometry Checks"
         }
       ],
       "proof_routes": [
@@ -2097,13 +2103,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/coordinate-geometry-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/coordinate-geometry-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2229,6 +2235,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
           "notes": "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."
+        },
+        {
+          "id": "affine-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/affine-geometry-v0",
+          "notes": "Exact Affine Geometry Checks"
         },
         {
           "id": "bounded-dynamics-v0",
@@ -3090,6 +3102,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
           "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."
+        },
+        {
+          "id": "affine-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/affine-geometry-v0",
+          "notes": "Exact Affine Geometry Checks"
         },
         {
           "id": "calculus-algebraic-shadow-v0",

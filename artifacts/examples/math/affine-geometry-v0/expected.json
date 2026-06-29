@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "pack_id": "affine-geometry-v0",
+  "witnesses": [
+    {
+      "id": "affine-point-image",
+      "description": "A fixed affine map sends (2, 1) to (6, 4).",
+      "values": {
+        "matrix": [["2", "1"], ["1", "3"]],
+        "translation": ["1", "-1"],
+        "point": ["2", "1"],
+        "image": ["6", "4"]
+      }
+    },
+    {
+      "id": "affine-midpoint",
+      "description": "The same affine map preserves the midpoint of a fixed segment.",
+      "values": {
+        "matrix": [["2", "1"], ["1", "3"]],
+        "translation": ["1", "-1"],
+        "a": ["0", "0"],
+        "b": ["4", "2"],
+        "midpoint": ["2", "1"],
+        "image_a": ["1", "-1"],
+        "image_b": ["11", "9"],
+        "image_midpoint": ["6", "4"],
+        "midpoint_of_images": ["6", "4"]
+      }
+    },
+    {
+      "id": "affine-collinear-triple",
+      "description": "An invertible affine map preserves collinearity of a fixed triple.",
+      "values": {
+        "matrix": [["2", "1"], ["1", "3"]],
+        "translation": ["1", "-1"],
+        "determinant": "5",
+        "points": [["0", "0"], ["1", "1"], ["3", "3"]],
+        "images": [["1", "-1"], ["4", "3"], ["10", "11"]]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "affine-map-point-witness",
+      "claim": "The listed affine map sends the fixed input point to the listed image point.",
+      "expected_result": "sat",
+      "validation": "exact_affine_coordinate_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-point-image"],
+      "notes": "The validator recomputes A*p + b over exact rationals."
+    },
+    {
+      "id": "affine-midpoint-preservation",
+      "claim": "For the fixed segment and affine map, the image of the midpoint equals the midpoint of the images.",
+      "expected_result": "sat",
+      "validation": "exact_affine_midpoint_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-midpoint"],
+      "notes": "The validator recomputes the segment midpoint, all three images, and the midpoint of the image segment exactly."
+    },
+    {
+      "id": "affine-collinearity-preservation",
+      "claim": "The listed invertible affine map sends a collinear triple to another collinear triple.",
+      "expected_result": "sat",
+      "validation": "exact_affine_collinearity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-collinear-triple"],
+      "notes": "The validator checks the original and transformed two-dimensional determinants exactly."
+    },
+    {
+      "id": "bad-distance-preservation-rejected",
+      "claim": "Every affine map preserves Euclidean squared distance for the listed two points.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_distance_preservation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [["2", "1"], ["1", "3"]],
+        "translation": ["1", "-1"],
+        "p": ["0", "0"],
+        "q": ["1", "0"],
+        "image_p": ["1", "-1"],
+        "image_q": ["3", "0"],
+        "original_distance_squared": "1",
+        "transformed_distance_squared": "5"
+      },
+      "notes": "The validator rejects the distance-preservation claim because this affine map scales the fixed segment length."
+    },
+    {
+      "id": "general-affine-geometry-lean-horizon",
+      "claim": "General affine-geometry theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "affine maps preserve affine combinations, incidence, and ratios over general vector spaces",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked by exact rational replay; general affine geometry remains a proof-assistant horizon."
+    }
+  ]
+}
