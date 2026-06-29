@@ -401,3 +401,21 @@ fn random_matrix_bad_trace_moment_emits_checked_farkas() {
         &[actual_moment, false_moment],
     );
 }
+
+#[test]
+fn affine_geometry_bad_distance_preservation_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let original_distance_squared = real(&mut arena, "original_distance_squared");
+    let transformed_distance_squared = real(&mut arena, "transformed_distance_squared");
+    let original_is_one = eq_ratio(&mut arena, original_distance_squared, 1, 1);
+    let transformed_is_five = eq_ratio(&mut arena, transformed_distance_squared, 5, 1);
+    let false_preservation = arena
+        .eq(original_distance_squared, transformed_distance_squared)
+        .unwrap();
+
+    assert_farkas_checked(
+        "affine-geometry-v0 bad-distance-preservation-rejected",
+        &arena,
+        &[original_is_one, transformed_is_five, false_preservation],
+    );
+}

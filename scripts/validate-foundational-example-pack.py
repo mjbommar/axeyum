@@ -9966,6 +9966,17 @@ def validate_affine_geometry(expected: dict[str, Any]) -> None:
         fail("bad-distance-preservation-rejected transformed distance is incorrect")
     if original_distance == transformed_distance:
         fail("bad-distance-preservation-rejected unexpectedly preserves distance")
+    farkas_claim = data.get("farkas_distance_claim")
+    require_string("bad distance farkas_distance_claim", farkas_claim)
+    if farkas_claim != "original_distance_squared = transformed_distance_squared":
+        fail("bad-distance-preservation-rejected must document the Farkas distance claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad distance smt2_artifact", smt2_artifact)
+    check_source("bad distance smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad distance farkas_regression", regression)
+    if "affine_geometry_bad_distance_preservation_emits_checked_farkas" not in regression:
+        fail("bad-distance-preservation-rejected must link the Farkas regression")
 
     horizon = checks["general-affine-geometry-lean-horizon"]
     if horizon["expected_result"] != "not-run":

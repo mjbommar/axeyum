@@ -81,9 +81,12 @@
         "image_p": ["1", "-1"],
         "image_q": ["3", "0"],
         "original_distance_squared": "1",
-        "transformed_distance_squared": "5"
+        "transformed_distance_squared": "5",
+        "farkas_distance_claim": "original_distance_squared = transformed_distance_squared",
+        "smt2_artifact": "artifacts/examples/math/affine-geometry-v0/smt2/bad-distance-preservation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_distance_preservation_emits_checked_farkas"
       },
-      "notes": "The validator rejects the distance-preservation claim because this affine map scales the fixed segment length."
+      "notes": "The validator rejects the distance-preservation claim because this affine map scales the fixed segment length; the final distance equality conflict is checked through QF_LRA/Farkas evidence."
     },
     {
       "id": "general-affine-geometry-lean-horizon",

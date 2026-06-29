@@ -143,10 +143,12 @@ First targets:
 - [random-matrix-finite-v0](../../artifacts/examples/math/random-matrix-finite-v0/)
   (resource-backed Farkas regression landed for the bad trace-square moment
   row)
+- [affine-geometry-v0](../../artifacts/examples/math/affine-geometry-v0/)
+  (resource-backed Farkas regression landed for the bad distance-preservation
+  row)
 
 Secondary targets:
 
-- affine geometry;
 - inner-product, spectral, and matrix-invariant packs.
 
 Expected artifact:

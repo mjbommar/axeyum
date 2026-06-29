@@ -58,5 +58,17 @@ Affine maps do not generally preserve Euclidean distance. For `P = (0, 0)` and
 `Q = (1, 0)`, the original squared distance is `1`. Their images are `(1, -1)`
 and `(3, 0)`, whose squared distance is `5`.
 
+The rejected distance-preservation claim is the exact-rational contradiction:
+
+```text
+original_distance_squared = 1
+transformed_distance_squared = 5
+original_distance_squared = transformed_distance_squared
+```
+
+The pack links this to a `QF_LRA` SMT-LIB artifact and a resource-backed
+`UnsatFarkas` regression. Finite replay computes the two distances; the
+certificate checker rejects the incompatible equality.
+
 These are exact finite replay targets, not a complete formalization of affine
 geometry.

@@ -649,8 +649,8 @@ Lean-horizon row.
 collinearity, and squared-distance coordinate checks.
 `artifacts/examples/math/affine-geometry-v0/` now validates exact affine
 point-image replay, midpoint preservation, collinearity preservation, checked
-rejection of a false affine distance-preservation claim, and a general
-affine-geometry Lean-horizon row.
+QF_LRA/Farkas rejection of a false affine distance-preservation claim, and a
+general affine-geometry Lean-horizon row.
 `artifacts/examples/math/orientation-area-geometry-v0/` now validates exact
 signed-area/orientation replay, affine area scaling by determinant,
 barycentric point-inside replay, checked QF_LRA/Farkas rejection of a false
@@ -784,8 +784,8 @@ Recommended order:
 7. `coordinate-geometry-v0`, `affine-geometry-v0`, and
    `orientation-area-geometry-v0`: collinearity, midpoint, distance
    constraints, affine maps, signed area/orientation, barycentric replay,
-   finite incidence preservation, false distance-preservation rejection, and
-   QF_LRA/Farkas false orientation rejection.
+   finite incidence preservation, QF_LRA/Farkas false distance-preservation
+   rejection, and QF_LRA/Farkas false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior and metric-ball examples.
 9. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
@@ -1171,8 +1171,8 @@ and alternation-sign bridge toward Chebyshev-system, Haar-space, minimax, and
 approximation-theory horizons.
 `affine-geometry-v0` now adds the exact finite affine-map bridge for geometry:
 point-image replay, midpoint preservation, collinearity preservation, checked
-rejection of false distance preservation, and an affine-geometry Lean-horizon
-row.
+QF_LRA/Farkas rejection of false distance preservation, and an affine-geometry
+Lean-horizon row.
 `orientation-area-geometry-v0` now adds the exact finite orientation/area
 bridge for geometry: signed-area replay, affine determinant area scaling,
 barycentric point-inside replay, checked QF_LRA/Farkas rejection of false
@@ -1278,8 +1278,8 @@ horizon.
 `coordinate-geometry-v0`, `affine-geometry-v0`, and
 `orientation-area-geometry-v0` now have a learner-facing end-to-end lesson for
 exact midpoint, collinearity, squared-distance, affine-map, signed-area,
-area-scaling, barycentric, checked bad-distance, checked QF_LRA/Farkas
-bad-orientation, and general geometry Lean-horizon rows.
+area-scaling, barycentric, checked QF_LRA/Farkas bad-distance, checked
+QF_LRA/Farkas bad-orientation, and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, finite sigma-algebra closure, exact finite additivity,
@@ -1448,6 +1448,8 @@ the same checked Farkas evidence path after exact signed-area replay.
 same checked Farkas evidence path after exact residual-norm replay.
 `random-matrix-finite-v0` now routes its bad trace-square row through the same
 checked Farkas evidence path after exact finite moment replay.
+`affine-geometry-v0` now routes its bad distance-preservation row through the
+same checked Farkas evidence path after exact squared-distance replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

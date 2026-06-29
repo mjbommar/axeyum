@@ -123,6 +123,18 @@ distance^2(p,q) = 1
 distance^2(T(p),T(q)) = 5
 ```
 
+The affine pack exposes the rejected preservation claim as a `QF_LRA`
+contradiction:
+
+```text
+original_distance_squared = 1
+transformed_distance_squared = 5
+original_distance_squared = transformed_distance_squared
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 So the claim that this arbitrary affine map preserves Euclidean squared
 distance is checked `unsat`.
 
@@ -240,6 +252,7 @@ This lesson shows Axeyum's current finite geometry resource pattern:
 ```text
 untrusted fast search -> point, map, area, barycentric, or counterexample row
 trusted small checking -> exact rational coordinate and determinant replay
+proof upgrade -> QF_LRA/Farkas certificates for false distance/orientation rows
 remaining horizon -> general affine, Euclidean, and oriented geometry proofs
 ```
 

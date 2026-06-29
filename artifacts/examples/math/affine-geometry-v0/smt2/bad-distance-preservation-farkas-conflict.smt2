@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const original_distance_squared Real)
+(declare-const transformed_distance_squared Real)
+(assert (= original_distance_squared 1))
+(assert (= transformed_distance_squared 5))
+(assert (= original_distance_squared transformed_distance_squared))
+(check-sat)

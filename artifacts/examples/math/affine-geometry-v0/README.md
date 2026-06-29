@@ -16,8 +16,8 @@ The pack covers:
 - exact point-image replay for one affine map;
 - midpoint preservation for a fixed segment;
 - collinearity preservation for a fixed triple;
-- checked rejection of the false claim that arbitrary affine maps preserve
-  Euclidean distance;
+- checked QF_LRA/Farkas rejection of the false claim that arbitrary affine maps
+  preserve Euclidean distance;
 - a Lean-horizon row for general affine-geometry theorems.
 
 ## Concepts
@@ -35,7 +35,9 @@ The current validator parses all coordinates, matrix entries, and translations
 as exact rational strings. It recomputes every affine image and determinant
 without floating point. The false distance-preservation row is checked by
 explicit counterexample replay: the original squared distance is `1`, while the
-transformed squared distance is `5`.
+transformed squared distance is `5`. It also links a `QF_LRA` SMT-LIB artifact
+and a solver regression that emits independently rechecked `UnsatFarkas`
+evidence for the impossible equality between those two squared distances.
 
 This is still a finite replay pack. It does not claim a general theorem about
 all affine maps or all geometries.

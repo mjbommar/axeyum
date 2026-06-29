@@ -29,7 +29,9 @@ Expected result: `unsat`.
 
 The validator rejects the false claim that the affine map preserves Euclidean
 squared distance for the listed segment: the original squared distance is `1`
-and the transformed squared distance is `5`.
+and the transformed squared distance is `5`. The final equality conflict is
+also checked by a linked `QF_LRA` artifact and a resource-backed
+`UnsatFarkas` regression.
 
 ## `general-affine-geometry-lean-horizon`
 

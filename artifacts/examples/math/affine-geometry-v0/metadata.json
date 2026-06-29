@@ -38,7 +38,8 @@
     "docs/curriculum/02-structures/polynomials.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "affine-map-point-witness",
@@ -50,7 +51,7 @@
   "graduation_criteria": [
     "Encode fixed affine-map and incidence checks as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted certificates for the false distance-preservation row once the LRA/NRA proof routes are promoted.",
+    "Route the false distance-preservation row through checked QF_LRA/Farkas evidence after exact replay computes both squared distances.",
     "Keep projective, differential, and synthetic geometry theorems under Lean horizon until formal proof routes exist."
   ]
 }

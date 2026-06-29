@@ -422,6 +422,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `expected_trace_square = 1`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Affine-geometry QF_LRA/Farkas regression landed.**
+  [`affine-geometry-v0`](artifacts/examples/math/affine-geometry-v0/)
+  now binds its bad distance-preservation row to Axeyum's evidence path. The
+  new SMT-LIB artifact encodes `original_distance_squared = 1`,
+  `transformed_distance_squared = 5`, and the false equality between them; the
+  shared LRA resource regression requires `Evidence::UnsatFarkas` and rechecks
+  the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
