@@ -155,6 +155,10 @@ CURRICULUM_MAP = {
                 "finite-vector-spaces-v0",
                 "Finite vector-space tables, subspaces, spans, linear maps, kernels, images, and rank-nullity replay.",
             ),
+            (
+                "finite-modules-v0",
+                "Finite module tables over rings, submodules, generated submodules, homomorphisms, kernels, images, and quotient modules.",
+            ),
         ],
     },
     "rings": {
@@ -166,6 +170,10 @@ CURRICULUM_MAP = {
             (
                 "finite-algebra-homomorphisms-v0",
                 "Finite ring homomorphism tables and quotient-map replay.",
+            ),
+            (
+                "finite-modules-v0",
+                "Finite module tables over Z/4Z, submodule span replay, homomorphisms, kernels, images, and quotient modules.",
             ),
         ],
     },
@@ -215,6 +223,10 @@ CURRICULUM_MAP = {
                 "finite-vector-spaces-v0",
                 "Finite vector spaces over F2, subspaces, spans, linear maps, kernels, images, and rank-nullity replay.",
             ),
+            (
+                "finite-modules-v0",
+                "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
+            ),
         ],
     },
     "calculus": {
@@ -237,8 +249,8 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces, LU replay, rank, inverse, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, and infeasibility."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, modules, homomorphism tables, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),

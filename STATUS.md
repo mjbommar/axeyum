@@ -178,6 +178,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite module foundations pack landed.** Added
+  [`finite-modules-v0`](artifacts/examples/math/finite-modules-v0/README.md)
+  as the exact finite bridge from ring actions to linear algebra. The pack
+  validates `Z/4Z` regular-module table replay, submodule/span replay,
+  multiplication-by-`2` as a module homomorphism, kernel/image recomputation,
+  quotient-module addition and scalar-action replay, checked rejection of a
+  bad submodule, and a general module-theory Lean-horizon row. The
+  foundational example-pack validator now checks these rows by exact finite
+  table enumeration.
+
 - **Finite vector space foundations pack landed.** Added
   [`finite-vector-spaces-v0`](artifacts/examples/math/finite-vector-spaces-v0/README.md)
   as the exact finite bridge from finite fields to linear algebra. The pack

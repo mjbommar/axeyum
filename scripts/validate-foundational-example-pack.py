@@ -2739,6 +2739,441 @@ def validate_finite_vector_spaces(expected: dict[str, Any]) -> None:
     require_string("general vector-space future_checker", data.get("future_checker"))
 
 
+def require_module_tables(
+    context: str,
+    value: Any,
+    scalars: list[str],
+) -> tuple[list[str], str, dict[tuple[str, str], str], dict[tuple[str, str], str]]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    elements = require_string_list(f"{context}.elements", value.get("elements"))
+    element_set = set(elements)
+    zero = value.get("zero")
+    require_string(f"{context}.zero", zero)
+    if zero not in element_set:
+        fail(f"{context}.zero must be in the module carrier")
+    add_op = require_binary_table(f"{context}.add", elements, value.get("add"))
+    scalar_mul = require_scalar_mul_table(f"{context}.scalar_mul", value.get("scalar_mul"), scalars, elements)
+    return elements, zero, add_op, scalar_mul
+
+
+def module_axiom_failures(
+    ring_carrier: list[str],
+    ring_zero: str,
+    ring_one: str | None,
+    ring_add: dict[tuple[str, str], str],
+    ring_mul: dict[tuple[str, str], str],
+    module_elements: list[str],
+    module_zero: str,
+    module_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+) -> list[str]:
+    if ring_one is None:
+        return ["module requires a unital scalar ring"]
+    failures = group_axiom_failures(module_elements, module_zero, module_add)
+    if failures:
+        return [f"module addition {failures[0]}"]
+    if not is_commutative(module_elements, module_add):
+        return ["module addition is not commutative"]
+    for element in module_elements:
+        if table_op(scalar_mul, ring_one, element) != element:
+            return [f"one scalar action fails for {element}"]
+        if table_op(scalar_mul, ring_zero, element) != module_zero:
+            return [f"zero scalar action fails for {element}"]
+    for scalar in ring_carrier:
+        if table_op(scalar_mul, scalar, module_zero) != module_zero:
+            return [f"scalar action on zero module element fails for {scalar}"]
+        for left in module_elements:
+            for right in module_elements:
+                left_sum = table_op(module_add, left, right)
+                lhs = table_op(scalar_mul, scalar, left_sum)
+                rhs = table_op(
+                    module_add,
+                    table_op(scalar_mul, scalar, left),
+                    table_op(scalar_mul, scalar, right),
+                )
+                if lhs != rhs:
+                    return [f"scalar distributivity over module addition fails for {(scalar, left, right)}"]
+    for left_scalar in ring_carrier:
+        for right_scalar in ring_carrier:
+            scalar_sum = table_op(ring_add, left_scalar, right_scalar)
+            scalar_product = table_op(ring_mul, left_scalar, right_scalar)
+            for element in module_elements:
+                add_lhs = table_op(scalar_mul, scalar_sum, element)
+                add_rhs = table_op(
+                    module_add,
+                    table_op(scalar_mul, left_scalar, element),
+                    table_op(scalar_mul, right_scalar, element),
+                )
+                if add_lhs != add_rhs:
+                    return [f"scalar addition distributivity fails for {(left_scalar, right_scalar, element)}"]
+                mul_lhs = table_op(scalar_mul, scalar_product, element)
+                mul_rhs = table_op(scalar_mul, left_scalar, table_op(scalar_mul, right_scalar, element))
+                if mul_lhs != mul_rhs:
+                    return [f"scalar multiplication associativity fails for {(left_scalar, right_scalar, element)}"]
+    return []
+
+
+def require_module_subset(context: str, value: Any, elements: list[str], *, nonempty: bool = False) -> set[str]:
+    items = require_string_list(context, value, nonempty=nonempty)
+    element_set = set(elements)
+    subset = set(items)
+    extra = sorted(subset - element_set)
+    if extra:
+        fail(f"{context} contains module elements outside the carrier: {extra}")
+    return subset
+
+
+def is_module_submodule(
+    subset: set[str],
+    ring_carrier: list[str],
+    module_zero: str,
+    module_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+) -> bool:
+    if module_zero not in subset:
+        return False
+    for left in subset:
+        for right in subset:
+            if table_op(module_add, left, right) not in subset:
+                return False
+    for scalar in ring_carrier:
+        for element in subset:
+            if table_op(scalar_mul, scalar, element) not in subset:
+                return False
+    return True
+
+
+def span_module_elements(
+    generators: set[str],
+    ring_carrier: list[str],
+    module_zero: str,
+    module_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+) -> set[str]:
+    span = {module_zero}
+    for generator in sorted(generators):
+        next_span: set[str] = set()
+        for existing in span:
+            for scalar in ring_carrier:
+                scaled = table_op(scalar_mul, scalar, generator)
+                next_span.add(table_op(module_add, existing, scaled))
+        span = next_span
+    return span
+
+
+def module_homomorphism_failures(
+    ring_carrier: list[str],
+    domain_elements: list[str],
+    domain_add: dict[tuple[str, str], str],
+    domain_scalar_mul: dict[tuple[str, str], str],
+    codomain_add: dict[tuple[str, str], str],
+    codomain_scalar_mul: dict[tuple[str, str], str],
+    mapping: dict[str, str],
+) -> list[str]:
+    for left in domain_elements:
+        for right in domain_elements:
+            lhs = mapping[table_op(domain_add, left, right)]
+            rhs = table_op(codomain_add, mapping[left], mapping[right])
+            if lhs != rhs:
+                return [f"additivity fails for {(left, right)}"]
+    for scalar in ring_carrier:
+        for element in domain_elements:
+            lhs = mapping[table_op(domain_scalar_mul, scalar, element)]
+            rhs = table_op(codomain_scalar_mul, scalar, mapping[element])
+            if lhs != rhs:
+                return [f"scalar preservation fails for {(scalar, element)}"]
+    return []
+
+
+def require_quotient_scalar_table(
+    context: str,
+    value: Any,
+    scalars: list[str],
+    coset_ids: list[str],
+) -> dict[tuple[str, str], str]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    scalar_set = set(scalars)
+    coset_set = set(coset_ids)
+    if set(value) != scalar_set:
+        missing = sorted(scalar_set - set(value))
+        extra = sorted(set(value) - scalar_set)
+        fail(f"{context} must cover exactly the scalars; missing={missing} extra={extra}")
+    scalar_mul: dict[tuple[str, str], str] = {}
+    for scalar in scalars:
+        row = value[scalar]
+        if not isinstance(row, dict):
+            fail(f"{context}.{scalar} must be an object")
+        if set(row) != coset_set:
+            missing = sorted(coset_set - set(row))
+            extra = sorted(set(row) - coset_set)
+            fail(f"{context}.{scalar} must cover quotient cosets; missing={missing} extra={extra}")
+        for coset_id in coset_ids:
+            result = row[coset_id]
+            require_string(f"{context}.{scalar}.{coset_id}", result)
+            if result not in coset_set:
+                fail(f"{context}.{scalar}.{coset_id} is outside the quotient carrier")
+            scalar_mul[(scalar, coset_id)] = result
+    return scalar_mul
+
+
+def validate_finite_modules(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    module_table = checks["z4-regular-module"]
+    if module_table["expected_result"] != "sat":
+        fail("z4-regular-module must expect sat")
+    values = single_witness_values(module_table, witnesses)
+    ring_carrier, ring_zero, ring_one, ring_add, ring_mul = require_ring_tables("module scalar ring", values.get("ring"))
+    failures = ring_axiom_failures(ring_carrier, ring_zero, ring_one, ring_add, ring_mul)
+    if failures:
+        fail(f"z4-regular-module scalar ring failed axioms: {failures[0]}")
+    module_elements, module_zero, module_add, scalar_mul = require_module_tables(
+        "regular module",
+        values.get("module"),
+        ring_carrier,
+    )
+    failures = module_axiom_failures(
+        ring_carrier,
+        ring_zero,
+        ring_one,
+        ring_add,
+        ring_mul,
+        module_elements,
+        module_zero,
+        module_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"z4-regular-module failed module axioms: {failures[0]}")
+
+    submodule = checks["submodule-span-replay"]
+    if submodule["expected_result"] != "sat":
+        fail("submodule-span-replay must expect sat")
+    values = single_witness_values(submodule, witnesses)
+    ring_carrier, ring_zero, ring_one, ring_add, ring_mul = require_ring_tables("submodule scalar ring", values.get("ring"))
+    failures = ring_axiom_failures(ring_carrier, ring_zero, ring_one, ring_add, ring_mul)
+    if failures:
+        fail(f"submodule-span-replay scalar ring failed axioms: {failures[0]}")
+    module_elements, module_zero, module_add, scalar_mul = require_module_tables(
+        "submodule module",
+        values.get("module"),
+        ring_carrier,
+    )
+    failures = module_axiom_failures(
+        ring_carrier,
+        ring_zero,
+        ring_one,
+        ring_add,
+        ring_mul,
+        module_elements,
+        module_zero,
+        module_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"submodule-span-replay module failed axioms: {failures[0]}")
+    subset = require_module_subset("submodule subset", values.get("subset"), module_elements, nonempty=True)
+    if not is_module_submodule(subset, ring_carrier, module_zero, module_add, scalar_mul):
+        fail("submodule-span-replay listed subset is not a submodule")
+    generators = require_module_subset("submodule generators", values.get("generators"), module_elements, nonempty=True)
+    expected_span = require_module_subset("submodule span", values.get("span"), module_elements, nonempty=True)
+    computed_span = span_module_elements(generators, ring_carrier, module_zero, module_add, scalar_mul)
+    if computed_span != expected_span:
+        fail("submodule-span-replay listed span is incorrect")
+    if computed_span != subset:
+        fail("submodule-span-replay span does not equal the listed subset")
+
+    hom = checks["module-hom-kernel-image"]
+    if hom["expected_result"] != "sat":
+        fail("module-hom-kernel-image must expect sat")
+    values = single_witness_values(hom, witnesses)
+    ring_carrier, ring_zero, ring_one, ring_add, ring_mul = require_ring_tables("module hom scalar ring", values.get("ring"))
+    failures = ring_axiom_failures(ring_carrier, ring_zero, ring_one, ring_add, ring_mul)
+    if failures:
+        fail(f"module-hom-kernel-image scalar ring failed axioms: {failures[0]}")
+    domain_elements, domain_zero, domain_add, domain_scalar_mul = require_module_tables(
+        "module hom domain",
+        values.get("domain"),
+        ring_carrier,
+    )
+    codomain_elements, codomain_zero, codomain_add, codomain_scalar_mul = require_module_tables(
+        "module hom codomain",
+        values.get("codomain"),
+        ring_carrier,
+    )
+    for context, elements, zero, add_op, action in [
+        ("module hom domain", domain_elements, domain_zero, domain_add, domain_scalar_mul),
+        ("module hom codomain", codomain_elements, codomain_zero, codomain_add, codomain_scalar_mul),
+    ]:
+        failures = module_axiom_failures(
+            ring_carrier,
+            ring_zero,
+            ring_one,
+            ring_add,
+            ring_mul,
+            elements,
+            zero,
+            add_op,
+            action,
+        )
+        if failures:
+            fail(f"{context} failed module axioms: {failures[0]}")
+    mapping = require_mapping_object("module hom map", values.get("map"), domain_elements, codomain_elements)
+    failures = module_homomorphism_failures(
+        ring_carrier,
+        domain_elements,
+        domain_add,
+        domain_scalar_mul,
+        codomain_add,
+        codomain_scalar_mul,
+        mapping,
+    )
+    if failures:
+        fail(f"module-hom-kernel-image map is not a module homomorphism: {failures[0]}")
+    computed_kernel = {element for element in domain_elements if mapping[element] == codomain_zero}
+    computed_image = set(mapping.values())
+    kernel = require_module_subset("module hom kernel", values.get("kernel"), domain_elements)
+    image = require_module_subset("module hom image", values.get("image"), codomain_elements)
+    if kernel != computed_kernel:
+        fail("module-hom-kernel-image listed kernel is incorrect")
+    if image != computed_image:
+        fail("module-hom-kernel-image listed image is incorrect")
+    if not is_module_submodule(kernel, ring_carrier, domain_zero, domain_add, domain_scalar_mul):
+        fail("module-hom-kernel-image kernel is not a submodule")
+    if not is_module_submodule(image, ring_carrier, codomain_zero, codomain_add, codomain_scalar_mul):
+        fail("module-hom-kernel-image image is not a submodule")
+
+    quotient = checks["quotient-module-replay"]
+    if quotient["expected_result"] != "sat":
+        fail("quotient-module-replay must expect sat")
+    values = single_witness_values(quotient, witnesses)
+    ring_carrier, ring_zero, ring_one, ring_add, ring_mul = require_ring_tables("quotient scalar ring", values.get("ring"))
+    failures = ring_axiom_failures(ring_carrier, ring_zero, ring_one, ring_add, ring_mul)
+    if failures:
+        fail(f"quotient-module-replay scalar ring failed axioms: {failures[0]}")
+    module_elements, module_zero, module_add, scalar_mul = require_module_tables(
+        "quotient module",
+        values.get("module"),
+        ring_carrier,
+    )
+    failures = module_axiom_failures(
+        ring_carrier,
+        ring_zero,
+        ring_one,
+        ring_add,
+        ring_mul,
+        module_elements,
+        module_zero,
+        module_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"quotient-module-replay module failed axioms: {failures[0]}")
+    submodule_set = require_module_subset("quotient submodule", values.get("submodule"), module_elements, nonempty=True)
+    if not is_module_submodule(submodule_set, ring_carrier, module_zero, module_add, scalar_mul):
+        fail("quotient-module-replay listed submodule is not a submodule")
+    coset_ids, representatives, coset_members = require_cosets("quotient cosets", values.get("cosets"), module_elements)
+    quotient_zero = values.get("quotient_zero")
+    require_string("quotient module zero", quotient_zero)
+    if quotient_zero not in set(coset_ids):
+        fail("quotient-module-replay quotient_zero must be one of the listed cosets")
+    if coset_members[quotient_zero] != submodule_set:
+        fail("quotient-module-replay zero coset must equal the listed submodule")
+    for coset_id in coset_ids:
+        representative = representatives[coset_id]
+        expected_coset = {table_op(module_add, representative, member) for member in submodule_set}
+        if expected_coset != coset_members[coset_id]:
+            fail(f"quotient-module-replay coset {coset_id} does not match representative plus submodule")
+    quotient_add = require_quotient_table("quotient module add", values.get("quotient_add"), coset_ids)
+    for left in coset_ids:
+        for right in coset_ids:
+            representative_sum = table_op(module_add, representatives[left], representatives[right])
+            expected_coset = coset_id_for_member("quotient module addition", representative_sum, coset_members)
+            if quotient_add[(left, right)] != expected_coset:
+                fail("quotient-module-replay quotient addition is incorrect")
+    quotient_scalar_mul = require_quotient_scalar_table(
+        "quotient module scalar_mul",
+        values.get("quotient_scalar_mul"),
+        ring_carrier,
+        coset_ids,
+    )
+    for scalar in ring_carrier:
+        for coset_id in coset_ids:
+            representative_product = table_op(scalar_mul, scalar, representatives[coset_id])
+            expected_coset = coset_id_for_member("quotient module scalar action", representative_product, coset_members)
+            if quotient_scalar_mul[(scalar, coset_id)] != expected_coset:
+                fail("quotient-module-replay quotient scalar action is incorrect")
+    failures = module_axiom_failures(
+        ring_carrier,
+        ring_zero,
+        ring_one,
+        ring_add,
+        ring_mul,
+        coset_ids,
+        quotient_zero,
+        quotient_add,
+        quotient_scalar_mul,
+    )
+    if failures:
+        fail(f"quotient-module-replay quotient tables failed module axioms: {failures[0]}")
+
+    bad = checks["bad-submodule-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-submodule-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    ring_carrier, ring_zero, ring_one, ring_add, ring_mul = require_ring_tables("bad submodule scalar ring", data.get("ring"))
+    failures = ring_axiom_failures(ring_carrier, ring_zero, ring_one, ring_add, ring_mul)
+    if failures:
+        fail(f"bad-submodule-rejected scalar ring failed axioms: {failures[0]}")
+    module_elements, module_zero, module_add, scalar_mul = require_module_tables(
+        "bad submodule module",
+        data.get("module"),
+        ring_carrier,
+    )
+    failures = module_axiom_failures(
+        ring_carrier,
+        ring_zero,
+        ring_one,
+        ring_add,
+        ring_mul,
+        module_elements,
+        module_zero,
+        module_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"bad-submodule-rejected module failed axioms: {failures[0]}")
+    subset = require_module_subset("bad submodule subset", data.get("subset"), module_elements, nonempty=True)
+    if is_module_submodule(subset, ring_carrier, module_zero, module_add, scalar_mul):
+        fail("bad-submodule-rejected subset unexpectedly is a submodule")
+    failing_scalar = data.get("failing_scalar")
+    failing_vector = data.get("failing_vector")
+    actual_scalar_product = data.get("actual_scalar_product")
+    require_string("bad submodule failing_scalar", failing_scalar)
+    require_string("bad submodule failing_vector", failing_vector)
+    require_string("bad submodule actual_scalar_product", actual_scalar_product)
+    if failing_scalar not in set(ring_carrier):
+        fail("bad-submodule-rejected failing_scalar is outside the scalar ring")
+    if failing_vector not in subset:
+        fail("bad-submodule-rejected failing_vector must be in the claimed subset")
+    if table_op(scalar_mul, failing_scalar, failing_vector) != actual_scalar_product:
+        fail("bad-submodule-rejected actual_scalar_product is incorrect")
+    if actual_scalar_product in subset:
+        fail("bad-submodule-rejected actual_scalar_product unexpectedly belongs to the subset")
+
+    horizon = checks["general-module-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-module-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-module-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general module target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general module future_checker", data.get("future_checker"))
+
+
 def validate_finite_groups(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -11133,6 +11568,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_hitting_times(expected)
     if metadata["id"] == "finite-vector-spaces-v0":
         validate_finite_vector_spaces(expected)
+    if metadata["id"] == "finite-modules-v0":
+        validate_finite_modules(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":
         validate_finite_stochastic_kernels(expected)
     if metadata["id"] == "finite-operator-v0":

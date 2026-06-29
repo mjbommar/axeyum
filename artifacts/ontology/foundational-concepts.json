@@ -1003,6 +1003,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
           "notes": "Finite vector-space tables, subspaces, spans, linear maps, kernels, images, and rank-nullity replay."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Finite module tables over rings, submodules, generated submodules, homomorphisms, kernels, images, and quotient modules."
         }
       ],
       "proof_routes": [
@@ -1076,6 +1082,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
           "notes": "Finite ring homomorphism tables and quotient-map replay."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Finite module tables over Z/4Z, submodule span replay, homomorphisms, kernels, images, and quotient modules."
         }
       ],
       "proof_routes": [
@@ -1492,6 +1504,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
           "notes": "Finite vector spaces over F2, subspaces, spans, linear maps, kernels, images, and rank-nullity replay."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules."
         }
       ],
       "proof_routes": [
@@ -1613,7 +1631,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, homomorphism tables, Cayley-table validators",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, modules, homomorphism tables, Cayley-table validators",
       "prerequisites": [],
       "unlocks": [
         "curriculum_fields",
@@ -1624,14 +1642,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite groups, rings, fields, homomorphism tables, Cayley-table validators"
+        "Finite groups, rings, fields, modules, homomorphism tables, Cayley-table validators"
       ],
       "example_packs": [
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
-          "notes": "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."
+          "notes": "Finite groups, rings, fields, modules, homomorphism tables, and Cayley-table validation."
         },
         {
           "id": "complex-algebraic-v0",
@@ -1656,6 +1674,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-groups-v0",
           "notes": "Finite Group Cayley Table Checks"
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Exact Finite Module Checks"
         },
         {
           "id": "finite-rings-v0",
@@ -2302,7 +2326,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, subspaces, and finite-field linear algebra",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, and finite-field linear algebra",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -2311,14 +2335,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, subspaces, and finite-field linear algebra"
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, and finite-field linear algebra"
       ],
       "example_packs": [
         {
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces, LU replay, rank, inverse, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -2379,6 +2403,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-markov-chain-v0",
           "notes": "Exact Finite Markov Chain Checks"
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Exact Finite Module Checks"
         },
         {
           "id": "finite-operator-v0",
@@ -2455,7 +2485,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Spectral theorems, general vector-space theorems, and conditioning/stability need proof or numerical tracks.",
+          "name": "Spectral theorems, general vector-space/module theorems, and conditioning/stability need proof or numerical tracks.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -3544,6 +3574,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
           "notes": "Finite Sigma-Algebra And Measure Checks"
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Exact Finite Module Checks"
         },
         {
           "id": "finite-predicate-v0",

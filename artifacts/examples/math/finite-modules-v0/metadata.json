@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "finite-modules-v0",
+  "title": "Exact Finite Module Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_rings",
+    "curriculum_groups",
+    "curriculum_linear_algebra",
+    "field_abstract_algebra",
+    "field_linear_algebra",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "linear_algebra",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "rings",
+    "groups",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite rings",
+    "finite modules",
+    "finite functions",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/rings.md",
+    "docs/curriculum/02-structures/groups.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "z4-regular-module",
+    "submodule-span-replay",
+    "module-hom-kernel-image",
+    "quotient-module-replay",
+    "bad-submodule-rejected",
+    "general-module-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite module tables as deterministic finite-function and equality obligations.",
+    "Replay submodule, generated-submodule, module-homomorphism, kernel, image, and quotient-module witnesses through Axeyum model evaluation.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-submodule and bad-module-homomorphism rows once proof routes are promoted.",
+    "Keep general module theory, exact sequences, tensor products, projective/injective modules, and homological algebra under Lean horizon until formal routes exist."
+  ]
+}
