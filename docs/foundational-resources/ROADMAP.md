@@ -79,6 +79,8 @@ Required row fields:
 
 Current base: [formal mathematics curriculum](../curriculum/README.md).
 Field spine: [University Math Field Taxonomy](MATH-FIELDS.md).
+Detailed execution plan:
+[Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md).
 
 Add depth in four waves:
 

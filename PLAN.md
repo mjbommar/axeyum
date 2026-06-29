@@ -25,7 +25,9 @@ live under [`artifacts/ontology/`](artifacts/ontology/) and the corresponding
 incubator subfolders. The broader foundational-resource expansion lives in
 [`docs/foundational-resources/`](docs/foundational-resources/), including the
 university-style math field spine in
-[`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md).
+[`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md)
+and the curriculum-to-resource buildout plan in
+[`docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md`](docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md).
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

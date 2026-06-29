@@ -6,6 +6,7 @@
 - [Foundational Resource Expansion](foundational-resources/README.md)
   - [Source Research Ledger](foundational-resources/SOURCES.md)
   - [University Math Field Taxonomy](foundational-resources/MATH-FIELDS.md)
+  - [Math Curriculum Resource Buildout](foundational-resources/MATH-CURRICULUM-BUILDOUT.md)
   - [Expansion Roadmap](foundational-resources/ROADMAP.md)
 - [SMT Fragment Atlas](atlas/README.md)
   - [Atlas Roadmap](atlas/ROADMAP.md)

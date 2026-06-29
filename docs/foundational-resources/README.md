@@ -14,6 +14,9 @@ schemas, examples, and validation workflows.
   used to ground the plan.
 - [MATH-FIELDS.md](MATH-FIELDS.md) defines the university-style mathematics
   field taxonomy that seeds the Foundational Concept Atlas.
+- [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) is the detailed
+  buildout plan from the current curriculum DAG to atlas rows, example packs,
+  lessons, proof hooks, dashboards, and eventual library boundaries.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 
 ## Principle
