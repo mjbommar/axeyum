@@ -16,7 +16,7 @@
 
 #![allow(clippy::similar_names)]
 
-use axeyum_verify::{Verdict, Witness, verify};
+use axeyum_verify::{Verdict, Witness, cert_coverage, verify};
 
 // ---- Ring buffer: wrapped slot indexing stays in bounds (seL4-IPC flavored) ----
 
@@ -133,4 +133,43 @@ fn int_bits(inputs: &[Witness], name: &str) -> u128 {
             _ => None,
         })
         .unwrap_or_else(|| panic!("no int witness `{name}` in {inputs:?}"))
+}
+
+// ---- Lean-cert coverage (the moat metric) over the safe systems cases ----------
+
+/// Lean-cert coverage of the safe *systems* (array + bounded-loop) proofs.
+/// Honestly reported, not asserted at a fixed value (loop/array refutations route
+/// through DRAT today, not the kernel Lean fragment); the soundness floor is
+/// asserted. See `network_lean_cert_coverage` for the rationale.
+#[test]
+fn systems_lean_cert_coverage() {
+    let verdicts = vec![
+        ring_wrapped_read_safe__axeyum_verdict(),
+        bounded_read_safe__axeyum_verdict(),
+    ];
+    let cov = cert_coverage(&verdicts);
+    eprintln!(
+        "systems safe-case Lean-cert coverage: {}/{} carry a Lean module ({:.0}%); \
+         {}/{} re-checked their in-tree certificate.",
+        cov.lean_certified,
+        cov.verified,
+        cov.lean_fraction() * 100.0,
+        cov.certified,
+        cov.verified,
+    );
+    for v in &verdicts {
+        if let Verdict::Verified {
+            lean_module: Some(m),
+            ..
+        } = v
+        {
+            assert!(
+                m.contains("theorem axeyum_refutation") && m.contains("False"),
+                "a produced Lean module must be the real refutation module"
+            );
+        }
+    }
+    assert_eq!(cov.verified, 2, "both safe systems cases must verify");
+    assert!(cov.lean_certified <= cov.verified);
+    assert!((0.0..=1.0).contains(&cov.lean_fraction()));
 }

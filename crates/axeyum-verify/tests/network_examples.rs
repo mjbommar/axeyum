@@ -21,7 +21,7 @@
 
 #![allow(clippy::similar_names)]
 
-use axeyum_verify::{Verdict, Witness, verify};
+use axeyum_verify::{Verdict, Witness, cert_coverage, verify};
 
 // ---- Rung 1: Internet checksum end-around-carry fold equivalence (RFC 1071) ----
 
@@ -168,4 +168,46 @@ fn int_bits(inputs: &[Witness], name: &str) -> u128 {
             _ => None,
         })
         .unwrap_or_else(|| panic!("no int witness `{name}` in {inputs:?}"))
+}
+
+// ---- Lean-cert coverage (the moat metric) over the safe network cases ----------
+
+/// Report the Lean-cert coverage of the *safe* network proofs — the fraction of
+/// `Verified` results that carry a kernel-checkable Lean module (vs. routing
+/// through DRAT). The number is honestly reported, not asserted at a fixed value:
+/// it is capped by the upstream reconstructor's fragment (most arithmetic/wrapping
+/// refutations route through DRAT today). The soundness floor is asserted — any
+/// produced module is the real refutation module, and the counts stay consistent.
+#[test]
+fn network_lean_cert_coverage() {
+    let verdicts = vec![
+        ic_carry_fold_equiv__axeyum_verdict(),
+        be16_field_roundtrip__axeyum_verdict(),
+        seq_advance_roundtrip__axeyum_verdict(),
+    ];
+    let cov = cert_coverage(&verdicts);
+    eprintln!(
+        "network safe-case Lean-cert coverage: {}/{} carry a Lean module ({:.0}%); \
+         {}/{} re-checked their in-tree certificate.",
+        cov.lean_certified,
+        cov.verified,
+        cov.lean_fraction() * 100.0,
+        cov.certified,
+        cov.verified,
+    );
+    for v in &verdicts {
+        if let Verdict::Verified {
+            lean_module: Some(m),
+            ..
+        } = v
+        {
+            assert!(
+                m.contains("theorem axeyum_refutation") && m.contains("False"),
+                "a produced Lean module must be the real refutation module"
+            );
+        }
+    }
+    assert_eq!(cov.verified, 3, "all three safe network cases must verify");
+    assert!(cov.lean_certified <= cov.verified);
+    assert!((0.0..=1.0).contains(&cov.lean_fraction()));
 }

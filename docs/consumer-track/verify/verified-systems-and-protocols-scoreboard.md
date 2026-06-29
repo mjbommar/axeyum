@@ -6,19 +6,25 @@ macro:
 
 - `crates/axeyum-verify/tests/network_examples.rs` (Block A)
 - `crates/axeyum-verify/tests/systems_examples.rs` (Block B)
+- `crates/axeyum-verify/tests/protocol_fsm_examples.rs` (Block C — protocol FSMs)
 - `crates/axeyum-verify/tests/spec_oracle_gradient.rs` (the fuzz↔proof gradient)
 
 Reproduce: `cargo test -p axeyum-verify --test network_examples --test
-systems_examples --test spec_oracle_gradient -- -Z unstable-options
---report-time` (nightly for per-test times). Times are a single indicative
-wall-clock run (debug build, `scripts/mem-run.sh`), 2026-06-29; not tuned.
+systems_examples --test protocol_fsm_examples --test spec_oracle_gradient --
+-Z unstable-options --report-time --nocapture` (nightly for per-test times;
+`--nocapture` to print the Lean-cert coverage lines). Times are a single
+indicative wall-clock run (debug build, `scripts/mem-run.sh`), 2026-06-29; not
+tuned.
 
 ## Headline
 
-- **9 `#[verify]` cases**: 5 safe → **verified**, 4 buggy → **bug-found**.
+- **13 `#[verify]` cases**: 7 safe → **verified**, 6 buggy → **bug-found**.
 - **DISAGREE = 0** (soundness floor): every safe case proves within its bound;
   every bug witness is re-run through the *original* fn and actually panics
   (`reproduce::panics_on`).
+- **Lean-cert coverage (the moat metric): 1/7 safe cases (14%) carry a
+  kernel-checkable Lean module; 7/7 carry a re-checked in-tree certificate.**
+  See [Lean-cert coverage](#lean-cert-coverage-the-moat-metric) below.
 - All guarantees are **bounded** (fixed widths / `#[unwind(K)]` / fixed array
   sizes). "Verified" = no bad state reachable within the bound, not total
   correctness.
@@ -36,11 +42,41 @@ wall-clock run (debug build, `scripts/mem-run.sh`), 2026-06-29; not tuned.
 | `ring_unwrapped_read_oob` | ring buffer | 3 (loop/array) | index-OOB | bug | bug-found | `[u8;4]`, unwind 5 | 0.005 s |
 | `bounded_read_safe` | length-guarded copy | 3 (loop/array) | index-OOB | safe | verified | `[u8;4]`, unwind 5 | 0.18 s |
 | `unbounded_read_oob` | length-guarded copy | 3 (loop/array) | index-OOB | bug | bug-found | `[u8;4]`, unwind 5 | 0.003 s |
+| `handshake_validity_safe` | protocol FSM | 3 (state machine) | `assert!` | safe | verified | `[u8;4]`, unwind 4 | 0.014 s |
+| `handshake_validity_offbyone_bug` | protocol FSM | 3 (state machine) | `assert!` | bug | bug-found | `[u8;4]`, unwind 4 | 0.010 s |
+| `handshake_ordering_safe` | protocol FSM | 3 (state machine) | `assert!` | safe | verified | `[u8;4]`, unwind 4 | 0.027 s |
+| `handshake_skip_bug` | protocol FSM | 3 (state machine) | `assert!` | bug | bug-found | `[u8;4]`, unwind 4 | 0.012 s |
 
 (Rungs per the [horizon ladder](verified-systems-and-protocols.md#3-the-capability-ladder-and-where-we-stand-on-it).
-A *Lean-cert coverage* column is deferred: it needs per-case inspection of
-`Verdict::Verified.lean_module`, the headline-moat metric the existing
-[`SCOREBOARD.md`](SCOREBOARD.md) reports — a follow-up for a generated harness.)
+The Block C protocol-FSM cases are designed in
+[`protocol-state-machines.md`](protocol-state-machines.md); their bad-trace
+witnesses are concrete event sequences — e.g. `handshake_skip_bug` reports
+`events=[CLOSE, RECV_SYNACK, …]` (ESTABLISHED reached with no handshake).)
+
+## Lean-cert coverage (the moat metric)
+
+Per-case inspection of `Verdict::Verified.lean_module` (via `cert_coverage`),
+printed by the `*_lean_cert_coverage` tests in each suite. The honest measured
+picture for this domain:
+
+| Suite | kernel Lean module | in-tree re-checked cert |
+|---|---|---|
+| network (`ic_carry_fold_equiv`, `be16_field_roundtrip`, `seq_advance_roundtrip`) | **1/3** | 3/3 |
+| systems (`ring_wrapped_read_safe`, `bounded_read_safe`) | **0/2** | 2/2 |
+| protocol FSM (`handshake_validity_safe`, `handshake_ordering_safe`) | **0/2** | 2/2 |
+| **total safe cases** | **1/7 (14%)** | **7/7 (100%)** |
+
+The single kernel-Lean case is `seq_advance_roundtrip` (the `u8` wrapping
+add/sub modular identity) — its refutation lands in the reconstructor's covered
+fragment. The checksum/header equivalences, the array+loop memory-safety proofs,
+and the FSM proofs all route through **DRAT** (in-tree re-checked, but not yet a
+Lean-kernel artifact). This **quantifies the cert-lane gap** for the
+systems/network domain: the Lean reconstructor's fragment (UPSTREAM-FEEDBACK
+U1/U4) does not yet cover bit-vector arithmetic equivalence, array/loop
+refutations, or FSM invariants. Soundness is asserted (any produced module is the
+real `theorem axeyum_refutation … False`), the *count* is reported, not pinned —
+it rises as the reconstructor's fragment widens. This is the four-constraint
+Pareto-dominance leg (3) that PLAN.md names as the structural win Z3 cannot match.
 
 ## Fuzz ↔ proof gradient (spec-as-oracle)
 
@@ -80,8 +116,18 @@ is specific to the *all-inputs* proof + certificate path.
 
 ## Next
 
+- **Widen the Lean reconstructor to lift this domain's coverage off 1/7**: the
+  measured gap is concrete — BV-arithmetic *equivalence* refutations, array/loop
+  (memory-safety) refutations, and FSM-invariant refutations all route through
+  DRAT today. Each is a tracked reconstructor-fragment target (UPSTREAM-FEEDBACK
+  U1/U4); this scoreboard is the regression metric for that work.
+- **Unbounded protocol safety**: lift one Block C FSM invariant from bounded
+  (`#[unwind(K)]`) to all-traces via an inductive invariant on the same
+  transition relation — the CHC/PDR route
+  ([ADR-0048](../../research/09-decisions/adr-0048-chc-pdr-verify-guarded-invariant-discovery.md)),
+  the first rung-4 result and the first *protocol* property with an inductive
+  proof. (Design: [`protocol-state-machines.md`](protocol-state-machines.md) §
+  rung-4 bridge.)
 - A *generated* scoreboard (mirroring `measure_verify.rs`'s `ast::Program`
-  construction) that also records per-case Lean-cert coverage.
-- Block C rungs: bounded protocol state machine → unbounded via CHC/PDR
-  ([ADR-0048](../../research/09-decisions/adr-0048-chc-pdr-verify-guarded-invariant-discovery.md)).
+  construction) folding in these per-suite numbers automatically.
 - Feed the perf-wall finding to the QF_BV word-level reduction / SAT-core lane.

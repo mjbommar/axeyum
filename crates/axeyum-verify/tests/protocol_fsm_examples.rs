@@ -19,7 +19,7 @@
 
 #![allow(clippy::similar_names)]
 
-use axeyum_verify::{Verdict, verify};
+use axeyum_verify::{Verdict, cert_coverage, verify};
 
 // ---- Invariant class 1: validity (state never escapes the enum range) ----------
 
@@ -158,4 +158,43 @@ fn handshake_skip_bug(events: [u8; 4]) -> u8 {
         i += 1;
     }
     state
+}
+
+// ---- Lean-cert coverage (the moat metric) over the safe FSM cases --------------
+
+/// Lean-cert coverage of the safe *protocol-FSM* proofs. Honestly reported, not
+/// asserted at a fixed value (FSM/loop refutations route through DRAT today, not
+/// the kernel Lean fragment); the soundness floor is asserted. See
+/// `network_examples::network_lean_cert_coverage` for the rationale.
+#[test]
+fn fsm_lean_cert_coverage() {
+    let verdicts = vec![
+        handshake_validity_safe__axeyum_verdict(),
+        handshake_ordering_safe__axeyum_verdict(),
+    ];
+    let cov = cert_coverage(&verdicts);
+    eprintln!(
+        "protocol-FSM safe-case Lean-cert coverage: {}/{} carry a Lean module ({:.0}%); \
+         {}/{} re-checked their in-tree certificate.",
+        cov.lean_certified,
+        cov.verified,
+        cov.lean_fraction() * 100.0,
+        cov.certified,
+        cov.verified,
+    );
+    for v in &verdicts {
+        if let Verdict::Verified {
+            lean_module: Some(m),
+            ..
+        } = v
+        {
+            assert!(
+                m.contains("theorem axeyum_refutation") && m.contains("False"),
+                "a produced Lean module must be the real refutation module"
+            );
+        }
+    }
+    assert_eq!(cov.verified, 2, "both safe FSM cases must verify");
+    assert!(cov.lean_certified <= cov.verified);
+    assert!((0.0..=1.0).contains(&cov.lean_fraction()));
 }
