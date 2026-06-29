@@ -790,6 +790,13 @@ Exit criteria:
 Only after the data and examples reveal repeated logic, decide whether to add a
 workspace crate or split a sibling repository.
 
+Status: initial decision landed in
+[Foundational Resource Library Boundary Decision](LIBRARY-BOUNDARY-DECISION.md).
+The resource lane stays in-repo for now. The stable boundary is the committed
+JSON/schema/metadata contract plus generated dashboards, smoke-tested by
+`scripts/consume-foundational-resources.py`; crates or repo splits are deferred
+until external consumers, generated typed APIs, or shared encoders require them.
+
 Possible boundaries:
 
 - `axeyum-foundational-data`: generated JSON and schema consumers.
@@ -801,10 +808,16 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
+  Status: 41 atlas rows validate.
 - At least 12 validated example packs.
+  Status: 64 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
+  Status: 52 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
+  Status: `scripts/consume-foundational-resources.py` reads the committed atlas
+  and example-pack JSON files directly without importing generator or validator
+  internals.
 
 ## First Ten Commits To Make
 

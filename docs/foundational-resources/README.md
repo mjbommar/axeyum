@@ -17,6 +17,10 @@ schemas, examples, and validation workflows.
 - [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) is the detailed
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.
+- [LIBRARY-BOUNDARY-DECISION.md](LIBRARY-BOUNDARY-DECISION.md) records the
+  current Phase M8 decision: keep the resources in-repo, expose a stable JSON
+  data contract, and defer crates or repo splits until real consumers require
+  them.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.
@@ -40,6 +44,9 @@ schemas, examples, and validation workflows.
   metadata.
 - [`scripts/gen-foundational-dashboards.py`](../../scripts/gen-foundational-dashboards.py)
   regenerates the Markdown dashboards under `generated/`.
+- [`scripts/consume-foundational-resources.py`](../../scripts/consume-foundational-resources.py)
+  is a dependency-free downstream-consumer smoke test for the public atlas and
+  example-pack JSON contract.
 - [`artifacts/ontology/foundational-example-pack.schema.json`](../../artifacts/ontology/foundational-example-pack.schema.json)
   defines the example-pack metadata and expected-result shape.
 - [`scripts/validate-foundational-example-pack.py`](../../scripts/validate-foundational-example-pack.py)

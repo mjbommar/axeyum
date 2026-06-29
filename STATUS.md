@@ -169,6 +169,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Foundational resource library-boundary decision landed.** Added
+  [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
+  for Phase M8: keep the foundational resources in-repo for now, expose the
+  JSON/schema/metadata files as the stable data contract, and defer new crates
+  or a repo split until external consumers or shared encoders justify them.
+  Added `scripts/consume-foundational-resources.py` as a dependency-free
+  consumer smoke test and wired it into `scripts/check-foundational-resources.sh`.
+
 - **Foundational field dashboard now reflects actual pack coverage.** Updated
   the foundational concept generator to read non-template
   `artifacts/examples/math/*/metadata.json` and merge validated pack coverage

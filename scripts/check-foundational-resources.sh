@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 python3 scripts/gen-foundational-concepts.py
 python3 scripts/validate-foundational-concepts.py
 python3 scripts/validate-foundational-example-pack.py
+python3 scripts/consume-foundational-resources.py
 python3 scripts/gen-foundational-dashboards.py
 
 git diff --exit-code -- \

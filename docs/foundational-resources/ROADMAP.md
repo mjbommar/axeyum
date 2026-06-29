@@ -50,6 +50,7 @@ docs/foundational-resources/
   SOURCES.md
   MATH-FIELDS.md
   MATH-CURRICULUM-BUILDOUT.md
+  LIBRARY-BOUNDARY-DECISION.md
   ROADMAP.md
   generated/
 artifacts/ontology/
@@ -124,6 +125,7 @@ artifacts/examples/math/
   complex-algebraic-v0/
 scripts/
   gen-foundational-concepts.py
+  consume-foundational-resources.py
   validate-foundational-concepts.py
   gen-foundational-dashboards.py
   validate-foundational-example-pack.py
