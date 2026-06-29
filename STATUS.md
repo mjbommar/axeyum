@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite sets end-to-end lesson landed.** Added
+  [`finite-sets-end-to-end.md`](docs/learn/math/finite-sets-end-to-end.md)
+  as the learner-facing trace for the finite sets pack: explicit finite
+  universe/subset replay, union/intersection identity replay, subset
+  transitivity, fixed malformed-identity rejection, and the Bool/BV plus
+  CNF/LRAT graduation route for stronger finite-set evidence. The lesson is
+  linked from the math learning index plus the sets/relations path.
+
 - **Cardinality-principles end-to-end lesson landed.** Added
   [`cardinality-principles-end-to-end.md`](docs/learn/math/cardinality-principles-end-to-end.md)
   as the learner-facing trace for the cardinality-principles pack:
