@@ -169,6 +169,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite simplicial homology foundations pack landed.** Added
+  [`finite-simplicial-homology-v0`](artifacts/examples/math/finite-simplicial-homology-v0/README.md)
+  as the exact finite algebraic-topology bridge across topology, finite set
+  data, linear algebra, and abstract algebra. The pack validates
+  simplicial-complex closure, oriented-boundary replay, `boundary^2 = 0`,
+  Betti-rank replay for a three-edge circle over `Q`, checked rejection of a
+  bad boundary sign, and a general homology Lean-horizon row. The foundational
+  example-pack validator now checks these rows by exact face enumeration,
+  chain normalization, boundary-matrix rank replay, and rational Gaussian
+  elimination.
+
 - **Finite Euler method foundations pack landed.** Added
   [`finite-euler-method-v0`](artifacts/examples/math/finite-euler-method-v0/README.md)
   as the next exact finite bridge across differential equations, numerical

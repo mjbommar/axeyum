@@ -15,6 +15,7 @@ Example packs:
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
+- [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
@@ -35,6 +36,8 @@ eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix. The matrix-invariants
 slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,
 and finite Gershgorin intervals for a fixed rational matrix. The finite
+homology slice builds boundary matrices for a fixed simplicial complex,
+computes exact ranks, and replays Betti numbers over `Q`. The finite
 convexity slice checks midpoint Jensen replay, finite-grid second differences,
 affine threshold monotonicity, and bad midpoint-convexity rejection over exact
 rational data. The finite
@@ -111,6 +114,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0

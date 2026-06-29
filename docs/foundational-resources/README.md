@@ -128,6 +128,10 @@ schemas, examples, and validation workflows.
   validates finite continuity by open-set preimage enumeration, finite
   homeomorphism replay, bad-continuity and bad-homeomorphism rejection, and a
   continuous-map Lean-horizon row.
+- [`artifacts/examples/math/finite-simplicial-homology-v0/`](../../artifacts/examples/math/finite-simplicial-homology-v0/)
+  validates finite simplicial-complex closure, oriented-boundary replay,
+  `boundary^2 = 0`, Betti-rank replay for a three-edge circle, checked
+  rejection of a bad boundary sign, and a homology Lean-horizon row.
 - [`artifacts/examples/math/calculus-algebraic-shadow-v0/`](../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
   validates polynomial derivative replay, a product-rule polynomial identity,
   tangent-line replay, a convex quadratic critical point, false-derivative
@@ -308,6 +312,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/me
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0

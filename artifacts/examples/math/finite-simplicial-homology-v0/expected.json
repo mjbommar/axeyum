@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-simplicial-homology-v0",
+  "witnesses": [
+    {
+      "id": "filled-triangle-complex",
+      "description": "A finite two-simplex with all non-empty faces listed.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "simplices": [
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "facets": [
+          ["a", "b", "c"]
+        ],
+        "dimension_counts": {
+          "0": 3,
+          "1": 3,
+          "2": 1
+        }
+      }
+    },
+    {
+      "id": "triangle-boundary",
+      "description": "The oriented boundary of the two-simplex [a,b,c].",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "simplex": ["a", "b", "c"],
+        "boundary": [
+          {"coefficient": "1", "simplex": ["b", "c"]},
+          {"coefficient": "-1", "simplex": ["a", "c"]},
+          {"coefficient": "1", "simplex": ["a", "b"]}
+        ]
+      }
+    },
+    {
+      "id": "triangle-boundary-square",
+      "description": "The boundary of the boundary of [a,b,c] is the zero chain.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "simplex": ["a", "b", "c"],
+        "first_boundary": [
+          {"coefficient": "1", "simplex": ["b", "c"]},
+          {"coefficient": "-1", "simplex": ["a", "c"]},
+          {"coefficient": "1", "simplex": ["a", "b"]}
+        ],
+        "second_boundary": []
+      }
+    },
+    {
+      "id": "circle-one-cycle",
+      "description": "The boundary of a three-edge cycle is zero and its first Betti number is one over Q.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "simplices": [
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"]
+        ],
+        "chain_dimensions": {
+          "0": 3,
+          "1": 3,
+          "2": 0
+        },
+        "boundary_ranks": {
+          "1": 2,
+          "2": 0
+        },
+        "betti_numbers": {
+          "0": 1,
+          "1": 1
+        },
+        "cycle_generator": [
+          {"coefficient": "1", "simplex": ["a", "b"]},
+          {"coefficient": "-1", "simplex": ["a", "c"]},
+          {"coefficient": "1", "simplex": ["b", "c"]}
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "simplicial-complex-closure",
+      "claim": "The filled triangle data is closed under non-empty faces.",
+      "expected_result": "sat",
+      "validation": "finite_simplicial_complex_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["filled-triangle-complex"],
+      "notes": "The validator checks that every non-empty face of every listed simplex is also listed and verifies the dimension counts."
+    },
+    {
+      "id": "oriented-boundary-replay",
+      "claim": "The oriented boundary of [a,b,c] is [b,c] - [a,c] + [a,b].",
+      "expected_result": "sat",
+      "validation": "finite_oriented_boundary_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["triangle-boundary"],
+      "notes": "The validator recomputes the alternating face sum with exact integer coefficients."
+    },
+    {
+      "id": "boundary-squared-zero",
+      "claim": "Applying the simplicial boundary twice to [a,b,c] gives the zero chain.",
+      "expected_result": "sat",
+      "validation": "finite_chain_complex_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["triangle-boundary-square"],
+      "notes": "The validator expands the first boundary, applies the edge boundary again, and checks that all vertex coefficients cancel."
+    },
+    {
+      "id": "betti-rank-replay",
+      "claim": "The three-edge circle has Betti numbers b0 = 1 and b1 = 1 over Q.",
+      "expected_result": "sat",
+      "validation": "finite_homology_rank_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["circle-one-cycle"],
+      "notes": "The validator builds boundary matrices over exact rationals, computes ranks by Gaussian elimination, and checks the listed cycle generator."
+    },
+    {
+      "id": "bad-boundary-rejected",
+      "claim": "The boundary of [a,b,c] is [b,c] + [a,c] + [a,b].",
+      "expected_result": "unsat",
+      "validation": "finite_bad_boundary_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "simplex": ["a", "b", "c"],
+        "claimed_boundary": [
+          {"coefficient": "1", "simplex": ["b", "c"]},
+          {"coefficient": "1", "simplex": ["a", "c"]},
+          {"coefficient": "1", "simplex": ["a", "b"]}
+        ],
+        "actual_boundary": [
+          {"coefficient": "1", "simplex": ["b", "c"]},
+          {"coefficient": "-1", "simplex": ["a", "c"]},
+          {"coefficient": "1", "simplex": ["a", "b"]}
+        ],
+        "first_mismatch_simplex": ["a", "c"],
+        "claimed_coefficient": "1",
+        "actual_coefficient": "-1"
+      },
+      "notes": "The validator recomputes the alternating boundary and checks that the listed sign error is a real mismatch."
+    },
+    {
+      "id": "general-homology-lean-horizon",
+      "claim": "General algebraic-topology theorems require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "homology invariance, exact sequences, homotopy equivalence, cohomology operations, and higher-dimensional algebraic topology",
+        "future_checker": "Lean modules for simplicial complexes, chain complexes, homology functors, and proof reconstruction from finite rank certificates"
+      },
+      "notes": "The finite rows are checked by exact face enumeration and rational matrix replay; general algebraic topology remains a proof-assistant horizon."
+    }
+  ]
+}

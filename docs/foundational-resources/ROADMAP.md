@@ -114,6 +114,7 @@ artifacts/examples/math/
   finite-compactness-v0/
   finite-connectedness-v0/
   finite-continuous-maps-v0/
+  finite-simplicial-homology-v0/
   finite-measure-v0/
   finite-integration-v0/
   finite-product-measure-v0/
@@ -432,6 +433,10 @@ bad-connected-claim rejection, and a connectedness Lean-horizon row.
 validates finite continuity by open-set preimage enumeration, finite
 homeomorphism replay, bad-continuity and bad-homeomorphism rejection, and a
 continuous-map Lean-horizon row.
+[`finite-simplicial-homology-v0`](../../artifacts/examples/math/finite-simplicial-homology-v0/)
+validates finite simplicial-complex closure, oriented-boundary replay,
+`boundary^2 = 0`, Betti-rank replay for a three-edge circle, checked rejection
+of a bad boundary sign, and a homology Lean-horizon row.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.
@@ -501,6 +506,9 @@ claim, and an oriented-geometry Lean-horizon row.
 [`finite-topology-v0`](../../artifacts/examples/math/finite-topology-v0/)
 validates finite topology axioms, closure/interior computation, and exact finite
 metric-ball replay.
+[`finite-simplicial-homology-v0`](../../artifacts/examples/math/finite-simplicial-homology-v0/)
+adds the finite algebraic-topology bridge: simplicial closure, alternating
+boundaries, boundary-squared-zero replay, and fixed Betti-rank checks.
 [`finite-measure-v0`](../../artifacts/examples/math/finite-measure-v0/)
 validates finite sigma-algebra axioms, exact finite additivity, and
 event/complement measure replay.

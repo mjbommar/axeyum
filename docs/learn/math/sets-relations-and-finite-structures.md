@@ -20,6 +20,7 @@ Example packs:
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
+- [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
 ## What Axeyum Checks
@@ -45,8 +46,10 @@ enumeration, finite-intersection families, and rejection of a bad cover. The
 connectedness pack checks finite clopen-subset enumeration, open separations,
 and rejection of a false connectedness claim. The continuous-map pack checks
 finite function preimages of open sets, homeomorphism witnesses, and rejection
-of false continuity/homeomorphism claims. The measure pack checks finite
-sigma-algebra closure, rational measure tables, finite additivity, and
+of false continuity/homeomorphism claims. The finite simplicial-homology pack
+checks face closure for finite complexes, oriented-boundary replay,
+`boundary^2 = 0`, and a fixed Betti-rank calculation. The measure pack checks
+finite sigma-algebra closure, rational measure tables, finite additivity, and
 event/complement identities.
 
 ## Encode / Check Walkthrough
@@ -165,7 +168,16 @@ f(1) = v
 ```
 
 The checker recomputes every open-set preimage and rejects continuity when a
-codomain-open set has a non-open preimage. For measure, use the partition
+codomain-open set has a non-open preimage. For finite simplicial complexes,
+the checker applies the same subset discipline to faces:
+
+```text
+simplices = [a], [b], [c], [a,b], [a,c], [b,c], [a,b,c]
+boundary([a,b,c]) = [b,c] - [a,c] + [a,b]
+```
+
+It verifies face closure, recomputes the alternating boundary, and rejects the
+false all-positive boundary. For measure, use the partition
 `{a,b}` / `{c,d}` with masses `1/3` and `2/3`; the checker verifies
 normalization, finite additivity, and the event/complement identity.
 
@@ -182,6 +194,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -192,9 +205,10 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 
 The finite set, relation/function, equivalence-class, function-composition,
 cardinality, cardinality-principles, topology, compactness-shadow,
-connectedness-shadow, continuous-map, and measure packs are now checked finite
-artifacts. The next finite-structure gaps are stronger EUF/Alethe evidence for
-congruence examples and Lean artifacts for infinite theorems. ZFC, ordinals,
-choice, infinite cardinality, arbitrary topological spaces, general compactness,
-general connectedness, continuous-image/homeomorphism theorems, and countable
-additivity remain proof-horizon material.
+connectedness-shadow, continuous-map, finite-simplicial-homology, and measure
+packs are now checked finite artifacts. The next finite-structure gaps are
+stronger EUF/Alethe evidence for congruence examples and Lean artifacts for
+infinite theorems. ZFC, ordinals, choice, infinite cardinality, arbitrary
+topological spaces, general compactness, general connectedness,
+continuous-image/homeomorphism theorems, homology invariance, exact sequences,
+and countable additivity remain proof-horizon material.

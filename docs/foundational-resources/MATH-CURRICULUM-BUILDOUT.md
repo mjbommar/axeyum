@@ -207,7 +207,7 @@ losing the curriculum anchor.
 | Field | Curriculum Anchor | First New Resource |
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
-| `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, continuous maps, compactness, and connectedness finite checks. |
+| `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, continuous maps, compactness, connectedness, and finite chain-complex checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
@@ -550,6 +550,11 @@ rejection of a false connectedness claim, and a connectedness Lean-horizon row.
 continuity by open-set preimage enumeration, finite homeomorphism replay,
 checked rejection of false continuity and homeomorphism claims, and a
 continuous-map Lean-horizon row.
+`artifacts/examples/math/finite-simplicial-homology-v0/` now validates finite
+simplicial-complex closure, oriented-boundary replay, the finite
+`boundary^2 = 0` chain-complex identity, fixed Betti-rank replay over `Q`,
+checked rejection of a bad boundary sign, and a general homology
+Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, and event/complement measure
 replay.
@@ -677,29 +682,32 @@ Recommended order:
     clopen-subset enumeration, and bad-connected-claim rejection.
 21. `finite-continuous-maps-v0`: finite topological continuity, open-set
     preimages, homeomorphism replay, and bad-map rejection.
-22. `finite-integration-v0`: finite simple-function integrals, indicator
+22. `finite-simplicial-homology-v0`: finite simplicial-complex closure,
+    oriented-boundary replay, `boundary^2 = 0`, fixed Betti-rank replay, and
+    bad-boundary rejection.
+23. `finite-integration-v0`: finite simple-function integrals, indicator
     integrals, exact linearity, and bad-expectation rejection.
-23. `finite-product-measure-v0`: finite product probability tables,
+24. `finite-product-measure-v0`: finite product probability tables,
     rectangle probabilities, marginals, finite Fubini replay, and bad
     product-probability rejection.
-24. `finite-random-variables-v0`: finite random-variable pushforwards,
+25. `finite-random-variables-v0`: finite random-variable pushforwards,
     expectation through pushforward distributions, independence checks, and
     bad pushforward rejection.
-25. `finite-conditional-expectation-v0`: finite partition conditional
+26. `finite-conditional-expectation-v0`: finite partition conditional
     expectations, law of total expectation, tower property replay, and bad
     conditional-expectation rejection.
-26. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
+27. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
     equalities, square submartingale inequalities, bounded stopping replay, and
     bad martingale rejection.
-27. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
+28. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
     composition, and bad kernel-row rejection.
-28. `finite-hitting-times-v0`: finite first-hit distributions, survival
+29. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
     equations, and bad expected-time rejection.
-29. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
+30. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
-30. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
+31. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
     interpolation replay, alternating residual signs, and duplicate-node
     rejection.
 
@@ -843,9 +851,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 70 non-template math example packs validate.
+  Status: 71 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 58 non-template packs have at least one `checked` expected-result row.
+  Status: 59 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -877,7 +885,7 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `finite-cardinality-v0`, `cardinality-principles-v0`,
 `induction-obligations-v0`, `induction-patterns-v0`, `logic-basics-v0`, and
 `real-analysis-rational-v0`, `calculus-riemann-sum-v0`, Phase M4 graph-resource
-group and items 4-30, and
+group and items 4-31, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
 have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
@@ -930,7 +938,10 @@ finite-intersection bridge to the compactness horizon.
 `finite-connectedness-v0` now adds the finite clopen-subset/open-separation
 bridge to the connectedness horizon. `finite-continuous-maps-v0` now adds the
 finite preimage/homeomorphism bridge connecting continuity to compactness and
-connectedness horizons. `finite-integration-v0` now adds the exact finite
+connectedness horizons. `finite-simplicial-homology-v0` now adds the exact
+finite algebraic-topology bridge: simplicial closure, oriented boundaries,
+`boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, and a
+homology Lean-horizon row. `finite-integration-v0` now adds the exact finite
 simple-function integral bridge between finite measure, probability, and
 statistics. `finite-product-measure-v0` now adds the exact finite product
 measure, marginalization, and Fubini bridge toward general measure/probability

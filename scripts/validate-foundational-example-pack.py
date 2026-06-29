@@ -6463,6 +6463,325 @@ def finite_metric_distance(
     return distances[frozenset((left, right))]
 
 
+Simplex = tuple[str, ...]
+
+
+def simplex_vertex_index(vertices: list[str]) -> dict[str, int]:
+    return {vertex: index for index, vertex in enumerate(vertices)}
+
+
+def simplex_sort_key(simplex: Simplex, vertex_index: dict[str, int]) -> tuple[int, ...]:
+    return tuple(vertex_index[vertex] for vertex in simplex)
+
+
+def require_simplex(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    *,
+    canonical: bool = True,
+) -> Simplex:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty vertex list")
+    vertex_set = set(vertices)
+    vertex_index = simplex_vertex_index(vertices)
+    seen: set[str] = set()
+    simplex: list[str] = []
+    for index, vertex in enumerate(value):
+        require_string(f"{context}[{index}]", vertex)
+        if vertex not in vertex_set:
+            fail(f"{context}[{index}] references a missing vertex")
+        if vertex in seen:
+            fail(f"{context} repeats vertex {vertex!r}")
+        seen.add(vertex)
+        simplex.append(vertex)
+    result = tuple(simplex)
+    if canonical and tuple(sorted(result, key=vertex_index.__getitem__)) != result:
+        fail(f"{context} must use the declared vertex order")
+    return result
+
+
+def require_simplex_list(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    *,
+    canonical: bool = True,
+) -> set[Simplex]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty simplex list")
+    simplices: set[Simplex] = set()
+    for index, item in enumerate(value):
+        simplex = require_simplex(f"{context}[{index}]", item, vertices, canonical=canonical)
+        if simplex in simplices:
+            fail(f"{context} repeats simplex {simplex}")
+        simplices.add(simplex)
+    return simplices
+
+
+def nonempty_proper_faces(simplex: Simplex) -> set[Simplex]:
+    faces: set[Simplex] = set()
+    for size in range(1, len(simplex)):
+        for face in combinations(simplex, size):
+            faces.add(tuple(face))
+    return faces
+
+
+def require_simplicial_complex(context: str, values: dict[str, Any]) -> tuple[list[str], set[Simplex]]:
+    vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
+    simplices = require_simplex_list(f"{context}.simplices", values.get("simplices"), vertices)
+    for vertex in vertices:
+        if (vertex,) not in simplices:
+            fail(f"{context}.simplices must include vertex simplex {(vertex,)}")
+    for simplex in simplices:
+        for face in nonempty_proper_faces(simplex):
+            if face not in simplices:
+                fail(f"{context}.simplices omits face {face} of simplex {simplex}")
+    return vertices, simplices
+
+
+def simplicial_facets(simplices: set[Simplex]) -> set[Simplex]:
+    return {
+        simplex
+        for simplex in simplices
+        if not any(set(simplex) < set(candidate) for candidate in simplices)
+    }
+
+
+def require_dimension_int_map(context: str, value: Any) -> dict[int, int]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    result: dict[int, int] = {}
+    for raw_key, raw_count in value.items():
+        require_string(f"{context} key", raw_key)
+        try:
+            dimension = int(raw_key)
+        except ValueError:
+            fail(f"{context} key {raw_key!r} must be a non-negative integer string")
+        if dimension < 0:
+            fail(f"{context} key {raw_key!r} must be non-negative")
+        count = require_int(f"{context}.{raw_key}", raw_count)
+        if count < 0:
+            fail(f"{context}.{raw_key} must be non-negative")
+        result[dimension] = count
+    return result
+
+
+def simplex_dimension_counts(simplices: set[Simplex], max_dimension: int) -> dict[int, int]:
+    return {
+        dimension: sum(1 for simplex in simplices if len(simplex) - 1 == dimension)
+        for dimension in range(max_dimension + 1)
+    }
+
+
+def normalize_chain(chain: dict[Simplex, Fraction]) -> dict[Simplex, Fraction]:
+    return {simplex: coefficient for simplex, coefficient in chain.items() if coefficient != 0}
+
+
+def require_chain(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    *,
+    allow_empty: bool = False,
+) -> dict[Simplex, Fraction]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a chain list")
+    if not value and not allow_empty:
+        fail(f"{context} must not be empty")
+    chain: dict[Simplex, Fraction] = {}
+    for index, term in enumerate(value):
+        if not isinstance(term, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", term, {"coefficient", "simplex"})
+        coefficient = require_fraction(f"{context}[{index}].coefficient", term.get("coefficient"))
+        if coefficient == 0:
+            fail(f"{context}[{index}].coefficient must be non-zero")
+        simplex = require_simplex(f"{context}[{index}].simplex", term.get("simplex"), vertices)
+        if simplex in chain:
+            fail(f"{context} repeats simplex {simplex}")
+        chain[simplex] = coefficient
+    return normalize_chain(chain)
+
+
+def oriented_boundary(simplex: Simplex) -> dict[Simplex, Fraction]:
+    if len(simplex) == 1:
+        return {}
+    boundary: dict[Simplex, Fraction] = {}
+    for index in range(len(simplex)):
+        face = simplex[:index] + simplex[index + 1 :]
+        if not face:
+            continue
+        coefficient = Fraction(1 if index % 2 == 0 else -1)
+        boundary[face] = boundary.get(face, Fraction(0)) + coefficient
+    return normalize_chain(boundary)
+
+
+def chain_boundary(chain: dict[Simplex, Fraction]) -> dict[Simplex, Fraction]:
+    result: dict[Simplex, Fraction] = {}
+    for simplex, coefficient in chain.items():
+        for face, face_coefficient in oriented_boundary(simplex).items():
+            result[face] = result.get(face, Fraction(0)) + coefficient * face_coefficient
+    return normalize_chain(result)
+
+
+def simplices_by_dimension(simplices: set[Simplex]) -> dict[int, list[Simplex]]:
+    groups: dict[int, list[Simplex]] = {}
+    for simplex in simplices:
+        groups.setdefault(len(simplex) - 1, []).append(simplex)
+    return groups
+
+
+def boundary_matrix(
+    simplices: set[Simplex],
+    dimension: int,
+    vertex_index: dict[str, int],
+) -> list[list[Fraction]]:
+    if dimension <= 0:
+        return []
+    groups = simplices_by_dimension(simplices)
+    columns = sorted(groups.get(dimension, []), key=lambda simplex: simplex_sort_key(simplex, vertex_index))
+    rows = sorted(groups.get(dimension - 1, []), key=lambda simplex: simplex_sort_key(simplex, vertex_index))
+    row_index = {simplex: index for index, simplex in enumerate(rows)}
+    matrix = [[Fraction(0) for _ in columns] for _ in rows]
+    for col_index, simplex in enumerate(columns):
+        for face, coefficient in oriented_boundary(simplex).items():
+            if face not in row_index:
+                fail(f"boundary matrix missing face {face} of simplex {simplex}")
+            matrix[row_index[face]][col_index] = coefficient
+    return matrix
+
+
+def boundary_rank(simplices: set[Simplex], dimension: int, vertex_index: dict[str, int]) -> int:
+    return matrix_rank(boundary_matrix(simplices, dimension, vertex_index))
+
+
+def betti_numbers_for_dimensions(
+    simplices: set[Simplex],
+    dimensions: set[int],
+    vertex_index: dict[str, int],
+) -> dict[int, int]:
+    max_dimension = max(dimensions | {0})
+    chain_dimensions = simplex_dimension_counts(simplices, max_dimension + 1)
+    return {
+        dimension: chain_dimensions[dimension]
+        - boundary_rank(simplices, dimension, vertex_index)
+        - boundary_rank(simplices, dimension + 1, vertex_index)
+        for dimension in dimensions
+    }
+
+
+def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    closure = checks["simplicial-complex-closure"]
+    if closure["expected_result"] != "sat":
+        fail("simplicial-complex-closure must expect sat")
+    values = single_witness_values(closure, witnesses)
+    vertices, simplices = require_simplicial_complex("simplicial closure", values)
+    listed_facets = require_simplex_list("simplicial closure facets", values.get("facets"), vertices)
+    if listed_facets != simplicial_facets(simplices):
+        fail("simplicial-complex-closure facets do not match maximal simplices")
+    listed_counts = require_dimension_int_map("simplicial closure dimension_counts", values.get("dimension_counts"))
+    if simplex_dimension_counts(simplices, max(listed_counts)) != listed_counts:
+        fail("simplicial-complex-closure dimension counts are incorrect")
+
+    boundary = checks["oriented-boundary-replay"]
+    if boundary["expected_result"] != "sat":
+        fail("oriented-boundary-replay must expect sat")
+    values = single_witness_values(boundary, witnesses)
+    vertices = require_string_list("oriented boundary vertices", values.get("vertices"))
+    simplex = require_simplex("oriented boundary simplex", values.get("simplex"), vertices)
+    listed_boundary = require_chain("oriented boundary boundary", values.get("boundary"), vertices)
+    if oriented_boundary(simplex) != listed_boundary:
+        fail("oriented-boundary-replay listed boundary is incorrect")
+
+    squared = checks["boundary-squared-zero"]
+    if squared["expected_result"] != "sat":
+        fail("boundary-squared-zero must expect sat")
+    values = single_witness_values(squared, witnesses)
+    vertices = require_string_list("boundary squared vertices", values.get("vertices"))
+    simplex = require_simplex("boundary squared simplex", values.get("simplex"), vertices)
+    first_boundary = require_chain("boundary squared first_boundary", values.get("first_boundary"), vertices)
+    if oriented_boundary(simplex) != first_boundary:
+        fail("boundary-squared-zero first_boundary is incorrect")
+    second_boundary = require_chain(
+        "boundary squared second_boundary",
+        values.get("second_boundary"),
+        vertices,
+        allow_empty=True,
+    )
+    computed_second_boundary = chain_boundary(first_boundary)
+    if computed_second_boundary != second_boundary:
+        fail("boundary-squared-zero second_boundary is incorrect")
+    if computed_second_boundary:
+        fail("boundary-squared-zero did not reduce to the zero chain")
+
+    betti = checks["betti-rank-replay"]
+    if betti["expected_result"] != "sat":
+        fail("betti-rank-replay must expect sat")
+    values = single_witness_values(betti, witnesses)
+    vertices, simplices = require_simplicial_complex("Betti rank complex", values)
+    vertex_index = simplex_vertex_index(vertices)
+    chain_dimensions = require_dimension_int_map("Betti rank chain_dimensions", values.get("chain_dimensions"))
+    if simplex_dimension_counts(simplices, max(chain_dimensions)) != chain_dimensions:
+        fail("betti-rank-replay chain dimensions are incorrect")
+    listed_boundary_ranks = require_dimension_int_map("Betti rank boundary_ranks", values.get("boundary_ranks"))
+    computed_boundary_ranks = {
+        dimension: boundary_rank(simplices, dimension, vertex_index)
+        for dimension in listed_boundary_ranks
+    }
+    if computed_boundary_ranks != listed_boundary_ranks:
+        fail("betti-rank-replay boundary ranks are incorrect")
+    listed_betti = require_dimension_int_map("Betti rank betti_numbers", values.get("betti_numbers"))
+    if betti_numbers_for_dimensions(simplices, set(listed_betti), vertex_index) != listed_betti:
+        fail("betti-rank-replay Betti numbers are incorrect")
+    cycle = require_chain("Betti rank cycle_generator", values.get("cycle_generator"), vertices)
+    if any(simplex not in simplices for simplex in cycle):
+        fail("betti-rank-replay cycle_generator uses a simplex outside the complex")
+    if any(len(simplex) != 2 for simplex in cycle):
+        fail("betti-rank-replay cycle_generator must be a 1-chain")
+    if chain_boundary(cycle):
+        fail("betti-rank-replay cycle_generator is not a cycle")
+
+    bad = checks["bad-boundary-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-boundary-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    vertices = require_string_list("bad boundary vertices", data.get("vertices"))
+    simplex = require_simplex("bad boundary simplex", data.get("simplex"), vertices)
+    claimed_boundary = require_chain("bad boundary claimed_boundary", data.get("claimed_boundary"), vertices)
+    actual_boundary = require_chain("bad boundary actual_boundary", data.get("actual_boundary"), vertices)
+    computed_boundary = oriented_boundary(simplex)
+    if actual_boundary != computed_boundary:
+        fail("bad-boundary-rejected actual_boundary is incorrect")
+    if claimed_boundary == actual_boundary:
+        fail("bad-boundary-rejected claimed boundary unexpectedly matches actual")
+    mismatch_simplex = require_simplex(
+        "bad boundary first_mismatch_simplex",
+        data.get("first_mismatch_simplex"),
+        vertices,
+    )
+    claimed_coefficient = require_fraction("bad boundary claimed_coefficient", data.get("claimed_coefficient"))
+    actual_coefficient = require_fraction("bad boundary actual_coefficient", data.get("actual_coefficient"))
+    if claimed_boundary.get(mismatch_simplex, Fraction(0)) != claimed_coefficient:
+        fail("bad-boundary-rejected claimed_coefficient does not match the claimed boundary")
+    if actual_boundary.get(mismatch_simplex, Fraction(0)) != actual_coefficient:
+        fail("bad-boundary-rejected actual_coefficient does not match the actual boundary")
+    if claimed_coefficient == actual_coefficient:
+        fail("bad-boundary-rejected mismatch coefficients are equal")
+
+    horizon = checks["general-homology-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-homology-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-homology-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general homology target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general homology future_checker", data.get("future_checker"))
+
+
 def require_point_values(
     context: str,
     value: Any,
@@ -10109,6 +10428,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_random_variables(expected)
     if metadata["id"] == "finite-markov-chain-v0":
         validate_finite_markov_chain(expected)
+    if metadata["id"] == "finite-simplicial-homology-v0":
+        validate_finite_simplicial_homology(expected)
     if metadata["id"] == "finite-hitting-times-v0":
         validate_finite_hitting_times(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":

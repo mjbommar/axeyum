@@ -1628,6 +1628,12 @@
           "notes": "Finite Ring Table Checks"
         },
         {
+          "id": "finite-simplicial-homology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simplicial-homology-v0",
+          "notes": "Exact Finite Simplicial Homology Checks"
+        },
+        {
           "id": "generating-functions-v0",
           "status": "validated",
           "path": "artifacts/examples/math/generating-functions-v0",
@@ -2337,6 +2343,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-simplicial-homology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simplicial-homology-v0",
+          "notes": "Exact Finite Simplicial Homology Checks"
         },
         {
           "id": "finite-stochastic-kernels-v0",
@@ -3492,6 +3504,12 @@
           "notes": "Finite Random Variable Checks"
         },
         {
+          "id": "finite-simplicial-homology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simplicial-homology-v0",
+          "notes": "Exact Finite Simplicial Homology Checks"
+        },
+        {
           "id": "finite-stochastic-kernels-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
@@ -3697,21 +3715,21 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate bridge for analysis and geometry. First Axeyum slice: Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces",
+      "summary": "Graduate bridge for analysis and geometry. First Axeyum slice: Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay",
       "prerequisites": [],
       "unlocks": [
         "curriculum_sequences_and_limits"
       ],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces"
+        "Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay"
       ],
       "example_packs": [
         {
           "id": "finite-topology-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
-          "notes": "Finite topologies, metric balls, closure, and interior checks."
+          "notes": "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."
         },
         {
           "id": "finite-compactness-v0",
@@ -3730,6 +3748,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-continuous-maps-v0",
           "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "finite-simplicial-homology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simplicial-homology-v0",
+          "notes": "Exact Finite Simplicial Homology Checks"
         },
         {
           "id": "metric-continuity-v0",
@@ -3752,7 +3776,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General topological spaces, compactness, connectedness, and homotopy are proof-horizon.",
+          "name": "General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon.",
           "status": "lean-horizon",
           "checker": "planned foundational example-pack validator",
           "lean_status": "required",

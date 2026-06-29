@@ -45,7 +45,7 @@ Use these sources as checks against local taste:
 | `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, homomorphism tables, Cayley-table validators | General group/ring/module/category theory belongs in Lean-backed concept rows. |
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates | General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
-| `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces | General topological spaces, compactness, connectedness, and homotopy are proof-horizon. |
+| `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay | General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon. |
 | `measure_theory` | Measure theory | Graduate analysis / probability foundation | Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, simple-function integrals, and exact finite probability | Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean. |
 | `probability_theory` | Probability theory | Undergraduate / graduate applied and pure math | Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions | Continuous distributions, stochastic processes, concentration inequalities, and limit theorems are mostly proof or numerical-honesty tracks. |
 | `statistics` | Statistics | Undergraduate / graduate applied math and data science | Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, small Bayesian tables | Floating-point inference, MCMC, VI, and model calibration are reproducibility claims, not proof claims. |
@@ -125,6 +125,7 @@ one of:
 | BFS vs DFS pathological runtime | `discrete_math`, `graph_theory`; companion CS algorithms track | Check `graph-search-runtime-v0` finite shortcut-tail families, replay BFS/DFS target-discovery orders, compare visited-node counters, and reject false finite cost bounds. | A CS algorithms resource track, asymptotic/runtime-proof rows, and Lean-backed recurrence/asymptotic lemmas. |
 | Random matrix theory | `probability_theory`, `statistics`, `linear_algebra`, `functional_analysis_and_operator_theory` | Check exact small random-matrix distributions by enumeration, determinant/rank/eigenvalue constraints for fixed matrices, and finite sampling invariants. | Measure/probability formalization, asymptotic limit-theorem rows, numerical experiment metadata, and clear "not proof" status for simulations. |
 | LU decomposition | `linear_algebra`, `numerical_analysis` | Verify `A = L * U` for exact fixed matrices, find singular/pivoting counterexamples, and check inconsistent linear systems with certificates. | Matrix example packs, pivoting/stability metadata, determinant/rank theorem reconstruction, and numerical error-bound resources. |
+| Simplicial homology | `topology`, `set_theory_and_foundations`, `linear_algebra`, `abstract_algebra` | Check `finite-simplicial-homology-v0` face-closure, oriented-boundary, `boundary^2 = 0`, and fixed Betti-rank rows by exact finite replay. | Lean-backed chain-complex and homology-functor formalization, homology invariance, exact sequences, homotopy equivalence, and proof reconstruction from rank certificates. |
 
 ## First Example Packs To Create
 
@@ -235,6 +236,12 @@ one of:
       `abstract_algebra`.
     - Checks: real-pair complex arithmetic, conjugate norm replay, fixed
       polynomial-root witness.
+23. `artifacts/examples/math/finite-simplicial-homology-v0/`
+    - Fields: `topology`, `set_theory_and_foundations`, `linear_algebra`,
+      `abstract_algebra`.
+    - Checks: finite simplicial-complex closure, oriented-boundary replay,
+      boundary-squared-zero replay, fixed Betti-rank replay, bad-boundary
+      rejection, and a general homology Lean-horizon row.
 
 ## Graduation Criteria
 

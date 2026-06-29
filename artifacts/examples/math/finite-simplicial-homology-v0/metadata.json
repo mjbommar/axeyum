@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "finite-simplicial-homology-v0",
+  "title": "Exact Finite Simplicial Homology Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "linear_algebra",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "integer linear algebra",
+    "finite chain complexes",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "simplicial-complex-closure",
+    "oriented-boundary-replay",
+    "boundary-squared-zero",
+    "betti-rank-replay",
+    "bad-boundary-rejected",
+    "general-homology-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite simplicial complexes as deterministic finite-set and integer-linear-algebra obligations.",
+    "Replay boundary, chain-complex, and Betti-rank rows through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted certificates for false-boundary and rank rows once finite matrix proof routes are promoted.",
+    "Keep homology invariance, exact sequences, homotopy equivalence, cohomology, and general algebraic-topology theorems under Lean horizon until formal routes exist."
+  ]
+}

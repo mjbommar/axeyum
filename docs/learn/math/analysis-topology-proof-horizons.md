@@ -19,6 +19,7 @@ Example packs:
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
+- [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
@@ -41,6 +42,8 @@ finite product-measure tables, rectangle probabilities, finite Fubini sums,
 bounded rational interval/ball inclusions, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
+finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
+rank checks, fixed Betti-number replay, and bad boundary-sign rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, bounded recurrence traces, finite invariant witnesses, matrix
 operator bounds, Chebyshev recurrence values at fixed points,
@@ -155,6 +158,20 @@ codomain open set, checks continuity, checks a finite homeomorphism by
 bijectivity plus continuity of the inverse, and rejects a false continuity
 claim for the same map into the discrete topology.
 
+For a finite algebraic-topology shadow, encode a simplicial complex as vertices
+and non-empty simplices:
+
+```text
+vertices = a, b, c
+simplices = [a], [b], [c], [a,b], [a,c], [b,c]
+cycle = [a,b] - [a,c] + [b,c]
+```
+
+The `finite-simplicial-homology-v0` validator checks face closure, recomputes
+oriented boundaries, verifies `boundary^2 = 0`, builds exact rational boundary
+matrices, checks the three-edge circle has `b0 = 1` and `b1 = 1`, and rejects a
+false boundary sign for `[a,b,c]`.
+
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
 
@@ -231,6 +248,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/me
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
@@ -256,5 +274,6 @@ convergence theorems, product-measure construction, Fubini/Tonelli, ODE
 existence and uniqueness, Banach/Hilbert space
 theorems, compact operators, countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
-general Chebyshev spaces, and infinite-dimensional spectral theory remain
-Lean-horizon material.
+general Chebyshev spaces, homology invariance, exact sequences, homotopy
+equivalence, and infinite-dimensional spectral theory remain Lean-horizon
+material.
