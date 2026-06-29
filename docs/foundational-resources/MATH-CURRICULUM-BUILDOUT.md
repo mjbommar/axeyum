@@ -264,7 +264,10 @@ Status: scaffold landed. The repository now has an example-pack schema, a
 validator, a validating template pack under `artifacts/examples/math/template-v0/`,
 and the first substantive pack under
 `artifacts/examples/math/proof-methods-refutation-v0/`; the first replay-checked
-number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`;
+bounded induction pack lives under
+`artifacts/examples/math/induction-obligations-v0/`;
+the first replay-checked number-theory pack lives under
+`artifacts/examples/math/modular-arithmetic-v0/`;
 the first gcd/Bezout core arithmetic pack lives under
 `artifacts/examples/math/gcd-bezout-v0/`;
 the first bounded number-theory destination pack lives under
@@ -344,8 +347,11 @@ distributivity, successor injectivity by bounded enumeration, zero-not-successor
 and nonnegative-domain checks. `finite-cardinality-v0` now validates finite
 bijection replay, proper-subset injection replay, exhaustive no-injection and
 no-surjection rows, and a Cantor-diagonal theorem target that stays
-Lean-horizon. Continue by closing the remaining `proof-methods-refutation-v0`
-CNF/LRAT proof gap or by adding `induction-obligations-v0`.
+Lean-horizon. `induction-obligations-v0` now validates exact prefix-sum
+base-case replay, bounded step-obligation enumeration, bounded conclusion
+checking, a bad-step counterexample witness, and a full-schema Lean-horizon
+row. Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT
+proof gap or by adding `logic-basics-v0`.
 
 Recommended order:
 
@@ -372,6 +378,9 @@ Recommended order:
     commutativity, distributivity, and Peano-style bounded no-counterexamples.
 13. `finite-cardinality-v0` (landed): finite bijections, finite cardinal
     inequalities, injection/surjection refutations, and infinite-cardinality
+    Lean-horizon metadata.
+14. `induction-obligations-v0` (landed): bounded base/step obligations,
+    bounded conclusion checking, bad-step witnesses, and full-schema
     Lean-horizon metadata.
 
 Exit criteria:
@@ -581,15 +590,15 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `relations-functions-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
-`finite-cardinality-v0`, Phase M4 items 4-10, and the Phase M5 learner-path
-scaffold plus first encode/check walkthrough layer have landed for the math
-seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
-linear algebra/optimization, probability/statistics, finite structures, and
-analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs. Phase M7 now has generated pack-level
-proof-gap rows and a normal foundational-resource check hook. Continue by
-closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by
-adding `induction-obligations-v0`.
+`finite-cardinality-v0`, and `induction-obligations-v0`, Phase M4 items 4-10,
+and the Phase M5 learner-path scaffold plus first encode/check walkthrough
+layer have landed for the math seed. End-to-end lessons now exist for graph
+coloring, rational arithmetic, linear algebra/optimization,
+probability/statistics, finite structures, and analysis/topology horizons.
+Phase M6 now has cookbook links from all current non-template math example
+packs. Phase M7 now has generated pack-level proof-gap rows and a normal
+foundational-resource check hook. Continue by closing the remaining
+`proof-methods-refutation-v0` CNF/LRAT proof gap or by adding `logic-basics-v0`.
 
 ## Operating Rules
 

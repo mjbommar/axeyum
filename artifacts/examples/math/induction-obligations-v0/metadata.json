@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "induction-obligations-v0",
+  "title": "Bounded Induction Obligation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_induction",
+    "curriculum_naturals",
+    "field_logic_and_proof",
+    "field_number_theory"
+  ],
+  "field_ids": [
+    "logic_and_proof",
+    "number_theory"
+  ],
+  "curriculum_nodes": [
+    "induction",
+    "naturals"
+  ],
+  "axeyum_fragments": [
+    "bounded induction obligations",
+    "LIA / BV",
+    "finite-domain enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/induction.md",
+    "docs/curriculum/01-number-systems/naturals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "sum-formula-base-case",
+    "sum-formula-step-bounded",
+    "sum-formula-conclusion-bounded",
+    "bad-step-counterexample-witness",
+    "induction-schema-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode bounded base and step obligations as deterministic QF_LIA or QF_BV formulas.",
+    "Replay finite SAT witnesses through Axeyum model evaluation.",
+    "Emit checked evidence for bounded step and conclusion no-counterexample rows.",
+    "Keep the full induction schema marked Lean-horizon until a no-sorry Lean route assembles the obligations into a universal theorem."
+  ]
+}

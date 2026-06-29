@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Induction obligations foundations pack landed.** Added
+  [`induction-obligations-v0`](artifacts/examples/math/induction-obligations-v0/README.md)
+  with exact prefix-sum base-case replay, bounded step-obligation
+  no-counterexample checking, bounded conclusion checking, a bad-step
+  counterexample witness for the false property `n = 0`, and the full induction
+  schema kept as Lean-horizon metadata. The foundational example-pack validator
+  now checks bounded induction limits, exact prefix-sum arithmetic, step and
+  conclusion enumeration, and theorem-horizon metadata. Continue by closing the
+  remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `logic-basics-v0`.
+
 - **Finite cardinality foundations pack landed.** Added
   [`finite-cardinality-v0`](artifacts/examples/math/finite-cardinality-v0/README.md)
   with finite bijection replay, proper-subset injection replay, checked
@@ -166,9 +177,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Cantor-diagonal infinite-cardinality row explicitly kept as Lean-horizon. The
   foundational example-pack validator now checks finite function graphs,
   injection/surjection/bijection properties, bounded function-space
-  enumeration, and the theorem-horizon metadata row. Continue by closing the
-  remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-  `induction-obligations-v0`.
+  enumeration, and the theorem-horizon metadata row. `induction-obligations-v0`
+  is now the bounded induction follow-on.
 
 - **Natural arithmetic core number-system pack landed.** Added
   [`natural-arithmetic-v0`](artifacts/examples/math/natural-arithmetic-v0/README.md)

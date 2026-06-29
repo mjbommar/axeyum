@@ -1487,6 +1487,95 @@ def validate_natural_arithmetic(expected: dict[str, Any]) -> None:
             fail("bounded-natural-negative-rejected found a negative natural")
 
 
+def require_bool(context: str, value: Any) -> bool:
+    if not isinstance(value, bool):
+        fail(f"{context} must be a boolean")
+    return value
+
+
+def prefix_sum(n_value: int) -> int:
+    return sum(range(n_value + 1))
+
+
+def prefix_sum_formula(n_value: int) -> int:
+    return n_value * (n_value + 1) // 2
+
+
+def prefix_sum_property_holds(n_value: int) -> bool:
+    return prefix_sum(n_value) == prefix_sum_formula(n_value)
+
+
+def require_bounded_induction_limit(context: str, data: dict[str, Any], key: str) -> int:
+    max_value = require_natural(f"{context}.{key}", data.get(key))
+    if max_value > 1024:
+        fail(f"{context}.{key} is too large for deterministic example-pack enumeration")
+    return max_value
+
+
+def validate_induction_obligations(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    base = checks["sum-formula-base-case"]
+    if base["expected_result"] != "sat":
+        fail("sum-formula-base-case must expect sat")
+    values = single_witness_values(base, witnesses)
+    n_value = require_natural("sum formula base n", values.get("n"))
+    listed_sum = require_natural("sum formula base sum_0_to_n", values.get("sum_0_to_n"))
+    listed_formula = require_natural("sum formula base formula", values.get("formula"))
+    if n_value != 0:
+        fail("sum-formula-base-case must use n = 0")
+    if listed_sum != prefix_sum(n_value):
+        fail("sum-formula-base-case listed sum does not match sum(0..n)")
+    if listed_formula != prefix_sum_formula(n_value):
+        fail("sum-formula-base-case listed formula does not match n*(n+1)/2")
+    if listed_sum != listed_formula:
+        fail("sum-formula-base-case does not satisfy the property")
+
+    step = checks["sum-formula-step-bounded"]
+    if step["expected_result"] != "unsat":
+        fail("sum-formula-step-bounded must expect unsat")
+    max_k = require_bounded_induction_limit("sum-formula-step-bounded", step.get("data", {}), "max_k")
+    for k_value in range(max_k + 1):
+        if prefix_sum_property_holds(k_value) and not prefix_sum_property_holds(k_value + 1):
+            fail("sum-formula-step-bounded found a step counterexample")
+
+    conclusion = checks["sum-formula-conclusion-bounded"]
+    if conclusion["expected_result"] != "unsat":
+        fail("sum-formula-conclusion-bounded must expect unsat")
+    max_n = require_bounded_induction_limit("sum-formula-conclusion-bounded", conclusion.get("data", {}), "max_n")
+    for n_value in range(max_n + 1):
+        if not prefix_sum_property_holds(n_value):
+            fail("sum-formula-conclusion-bounded found a formula counterexample")
+
+    bad_step = checks["bad-step-counterexample-witness"]
+    if bad_step["expected_result"] != "sat":
+        fail("bad-step-counterexample-witness must expect sat")
+    values = single_witness_values(bad_step, witnesses)
+    property_name = values.get("property")
+    require_string("bad step property", property_name)
+    if property_name != "n_eq_0":
+        fail("bad-step-counterexample-witness must use property n_eq_0")
+    k_value = require_natural("bad step k", values.get("k"))
+    p_k = require_bool("bad step p_k", values.get("p_k"))
+    p_next = require_bool("bad step p_next", values.get("p_next"))
+    if p_k != (k_value == 0):
+        fail("bad-step-counterexample-witness p_k does not match n_eq_0")
+    if p_next != (k_value + 1 == 0):
+        fail("bad-step-counterexample-witness p_next does not match n_eq_0 at k+1")
+    if not p_k or p_next:
+        fail("bad-step-counterexample-witness does not witness a step failure")
+
+    schema = checks["induction-schema-lean-horizon"]
+    if schema["expected_result"] != "not-run":
+        fail("induction-schema-lean-horizon must be not-run")
+    if schema["proof_status"] != "lean-horizon":
+        fail("induction-schema-lean-horizon must remain lean-horizon")
+    data = schema.get("data", {})
+    require_string("induction target theorem", data.get("target_theorem"))
+    require_string("induction future checker", data.get("future_checker"))
+
+
 def require_fraction(context: str, value: Any) -> Fraction:
     if not isinstance(value, str) or not value:
         fail(f"{context} must be a non-empty fraction string")
@@ -2714,6 +2803,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_measure(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "induction-obligations-v0":
+        validate_induction_obligations(expected)
     if metadata["id"] == "integer-lia-v0":
         validate_integer_lia(expected)
     if metadata["id"] == "finite-probability-v0":

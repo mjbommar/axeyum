@@ -59,6 +59,7 @@ artifacts/ontology/
 artifacts/examples/math/
   template-v0/
   proof-methods-refutation-v0/
+  induction-obligations-v0/
   finite-sets-v0/
   relations-functions-v0/
   finite-cardinality-v0/
@@ -317,6 +318,9 @@ Status: example-pack schema and validating template scaffold landed; the first
 substantive pack,
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
 now validates with a SAT witness control case and an explicit UNSAT proof gap.
+[`induction-obligations-v0`](../../artifacts/examples/math/induction-obligations-v0/)
+validates bounded induction base, step, and conclusion obligations with the
+full induction schema kept as a Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

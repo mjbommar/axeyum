@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "pack_id": "induction-obligations-v0",
+  "witnesses": [
+    {
+      "id": "sum-formula-base-zero",
+      "description": "The base case for the finite prefix-sum formula.",
+      "values": {
+        "n": 0,
+        "sum_0_to_n": 0,
+        "formula": 0
+      }
+    },
+    {
+      "id": "n-equals-zero-step-failure",
+      "description": "A counterexample showing that the property n = 0 has a base case but fails the induction step.",
+      "values": {
+        "property": "n_eq_0",
+        "k": 0,
+        "p_k": true,
+        "p_next": false
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "sum-formula-base-case",
+      "claim": "The prefix-sum formula holds at n = 0.",
+      "expected_result": "sat",
+      "validation": "bounded_induction_base_replay",
+      "proof_status": "checked",
+      "witnesses": ["sum-formula-base-zero"],
+      "notes": "The validator recomputes sum(0..0) and 0*(0+1)/2 exactly."
+    },
+    {
+      "id": "sum-formula-step-bounded",
+      "claim": "There exists k <= 8 such that P(k) holds for the prefix-sum formula but P(k + 1) fails.",
+      "expected_result": "unsat",
+      "validation": "bounded_induction_step_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "max_k": 8
+      },
+      "notes": "The validator enumerates k = 0..8 and finds no bounded step counterexample."
+    },
+    {
+      "id": "sum-formula-conclusion-bounded",
+      "claim": "There exists n <= 9 where the prefix-sum formula fails.",
+      "expected_result": "unsat",
+      "validation": "bounded_induction_conclusion_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "max_n": 9
+      },
+      "notes": "The validator enumerates n = 0..9 and finds no bounded formula failure."
+    },
+    {
+      "id": "bad-step-counterexample-witness",
+      "claim": "The candidate property n = 0 has a bounded induction-step counterexample.",
+      "expected_result": "sat",
+      "validation": "bounded_induction_bad_step_replay",
+      "proof_status": "checked",
+      "witnesses": ["n-equals-zero-step-failure"],
+      "notes": "The validator checks P(0) is true and P(1) is false for the candidate property n = 0."
+    },
+    {
+      "id": "induction-schema-lean-horizon",
+      "claim": "The full natural-number induction schema turns checked base and step obligations into a theorem for all n.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem": "nat_induction_schema_for_prefix_sum",
+        "future_checker": "Lean module with no sorryAx dependency"
+      },
+      "notes": "This row is theorem-prover metadata; the finite obligations do not themselves prove the universal schema."
+    }
+  ]
+}

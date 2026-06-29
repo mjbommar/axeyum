@@ -49,6 +49,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
   is the first substantive math pack: proof-by-refutation over finite
   pigeonhole examples, with the UNSAT proof route still marked as a proof gap.
+- [`artifacts/examples/math/induction-obligations-v0/`](../../artifacts/examples/math/induction-obligations-v0/)
+  validates bounded induction base, step, and conclusion obligations while
+  keeping the full induction schema under Lean horizon.
 - [`artifacts/examples/math/finite-sets-v0/`](../../artifacts/examples/math/finite-sets-v0/),
   [`artifacts/examples/math/relations-functions-v0/`](../../artifacts/examples/math/relations-functions-v0/),
   and [`artifacts/examples/math/finite-cardinality-v0/`](../../artifacts/examples/math/finite-cardinality-v0/)
@@ -118,6 +121,7 @@ python3 scripts/gen-foundational-dashboards.py
 python3 scripts/validate-foundational-example-pack.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0

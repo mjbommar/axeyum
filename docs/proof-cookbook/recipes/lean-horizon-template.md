@@ -104,5 +104,6 @@ resource.
 - [Math Curriculum Resource Buildout](../../foundational-resources/MATH-CURRICULUM-BUILDOUT.md)
 - [Math Field Taxonomy](../../foundational-resources/MATH-FIELDS.md)
 - [Proof Gap Dashboard](../../foundational-resources/generated/proof-gap-dashboard.md)
+- [Induction Obligations pack](../../../artifacts/examples/math/induction-obligations-v0/)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [north star](../../research/00-orientation/north-star.md)
