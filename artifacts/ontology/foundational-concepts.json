@@ -681,6 +681,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/rationals-lra-v0",
           "notes": "Exact rational order/field facts, density, trichotomy, and Farkas links."
+        },
+        {
+          "id": "polynomial-factorization-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
+          "notes": "Exact rational polynomial division, GCD, square-free decomposition, and irreducibility replay."
         }
       ],
       "proof_routes": [
@@ -708,7 +714,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/rationals-lra-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/rationals-lra-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1223,6 +1229,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-tensor-products-v0",
           "notes": "Finite vector-space tensor products over F2, bilinear maps, and Kronecker-product replay."
+        },
+        {
+          "id": "polynomial-factorization-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
+          "notes": "Exact rational polynomial factorization, Euclidean GCD, and square-free replay over Q[x]."
         }
       ],
       "proof_routes": [
@@ -1292,6 +1304,18 @@
           "status": "validated",
           "path": "artifacts/examples/math/polynomial-identities-v0",
           "notes": "Fixed-degree identities, factor theorem, and root witness replay."
+        },
+        {
+          "id": "polynomial-factorization-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
+          "notes": "Exact rational factor products, polynomial division, Euclidean GCD, square-free decomposition, and irreducible-quadratic rejection."
+        },
+        {
+          "id": "generating-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/generating-functions-v0",
+          "notes": "Finite coefficient extraction, Cauchy products, and recurrence/generating-function prefixes."
         }
       ],
       "proof_routes": [
@@ -1320,7 +1344,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/polynomial-identities-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/polynomial-identities-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1721,7 +1745,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, Cayley-table validators",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators",
       "prerequisites": [],
       "unlocks": [
         "curriculum_fields",
@@ -1732,14 +1756,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, Cayley-table validators"
+        "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators"
       ],
       "example_packs": [
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
-          "notes": "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, and Cayley-table validation."
+          "notes": "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."
         },
         {
           "id": "complex-algebraic-v0",
@@ -1826,6 +1850,12 @@
           "notes": "Modular Arithmetic Witnesses"
         },
         {
+          "id": "polynomial-factorization-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
+          "notes": "Exact Rational Polynomial Factorization Checks"
+        },
+        {
           "id": "polynomial-identities-v0",
           "status": "validated",
           "path": "artifacts/examples/math/polynomial-identities-v0",
@@ -1834,7 +1864,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General group/ring/ideal/module/duality/tensor/category theory belongs in Lean-backed concept rows.",
+          "name": "General group/ring/ideal/module/duality/tensor/category and arbitrary-field factorization theory belongs in Lean-backed concept rows.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -1876,7 +1906,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate bridge from real analysis and algebra. First Axeyum slice: Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts",
+      "summary": "Graduate bridge from real analysis and algebra. First Axeyum slice: Polynomial identities, finite evaluations, rational factorization shadows, algebraic constraints over real/imaginary parts",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -1884,20 +1914,26 @@
       ],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts"
+        "Polynomial identities, finite evaluations, rational factorization shadows, algebraic constraints over real/imaginary parts"
       ],
       "example_packs": [
         {
           "id": "complex-algebraic-v0",
           "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
-          "notes": "Complex arithmetic as real-pair algebra before analytic proof horizons."
+          "notes": "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."
         },
         {
           "id": "complex-plane-transforms-v0",
           "status": "validated",
           "path": "artifacts/examples/math/complex-plane-transforms-v0",
           "notes": "Exact Complex Plane Transform Checks"
+        },
+        {
+          "id": "polynomial-factorization-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
+          "notes": "Exact Rational Polynomial Factorization Checks"
         },
         {
           "id": "polynomial-identities-v0",
@@ -1908,7 +1944,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon.",
+          "name": "Holomorphicity, contour integration, residues, analytic continuation, and algebraic closure need proof-horizon support.",
           "status": "lean-horizon",
           "checker": "planned foundational example-pack validator",
           "lean_status": "required",
@@ -3431,7 +3467,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core proof-based undergraduate / graduate analysis. First Axeyum slice: Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows",
+      "summary": "Core proof-based undergraduate / graduate analysis. First Axeyum slice: Rational witnesses, inequalities, algebraic real constraints, rational polynomial factorization shadows, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows",
       "prerequisites": [],
       "unlocks": [
         "curriculum_calculus",
@@ -3442,14 +3478,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows"
+        "Rational witnesses, inequalities, algebraic real constraints, rational polynomial factorization shadows, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows"
       ],
       "example_packs": [
         {
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -3612,6 +3648,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/orientation-area-geometry-v0",
           "notes": "Exact Orientation And Area Geometry Checks"
+        },
+        {
+          "id": "polynomial-factorization-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-factorization-rational-v0",
+          "notes": "Exact Rational Polynomial Factorization Checks"
         },
         {
           "id": "polynomial-identities-v0",

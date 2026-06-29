@@ -130,6 +130,12 @@ CURRICULUM_MAP = {
         "pack": "rationals-lra-v0",
         "slice": "Exact rational order/field facts, density, trichotomy, and Farkas links.",
         "proof": "Exact rational LRA with Farkas certificates where available.",
+        "extra_packs": [
+            (
+                "polynomial-factorization-rational-v0",
+                "Exact rational polynomial division, GCD, square-free decomposition, and irreducibility replay.",
+            ),
+        ],
     },
     "reals": {
         "field_ids": ["real_analysis", "optimization_and_convexity"],
@@ -233,6 +239,10 @@ CURRICULUM_MAP = {
                 "finite-tensor-products-v0",
                 "Finite vector-space tensor products over F2, bilinear maps, and Kronecker-product replay.",
             ),
+            (
+                "polynomial-factorization-rational-v0",
+                "Exact rational polynomial factorization, Euclidean GCD, and square-free replay over Q[x].",
+            ),
         ],
     },
     "polynomials": {
@@ -240,6 +250,16 @@ CURRICULUM_MAP = {
         "pack": "polynomial-identities-v0",
         "slice": "Fixed-degree identities, factor theorem, and root witness replay.",
         "proof": "Fixed-degree algebra replay; broad polynomial theory remains partial.",
+        "extra_packs": [
+            (
+                "polynomial-factorization-rational-v0",
+                "Exact rational factor products, polynomial division, Euclidean GCD, square-free decomposition, and irreducible-quadratic rejection.",
+            ),
+            (
+                "generating-functions-v0",
+                "Finite coefficient extraction, Cauchy products, and recurrence/generating-function prefixes.",
+            ),
+        ],
     },
     "sequences-and-limits": {
         "field_ids": ["real_analysis", "topology"],
@@ -316,9 +336,9 @@ FIELD_PACKS = {
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."),
-    "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
+    "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."),

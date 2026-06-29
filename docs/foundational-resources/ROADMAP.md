@@ -108,6 +108,7 @@ artifacts/examples/math/
   finite-modules-v0/
   finite-ideals-v0/
   polynomial-identities-v0/
+  polynomial-factorization-rational-v0/
   counting-v0/
   generating-functions-v0/
   graph-coloring-v0/
@@ -525,6 +526,11 @@ Fisher p-values, and checked rejection of a false p-value.
 validates finite coefficient extraction, Cauchy product convolution,
 Fibonacci generating-function prefix replay, checked rejection of a bad
 convolution coefficient, and a generating-functions Lean-horizon row.
+[`polynomial-factorization-rational-v0`](../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+validates exact rational factor-list product replay, polynomial long division,
+Euclidean GCD replay, square-free decomposition replay,
+irreducible-quadratic rejection by discriminant, and a general
+factorization-theory Lean-horizon row.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.

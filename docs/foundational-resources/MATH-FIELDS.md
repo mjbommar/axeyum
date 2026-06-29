@@ -42,9 +42,9 @@ Use these sources as checks against local taste:
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
 | `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, exact rational inner products, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians | Spectral theorems, general vector-space/dual-space/inner-product/module/tensor theorems, and conditioning/stability need proof or numerical tracks. |
-| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, Cayley-table validators | General group/ring/ideal/module/duality/tensor/category theory belongs in Lean-backed concept rows. |
-| `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows | General completeness, limits, continuity, compactness, differentiability, and convergence proofs need Lean reconstruction. |
-| `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
+| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Cayley-table validators | General group/ring/ideal/module/duality/tensor/category and arbitrary-field factorization theory belongs in Lean-backed concept rows. |
+| `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, rational polynomial factorization shadows, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows | General completeness, limits, continuity, compactness, differentiability, and convergence proofs need Lean reconstruction. |
+| `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, rational factorization shadows, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, analytic continuation, and algebraic closure need proof-horizon support. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay | General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon. |
 | `measure_theory` | Measure theory | Graduate analysis / probability foundation | Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, simple-function integrals, and exact finite probability | Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean. |
 | `probability_theory` | Probability theory | Undergraduate / graduate applied and pure math | Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions | Continuous distributions, stochastic processes, concentration inequalities, and limit theorems are mostly proof or numerical-honesty tracks. |
@@ -302,6 +302,12 @@ one of:
       minors, fixed Cauchy-Schwarz replay, orthogonal projection replay,
       Gram-Schmidt replay, bad-inner-product rejection, and a general
       Hilbert/inner-product-space Lean-horizon row.
+33. `artifacts/examples/math/polynomial-factorization-rational-v0/`
+    - Fields: `abstract_algebra`, `real_analysis`, `complex_analysis`.
+    - Checks: exact rational factor-list product replay, polynomial long
+      division, Euclidean GCD replay, square-free decomposition replay,
+      irreducible-quadratic rejection by discriminant, and a general
+      polynomial-factorization Lean-horizon row.
 
 ## Graduation Criteria
 

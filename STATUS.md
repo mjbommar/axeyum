@@ -179,6 +179,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Exact rational polynomial-factorization pack landed.** Added
+  [`polynomial-factorization-rational-v0`](artifacts/examples/math/polynomial-factorization-rational-v0/README.md)
+  as the next curriculum-adjacent deepening of the polynomial and rational
+  algebra path. The pack validates factor-list product replay for `x^4 - 1`,
+  polynomial long-division replay, monic Euclidean GCD replay,
+  square-free decomposition through `gcd(p,p')`, checked rejection of a
+  rational linear factorization claim for `x^2 + 1`, and a general
+  polynomial-factorization Lean-horizon row. The foundational example-pack
+  validator now checks these rows with exact rational polynomial arithmetic.
+
 - **Exact rational inner-product foundations pack landed.** Added
   [`inner-product-spaces-rational-v0`](artifacts/examples/math/inner-product-spaces-rational-v0/README.md)
   as the finite-dimensional bridge from linear algebra into projections,

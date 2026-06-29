@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "pack_id": "polynomial-factorization-rational-v0",
+  "witnesses": [
+    {
+      "id": "x4-minus-one-factorization",
+      "description": "Factorization and division witnesses for x^4 - 1 over Q.",
+      "values": {
+        "polynomial": ["-1", "0", "0", "0", "1"],
+        "factors": [
+          ["-1", "1"],
+          ["1", "1"],
+          ["1", "0", "1"]
+        ],
+        "divisor": ["-1", "1"],
+        "quotient": ["1", "1", "1", "1"],
+        "remainder": ["0"]
+      }
+    },
+    {
+      "id": "euclidean-gcd-example",
+      "description": "A monic GCD witness for x^3 - x and x^2 - 1.",
+      "values": {
+        "left": ["0", "-1", "0", "1"],
+        "right": ["-1", "0", "1"],
+        "gcd": ["-1", "0", "1"],
+        "left_quotient": ["0", "1"],
+        "right_quotient": ["1"]
+      }
+    },
+    {
+      "id": "square-free-example",
+      "description": "A square-free decomposition witness for (x - 1)^2*(x + 2).",
+      "values": {
+        "polynomial": ["2", "-3", "0", "1"],
+        "derivative": ["-3", "0", "3"],
+        "repeated_factor": ["-1", "1"],
+        "square_free_part": ["-2", "1", "1"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "factorization-product-replay",
+      "claim": "The listed factors multiply to x^4 - 1 over Q.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polynomial_factor_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["x4-minus-one-factorization"],
+      "notes": "The validator multiplies the coefficient lists and compares normalized coefficients."
+    },
+    {
+      "id": "polynomial-division-replay",
+      "claim": "Dividing x^4 - 1 by x - 1 gives x^3 + x^2 + x + 1 with zero remainder.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polynomial_division_replay",
+      "proof_status": "checked",
+      "witnesses": ["x4-minus-one-factorization"],
+      "notes": "The validator recomputes polynomial long division and reconstructs divisor*quotient + remainder."
+    },
+    {
+      "id": "euclidean-gcd-replay",
+      "claim": "The monic GCD of x^3 - x and x^2 - 1 is x^2 - 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polynomial_gcd_replay",
+      "proof_status": "checked",
+      "witnesses": ["euclidean-gcd-example"],
+      "notes": "The validator recomputes the monic Euclidean GCD and checks the listed quotient divisions."
+    },
+    {
+      "id": "square-free-decomposition-replay",
+      "claim": "For p=(x-1)^2*(x+2), gcd(p,p')=x-1 and p/(x-1)=x^2+x-2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_square_free_replay",
+      "proof_status": "checked",
+      "witnesses": ["square-free-example"],
+      "notes": "The validator recomputes p', gcd(p,p'), and the square-free quotient."
+    },
+    {
+      "id": "irreducible-quadratic-rational-rejected",
+      "claim": "The polynomial x^2 + 1 has a factorization into rational linear factors.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_quadratic_irreducibility_replay",
+      "proof_status": "checked",
+      "data": {
+        "polynomial": ["1", "0", "1"],
+        "discriminant": "-4",
+        "reason": "negative_discriminant"
+      },
+      "notes": "The validator recomputes the discriminant and rejects rational linear factors for this fixed quadratic."
+    },
+    {
+      "id": "general-factorization-theory-lean-horizon",
+      "claim": "General polynomial factorization and irreducibility theory requires a proof-assistant route.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Euclidean domains, PIDs/UFDs, primitive part/content lemmas, Gauss lemma, irreducibility criteria, algebraic closure, and complete factorization algorithms over arbitrary fields.",
+        "future_checker": "Lean/mathlib algebra and polynomial libraries plus Axeyum evidence import for fixed finite exact subgoals."
+      },
+      "notes": "The finite rows are exact rational arithmetic checks; the general theory remains proof-assistant territory."
+    }
+  ]
+}

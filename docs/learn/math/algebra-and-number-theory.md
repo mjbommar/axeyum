@@ -23,6 +23,7 @@ Example packs:
 - [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
 - [finite-fields-v0](../../../artifacts/examples/math/finite-fields-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
+- [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 
 ## What Axeyum Checks
@@ -53,8 +54,11 @@ compatibility, quadratic residues, sum-of-two-squares, and Diophantine replay.
 The finite-fields pack adds a complete inverse table for `F_7`, exhaustive
 distributivity checking in `F_5`, and a `Z/6Z` non-field contrast.
 The polynomial pack adds exact coefficient replay, factor-theorem witnesses, and
-fixed false-root rejection. The complex pack adds algebraic real-pair arithmetic
-and a fixed polynomial-root witness.
+fixed false-root rejection. The rational polynomial-factorization pack adds
+factor-list product replay, polynomial long division, Euclidean GCD replay,
+square-free decomposition replay, and a checked irreducible-quadratic rejection.
+The complex pack adds algebraic real-pair arithmetic and a fixed polynomial-root
+witness.
 
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
@@ -213,6 +217,20 @@ For a polynomial-flavored algebra example, the polynomial pack encodes
 x^2 - 5x + 6 = (x - 2)(x - 3)
 ```
 
+The factorization pack then moves from one root witness to exact rational
+polynomial arithmetic:
+
+```text
+x^4 - 1 = (x - 1)(x + 1)(x^2 + 1)
+(x^4 - 1) / (x - 1) = x^3 + x^2 + x + 1
+gcd(x^3 - x, x^2 - 1) = x^2 - 1
+```
+
+It also checks a square-free decomposition for
+`(x - 1)^2*(x + 2) = x^3 - 3x + 2` by recomputing `gcd(p,p') = x - 1`, and
+rejects a rational linear factorization claim for `x^2 + 1` using the exact
+negative discriminant.
+
 The complex pack then encodes `i` as the real pair `[0, 1]`. The validator
 squares the pair and checks:
 
@@ -236,6 +254,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
@@ -243,8 +262,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 
 General group, ring, field, module, isomorphism-theorem, quotient, and
 algebraic-number-theory theorems need Lean-backed concept rows. Near-term
-resource gaps are richer polynomial factorization packs and stronger BV/CNF or
-EUF/Alethe evidence for finite group, finite ring, finite homomorphism,
+resource gaps are stronger BV/CNF or EUF/Alethe evidence for finite group,
+finite ring, finite homomorphism,
 finite ideal, finite vector-space, finite dual-space, finite-field, finite-module,
 gcd/Diophantine, bounded number-theory, and fixed-degree polynomial universal
 rows.

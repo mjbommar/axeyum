@@ -6210,6 +6210,83 @@ def polynomial_add(left: list[Fraction], right: list[Fraction]) -> list[Fraction
     return normalize_polynomial(result)
 
 
+def polynomial_sub(left: list[Fraction], right: list[Fraction]) -> list[Fraction]:
+    width = max(len(left), len(right))
+    result = [Fraction(0) for _ in range(width)]
+    for index, coefficient in enumerate(left):
+        result[index] += coefficient
+    for index, coefficient in enumerate(right):
+        result[index] -= coefficient
+    return normalize_polynomial(result)
+
+
+def polynomial_is_zero(polynomial: list[Fraction]) -> bool:
+    normalized = normalize_polynomial(polynomial)
+    return len(normalized) == 1 and normalized[0] == 0
+
+
+def polynomial_degree(polynomial: list[Fraction]) -> int:
+    normalized = normalize_polynomial(polynomial)
+    if polynomial_is_zero(normalized):
+        return -1
+    return len(normalized) - 1
+
+
+def polynomial_divmod(
+    dividend: list[Fraction],
+    divisor: list[Fraction],
+) -> tuple[list[Fraction], list[Fraction]]:
+    dividend = normalize_polynomial(dividend)
+    divisor = normalize_polynomial(divisor)
+    if polynomial_is_zero(divisor):
+        fail("polynomial division by zero divisor")
+    if polynomial_degree(dividend) < polynomial_degree(divisor):
+        return [Fraction(0)], dividend
+
+    quotient = [
+        Fraction(0)
+        for _ in range(polynomial_degree(dividend) - polynomial_degree(divisor) + 1)
+    ]
+    remainder = list(dividend)
+    divisor_degree = polynomial_degree(divisor)
+    divisor_leading = divisor[-1]
+    while not polynomial_is_zero(remainder) and polynomial_degree(remainder) >= divisor_degree:
+        shift = polynomial_degree(remainder) - divisor_degree
+        coefficient = remainder[-1] / divisor_leading
+        quotient[shift] += coefficient
+        subtraction = [Fraction(0) for _ in range(shift)] + [
+            coefficient * item for item in divisor
+        ]
+        remainder = polynomial_sub(remainder, subtraction)
+    return normalize_polynomial(quotient), normalize_polynomial(remainder)
+
+
+def polynomial_monic(polynomial: list[Fraction]) -> list[Fraction]:
+    polynomial = normalize_polynomial(polynomial)
+    if polynomial_is_zero(polynomial):
+        return [Fraction(0)]
+    leading = polynomial[-1]
+    return normalize_polynomial([coefficient / leading for coefficient in polynomial])
+
+
+def polynomial_gcd(left: list[Fraction], right: list[Fraction]) -> list[Fraction]:
+    left = normalize_polynomial(left)
+    right = normalize_polynomial(right)
+    while not polynomial_is_zero(right):
+        _, remainder = polynomial_divmod(left, right)
+        left, right = right, remainder
+    return polynomial_monic(left)
+
+
+def require_polynomial_list(context: str, value: Any) -> list[list[Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list of polynomials")
+    return [
+        require_polynomial(f"{context}[{index}]", polynomial)
+        for index, polynomial in enumerate(value)
+    ]
+
+
 def polynomial_derivative(polynomial: list[Fraction]) -> list[Fraction]:
     if len(polynomial) == 1:
         return [Fraction(0)]
@@ -6497,6 +6574,100 @@ def validate_polynomial_identities(expected: dict[str, Any]) -> None:
     candidate = require_fraction("false root candidate", values.get("candidate_root"))
     if polynomial_eval(polynomial, candidate) == 0:
         fail("false-rational-root-rejected candidate unexpectedly is a root")
+
+
+def validate_polynomial_factorization_rational(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    product = checks["factorization-product-replay"]
+    if product["expected_result"] != "sat":
+        fail("factorization-product-replay must expect sat")
+    values = single_witness_values(product, witnesses)
+    polynomial = require_polynomial("factorization polynomial", values.get("polynomial"))
+    factors = require_polynomial_list("factorization factors", values.get("factors"))
+    computed_product = [Fraction(1)]
+    for factor in factors:
+        computed_product = polynomial_mul(computed_product, factor)
+    if computed_product != polynomial:
+        fail("factorization-product-replay factor product does not reconstruct polynomial")
+
+    division = checks["polynomial-division-replay"]
+    if division["expected_result"] != "sat" or division.get("proof_status") != "checked":
+        fail("polynomial-division-replay must be a checked sat row")
+    values = single_witness_values(division, witnesses)
+    polynomial = require_polynomial("division polynomial", values.get("polynomial"))
+    divisor = require_polynomial("division divisor", values.get("divisor"))
+    quotient = require_polynomial("division quotient", values.get("quotient"))
+    remainder = require_polynomial("division remainder", values.get("remainder"))
+    computed_quotient, computed_remainder = polynomial_divmod(polynomial, divisor)
+    if computed_quotient != quotient:
+        fail("polynomial-division-replay quotient is incorrect")
+    if computed_remainder != remainder:
+        fail("polynomial-division-replay remainder is incorrect")
+    reconstructed = polynomial_add(polynomial_mul(divisor, quotient), remainder)
+    if reconstructed != polynomial:
+        fail("polynomial-division-replay reconstruction is incorrect")
+
+    gcd = checks["euclidean-gcd-replay"]
+    if gcd["expected_result"] != "sat" or gcd.get("proof_status") != "checked":
+        fail("euclidean-gcd-replay must be a checked sat row")
+    values = single_witness_values(gcd, witnesses)
+    left = require_polynomial("GCD left", values.get("left"))
+    right = require_polynomial("GCD right", values.get("right"))
+    listed_gcd = require_polynomial("GCD gcd", values.get("gcd"))
+    left_quotient = require_polynomial("GCD left_quotient", values.get("left_quotient"))
+    right_quotient = require_polynomial("GCD right_quotient", values.get("right_quotient"))
+    if polynomial_gcd(left, right) != listed_gcd:
+        fail("euclidean-gcd-replay listed GCD is incorrect")
+    if polynomial_mul(listed_gcd, left_quotient) != left:
+        fail("euclidean-gcd-replay left quotient is incorrect")
+    if polynomial_mul(listed_gcd, right_quotient) != right:
+        fail("euclidean-gcd-replay right quotient is incorrect")
+
+    square_free = checks["square-free-decomposition-replay"]
+    if square_free["expected_result"] != "sat" or square_free.get("proof_status") != "checked":
+        fail("square-free-decomposition-replay must be a checked sat row")
+    values = single_witness_values(square_free, witnesses)
+    polynomial = require_polynomial("square-free polynomial", values.get("polynomial"))
+    derivative = require_polynomial("square-free derivative", values.get("derivative"))
+    repeated_factor = require_polynomial("square-free repeated_factor", values.get("repeated_factor"))
+    square_free_part = require_polynomial("square-free square_free_part", values.get("square_free_part"))
+    if polynomial_derivative(polynomial) != derivative:
+        fail("square-free-decomposition-replay derivative is incorrect")
+    if polynomial_gcd(polynomial, derivative) != repeated_factor:
+        fail("square-free-decomposition-replay repeated factor is not gcd(p,p')")
+    quotient, remainder = polynomial_divmod(polynomial, repeated_factor)
+    if remainder != [Fraction(0)]:
+        fail("square-free-decomposition-replay repeated factor does not divide polynomial")
+    if quotient != square_free_part:
+        fail("square-free-decomposition-replay square-free part is incorrect")
+    if polynomial_mul(repeated_factor, square_free_part) != polynomial:
+        fail("square-free-decomposition-replay reconstruction is incorrect")
+
+    irreducible = checks["irreducible-quadratic-rational-rejected"]
+    if irreducible["expected_result"] != "unsat" or irreducible.get("proof_status") != "checked":
+        fail("irreducible-quadratic-rational-rejected must be a checked unsat row")
+    data = irreducible.get("data", {})
+    polynomial = require_quadratic("irreducible quadratic polynomial", data.get("polynomial"))
+    discriminant = require_fraction("irreducible quadratic discriminant", data.get("discriminant"))
+    reason = data.get("reason")
+    require_string("irreducible quadratic reason", reason)
+    if quadratic_discriminant(polynomial) != discriminant:
+        fail("irreducible-quadratic-rational-rejected discriminant is incorrect")
+    if reason != "negative_discriminant":
+        fail("irreducible-quadratic-rational-rejected must use negative_discriminant reason")
+    if discriminant >= 0:
+        fail("irreducible-quadratic-rational-rejected discriminant must be negative")
+
+    horizon = checks["general-factorization-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-factorization-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-factorization-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general factorization target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general factorization future_checker", data.get("future_checker"))
 
 
 def polynomial_prefix(polynomial: list[Fraction], length: int) -> list[Fraction]:
@@ -13398,6 +13569,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_integer_lia(expected)
     if metadata["id"] == "inner-product-spaces-rational-v0":
         validate_inner_product_spaces_rational(expected)
+    if metadata["id"] == "polynomial-factorization-rational-v0":
+        validate_polynomial_factorization_rational(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
     if metadata["id"] == "finite-product-measure-v0":

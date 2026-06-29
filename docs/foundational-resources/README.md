@@ -207,13 +207,15 @@ schemas, examples, and validation workflows.
   [`artifacts/examples/math/finite-modules-v0/`](../../artifacts/examples/math/finite-modules-v0/),
   [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/),
   [`artifacts/examples/math/polynomial-identities-v0/`](../../artifacts/examples/math/polynomial-identities-v0/),
+  [`artifacts/examples/math/polynomial-factorization-rational-v0/`](../../artifacts/examples/math/polynomial-factorization-rational-v0/),
   [`artifacts/examples/math/counting-v0/`](../../artifacts/examples/math/counting-v0/),
   and [`artifacts/examples/math/generating-functions-v0/`](../../artifacts/examples/math/generating-functions-v0/)
   validate the finite algebra and discrete core: finite group/ring/field table
   checks, finite homomorphism/kernel/quotient replay, finite ideal and
   quotient-ring replay, finite vector-space, dual-space, inner-product, and
-  module replay, fixed polynomial identities, finite counting/pigeonhole rows,
-  and finite generating-function coefficient/convolution replay.
+  module replay, fixed polynomial identities, exact rational polynomial
+  factorization/division/GCD rows, finite counting/pigeonhole rows, and finite
+  generating-function coefficient/convolution replay.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
@@ -372,6 +374,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0

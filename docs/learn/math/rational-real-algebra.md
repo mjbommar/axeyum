@@ -14,6 +14,7 @@ Example packs:
 - [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/)
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
+- [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -26,7 +27,8 @@ The real-algebra path is currently exact rational arithmetic plus algebraic
 shadows of real reasoning. It checks density witnesses, additive inverses,
 fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
 samples, ordered-field real witnesses, small nonlinear polynomial constraints,
-fixed-degree polynomial identities and roots, LP feasibility and infeasibility
+fixed-degree polynomial identities and roots, rational polynomial
+factorization/division/GCD/square-free replay, LP feasibility and infeasibility
 certificates, finite convexity and monotonicity checks, exact rational
 gradients, Jacobian chain-rule replay, Hessian minor checks, midpoints,
 collinearity determinants, and squared distances. The matrix-invariants pack
@@ -90,7 +92,17 @@ quotient = [-3, 1]
 ```
 
 The checker evaluates `p(2)` exactly and verifies
-`p = (x - 2)(x - 3)`. For a matrix-invariant check, encode a fixed matrix and
+`p = (x - 2)(x - 3)`. The factorization pack adds exact rational division and
+GCD examples:
+
+```text
+x^4 - 1 = (x - 1)(x + 1)(x^2 + 1)
+(x^4 - 1) / (x - 1) = x^3 + x^2 + x + 1
+gcd(x^3 - x, x^2 - 1) = x^2 - 1
+```
+
+It also rejects rational linear factors for `x^2 + 1` by recomputing the
+negative discriminant. For a matrix-invariant check, encode a fixed matrix and
 its characteristic polynomial:
 
 ```text
@@ -137,6 +149,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0

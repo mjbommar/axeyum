@@ -184,15 +184,15 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets, finite Boolean lattices; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
-| `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0` | Exact rational order/field facts, density, trichotomy, Farkas links. |
+| `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, and factorization replay. |
 | `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, exact rational gradients, and Hessian checks; completeness marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, modular ring ideals, and quotient rings. |
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
-| `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, and tensor-product replay. |
-| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, coefficient extraction, and finite convolution. |
+| `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
+| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection, coefficient extraction, and finite convolution. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
@@ -299,6 +299,8 @@ the first finite-field core curriculum pack lives under
 `artifacts/examples/math/finite-fields-v0/`;
 the first fixed-degree polynomial core curriculum pack lives under
 `artifacts/examples/math/polynomial-identities-v0/`;
+the first exact rational polynomial-factorization pack lives under
+`artifacts/examples/math/polynomial-factorization-rational-v0/`;
 the first finite-counting core curriculum pack lives under
 `artifacts/examples/math/counting-v0/`;
 the first finite-group core-structure pack lives under
@@ -373,7 +375,11 @@ prime field, and a checked composite-modulus non-field contrast.
 now validates exact coefficient identity replay, a factor-theorem root witness,
 and a checked false rational-root rejection. `counting-v0` now validates fixed
 permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
-refutation. `generating-functions-v0` now validates finite coefficient
+refutation. `polynomial-factorization-rational-v0` now validates exact
+rational factor-list product replay, polynomial division, Euclidean GCD replay,
+square-free decomposition, checked irreducible-quadratic rejection, and a
+general factorization-theory Lean-horizon row. `generating-functions-v0` now
+validates finite coefficient
 extraction, Cauchy product convolution, Fibonacci generating-function prefix
 replay, checked rejection of a bad convolution coefficient, and a
 generating-functions Lean-horizon row. The recommended Phase M3 pack list has
@@ -502,9 +508,12 @@ Recommended order:
    products, bilinear maps, Kronecker products, linear maps, rank-nullity
    replay, LU replay, Jacobian/Hessian matrix replay, and inconsistent systems
    with Farkas evidence where available.
-8. `polynomial-identities-v0` and `generating-functions-v0` (landed): factor
-   theorem, fixed-degree identities, finite coefficient extraction, Cauchy
-   products, and bounded recurrence/generating-function prefixes.
+8. `polynomial-identities-v0`, `polynomial-factorization-rational-v0`,
+   and `generating-functions-v0` (landed): factor theorem, fixed-degree
+   identities, rational factor products, polynomial division, Euclidean GCD,
+   square-free decomposition, irreducible-quadratic rejection, finite
+   coefficient extraction, Cauchy products, and bounded
+   recurrence/generating-function prefixes.
 9. `counting-v0` (landed): combinations, pigeonhole, finite counting witnesses.
 10. `number-theory-v0` (landed): CRT compatibility, quadratic residues,
     sum-of-two-squares, and bounded Diophantine checks.
@@ -932,9 +941,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 80 non-template math example packs validate.
+  Status: 81 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 68 non-template packs have at least one `checked` expected-result row.
+  Status: 69 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -968,7 +977,8 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `inner-product-spaces-rational-v0`,
 `finite-tensor-products-v0`,
 `finite-modules-v0`,
-`polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
+`polynomial-identities-v0`, `polynomial-factorization-rational-v0`,
+`counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `cardinality-principles-v0`,
 `induction-obligations-v0`, `induction-patterns-v0`, `logic-basics-v0`, and
@@ -1072,6 +1082,10 @@ Lean-horizon row.
 bridge: coefficient extraction, Cauchy product convolution, Fibonacci
 generating-function prefix replay, checked rejection of a bad convolution
 coefficient, and a generating-functions Lean-horizon row.
+`polynomial-factorization-rational-v0` now adds the next exact finite
+polynomial bridge: rational factor-list product replay, polynomial division,
+Euclidean GCD replay, square-free decomposition, checked irreducible-quadratic
+rejection, and a general polynomial-factorization Lean-horizon row.
 `finite-euler-method-v0` now adds the next exact finite dynamics/numerical
 bridge: explicit Euler replay, polynomial-solution error replay, finite
 invariant checks, checked rejection of a bad Euler step, and an ODE-theory
