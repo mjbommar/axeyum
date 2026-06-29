@@ -84,6 +84,7 @@ artifacts/examples/math/
   calculus-algebraic-shadow-v0/
   calculus-riemann-sum-v0/
   linear-algebra-rational-v0/
+  finite-vector-spaces-v0/
   numerical-linear-algebra-v0/
   spectral-linear-algebra-v0/
   matrix-invariants-v0/
@@ -94,6 +95,7 @@ artifacts/examples/math/
   finite-rings-v0/
   finite-fields-v0/
   finite-algebra-homomorphisms-v0/
+  finite-vector-spaces-v0/
   polynomial-identities-v0/
   counting-v0/
   generating-functions-v0/
@@ -393,6 +395,10 @@ associativity, and checked non-injective inverse counterexamples.
 validates finite group and ring homomorphism replay, kernel/image
 recomputation, quotient/induced-map replay, checked bad-homomorphism
 rejection, and an isomorphism-theorem Lean-horizon row.
+[`finite-vector-spaces-v0`](../../artifacts/examples/math/finite-vector-spaces-v0/)
+validates finite vector-space laws over `F2`, subspace/span replay, linear-map
+kernel/image replay, rank-nullity replay, checked bad-subspace rejection, and a
+vector-space/module Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality
@@ -416,6 +422,10 @@ exact rational metrics, plus checked rejection of an overlarge delta.
 [`linear-algebra-rational-v0`](../../artifacts/examples/math/linear-algebra-rational-v0/)
 validates exact rational matrix-vector replay, LU factorization replay, and a
 row-scaling inconsistency certificate for a singular system.
+[`finite-vector-spaces-v0`](../../artifacts/examples/math/finite-vector-spaces-v0/)
+adds the finite-field linear algebra bridge: vector-space tables over `F2`,
+subspaces, spans, linear maps, kernels, images, rank-nullity, and bad-subspace
+rejection.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of a false residual bound.

@@ -41,7 +41,7 @@ Use these sources as checks against local taste:
 | `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search | General asymptotic enumeration and deep extremal combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
-| `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite-field linear algebra | Spectral theorems, general vector-space theorems, and conditioning/stability need proof or numerical tracks. |
+| `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, subspaces, and finite-field linear algebra | Spectral theorems, general vector-space theorems, and conditioning/stability need proof or numerical tracks. |
 | `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, homomorphism tables, Cayley-table validators | General group/ring/module/category theory belongs in Lean-backed concept rows. |
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates | General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
@@ -247,6 +247,13 @@ one of:
     - Checks: finite group and ring homomorphism replay, kernel/image
       recomputation, quotient/induced-map replay, bad-homomorphism rejection,
       and a general isomorphism-theorem Lean-horizon row.
+25. `artifacts/examples/math/finite-vector-spaces-v0/`
+    - Fields: `linear_algebra`, `abstract_algebra`,
+      `set_theory_and_foundations`.
+    - Checks: finite vector-space table replay over `F2`, subspace/span
+      replay, linear-map kernel/image replay, rank-nullity replay,
+      bad-subspace rejection, and a general vector-space/module Lean-horizon
+      row.
 
 ## Graduation Criteria
 

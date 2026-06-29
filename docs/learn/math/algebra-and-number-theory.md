@@ -13,6 +13,7 @@ Example packs:
 - [finite-groups-v0](../../../artifacts/examples/math/finite-groups-v0/)
 - [finite-rings-v0](../../../artifacts/examples/math/finite-rings-v0/)
 - [finite-algebra-homomorphisms-v0](../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
+- [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
@@ -29,7 +30,9 @@ unit enumeration. The finite-rings pack adds distributivity checks and a `Z/4Z`
 zero-divisor witness. The finite-algebra-homomorphisms pack adds exact
 structure-preserving map checks: group homomorphism replay, kernel/image
 recomputation, quotient and induced-map replay, ring homomorphism replay, and
-bad-homomorphism rejection. The gcd/Bezout pack adds exact divisibility and fixed
+bad-homomorphism rejection. The finite-vector-spaces pack checks finite fields
+acting on finite additive groups, subspaces, spans, linear maps, kernels,
+images, and rank-nullity. The gcd/Bezout pack adds exact divisibility and fixed
 linear Diophantine checks. The number-theory pack adds bounded CRT
 compatibility, quadratic residues, sum-of-two-squares, and Diophantine replay.
 The finite-fields pack adds a complete inverse table for `F_7`, exhaustive
@@ -76,6 +79,19 @@ ker(f) = {0, 2}
 The `finite-algebra-homomorphisms-v0` pack checks `f(a + b) = f(a) + f(b)` for
 every pair, recomputes kernel and image, verifies the quotient by the kernel,
 and checks the same map as a unital ring homomorphism.
+
+For a finite vector-space example, use `F2^2`:
+
+```text
+vectors = 00, 10, 01, 11
+span(10) = {00, 10}
+projection(01) = 00
+projection(11) = 10
+```
+
+The `finite-vector-spaces-v0` pack checks the scalar action laws, recomputes
+the span of `10`, checks the projection is linear, recomputes kernel and image,
+and verifies rank-nullity as `2 = 1 + 1`.
 
 The number-theory bridge starts with a Bezout witness:
 
@@ -138,6 +154,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
@@ -152,5 +169,5 @@ General group, ring, field, module, isomorphism-theorem, quotient, and
 algebraic-number-theory theorems need Lean-backed concept rows. Near-term
 resource gaps are richer polynomial factorization packs and stronger BV/CNF or
 EUF/Alethe evidence for finite group, finite ring, finite homomorphism,
-finite-field, gcd/Diophantine, bounded number-theory, and fixed-degree
-polynomial universal rows.
+finite vector-space, finite-field, gcd/Diophantine, bounded number-theory, and
+fixed-degree polynomial universal rows.

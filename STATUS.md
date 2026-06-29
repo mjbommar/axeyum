@@ -169,6 +169,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite vector space foundations pack landed.** Added
+  [`finite-vector-spaces-v0`](artifacts/examples/math/finite-vector-spaces-v0/README.md)
+  as the exact finite bridge from finite fields to linear algebra. The pack
+  validates `F2^2` vector-space table replay, one-dimensional subspace/span
+  replay, first-coordinate projection as a linear map, kernel/image
+  recomputation, rank-nullity by finite cardinality, checked rejection of a
+  bad subspace, and a general vector-space/module Lean-horizon row. The
+  foundational example-pack validator now checks these rows by exact finite
+  table enumeration.
+
 - **Finite algebra homomorphism foundations pack landed.** Added
   [`finite-algebra-homomorphisms-v0`](artifacts/examples/math/finite-algebra-homomorphisms-v0/README.md)
   as the exact finite bridge from group/ring tables to structure-preserving

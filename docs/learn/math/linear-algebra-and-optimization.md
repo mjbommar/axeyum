@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
+- [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
@@ -27,7 +28,9 @@ The linear path uses exact rational matrices. It replays `A*x = b`, checks
 `L*U = A`, validates a row-scaling inconsistency certificate, checks LP
 feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
 replays finite convexity/threshold and finite-dimensional norm/operator
-examples. The numerical-linear-algebra
+examples. The finite-vector-space slice adds `F2^2`, subspace/span replay,
+linear-map kernel/image replay, rank-nullity by finite cardinality, and
+checked non-subspace rejection. The numerical-linear-algebra
 slice adds exact residual bounds, rational interval boxes for solutions, and a
 one-step Jacobi contraction check. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
@@ -62,8 +65,22 @@ b = [4,-1]
 The validator recomputes `A*x` and checks it equals `b`. For an LU witness, it
 recomputes `L*U = A` and checks triangular shape. For optimization, it evaluates
 each linear inequality at the candidate point and checks Farkas multipliers when
-the pack claims infeasibility. For convexity, it checks exact finite
-inequalities:
+the pack claims infeasibility.
+
+For finite-field linear algebra, encode `F2^2` as four vectors:
+
+```text
+vectors = 00, 10, 01, 11
+span(10) = {00, 10}
+kernel(projection_to_first_coordinate) = {00, 01}
+image(projection_to_first_coordinate) = {00, 10}
+```
+
+The `finite-vector-spaces-v0` validator checks vector-space laws by
+enumeration, recomputes spans, verifies linear-map preservation, and checks
+rank-nullity as `dim(domain) = dim(kernel) + dim(image)`.
+
+For convexity, the validator checks exact finite inequalities:
 
 ```text
 f(x) = x^2
@@ -110,6 +127,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
@@ -126,7 +144,8 @@ read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
 
 ## Horizon
 
-General spectral theorems, rank theorems, Chebyshev-system/Haar-space
-theorems, minimax approximation, conditioning, numerical stability, SDP,
+General spectral theorems, rank theorems, vector-space dimension theorems,
+module theory, Chebyshev-system/Haar-space theorems, minimax approximation,
+conditioning, numerical stability, SDP,
 general convex analysis, and algorithm convergence need proof routes or
 carefully bounded numerical-experiment metadata.

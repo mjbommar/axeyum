@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-vector-spaces-v0",
+  "witnesses": [
+    {
+      "id": "f2-plane",
+      "description": "The two-dimensional vector space F2^2 with XOR addition.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {
+              "00": "00",
+              "10": "00",
+              "01": "00",
+              "11": "00"
+            },
+            "1": {
+              "00": "00",
+              "10": "10",
+              "01": "01",
+              "11": "11"
+            }
+          },
+          "dimension": 2
+        }
+      }
+    },
+    {
+      "id": "x-axis-subspace",
+      "description": "The span of the vector 10 is the x-axis subspace of F2^2.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {
+              "00": "00",
+              "10": "00",
+              "01": "00",
+              "11": "00"
+            },
+            "1": {
+              "00": "00",
+              "10": "10",
+              "01": "01",
+              "11": "11"
+            }
+          },
+          "dimension": 2
+        },
+        "subset": ["00", "10"],
+        "basis": ["10"],
+        "span": ["00", "10"],
+        "subspace_dimension": 1
+      }
+    },
+    {
+      "id": "first-coordinate-projection",
+      "description": "Projection onto the first coordinate as a linear map F2^2 -> F2^2.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "domain": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {
+              "00": "00",
+              "10": "00",
+              "01": "00",
+              "11": "00"
+            },
+            "1": {
+              "00": "00",
+              "10": "10",
+              "01": "01",
+              "11": "11"
+            }
+          },
+          "dimension": 2
+        },
+        "codomain": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {
+              "00": "00",
+              "10": "00",
+              "01": "00",
+              "11": "00"
+            },
+            "1": {
+              "00": "00",
+              "10": "10",
+              "01": "01",
+              "11": "11"
+            }
+          },
+          "dimension": 2
+        },
+        "map": {
+          "00": "00",
+          "10": "10",
+          "01": "00",
+          "11": "10"
+        },
+        "kernel": ["00", "01"],
+        "image": ["00", "10"],
+        "kernel_dimension": 1,
+        "image_dimension": 1,
+        "domain_dimension": 2
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "f2-plane-vector-space",
+      "claim": "The listed finite tables define the vector space F2^2.",
+      "expected_result": "sat",
+      "validation": "finite_vector_space_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["f2-plane"],
+      "notes": "The validator checks the finite field table, additive abelian group table, scalar action laws, distributivity, and listed dimension."
+    },
+    {
+      "id": "subspace-span-replay",
+      "claim": "The listed subset is the span of 10 and is a one-dimensional subspace.",
+      "expected_result": "sat",
+      "validation": "finite_subspace_span_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["x-axis-subspace"],
+      "notes": "The validator checks zero membership, closure under vector addition and scalar multiplication, recomputes the span, and checks the finite dimension."
+    },
+    {
+      "id": "linear-map-kernel-image",
+      "claim": "The first-coordinate projection is linear and has the listed kernel and image.",
+      "expected_result": "sat",
+      "validation": "finite_linear_map_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["first-coordinate-projection"],
+      "notes": "The validator checks addition and scalar preservation, then recomputes kernel and image subsets."
+    },
+    {
+      "id": "rank-nullity-replay",
+      "claim": "The projection satisfies rank-nullity over the finite vector space: 2 = 1 + 1.",
+      "expected_result": "sat",
+      "validation": "finite_rank_nullity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["first-coordinate-projection"],
+      "notes": "The validator derives dimensions from finite subspace cardinalities and checks dim(domain) = dim(kernel) + dim(image)."
+    },
+    {
+      "id": "bad-subspace-rejected",
+      "claim": "The subset {00, 10, 01} is a subspace of F2^2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_subspace_refutation",
+      "proof_status": "checked",
+      "data": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {
+              "00": "00",
+              "10": "00",
+              "01": "00",
+              "11": "00"
+            },
+            "1": {
+              "00": "00",
+              "10": "10",
+              "01": "01",
+              "11": "11"
+            }
+          },
+          "dimension": 2
+        },
+        "subset": ["00", "10", "01"],
+        "failing_sum": ["10", "01"],
+        "actual_sum": "11"
+      },
+      "notes": "The validator recomputes 10 + 01 = 11 and checks that 11 is missing from the claimed subset."
+    },
+    {
+      "id": "general-vector-space-theory-lean-horizon",
+      "claim": "General vector-space and module theorems require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "basis extension, dimension uniqueness, quotient spaces, rank-nullity over arbitrary fields, module theory, and infinite-dimensional vector spaces",
+        "future_checker": "Lean modules for vector spaces, finite-dimensional linear algebra, quotient spaces, modules, and proof reconstruction from finite table certificates"
+      },
+      "notes": "The finite rows are checked by exact table replay; general vector-space and module theory remains a proof-assistant horizon."
+    }
+  ]
+}

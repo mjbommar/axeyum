@@ -997,6 +997,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
           "notes": "Finite group homomorphism tables, kernel/image replay, quotient maps, and first-isomorphism shadows."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Finite vector-space tables, subspaces, spans, linear maps, kernels, images, and rank-nullity replay."
         }
       ],
       "proof_routes": [
@@ -1139,6 +1145,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
           "notes": "Field axioms over small prime fields and composite-modulus counterexamples."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Finite vector-space tables over F2, subspaces, spans, and linear maps."
         }
       ],
       "proof_routes": [
@@ -1167,7 +1179,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-fields-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/finite-fields-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1474,6 +1486,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
           "notes": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Finite vector spaces over F2, subspaces, spans, linear maps, kernels, images, and rank-nullity replay."
         }
       ],
       "proof_routes": [
@@ -1502,7 +1520,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/linear-algebra-rational-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/linear-algebra-rational-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1650,6 +1668,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-simplicial-homology-v0",
           "notes": "Exact Finite Simplicial Homology Checks"
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Exact Finite Vector Space Checks"
         },
         {
           "id": "generating-functions-v0",
@@ -2278,7 +2302,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite-field linear algebra",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, subspaces, and finite-field linear algebra",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -2287,14 +2311,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Matrix identities, LU decomposition, rank, inconsistent systems, finite-field linear algebra"
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, subspaces, and finite-field linear algebra"
       ],
       "example_packs": [
         {
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces, LU replay, rank, inverse, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -2373,6 +2397,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
           "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Exact Finite Vector Space Checks"
         },
         {
           "id": "least-squares-regression-v0",
@@ -3544,6 +3574,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
           "notes": "Finite Topology And Metric-Ball Checks"
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Exact Finite Vector Space Checks"
         },
         {
           "id": "function-composition-v0",

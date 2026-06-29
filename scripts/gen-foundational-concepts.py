@@ -151,6 +151,10 @@ CURRICULUM_MAP = {
                 "finite-algebra-homomorphisms-v0",
                 "Finite group homomorphism tables, kernel/image replay, quotient maps, and first-isomorphism shadows.",
             ),
+            (
+                "finite-vector-spaces-v0",
+                "Finite vector-space tables, subspaces, spans, linear maps, kernels, images, and rank-nullity replay.",
+            ),
         ],
     },
     "rings": {
@@ -170,6 +174,12 @@ CURRICULUM_MAP = {
         "pack": "finite-fields-v0",
         "slice": "Field axioms over small prime fields and composite-modulus counterexamples.",
         "proof": "Finite table replay and BV enumeration.",
+        "extra_packs": [
+            (
+                "finite-vector-spaces-v0",
+                "Finite vector-space tables over F2, subspaces, spans, and linear maps.",
+            ),
+        ],
     },
     "polynomials": {
         "field_ids": ["abstract_algebra", "real_analysis", "complex_analysis"],
@@ -200,6 +210,12 @@ CURRICULUM_MAP = {
         "pack": "linear-algebra-rational-v0",
         "slice": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems.",
         "proof": "Exact replay plus Farkas certificates for infeasible LRA systems.",
+        "extra_packs": [
+            (
+                "finite-vector-spaces-v0",
+                "Finite vector spaces over F2, subspaces, spans, linear maps, kernels, images, and rank-nullity replay.",
+            ),
+        ],
     },
     "calculus": {
         "field_ids": ["real_analysis", "differential_equations_and_dynamical_systems", "numerical_analysis"],
@@ -221,7 +237,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces, LU replay, rank, inverse, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),

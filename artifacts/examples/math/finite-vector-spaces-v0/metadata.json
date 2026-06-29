@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "finite-vector-spaces-v0",
+  "title": "Exact Finite Vector Space Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_fields",
+    "curriculum_groups",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "abstract_algebra",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "fields",
+    "groups"
+  ],
+  "axeyum_fragments": [
+    "finite fields",
+    "finite vector spaces",
+    "finite functions",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/02-structures/groups.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "f2-plane-vector-space",
+    "subspace-span-replay",
+    "linear-map-kernel-image",
+    "rank-nullity-replay",
+    "bad-subspace-rejected",
+    "general-vector-space-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite vector-space tables as deterministic finite-function and equality obligations.",
+    "Replay subspace, span, linear-map, kernel, image, and rank-nullity witnesses through Axeyum model evaluation.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-subspace and bad-linear-map rows once proof routes are promoted.",
+    "Keep general vector-space, module, basis-extension, dimension, quotient-space, and linear-map theorems under Lean horizon until formal routes exist."
+  ]
+}

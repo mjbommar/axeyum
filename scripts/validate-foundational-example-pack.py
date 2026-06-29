@@ -2332,6 +2332,413 @@ def validate_finite_algebra_homomorphisms(expected: dict[str, Any]) -> None:
     require_string("general isomorphism future_checker", data.get("future_checker"))
 
 
+def finite_field_axiom_failures(
+    carrier: list[str],
+    zero: str,
+    one: str | None,
+    add_op: dict[tuple[str, str], str],
+    mul_op: dict[tuple[str, str], str],
+) -> list[str]:
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        return failures
+    if one is None:
+        return ["field requires a multiplicative identity"]
+    if not is_commutative(carrier, mul_op):
+        return ["multiplication is not commutative"]
+    for item in carrier:
+        if item == zero:
+            continue
+        if not any(table_op(mul_op, item, candidate) == one for candidate in carrier):
+            return [f"nonzero element {item} has no multiplicative inverse"]
+    return []
+
+
+def require_finite_field_tables(
+    context: str,
+    value: Any,
+) -> tuple[list[str], str, str, dict[tuple[str, str], str], dict[tuple[str, str], str]]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    carrier, zero, one, add_op, mul_op = require_ring_tables(context, value)
+    if one is None:
+        fail(f"{context}.one is required for a finite field")
+    failures = finite_field_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"{context} is not a finite field: {failures[0]}")
+    return carrier, zero, one, add_op, mul_op
+
+
+def require_scalar_mul_table(
+    context: str,
+    value: Any,
+    scalars: list[str],
+    vectors: list[str],
+) -> dict[tuple[str, str], str]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    scalar_set = set(scalars)
+    vector_set = set(vectors)
+    if set(value) != scalar_set:
+        missing = sorted(scalar_set - set(value))
+        extra = sorted(set(value) - scalar_set)
+        fail(f"{context} must cover exactly the scalars; missing={missing} extra={extra}")
+    scalar_mul: dict[tuple[str, str], str] = {}
+    for scalar in scalars:
+        row = value[scalar]
+        if not isinstance(row, dict):
+            fail(f"{context}.{scalar} must be an object")
+        if set(row) != vector_set:
+            missing = sorted(vector_set - set(row))
+            extra = sorted(set(row) - vector_set)
+            fail(f"{context}.{scalar} must cover vectors; missing={missing} extra={extra}")
+        for vector in vectors:
+            product = row[vector]
+            require_string(f"{context}.{scalar}.{vector}", product)
+            if product not in vector_set:
+                fail(f"{context}.{scalar}.{vector} is outside the vector carrier")
+            scalar_mul[(scalar, vector)] = product
+    return scalar_mul
+
+
+def require_vector_space_tables(
+    context: str,
+    value: Any,
+    scalars: list[str],
+) -> tuple[list[str], str, dict[tuple[str, str], str], dict[tuple[str, str], str], int]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    vectors = require_string_list(f"{context}.vectors", value.get("vectors"))
+    vector_set = set(vectors)
+    zero = value.get("zero")
+    require_string(f"{context}.zero", zero)
+    if zero not in vector_set:
+        fail(f"{context}.zero must be in the vector carrier")
+    add_op = require_binary_table(f"{context}.add", vectors, value.get("add"))
+    scalar_mul = require_scalar_mul_table(f"{context}.scalar_mul", value.get("scalar_mul"), scalars, vectors)
+    dimension = require_nonnegative_int(f"{context}.dimension", value.get("dimension"))
+    return vectors, zero, add_op, scalar_mul, dimension
+
+
+def vector_space_axiom_failures(
+    field_carrier: list[str],
+    field_zero: str,
+    field_one: str,
+    field_add: dict[tuple[str, str], str],
+    field_mul: dict[tuple[str, str], str],
+    vectors: list[str],
+    vector_zero: str,
+    vector_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+) -> list[str]:
+    failures = group_axiom_failures(vectors, vector_zero, vector_add)
+    if failures:
+        return [f"vector addition {failures[0]}"]
+    if not is_commutative(vectors, vector_add):
+        return ["vector addition is not commutative"]
+    for vector in vectors:
+        if table_op(scalar_mul, field_one, vector) != vector:
+            return [f"one scalar action fails for {vector}"]
+        if table_op(scalar_mul, field_zero, vector) != vector_zero:
+            return [f"zero scalar action fails for {vector}"]
+    for scalar in field_carrier:
+        if table_op(scalar_mul, scalar, vector_zero) != vector_zero:
+            return [f"scalar action on zero vector fails for {scalar}"]
+        for left in vectors:
+            for right in vectors:
+                left_sum = table_op(vector_add, left, right)
+                lhs = table_op(scalar_mul, scalar, left_sum)
+                rhs = table_op(vector_add, table_op(scalar_mul, scalar, left), table_op(scalar_mul, scalar, right))
+                if lhs != rhs:
+                    return [f"scalar distributivity over vector addition fails for {(scalar, left, right)}"]
+    for left_scalar in field_carrier:
+        for right_scalar in field_carrier:
+            scalar_sum = table_op(field_add, left_scalar, right_scalar)
+            scalar_product = table_op(field_mul, left_scalar, right_scalar)
+            for vector in vectors:
+                add_lhs = table_op(scalar_mul, scalar_sum, vector)
+                add_rhs = table_op(
+                    vector_add,
+                    table_op(scalar_mul, left_scalar, vector),
+                    table_op(scalar_mul, right_scalar, vector),
+                )
+                if add_lhs != add_rhs:
+                    return [f"scalar addition distributivity fails for {(left_scalar, right_scalar, vector)}"]
+                mul_lhs = table_op(scalar_mul, scalar_product, vector)
+                mul_rhs = table_op(scalar_mul, left_scalar, table_op(scalar_mul, right_scalar, vector))
+                if mul_lhs != mul_rhs:
+                    return [f"scalar multiplication associativity fails for {(left_scalar, right_scalar, vector)}"]
+    return []
+
+
+def finite_dimension_from_size(context: str, field_size: int, size: int) -> int:
+    if field_size <= 1:
+        fail(f"{context} field size must be > 1")
+    dimension = 0
+    current = 1
+    while current < size:
+        current *= field_size
+        dimension += 1
+    if current != size:
+        fail(f"{context} size {size} is not a power of field size {field_size}")
+    return dimension
+
+
+def require_vector_subset(context: str, value: Any, vectors: list[str], *, nonempty: bool = False) -> set[str]:
+    items = require_string_list(context, value, nonempty=nonempty)
+    vector_set = set(vectors)
+    subset = set(items)
+    extra = sorted(subset - vector_set)
+    if extra:
+        fail(f"{context} contains vectors outside the carrier: {extra}")
+    return subset
+
+
+def is_vector_subspace(
+    subset: set[str],
+    field_carrier: list[str],
+    vector_zero: str,
+    vector_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+) -> bool:
+    if vector_zero not in subset:
+        return False
+    for left in subset:
+        for right in subset:
+            if table_op(vector_add, left, right) not in subset:
+                return False
+    for scalar in field_carrier:
+        for vector in subset:
+            if table_op(scalar_mul, scalar, vector) not in subset:
+                return False
+    return True
+
+
+def span_vectors(
+    basis: set[str],
+    field_carrier: list[str],
+    vector_zero: str,
+    vector_add: dict[tuple[str, str], str],
+    scalar_mul: dict[tuple[str, str], str],
+) -> set[str]:
+    span = {vector_zero}
+    for basis_vector in sorted(basis):
+        next_span: set[str] = set()
+        for existing in span:
+            for scalar in field_carrier:
+                scaled = table_op(scalar_mul, scalar, basis_vector)
+                next_span.add(table_op(vector_add, existing, scaled))
+        span = next_span
+    return span
+
+
+def linear_map_failures(
+    field_carrier: list[str],
+    domain_vectors: list[str],
+    domain_add: dict[tuple[str, str], str],
+    domain_scalar_mul: dict[tuple[str, str], str],
+    codomain_add: dict[tuple[str, str], str],
+    codomain_scalar_mul: dict[tuple[str, str], str],
+    mapping: dict[str, str],
+) -> list[str]:
+    for left in domain_vectors:
+        for right in domain_vectors:
+            lhs = mapping[table_op(domain_add, left, right)]
+            rhs = table_op(codomain_add, mapping[left], mapping[right])
+            if lhs != rhs:
+                return [f"additivity fails for {(left, right)}"]
+    for scalar in field_carrier:
+        for vector in domain_vectors:
+            lhs = mapping[table_op(domain_scalar_mul, scalar, vector)]
+            rhs = table_op(codomain_scalar_mul, scalar, mapping[vector])
+            if lhs != rhs:
+                return [f"scalar preservation fails for {(scalar, vector)}"]
+    return []
+
+
+def validate_finite_vector_spaces(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    vector_space = checks["f2-plane-vector-space"]
+    if vector_space["expected_result"] != "sat":
+        fail("f2-plane-vector-space must expect sat")
+    values = single_witness_values(vector_space, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("vector space field", values.get("field"))
+    vectors, vector_zero, vector_add, scalar_mul, listed_dimension = require_vector_space_tables(
+        "vector space",
+        values.get("space"),
+        field_carrier,
+    )
+    failures = vector_space_axiom_failures(
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+        vectors,
+        vector_zero,
+        vector_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"f2-plane-vector-space failed vector-space axioms: {failures[0]}")
+    if finite_dimension_from_size("f2-plane-vector-space", len(field_carrier), len(vectors)) != listed_dimension:
+        fail("f2-plane-vector-space listed dimension is incorrect")
+
+    subspace = checks["subspace-span-replay"]
+    if subspace["expected_result"] != "sat":
+        fail("subspace-span-replay must expect sat")
+    values = single_witness_values(subspace, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("subspace field", values.get("field"))
+    vectors, vector_zero, vector_add, scalar_mul, _ = require_vector_space_tables("subspace space", values.get("space"), field_carrier)
+    failures = vector_space_axiom_failures(
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+        vectors,
+        vector_zero,
+        vector_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"subspace-span-replay ambient space failed axioms: {failures[0]}")
+    subset = require_vector_subset("subspace subset", values.get("subset"), vectors, nonempty=True)
+    if not is_vector_subspace(subset, field_carrier, vector_zero, vector_add, scalar_mul):
+        fail("subspace-span-replay listed subset is not a subspace")
+    basis = require_vector_subset("subspace basis", values.get("basis"), vectors, nonempty=True)
+    expected_span = require_vector_subset("subspace span", values.get("span"), vectors, nonempty=True)
+    computed_span = span_vectors(basis, field_carrier, vector_zero, vector_add, scalar_mul)
+    if computed_span != expected_span:
+        fail("subspace-span-replay listed span is incorrect")
+    if computed_span != subset:
+        fail("subspace-span-replay span does not equal the listed subset")
+    listed_subspace_dimension = require_nonnegative_int("subspace subspace_dimension", values.get("subspace_dimension"))
+    if finite_dimension_from_size("subspace-span-replay", len(field_carrier), len(subset)) != listed_subspace_dimension:
+        fail("subspace-span-replay listed subspace dimension is incorrect")
+
+    linear = checks["linear-map-kernel-image"]
+    if linear["expected_result"] != "sat":
+        fail("linear-map-kernel-image must expect sat")
+    values = single_witness_values(linear, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("linear map field", values.get("field"))
+    domain_vectors, domain_zero, domain_add, domain_scalar_mul, domain_dimension = require_vector_space_tables(
+        "linear map domain",
+        values.get("domain"),
+        field_carrier,
+    )
+    codomain_vectors, codomain_zero, codomain_add, codomain_scalar_mul, _ = require_vector_space_tables(
+        "linear map codomain",
+        values.get("codomain"),
+        field_carrier,
+    )
+    for context, vectors_, zero_, add_, scalar_mul_ in [
+        ("linear map domain", domain_vectors, domain_zero, domain_add, domain_scalar_mul),
+        ("linear map codomain", codomain_vectors, codomain_zero, codomain_add, codomain_scalar_mul),
+    ]:
+        failures = vector_space_axiom_failures(
+            field_carrier,
+            field_zero,
+            field_one,
+            field_add,
+            field_mul,
+            vectors_,
+            zero_,
+            add_,
+            scalar_mul_,
+        )
+        if failures:
+            fail(f"{context} failed vector-space axioms: {failures[0]}")
+    mapping = require_mapping_object("linear map", values.get("map"), domain_vectors, codomain_vectors)
+    failures = linear_map_failures(
+        field_carrier,
+        domain_vectors,
+        domain_add,
+        domain_scalar_mul,
+        codomain_add,
+        codomain_scalar_mul,
+        mapping,
+    )
+    if failures:
+        fail(f"linear-map-kernel-image map is not linear: {failures[0]}")
+    computed_kernel = {vector for vector in domain_vectors if mapping[vector] == codomain_zero}
+    computed_image = set(mapping.values())
+    kernel = require_vector_subset("linear map kernel", values.get("kernel"), domain_vectors)
+    image = require_vector_subset("linear map image", values.get("image"), codomain_vectors)
+    if kernel != computed_kernel:
+        fail("linear-map-kernel-image listed kernel is incorrect")
+    if image != computed_image:
+        fail("linear-map-kernel-image listed image is incorrect")
+    if not is_vector_subspace(kernel, field_carrier, domain_zero, domain_add, domain_scalar_mul):
+        fail("linear-map-kernel-image kernel is not a subspace")
+    if not is_vector_subspace(image, field_carrier, codomain_zero, codomain_add, codomain_scalar_mul):
+        fail("linear-map-kernel-image image is not a subspace")
+
+    rank_nullity = checks["rank-nullity-replay"]
+    if rank_nullity["expected_result"] != "sat":
+        fail("rank-nullity-replay must expect sat")
+    values = single_witness_values(rank_nullity, witnesses)
+    listed_domain_dimension = require_nonnegative_int("rank-nullity domain_dimension", values.get("domain_dimension"))
+    listed_kernel_dimension = require_nonnegative_int("rank-nullity kernel_dimension", values.get("kernel_dimension"))
+    listed_image_dimension = require_nonnegative_int("rank-nullity image_dimension", values.get("image_dimension"))
+    if domain_dimension != listed_domain_dimension:
+        fail("rank-nullity-replay domain dimension disagrees with the domain table")
+    if finite_dimension_from_size("rank-nullity kernel", len(field_carrier), len(kernel)) != listed_kernel_dimension:
+        fail("rank-nullity-replay listed kernel dimension is incorrect")
+    if finite_dimension_from_size("rank-nullity image", len(field_carrier), len(image)) != listed_image_dimension:
+        fail("rank-nullity-replay listed image dimension is incorrect")
+    if listed_domain_dimension != listed_kernel_dimension + listed_image_dimension:
+        fail("rank-nullity-replay dimension equation does not hold")
+
+    bad = checks["bad-subspace-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-subspace-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("bad subspace field", data.get("field"))
+    vectors, vector_zero, vector_add, scalar_mul, _ = require_vector_space_tables("bad subspace space", data.get("space"), field_carrier)
+    failures = vector_space_axiom_failures(
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+        vectors,
+        vector_zero,
+        vector_add,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"bad-subspace-rejected ambient space failed axioms: {failures[0]}")
+    subset = require_vector_subset("bad subspace subset", data.get("subset"), vectors, nonempty=True)
+    if is_vector_subspace(subset, field_carrier, vector_zero, vector_add, scalar_mul):
+        fail("bad-subspace-rejected subset unexpectedly is a subspace")
+    failing_sum = data.get("failing_sum")
+    if not isinstance(failing_sum, list) or len(failing_sum) != 2:
+        fail("bad-subspace-rejected failing_sum must be a two-element list")
+    left, right = failing_sum
+    require_string("bad subspace failing_sum[0]", left)
+    require_string("bad subspace failing_sum[1]", right)
+    if left not in subset or right not in subset:
+        fail("bad-subspace-rejected failing_sum entries must be in the claimed subset")
+    actual_sum = data.get("actual_sum")
+    require_string("bad subspace actual_sum", actual_sum)
+    if table_op(vector_add, left, right) != actual_sum:
+        fail("bad-subspace-rejected actual_sum is incorrect")
+    if actual_sum in subset:
+        fail("bad-subspace-rejected actual_sum unexpectedly belongs to the subset")
+
+    horizon = checks["general-vector-space-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-vector-space-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-vector-space-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general vector-space target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general vector-space future_checker", data.get("future_checker"))
+
+
 def validate_finite_groups(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -10724,6 +11131,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_simplicial_homology(expected)
     if metadata["id"] == "finite-hitting-times-v0":
         validate_finite_hitting_times(expected)
+    if metadata["id"] == "finite-vector-spaces-v0":
+        validate_finite_vector_spaces(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":
         validate_finite_stochastic_kernels(expected)
     if metadata["id"] == "finite-operator-v0":
