@@ -288,6 +288,18 @@ impl Lowerer<'_> {
             BinOp::SaturatingAdd | BinOp::SaturatingSub | BinOp::SaturatingMul => {
                 self.lower_saturating(op, a, b)?
             }
+            // `min`/`max`: select an operand by a signedness-correct comparison.
+            BinOp::Min | BinOp::Max => {
+                let cmp = match (op, signed) {
+                    (BinOp::Min, true) => self.arena.bv_sle(a.term, b.term),
+                    (BinOp::Min, false) => self.arena.bv_ule(a.term, b.term),
+                    (BinOp::Max, true) => self.arena.bv_sge(a.term, b.term),
+                    (BinOp::Max, false) => self.arena.bv_uge(a.term, b.term),
+                    _ => unreachable!(),
+                }
+                .map_err(|e| ir(&e))?;
+                self.arena.ite(cmp, a.term, b.term).map_err(|e| ir(&e))?
+            }
             BinOp::BitAnd => self.arena.bv_and(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitOr => self.arena.bv_or(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitXor => self.arena.bv_xor(a.term, b.term).map_err(|e| ir(&e))?,

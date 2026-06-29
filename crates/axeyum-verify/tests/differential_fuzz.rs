@@ -517,6 +517,86 @@ fn saturating_value_matches_concrete_clamp() {
 }
 
 #[test]
+fn min_max_value_matches_concrete() {
+    // `min`/`max` must select the signedness-correct operand. Assert the
+    // always-false `c != <concrete min/max>`; it must stay reachable (a wrong
+    // selection would make verify wrongly prove safety). Both signednesses.
+    let cfg = SolverConfig::default();
+    let mut rng = Rng(0x_d1d4_0000_0000_0003);
+    let mut checked_u = 0u32;
+    let mut checked_s = 0u32;
+    for _ in 0..600 {
+        let is_max = rng.next() % 2 == 0;
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let signed = rng.next() % 2 == 0;
+        let (a_pat, b_pat, expect, ty) = if signed {
+            let min = -(1i128 << (w - 1));
+            let max = (1i128 << (w - 1)) - 1;
+            let span = (max - min + 1) as u128;
+            let a = min + ((u128::from(rng.next()) % span) as i128);
+            let b = min + ((u128::from(rng.next()) % span) as i128);
+            let e = if is_max { a.max(b) } else { a.min(b) };
+            checked_s += 1;
+            (
+                bits(a, w),
+                bits(b, w),
+                bits(e, w),
+                Ty::Int {
+                    width: w,
+                    signed: true,
+                },
+            )
+        } else {
+            let mask: u128 = (1u128 << w) - 1;
+            let a = u128::from(rng.next()) & mask;
+            let b = u128::from(rng.next()) & mask;
+            let e = if is_max { a.max(b) } else { a.min(b) };
+            checked_u += 1;
+            (
+                a,
+                b,
+                e,
+                Ty::Int {
+                    width: w,
+                    signed: false,
+                },
+            )
+        };
+        let op = if is_max { BinOp::Max } else { BinOp::Min };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: Expr::Binary {
+                        op,
+                        lhs: Box::new(Expr::IntLit { value: a_pat, ty }),
+                        rhs: Box::new(Expr::IntLit { value: b_pat, ty }),
+                    },
+                },
+                Stmt::Assert(Expr::Binary {
+                    op: BinOp::Ne,
+                    lhs: Box::new(Expr::Var("c".to_string())),
+                    rhs: Box::new(Expr::IntLit { value: expect, ty }),
+                }),
+            ],
+        };
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong min/max value: {op:?} signed={signed} (w{w}) expected {expect}, got {verdict:?}"
+        );
+    }
+    assert!(
+        checked_u >= 10 && checked_s >= 10,
+        "min/max fuzz under-exercised (u={checked_u}, s={checked_s})"
+    );
+}
+
+#[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index
     // panics (OOB); verify must then never return Verified.

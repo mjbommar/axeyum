@@ -78,3 +78,36 @@ fn saturating_is_not_strictly_increasing_finds_counterexample() {
         other => panic!("saturating_is_not_strictly_increasing must find a cex, got {other:?}"),
     }
 }
+
+/// Safe: `x.min(10)` is always ≤ 10 (a clamp); the assert always holds.
+#[verify]
+fn min_clamps(x: u8) -> u8 {
+    let r: u8 = x.min(10);
+    assert!(r <= 10);
+    r
+}
+
+#[test]
+fn min_clamps_verifies() {
+    match min_clamps__axeyum_verdict() {
+        Verdict::Verified { certified, .. } => assert!(certified, "min_clamps proof must re-check"),
+        other => panic!("min_clamps must verify, got {other:?}"),
+    }
+}
+
+/// Bug: `x.max(10)` is ≥ 10, never < 10, so `r < 10` is unsatisfiable as a true
+/// branch — but asserting it is reachably false for every `x` (e.g. x=0 ⇒ r=10).
+#[verify(expect_bug)]
+fn max_is_never_below_floor(x: u8) -> u8 {
+    let r: u8 = x.max(10);
+    assert!(r < 10);
+    r
+}
+
+#[test]
+fn max_is_never_below_floor_finds_counterexample() {
+    match max_is_never_below_floor__axeyum_verdict() {
+        Verdict::Counterexample { .. } => {}
+        other => panic!("max_is_never_below_floor must find a cex, got {other:?}"),
+    }
+}

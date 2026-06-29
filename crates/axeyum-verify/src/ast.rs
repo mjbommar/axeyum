@@ -61,6 +61,10 @@ pub enum BinOp {
     SaturatingSub,
     /// `saturating_mul` — clamps to the type's bound on overflow; never panics.
     SaturatingMul,
+    /// `a.min(b)` — the smaller operand (signedness from operand type).
+    Min,
+    /// `a.max(b)` — the larger operand (signedness from operand type).
+    Max,
     /// `/` (checked for divide-by-zero; signedness from operand type).
     Div,
     /// `%` (checked for modulo-by-zero).

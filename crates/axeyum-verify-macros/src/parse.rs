@@ -1157,6 +1157,8 @@ impl Lowerer {
             "saturating_add" => Some("SaturatingAdd"),
             "saturating_sub" => Some("SaturatingSub"),
             "saturating_mul" => Some("SaturatingMul"),
+            "min" => Some("Min"),
+            "max" => Some("Max"),
             _ => None,
         } {
             if mc.args.len() != 1 {
