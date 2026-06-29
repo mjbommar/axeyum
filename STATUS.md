@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-product-measure end-to-end lesson landed.** Added
+  [`finite-product-measure-end-to-end.md`](docs/learn/math/finite-product-measure-end-to-end.md)
+  as the learner-facing trace for the finite-product-measure pack:
+  Cartesian-product probability tables, rectangle probabilities, marginals,
+  finite Fubini replay, checked bad product-probability rejection, and the
+  Fubini/Tonelli Lean horizon. The lesson is linked from the math learning
+  index plus the probability/statistics and analysis/topology paths.
+
 - **Finite-integration end-to-end lesson landed.** Added
   [`finite-integration-end-to-end.md`](docs/learn/math/finite-integration-end-to-end.md)
   as the learner-facing trace for the finite-integration pack: finite

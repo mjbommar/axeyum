@@ -240,6 +240,9 @@ sum_x P(x) * sum_y f(x,y) Q(y) = 3
 sum_y Q(y) * sum_x f(x,y) P(x) = 3
 ```
 
+For a fuller focused trace, read
+[End To End: Finite Product Measure](finite-product-measure-end-to-end.md).
+
 ## Run It
 
 From the repository root:

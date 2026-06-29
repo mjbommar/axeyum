@@ -197,6 +197,10 @@ validated pack data and the repo-root command that replays it.
 - [Finite Integration](finite-integration-end-to-end.md): follows finite
   simple-function integrals, indicator integrals, integral linearity, checked
   bad-expectation rejection, and the Lebesgue-integration Lean horizon.
+- [Finite Product Measure](finite-product-measure-end-to-end.md): follows
+  Cartesian-product probability tables, rectangle probabilities, marginals,
+  finite Fubini replay, checked bad product-probability rejection, and the
+  Fubini/Tonelli Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
