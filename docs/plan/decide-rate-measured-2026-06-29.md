@@ -46,6 +46,20 @@ Ackermann, not a missing string bound and not a soundness hole.** This is exactl
 the frontier's "uninterpreted-sort IR keystone" / "e-graph + CDCL(T) combination"
 (Track 1, P1.4/P1.5) — a deep, soundness-critical core change.
 
+## Landed this session (robustness, not yet a decide-rate gain)
+
+- **`check_auto` no longer hard-errors on a valid QF_UF instance.** `ite3`
+  (`(declare-sort U) … (not (= x (ite a (ite a x y) (ite (not a) x y))))`) used to
+  return `Err("term has sort (Uninterpreted 0) that the pure-Rust BV backend
+  cannot bit-blast")` — the e-graph path declined (it treats the uninterpreted-sort
+  `ite` opaquely, so the `x ≠ ite(…)` candidate fails replay) and the final BV
+  fallback then errored. The fallback now catches *that specific error* (only when
+  `features.has_uninterpreted_sort`) and returns an honest `Unknown`. Decisions are
+  untouched (it is the `Err` arm), so decide-rate is unchanged (QF_UF 37/48,
+  DISAGREE = 0, re-measured) — but a consumer calling `check_auto` on such an
+  instance no longer gets a hard error. The actual decide-rate gain (`ite3` is
+  trivially `unsat`) needs the next step.
+
 ## Recommended next core step (focused session)
 
 1. **Uninterpreted-sort Ackermann in the BV/auto route** so `ite3`-style

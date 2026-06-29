@@ -1826,10 +1826,31 @@ fn check_auto_dispatch(
     }
 
     let mut backend = SatBvBackend::new();
-    let result =
-        check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config)?;
-    with_recorder(rec, |t| t.record_result("qf-bv", &result));
-    Ok(result)
+    match check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config) {
+        Ok(result) => {
+            with_recorder(rec, |t| t.record_result("qf-bv", &result));
+            Ok(result)
+        }
+        // The pure-BV bit-blaster cannot represent an uninterpreted carrier sort.
+        // When such a term reaches this fallback (the e-graph path above already
+        // declined — e.g. an `ite`/`=` over an uninterpreted sort whose semantics
+        // the congruence closure did not capture) the bit-blaster hard-errors.
+        // Convert *only that error* to an honest `Unknown`: `check_auto` must never
+        // error on a valid quantifier-free instance. Decisions are unaffected (this
+        // is the `Err` arm), so decide-rate cannot regress; other errors propagate.
+        Err(e) if features.has_uninterpreted_sort => {
+            let result = CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!(
+                    "uninterpreted-sort term not bit-blastable by the pure-BV backend \
+                     (no Ackermann route engaged): {e}"
+                ),
+            });
+            with_recorder(rec, |t| t.record_result("qf-bv-uninterpreted-decline", &result));
+            Ok(result)
+        }
+        Err(e) => Err(e),
+    }
 }
 
 fn dispatch_uf_routes(
