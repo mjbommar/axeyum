@@ -36,3 +36,25 @@ tensor space to a codomain vector space.
 
 This is only a finite universal-property shadow. The full universal property
 over arbitrary modules remains Lean-horizon.
+
+## Bad Bilinear Certificate
+
+For the rejected map, exact replay computes:
+
+```text
+10 + 01 = 11
+beta(11,1) = 00
+beta(10,1) = 10
+beta(01,1) = 01
+10 + 01 = 11
+```
+
+Left additivity of a bilinear map would require:
+
+```text
+beta(10 + 01, 1) = beta(10,1) + beta(01,1)
+```
+
+The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
+The resource regression checks that Axeyum emits independently rechecked
+`UnsatAletheProof` evidence with no trusted reduction step.

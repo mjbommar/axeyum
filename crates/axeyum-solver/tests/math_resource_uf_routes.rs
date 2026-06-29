@@ -44,6 +44,9 @@ const FINITE_MODULES_BAD_SUBMODULE: &str = include_str!(
 const FINITE_IDEALS_BAD_IDEAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2"
 );
+const FINITE_TENSOR_PRODUCTS_BAD_BILINEAR: &str = include_str!(
+    "../../../artifacts/examples/math/finite-tensor-products-v0/smt2/bad-bilinear-left-additivity-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -136,6 +139,14 @@ fn finite_modules_bad_submodule_emits_checked_alethe() {
 #[test]
 fn finite_ideals_bad_ideal_emits_checked_alethe() {
     assert_resource_euf_alethe("finite-ideals-v0 bad ideal", FINITE_IDEALS_BAD_IDEAL);
+}
+
+#[test]
+fn finite_tensor_products_bad_bilinear_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-tensor-products-v0 bad bilinear map",
+        FINITE_TENSOR_PRODUCTS_BAD_BILINEAR,
+    );
 }
 
 fn assert_resource_euf_alethe(label: &str, smt2: &str) {

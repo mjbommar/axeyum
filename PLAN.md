@@ -92,10 +92,10 @@ Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, and finite monoids.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
-dual spaces, finite modules, and finite ideals now add secondary
-equality-heavy promotions for bad antisymmetry, bad nonbijection,
-bad subspace-closure, covector-additivity, submodule scalar-closure, and
-ideal additive-closure rows.
+dual spaces, finite modules, finite ideals, and finite tensor products now add
+secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,
+bad subspace-closure, covector-additivity, submodule scalar-closure, ideal
+additive-closure, and bilinear left-additivity rows.
 Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
@@ -120,7 +120,8 @@ trace-square moment row, with affine geometry now promoted for its bad
 distance-preservation row and inner-product spaces now promoted for its bad
 negative-norm row, and spectral linear algebra now promoted for its bad
 eigenpair row, with matrix invariants now promoted for its bad characteristic
-polynomial row. The first secondary QF_LRA/Farkas target set is now covered;
+polynomial row. The first secondary QF_LRA/Farkas target set is now covered,
+and the initial equality-heavy QF_UF/Alethe secondary set is now covered;
 prefer the next proof-frontier lane or equality-heavy pack that can carry a
 small checked certificate and a resource-backed regression.
 

@@ -196,7 +196,8 @@ validated pack data and the repo-root command that replays it.
   rejection.
 - [Finite Tensor Products](finite-tensor-products-end-to-end.md): follows
   finite tensor-basis replay, bilinear-map checks, factorization through a
-  tensor map, Kronecker-product replay, and checked bad-bilinear rejection.
+  tensor map, Kronecker-product replay, and checked QF_UF/Alethe bad-bilinear
+  rejection.
 - [Finite Groups](finite-groups-end-to-end.md): follows `Z/4Z`
   Cayley-table replay, inverse-table replay, and checked rejection of
   subtraction modulo `3` as a group operation, plus a QF_UF/Alethe operation

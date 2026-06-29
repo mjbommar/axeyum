@@ -63,10 +63,10 @@ pairing, annihilator recomputation, transpose maps, and checked QF_UF/Alethe
 bad-covector refutations. The finite-modules pack checks finite rings acting
 on finite additive groups, generated submodules, module homomorphisms,
 quotient module tables, kernels, images, and checked QF_UF/Alethe
-bad-submodule refutations. The
-finite-tensor-products pack checks finite tensor-product basis/dimension
-replay, bilinear maps, factorization through a tensor map, Kronecker products,
-and bad-bilinear-map refutations. The gcd/Bezout
+bad-submodule refutations. The finite-tensor-products pack checks finite
+tensor-product basis/dimension replay, bilinear maps, factorization through a
+tensor map, Kronecker products, and checked QF_UF/Alethe bad-bilinear-map
+refutations. The gcd/Bezout
 pack adds exact divisibility and fixed linear Diophantine checks. The
 number-theory pack adds bounded CRT
 compatibility, quadratic residues, sum-of-two-squares, and Diophantine replay.
@@ -255,7 +255,8 @@ beta(11, 1) = 11
 The `finite-tensor-products-v0` pack checks the listed basis tensors span the
 finite tensor space, verifies bilinearity of `beta(v,a) = a*v`, checks a
 finite universal-factorization shadow through a linear projection, recomputes
-a fixed Kronecker product over `F2`, and rejects a malformed bilinear table.
+a fixed Kronecker product over `F2`, and links a malformed bilinear table to
+checked QF_UF/Alethe evidence.
 
 The number-theory bridge starts with a Bezout witness:
 

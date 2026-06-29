@@ -50,12 +50,12 @@ orthogonal projection replay, Gram-Schmidt orthogonalization replay, and
 QF_LRA/Farkas rejection of an indefinite bilinear form. The finite-module
 slice adds ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
-tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product slice
-adds bilinear maps, finite universal-factorization shadows, Kronecker products,
-and bad-bilinear-map rejection over `F2`. The numerical-linear-algebra slice
-adds exact residual bounds, rational interval boxes for solutions, and a
-one-step Jacobi contraction check, with a checked QF_LRA/Farkas bad-bound
-certificate. The finite random-matrix slice adds exact
+tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product
+slice adds bilinear maps, finite universal-factorization shadows, Kronecker
+products, and checked QF_UF/Alethe bad-bilinear-map rejection over `F2`. The
+numerical-linear-algebra slice adds exact residual bounds, rational interval
+boxes for solutions, and a one-step Jacobi contraction check, with a checked
+QF_LRA/Farkas bad-bound certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -179,7 +179,8 @@ beta(11,1) = 11
 
 The `finite-tensor-products-v0` validator checks bilinearity in both
 arguments, verifies the listed tensor basis spans `F2^2 tensor F2`, checks a
-linear projection factorization, and recomputes a fixed Kronecker product.
+linear projection factorization, recomputes a fixed Kronecker product, and
+links a failed left-additivity row to checked QF_UF/Alethe evidence.
 
 For convexity, the validator checks exact finite inequalities:
 

@@ -3751,6 +3751,21 @@ def validate_finite_tensor_products(expected: dict[str, Any]) -> None:
         fail("bad-bilinear-map-rejected actual_sum is incorrect")
     if claimed == actual_sum:
         fail("bad-bilinear-map-rejected malformed map unexpectedly satisfies the documented additivity row")
+    alethe_claim = data.get("alethe_left_additivity_claim")
+    require_string("bad bilinear alethe_left_additivity_claim", alethe_claim)
+    if alethe_claim != f"beta({left_a}+{left_b},{right}) = beta({left_a},{right})+beta({left_b},{right})":
+        fail("bad-bilinear-map-rejected must document the Alethe left-additivity claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad bilinear smt2_artifact", smt2_artifact)
+    check_source("bad bilinear smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad bilinear proof_regression", proof_regression)
+    if "finite_tensor_products_bad_bilinear_emits_checked_alethe" not in proof_regression:
+        fail("bad-bilinear-map-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad bilinear certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-bilinear-map-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-tensor-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

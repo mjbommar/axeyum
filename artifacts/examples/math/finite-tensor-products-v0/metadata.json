@@ -29,6 +29,7 @@
     "finite bilinear maps",
     "finite functions",
     "Bool / enumeration",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0",
@@ -40,7 +41,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "tensor-product-basis-replay",
@@ -53,7 +55,7 @@
   "graduation_criteria": [
     "Encode fixed finite tensor-product, bilinear-map, and Kronecker-product rows as deterministic finite-function and finite-matrix obligations.",
     "Replay bilinear laws, factorization through the tensor table, and finite matrix rows through Axeyum model evaluation.",
-    "Add emitted EUF/Alethe or finite-table certificates for bad-bilinear-map rows once proof routes are promoted.",
+    "Route bad finite bilinear-map left-additivity conflicts through checked QF_UF/Alethe evidence once exact evaluation replay identifies the failing pair.",
     "Keep general tensor products, universal properties over arbitrary modules, multilinear algebra, exterior/symmetric powers, and homological algebra under Lean horizon until formal routes exist."
   ]
 }

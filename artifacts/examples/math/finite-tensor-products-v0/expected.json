@@ -394,9 +394,13 @@
           "right": "1",
           "claimed": "00",
           "actual_sum": "11"
-        }
+        },
+        "alethe_left_additivity_claim": "beta(10+01,1) = beta(10,1)+beta(01,1)",
+        "smt2_artifact": "artifacts/examples/math/finite-tensor-products-v0/smt2/bad-bilinear-left-additivity-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_tensor_products_bad_bilinear_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks beta(10 + 01, 1) differs from beta(10,1) + beta(01,1)."
+      "notes": "The validator checks beta(10 + 01, 1) differs from beta(10,1) + beta(01,1); the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed left-additivity equality claim."
     },
     {
       "id": "general-tensor-theory-lean-horizon",

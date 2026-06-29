@@ -11,8 +11,13 @@ It checks:
 - a finite universal-property shadow, where a bilinear scalar map factors
   through the tensor map by a linear projection;
 - a fixed Kronecker-product matrix over `F2`;
-- checked rejection of a malformed bilinear map;
+- checked rejection of a malformed bilinear map with QF_UF/Alethe evidence;
 - Lean-horizon metadata for general tensor and multilinear algebra.
+
+For the bad bilinear row, exact replay computes `10 + 01 = 11`,
+`beta(11,1) = 00`, and `beta(10,1) + beta(01,1) = 11`. The linked `QF_UF`
+artifact refutes the fixed left-additivity equality and checks the resulting
+`UnsatAletheProof` independently.
 
 Run from the repository root:
 

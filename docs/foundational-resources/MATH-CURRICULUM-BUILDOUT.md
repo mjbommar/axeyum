@@ -430,8 +430,8 @@ row.
 `finite-tensor-products-v0` now adds the finite multilinear-algebra bridge:
 `F2^2 tensor F2` basis/dimension replay, finite bilinear-map table replay,
 universal-factorization shadow through a linear map, Kronecker-product matrix
-replay, checked bad-bilinear-map rejection, and a general tensor-theory
-Lean-horizon row.
+replay, checked QF_UF/Alethe bad-bilinear-map rejection, and a general
+tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the finite quotient-ring bridge with `Z/6Z`
 ideal replay, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring table replay, checked QF_UF/Alethe
@@ -1242,8 +1242,8 @@ non-submodule rejection, and a module-theory Lean-horizon row.
 `finite-tensor-products-v0` now adds the exact finite multilinear-algebra
 bridge over `F2`: tensor-product basis/dimension replay, bilinear-map table
 replay, universal-factorization shadow through a linear map, Kronecker-product
-matrix replay, checked bad-bilinear-map rejection, and a tensor-theory
-Lean-horizon row.
+matrix replay, checked QF_UF/Alethe bad-bilinear-map rejection, and a
+tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the exact finite quotient-ring bridge over `Z/6Z`:
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring tables, checked QF_UF/Alethe non-ideal
