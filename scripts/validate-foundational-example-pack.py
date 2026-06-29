@@ -3496,6 +3496,132 @@ def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-residual-bound-rejected claimed bound unexpectedly holds")
 
 
+def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list of vectors")
+    vectors = [
+        require_fraction_vector(f"{context}[{index}]", item)
+        for index, item in enumerate(value)
+    ]
+    width = len(vectors[0])
+    for index, vector in enumerate(vectors):
+        if len(vector) != width:
+            fail(f"{context}[{index}] must have width {width}")
+    return vectors
+
+
+def dot_product(left: list[Fraction], right: list[Fraction]) -> Fraction:
+    require_same_vector_length("dot product", left, right)
+    return sum((left_item * right_item for left_item, right_item in zip(left, right)), Fraction(0))
+
+
+def scalar_vec(scalar: Fraction, vector: list[Fraction]) -> list[Fraction]:
+    return [scalar * item for item in vector]
+
+
+def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    eigenpair = checks["symmetric-eigenpair-witness"]
+    if eigenpair["expected_result"] != "sat":
+        fail("symmetric-eigenpair-witness must expect sat")
+    values = single_witness_values(eigenpair, witnesses)
+    matrix = require_fraction_matrix("eigenpair matrix", values.get("matrix"))
+    eigenvalue = require_fraction("eigenpair eigenvalue", values.get("eigenvalue"))
+    eigenvector = require_fraction_vector("eigenpair eigenvector", values.get("eigenvector"))
+    image = require_fraction_vector("eigenpair image", values.get("image"))
+    require_mat_vec_shape("eigenpair", matrix, eigenvector)
+    if mat_vec(matrix, eigenvector) != image:
+        fail("symmetric-eigenpair-witness image does not equal A*v")
+    if scalar_vec(eigenvalue, eigenvector) != image:
+        fail("symmetric-eigenpair-witness image does not equal lambda*v")
+
+    basis = checks["orthogonal-eigenbasis-witness"]
+    if basis["expected_result"] != "sat":
+        fail("orthogonal-eigenbasis-witness must expect sat")
+    values = single_witness_values(basis, witnesses)
+    matrix = require_fraction_matrix("orthogonal basis matrix", values.get("matrix"))
+    eigenvalues = require_fraction_vector("orthogonal basis eigenvalues", values.get("eigenvalues"))
+    eigenvectors = require_fraction_vector_list("orthogonal basis eigenvectors", values.get("eigenvectors"))
+    norm_squared = require_fraction_vector("orthogonal basis norm_squared", values.get("norm_squared"))
+    dot_products = require_fraction_vector("orthogonal basis dot_products", values.get("dot_products"))
+    if len(eigenvalues) != len(eigenvectors):
+        fail("orthogonal-eigenbasis-witness eigenvalue/vector counts differ")
+    if len(norm_squared) != len(eigenvectors):
+        fail("orthogonal-eigenbasis-witness norm_squared count differs")
+    require_square_matrix("orthogonal basis matrix", matrix)
+    for index, vector in enumerate(eigenvectors):
+        require_mat_vec_shape("orthogonal eigenvector", matrix, vector)
+        if mat_vec(matrix, vector) != scalar_vec(eigenvalues[index], vector):
+            fail(f"orthogonal-eigenbasis-witness vector {index} is not an eigenvector")
+        if dot_product(vector, vector) != norm_squared[index]:
+            fail(f"orthogonal-eigenbasis-witness norm_squared {index} is incorrect")
+    actual_dots: list[Fraction] = []
+    for left_index in range(len(eigenvectors)):
+        for right_index in range(left_index + 1, len(eigenvectors)):
+            actual_dots.append(dot_product(eigenvectors[left_index], eigenvectors[right_index]))
+    if actual_dots != dot_products:
+        fail("orthogonal-eigenbasis-witness dot_products are incorrect")
+    if any(dot != 0 for dot in actual_dots):
+        fail("orthogonal-eigenbasis-witness eigenvectors must be pairwise orthogonal")
+
+    rayleigh = checks["rayleigh-quotient-witness"]
+    if rayleigh["expected_result"] != "sat":
+        fail("rayleigh-quotient-witness must expect sat")
+    values = single_witness_values(rayleigh, witnesses)
+    matrix = require_fraction_matrix("Rayleigh matrix", values.get("matrix"))
+    vector = require_fraction_vector("Rayleigh vector", values.get("rayleigh_vector"))
+    numerator = require_fraction("Rayleigh numerator", values.get("rayleigh_numerator"))
+    denominator = require_fraction("Rayleigh denominator", values.get("rayleigh_denominator"))
+    quotient = require_fraction("Rayleigh quotient", values.get("rayleigh_quotient"))
+    require_mat_vec_shape("Rayleigh", matrix, vector)
+    image = mat_vec(matrix, vector)
+    if dot_product(vector, image) != numerator:
+        fail("rayleigh-quotient-witness numerator is incorrect")
+    if dot_product(vector, vector) != denominator:
+        fail("rayleigh-quotient-witness denominator is incorrect")
+    if denominator == 0:
+        fail("rayleigh-quotient-witness denominator must be nonzero")
+    if numerator / denominator != quotient:
+        fail("rayleigh-quotient-witness quotient is incorrect")
+
+    decomposition = checks["spectral-decomposition-witness"]
+    if decomposition["expected_result"] != "sat":
+        fail("spectral-decomposition-witness must expect sat")
+    values = single_witness_values(decomposition, witnesses)
+    matrix = require_fraction_matrix("spectral target matrix", values.get("matrix"))
+    eigenvector_matrix = require_fraction_matrix("spectral eigenvector_matrix", values.get("eigenvector_matrix"))
+    diagonal = require_fraction_matrix("spectral diagonal", values.get("diagonal"))
+    inverse = require_fraction_matrix("spectral inverse_eigenvector_matrix", values.get("inverse_eigenvector_matrix"))
+    require_mat_mul_shape("spectral P*D", eigenvector_matrix, diagonal)
+    require_mat_mul_shape("spectral P*D*P^-1", mat_mul(eigenvector_matrix, diagonal), inverse)
+    if mat_mul(mat_mul(eigenvector_matrix, diagonal), inverse) != matrix:
+        fail("spectral-decomposition-witness P*D*P^-1 does not reconstruct A")
+    identity = values.get("identity_check")
+    if identity is not None:
+        identity_matrix = require_fraction_matrix("spectral identity_check", identity)
+        if mat_mul(eigenvector_matrix, inverse) != identity_matrix:
+            fail("spectral-decomposition-witness P*P^-1 identity_check is incorrect")
+
+    bad = checks["bad-eigenpair-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-eigenpair-rejected must expect unsat")
+    data = bad.get("data", {})
+    matrix = require_fraction_matrix("bad eigenpair matrix", data.get("matrix"))
+    eigenvalue = require_fraction("bad eigenpair claimed_eigenvalue", data.get("claimed_eigenvalue"))
+    eigenvector = require_fraction_vector("bad eigenpair eigenvector", data.get("eigenvector"))
+    image = require_fraction_vector("bad eigenpair actual_image", data.get("actual_image"))
+    claimed_scaled = require_fraction_vector("bad eigenpair claimed_scaled", data.get("claimed_scaled"))
+    require_mat_vec_shape("bad eigenpair", matrix, eigenvector)
+    if mat_vec(matrix, eigenvector) != image:
+        fail("bad-eigenpair-rejected actual_image is incorrect")
+    if scalar_vec(eigenvalue, eigenvector) != claimed_scaled:
+        fail("bad-eigenpair-rejected claimed_scaled is incorrect")
+    if image == claimed_scaled:
+        fail("bad-eigenpair-rejected claimed eigenpair unexpectedly holds")
+
+
 def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:
     pair = require_fraction_vector(context, value)
     if len(pair) != 2:
@@ -4891,6 +5017,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_relations_functions(expected)
     if metadata["id"] == "sequence-limit-shadow-v0":
         validate_sequence_limit_shadow(expected)
+    if metadata["id"] == "spectral-linear-algebra-v0":
+        validate_spectral_linear_algebra(expected)
     if metadata["id"] == "linear-algebra-rational-v0":
         validate_linear_algebra_rational(expected)
 

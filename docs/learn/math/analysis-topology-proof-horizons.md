@@ -20,6 +20,7 @@ Example packs:
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
+- [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 
 ## What Axeyum Checks
 
@@ -28,7 +29,9 @@ metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, bounded sequence tails and prefixes, polynomial derivative identities,
 bounded recurrence traces, finite invariant witnesses, matrix operator bounds,
 Chebyshev recurrence values at fixed points, and finite stochastic transition
-systems.
+systems. The spectral-linear-algebra pack adds exact finite eigenpair,
+orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
+a fixed rational matrix.
 
 This is the useful boundary for learners: Axeyum can check a concrete finite
 model and tell you exactly why it passes.
@@ -100,6 +103,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
 
 For a fuller trace through bounded dynamics and finite-dimensional operator
@@ -112,4 +116,5 @@ theorem, fundamental theorem of calculus, Cauchy completeness, monotone
 convergence, compactness, connectedness, Lebesgue measure, integration,
 convergence theorems, ODE existence and uniqueness, Banach/Hilbert space
 theorems, compact operators, countably infinite Markov chains, mixing-time
-bounds, and general Chebyshev spaces remain Lean-horizon material.
+bounds, general Chebyshev spaces, and infinite-dimensional spectral theory
+remain Lean-horizon material.

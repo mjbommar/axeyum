@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "pack_id": "spectral-linear-algebra-v0",
+  "witnesses": [
+    {
+      "id": "symmetric-two-by-two-spectrum",
+      "description": "Exact spectral witnesses for A = [[2,1],[1,2]].",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "eigenvalue": "3",
+        "eigenvector": ["1", "1"],
+        "image": ["3", "3"],
+        "eigenvalues": ["3", "1"],
+        "eigenvectors": [
+          ["1", "1"],
+          ["1", "-1"]
+        ],
+        "norm_squared": ["2", "2"],
+        "dot_products": ["0"],
+        "rayleigh_vector": ["1", "1"],
+        "rayleigh_numerator": "6",
+        "rayleigh_denominator": "2",
+        "rayleigh_quotient": "3",
+        "eigenvector_matrix": [
+          ["1", "1"],
+          ["1", "-1"]
+        ],
+        "diagonal": [
+          ["3", "0"],
+          ["0", "1"]
+        ],
+        "inverse_eigenvector_matrix": [
+          ["1/2", "1/2"],
+          ["1/2", "-1/2"]
+        ],
+        "identity_check": [
+          ["1", "0"],
+          ["0", "1"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "symmetric-eigenpair-witness",
+      "claim": "The vector [1,1] is an eigenvector of [[2,1],[1,2]] with eigenvalue 3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_eigenpair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-spectrum"],
+      "notes": "The validator recomputes A*v and checks it equals lambda*v exactly."
+    },
+    {
+      "id": "orthogonal-eigenbasis-witness",
+      "claim": "The listed eigenvectors form an orthogonal eigenbasis for the fixed symmetric matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_orthogonal_eigenbasis_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-spectrum"],
+      "notes": "The validator checks both eigenpairs, squared norms, and pairwise dot products exactly."
+    },
+    {
+      "id": "rayleigh-quotient-witness",
+      "claim": "The Rayleigh quotient of [1,1] for the fixed symmetric matrix is 3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rayleigh_quotient_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-spectrum"],
+      "notes": "The validator recomputes v^T*A*v, v^T*v, and the quotient exactly."
+    },
+    {
+      "id": "spectral-decomposition-witness",
+      "claim": "The listed P*D*P^-1 decomposition reconstructs the fixed matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_spectral_decomposition_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-spectrum"],
+      "notes": "The validator recomputes P*D*P^-1 and P*P^-1 exactly."
+    },
+    {
+      "id": "bad-eigenpair-rejected",
+      "claim": "The vector [1,1] is not an eigenvector with claimed eigenvalue 2 for the fixed matrix.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_eigenpair_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "claimed_eigenvalue": "2",
+        "eigenvector": ["1", "1"],
+        "actual_image": ["3", "3"],
+        "claimed_scaled": ["2", "2"]
+      },
+      "notes": "The validator recomputes A*v = [3,3] and rejects the claimed scaled vector [2,2]."
+    }
+  ]
+}

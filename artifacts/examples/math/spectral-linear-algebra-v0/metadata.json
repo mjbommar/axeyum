@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "spectral-linear-algebra-v0",
+  "title": "Exact Finite Spectral Linear Algebra Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_functional_analysis_and_operator_theory",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "functional_analysis_and_operator_theory",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite-dimensional linear algebra",
+    "finite matrices",
+    "LRA (exact rationals)",
+    "NRA shadow"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+  ],
+  "expected_results": [
+    "symmetric-eigenpair-witness",
+    "orthogonal-eigenbasis-witness",
+    "rayleigh-quotient-witness",
+    "spectral-decomposition-witness",
+    "bad-eigenpair-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode fixed eigenpair, Rayleigh quotient, and spectral-decomposition claims as deterministic exact-rational obligations.",
+    "Replay SAT witnesses through Axeyum model evaluation over finite matrices.",
+    "Add characteristic-polynomial and interval-eigenvalue checks before claiming broader spectral coverage.",
+    "Keep general spectral theorems, compact-operator theory, and numerical eigenvalue algorithms marked Lean/numerical horizon."
+  ]
+}

@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Spectral linear algebra foundations pack landed.** Added
+  [`spectral-linear-algebra-v0`](artifacts/examples/math/spectral-linear-algebra-v0/README.md)
+  as the first exact finite spectral-linear-algebra resource. The pack
+  validates exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh
+  quotient replay, spectral decomposition reconstruction, and checked
+  rejection of a false eigenpair. The foundational example-pack validator now
+  checks exact matrix-vector products, scalar-vector products, dot products,
+  Rayleigh quotients, and `P*D*P^-1` reconstruction over rational matrices.
+
 - **Exact statistical tests foundations pack landed.** Added
   [`exact-statistical-tests-v0`](artifacts/examples/math/exact-statistical-tests-v0/README.md)
   as the first exact finite statistical-test resource. The pack validates a

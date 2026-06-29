@@ -76,6 +76,7 @@ artifacts/examples/math/
   calculus-algebraic-shadow-v0/
   linear-algebra-rational-v0/
   numerical-linear-algebra-v0/
+  spectral-linear-algebra-v0/
   random-matrix-finite-v0/
   finite-markov-chain-v0/
   exact-statistical-tests-v0/
@@ -351,6 +352,10 @@ row-scaling inconsistency certificate for a singular system.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of a false residual bound.
+[`spectral-linear-algebra-v0`](../../artifacts/examples/math/spectral-linear-algebra-v0/)
+validates exact finite eigenpair replay, orthogonal eigenbasis checks,
+Rayleigh quotients, spectral decomposition replay, and checked rejection of a
+false eigenpair.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.
@@ -406,6 +411,9 @@ Exit criteria:
 
 - At least five new math example packs.
 - At least two use checked solver evidence, not only witness replay.
+- At least one finite spectral-linear-algebra pack validates eigenpair and
+  decomposition claims while keeping general spectral theorems on the proof
+  horizon.
 - Curriculum status/backlog updated from the new examples.
 
 ### Phase F3: CS Foundations Track

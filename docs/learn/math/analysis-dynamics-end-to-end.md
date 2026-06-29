@@ -5,7 +5,9 @@ replayed result. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
 [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/),
 with the finite stochastic transition slice in
-[finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/).
+[finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
+and the finite spectral slice in
+[spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/).
 
 Concept rows:
 
@@ -24,6 +26,7 @@ Concept rows:
 | `stationary-distribution-witness` | `sat` | replay-only |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
+| `spectral-decomposition-witness` | `sat` | replay-only |
 
 These are bounded finite traces and finite-dimensional algebra checks, not
 general analysis theorems.
@@ -84,6 +87,14 @@ For the Markov-chain row, it checks exact stochastic evolution:
 [1/2,1/2,0] * P = [1/4,1/2,1/4]
 ```
 
+For the spectral row, it checks exact rational eigenpair and decomposition
+arithmetic:
+
+```text
+A*[1,1] = 3*[1,1]
+P*D*P^-1 = A
+```
+
 ## Run It
 
 From the repository root:
@@ -92,6 +103,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
 
 Expected output for each command:
@@ -105,5 +117,6 @@ validated 1 foundational example pack(s)
 The trusted checker handles finite traces, exact rational matrices, and finite
 recurrence lists. General limits, ODE existence and uniqueness, stability,
 compact operators, Banach/Hilbert-space theorems, and general Chebyshev spaces
-remain Lean-horizon material. Infinite-state Markov chains and mixing-time
-theorems also remain proof-horizon material.
+remain Lean-horizon material. Infinite-dimensional spectral theory,
+infinite-state Markov chains, and mixing-time theorems also remain proof-horizon
+material.

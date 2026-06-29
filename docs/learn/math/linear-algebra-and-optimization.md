@@ -12,6 +12,7 @@ Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
+- [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
@@ -25,7 +26,9 @@ replays finite-dimensional norm/operator examples. The numerical-linear-algebra
 slice adds exact residual bounds, rational interval boxes for solutions, and a
 one-step Jacobi contraction check. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
-matrices, and rank distributions.
+matrices, and rank distributions. The spectral slice checks exact finite
+eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
+`P*D*P^-1` reconstruction for a fixed rational matrix.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -47,7 +50,9 @@ each linear inequality at the candidate point and checks Farkas multipliers when
 the pack claims infeasibility. For the numerical pack, it recomputes
 `A*x_hat - b`, infinity norms, interval membership, and the first Jacobi update
 using exact rational arithmetic. For random matrices, it checks finite atom
-probabilities and recomputes weighted matrix statistics exactly.
+probabilities and recomputes weighted matrix statistics exactly. For spectral
+linear algebra, it recomputes `A*v`, `lambda*v`, dot products, `v^T*A*v /
+v^T*v`, and `P*D*P^-1` exactly.
 
 For an operator example, the finite-operator pack checks:
 
@@ -62,6 +67,7 @@ Run the checks from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
@@ -72,6 +78,6 @@ read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
 
 ## Horizon
 
-Rank theorems, spectral theorems, conditioning, numerical stability, SDP,
-general convex analysis, and algorithm convergence need proof routes or
+General spectral theorems, rank theorems, conditioning, numerical stability,
+SDP, general convex analysis, and algorithm convergence need proof routes or
 carefully bounded numerical-experiment metadata.
