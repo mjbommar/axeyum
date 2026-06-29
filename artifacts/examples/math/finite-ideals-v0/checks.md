@@ -33,7 +33,8 @@ verifies quotient addition and multiplication from representatives.
 Expected result: `unsat`.
 
 The validator rejects `{0, 2}` because it is not additively closed:
-`2 + 2 = 4`, and `4` is not in the subset.
+`2 + 2 = 4`, and `4` is not in the subset. The row links that additive-closure
+conflict to checked QF_UF/Alethe evidence.
 
 ## `general-ideal-theory-lean-horizon`
 

@@ -351,6 +351,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
   rechecks it independently.
 
+- **Finite-ideals QF_UF/Alethe regression landed.**
+  [`finite-ideals-v0`](artifacts/examples/math/finite-ideals-v0/) now has a
+  checked proof-object row for the bad ideal additive-closure conflict. The
+  new SMT-LIB artifact records `2` present in the claimed subset, `4` absent,
+  `2 + 2 = 4`, and the fixed additive-closure membership claim; the shared UF
+  resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
+  rechecks it independently.
+
 - **Modular-arithmetic QF_LIA/Diophantine regression landed.**
   [`modular-arithmetic-v0`](artifacts/examples/math/modular-arithmetic-v0/)
   now has a checked proof-object row for the composite nonunit inverse

@@ -233,7 +233,8 @@ validated pack data and the repo-root command that replays it.
   rejection.
 - [Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md):
   follows `Z/6Z` ideal closure, principal generation, parity-map kernel/image,
-  quotient-ring table replay, and checked bad non-ideal rejection.
+  quotient-ring table replay, and checked QF_UF/Alethe bad non-ideal
+  rejection.
 - [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
   checked Bayes-posterior refutation, random-variable, conditional-expectation,

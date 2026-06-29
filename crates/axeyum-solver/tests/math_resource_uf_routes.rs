@@ -41,6 +41,9 @@ const FINITE_DUAL_SPACES_BAD_COVECTOR: &str = include_str!(
 const FINITE_MODULES_BAD_SUBMODULE: &str = include_str!(
     "../../../artifacts/examples/math/finite-modules-v0/smt2/bad-submodule-scalar-closure-conflict.smt2"
 );
+const FINITE_IDEALS_BAD_IDEAL: &str = include_str!(
+    "../../../artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -128,6 +131,11 @@ fn finite_modules_bad_submodule_emits_checked_alethe() {
         "finite-modules-v0 bad submodule",
         FINITE_MODULES_BAD_SUBMODULE,
     );
+}
+
+#[test]
+fn finite_ideals_bad_ideal_emits_checked_alethe() {
+    assert_resource_euf_alethe("finite-ideals-v0 bad ideal", FINITE_IDEALS_BAD_IDEAL);
 }
 
 fn assert_resource_euf_alethe(label: &str, smt2: &str) {

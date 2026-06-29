@@ -4643,6 +4643,21 @@ def validate_finite_ideals(expected: dict[str, Any]) -> None:
         fail("bad-ideal-rejected actual_sum is incorrect")
     if actual_sum in subset:
         fail("bad-ideal-rejected actual_sum unexpectedly belongs to the subset")
+    alethe_claim = data.get("alethe_additive_closure_claim")
+    require_string("bad ideal alethe_additive_closure_claim", alethe_claim)
+    if alethe_claim != f"in_subset(add({left},{right})) = present":
+        fail("bad-ideal-rejected must document the Alethe additive-closure claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad ideal smt2_artifact", smt2_artifact)
+    check_source("bad ideal smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad ideal proof_regression", proof_regression)
+    if "finite_ideals_bad_ideal_emits_checked_alethe" not in proof_regression:
+        fail("bad-ideal-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad ideal certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-ideal-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-ideal-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

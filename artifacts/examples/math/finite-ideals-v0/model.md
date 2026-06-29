@@ -71,3 +71,23 @@ O * O = O
 
 The validator checks quotient addition and multiplication by applying the
 operation to representatives and then locating the resulting coset.
+
+## Bad Ideal Certificate
+
+For the rejected subset, exact replay computes:
+
+```text
+2 in B
+4 not in B
+2 + 2 = 4
+```
+
+Additive closure of an ideal would require:
+
+```text
+in_subset(2 + 2) = present
+```
+
+The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
+The resource regression checks that Axeyum emits independently rechecked
+`UnsatAletheProof` evidence with no trusted reduction step.

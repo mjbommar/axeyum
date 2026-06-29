@@ -20,7 +20,7 @@ Concept rows:
 | `principal-ideal-span-replay` | `sat` | replay-only |
 | `mod-two-ring-hom-kernel-image` | `sat` | replay-only |
 | `quotient-ring-replay` | `sat` | replay-only |
-| `bad-ideal-rejected` | `unsat` | checked |
+| `bad-ideal-rejected` | `unsat` | checked QF_UF/Alethe |
 | `general-ideal-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The replay rows are exact finite table checks. The pack does not claim general
@@ -157,7 +157,10 @@ by recomputing one additive-closure failure:
 ```
 
 Because `4` is not in `{0, 2}`, the subset cannot be an additive subgroup and
-therefore cannot be an ideal.
+therefore cannot be an ideal. The linked `QF_UF` artifact records `2` present
+in the claimed subset, `4` absent, `2 + 2 = 4`, and the fixed additive-closure
+membership claim `in_subset(add(2,2)) = present`; Axeyum emits and
+independently rechecks an `UnsatAletheProof` for that equality conflict.
 
 ## Run It
 
@@ -181,6 +184,7 @@ This lesson shows Axeyum's resource pattern for quotient algebra:
 untrusted fast search -> candidate ideal, homomorphism, cosets, quotient tables
 trusted small checking -> ring table replay, ideal closure, kernel/image,
                           quotient replay
+checked proof object -> QF_UF/Alethe certificate for the bad ideal row
 ```
 
 General ideal theory, correspondence theorems, the first isomorphism theorem

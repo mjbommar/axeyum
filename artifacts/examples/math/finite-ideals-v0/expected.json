@@ -192,9 +192,13 @@
         },
         "subset": ["0", "2"],
         "failing_sum": ["2", "2"],
-        "actual_sum": "4"
+        "actual_sum": "4",
+        "alethe_additive_closure_claim": "in_subset(add(2,2)) = present",
+        "smt2_artifact": "artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_ideals_bad_ideal_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator recomputes 2 + 2 = 4 and checks that 4 is missing from the claimed subset."
+      "notes": "The validator recomputes 2 + 2 = 4 and checks that 4 is missing from the claimed subset; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed additive-closure membership claim."
     },
     {
       "id": "general-ideal-theory-lean-horizon",

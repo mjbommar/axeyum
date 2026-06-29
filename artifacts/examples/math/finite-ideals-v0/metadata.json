@@ -26,6 +26,7 @@
     "finite ideals",
     "finite functions",
     "Bool / enumeration",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0",
@@ -37,7 +38,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "z6-even-ideal",
@@ -50,7 +52,7 @@
   "graduation_criteria": [
     "Encode fixed finite ideal and quotient-ring tables as deterministic finite-function and equality obligations.",
     "Replay ideal membership, principal-ideal generation, ring-homomorphism kernel/image, and quotient-ring witnesses through Axeyum model evaluation.",
-    "Add emitted EUF/Alethe or finite-table certificates for bad-ideal and bad-quotient rows once proof routes are promoted.",
+    "Route bad finite ideal additive-closure conflicts through checked QF_UF/Alethe evidence once exact evaluation replay identifies the failing sum.",
     "Keep general ideal theory, quotient-ring theorems, correspondence theorems, localization, prime/maximal ideals, and algebraic geometry under Lean horizon until formal routes exist."
   ]
 }

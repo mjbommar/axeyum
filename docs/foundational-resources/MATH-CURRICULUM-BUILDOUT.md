@@ -434,8 +434,8 @@ replay, checked bad-bilinear-map rejection, and a general tensor-theory
 Lean-horizon row.
 `finite-ideals-v0` now adds the finite quotient-ring bridge with `Z/6Z`
 ideal replay, principal ideal generation, modulo-2 ring-homomorphism
-kernel/image replay, quotient-ring table replay, checked non-ideal rejection,
-and a general ideal-theory Lean-horizon row.
+kernel/image replay, quotient-ring table replay, checked QF_UF/Alethe
+non-ideal rejection, and a general ideal-theory Lean-horizon row.
 `gcd-bezout-v0` now
 validates gcd/common-divisor replay, Bezout coefficient replay, direct
 divisibility witnesses, and a checked linear Diophantine gcd obstruction.
@@ -1246,8 +1246,8 @@ matrix replay, checked bad-bilinear-map rejection, and a tensor-theory
 Lean-horizon row.
 `finite-ideals-v0` now adds the exact finite quotient-ring bridge over `Z/6Z`:
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
-kernel/image replay, quotient-ring tables, checked non-ideal rejection, and an
-ideal-theory Lean-horizon row.
+kernel/image replay, quotient-ring tables, checked QF_UF/Alethe non-ideal
+rejection, and an ideal-theory Lean-horizon row.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
 monotone-map fixed-point replay, checked QF_UF/Alethe bad-order rejection, and

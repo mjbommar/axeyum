@@ -133,7 +133,8 @@ modular quotient-ring replay, read
 [End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md),
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md), and
-[End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md).
+[End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md)
+with a checked QF_UF/Alethe bad-ideal row.
 
 ## Horizon
 

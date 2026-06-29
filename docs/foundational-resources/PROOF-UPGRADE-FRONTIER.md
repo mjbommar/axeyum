@@ -207,10 +207,12 @@ First targets:
   (resource-backed QF_UF/Alethe regression landed for the bad covector-additivity conflict)
 - [finite-modules-v0](../../artifacts/examples/math/finite-modules-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad submodule scalar-closure conflict)
+- [finite-ideals-v0](../../artifacts/examples/math/finite-ideals-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad ideal additive-closure conflict)
 
 Secondary targets:
 
-- ideals and tensor products where the finite table problem is equality-heavy.
+- tensor products where the finite table problem is equality-heavy.
 
 Expected artifact:
 
