@@ -143,6 +143,10 @@ pub enum Op {
     /// **witnessed symbolic input** (fresh symbol symbolically; replayed from the
     /// witness concretely) so paths explore past it soundly instead of halting.
     Env(u8),
+    /// `LOG0`–`LOG4` (0xa0–0xa4): pops `2 + n` args (offset, length, `n` topics)
+    /// and pushes nothing. Logs are observable side effects only — they do not
+    /// affect execution state — so for reachability analysis they are a no-op pop.
+    Log(u8),
     /// Any opcode outside the Phase-1 subset (KECCAK256, CALL, LOG*, …).
     /// Carries the raw byte so the interpreter can decide to havoc or stop.
     Unsupported(u8),
@@ -220,6 +224,7 @@ impl Op {
             0xf3 => Op::Return,
             0xfd => Op::Revert,
             0xfe => Op::Invalid,
+            0xa0..=0xa4 => Op::Log(byte - 0xa0),
             other => Op::Unsupported(other),
         }
     }

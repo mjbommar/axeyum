@@ -1093,6 +1093,15 @@ fn run_from(
                 state.env_syms.push(sym);
                 state.stack.push(value);
             }
+            Op::Log(topics) => {
+                // LOG0..LOG4: pop offset, length, and `topics` topic words; push
+                // nothing. Logs are pure side effects with no effect on execution
+                // state, so for reachability they are a no-op pop (paths explore
+                // past them instead of halting Unknown).
+                for _ in 0..(2 + u32::from(topics)) {
+                    let _ = pop_or_unknown!();
+                }
+            }
             Op::Unsupported(_) => {
                 // KECCAK / CALL / LOG / … : havoc and continue is unsound for
                 // control flow, so we conservatively terminate the path as Unknown.

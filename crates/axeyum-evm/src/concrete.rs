@@ -581,6 +581,12 @@ fn run_core(
                 *env_cursor += 1;
                 stack.push(value);
             }
+            Op::Log(topics) => {
+                // LOG0..LOG4: pop offset, length, and `topics` topics; no output.
+                for _ in 0..(2 + u32::from(topics)) {
+                    let _ = pop!();
+                }
+            }
             Op::Invalid => return (Halt::Invalid, overflowed),
             Op::Unsupported(b) => {
                 return (
