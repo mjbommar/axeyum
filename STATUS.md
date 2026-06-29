@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Spectral-linear-algebra end-to-end lesson landed.** Added
+  [`spectral-linear-algebra-end-to-end.md`](docs/learn/math/spectral-linear-algebra-end-to-end.md)
+  as the learner-facing trace for the spectral pack: exact eigenpair replay,
+  orthogonal eigenbasis arithmetic, Rayleigh quotient checking, spectral
+  decomposition reconstruction, checked bad-eigenpair rejection, and the
+  horizon for general spectral theory and numerical eigensolver correctness.
+  The lesson is linked from the math learning index plus the rational/real,
+  linear-algebra/optimization, analysis/topology, and bounded-operators paths.
+
 - **Finite Chebyshev-systems end-to-end lesson landed.** Added
   [`finite-chebyshev-systems-end-to-end.md`](docs/learn/math/finite-chebyshev-systems-end-to-end.md)
   as the learner-facing trace for the Chebyshev pack: exact Vandermonde

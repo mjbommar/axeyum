@@ -307,7 +307,8 @@ replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md),
-and [End To End: Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md).
+[End To End: Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md),
+and [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md).
 
 ## Horizon
 

@@ -858,8 +858,9 @@ order/lattice replay, finite cardinality replay, cardinality-principle replay,
 finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
 finite topology/measure, bounded dynamics/operators, and finite
-Chebyshev-system interpolation/alternation from data row through replay result
-and proof/evidence status.
+Chebyshev-system interpolation/alternation, plus spectral-linear-algebra
+eigenpair/decomposition replay from data row through replay result and
+proof/evidence status.
 
 Deliverables:
 
@@ -1206,6 +1207,10 @@ convex-analysis Lean horizon.
 exact Vandermonde unisolvence, interpolation, alternating residual signs,
 checked duplicate-node-grid rejection, and the Chebyshev/Haar/minimax Lean
 horizon.
+`spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
+exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
+checking, spectral decomposition reconstruction, checked bad-eigenpair
+rejection, and the general spectral/numerical horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

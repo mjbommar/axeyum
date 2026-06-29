@@ -138,6 +138,9 @@ A*[1,1] = 3*[1,1]
 P*D*P^-1 = A
 ```
 
+For a fuller trace of the spectral rows, read
+[End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md).
+
 ## Run It
 
 From the repository root:
