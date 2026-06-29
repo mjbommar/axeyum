@@ -50,11 +50,11 @@ moat — and a long road of decide-rate, performance, and proof-coverage work le
    has no verifiable headroom there); **QF_UF 37→39/48** (equisatisfiable
    uninterpreted-sort `ite`-elimination + a no-hard-error robustness fix);
    **QF_ABV 173→176/177** (write-index array extensionality for shared-base
-   `store-chain = store-chain` over wide indices, + robustness). Remaining lead:
-   the UF+theory-combination keystone (`issue5836-2`/`issue5396`). (A suspected
-   `check_auto` deadline-hang was investigated and ruled out — per-instance
-   QF_LIA returns within budget; the directory-scan slowness was cumulative +
-   environmental.)
+   `store-chain = store-chain` over wide indices, + robustness). Remaining leads:
+   the UF+theory-combination keystone (`issue5836-2`/`issue5396`); and a confirmed
+   **deadline-robustness defect** — QF_AUFLIA `bug330` runs 25 s under a 2 s
+   `config.timeout` (the UFLIA combination solve on its array-abstracted
+   relaxation doesn't check the deadline; QF_LIA and the lazy-row CEGAR are clean).
 2. **Reduction certificates → Lean (Track 3)** — drive the trusted-reduction
    ledger to zero (Alethe emitter → Carcara-checked → per-reduction proofs →
    kernel), and build the Lean tactic backend (P3.7, **fail not `sorry`**).

@@ -167,11 +167,14 @@ store-chain` over 32-/64-bit indices without `2^iw` enumeration) → **QF_ABV
 173 → 176/177** (gap to z3 −1), DISAGREE=0, abv fuzz DISAGREE=0, rewrite 88/88.
 Grounding + the remaining leads in
 [decide-rate-measured-2026-06-29](docs/plan/decide-rate-measured-2026-06-29.md):
-the **UF+theory combination keystone** (deep; `issue5836-2`/`issue5396`). (A
-suspected `check_auto` deadline-hang was investigated and **ruled out**: every
-QF_LIA instance returns within budget individually; the earlier directory-level
-`explain_corpus` slowness was cumulative scan time + environmental command-kills
-under heavy build load, not a per-instance deadline-ignore.)
+the **UF+theory combination keystone** (deep; `issue5836-2`/`issue5396`); and a
+**confirmed deadline-robustness defect** — QF_AUFLIA `bug330` runs 25 s under a
+2 s `config.timeout` (the UFLIA combination solve on its UF-heavy array-abstracted
+relaxation — eager Ackermann / e-graph recursion — does not check the deadline;
+the lazy-row CEGAR and QF_LIA *are* clean). A solver must honor its budget; thread
+the deadline through that inner path → graceful Unknown. *(Correction: an earlier
+note over-broadly "ruled out" the hang from QF_LIA evidence; `bug330` confirms it
+is real, scoped to the QF_AUFLIA UFLIA path.)*
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
