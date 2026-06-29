@@ -13,6 +13,7 @@ Example packs:
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
+- [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/)
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
@@ -37,7 +38,11 @@ linear-map kernel/image replay, rank-nullity by finite cardinality, and
 checked non-subspace rejection. The finite-dual-space slice adds covectors as
 finite function tables, pointwise dual operations, dual-basis pairings,
 annihilator recomputation, transpose-map replay, and checked bad-covector
-rejection. The finite-module slice adds ring actions on finite additive groups,
+rejection. The exact rational inner-product slice adds symmetric
+positive-definite Gram matrices, Cauchy-Schwarz replay for fixed vectors,
+orthogonal projection replay, Gram-Schmidt orthogonalization replay, and
+checked rejection of an indefinite bilinear form. The finite-module slice adds
+ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
 tables, and checked non-submodule rejection. The finite-tensor-product slice
 adds bilinear maps, finite universal-factorization shadows, Kronecker products,
@@ -107,6 +112,32 @@ The `finite-dual-spaces-v0` validator checks that `x`, `y`, and `x+y` are
 linear functionals, dual addition is pointwise, the listed dual basis pairs
 with `10,01` as the identity matrix, annihilators are recomputed from the
 evaluation table, and transpose maps satisfy `(T* phi)(v) = phi(Tv)`.
+
+For rational inner-product examples, encode the Gram matrix and the vectors:
+
+```text
+G = [[1, 0],
+     [0, 1]]
+u = (1, 2)
+v = (3,-1)
+<u,v> = 1
+<u,u> = 5
+<v,v> = 10
+```
+
+The `inner-product-spaces-rational-v0` validator checks symmetry and positive
+principal minors for a weighted Gram matrix, recomputes the listed dot products,
+checks the fixed Cauchy-Schwarz inequality `1^2 <= 5*10`, and verifies a
+projection onto the span of `(1,1)`:
+
+```text
+proj_(1,1)(2,3) = (5/2, 5/2)
+residual = (-1/2, 1/2)
+<residual, (1,1)> = 0
+```
+
+It also replays the second Gram-Schmidt vector as `(1/2,-1/2)` and rejects a
+diagonal form with negative norm square.
 
 For module-flavored linear algebra, encode `Z/4Z` as a module over itself:
 
@@ -197,6 +228,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
@@ -217,7 +249,9 @@ read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
 ## Horizon
 
 General spectral theorems, rank theorems, vector-space dimension theorems,
-duality and bidual theorems, topological duals, module theory,
+duality and bidual theorems, Cauchy-Schwarz and Gram-Schmidt as general
+theorems, Hilbert projection/Riesz representation results, topological duals,
+module theory,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
 numerical stability, SDP, general convex analysis, and algorithm convergence
 need proof routes or carefully bounded numerical-experiment metadata.

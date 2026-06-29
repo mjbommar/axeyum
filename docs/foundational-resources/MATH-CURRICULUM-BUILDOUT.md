@@ -196,7 +196,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
-| `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, and Hessians. |
+| `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, exact rational inner products, Gram matrices, projections, Gram-Schmidt replay, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, and Hessians. |
 | `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, and algebraic inequalities; general integration marked Lean-horizon. |
 
 ## Field Extensions Beyond The Current Curriculum
@@ -215,7 +215,7 @@ losing the curriculum anchor.
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, `multivariable-calculus-rational-v0`, LU replay, interval bounds, error recurrences, Jacobian/Hessian replay, and finite ODE step replay. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, incidence, distance, midpoint, collinearity, affine maps, signed area, barycentric replay, and finite incidence preservation. |
-| `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `finite-chebyshev-systems-v0`, norms, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
+| `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `inner-product-spaces-rational-v0`, `finite-chebyshev-systems-v0`, norms, inner products, projections, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
 
 ## Phased Build Plan
 
@@ -672,6 +672,11 @@ Euler-method traces, polynomial-solution error replay, invariant checks,
 checked rejection of a bad Euler step, and an ODE-theory Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
+`artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
+exact rational Gram matrices, positive-definite principal minors,
+Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
+Gram-Schmidt replay, checked rejection of a bad inner product, and a general
+inner-product/Hilbert-space Lean-horizon row.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
 finite Vandermonde unisolvence, interpolation matrix replay, alternating
 residual sign patterns, checked rejection of a duplicate-node grid, and a
@@ -732,8 +737,9 @@ Recommended order:
 9. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
    Euler step replay, finite error checks, and invariants.
-11. `finite-operator-v0`: finite-dimensional norms/operators and Chebyshev
-   polynomial examples.
+11. `finite-operator-v0` and `inner-product-spaces-rational-v0`:
+   finite-dimensional norms/operators, exact rational inner products,
+   projections, Gram-Schmidt replay, and Chebyshev polynomial examples.
 12. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
     arithmetic, unit-root cycles, conjugation/product replay, and rational
     Mobius transforms as real-pair algebra.
@@ -926,9 +932,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 79 non-template math example packs validate.
+  Status: 80 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 67 non-template packs have at least one `checked` expected-result row.
+  Status: 68 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -959,6 +965,7 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `finite-fields-v0`, `finite-algebra-homomorphisms-v0`,
 `finite-ideals-v0`,
 `finite-vector-spaces-v0`, `finite-dual-spaces-v0`,
+`inner-product-spaces-rational-v0`,
 `finite-tensor-products-v0`,
 `finite-modules-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
@@ -1080,6 +1087,11 @@ vector-space/module Lean-horizon row.
 covector linearity, pointwise dual operations, dual-basis pairing,
 annihilator recomputation, transpose-map replay, checked bad-covector
 rejection, and a duality/functional-analysis Lean-horizon row.
+`inner-product-spaces-rational-v0` now adds the exact rational
+inner-product-space bridge: Gram matrices, positive-definite minors,
+Cauchy-Schwarz replay, orthogonal projections, Gram-Schmidt residuals,
+checked bad-inner-product rejection, and an inner-product/Hilbert-space
+Lean-horizon row.
 `finite-modules-v0` now adds the exact finite algebra/linear-algebra bridge
 over `Z/4Z`: module laws, submodule/span replay, module-homomorphism
 kernel/image replay, quotient-module tables, checked non-submodule rejection,

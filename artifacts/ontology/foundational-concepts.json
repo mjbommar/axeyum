@@ -1572,6 +1572,12 @@
           "notes": "Finite dual spaces over F2, dual-basis pairings, annihilators, transpose maps, and covector counterexamples."
         },
         {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Exact rational Gram matrices, Cauchy-Schwarz replay, orthogonal projections, and Gram-Schmidt checks."
+        },
+        {
           "id": "finite-modules-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
@@ -2202,19 +2208,19 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids",
+      "summary": "Graduate analysis / numerical analysis foundation. First Axeyum slice: Finite-dimensional normed spaces, finite inner-product/projection examples, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite-dimensional normed spaces, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids"
+        "Finite-dimensional normed spaces, finite inner-product/projection examples, finite dual-space and operator-matrix examples, approximation examples, Chebyshev polynomial slices, finite Chebyshev-system grids"
       ],
       "example_packs": [
         {
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norms, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
+          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
         },
         {
           "id": "finite-chebyshev-systems-v0",
@@ -2229,6 +2235,12 @@
           "notes": "Exact Finite Dual Space Checks"
         },
         {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Exact Rational Inner Product Space Checks"
+        },
+        {
           "id": "spectral-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/spectral-linear-algebra-v0",
@@ -2237,7 +2249,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Banach/Hilbert-space theorems, topological duals, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support.",
+          "name": "Banach/Hilbert-space theorems, Hilbert projection theorem, topological duals, compact operators, and general Chebyshev spaces need Lean/mathlib-scale support.",
           "status": "lean-horizon",
           "checker": "planned foundational example-pack validator",
           "lean_status": "required",
@@ -2440,7 +2452,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, exact rational inner products, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -2449,14 +2461,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians"
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite dual spaces, exact rational inner products, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians"
       ],
       "example_packs": [
         {
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -2561,6 +2573,12 @@
           "notes": "Exact Finite Vector Space Checks"
         },
         {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Exact Rational Inner Product Space Checks"
+        },
+        {
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
@@ -2617,7 +2635,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Spectral theorems, general vector-space/dual-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks.",
+          "name": "Spectral theorems, general vector-space/dual-space/inner-product/module/tensor theorems, and conditioning/stability need proof or numerical tracks.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -3027,7 +3045,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU replay, interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."
+          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -3064,6 +3082,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Exact Rational Inner Product Space Checks"
         },
         {
           "id": "linear-algebra-rational-v0",
@@ -3168,6 +3192,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."
+        },
+        {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Exact rational projections, Gram matrices, and orthogonal residual checks."
         },
         {
           "id": "least-squares-regression-v0",
@@ -3546,6 +3576,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/generating-functions-v0",
           "notes": "Exact Generating Function Checks"
+        },
+        {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Exact Rational Inner Product Space Checks"
         },
         {
           "id": "linear-optimization-v0",

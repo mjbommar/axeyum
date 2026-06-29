@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "inner-product-spaces-rational-v0",
+  "title": "Exact Rational Inner Product Space Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "field_linear_algebra",
+    "field_functional_analysis_and_operator_theory",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "field_real_analysis"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "functional_analysis_and_operator_theory",
+    "numerical_analysis",
+    "optimization_and_convexity",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite-dimensional linear algebra",
+    "finite matrices",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "standard-inner-product-replay",
+    "gram-matrix-positive-definite",
+    "cauchy-schwarz-fixed-vectors",
+    "orthogonal-projection-replay",
+    "gram-schmidt-replay",
+    "bad-inner-product-rejected",
+    "general-inner-product-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed rational inner-product, Gram-matrix, projection, and Gram-Schmidt rows as deterministic exact-rational obligations.",
+    "Replay SAT witnesses through Axeyum model evaluation over finite-dimensional matrices and vectors.",
+    "Add emitted QF_LRA/Farkas-style certificates for rejected positivity and projection rows once proof routes are promoted.",
+    "Keep general Cauchy-Schwarz, Riesz representation, orthonormal-basis, Hilbert-projection, and complete Hilbert-space theorems under Lean horizon until formal routes exist."
+  ]
+}

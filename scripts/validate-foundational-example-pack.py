@@ -7807,6 +7807,257 @@ def scalar_vec(scalar: Fraction, vector: list[Fraction]) -> list[Fraction]:
     return [scalar * item for item in vector]
 
 
+def vector_add_fraction(left: list[Fraction], right: list[Fraction]) -> list[Fraction]:
+    require_same_vector_length("vector addition", left, right)
+    return [left_item + right_item for left_item, right_item in zip(left, right)]
+
+
+def inner_product(
+    gram_matrix: list[list[Fraction]],
+    left: list[Fraction],
+    right: list[Fraction],
+) -> Fraction:
+    require_square_matrix("inner-product Gram matrix", gram_matrix)
+    require_mat_vec_shape("inner-product right vector", gram_matrix, right)
+    if len(left) != len(gram_matrix):
+        fail("inner-product left vector length must match Gram matrix height")
+    return dot_product(left, mat_vec(gram_matrix, right))
+
+
+def require_symmetric_matrix(context: str, matrix: list[list[Fraction]]) -> None:
+    require_square_matrix(context, matrix)
+    for row_index in range(len(matrix)):
+        for column_index in range(row_index + 1, len(matrix)):
+            if matrix[row_index][column_index] != matrix[column_index][row_index]:
+                fail(f"{context} must be symmetric")
+
+
+def leading_principal_minor(matrix: list[list[Fraction]], size: int) -> Fraction:
+    if size <= 0 or size > len(matrix):
+        fail("leading principal minor size is outside the matrix")
+    return matrix_determinant([row[:size] for row in matrix[:size]])
+
+
+def require_fraction_dict(
+    context: str,
+    value: Any,
+    keys: list[str],
+) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    expected = set(keys)
+    if set(value) != expected:
+        missing = sorted(expected - set(value))
+        extra = sorted(set(value) - expected)
+        fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+    return {
+        key: require_fraction(f"{context}.{key}", value[key])
+        for key in keys
+    }
+
+
+def validate_inner_product_spaces_rational(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    replay = checks["standard-inner-product-replay"]
+    if replay["expected_result"] != "sat":
+        fail("standard-inner-product-replay must expect sat")
+    values = single_witness_values(replay, witnesses)
+    standard_gram = require_fraction_matrix("standard inner product Gram", values.get("standard_gram"))
+    require_symmetric_matrix("standard inner product Gram", standard_gram)
+    u_vector = require_fraction_vector("standard inner product u", values.get("u"))
+    v_vector = require_fraction_vector("standard inner product v", values.get("v"))
+    u_plus_v = require_fraction_vector("standard inner product u_plus_v", values.get("u_plus_v"))
+    two_u = require_fraction_vector("standard inner product two_u", values.get("two_u"))
+    require_same_vector_length("standard inner product u/v", u_vector, v_vector)
+    if vector_add_fraction(u_vector, v_vector) != u_plus_v:
+        fail("standard-inner-product-replay u_plus_v is incorrect")
+    if scalar_vec(Fraction(2), u_vector) != two_u:
+        fail("standard-inner-product-replay two_u is incorrect")
+    inner_products = require_fraction_dict(
+        "standard inner_products",
+        values.get("inner_products"),
+        ["u_u", "v_v", "u_v", "u_plus_v_u", "two_u_v"],
+    )
+    if inner_product(standard_gram, u_vector, u_vector) != inner_products["u_u"]:
+        fail("standard-inner-product-replay <u,u> is incorrect")
+    if inner_product(standard_gram, v_vector, v_vector) != inner_products["v_v"]:
+        fail("standard-inner-product-replay <v,v> is incorrect")
+    if inner_product(standard_gram, u_vector, v_vector) != inner_products["u_v"]:
+        fail("standard-inner-product-replay <u,v> is incorrect")
+    if inner_product(standard_gram, u_plus_v, u_vector) != inner_products["u_plus_v_u"]:
+        fail("standard-inner-product-replay <u+v,u> is incorrect")
+    if inner_product(standard_gram, two_u, v_vector) != inner_products["two_u_v"]:
+        fail("standard-inner-product-replay <2u,v> is incorrect")
+    if inner_products["u_plus_v_u"] != inner_products["u_u"] + inner_products["u_v"]:
+        fail("standard-inner-product-replay additivity sample fails")
+    if inner_products["two_u_v"] != 2 * inner_products["u_v"]:
+        fail("standard-inner-product-replay scalar-linearity sample fails")
+
+    gram = checks["gram-matrix-positive-definite"]
+    if gram["expected_result"] != "sat" or gram.get("proof_status") != "checked":
+        fail("gram-matrix-positive-definite must be a checked sat row")
+    values = single_witness_values(gram, witnesses)
+    weighted_gram = require_fraction_matrix("weighted Gram", values.get("weighted_gram"))
+    require_symmetric_matrix("weighted Gram", weighted_gram)
+    listed_minors = require_fraction_vector("weighted Gram leading_principal_minors", values.get("leading_principal_minors"))
+    if len(listed_minors) != len(weighted_gram):
+        fail("gram-matrix-positive-definite must list one leading minor per dimension")
+    computed_minors = [
+        leading_principal_minor(weighted_gram, size)
+        for size in range(1, len(weighted_gram) + 1)
+    ]
+    if listed_minors != computed_minors:
+        fail("gram-matrix-positive-definite listed minors are incorrect")
+    if any(minor <= 0 for minor in computed_minors):
+        fail("gram-matrix-positive-definite requires positive leading principal minors")
+
+    cauchy = checks["cauchy-schwarz-fixed-vectors"]
+    if cauchy["expected_result"] != "sat" or cauchy.get("proof_status") != "checked":
+        fail("cauchy-schwarz-fixed-vectors must be a checked sat row")
+    values = single_witness_values(cauchy, witnesses)
+    standard_gram = require_fraction_matrix("Cauchy Gram", values.get("standard_gram"))
+    u_vector = require_fraction_vector("Cauchy u", values.get("u"))
+    v_vector = require_fraction_vector("Cauchy v", values.get("v"))
+    inner_products = require_fraction_dict(
+        "Cauchy inner_products",
+        values.get("inner_products"),
+        ["u_u", "v_v", "u_v", "u_plus_v_u", "two_u_v"],
+    )
+    cauchy_values = require_fraction_dict(
+        "Cauchy values",
+        values.get("cauchy_schwarz"),
+        ["left_square", "right_product"],
+    )
+    actual_uv = inner_product(standard_gram, u_vector, v_vector)
+    actual_uu = inner_product(standard_gram, u_vector, u_vector)
+    actual_vv = inner_product(standard_gram, v_vector, v_vector)
+    if actual_uv != inner_products["u_v"] or actual_uu != inner_products["u_u"] or actual_vv != inner_products["v_v"]:
+        fail("cauchy-schwarz-fixed-vectors inner-products are inconsistent")
+    if actual_uv * actual_uv != cauchy_values["left_square"]:
+        fail("cauchy-schwarz-fixed-vectors left_square is incorrect")
+    if actual_uu * actual_vv != cauchy_values["right_product"]:
+        fail("cauchy-schwarz-fixed-vectors right_product is incorrect")
+    if cauchy_values["left_square"] > cauchy_values["right_product"]:
+        fail("cauchy-schwarz-fixed-vectors violates Cauchy-Schwarz")
+
+    projection = checks["orthogonal-projection-replay"]
+    if projection["expected_result"] != "sat" or projection.get("proof_status") != "checked":
+        fail("orthogonal-projection-replay must be a checked sat row")
+    values = single_witness_values(projection, witnesses)
+    standard_gram = require_fraction_matrix("projection Gram", values.get("standard_gram"))
+    projection_values = values.get("projection")
+    if not isinstance(projection_values, dict):
+        fail("projection values must be an object")
+    target = require_fraction_vector("projection target", projection_values.get("target"))
+    basis = require_fraction_vector("projection basis", projection_values.get("basis"))
+    coefficient = require_fraction("projection coefficient", projection_values.get("coefficient"))
+    projected = require_fraction_vector("projection projection", projection_values.get("projection"))
+    residual = require_fraction_vector("projection residual", projection_values.get("residual"))
+    residual_inner_basis = require_fraction("projection residual_inner_basis", projection_values.get("residual_inner_basis"))
+    target_norm_square = require_fraction("projection target_norm_square", projection_values.get("target_norm_square"))
+    projection_norm_square = require_fraction("projection projection_norm_square", projection_values.get("projection_norm_square"))
+    residual_norm_square = require_fraction("projection residual_norm_square", projection_values.get("residual_norm_square"))
+    basis_norm_square = inner_product(standard_gram, basis, basis)
+    if basis_norm_square == 0:
+        fail("orthogonal-projection-replay basis vector must be nonzero")
+    if inner_product(standard_gram, target, basis) / basis_norm_square != coefficient:
+        fail("orthogonal-projection-replay coefficient is incorrect")
+    if scalar_vec(coefficient, basis) != projected:
+        fail("orthogonal-projection-replay projection vector is incorrect")
+    if vector_sub(target, projected) != residual:
+        fail("orthogonal-projection-replay residual is incorrect")
+    if inner_product(standard_gram, residual, basis) != residual_inner_basis:
+        fail("orthogonal-projection-replay residual_inner_basis is incorrect")
+    if residual_inner_basis != 0:
+        fail("orthogonal-projection-replay residual must be orthogonal to the basis")
+    if inner_product(standard_gram, target, target) != target_norm_square:
+        fail("orthogonal-projection-replay target norm square is incorrect")
+    if inner_product(standard_gram, projected, projected) != projection_norm_square:
+        fail("orthogonal-projection-replay projection norm square is incorrect")
+    if inner_product(standard_gram, residual, residual) != residual_norm_square:
+        fail("orthogonal-projection-replay residual norm square is incorrect")
+    if target_norm_square != projection_norm_square + residual_norm_square:
+        fail("orthogonal-projection-replay norm decomposition is incorrect")
+
+    gram_schmidt = checks["gram-schmidt-replay"]
+    if gram_schmidt["expected_result"] != "sat" or gram_schmidt.get("proof_status") != "checked":
+        fail("gram-schmidt-replay must be a checked sat row")
+    values = single_witness_values(gram_schmidt, witnesses)
+    standard_gram = require_fraction_matrix("Gram-Schmidt Gram", values.get("standard_gram"))
+    gs_values = values.get("gram_schmidt")
+    if not isinstance(gs_values, dict):
+        fail("gram_schmidt values must be an object")
+    input_vectors = require_fraction_vector_list("Gram-Schmidt input_vectors", gs_values.get("input_vectors"))
+    orthogonal_vectors = require_fraction_vector_list("Gram-Schmidt orthogonal_vectors", gs_values.get("orthogonal_vectors"))
+    if len(input_vectors) != 2 or len(orthogonal_vectors) != 2:
+        fail("gram-schmidt-replay currently expects exactly two vectors")
+    second_projection_coefficient = require_fraction(
+        "Gram-Schmidt second_projection_coefficient",
+        gs_values.get("second_projection_coefficient"),
+    )
+    second_projection = require_fraction_vector("Gram-Schmidt second_projection", gs_values.get("second_projection"))
+    second_residual = require_fraction_vector("Gram-Schmidt second_residual", gs_values.get("second_residual"))
+    listed_inner_product = require_fraction("Gram-Schmidt inner_product", gs_values.get("inner_product"))
+    input_determinant = require_fraction("Gram-Schmidt input_determinant", gs_values.get("input_determinant"))
+    orthogonal_determinant = require_fraction("Gram-Schmidt orthogonal_determinant", gs_values.get("orthogonal_determinant"))
+    first_input, second_input = input_vectors
+    first_orthogonal, second_orthogonal = orthogonal_vectors
+    if first_input != first_orthogonal:
+        fail("gram-schmidt-replay first orthogonal vector must equal the first input vector")
+    first_norm = inner_product(standard_gram, first_orthogonal, first_orthogonal)
+    if first_norm == 0:
+        fail("gram-schmidt-replay first vector must be nonzero")
+    if inner_product(standard_gram, second_input, first_orthogonal) / first_norm != second_projection_coefficient:
+        fail("gram-schmidt-replay second projection coefficient is incorrect")
+    if scalar_vec(second_projection_coefficient, first_orthogonal) != second_projection:
+        fail("gram-schmidt-replay second projection is incorrect")
+    if vector_sub(second_input, second_projection) != second_residual:
+        fail("gram-schmidt-replay second residual is incorrect")
+    if second_orthogonal != second_residual:
+        fail("gram-schmidt-replay second orthogonal vector must be the second residual")
+    if inner_product(standard_gram, first_orthogonal, second_orthogonal) != listed_inner_product:
+        fail("gram-schmidt-replay listed inner product is incorrect")
+    if listed_inner_product != 0:
+        fail("gram-schmidt-replay vectors must be orthogonal")
+    if matrix_determinant(input_vectors) != input_determinant:
+        fail("gram-schmidt-replay input determinant is incorrect")
+    if matrix_determinant(orthogonal_vectors) != orthogonal_determinant:
+        fail("gram-schmidt-replay orthogonal determinant is incorrect")
+    if input_determinant == 0 or orthogonal_determinant == 0:
+        fail("gram-schmidt-replay both vector lists must be bases")
+
+    bad = checks["bad-inner-product-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-inner-product-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    gram_matrix = require_fraction_matrix("bad inner-product Gram", data.get("gram_matrix"))
+    require_symmetric_matrix("bad inner-product Gram", gram_matrix)
+    vector = require_fraction_vector("bad inner-product vector", data.get("vector"))
+    norm_square = require_fraction("bad inner-product norm_square", data.get("norm_square"))
+    listed_minors = require_fraction_vector("bad inner-product leading_principal_minors", data.get("leading_principal_minors"))
+    if inner_product(gram_matrix, vector, vector) != norm_square:
+        fail("bad-inner-product-rejected norm_square is incorrect")
+    computed_minors = [
+        leading_principal_minor(gram_matrix, size)
+        for size in range(1, len(gram_matrix) + 1)
+    ]
+    if listed_minors != computed_minors:
+        fail("bad-inner-product-rejected leading_principal_minors are incorrect")
+    if norm_square >= 0 and all(minor > 0 for minor in computed_minors):
+        fail("bad-inner-product-rejected data does not refute positive definiteness")
+
+    horizon = checks["general-inner-product-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-inner-product-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-inner-product-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general inner-product target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general inner-product future_checker", data.get("future_checker"))
+
+
 def require_same_matrix_shape(
     context: str,
     left: list[list[Fraction]],
@@ -13145,6 +13396,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_induction_patterns(expected)
     if metadata["id"] == "integer-lia-v0":
         validate_integer_lia(expected)
+    if metadata["id"] == "inner-product-spaces-rational-v0":
+        validate_inner_product_spaces_rational(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
     if metadata["id"] == "finite-product-measure-v0":

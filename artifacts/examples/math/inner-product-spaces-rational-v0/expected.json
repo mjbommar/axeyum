@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "pack_id": "inner-product-spaces-rational-v0",
+  "witnesses": [
+    {
+      "id": "q2-inner-product-data",
+      "description": "Exact rational inner-product witnesses in Q^2.",
+      "values": {
+        "standard_gram": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "weighted_gram": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "leading_principal_minors": ["2", "3"],
+        "u": ["1", "2"],
+        "v": ["3", "-1"],
+        "u_plus_v": ["4", "1"],
+        "two_u": ["2", "4"],
+        "inner_products": {
+          "u_u": "5",
+          "v_v": "10",
+          "u_v": "1",
+          "u_plus_v_u": "6",
+          "two_u_v": "2"
+        },
+        "cauchy_schwarz": {
+          "left_square": "1",
+          "right_product": "50"
+        },
+        "projection": {
+          "target": ["2", "3"],
+          "basis": ["1", "1"],
+          "coefficient": "5/2",
+          "projection": ["5/2", "5/2"],
+          "residual": ["-1/2", "1/2"],
+          "residual_inner_basis": "0",
+          "target_norm_square": "13",
+          "projection_norm_square": "25/2",
+          "residual_norm_square": "1/2"
+        },
+        "gram_schmidt": {
+          "input_vectors": [
+            ["1", "1"],
+            ["1", "0"]
+          ],
+          "orthogonal_vectors": [
+            ["1", "1"],
+            ["1/2", "-1/2"]
+          ],
+          "second_projection_coefficient": "1/2",
+          "second_projection": ["1/2", "1/2"],
+          "second_residual": ["1/2", "-1/2"],
+          "inner_product": "0",
+          "input_determinant": "-1",
+          "orthogonal_determinant": "-1"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "standard-inner-product-replay",
+      "claim": "The standard Gram matrix on Q^2 gives the listed dot products and sample bilinearity rows.",
+      "expected_result": "sat",
+      "validation": "exact_rational_inner_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["q2-inner-product-data"],
+      "notes": "The validator recomputes dot products, vector addition, scalar multiplication, and two sample bilinearity equations."
+    },
+    {
+      "id": "gram-matrix-positive-definite",
+      "claim": "The weighted Gram matrix [[2,1],[1,2]] is symmetric positive definite.",
+      "expected_result": "sat",
+      "validation": "exact_rational_sylvester_replay",
+      "proof_status": "checked",
+      "witnesses": ["q2-inner-product-data"],
+      "notes": "The validator checks symmetry and Sylvester leading principal minors 2 and 3."
+    },
+    {
+      "id": "cauchy-schwarz-fixed-vectors",
+      "claim": "The fixed vectors u=[1,2] and v=[3,-1] satisfy Cauchy-Schwarz under the standard inner product.",
+      "expected_result": "sat",
+      "validation": "exact_rational_cauchy_schwarz_replay",
+      "proof_status": "checked",
+      "witnesses": ["q2-inner-product-data"],
+      "notes": "The validator checks <u,v>^2 = 1 <= 50 = <u,u><v,v>."
+    },
+    {
+      "id": "orthogonal-projection-replay",
+      "claim": "The projection of [2,3] onto span([1,1]) is [5/2,5/2] with orthogonal residual.",
+      "expected_result": "sat",
+      "validation": "exact_rational_projection_replay",
+      "proof_status": "checked",
+      "witnesses": ["q2-inner-product-data"],
+      "notes": "The validator recomputes the coefficient, projection, residual orthogonality, and norm decomposition."
+    },
+    {
+      "id": "gram-schmidt-replay",
+      "claim": "The listed Gram-Schmidt residuals turn [1,1],[1,0] into an orthogonal rational basis.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gram_schmidt_replay",
+      "proof_status": "checked",
+      "witnesses": ["q2-inner-product-data"],
+      "notes": "The validator checks projection subtraction, orthogonality, and nonzero determinants for both bases."
+    },
+    {
+      "id": "bad-inner-product-rejected",
+      "claim": "The matrix diag(1,-1) is not a valid real inner product because [0,1] has negative norm square.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_positive_definiteness_refutation",
+      "proof_status": "checked",
+      "data": {
+        "gram_matrix": [
+          ["1", "0"],
+          ["0", "-1"]
+        ],
+        "vector": ["0", "1"],
+        "norm_square": "-1",
+        "leading_principal_minors": ["1", "-1"]
+      },
+      "notes": "The validator recomputes the negative quadratic form and the negative determinant."
+    },
+    {
+      "id": "general-inner-product-theory-lean-horizon",
+      "claim": "General inner-product and Hilbert-space theory requires a proof-assistant route.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "General Cauchy-Schwarz, Gram-Schmidt, orthonormal bases, Riesz representation, projection theorem, Hilbert-space completeness, adjoints, and spectral theorem statements over arbitrary real/complex inner-product or Hilbert spaces.",
+        "future_checker": "Lean/mathlib linear algebra, analysis, and Hilbert-space libraries plus Axeyum evidence import for finite exact subgoals."
+      },
+      "notes": "The finite rows are exact rational checks; the general theory remains proof-assistant territory."
+    }
+  ]
+}

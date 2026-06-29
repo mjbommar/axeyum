@@ -179,6 +179,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Exact rational inner-product foundations pack landed.** Added
+  [`inner-product-spaces-rational-v0`](artifacts/examples/math/inner-product-spaces-rational-v0/README.md)
+  as the finite-dimensional bridge from linear algebra into projections,
+  least squares, spectral methods, optimization, numerical analysis, and
+  functional-analysis proof horizons. The pack validates symmetric
+  positive-definite Gram matrices, exact Cauchy-Schwarz replay, orthogonal
+  projection replay, Gram-Schmidt replay, checked rejection of an indefinite
+  bilinear form, and a Hilbert/inner-product-theory Lean-horizon row. The
+  foundational example-pack validator now checks these rows with exact
+  rational fraction arithmetic and matrix/vector replay.
+
 - **Finite dual-space foundations pack landed.** Added
   [`finite-dual-spaces-v0`](artifacts/examples/math/finite-dual-spaces-v0/README.md)
   as the exact finite bridge from vector spaces into duality and functional

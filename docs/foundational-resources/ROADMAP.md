@@ -88,6 +88,7 @@ artifacts/examples/math/
   linear-algebra-rational-v0/
   finite-vector-spaces-v0/
   finite-dual-spaces-v0/
+  inner-product-spaces-rational-v0/
   finite-modules-v0/
   finite-tensor-products-v0/
   finite-ideals-v0/
@@ -103,6 +104,7 @@ artifacts/examples/math/
   finite-algebra-homomorphisms-v0/
   finite-vector-spaces-v0/
   finite-dual-spaces-v0/
+  inner-product-spaces-rational-v0/
   finite-modules-v0/
   finite-ideals-v0/
   polynomial-identities-v0/
@@ -412,6 +414,11 @@ vector-space/module Lean-horizon row.
 validates finite dual-space covectors over `F2`, pointwise dual operations,
 dual-basis pairing, annihilator recomputation, transpose-map replay, checked
 bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
+[`inner-product-spaces-rational-v0`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
+adds the exact rational inner-product bridge: Gram matrices, positive-definite
+principal minors, fixed Cauchy-Schwarz replay, orthogonal projection replay,
+Gram-Schmidt replay, bad-inner-product rejection, and a Hilbert/inner-product
+Lean-horizon row.
 [`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
 validates finite module laws over `Z/4Z`, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay, checked
@@ -459,6 +466,10 @@ rejection.
 [`finite-dual-spaces-v0`](../../artifacts/examples/math/finite-dual-spaces-v0/)
 adds the finite dual-space bridge: covector linearity, dual-basis pairings,
 annihilators, transpose maps, and bad-covector rejection over `F2`.
+[`inner-product-spaces-rational-v0`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
+adds the exact rational inner-product bridge: symmetric positive-definite Gram
+matrices, Cauchy-Schwarz arithmetic, orthogonal projections, Gram-Schmidt
+orthogonalization, and bad-inner-product rejection.
 [`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
 adds the finite module bridge from rings into linear algebra: `Z/4Z` action
 tables, generated submodules, module homomorphisms, kernel/image replay,
@@ -613,6 +624,9 @@ Exit criteria:
 - At least two use checked solver evidence, not only witness replay.
 - At least one finite spectral-linear-algebra pack validates eigenpair and
   decomposition claims while keeping general spectral theorems on the proof
+  horizon.
+- At least one exact rational inner-product pack validates projection and
+  Gram-Schmidt arithmetic while keeping Hilbert-space theorems on the proof
   horizon.
 - Curriculum status/backlog updated from the new examples.
 

@@ -274,6 +274,10 @@ CURRICULUM_MAP = {
                 "Finite dual spaces over F2, dual-basis pairings, annihilators, transpose maps, and covector counterexamples.",
             ),
             (
+                "inner-product-spaces-rational-v0",
+                "Exact rational Gram matrices, Cauchy-Schwarz replay, orthogonal projections, and Gram-Schmidt checks.",
+            ),
+            (
                 "finite-modules-v0",
                 "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
@@ -311,7 +315,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
@@ -323,11 +327,12 @@ FIELD_PACKS = {
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."),
         ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
+        ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, distance, midpoint, collinearity, and rigid finite configurations."),
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {

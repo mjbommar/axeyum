@@ -30,6 +30,7 @@ Example packs:
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/)
+- [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 - [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
@@ -49,10 +50,11 @@ polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
 operator bounds, Chebyshev recurrence values at fixed points,
-finite Chebyshev-system interpolation/sign-pattern checks, finite stochastic
-transition systems, finite first-hit distributions, and expected hitting-time
-equation checks. The
-spectral-linear-algebra pack adds exact finite eigenpair,
+finite Chebyshev-system interpolation/sign-pattern checks, exact rational
+inner-product Gram matrices, fixed Cauchy-Schwarz/projection/Gram-Schmidt
+replay, finite stochastic transition systems, finite first-hit distributions,
+and expected hitting-time equation checks. The spectral-linear-algebra pack
+adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
 
@@ -216,6 +218,21 @@ derivatives, checks the directional derivative as a dot product, verifies a
 Jacobian chain-rule matrix product for a fixed polynomial map composition, and
 checks a positive-definite Hessian by exact minors.
 
+For a finite-dimensional inner-product shadow, encode rational vectors and a
+Gram matrix. The `inner-product-spaces-rational-v0` validator recomputes
+positive-definite minors, dot products, the fixed Cauchy-Schwarz inequality,
+and orthogonal projection residuals:
+
+```text
+proj_span((1,1))(2,3) = (5/2, 5/2)
+residual = (-1/2, 1/2)
+<residual, (1,1)> = 0
+```
+
+That gives a checked finite-dimensional shadow for Hilbert projection and
+least-squares reasoning without claiming the general infinite-dimensional
+theorem.
+
 For dynamics, encode a bounded recurrence trace:
 
 ```text
@@ -275,6 +292,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
@@ -290,7 +308,8 @@ theorem, fundamental theorem of calculus, Cauchy completeness, monotone
 convergence, compactness, connectedness, Lebesgue measure, integration,
 convergence theorems, product-measure construction, Fubini/Tonelli, ODE
 existence and uniqueness, Banach/Hilbert space
-theorems, compact operators, countably infinite Markov chains,
+theorems, Hilbert projection/Riesz representation, compact operators,
+countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
 general Chebyshev spaces, homology invariance, exact sequences, homotopy
 equivalence, and infinite-dimensional spectral theory remain Lean-horizon

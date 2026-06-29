@@ -159,6 +159,11 @@ schemas, examples, and validation workflows.
   operations, dual-basis pairing, annihilator recomputation, transpose-map
   replay, checked rejection of a bad covector, and a duality/functional-analysis
   Lean-horizon row.
+- [`artifacts/examples/math/inner-product-spaces-rational-v0/`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
+  validates exact rational Gram matrices, positive-definite principal minors,
+  Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
+  Gram-Schmidt replay, checked rejection of an indefinite bilinear form, and a
+  Hilbert/inner-product-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-modules-v0/`](../../artifacts/examples/math/finite-modules-v0/)
   validates finite module laws over `Z/4Z`, submodule and span replay,
   module-homomorphism kernel/image replay, quotient-module table replay,
@@ -198,6 +203,7 @@ schemas, examples, and validation workflows.
   [`artifacts/examples/math/finite-algebra-homomorphisms-v0/`](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/),
   [`artifacts/examples/math/finite-vector-spaces-v0/`](../../artifacts/examples/math/finite-vector-spaces-v0/),
   [`artifacts/examples/math/finite-dual-spaces-v0/`](../../artifacts/examples/math/finite-dual-spaces-v0/),
+  [`artifacts/examples/math/inner-product-spaces-rational-v0/`](../../artifacts/examples/math/inner-product-spaces-rational-v0/),
   [`artifacts/examples/math/finite-modules-v0/`](../../artifacts/examples/math/finite-modules-v0/),
   [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/),
   [`artifacts/examples/math/polynomial-identities-v0/`](../../artifacts/examples/math/polynomial-identities-v0/),
@@ -205,9 +211,9 @@ schemas, examples, and validation workflows.
   and [`artifacts/examples/math/generating-functions-v0/`](../../artifacts/examples/math/generating-functions-v0/)
   validate the finite algebra and discrete core: finite group/ring/field table
   checks, finite homomorphism/kernel/quotient replay, finite ideal and
-  quotient-ring replay, finite vector-space, dual-space, and module replay,
-  fixed polynomial identities, finite counting/pigeonhole rows, and finite
-  generating-function coefficient/convolution replay.
+  quotient-ring replay, finite vector-space, dual-space, inner-product, and
+  module replay, fixed polynomial identities, finite counting/pigeonhole rows,
+  and finite generating-function coefficient/convolution replay.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
@@ -356,6 +362,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0
