@@ -10,12 +10,18 @@ Concept rows:
 
 Example packs:
 
+- [finite-sets-v0](../../../artifacts/examples/math/finite-sets-v0/)
+- [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
 ## What Axeyum Checks
 
-The current finite-structure path checks set families. The topology pack checks
+The current finite-structure path starts with plain finite sets, then moves to
+relations, functions, and set families. The finite-set pack replays
+union/intersection identities, subset transitivity, and a fixed false set claim.
+The relations/functions pack checks partial-order properties, bijective function
+tables, and rejection of a multi-valued graph. The topology pack checks
 empty/universe membership, closure under finite unions and intersections,
 closure/interior computation, and finite metric balls. The measure pack checks
 finite sigma-algebra closure, rational measure tables, finite additivity, and
@@ -23,7 +29,28 @@ event/complement identities.
 
 ## Encode / Check Walkthrough
 
-For topology, encode only finite sets:
+For sets, encode membership over one finite universe:
+
+```text
+U = {a,b,c,d}
+A = {a,b}
+B = {b,c}
+C = {c,d}
+```
+
+The validator recomputes `A union (B intersect C)` and
+`(A union B) intersect (A union C)` directly. For relations and functions, encode
+ordered pairs:
+
+```text
+domain = {x0,x1,x2}
+codomain = {y0,y1,y2}
+graph = {(x0,y1), (x1,y2), (x2,y0)}
+```
+
+The validator checks totality, single-valuedness, injectivity, and
+surjectivity. For topology, the same finite-set discipline scales up to set
+families:
 
 ```text
 universe = a,b,c
@@ -39,6 +66,8 @@ normalization, finite additivity, and the event/complement identity.
 Run the checks from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
@@ -48,6 +77,8 @@ For a fuller trace through finite topology and measure replay, read
 
 ## Horizon
 
-Dedicated `finite-sets-v0` and `relations-functions-v0` packs are still needed.
-ZFC, ordinals, choice, infinite cardinality, arbitrary topological spaces, and
-countable additivity remain proof-horizon material.
+The finite set and relation/function packs are now replay-checked finite
+artifacts. The next finite-structure gaps are cardinality/bijection packs and
+stronger EUF/Alethe evidence for congruence examples. ZFC, ordinals, choice,
+infinite cardinality, arbitrary topological spaces, and countable additivity
+remain proof-horizon material.

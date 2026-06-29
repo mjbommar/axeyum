@@ -365,7 +365,7 @@
       "example_packs": [
         {
           "id": "relations-functions-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/relations-functions-v0",
           "notes": "Finite relation properties, injective/surjective checks, and EUF slices."
         }
@@ -389,8 +389,8 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
-        "Generated dashboards keep this pack planned until a validating example pack lands."
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack."
       ],
       "graduation": {
         "status": "planned",

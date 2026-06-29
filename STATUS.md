@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Relations/functions core curriculum pack landed.** Added
+  [`relations-functions-v0`](artifacts/examples/math/relations-functions-v0/README.md)
+  with finite relation-property replay, bijective function-table replay, and a
+  checked rejection of a multi-valued graph. The foundational example-pack
+  validator now checks relation pairs, partial-order properties, function
+  totality/single-valuedness, injectivity, and surjectivity; generated
+  dashboards mark `relations-functions-v0` as validated and link the QF_UF
+  congruence/Alethe recipe as the graduation route. Continue Phase M3 with
+  `finite-fields-v0`, or close the remaining `proof-methods-refutation-v0`
+  CNF/LRAT proof gap.
+
 - **Finite sets core curriculum pack landed.** Added
   [`finite-sets-v0`](artifacts/examples/math/finite-sets-v0/README.md) with
   exact finite-universe replay for union/intersection distributivity, subset

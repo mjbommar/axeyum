@@ -267,6 +267,8 @@ and the first substantive pack under
 number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`;
 the first finite-set core curriculum pack lives under
 `artifacts/examples/math/finite-sets-v0/`;
+the first relation/function core curriculum pack lives under
+`artifacts/examples/math/relations-functions-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
@@ -294,18 +296,20 @@ Exit criteria:
 
 Build the existing DAG before adding too many adjacent fields.
 
-Status: core pack expansion is ongoing. `finite-sets-v0` now validates the
-`sets` curriculum node with finite universe membership, subset transitivity,
+Status: core pack expansion is ongoing. `finite-sets-v0` validates the `sets`
+curriculum node with finite universe membership, subset transitivity,
 union/intersection identity replay, and a bounded rejection of a malformed fixed
-set identity. Continue with `relations-functions-v0` for the next set-theory
-dependency, or close the remaining `proof-methods-refutation-v0` CNF/LRAT proof
-gap.
+set identity. `relations-functions-v0` now validates the next set-theory
+dependency with finite relation properties, bijective function-table replay, and
+a checked rejection of a multi-valued graph. Continue with `finite-fields-v0` as
+the next new core pack, or close the remaining `proof-methods-refutation-v0`
+CNF/LRAT proof gap.
 
 Recommended order:
 
 1. `proof-methods-refutation-v0`: negation-as-query, pigeonhole, CNF/LRAT gap
    or checked route.
-2. `finite-sets-v0` (landed) and `relations-functions-v0`: finite set
+2. `finite-sets-v0` (landed) and `relations-functions-v0` (landed): finite set
    identities, relation properties, function properties.
 3. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
 4. `finite-fields-v0`: prime-field axioms and composite-modulus counterexample.
@@ -432,7 +436,8 @@ Priority recipes:
 3. Finite-function/EUF congruence for relation/function packs. Status: base
    recipe landed as
    [QF_UF Congruence And Alethe Evidence](../proof-cookbook/recipes/qf-uf-congruence-alethe.md);
-   apply it when `relations-functions-v0` or finite-function packs land.
+   `relations-functions-v0` now links it as the graduation route beyond finite
+   table replay.
 4. Bounded arithmetic/Diophantine route for number-theory packs. Status:
    landed as [QF_LIA Diophantine Evidence](../proof-cookbook/recipes/qf-lia-diophantine.md)
    and linked from `modular-arithmetic-v0` as the graduation route beyond finite
@@ -517,16 +522,16 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10, Phase M3 `finite-sets-v0`, Phase M4 items 4-10, and the
-Phase M5 learner-path
+Progress: items 1-10, Phase M3 `finite-sets-v0` and
+`relations-functions-v0`, Phase M4 items 4-10, and the Phase M5 learner-path
 scaffold plus first encode/check walkthrough layer have landed for the math
 seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
 linear algebra/optimization, probability/statistics, finite structures, and
 analysis/topology horizons. Phase M6 now has cookbook links from all current
 non-template math example packs. Phase M7 now has generated pack-level proof-gap
 rows and a normal foundational-resource check hook. Continue by adding
-`relations-functions-v0` as the next core curriculum pack or by closing the
-remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
+`finite-fields-v0` as the next core curriculum pack or by closing the remaining
+`proof-methods-refutation-v0` CNF/LRAT proof gap.
 
 ## Operating Rules
 

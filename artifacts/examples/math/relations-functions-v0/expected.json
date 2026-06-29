@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "pack_id": "relations-functions-v0",
+  "witnesses": [
+    {
+      "id": "divisibility-poset",
+      "description": "The divisibility relation on the finite carrier {1, 2, 4}.",
+      "values": {
+        "elements": ["1", "2", "4"],
+        "pairs": [
+          ["1", "1"],
+          ["1", "2"],
+          ["1", "4"],
+          ["2", "2"],
+          ["2", "4"],
+          ["4", "4"]
+        ]
+      }
+    },
+    {
+      "id": "three-point-bijection",
+      "description": "A bijective function table between two three-element sets.",
+      "values": {
+        "domain": ["x0", "x1", "x2"],
+        "codomain": ["y0", "y1", "y2"],
+        "pairs": [
+          ["x0", "y1"],
+          ["x1", "y2"],
+          ["x2", "y0"]
+        ]
+      }
+    },
+    {
+      "id": "multi-valued-graph",
+      "description": "A relation that is not a function because x0 has two outputs.",
+      "values": {
+        "domain": ["x0", "x1"],
+        "codomain": ["y0", "y1"],
+        "pairs": [
+          ["x0", "y0"],
+          ["x0", "y1"],
+          ["x1", "y1"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "partial-order-witness",
+      "claim": "The listed relation is a partial order on the finite carrier.",
+      "expected_result": "sat",
+      "validation": "finite_relation_property_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["divisibility-poset"],
+      "notes": "The validator checks reflexivity, antisymmetry, and transitivity over the explicit pair set."
+    },
+    {
+      "id": "bijection-table-witness",
+      "claim": "The listed finite graph is a bijective function from the domain to the codomain.",
+      "expected_result": "sat",
+      "validation": "finite_function_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-bijection"],
+      "notes": "The validator checks totality, single-valuedness, injectivity, and surjectivity."
+    },
+    {
+      "id": "non-function-rejected",
+      "claim": "The listed finite graph is a function from the domain to the codomain.",
+      "expected_result": "unsat",
+      "validation": "finite_function_table_replay",
+      "proof_status": "checked",
+      "witnesses": ["multi-valued-graph"],
+      "notes": "The validator confirms x0 maps to two distinct codomain elements, violating single-valuedness."
+    }
+  ]
+}

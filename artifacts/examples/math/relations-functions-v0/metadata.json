@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "relations-functions-v0",
+  "title": "Finite Relations And Function Tables",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "curriculum_relations_and_functions",
+    "curriculum_sets",
+    "field_set_theory_and_foundations",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "set_theory_and_foundations",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "relations-and-functions",
+    "sets"
+  ],
+  "axeyum_fragments": [
+    "finite relations",
+    "finite functions",
+    "Bool",
+    "BV / enumeration",
+    "QF_UF"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md"
+  ],
+  "expected_results": [
+    "partial-order-witness",
+    "bijection-table-witness",
+    "non-function-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode finite relation predicates as deterministic Bool/BV formulas.",
+    "Replay finite function tables through Axeyum model evaluation.",
+    "Add explicit QF_UF congruence-conflict examples with checked Alethe evidence.",
+    "Promote reusable finite-relation helpers only after cardinality or finite-algebra packs duplicate the same logic."
+  ]
+}

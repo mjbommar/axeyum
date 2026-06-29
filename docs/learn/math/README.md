@@ -17,7 +17,7 @@ Source maps:
 | Path | Start With | First Checkable Packs |
 |---|---|---|
 | [Logic And Proof](logic-and-proof.md) | `curriculum_proof_methods`, `field_logic_and_proof` | `proof-methods-refutation-v0`, `graph-coloring-v0` |
-| [Sets, Relations, And Finite Structures](sets-relations-and-finite-structures.md) | `curriculum_sets`, `field_set_theory_and_foundations` | `finite-topology-v0`, `finite-measure-v0` |
+| [Sets, Relations, And Finite Structures](sets-relations-and-finite-structures.md) | `curriculum_sets`, `field_set_theory_and_foundations` | `finite-sets-v0`, `relations-functions-v0`, `finite-topology-v0` |
 | [Number Systems And Arithmetic](number-systems-and-arithmetic.md) | `curriculum_modular_arithmetic`, `curriculum_rationals`, `curriculum_complex` | `modular-arithmetic-v0`, `rationals-lra-v0`, `complex-algebraic-v0` |
 | [Algebra And Number Theory](algebra-and-number-theory.md) | `field_abstract_algebra`, `field_number_theory` | `modular-arithmetic-v0`, `complex-algebraic-v0` |
 | [Rational And Real Algebra](rational-real-algebra.md) | `field_real_analysis`, `curriculum_reals` | `rationals-lra-v0`, `linear-optimization-v0`, `coordinate-geometry-v0` |

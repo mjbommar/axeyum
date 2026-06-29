@@ -282,6 +282,133 @@ def validate_finite_sets(expected: dict[str, Any]) -> None:
         fail("bad distributive identity unexpectedly holds for the fixed witness")
 
 
+def require_pair_set(
+    context: str,
+    value: Any,
+    left_values: set[str],
+    right_values: set[str],
+) -> set[tuple[str, str]]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    pairs: set[tuple[str, str]] = set()
+    for index, pair in enumerate(value):
+        if not isinstance(pair, list) or len(pair) != 2:
+            fail(f"{context}[{index}] must be a two-element list")
+        left, right = pair
+        require_string(f"{context}[{index}][0]", left)
+        require_string(f"{context}[{index}][1]", right)
+        if left not in left_values:
+            fail(f"{context}[{index}][0] references missing left element {left!r}")
+        if right not in right_values:
+            fail(f"{context}[{index}][1] references missing right element {right!r}")
+        normalized = (left, right)
+        if normalized in pairs:
+            fail(f"{context} repeats pair {normalized}")
+        pairs.add(normalized)
+    return pairs
+
+
+def require_relation_data(context: str, values: dict[str, Any]) -> tuple[list[str], set[tuple[str, str]]]:
+    elements = require_string_list(f"{context}.elements", values.get("elements"))
+    element_set = set(elements)
+    pairs = require_pair_set(f"{context}.pairs", values.get("pairs"), element_set, element_set)
+    return elements, pairs
+
+
+def is_reflexive(elements: list[str], pairs: set[tuple[str, str]]) -> bool:
+    return all((element, element) in pairs for element in elements)
+
+
+def is_antisymmetric(pairs: set[tuple[str, str]]) -> bool:
+    return all(left == right or (right, left) not in pairs for left, right in pairs)
+
+
+def is_transitive(pairs: set[tuple[str, str]]) -> bool:
+    return all(
+        (left, right_2) in pairs
+        for left, right_1 in pairs
+        for left_2, right_2 in pairs
+        if right_1 == left_2
+    )
+
+
+def require_function_graph_data(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], list[str], set[tuple[str, str]]]:
+    domain = require_string_list(f"{context}.domain", values.get("domain"))
+    codomain = require_string_list(f"{context}.codomain", values.get("codomain"))
+    pairs = require_pair_set(f"{context}.pairs", values.get("pairs"), set(domain), set(codomain))
+    return domain, codomain, pairs
+
+
+def outputs_by_input(domain: list[str], pairs: set[tuple[str, str]]) -> dict[str, set[str]]:
+    return {
+        item: {output for input_item, output in pairs if input_item == item}
+        for item in domain
+    }
+
+
+def is_total_function(domain: list[str], pairs: set[tuple[str, str]]) -> bool:
+    outputs = outputs_by_input(domain, pairs)
+    return all(outputs[item] for item in domain)
+
+
+def is_single_valued(domain: list[str], pairs: set[tuple[str, str]]) -> bool:
+    outputs = outputs_by_input(domain, pairs)
+    return all(len(outputs[item]) <= 1 for item in domain)
+
+
+def function_mapping(domain: list[str], pairs: set[tuple[str, str]]) -> dict[str, str]:
+    outputs = outputs_by_input(domain, pairs)
+    if not all(len(outputs[item]) == 1 for item in domain):
+        fail("function graph must be total and single-valued before extracting a mapping")
+    return {item: next(iter(outputs[item])) for item in domain}
+
+
+def validate_relations_functions(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    order = checks["partial-order-witness"]
+    if order["expected_result"] != "sat":
+        fail("partial-order-witness must expect sat")
+    values = single_witness_values(order, witnesses)
+    elements, pairs = require_relation_data("partial order", values)
+    if not is_reflexive(elements, pairs):
+        fail("partial-order-witness relation is not reflexive")
+    if not is_antisymmetric(pairs):
+        fail("partial-order-witness relation is not antisymmetric")
+    if not is_transitive(pairs):
+        fail("partial-order-witness relation is not transitive")
+
+    bijection = checks["bijection-table-witness"]
+    if bijection["expected_result"] != "sat":
+        fail("bijection-table-witness must expect sat")
+    values = single_witness_values(bijection, witnesses)
+    domain, codomain, pairs = require_function_graph_data("bijection table", values)
+    if not is_total_function(domain, pairs):
+        fail("bijection-table-witness graph is not total")
+    if not is_single_valued(domain, pairs):
+        fail("bijection-table-witness graph is not single-valued")
+    mapping = function_mapping(domain, pairs)
+    images = list(mapping.values())
+    if len(set(images)) != len(images):
+        fail("bijection-table-witness graph is not injective")
+    if set(images) != set(codomain):
+        fail("bijection-table-witness graph is not surjective")
+
+    bad_function = checks["non-function-rejected"]
+    if bad_function["expected_result"] != "unsat":
+        fail("non-function-rejected must expect unsat")
+    values = single_witness_values(bad_function, witnesses)
+    domain, _, pairs = require_function_graph_data("non-function graph", values)
+    if is_single_valued(domain, pairs):
+        fail("non-function-rejected graph unexpectedly is single-valued")
+    if is_total_function(domain, pairs) and is_single_valued(domain, pairs):
+        fail("non-function-rejected graph unexpectedly is a function")
+
+
 def require_graph_data(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]], list[str]]:
     vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
     colors = require_string_list(f"{context}.colors", values.get("colors"))
@@ -1615,6 +1742,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_modular_arithmetic(expected)
     if metadata["id"] == "rationals-lra-v0":
         validate_rationals_lra(expected)
+    if metadata["id"] == "relations-functions-v0":
+        validate_relations_functions(expected)
     if metadata["id"] == "linear-algebra-rational-v0":
         validate_linear_algebra_rational(expected)
 
