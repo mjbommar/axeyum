@@ -50,6 +50,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/modular-arithmetic-v0/`](../../artifacts/examples/math/modular-arithmetic-v0/)
   validates small CRT, modular inverse, composite non-unit, and Fermat-style
   finite checks by replay/exhaustive search.
+- [`artifacts/examples/math/rationals-lra-v0/`](../../artifacts/examples/math/rationals-lra-v0/)
+  validates exact rational density, additive inverse, trichotomy, and
+  transitivity checks using rational replay.
 
 Validation commands:
 
@@ -60,6 +63,7 @@ python3 scripts/gen-foundational-dashboards.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 ```
 
 ## Principle

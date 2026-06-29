@@ -1,0 +1,28 @@
+# Checks
+
+## `density-between-witness`
+
+Expected result: `sat`.
+
+The witness `1/2` lies strictly between `1/3` and `2/3`, and is exactly their
+average.
+
+## `additive-inverse-witness`
+
+Expected result: `sat`.
+
+The witness `-5/7` is the additive inverse of `5/7`.
+
+## `trichotomy-fixed-unsat`
+
+Expected result: `unsat`.
+
+The checked query is the absence of a trichotomy violation for the fixed pair
+`1/4` and `3/4`.
+
+## `order-transitivity-fixed-unsat`
+
+Expected result: `unsat`.
+
+The checked query is the absence of a transitivity violation for the fixed chain
+`1/5 < 2/5 < 3/5`.

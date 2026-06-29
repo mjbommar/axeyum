@@ -629,7 +629,7 @@
       "example_packs": [
         {
           "id": "rationals-lra-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/rationals-lra-v0",
           "notes": "Exact rational order/field facts, density, trichotomy, and Farkas links."
         }
@@ -653,7 +653,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
         "Generated dashboards currently track planned packs, not replayed pack results."
       ],
       "graduation": {

@@ -134,6 +134,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rationals LRA pack landed.** Added
+  [`artifacts/examples/math/rationals-lra-v0/`](artifacts/examples/math/rationals-lra-v0/)
+  for exact rational density, additive inverse, trichotomy, and order
+  transitivity checks. The foundational example-pack validator now parses
+  rational strings with exact arithmetic and replays the pack without
+  floating-point tolerances. The concept atlas and generated dashboard now mark
+  `rationals-lra-v0` as validated for the `rationals` curriculum row.
+
 - **Modular arithmetic pack landed.** Added
   [`artifacts/examples/math/modular-arithmetic-v0/`](artifacts/examples/math/modular-arithmetic-v0/)
   for small CRT, modular inverse, composite non-unit, and Fermat-style finite
@@ -8987,6 +8995,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-29** — **Rationals LRA pack landed.**
+  Added
+  [`artifacts/examples/math/rationals-lra-v0/`](artifacts/examples/math/rationals-lra-v0/)
+  with exact rational replay for density, additive inverse, trichotomy, and
+  order transitivity. Extended
+  [`validate-foundational-example-pack.py`](scripts/validate-foundational-example-pack.py)
+  to parse fraction strings with exact arithmetic, keeping this pack free of
+  floating-point tolerance claims.
 
 - **2026-06-29** — **Modular arithmetic pack landed.**
   Added

@@ -60,6 +60,7 @@ artifacts/examples/math/
   template-v0/
   proof-methods-refutation-v0/
   modular-arithmetic-v0/
+  rationals-lra-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -296,6 +297,9 @@ now validates with a SAT witness control case and an explicit UNSAT proof gap.
 [`modular-arithmetic-v0`](../../artifacts/examples/math/modular-arithmetic-v0/)
 also validates with replayed CRT/inverse witnesses and exhaustive finite
 non-invertibility/Fermat-style checks.
+[`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/)
+validates exact rational density, additive inverse, trichotomy, and transitivity
+checks without floating-point arithmetic.
 
 Exit criteria:
 

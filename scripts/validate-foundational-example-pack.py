@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from fractions import Fraction
 from math import gcd
 from pathlib import Path
 from typing import Any
@@ -305,9 +306,69 @@ def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
             fail(f"fermat counterexample found: a={a}, modulus={modulus}, exponent={exponent}")
 
 
+def require_fraction(context: str, value: Any) -> Fraction:
+    if not isinstance(value, str) or not value:
+        fail(f"{context} must be a non-empty fraction string")
+    try:
+        return Fraction(value)
+    except ValueError as error:
+        fail(f"{context} is not a valid exact fraction: {error}")
+
+
+def validate_rationals_lra(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    density = checks["density-between-witness"]
+    if density["expected_result"] != "sat":
+        fail("density-between-witness must expect sat")
+    values = single_witness_values(density, witnesses)
+    a = require_fraction("density a", values.get("a"))
+    b = require_fraction("density b", values.get("b"))
+    midpoint = require_fraction("density midpoint", values.get("midpoint"))
+    if not a < midpoint < b:
+        fail("density witness must satisfy a < midpoint < b")
+    if midpoint != (a + b) / 2:
+        fail("density midpoint must be exactly (a + b) / 2")
+
+    inverse = checks["additive-inverse-witness"]
+    if inverse["expected_result"] != "sat":
+        fail("additive-inverse-witness must expect sat")
+    values = single_witness_values(inverse, witnesses)
+    x = require_fraction("inverse x", values.get("x"))
+    neg_x = require_fraction("inverse inverse", values.get("inverse"))
+    total = require_fraction("inverse sum", values.get("sum"))
+    if x + neg_x != total or total != 0:
+        fail("additive inverse witness must sum to exactly zero")
+
+    trichotomy = checks["trichotomy-fixed-unsat"]
+    if trichotomy["expected_result"] != "unsat":
+        fail("trichotomy-fixed-unsat must expect unsat")
+    data = trichotomy.get("data", {})
+    left = require_fraction("trichotomy left", data.get("left"))
+    right = require_fraction("trichotomy right", data.get("right"))
+    relations = [left < right, left == right, left > right]
+    if sum(1 for relation in relations if relation) != 1:
+        fail("trichotomy fixed pair must satisfy exactly one relation")
+
+    transitivity = checks["order-transitivity-fixed-unsat"]
+    if transitivity["expected_result"] != "unsat":
+        fail("order-transitivity-fixed-unsat must expect unsat")
+    data = transitivity.get("data", {})
+    lower = require_fraction("transitivity a", data.get("a"))
+    middle = require_fraction("transitivity b", data.get("b"))
+    upper = require_fraction("transitivity c", data.get("c"))
+    if not (lower < middle and middle < upper):
+        fail("transitivity fixed data must satisfy a < b < c")
+    if not lower < upper:
+        fail("transitivity fixed data unexpectedly violates a < c")
+
+
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
+    if metadata["id"] == "rationals-lra-v0":
+        validate_rationals_lra(expected)
 
 
 def validate_pack(pack_dir: Path, concept_ids: set[str], field_ids: set[str], curriculum_nodes: set[str]) -> None:

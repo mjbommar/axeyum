@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "rationals-lra-v0",
+  "title": "Exact Rational LRA Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "curriculum_rationals",
+    "curriculum_reals",
+    "field_real_analysis",
+    "field_linear_algebra"
+  ],
+  "field_ids": ["real_analysis", "linear_algebra"],
+  "curriculum_nodes": ["rationals", "reals"],
+  "axeyum_fragments": ["LRA (exact rationals)", "QF_LRA"],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0",
+  "source_refs": [
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/BACKLOG.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+  ],
+  "expected_results": [
+    "density-between-witness",
+    "additive-inverse-witness",
+    "trichotomy-fixed-unsat",
+    "order-transitivity-fixed-unsat"
+  ],
+  "graduation_criteria": [
+    "Encode each fixed rational check as QF_LRA.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Add Farkas certificates for UNSAT LRA forms where applicable.",
+    "Extend from fixed examples to a small generated rational corpus."
+  ]
+}

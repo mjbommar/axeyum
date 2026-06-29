@@ -264,7 +264,8 @@ Status: scaffold landed. The repository now has an example-pack schema, a
 validator, a validating template pack under `artifacts/examples/math/template-v0/`,
 and the first substantive pack under
 `artifacts/examples/math/proof-methods-refutation-v0/`; the first replay-checked
-number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`.
+number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`;
+the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`.
 
 Deliverables:
 
@@ -434,8 +435,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-6 have landed for the math seed. Continue with item 7:
-`rationals-lra-v0` with density/trichotomy checks.
+Progress: items 1-7 have landed for the math seed. Continue with item 8:
+`linear-algebra-rational-v0` with LU and inconsistent-system examples.
 
 ## Operating Rules
 
