@@ -862,7 +862,7 @@ finite topology/measure, bounded dynamics/operators, finite
 Euler-step/error replay, finite compactness/connectedness/continuous-map
 replay, finite simplicial-homology replay, finite integration replay, finite
 product-measure/Fubini replay, finite random-variable replay, and finite
-Chebyshev-system
+conditional-expectation replay, and finite Chebyshev-system
 interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
@@ -1286,6 +1286,10 @@ Fubini/Tonelli Lean horizon.
 finite random-variable functions, pushforward distributions, expectation
 through pushforwards, finite independence, checked bad pushforward rejection,
 and the general random-variable Lean horizon.
+`finite-conditional-expectation-v0` now has a learner-facing end-to-end lesson
+for finite conditioning partitions, blockwise conditional expectations, total
+expectation replay, tower-property replay, checked bad table rejection, and the
+general conditional-expectation Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

@@ -189,6 +189,9 @@ E[E[X | G]] = E[X] = 7/2
 It also checks a finite tower-property row for a two-block partition refining
 the one-block partition.
 
+For a fuller focused trace, read
+[End To End: Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md).
+
 For the finite stochastic-kernel row, the checker recomputes:
 
 ```text

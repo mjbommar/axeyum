@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-conditional-expectation end-to-end lesson landed.** Added
+  [`finite-conditional-expectation-end-to-end.md`](docs/learn/math/finite-conditional-expectation-end-to-end.md)
+  as the learner-facing trace for the finite-conditional-expectation pack:
+  finite conditioning partitions, blockwise conditional expectations, total
+  expectation replay, tower-property replay, checked bad table rejection, and
+  the general conditional-expectation Lean horizon. The lesson is linked from
+  the math learning index plus the probability/statistics path.
+
 - **Finite-random-variables end-to-end lesson landed.** Added
   [`finite-random-variables-end-to-end.md`](docs/learn/math/finite-random-variables-end-to-end.md)
   as the learner-facing trace for the finite-random-variables pack:

@@ -205,6 +205,10 @@ validated pack data and the repo-root command that replays it.
   finite random-variable functions, pushforward distributions, expectation
   through pushforwards, finite independence, checked bad pushforward rejection,
   and the general random-variable Lean horizon.
+- [Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md):
+  follows finite conditioning partitions, blockwise conditional expectations,
+  total-expectation replay, tower-property replay, checked bad table
+  rejection, and the general conditional-expectation Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
