@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "integer-lia-v0",
+  "title": "Integer Linear Arithmetic Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_integers",
+    "curriculum_naturals",
+    "field_number_theory"
+  ],
+  "field_ids": [
+    "number_theory"
+  ],
+  "curriculum_nodes": [
+    "integers",
+    "naturals"
+  ],
+  "axeyum_fragments": [
+    "LIA / BV",
+    "linear integer arithmetic",
+    "QF_LIA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/integer-lia-v0",
+  "source_refs": [
+    "docs/curriculum/01-number-systems/integers.md",
+    "docs/curriculum/01-number-systems/naturals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+  ],
+  "expected_results": [
+    "signed-trichotomy-fixed",
+    "order-transitivity-fixed",
+    "integer-ring-identity-replay",
+    "linear-equation-witness",
+    "integer-interval-infeasible",
+    "diophantine-gcd-obstruction"
+  ],
+  "graduation_criteria": [
+    "Encode each fixed integer row as deterministic QF_LIA.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Emit and check integer-prelude evidence for interval and Diophantine UNSAT rows.",
+    "Keep general quantified integer algebra and induction-dependent theorems marked Lean-horizon."
+  ]
+}

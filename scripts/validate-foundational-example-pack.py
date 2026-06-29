@@ -1185,6 +1185,104 @@ def validate_number_theory(expected: dict[str, Any]) -> None:
         fail("bounded-diophantine-witness solution does not satisfy the equation")
 
 
+def integer_relation(left: int, right: int) -> str:
+    if left < right:
+        return "lt"
+    if left > right:
+        return "gt"
+    return "eq"
+
+
+def require_linear_integer_witness(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[int], list[int], int]:
+    coefficients = require_int_list(f"{context}.coefficients", values.get("coefficients"))
+    solution = require_int_list(f"{context}.solution", values.get("solution"))
+    target = require_int(f"{context}.target", values.get("target"))
+    if len(coefficients) != len(solution):
+        fail(f"{context} coefficients and solution must have the same length")
+    return coefficients, solution, target
+
+
+def dot_product(left: list[int], right: list[int]) -> int:
+    return sum(left_value * right_value for left_value, right_value in zip(left, right))
+
+
+def validate_integer_lia(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    trichotomy = checks["signed-trichotomy-fixed"]
+    if trichotomy["expected_result"] != "sat":
+        fail("signed-trichotomy-fixed must expect sat")
+    values = single_witness_values(trichotomy, witnesses)
+    left = require_int("trichotomy left", values.get("left"))
+    right = require_int("trichotomy right", values.get("right"))
+    relation = values.get("relation")
+    require_string("trichotomy relation", relation)
+    if relation not in {"lt", "eq", "gt"}:
+        fail("trichotomy relation must be one of lt, eq, gt")
+    truth_values = [left < right, left == right, left > right]
+    if sum(1 for truth_value in truth_values if truth_value) != 1:
+        fail("signed-trichotomy-fixed did not find exactly one true relation")
+    if integer_relation(left, right) != relation:
+        fail("signed-trichotomy-fixed listed relation is not the true relation")
+
+    transitivity = checks["order-transitivity-fixed"]
+    if transitivity["expected_result"] != "sat":
+        fail("order-transitivity-fixed must expect sat")
+    values = single_witness_values(transitivity, witnesses)
+    a_value = require_int("transitivity a", values.get("a"))
+    b_value = require_int("transitivity b", values.get("b"))
+    c_value = require_int("transitivity c", values.get("c"))
+    if not (a_value < b_value and b_value < c_value and a_value < c_value):
+        fail("order-transitivity-fixed chain does not satisfy transitivity")
+
+    identity = checks["integer-ring-identity-replay"]
+    if identity["expected_result"] != "sat":
+        fail("integer-ring-identity-replay must expect sat")
+    values = single_witness_values(identity, witnesses)
+    a_value = require_int("ring identity a", values.get("a"))
+    b_value = require_int("ring identity b", values.get("b"))
+    result = require_int("ring identity result", values.get("result"))
+    if (a_value + b_value) - b_value != result:
+        fail("integer-ring-identity-replay result does not match")
+    if result != a_value:
+        fail("integer-ring-identity-replay result must equal a")
+
+    equation = checks["linear-equation-witness"]
+    if equation["expected_result"] != "sat":
+        fail("linear-equation-witness must expect sat")
+    values = single_witness_values(equation, witnesses)
+    coefficients, solution, target = require_linear_integer_witness("linear equation", values)
+    if dot_product(coefficients, solution) != target:
+        fail("linear-equation-witness solution does not satisfy the equation")
+
+    interval = checks["integer-interval-infeasible"]
+    if interval["expected_result"] != "unsat":
+        fail("integer-interval-infeasible must expect unsat")
+    data = interval.get("data", {})
+    lower = require_int("integer interval lower", data.get("lower"))
+    upper = require_int("integer interval upper", data.get("upper"))
+    if lower <= upper:
+        fail("integer-interval-infeasible data is satisfiable")
+
+    obstruction = checks["diophantine-gcd-obstruction"]
+    if obstruction["expected_result"] != "unsat":
+        fail("diophantine-gcd-obstruction must expect unsat")
+    data = obstruction.get("data", {})
+    coefficients = require_int_list("integer diophantine coefficients", data.get("coefficients"))
+    target = require_int("integer diophantine target", data.get("target"))
+    coefficient_gcd = 0
+    for coefficient in coefficients:
+        coefficient_gcd = gcd(coefficient_gcd, abs(coefficient))
+    if coefficient_gcd == 0:
+        fail("diophantine-gcd-obstruction coefficients must not all be zero")
+    if target % coefficient_gcd == 0:
+        fail("diophantine-gcd-obstruction data is satisfiable by the gcd criterion")
+
+
 def require_fraction(context: str, value: Any) -> Fraction:
     if not isinstance(value, str) or not value:
         fail(f"{context} must be a non-empty fraction string")
@@ -2410,6 +2508,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_measure(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "integer-lia-v0":
+        validate_integer_lia(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
     if metadata["id"] == "finite-operator-v0":

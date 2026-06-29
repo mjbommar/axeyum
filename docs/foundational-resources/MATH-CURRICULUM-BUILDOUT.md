@@ -269,6 +269,8 @@ the first gcd/Bezout core arithmetic pack lives under
 `artifacts/examples/math/gcd-bezout-v0/`;
 the first bounded number-theory destination pack lives under
 `artifacts/examples/math/number-theory-v0/`;
+the first exact-integer LIA pack lives under
+`artifacts/examples/math/integer-lia-v0/`;
 the first finite-set core curriculum pack lives under
 `artifacts/examples/math/finite-sets-v0/`;
 the first relation/function core curriculum pack lives under
@@ -329,10 +331,12 @@ validates gcd/common-divisor replay, Bezout coefficient replay, direct
 divisibility witnesses, and a checked linear Diophantine gcd obstruction.
 `number-theory-v0` now validates bounded CRT compatibility, quadratic-residue
 replay, checked nonresidue enumeration, sum-of-two-squares replay, checked
-mod-4 two-squares obstruction, and bounded Diophantine replay. Continue by
-closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by
-adding another remaining core arithmetic/foundation pack such as
-`natural-arithmetic-v0` or `integer-lia-v0`.
+mod-4 two-squares obstruction, and bounded Diophantine replay. `integer-lia-v0`
+now validates signed trichotomy, order transitivity, integer ring-identity
+replay, linear equation witnesses, checked interval infeasibility, and a fixed
+GCD-test Diophantine obstruction. Continue by closing the remaining
+`proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+`natural-arithmetic-v0`.
 
 Recommended order:
 
@@ -353,6 +357,8 @@ Recommended order:
 9. `counting-v0` (landed): combinations, pigeonhole, finite counting witnesses.
 10. `number-theory-v0` (landed): CRT compatibility, quadratic residues,
     sum-of-two-squares, and bounded Diophantine checks.
+11. `integer-lia-v0` (landed): signed order facts, linear equations,
+    interval infeasibility, and GCD-test refutations.
 
 Exit criteria:
 
@@ -559,17 +565,16 @@ docs link checker clean.
 
 Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `relations-functions-v0`, `finite-fields-v0`,
-`polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`, and
-`number-theory-v0`, Phase M4 items 4-10, and the Phase M5 learner-path scaffold
-plus first encode/check walkthrough layer have landed for the math seed.
-End-to-end lessons now exist for graph coloring, rational arithmetic, linear
-algebra/optimization, probability/statistics, finite structures, and
-analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs. Phase M7 now has generated pack-level
-proof-gap rows and a normal foundational-resource check hook. Continue by
-closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by
-adding another remaining core arithmetic/foundation pack such as
-`natural-arithmetic-v0` or `integer-lia-v0`.
+`polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
+`number-theory-v0`, and `integer-lia-v0`, Phase M4 items 4-10, and the Phase M5
+learner-path scaffold plus first encode/check walkthrough layer have landed for
+the math seed. End-to-end lessons now exist for graph coloring, rational
+arithmetic, linear algebra/optimization, probability/statistics, finite
+structures, and analysis/topology horizons. Phase M6 now has cookbook links from
+all current non-template math example packs. Phase M7 now has generated
+pack-level proof-gap rows and a normal foundational-resource check hook.
+Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof
+gap or by adding `natural-arithmetic-v0`.
 
 ## Operating Rules
 

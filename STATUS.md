@@ -159,6 +159,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Integer LIA core number-system pack landed.** Added
+  [`integer-lia-v0`](artifacts/examples/math/integer-lia-v0/README.md) with
+  signed trichotomy replay, order-transitivity replay, integer ring-identity
+  replay, a linear equation witness, a checked infeasible interval, and the
+  `2*x + 4*y = 3` GCD obstruction from the integers curriculum row. The
+  foundational example-pack validator now checks fixed integer comparisons,
+  exact integer identities, linear dot-product witnesses, interval
+  contradictions, and GCD non-divisibility; generated dashboards mark the
+  integers curriculum row's first pack as validated. Continue by closing the
+  remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `natural-arithmetic-v0`.
+
 - **Bounded number-theory destination pack landed.** Added
   [`number-theory-v0`](artifacts/examples/math/number-theory-v0/README.md)
   with a compatible non-coprime CRT witness, quadratic-residue witness,
@@ -168,9 +180,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   residue-square enumeration, square-sum replay, the mod-4 obstruction, and
   exact Diophantine replay; generated dashboards mark the number-theory
   curriculum row's first pack as validated. Continue by closing the remaining
-  `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding another
-  remaining core arithmetic/foundation pack such as `natural-arithmetic-v0` or
-  `integer-lia-v0`.
+  `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `integer-lia-v0` / `natural-arithmetic-v0`.
 
 - **GCD/Bezout core arithmetic pack landed.** Added
   [`gcd-bezout-v0`](artifacts/examples/math/gcd-bezout-v0/README.md) with exact

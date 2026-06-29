@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "pack_id": "integer-lia-v0",
+  "witnesses": [
+    {
+      "id": "trichotomy-minus3-4",
+      "description": "Signed trichotomy witness for -3 and 4.",
+      "values": {
+        "left": -3,
+        "right": 4,
+        "relation": "lt"
+      }
+    },
+    {
+      "id": "chain-minus2-1-5",
+      "description": "Order-transitivity witness for -2 < 1 < 5.",
+      "values": {
+        "a": -2,
+        "b": 1,
+        "c": 5
+      }
+    },
+    {
+      "id": "ring-identity-minus7-5",
+      "description": "A fixed replay of (a + b) - b = a.",
+      "values": {
+        "a": -7,
+        "b": 5,
+        "result": -7
+      }
+    },
+    {
+      "id": "linear-equation-3-minus2-7",
+      "description": "A fixed integer solution for 3*x - 2*y = 7.",
+      "values": {
+        "coefficients": [3, -2],
+        "solution": [3, 1],
+        "target": 7
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "signed-trichotomy-fixed",
+      "claim": "Exactly one comparison relation holds between -3 and 4.",
+      "expected_result": "sat",
+      "validation": "integer_trichotomy_replay",
+      "proof_status": "checked",
+      "witnesses": ["trichotomy-minus3-4"],
+      "notes": "The validator checks exactly one of <, =, > holds and that the listed relation is the true one."
+    },
+    {
+      "id": "order-transitivity-fixed",
+      "claim": "The fixed chain -2 < 1 < 5 implies -2 < 5.",
+      "expected_result": "sat",
+      "validation": "integer_order_replay",
+      "proof_status": "checked",
+      "witnesses": ["chain-minus2-1-5"],
+      "notes": "The validator checks both premises and the transitive endpoint order."
+    },
+    {
+      "id": "integer-ring-identity-replay",
+      "claim": "The fixed integer values satisfy (a + b) - b = a.",
+      "expected_result": "sat",
+      "validation": "integer_ring_identity_replay",
+      "proof_status": "checked",
+      "witnesses": ["ring-identity-minus7-5"],
+      "notes": "The validator recomputes (-7 + 5) - 5 exactly."
+    },
+    {
+      "id": "linear-equation-witness",
+      "claim": "The listed values solve 3*x - 2*y = 7.",
+      "expected_result": "sat",
+      "validation": "linear_integer_equation_replay",
+      "proof_status": "checked",
+      "witnesses": ["linear-equation-3-minus2-7"],
+      "notes": "The validator checks the exact integer dot product."
+    },
+    {
+      "id": "integer-interval-infeasible",
+      "claim": "There exists an integer z with z >= 5 and z <= 2.",
+      "expected_result": "unsat",
+      "validation": "integer_interval_refutation",
+      "proof_status": "checked",
+      "data": {
+        "lower": 5,
+        "upper": 2
+      },
+      "notes": "The validator checks the lower bound is greater than the upper bound."
+    },
+    {
+      "id": "diophantine-gcd-obstruction",
+      "claim": "There exist integers x and y such that 2*x + 4*y = 3.",
+      "expected_result": "unsat",
+      "validation": "gcd_divisibility_refutation",
+      "proof_status": "checked",
+      "data": {
+        "coefficients": [2, 4],
+        "target": 3
+      },
+      "notes": "The validator checks gcd(2,4) = 2 and 2 does not divide 3."
+    }
+  ]
+}

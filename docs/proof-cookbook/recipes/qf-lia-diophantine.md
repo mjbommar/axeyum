@@ -23,9 +23,9 @@ The Diophantine route normalizes integer equalities into a linear system
 contradiction `0 = d` with `d != 0`.
 
 The route is used by Axeyum's integer evidence layer. Some math resource packs,
-such as gcd/Bezout, bounded number theory, and modular arithmetic, still use
-finite replay today; this recipe is their graduation path when those examples
-are emitted as solver-form LIA obligations.
+such as integer LIA, gcd/Bezout, bounded number theory, and modular arithmetic,
+still use finite replay today; this recipe is their graduation path when those
+examples are emitted as solver-form LIA obligations.
 
 ## Evidence Artifact
 
@@ -103,6 +103,7 @@ cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
 Resource packs currently linked as graduation targets:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/integer-lia-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
@@ -114,6 +115,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mo
 - [support matrix](../../research/08-planning/support-matrix.md)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [dominance scoreboard](../../../bench-results/DOMINANCE.md)
+- [Integer LIA pack](../../../artifacts/examples/math/integer-lia-v0/)
 - [GCD Bezout pack](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [Number Theory pack](../../../artifacts/examples/math/number-theory-v0/)
 - [Modular Arithmetic pack](../../../artifacts/examples/math/modular-arithmetic-v0/)
