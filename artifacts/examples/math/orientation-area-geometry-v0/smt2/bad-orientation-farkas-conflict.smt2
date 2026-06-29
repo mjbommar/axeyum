@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const signed_double_area Real)
+(assert (= signed_double_area (- 1)))
+(assert (> signed_double_area 0))
+(check-sat)

@@ -187,6 +187,17 @@ signed double area = -1
 orientation = clockwise
 ```
 
+The resource regression checks the final orientation contradiction as
+`QF_LRA`:
+
+```text
+signed_double_area = -1
+signed_double_area > 0
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 The false orientation claim is checked `unsat`.
 
 ## Name The Lean Horizon

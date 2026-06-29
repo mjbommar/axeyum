@@ -38,7 +38,8 @@
     "docs/curriculum/02-structures/polynomials.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "triangle-orientation-witness",
@@ -50,7 +51,7 @@
   "graduation_criteria": [
     "Encode fixed orientation, signed-area, and barycentric checks as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted certificates for the false orientation row once the LRA proof routes are promoted.",
+    "Route false fixed-orientation claims through checked QF_LRA/Farkas certificates once signed area is replayed exactly.",
     "Keep projective, differential, and higher-dimensional orientation theorems under Lean horizon until formal proof routes exist."
   ]
 }

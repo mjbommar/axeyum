@@ -10,7 +10,7 @@ The pack covers:
 - counterclockwise orientation and signed double-area replay for one triangle;
 - affine area scaling by the determinant of a fixed invertible affine map;
 - barycentric point replay for a point inside a fixed triangle;
-- checked rejection of a false orientation claim;
+- checked QF_LRA/Farkas rejection of a false orientation claim;
 - a Lean-horizon row for general orientation and area theorems.
 
 ## Concepts
@@ -27,7 +27,8 @@ The pack covers:
 The validator parses all coordinates, matrix entries, determinants, weights,
 and areas as exact rational strings. It recomputes signed double areas with the
 two-dimensional determinant, applies affine maps exactly, and checks
-barycentric coordinates without floating point.
+barycentric coordinates without floating point. The false orientation row is
+also routed through Axeyum's checked `UnsatFarkas` evidence path.
 
 This is still a finite replay pack. It does not claim general theorems about
 all oriented manifolds, all Euclidean geometries, or all affine spaces.

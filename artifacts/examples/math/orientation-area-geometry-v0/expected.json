@@ -74,9 +74,12 @@
         "points": [["0", "0"], ["0", "1"], ["1", "0"]],
         "claimed_orientation": "ccw",
         "actual_orientation": "cw",
-        "signed_double_area": "-1"
+        "signed_double_area": "-1",
+        "farkas_orientation_claim": "signed_double_area > 0",
+        "smt2_artifact": "artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-orientation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes orientation_area_bad_orientation_emits_checked_farkas"
       },
-      "notes": "The validator rejects the claim because the signed double area is negative."
+      "notes": "The validator rejects the claim because the signed double area is negative; the Axeyum regression refutes signed_double_area = -1 together with the false orientation claim signed_double_area > 0 using rechecked Farkas evidence."
     },
     {
       "id": "general-oriented-geometry-lean-horizon",

@@ -401,6 +401,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `posterior = 1/5`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Orientation/area geometry QF_LRA/Farkas regression landed.**
+  [`orientation-area-geometry-v0`](artifacts/examples/math/orientation-area-geometry-v0/)
+  now binds its bad fixed-orientation row to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `signed_double_area = -1` and the false claim
+  `signed_double_area > 0`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

@@ -10097,6 +10097,18 @@ def validate_orientation_area_geometry(expected: dict[str, Any]) -> None:
         fail("bad-orientation-rejected actual orientation is incorrect")
     if claimed_orientation == actual_orientation:
         fail("bad-orientation-rejected should contain a false orientation claim")
+    farkas_orientation_claim = data.get("farkas_orientation_claim")
+    require_string("bad orientation farkas_orientation_claim", farkas_orientation_claim)
+    if farkas_orientation_claim != "signed_double_area > 0":
+        fail("bad-orientation-rejected must document the Farkas orientation claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad orientation smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-orientation-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad orientation farkas_regression", regression)
+    if "orientation_area_bad_orientation_emits_checked_farkas" not in regression:
+        fail("bad-orientation-rejected must link the Farkas regression")
 
     horizon = checks["general-oriented-geometry-lean-horizon"]
     if horizon["expected_result"] != "not-run":

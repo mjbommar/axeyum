@@ -357,3 +357,18 @@ fn finite_euler_bad_step_emits_checked_farkas() {
         ],
     );
 }
+
+#[test]
+fn orientation_area_bad_orientation_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let signed_double_area = real(&mut arena, "signed_double_area");
+    let area_is_negative_one = eq_ratio(&mut arena, signed_double_area, -1, 1);
+    let zero = arena.real_ratio(0, 1);
+    let false_ccw_claim = arena.real_gt(signed_double_area, zero).unwrap();
+
+    assert_farkas_checked(
+        "orientation-area-geometry-v0 bad-orientation-rejected",
+        &arena,
+        &[area_is_negative_one, false_ccw_claim],
+    );
+}

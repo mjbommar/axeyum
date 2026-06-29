@@ -136,10 +136,12 @@ First targets:
   (resource-backed Farkas regression landed for the bad high-block table)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
   (resource-backed Farkas regression landed for the bad fixed-step transition)
+- [orientation-area-geometry-v0](../../artifacts/examples/math/orientation-area-geometry-v0/)
+  (resource-backed Farkas regression landed for the bad fixed-orientation row)
 
 Secondary targets:
 
-- affine and orientation geometry;
+- affine geometry;
 - inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix packs.
 

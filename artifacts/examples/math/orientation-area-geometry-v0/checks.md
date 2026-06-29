@@ -31,6 +31,10 @@ Expected result: `unsat`.
 The validator rejects the false claim that the clockwise triangle
 `(0, 0), (0, 1), (1, 0)` is counterclockwise: its signed double area is `-1`.
 
+The resource-backed Axeyum regression checks the final orientation
+contradiction as `QF_LRA`: `signed_double_area = -1` and
+`signed_double_area > 0`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-oriented-geometry-lean-horizon`
 
 Expected result: `not-run`.

@@ -653,8 +653,8 @@ rejection of a false affine distance-preservation claim, and a general
 affine-geometry Lean-horizon row.
 `artifacts/examples/math/orientation-area-geometry-v0/` now validates exact
 signed-area/orientation replay, affine area scaling by determinant,
-barycentric point-inside replay, checked rejection of a false orientation
-claim, and a general oriented-geometry Lean-horizon row.
+barycentric point-inside replay, checked QF_LRA/Farkas rejection of a false
+orientation claim, and a general oriented-geometry Lean-horizon row.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
 axioms, closure/interior computation, and exact finite metric-ball replay.
 `artifacts/examples/math/metric-continuity-v0/` now validates finite
@@ -785,7 +785,7 @@ Recommended order:
    `orientation-area-geometry-v0`: collinearity, midpoint, distance
    constraints, affine maps, signed area/orientation, barycentric replay,
    finite incidence preservation, false distance-preservation rejection, and
-   false orientation rejection.
+   QF_LRA/Farkas false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior and metric-ball examples.
 9. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
@@ -1172,8 +1172,8 @@ rejection of false distance preservation, and an affine-geometry Lean-horizon
 row.
 `orientation-area-geometry-v0` now adds the exact finite orientation/area
 bridge for geometry: signed-area replay, affine determinant area scaling,
-barycentric point-inside replay, checked rejection of false orientation, and an
-oriented-geometry Lean-horizon row.
+barycentric point-inside replay, checked QF_LRA/Farkas rejection of false
+orientation, and an oriented-geometry Lean-horizon row.
 `complex-plane-transforms-v0` now adds the next exact finite complex-analysis
 bridge: unit-root cycles, conjugation/product replay, rational
 Mobius-transform replay, checked rejection of a false unit-square real-part
@@ -1275,8 +1275,8 @@ horizon.
 `coordinate-geometry-v0`, `affine-geometry-v0`, and
 `orientation-area-geometry-v0` now have a learner-facing end-to-end lesson for
 exact midpoint, collinearity, squared-distance, affine-map, signed-area,
-area-scaling, barycentric, checked bad-distance, checked bad-orientation, and
-general geometry Lean-horizon rows.
+area-scaling, barycentric, checked bad-distance, checked QF_LRA/Farkas
+bad-orientation, and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, finite sigma-algebra closure, exact finite additivity,
@@ -1439,6 +1439,8 @@ the same checked Farkas evidence path using the denominator-cleared block
 average contradiction.
 `finite-euler-method-v0` now routes its bad fixed-step transition through the
 same checked Farkas evidence path after exact derivative replay.
+`orientation-area-geometry-v0` now routes its bad fixed-orientation row through
+the same checked Farkas evidence path after exact signed-area replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

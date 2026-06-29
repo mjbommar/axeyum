@@ -54,5 +54,15 @@ triangle witness.
 The triangle `(0, 0), (0, 1), (1, 0)` has signed double area `-1`, so the claim
 that it is counterclockwise is rejected by exact replay.
 
+The checked linear contradiction is:
+
+```text
+signed_double_area = -1
+signed_double_area > 0
+```
+
+The pack keeps this false fixed-orientation claim on the checked
+`UnsatFarkas` route.
+
 These are exact finite replay targets, not a complete formalization of
 oriented geometry.
