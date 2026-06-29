@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "pack_id": "proof-methods-refutation-v0",
+  "witnesses": [
+    {
+      "id": "bijection-2-2",
+      "description": "Two pigeons occupy two different holes.",
+      "values": {
+        "x_p0_h0": true,
+        "x_p0_h1": false,
+        "x_p1_h0": false,
+        "x_p1_h1": true
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "php-2-2-sat",
+      "claim": "PHP(2,2) has an injective assignment.",
+      "expected_result": "sat",
+      "validation": "witness_replay_planned",
+      "proof_status": "replay-only",
+      "witnesses": ["bijection-2-2"],
+      "notes": "The witness is structurally present; a pack-specific replay harness is the graduation step."
+    },
+    {
+      "id": "php-3-2-unsat",
+      "claim": "PHP(3,2) has no injective assignment.",
+      "expected_result": "unsat",
+      "validation": "cnf_lrat_planned",
+      "proof_status": "proof-gap",
+      "notes": "The intended route is deterministic CNF emission plus checked LRAT/DRAT evidence."
+    }
+  ]
+}

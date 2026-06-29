@@ -253,10 +253,15 @@ def concept_decidability(node_decidability: str) -> str:
     return node_decidability
 
 
+def pack_status(pack_id: str) -> str:
+    path = ROOT / "artifacts" / "examples" / "math" / pack_id / "metadata.json"
+    return "validated" if path.exists() else "planned"
+
+
 def pack(pack_id: str, notes: str) -> dict[str, str]:
     return {
         "id": pack_id,
-        "status": "planned",
+        "status": pack_status(pack_id),
         "path": f"artifacts/examples/math/{pack_id}",
         "notes": notes,
     }

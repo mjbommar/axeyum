@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "proof-methods-refutation-v0",
+  "title": "Proof Methods By Refutation",
+  "domain": "mathematics",
+  "claim_status": "proof-gap",
+  "trust_status": "proof-gap",
+  "concept_ids": [
+    "curriculum_proof_methods",
+    "curriculum_propositional_logic",
+    "curriculum_counting"
+  ],
+  "field_ids": ["logic_and_proof", "discrete_math"],
+  "curriculum_nodes": ["proof-methods", "propositional-logic", "counting"],
+  "axeyum_fragments": ["Bool / SAT"],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/proof-methods.md",
+    "docs/curriculum/00-foundations/propositional-logic.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/README.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+  ],
+  "expected_results": ["php-2-2-sat", "php-3-2-unsat"],
+  "graduation_criteria": [
+    "Emit the PHP(3,2) Boolean formula as deterministic CNF.",
+    "Produce and check an LRAT or DRAT proof for the UNSAT case.",
+    "Replay the PHP(2,2) witness against the original finite assignment model.",
+    "Link the checked evidence route from the Proof Certificate Cookbook."
+  ]
+}

@@ -44,6 +44,9 @@ schemas, examples, and validation workflows.
   validates foundational math example-pack folders.
 - [`artifacts/examples/math/template-v0/`](../../artifacts/examples/math/template-v0/)
   is the validating template for future math packs.
+- [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
+  is the first substantive math pack: proof-by-refutation over finite
+  pigeonhole examples, with the UNSAT proof route still marked as a proof gap.
 
 Validation commands:
 
@@ -52,6 +55,7 @@ python3 scripts/gen-foundational-concepts.py
 python3 scripts/validate-foundational-concepts.py
 python3 scripts/gen-foundational-dashboards.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 ```
 
 ## Principle

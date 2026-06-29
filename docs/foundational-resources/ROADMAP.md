@@ -58,6 +58,7 @@ artifacts/ontology/
   foundational-example-pack.schema.json
 artifacts/examples/math/
   template-v0/
+  proof-methods-refutation-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -287,8 +288,10 @@ Exit criteria:
 
 ### Phase F2: Mathematics Deepening
 
-Status: example-pack schema and validating template scaffold landed; substantive
-math packs remain open.
+Status: example-pack schema and validating template scaffold landed; the first
+substantive pack,
+[`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
+now validates with a SAT witness control case and an explicit UNSAT proof gap.
 
 Exit criteria:
 

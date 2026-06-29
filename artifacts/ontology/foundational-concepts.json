@@ -166,7 +166,7 @@
       "example_packs": [
         {
           "id": "proof-methods-refutation-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/proof-methods-refutation-v0",
           "notes": "Negate-and-decide examples; proof by contradiction as UNSAT."
         }
@@ -2055,7 +2055,7 @@
       "example_packs": [
         {
           "id": "proof-methods-refutation-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/proof-methods-refutation-v0",
           "notes": "Negation-as-query, CNF/LRAT, and proof-object lessons."
         }

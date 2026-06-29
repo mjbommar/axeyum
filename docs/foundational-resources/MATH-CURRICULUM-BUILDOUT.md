@@ -261,8 +261,9 @@ Exit criteria:
 ### Phase M2: Example-Pack Schema And Scaffold
 
 Status: scaffold landed. The repository now has an example-pack schema, a
-validator, and a validating template pack under
-`artifacts/examples/math/template-v0/`. Substantive math packs start in Phase M3.
+validator, a validating template pack under `artifacts/examples/math/template-v0/`,
+and the first substantive pack under
+`artifacts/examples/math/proof-methods-refutation-v0/`.
 
 Deliverables:
 
@@ -432,8 +433,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-4 have landed for the math seed. Continue with item 5:
-`proof-methods-refutation-v0` with pigeonhole metadata and proof gap.
+Progress: items 1-5 have landed for the math seed. Continue with item 6:
+`modular-arithmetic-v0` from the curriculum backlog.
 
 ## Operating Rules
 
