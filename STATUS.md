@@ -224,6 +224,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   DRAT, elaborates LRAT, and checks both proof objects, leaving only
   `finite-sets-v0` as the remaining first-wave Boolean CNF/LRAT target.
 
+- **Finite-sets CNF/LRAT regression landed.**
+  [`finite-sets-v0`](artifacts/examples/math/finite-sets-v0/) now has a
+  deterministic DIMACS artifact for the malformed distributive-law
+  counterexample at element `c`. The shared `axeyum-cnf` resource regression
+  emits DRAT, elaborates LRAT, and checks both proof objects; the first-wave
+  Boolean CNF/LRAT target set is now covered by concrete resource artifacts.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

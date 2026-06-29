@@ -57,9 +57,14 @@
       "claim": "For the fixed finite sets, A intersect (B union C) equals (A intersect B) union C.",
       "expected_result": "unsat",
       "validation": "finite_set_identity_replay",
-      "proof_status": "replay-only",
+      "proof_status": "checked",
       "witnesses": ["bad-distribution-claim"],
-      "notes": "The validator recomputes both sides and confirms this malformed fixed identity fails."
+      "data": {
+        "counterexample_element": "c",
+        "cnf_artifact": "artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf",
+        "proof_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_sets_distributive_counterexample_emits_checked_drat_and_lrat"
+      },
+      "notes": "The validator recomputes both sides and confirms this malformed fixed identity fails; the CNF proof regression parses the DIMACS artifact for the element c obstruction, emits DRAT, elaborates LRAT, and checks both proofs."
     }
   ]
 }

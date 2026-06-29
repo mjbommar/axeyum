@@ -15,6 +15,9 @@ const TRIANGLE_NOT_2_COLORABLE_CNF: &str = include_str!(
 const CONTRADICTION_REFUTATION_CNF: &str = include_str!(
     "../../../artifacts/examples/math/proof-methods-patterns-v0/cnf/contradiction-refutation.cnf"
 );
+const FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF: &str = include_str!(
+    "../../../artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf"
+);
 
 fn assert_unsat_resource_cnf_checks(
     label: &str,
@@ -64,5 +67,15 @@ fn proof_methods_contradiction_refutation_emits_checked_drat_and_lrat() {
         CONTRADICTION_REFUTATION_CNF,
         2,
         3,
+    );
+}
+
+#[test]
+fn finite_sets_distributive_counterexample_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "finite-sets-v0 distributive-law-counterexample",
+        FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF,
+        5,
+        13,
     );
 }

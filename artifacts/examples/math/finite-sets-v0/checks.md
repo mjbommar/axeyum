@@ -31,4 +31,26 @@ A intersect (B union C) = (A intersect B) union C
 ```
 
 The validator recomputes both sides and confirms that the equality fails for the
-listed sets. This is a bounded replay rejection, not a general proof object.
+listed sets.
+
+The pack also carries
+[`cnf/distributive-law-counterexample.cnf`](cnf/distributive-law-counterexample.cnf),
+a deterministic DIMACS encoding of the element `c` obstruction:
+
+```text
+c notin A
+c notin B
+c in C
+left_c  <=> c in A intersect (B union C)
+right_c <=> c in (A intersect B) union C
+left_c = right_c
+```
+
+The focused regression
+
+```sh
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_sets_distributive_counterexample_emits_checked_drat_and_lrat
+```
+
+parses that CNF, emits a DRAT proof with untrusted search, checks the DRAT proof
+independently, elaborates it to LRAT, and checks the LRAT proof independently.

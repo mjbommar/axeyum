@@ -1370,6 +1370,9 @@ non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and
 checks both proof objects.
 `proof-methods-patterns-v0` now carries the same CNF/DRAT/LRAT regression
 pattern for the contradiction row `p`, `p -> q`, `not q`.
+`finite-sets-v0` now carries the same CNF/DRAT/LRAT regression pattern for the
+malformed distributive-law counterexample at element `c`, completing the first
+Boolean CNF/LRAT proof-upgrade target set.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

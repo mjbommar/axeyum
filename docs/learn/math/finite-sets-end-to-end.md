@@ -17,11 +17,12 @@ Concept rows:
 |---|---|---|
 | `union-intersection-identity` | `sat` | replay-only |
 | `subset-transitivity-witness` | `sat` | replay-only |
-| `distributive-law-counterexample-rejected` | `unsat` | replay-only |
+| `distributive-law-counterexample-rejected` | `unsat` | checked |
 
 The rows are fixed finite set replays. The pack does not claim ZFC set theory,
 power-set axioms, ordinals, cardinals, choice principles, or infinite-set
-theorems.
+theorems. The malformed distributive-law row also has a concrete CNF/DRAT/LRAT
+proof route for the element where equality fails.
 
 ## Encode
 
@@ -131,8 +132,21 @@ A intersect B = {}
 ```
 
 Since `{a} != {a,c}`, the fixed equality claim is rejected. The evidence is
-still `replay-only`: the validator recomputes the counterexample, but this row
-does not yet carry a CNF/LRAT proof artifact.
+checked two ways: the validator recomputes the counterexample, and the CNF proof
+route checks the element `c` obstruction.
+
+The CNF route introduces Boolean facts for whether `c` is in `A`, `B`, `C`, the
+left side, and the right side. The fixed facts force:
+
+```text
+left_c = false
+right_c = true
+```
+
+while the malformed equality requires `left_c = right_c`. The DIMACS artifact
+[`distributive-law-counterexample.cnf`](../../../artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf)
+is unsatisfiable; the proof-producing SAT core emits DRAT, and the trusted path
+independently checks DRAT and the elaborated LRAT proof.
 
 ## Run It
 
@@ -140,6 +154,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_sets_distributive_counterexample_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -154,7 +169,7 @@ This lesson shows Axeyum's resource pattern for the finite-set base layer:
 
 ```text
 untrusted fast search -> candidate finite universe and subset data
-trusted small checking -> membership, union, intersection, subset, counterexample replay
+trusted small checking -> membership, union, intersection, subset, counterexample replay, DRAT/LRAT checks
 ```
 
 Universal finite-domain identities should graduate to Bool/BV formulas plus

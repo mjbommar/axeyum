@@ -1,0 +1,22 @@
+c finite-sets-v0 malformed distributive-law counterexample at element c
+c variable 1: c is in A
+c variable 2: c is in B
+c variable 3: c is in C
+c variable 4: c is in A intersect (B union C)
+c variable 5: c is in (A intersect B) union C
+c fixed witness facts: c notin A, c notin B, c in C
+c equality requires variables 4 and 5 to agree
+p cnf 5 13
+-1 0
+-2 0
+3 0
+-4 1 0
+-4 2 3 0
+-1 -2 4 0
+-1 -3 4 0
+-5 1 3 0
+-5 2 3 0
+-3 5 0
+-1 -2 5 0
+-4 5 0
+4 -5 0

@@ -4,7 +4,7 @@
   "title": "Finite Set Identity Witnesses",
   "domain": "mathematics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "curriculum_sets",
     "field_set_theory_and_foundations"
@@ -25,7 +25,9 @@
     "docs/curriculum/00-foundations/sets.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md"
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "union-intersection-identity",
@@ -36,6 +38,7 @@
     "Encode finite set membership as deterministic Bool/BV formulas.",
     "Replay set witnesses through Axeyum model evaluation.",
     "Add checked SAT/CNF evidence for finite refutations once set encodings emit proof artifacts.",
+    "Keep the resource-backed malformed distributive-law CNF regression checking generated DRAT and elaborated LRAT proofs.",
     "Promote reusable finite-set helpers only after relations/functions or cardinality packs duplicate the same logic."
   ]
 }
