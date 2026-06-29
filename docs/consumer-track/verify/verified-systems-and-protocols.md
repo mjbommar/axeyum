@@ -167,7 +167,16 @@ metric)** are in
 **1/7 (14%) kernel-Lean, 7/7 in-tree-certified** — quantifying the cert-lane
 gap (BV-equivalence, array/loop, and FSM refutations route through DRAT today).
 The first FSM safety properties verified include *"ESTABLISHED requires a
-handshake"* (a blind-injection class caught as a one-event bad trace). The
-remaining rungs are **unbounded** protocol safety (rung 4, CHC/PDR,
-[ADR-0048](../../research/09-decisions/adr-0048-chc-pdr-verify-guarded-invariant-discovery.md))
-and **widening the Lean reconstructor** to lift coverage off 1/7.
+handshake"* (a blind-injection class caught as a one-event bad trace).
+
+**Rung 4 (unbounded) also landed** as `tests/protocol_unbounded.rs` (design:
+[`unbounded-protocol-safety.md`](unbounded-protocol-safety.md)): the handshake
+FSM as a `TransitionSystem`, proven for **every trace** — validity and ordering
+`Safe` via both k-induction and PDR (independent engines agreeing), a
+**certified-PDR** proof whose three DRAT obligations re-check (the first protocol
+property with an unbounded checkable proof), and the blind-injection bug caught as
+an unbounded `Reachable` counterexample. A benchmark shows one unbounded proof
+(5.6 ms) subsumes — and beats — bounded model checking at depth 32 (99.9 ms, still
+not a proof). The remaining rungs are **lifting the rung-4 certificate from DRAT
+to Lean**, **widening the Lean reconstructor** to lift coverage off 1/7, and an
+**array-aware** unbounded route for buffer/window protocols.
