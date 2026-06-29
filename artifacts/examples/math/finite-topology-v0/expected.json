@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-topology-v0",
+  "witnesses": [
+    {
+      "id": "sierpinski-like-topology",
+      "description": "A finite topology on three points.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["a", "b"],
+          ["a", "b", "c"]
+        ]
+      }
+    },
+    {
+      "id": "closure-interior-subset",
+      "description": "Interior and closure of {b} in the finite topology.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["a", "b"],
+          ["a", "b", "c"]
+        ],
+        "subset": ["b"],
+        "interior": [],
+        "closure": ["b", "c"]
+      }
+    },
+    {
+      "id": "finite-metric-ball",
+      "description": "An open metric ball in a finite rational metric space.",
+      "values": {
+        "points": ["p0", "p1", "p2"],
+        "distances": [
+          {"pair": ["p0", "p1"], "distance": "1"},
+          {"pair": ["p1", "p2"], "distance": "2"},
+          {"pair": ["p0", "p2"], "distance": "3"}
+        ],
+        "center": "p1",
+        "radius": "3/2",
+        "ball": ["p0", "p1"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-topology-axioms",
+      "claim": "The listed finite family of open sets is a topology.",
+      "expected_result": "sat",
+      "validation": "finite_topology_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-like-topology"],
+      "notes": "The validator checks empty/universe membership and pairwise union/intersection closure."
+    },
+    {
+      "id": "closure-interior-witness",
+      "claim": "The listed subset has the stated interior and closure in the finite topology.",
+      "expected_result": "sat",
+      "validation": "finite_topology_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["closure-interior-subset"],
+      "notes": "The validator recomputes interior as the union of open subsets and closure by complementing interior of the complement."
+    },
+    {
+      "id": "metric-ball-witness",
+      "claim": "The listed open metric ball is exactly {p0, p1}.",
+      "expected_result": "sat",
+      "validation": "finite_metric_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["finite-metric-ball"],
+      "notes": "The validator checks the finite metric table and recomputes d(center, point) < radius."
+    }
+  ]
+}

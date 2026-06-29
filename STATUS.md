@@ -134,12 +134,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite topology pack landed.** Added
+  [`artifacts/examples/math/finite-topology-v0/`](artifacts/examples/math/finite-topology-v0/)
+  for finite topology axioms, closure/interior computation, and exact finite
+  metric-ball replay. The foundational example-pack validator now checks finite
+  set families, topology closure under union/intersection, closure/interior via
+  complements, and rational finite metric balls. Continue Phase M4 with
+  `finite-measure-v0`.
+
 - **Coordinate geometry pack landed.** Added
   [`artifacts/examples/math/coordinate-geometry-v0/`](artifacts/examples/math/coordinate-geometry-v0/)
   for exact midpoint, collinearity, and squared-distance coordinate checks. The
   foundational example-pack validator now checks rational 2D points, determinant
-  collinearity, and squared Euclidean distance exactly. Continue Phase M4 with
-  `finite-topology-v0`.
+  collinearity, and squared Euclidean distance exactly.
 
 - **Linear optimization pack landed.** Added
   [`artifacts/examples/math/linear-optimization-v0/`](artifacts/examples/math/linear-optimization-v0/)

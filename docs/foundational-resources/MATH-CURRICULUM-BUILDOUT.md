@@ -329,6 +329,8 @@ count-table witness.
 witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 `artifacts/examples/math/coordinate-geometry-v0/` now validates exact midpoint,
 collinearity, and squared-distance coordinate checks.
+`artifacts/examples/math/finite-topology-v0/` now validates finite topology
+axioms, closure/interior computation, and exact finite metric-ball replay.
 
 Recommended order:
 
@@ -450,8 +452,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10 and Phase M4 items 4-5 have landed for the math seed.
-Continue Phase M4 with `finite-topology-v0`.
+Progress: items 1-10 and Phase M4 items 4-6 have landed for the math seed.
+Continue Phase M4 with `finite-measure-v0`.
 
 ## Operating Rules
 

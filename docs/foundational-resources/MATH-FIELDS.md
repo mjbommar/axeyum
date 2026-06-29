@@ -151,11 +151,14 @@ one of:
 6. `artifacts/examples/math/coordinate-geometry-v0/`
    - Fields: `geometry`, `linear_algebra`, `real_analysis`.
    - Checks: midpoint, collinearity determinant, squared-distance replay.
-7. `artifacts/examples/math/modular-arithmetic-v0/`
+7. `artifacts/examples/math/finite-topology-v0/`
+   - Fields: `topology`, `set_theory_and_foundations`, `real_analysis`.
+   - Checks: finite topology axioms, closure/interior, metric-ball replay.
+8. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-8. `artifacts/examples/math/real-analysis-rational-v0/`
+9. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

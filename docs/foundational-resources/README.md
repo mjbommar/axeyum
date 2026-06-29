@@ -71,6 +71,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks.
+- [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
+  validates finite topology axioms, closure/interior computation, and exact
+  finite metric-ball replay.
 
 Validation commands:
 
@@ -88,6 +91,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 ```
 
 ## Principle

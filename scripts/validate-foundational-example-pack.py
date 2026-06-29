@@ -791,6 +791,172 @@ def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
         fail("distance-squared witness does not match point coordinates")
 
 
+def require_subset(context: str, value: Any, universe: list[str]) -> frozenset[str]:
+    subset = set(require_string_list(context, value, nonempty=False))
+    universe_set = set(universe)
+    missing = sorted(subset - universe_set)
+    if missing:
+        fail(f"{context} contains elements outside universe: {missing}")
+    return frozenset(subset)
+
+
+def require_set_family(
+    context: str,
+    value: Any,
+    universe: list[str],
+) -> set[frozenset[str]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty set family")
+    family: set[frozenset[str]] = set()
+    for index, subset in enumerate(value):
+        normalized = require_subset(f"{context}[{index}]", subset, universe)
+        if normalized in family:
+            fail(f"{context} repeats subset {sorted(normalized)}")
+        family.add(normalized)
+    return family
+
+
+def require_topology_data(context: str, values: dict[str, Any]) -> tuple[list[str], set[frozenset[str]]]:
+    universe = require_string_list(f"{context}.universe", values.get("universe"))
+    open_sets = require_set_family(f"{context}.open_sets", values.get("open_sets"), universe)
+    validate_topology_axioms(context, universe, open_sets)
+    return universe, open_sets
+
+
+def validate_topology_axioms(context: str, universe: list[str], open_sets: set[frozenset[str]]) -> None:
+    empty = frozenset()
+    full = frozenset(universe)
+    if empty not in open_sets:
+        fail(f"{context} open sets must include the empty set")
+    if full not in open_sets:
+        fail(f"{context} open sets must include the universe")
+    for left in open_sets:
+        for right in open_sets:
+            if frozenset(left | right) not in open_sets:
+                fail(f"{context} open sets are not closed under pairwise union")
+            if frozenset(left & right) not in open_sets:
+                fail(f"{context} open sets are not closed under pairwise intersection")
+
+
+def topology_interior(subset: frozenset[str], open_sets: set[frozenset[str]]) -> frozenset[str]:
+    result: set[str] = set()
+    for open_set in open_sets:
+        if open_set <= subset:
+            result.update(open_set)
+    return frozenset(result)
+
+
+def topology_closure(
+    subset: frozenset[str],
+    universe: list[str],
+    open_sets: set[frozenset[str]],
+) -> frozenset[str]:
+    universe_set = frozenset(universe)
+    complement = universe_set - subset
+    return frozenset(universe_set - topology_interior(frozenset(complement), open_sets))
+
+
+def require_metric_distances(
+    context: str,
+    values: Any,
+    points: list[str],
+) -> dict[frozenset[str], Fraction]:
+    if not isinstance(values, list) or not values:
+        fail(f"{context} must be a non-empty distance list")
+    point_set = set(points)
+    distances: dict[frozenset[str], Fraction] = {}
+    for index, item in enumerate(values):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        pair = item.get("pair")
+        if not isinstance(pair, list) or len(pair) != 2:
+            fail(f"{context}[{index}].pair must be a two-element list")
+        left, right = pair
+        require_string(f"{context}[{index}].pair[0]", left)
+        require_string(f"{context}[{index}].pair[1]", right)
+        if left == right:
+            fail(f"{context}[{index}].pair must contain distinct points")
+        if left not in point_set or right not in point_set:
+            fail(f"{context}[{index}].pair references a missing point")
+        key = frozenset((left, right))
+        if key in distances:
+            fail(f"{context} repeats distance pair {sorted(key)}")
+        distance = require_fraction(f"{context}[{index}].distance", item.get("distance"))
+        if distance <= 0:
+            fail(f"{context}[{index}].distance must be positive for distinct points")
+        distances[key] = distance
+    for left_index, left in enumerate(points):
+        for right in points[left_index + 1 :]:
+            key = frozenset((left, right))
+            if key not in distances:
+                fail(f"{context} missing distance pair {sorted(key)}")
+    for x in points:
+        for y in points:
+            for z in points:
+                xy = Fraction(0) if x == y else distances[frozenset((x, y))]
+                yz = Fraction(0) if y == z else distances[frozenset((y, z))]
+                xz = Fraction(0) if x == z else distances[frozenset((x, z))]
+                if xz > xy + yz:
+                    fail(f"{context} violates triangle inequality for {x}, {y}, {z}")
+    return distances
+
+
+def finite_metric_distance(
+    distances: dict[frozenset[str], Fraction],
+    left: str,
+    right: str,
+) -> Fraction:
+    if left == right:
+        return Fraction(0)
+    return distances[frozenset((left, right))]
+
+
+def validate_finite_topology(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    axioms = checks["finite-topology-axioms"]
+    if axioms["expected_result"] != "sat":
+        fail("finite-topology-axioms must expect sat")
+    values = single_witness_values(axioms, witnesses)
+    require_topology_data("finite topology", values)
+
+    closure_interior = checks["closure-interior-witness"]
+    if closure_interior["expected_result"] != "sat":
+        fail("closure-interior-witness must expect sat")
+    values = single_witness_values(closure_interior, witnesses)
+    universe, open_sets = require_topology_data("closure/interior topology", values)
+    subset = require_subset("closure/interior subset", values.get("subset"), universe)
+    expected_interior = require_subset("closure/interior interior", values.get("interior"), universe)
+    expected_closure = require_subset("closure/interior closure", values.get("closure"), universe)
+    if topology_interior(subset, open_sets) != expected_interior:
+        fail("closure-interior witness interior does not match topology")
+    if topology_closure(subset, universe, open_sets) != expected_closure:
+        fail("closure-interior witness closure does not match topology")
+
+    metric_ball = checks["metric-ball-witness"]
+    if metric_ball["expected_result"] != "sat":
+        fail("metric-ball-witness must expect sat")
+    values = single_witness_values(metric_ball, witnesses)
+    points = require_string_list("metric points", values.get("points"))
+    distances = require_metric_distances("metric distances", values.get("distances"), points)
+    center = values.get("center")
+    require_string("metric center", center)
+    if center not in set(points):
+        fail("metric center must be one of the points")
+    radius = require_fraction("metric radius", values.get("radius"))
+    if radius <= 0:
+        fail("metric radius must be positive")
+    expected_ball = require_subset("metric ball", values.get("ball"), points)
+    computed_ball = frozenset(
+        point
+        for point in points
+        if finite_metric_distance(distances, center, point) < radius
+    )
+    if computed_ball != expected_ball:
+        fail("metric-ball witness does not match finite metric")
+
+
 def require_probability(context: str, value: Any) -> Fraction:
     probability = require_fraction(context, value)
     if probability < 0 or probability > 1:
@@ -1020,6 +1186,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":
         validate_descriptive_statistics(expected)
+    if metadata["id"] == "finite-topology-v0":
+        validate_finite_topology(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
     if metadata["id"] == "finite-probability-v0":

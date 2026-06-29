@@ -67,6 +67,7 @@ artifacts/examples/math/
   descriptive-statistics-v0/
   linear-optimization-v0/
   coordinate-geometry-v0/
+  finite-topology-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -323,6 +324,9 @@ validates exact LP feasibility witnesses, objective-threshold replay, and a
 tiny checked Farkas infeasibility certificate.
 [`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
 validates exact midpoint, collinearity, and squared-distance coordinate checks.
+[`finite-topology-v0`](../../artifacts/examples/math/finite-topology-v0/)
+validates finite topology axioms, closure/interior computation, and exact finite
+metric-ball replay.
 
 Exit criteria:
 

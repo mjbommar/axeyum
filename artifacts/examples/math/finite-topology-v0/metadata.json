@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "finite-topology-v0",
+  "title": "Finite Topology And Metric-Ball Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_real_analysis",
+    "curriculum_sets",
+    "curriculum_reals",
+    "curriculum_sequences_and_limits"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "reals",
+    "sequences-and-limits"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "Bool",
+    "LRA (exact rationals)"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md"
+  ],
+  "expected_results": [
+    "finite-topology-axioms",
+    "closure-interior-witness",
+    "metric-ball-witness"
+  ],
+  "graduation_criteria": [
+    "Encode finite topology membership and subset checks as deterministic Bool formulas.",
+    "Replay finite closure/interior witnesses through Axeyum model evaluation.",
+    "Encode finite metric-ball checks with exact LRA distance comparisons.",
+    "Keep compactness, connectedness, continuity, and general topological-space facts marked Lean-horizon."
+  ]
+}
