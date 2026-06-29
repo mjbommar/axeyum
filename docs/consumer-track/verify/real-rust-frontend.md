@@ -66,6 +66,29 @@ opcode subset is handled.
 rustc driver + compiler-internal deps, so it waits behind an ADR and a deps
 decision (it changes the build's trust/dependency surface).
 
+## B — symbolic proof of reflected MIR (scale past enumeration)
+
+A3 cross-checks the reflected term by *exhaustive evaluation* (all `u8` inputs).
+That does not scale: a `u32` function has 2³² inputs. The fix is to feed the
+reflected term to the **solver** and prove a property *symbolically* —
+`axeyum_solver::prove(arena, &[], goal, cfg)` returns `Proved` / `Disproved(model)`
+/ `Unknown`, where `Proved` is a re-checked refutation of `¬goal`. So "reflect
+real compiled Rust → prove a property for all inputs" works at any width.
+
+- **Width generalization (cheap).** A wider lookup `fn(u32)->u32` compiles to the
+  *same* `switchInt`/`const` MIR shape, only with `_u32` literals — so the A3
+  reflector generalizes by reading the bit-width from the `_uN` suffix. A `u32`
+  function with five arms is reflected and `T(x) <= 9` is **proved symbolically**
+  (instant), where enumerating 2³² inputs is infeasible — the concrete payoff of
+  reflect-then-prove over reflect-then-enumerate. A false bound yields a
+  `Disproved` countermodel (the verifier catches wrong claims on real code).
+- **Arithmetic is the boundary.** Functions using `+`/`<<`/etc. compile (in debug)
+  to MIR with *overflow/range-check* branches (`CheckedAdd`, `Assert` terminators,
+  panic blocks) — a much larger opcode surface than the clean `switchInt`/`const`
+  lookups. Reflecting that robustly is real front-end work; this prototype stays in
+  the branch/const subset and documents arithmetic-MIR as the next parser frontier
+  (or sidestepped via `-O` / `wrapping_*` ops, which emit check-free MIR).
+
 ## Honest boundary
 
 - Finite reflection is *sound and complete* but only for enumerable state — the
