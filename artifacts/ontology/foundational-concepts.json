@@ -2555,7 +2555,7 @@
       "example_packs": [
         {
           "id": "descriptive-statistics-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
           "notes": "Mean/variance identities, contingency tables, exact tests, and Simpson witnesses."
         }
@@ -2578,7 +2578,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate."
       ],
       "graduation": {

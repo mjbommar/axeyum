@@ -134,20 +134,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Descriptive statistics pack landed.** Added
+  [`artifacts/examples/math/descriptive-statistics-v0/`](artifacts/examples/math/descriptive-statistics-v0/)
+  for exact mean/variance identities, contingency-table margins, and a
+  Simpson's paradox count-table witness. The foundational example-pack
+  validator now checks exact rational moments, integer margins, and finite
+  success-rate inequalities. The first ten math-resource commits are complete;
+  continue Phase M4 with `linear-optimization-v0`.
+
 - **Finite probability pack landed.** Added
   [`artifacts/examples/math/finite-probability-v0/`](artifacts/examples/math/finite-probability-v0/)
   for exact finite probability mass tables, conditional probability, and Bayes
   posterior replay. The foundational example-pack validator now checks
   rational probability atoms, normalization, event conditioning, and Bayes rule
-  exactly. Continue item 10 with `descriptive-statistics-v0`.
+  exactly.
 
 - **Graph coloring pack landed.** Added
   [`artifacts/examples/math/graph-coloring-v0/`](artifacts/examples/math/graph-coloring-v0/)
   as the first pure field-extension pack for graph theory. The pack validates a
   proper `K3` three-coloring witness, rejects an invalid same-edge coloring, and
-  exhaustively checks that `K3` has no two-coloring. The next planned
-  math-resource increment is the probability/statistics bridge:
-  `finite-probability-v0` and `descriptive-statistics-v0`.
+  exhaustively checks that `K3` has no two-coloring.
 
 - **Linear algebra rational pack landed.** Added
   [`artifacts/examples/math/linear-algebra-rational-v0/`](artifacts/examples/math/linear-algebra-rational-v0/)

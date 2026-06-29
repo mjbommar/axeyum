@@ -597,6 +597,82 @@ fn min_max_value_matches_concrete() {
 }
 
 #[test]
+fn abs_desugar_min_overflow_and_value() {
+    // The `.abs()` desugar shape `ite(a < 0, -a, a)`: at `a == iN::MIN` the `-a`
+    // arm records the negation-overflow panic (reachable → never Verified); for
+    // any other `a` the value must equal `|a|`, checked by an always-false assert.
+    use axeyum_verify::ast::UnOp;
+    let cfg = SolverConfig::default();
+    let mut rng = Rng(0x_ab50_0000_0000_000b);
+    let mut checked_min = 0u32;
+    let mut checked_val = 0u32;
+    for _ in 0..500 {
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let min = -(1i128 << (w - 1));
+        let max = (1i128 << (w - 1)) - 1;
+        let span = (max - min + 1) as u128;
+        let a = if rng.next() % 4 == 0 {
+            min // force the overflow edge
+        } else {
+            min + ((u128::from(rng.next()) % span) as i128)
+        };
+        let is_min = a == min;
+        if is_min {
+            checked_min += 1;
+        } else {
+            checked_val += 1;
+        }
+        let ty = Ty::Int {
+            width: w,
+            signed: true,
+        };
+        let a_expr = Expr::IntLit { value: bits(a, w), ty };
+        // ite(a < 0, -a, a)
+        let abs_expr = Expr::Ite {
+            cond: Box::new(Expr::Binary {
+                op: BinOp::Lt,
+                lhs: Box::new(a_expr.clone()),
+                rhs: Box::new(Expr::IntLit { value: 0, ty }),
+            }),
+            then: Box::new(Expr::Unary {
+                op: UnOp::Neg,
+                operand: Box::new(a_expr.clone()),
+            }),
+            els: Box::new(a_expr.clone()),
+        };
+        // For non-MIN, the always-false `c != |a|` must be reachable. For MIN the
+        // Neg-overflow alone makes the program non-Verified (expect is unused).
+        let expect = if is_min { 0 } else { bits(a.abs(), w) };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: abs_expr,
+                },
+                Stmt::Assert(Expr::Binary {
+                    op: BinOp::Ne,
+                    lhs: Box::new(Expr::Var("c".to_string())),
+                    rhs: Box::new(Expr::IntLit { value: expect, ty }),
+                }),
+            ],
+        };
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "abs desugar wrong-safe: a={a} (i{w}, is_min={is_min}) returned {verdict:?}"
+        );
+    }
+    assert!(
+        checked_min >= 5 && checked_val >= 10,
+        "abs fuzz under-exercised (min={checked_min}, val={checked_val})"
+    );
+}
+
+#[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index
     // panics (OOB); verify must then never return Verified.

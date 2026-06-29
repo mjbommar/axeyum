@@ -322,6 +322,9 @@ Status: first field-extension packs landed.
 and a tiny exhaustive non-colorability check.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, and Bayes posterior replay.
+`artifacts/examples/math/descriptive-statistics-v0/` now validates exact
+mean/variance identities, contingency-table margins, and a Simpson's paradox
+count-table witness.
 
 Recommended order:
 
@@ -443,9 +446,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-9 and the `finite-probability-v0` half of item 10 have landed
-for the math seed. Continue with `descriptive-statistics-v0` to complete the
-probability/statistics bridge.
+Progress: items 1-10 have landed for the math seed. Continue Phase M4 with
+`linear-optimization-v0`.
 
 ## Operating Rules
 

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "pack_id": "descriptive-statistics-v0",
+  "witnesses": [
+    {
+      "id": "mean-variance-sample",
+      "description": "The sample [1, 2, 3, 4] has mean 5/2 and population variance 5/4.",
+      "values": {
+        "sample": ["1", "2", "3", "4"],
+        "mean": "5/2",
+        "second_moment": "15/2",
+        "population_variance": "5/4"
+      }
+    },
+    {
+      "id": "two-by-two-contingency",
+      "description": "A 2x2 contingency table with explicit row, column, and total margins.",
+      "values": {
+        "table": [
+          [8, 2],
+          [1, 9]
+        ],
+        "row_sums": [10, 10],
+        "column_sums": [9, 11],
+        "total": 20
+      }
+    },
+    {
+      "id": "kidney-stone-simpson",
+      "description": "A two-stratum success-rate table exhibiting Simpson's paradox.",
+      "values": {
+        "strata": [
+          {
+            "id": "small",
+            "a_success": 81,
+            "a_total": 87,
+            "b_success": 234,
+            "b_total": 270
+          },
+          {
+            "id": "large",
+            "a_success": 192,
+            "a_total": 263,
+            "b_success": 55,
+            "b_total": 80
+          }
+        ],
+        "within_strata_winner": "A",
+        "aggregate_winner": "B"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "mean-variance-identity",
+      "claim": "The listed finite sample has the stated mean, second moment, and population variance.",
+      "expected_result": "sat",
+      "validation": "exact_rational_statistics_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["mean-variance-sample"],
+      "notes": "The validator recomputes mean, E[X^2], and Var(X) = E[X^2] - E[X]^2 exactly."
+    },
+    {
+      "id": "contingency-table-margins",
+      "claim": "The listed 2x2 contingency table has the stated margins and total.",
+      "expected_result": "sat",
+      "validation": "exact_integer_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-contingency"],
+      "notes": "The validator recomputes row sums, column sums, and total from integer counts."
+    },
+    {
+      "id": "simpson-paradox-witness",
+      "claim": "The listed two-stratum count table exhibits Simpson's paradox.",
+      "expected_result": "sat",
+      "validation": "exact_integer_rate_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["kidney-stone-simpson"],
+      "notes": "The validator checks A beats B in each stratum while B beats A after aggregation."
+    }
+  ]
+}

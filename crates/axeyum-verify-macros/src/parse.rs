@@ -1117,6 +1117,7 @@ impl Lowerer {
     /// `<bool-expr>.then_some(<value>).unwrap()` is also out. Phase 1 supports
     /// the explicit helper `axeyum_verify::opt(is_some, value).unwrap()` via a
     /// method-call shape recognized here.
+    #[allow(clippy::too_many_lines)]
     fn lower_method_call(&mut self, mc: &syn::ExprMethodCall) -> syn::Result<(TokenStream, Ty)> {
         let method = mc.method.to_string();
         if method == "unwrap" || method == "expect" {
@@ -1186,6 +1187,37 @@ impl Lowerer {
                         op: axeyum_verify::ast::BinOp::#op_ident,
                         lhs: Box::new(#lhs),
                         rhs: Box::new(#rhs),
+                    }
+                },
+                lty,
+            ));
+        }
+        // `recv.abs()` (signed) — desugar to `ite(a < 0, -a, a)`. The `-a` arm
+        // records the `iN::MIN` negation-overflow panic, which is *exactly* the
+        // condition under which `abs` panics, so this is sound and precise.
+        if method == "abs" {
+            if !mc.args.is_empty() {
+                return Err(syn::Error::new(
+                    mc.span(),
+                    "axeyum::verify: `.abs()` takes no arguments",
+                ));
+            }
+            let (recv, lty) = self.lower_expr(&mc.receiver)?;
+            let zero_lit = syn::LitInt::new("0", mc.span());
+            let (zero, _) = lower_lit_as(&Lit::Int(zero_lit), lty, mc.span())?;
+            return Ok((
+                quote! {
+                    axeyum_verify::ast::Expr::Ite {
+                        cond: Box::new(axeyum_verify::ast::Expr::Binary {
+                            op: axeyum_verify::ast::BinOp::Lt,
+                            lhs: Box::new(#recv),
+                            rhs: Box::new(#zero),
+                        }),
+                        then: Box::new(axeyum_verify::ast::Expr::Unary {
+                            op: axeyum_verify::ast::UnOp::Neg,
+                            operand: Box::new(#recv),
+                        }),
+                        els: Box::new(#recv),
                     }
                 },
                 lty,

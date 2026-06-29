@@ -687,7 +687,126 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
         fail("bayes posterior witness does not match Bayes rule")
 
 
+def require_nonnegative_int(context: str, value: Any) -> int:
+    integer = require_int(context, value)
+    if integer < 0:
+        fail(f"{context} must be nonnegative")
+    return integer
+
+
+def require_positive_int(context: str, value: Any) -> int:
+    integer = require_int(context, value)
+    if integer <= 0:
+        fail(f"{context} must be positive")
+    return integer
+
+
+def require_nonnegative_int_list(context: str, value: Any) -> list[int]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty integer list")
+    return [require_nonnegative_int(f"{context}[{index}]", item) for index, item in enumerate(value)]
+
+
+def require_count_matrix(context: str, value: Any) -> list[list[int]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty matrix")
+    matrix: list[list[int]] = []
+    for row_index, row in enumerate(value):
+        matrix.append(require_nonnegative_int_list(f"{context}[{row_index}]", row))
+    width = len(matrix[0])
+    for row_index, row in enumerate(matrix):
+        if len(row) != width:
+            fail(f"{context}[{row_index}] must have width {width}")
+    return matrix
+
+
+def column_sums(matrix: list[list[int]]) -> list[int]:
+    return [sum(row[column] for row in matrix) for column in range(len(matrix[0]))]
+
+
+def require_success_total(context: str, item: dict[str, Any], prefix: str) -> tuple[int, int]:
+    successes = require_nonnegative_int(f"{context}.{prefix}_success", item.get(f"{prefix}_success"))
+    total = require_positive_int(f"{context}.{prefix}_total", item.get(f"{prefix}_total"))
+    if successes > total:
+        fail(f"{context}.{prefix}_success must not exceed {prefix}_total")
+    return successes, total
+
+
+def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    moments = checks["mean-variance-identity"]
+    if moments["expected_result"] != "sat":
+        fail("mean-variance-identity must expect sat")
+    values = single_witness_values(moments, witnesses)
+    sample = require_fraction_vector("statistics sample", values.get("sample"))
+    mean = require_fraction("statistics mean", values.get("mean"))
+    second_moment = require_fraction("statistics second_moment", values.get("second_moment"))
+    variance = require_fraction("statistics population_variance", values.get("population_variance"))
+    count = Fraction(len(sample))
+    computed_mean = sum(sample, Fraction(0)) / count
+    computed_second_moment = sum((value * value for value in sample), Fraction(0)) / count
+    computed_variance = computed_second_moment - computed_mean * computed_mean
+    if computed_mean != mean:
+        fail("mean-variance witness mean does not match sample")
+    if computed_second_moment != second_moment:
+        fail("mean-variance witness second moment does not match sample")
+    if computed_variance != variance:
+        fail("mean-variance witness variance does not match sample")
+
+    contingency = checks["contingency-table-margins"]
+    if contingency["expected_result"] != "sat":
+        fail("contingency-table-margins must expect sat")
+    values = single_witness_values(contingency, witnesses)
+    table = require_count_matrix("contingency table", values.get("table"))
+    row_sums = require_nonnegative_int_list("contingency row_sums", values.get("row_sums"))
+    expected_column_sums = require_nonnegative_int_list(
+        "contingency column_sums",
+        values.get("column_sums"),
+    )
+    total = require_nonnegative_int("contingency total", values.get("total"))
+    if [sum(row) for row in table] != row_sums:
+        fail("contingency row sums do not match table")
+    if column_sums(table) != expected_column_sums:
+        fail("contingency column sums do not match table")
+    if sum(row_sums) != total:
+        fail("contingency total does not match row sums")
+
+    simpson = checks["simpson-paradox-witness"]
+    if simpson["expected_result"] != "sat":
+        fail("simpson-paradox-witness must expect sat")
+    values = single_witness_values(simpson, witnesses)
+    if values.get("within_strata_winner") != "A":
+        fail("simpson witness within_strata_winner must be A")
+    if values.get("aggregate_winner") != "B":
+        fail("simpson witness aggregate_winner must be B")
+    strata = values.get("strata")
+    if not isinstance(strata, list) or len(strata) < 2:
+        fail("simpson strata must contain at least two strata")
+    a_success_total = 0
+    a_total_total = 0
+    b_success_total = 0
+    b_total_total = 0
+    for index, stratum in enumerate(strata):
+        if not isinstance(stratum, dict):
+            fail(f"simpson strata[{index}] must be an object")
+        require_string(f"simpson strata[{index}].id", stratum.get("id"))
+        a_success, a_total = require_success_total(f"simpson strata[{index}]", stratum, "a")
+        b_success, b_total = require_success_total(f"simpson strata[{index}]", stratum, "b")
+        if Fraction(a_success, a_total) <= Fraction(b_success, b_total):
+            fail("simpson witness must have A beating B in every stratum")
+        a_success_total += a_success
+        a_total_total += a_total
+        b_success_total += b_success
+        b_total_total += b_total
+    if Fraction(b_success_total, b_total_total) <= Fraction(a_success_total, a_total_total):
+        fail("simpson witness must have B beating A in aggregate")
+
+
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
+    if metadata["id"] == "descriptive-statistics-v0":
+        validate_descriptive_statistics(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
     if metadata["id"] == "finite-probability-v0":

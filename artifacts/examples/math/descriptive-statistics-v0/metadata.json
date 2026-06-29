@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "descriptive-statistics-v0",
+  "title": "Exact Descriptive Statistics Witnesses",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_counting",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "counting",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "LIA",
+    "finite enumeration"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/foundational-resources/SOURCES.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/03-destinations/linear-algebra.md"
+  ],
+  "expected_results": [
+    "mean-variance-identity",
+    "contingency-table-margins",
+    "simpson-paradox-witness"
+  ],
+  "graduation_criteria": [
+    "Encode exact finite descriptive-statistics checks as deterministic QF_LRA/LIA formulas.",
+    "Replay count-table and finite-data witnesses through Axeyum model evaluation.",
+    "Keep statistical inference and numerical estimation under explicit reproducibility metadata, not proof status.",
+    "Add exact finite-test examples only after the table helpers are reused by another statistics pack."
+  ]
+}

@@ -64,6 +64,7 @@ artifacts/examples/math/
   linear-algebra-rational-v0/
   graph-coloring-v0/
   finite-probability-v0/
+  descriptive-statistics-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -202,9 +203,9 @@ docs/foundational-resources/statistics/
   probability-roadmap.md       # planned
   bayesian-roadmap.md          # planned
   causal-roadmap.md            # planned
-artifacts/examples/statistics/
-  finite-bayes-table-v0/       # planned
-  descriptive-stats-v0/        # planned
+artifacts/examples/math/
+  finite-probability-v0/       # landed
+  descriptive-statistics-v0/   # landed
 ```
 
 First concrete examples:
@@ -312,6 +313,9 @@ exhaustive two-colorability refutation for `K3`.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
 validates exact finite probability mass tables, conditional probability, and
 Bayes posterior replay.
+[`descriptive-statistics-v0`](../../artifacts/examples/math/descriptive-statistics-v0/)
+validates exact mean/variance identities, contingency-table margins, and a
+Simpson's paradox count-table witness.
 
 Exit criteria:
 

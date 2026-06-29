@@ -140,11 +140,15 @@ one of:
    - Fields: `probability_theory`, `statistics`, `measure_theory`.
    - Checks: total mass, conditional probability, Bayes table, exact rational
      replay.
-4. `artifacts/examples/math/modular-arithmetic-v0/`
+4. `artifacts/examples/math/descriptive-statistics-v0/`
+   - Fields: `statistics`, `probability_theory`, `linear_algebra`.
+   - Checks: mean/variance identity, contingency-table margins, Simpson's
+     paradox count-table witness.
+5. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-5. `artifacts/examples/math/real-analysis-rational-v0/`
+6. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

@@ -62,6 +62,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
   validates exact finite probability mass tables, conditional probability, and
   Bayes posterior replay.
+- [`artifacts/examples/math/descriptive-statistics-v0/`](../../artifacts/examples/math/descriptive-statistics-v0/)
+  validates exact mean/variance identities, contingency-table margins, and a
+  Simpson's paradox count-table witness.
 
 Validation commands:
 
@@ -76,6 +79,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 ```
 
 ## Principle
