@@ -167,7 +167,9 @@ polynomial replay, read
 factorization, division, and GCD replay, read
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
 For matrix characteristic-polynomial replay, read
-[End To End: Matrix Invariants](matrix-invariants-end-to-end.md).
+[End To End: Matrix Invariants](matrix-invariants-end-to-end.md). For exact
+multivariable derivative replay, read
+[End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md).
 
 ## Horizon
 

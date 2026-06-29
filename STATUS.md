@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rational multivariable-calculus end-to-end lesson landed.** Added
+  [`multivariable-calculus-end-to-end.md`](docs/learn/math/multivariable-calculus-end-to-end.md)
+  as the learner-facing trace for the multivariable-calculus pack: exact
+  gradient and value replay, directional derivative dot product, Jacobian
+  chain-rule matrix multiplication, Hessian positive-definiteness by minors,
+  checked bad-gradient rejection, and the Lean horizon for analytic
+  multivariable calculus. The lesson is linked from the math learning index
+  plus the rational/real, linear-algebra, and analysis/topology paths.
+
 - **Matrix-invariants end-to-end lesson landed.** Added
   [`matrix-invariants-end-to-end.md`](docs/learn/math/matrix-invariants-end-to-end.md)
   as the learner-facing trace for the matrix-invariants pack: exact trace,
