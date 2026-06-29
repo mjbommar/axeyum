@@ -1,5 +1,5 @@
 {
-  "total": 17, "bug_found": 12, "safe_proved": 5, "unknown": 0, "disagree": 0,
+  "total": 18, "bug_found": 13, "safe_proved": 5, "unknown": 0, "disagree": 0,
   "cases": [
     { "name": "add-overflow-unguarded", "shape": "arith", "outcome": "bug-found" },
     { "name": "selector-dispatch-add-overflow", "shape": "control-flow", "outcome": "bug-found" },
@@ -10,6 +10,7 @@
     { "name": "byte-extract-revert", "shape": "control-flow", "outcome": "bug-found" },
     { "name": "signextend-sign-revert", "shape": "arith", "outcome": "bug-found" },
     { "name": "bug-after-log", "shape": "control-flow", "outcome": "bug-found" },
+    { "name": "calldatacopy-revert", "shape": "concrete-mem", "outcome": "bug-found" },
     { "name": "mem-roundtrip-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
     { "name": "symbolic-storage-roundtrip-revert", "shape": "symbolic-storage", "outcome": "bug-found" },
     { "name": "cold-slot-load-safe", "shape": "symbolic-storage", "outcome": "safe-proved" },

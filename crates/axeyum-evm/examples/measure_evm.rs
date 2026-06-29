@@ -41,6 +41,7 @@ const SHR: u8 = 0x1c;
 const DUP1: u8 = 0x80;
 const SHA3: u8 = 0x20;
 const CALLDATALOAD: u8 = 0x35;
+const CALLDATACOPY: u8 = 0x37;
 const POP: u8 = 0x50;
 const MLOAD: u8 = 0x51;
 const MSTORE: u8 = 0x52;
@@ -343,6 +344,15 @@ fn corpus() -> Vec<Case> {
             bytecode: vec![
                 PUSH1, 0x00, PUSH1, 0x00, LOG0, PUSH1, 0x00, CALLDATALOAD, ISZERO, PUSH1, 0x0d,
                 JUMPI, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
+            // CALLDATACOPY precision: copy calldata[0..32]→mem[0], load it back,
+            // revert if zero — reachable, and only decidable if the copy is exact.
+            name: "calldatacopy-revert", shape: ConcreteMem, expect: Bug(Revert),
+            bytecode: vec![
+                PUSH1, 0x20, PUSH1, 0x00, PUSH1, 0x00, CALLDATACOPY, PUSH1, 0x00, MLOAD, ISZERO,
+                PUSH1, 0x0f, JUMPI, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
         },
         Case {
