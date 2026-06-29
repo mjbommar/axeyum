@@ -13,6 +13,7 @@ const JUMPI: u8 = 0x57;
 const JUMPDEST: u8 = 0x5b;
 const PUSH1: u8 = 0x60;
 const REVERT: u8 = 0xfd;
+const SELFDESTRUCT: u8 = 0xff;
 
 #[test]
 fn revert_on_failed_create_is_found() {
@@ -45,6 +46,20 @@ fn create_using_safe_contract_is_no_longer_unknown() {
     assert!(
         matches!(report.verdict, Some(Verdict::SafeUpToBound { .. })),
         "a safe CREATE-using contract must prove safe, got {:?}",
+        report.verdict
+    );
+}
+
+#[test]
+fn selfdestruct_halts_cleanly_not_unknown() {
+    // push beneficiary; selfdestruct — a clean halt (like STOP), no bug → safe.
+    // Was Unsupported → Unknown.
+    let bytecode = [PUSH1, 0x00, SELFDESTRUCT];
+    let report = analyze(&bytecode, &AnalyzeConfig::default());
+    assert!(!report.has_findings());
+    assert!(
+        matches!(report.verdict, Some(Verdict::SafeUpToBound { .. })),
+        "a contract ending in SELFDESTRUCT must prove safe, got {:?}",
         report.verdict
     );
 }

@@ -179,6 +179,10 @@ fn run_core(
 
         match inst.op {
             Op::Stop => return (Halt::Stop, overflowed),
+            Op::SelfDestruct => {
+                let _ = pop!(); // beneficiary
+                return (Halt::Stop, overflowed);
+            }
             Op::Add => {
                 let (a, b) = (pop!(), pop!());
                 if watch == Some((inst.pc, false)) {

@@ -495,6 +495,19 @@ fn run_from(
         let op = inst.op;
 
         match op {
+            Op::SelfDestruct => {
+                // Pop the beneficiary; then halt this execution exactly like STOP.
+                let _ = pop_or_unknown!();
+                if state.tx + 1 < max_txs {
+                    state.tx += 1;
+                    state.stack.clear();
+                    state.memory.clear();
+                    state.sym_memory.clear();
+                    idx = 0;
+                    continue;
+                }
+                return Ok(None);
+            }
             Op::Stop | Op::Return => {
                 // Normal end of the current transaction. If more transactions
                 // remain in the sequence, begin the next one: EVM semantics clear

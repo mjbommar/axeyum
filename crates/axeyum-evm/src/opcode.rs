@@ -155,6 +155,9 @@ pub enum Op {
         /// Stack args popped: 3 for `CREATE`, 4 for `CREATE2`.
         pops: u8,
     },
+    /// `SELFDESTRUCT` (0xff): pop the beneficiary address and halt the current
+    /// execution. For reachability it is a clean path end (like `STOP`).
+    SelfDestruct,
     /// `CODECOPY` (0x39): copy `length` bytes of the contract's own code at
     /// `offset` into memory at `destOffset` (pops destOffset, offset, length).
     /// Code is concrete, so this is modeled precisely as constant bytes.
@@ -247,6 +250,7 @@ impl Op {
             0x39 => Op::CodeCopy,
             0xf0 => Op::Create { pops: 3 },
             0xf5 => Op::Create { pops: 4 },
+            0xff => Op::SelfDestruct,
             0xa0..=0xa4 => Op::Log(byte - 0xa0),
             other => Op::Unsupported(other),
         }
