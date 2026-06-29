@@ -26,6 +26,22 @@ impl Word {
         Word(WideUint::from_u128(value, WIDTH))
     }
 
+    /// `self ** exp mod 2^256` — EVM `EXP` semantics, via square-and-multiply
+    /// over the exponent's bits (each `mul` already wraps at 256 bits). Used by
+    /// both the concrete oracle and the symbolic constant-fold so they agree.
+    #[must_use]
+    pub fn pow(&self, exp: &Word) -> Word {
+        let mut result = Word::from_u128(1);
+        let mut base = self.clone();
+        for bit in exp.0.to_lsb_bits() {
+            if bit {
+                result = Word(result.0.mul(&base.0));
+            }
+            base = Word(base.0.mul(&base.0));
+        }
+        result
+    }
+
     /// A word from up-to-32 big-endian bytes (right-aligned, zero-padded on the
     /// left — EVM `PUSH`/word semantics).
     #[must_use]

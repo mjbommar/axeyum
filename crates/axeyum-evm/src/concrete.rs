@@ -290,6 +290,10 @@ fn run_core(
                 let a = pop!();
                 stack.push(Word(a.0.not()));
             }
+            Op::Exp => {
+                let (base, exp) = (pop!(), pop!());
+                stack.push(base.pow(&exp));
+            }
             Op::SignExtend => {
                 let (b, x) = (pop!(), pop!());
                 // Sign-extend x from a (b+1)-byte value to 256 bits. b >= 31 is a

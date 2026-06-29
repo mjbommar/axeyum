@@ -692,6 +692,23 @@ fn run_from(
                 let value = pop_or_unknown!();
                 state.stack.push(arena.bv_ashr(value, shift)?);
             }
+            Op::Exp => {
+                // EXP(base, exp) = base**exp mod 2^256. When both operands are
+                // concrete (the common `10**18`-style case) we constant-fold to a
+                // 256-bit constant via `Word::pow` (matching the concrete oracle).
+                // A symbolic base or exponent havocs + saw_unknown (a faithful
+                // symbolic 256-bit modular pow is beyond this model).
+                let base = pop_or_unknown!();
+                let exp = pop_or_unknown!();
+                if let (Some(bw), Some(ew)) = (const_word(arena, base), const_word(arena, exp)) {
+                    let result = bw.pow(&ew);
+                    state.stack.push(push_word(arena, &result.to_be_bytes()));
+                } else {
+                    let h = env.havoc(arena)?;
+                    state.stack.push(h);
+                    *saw_unknown = true;
+                }
+            }
             Op::SignExtend => {
                 // SIGNEXTEND(b, x): sign-extend x from a (b+1)-byte two's-comp
                 // value to 256 bits; b >= 31 leaves x unchanged. With a concrete
