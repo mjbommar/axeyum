@@ -93,6 +93,7 @@ artifacts/examples/math/
   linear-optimization-v0/
   coordinate-geometry-v0/
   finite-topology-v0/
+  finite-compactness-v0/
   finite-measure-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
@@ -365,6 +366,10 @@ false eigenpair.
 validates exact trace/determinant characteristic-polynomial replay,
 characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals, and
 checked rejection of a false characteristic polynomial.
+[`finite-compactness-v0`](../../artifacts/examples/math/finite-compactness-v0/)
+validates finite open-cover/subcover checks, minimal subcover enumeration,
+finite-intersection families, bad-cover rejection, and a compactness
+Lean-horizon row.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.

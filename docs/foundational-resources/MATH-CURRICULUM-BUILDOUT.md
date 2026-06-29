@@ -467,6 +467,10 @@ axioms, closure/interior computation, and exact finite metric-ball replay.
 `artifacts/examples/math/metric-continuity-v0/` now validates finite
 Lipschitz, epsilon-delta, and open-ball preimage checks with exact rational
 metrics, plus checked rejection of an overlarge delta.
+`artifacts/examples/math/finite-compactness-v0/` now validates finite
+open-cover/subcover checks, minimal subcover enumeration,
+finite-intersection-family replay, bad-cover rejection, and a compactness
+Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, and event/complement measure
 replay.
@@ -531,6 +535,8 @@ Recommended order:
     roots, Cayley-Hamilton replay, and finite eigenvalue intervals.
 17. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
     preimage, and bad-delta checks over exact rational metric spaces.
+18. `finite-compactness-v0`: finite open covers, minimal subcover
+    enumeration, finite-intersection families, and bad-cover rejection.
 
 Exit criteria:
 
@@ -691,7 +697,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-17, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-18, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -713,8 +719,10 @@ decomposition replay. `matrix-invariants-v0` now adds the characteristic
 polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
 broader spectral claims. `metric-continuity-v0` now adds the finite
 epsilon-delta and open-ball preimage bridge for analysis/topology learners.
-Continue by adding the next curriculum-adjacent pack or by replacing finite
-enumeration routes with emitted, checked proof objects where appropriate.
+`finite-compactness-v0` now adds the finite open-cover/subcover and
+finite-intersection bridge to the compactness horizon. Continue by adding the
+next curriculum-adjacent pack or by replacing finite enumeration routes with
+emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 

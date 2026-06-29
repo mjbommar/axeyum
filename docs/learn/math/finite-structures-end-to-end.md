@@ -3,7 +3,9 @@
 This lesson follows finite set-family resources from data row to replayed
 result. It uses
 [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/) and
-[finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/).
+[finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/), with
+the finite open-cover slice in
+[finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/).
 
 Concept rows:
 
@@ -17,6 +19,8 @@ Concept rows:
 |---|---|---|
 | `finite-topology-axioms` | `sat` | replay-only |
 | `closure-interior-witness` | `sat` | replay-only |
+| `minimal-subcover-size-witness` | `sat` | checked |
+| `bad-open-cover-rejected` | `unsat` | checked |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
 
@@ -44,6 +48,14 @@ mu({c,d}) = 2/3
 mu(universe) = 1
 ```
 
+The compactness witness lists an open cover and subcover:
+
+```text
+universe = {a,b,c}
+cover = {a,b}, {b,c}, {a,c}
+subcover = {a,b}, {b,c}
+```
+
 ## Replay
 
 For topology, the checker confirms the empty set and universe are present, then
@@ -65,12 +77,17 @@ mu({a,b}) + mu({c,d}) = 1/3 + 2/3 = 1
 It also checks nonnegativity, `mu({}) = 0`, `mu(universe) = 1`, and finite
 additivity over disjoint measurable sets.
 
+For compactness, the checker recomputes the cover union, checks the listed
+subcover, enumerates smaller subfamilies for the minimal-size row, and rejects
+the bad cover `{a}, {b}` because it misses `c`.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -83,5 +100,5 @@ validated 1 foundational example pack(s)
 ## Trust Boundary
 
 The trusted checker only manipulates finite sets and exact fractions. ZFC,
-infinite cardinality, arbitrary topological spaces, countable additivity, and
-Lebesgue integration remain proof-horizon material.
+infinite cardinality, arbitrary topological spaces, general compactness,
+countable additivity, and Lebesgue integration remain proof-horizon material.

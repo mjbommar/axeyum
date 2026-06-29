@@ -4138,6 +4138,24 @@ def topology_closure(
     return frozenset(universe_set - topology_interior(frozenset(complement), open_sets))
 
 
+def set_family_union(family: set[frozenset[str]]) -> frozenset[str]:
+    result: set[str] = set()
+    for subset in family:
+        result.update(subset)
+    return frozenset(result)
+
+
+def set_family_intersection(family: set[frozenset[str]], universe: list[str]) -> frozenset[str]:
+    iterator = iter(family)
+    try:
+        result = set(next(iterator))
+    except StopIteration:
+        return frozenset(universe)
+    for subset in iterator:
+        result.intersection_update(subset)
+    return frozenset(result)
+
+
 def require_metric_distances(
     context: str,
     values: Any,
@@ -4263,6 +4281,98 @@ def validate_finite_topology(expected: dict[str, Any]) -> None:
     )
     if computed_ball != expected_ball:
         fail("metric-ball witness does not match finite metric")
+
+
+def validate_finite_compactness(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    cover_check = checks["finite-open-cover-subcover"]
+    if cover_check["expected_result"] != "sat":
+        fail("finite-open-cover-subcover must expect sat")
+    values = single_witness_values(cover_check, witnesses)
+    universe, open_sets = require_topology_data("finite compactness topology", values)
+    cover = require_set_family("finite compactness cover", values.get("cover"), universe)
+    subcover = require_set_family("finite compactness subcover", values.get("subcover"), universe)
+    universe_set = frozenset(universe)
+    if not cover <= open_sets:
+        fail("finite-open-cover-subcover cover must contain only open sets")
+    if not subcover <= cover:
+        fail("finite-open-cover-subcover subcover must be drawn from the cover")
+    if set_family_union(cover) != universe_set:
+        fail("finite-open-cover-subcover cover does not cover the universe")
+    if set_family_union(subcover) != universe_set:
+        fail("finite-open-cover-subcover subcover does not cover the universe")
+
+    minimal = checks["minimal-subcover-size-witness"]
+    if minimal["expected_result"] != "sat":
+        fail("minimal-subcover-size-witness must expect sat")
+    values = single_witness_values(minimal, witnesses)
+    universe, open_sets = require_topology_data("minimal subcover topology", values)
+    cover = require_set_family("minimal subcover cover", values.get("cover"), universe)
+    subcover = require_set_family("minimal subcover subcover", values.get("subcover"), universe)
+    min_size = require_nonnegative_int("minimal subcover min_size", values.get("min_size"))
+    universe_set = frozenset(universe)
+    if not cover <= open_sets:
+        fail("minimal-subcover-size-witness cover must contain only open sets")
+    if not subcover <= cover:
+        fail("minimal-subcover-size-witness subcover must be drawn from the cover")
+    if len(subcover) != min_size:
+        fail("minimal-subcover-size-witness listed subcover size does not match min_size")
+    if set_family_union(subcover) != universe_set:
+        fail("minimal-subcover-size-witness listed subcover does not cover the universe")
+    cover_list = list(cover)
+    for size in range(min_size):
+        for candidate in combinations(cover_list, size):
+            if set_family_union(set(candidate)) == universe_set:
+                fail("minimal-subcover-size-witness found a smaller covering subfamily")
+
+    intersection = checks["finite-intersection-family-witness"]
+    if intersection["expected_result"] != "sat":
+        fail("finite-intersection-family-witness must expect sat")
+    values = single_witness_values(intersection, witnesses)
+    universe, open_sets = require_topology_data("finite intersection topology", values)
+    closed_family = require_set_family(
+        "finite intersection closed_family",
+        values.get("closed_family"),
+        universe,
+    )
+    expected_intersection = require_subset("finite intersection intersection", values.get("intersection"), universe)
+    universe_set = frozenset(universe)
+    for closed_set in closed_family:
+        if frozenset(universe_set - closed_set) not in open_sets:
+            fail("finite-intersection-family-witness family contains a non-closed set")
+    if set_family_intersection(closed_family, universe) != expected_intersection:
+        fail("finite-intersection-family-witness intersection is incorrect")
+    family_list = list(closed_family)
+    for size in range(1, len(family_list) + 1):
+        for candidate in combinations(family_list, size):
+            if not set_family_intersection(set(candidate), universe):
+                fail("finite-intersection-family-witness violates the finite intersection property")
+
+    bad_cover = checks["bad-open-cover-rejected"]
+    if bad_cover["expected_result"] != "unsat":
+        fail("bad-open-cover-rejected must expect unsat")
+    data = bad_cover.get("data", {})
+    universe, open_sets = require_topology_data("bad cover topology", data)
+    cover = require_set_family("bad cover cover", data.get("cover"), universe)
+    missing_points = require_subset("bad cover missing_points", data.get("missing_points"), universe)
+    if not cover <= open_sets:
+        fail("bad-open-cover-rejected cover must contain only open sets")
+    actual_missing = frozenset(set(universe) - set_family_union(cover))
+    if actual_missing != missing_points:
+        fail("bad-open-cover-rejected missing_points are incorrect")
+    if not actual_missing:
+        fail("bad-open-cover-rejected cover unexpectedly covers the universe")
+
+    horizon = checks["general-compactness-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-compactness-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-compactness-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general compactness target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general compactness future_checker", data.get("future_checker"))
 
 
 def validate_metric_continuity(expected: dict[str, Any]) -> None:
@@ -5268,6 +5378,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_exact_statistical_tests(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
+    if metadata["id"] == "finite-compactness-v0":
+        validate_finite_compactness(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":

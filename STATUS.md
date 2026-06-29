@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite compactness foundations pack landed.** Added
+  [`finite-compactness-v0`](artifacts/examples/math/finite-compactness-v0/README.md)
+  as the finite open-cover bridge for topology and compactness. The pack
+  validates finite open-cover/subcover replay, checked minimal-subcover
+  enumeration, finite-intersection-family replay, checked rejection of a bad
+  open cover, and a general compactness Lean-horizon row. The foundational
+  example-pack validator now checks finite topology cover unions, subcover
+  membership, smaller-subcover enumeration, closed-family intersections, and
+  bad-cover missing points.
+
 - **Metric continuity foundations pack landed.** Added
   [`metric-continuity-v0`](artifacts/examples/math/metric-continuity-v0/README.md)
   as the first finite epsilon-delta continuity resource. The pack validates a

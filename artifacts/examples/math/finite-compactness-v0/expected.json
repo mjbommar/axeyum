@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-compactness-v0",
+  "witnesses": [
+    {
+      "id": "three-point-discrete-compactness",
+      "description": "A three-point discrete topology with finite open-cover witnesses.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "cover": [
+          ["a", "b"],
+          ["b", "c"],
+          ["a", "c"]
+        ],
+        "subcover": [
+          ["a", "b"],
+          ["b", "c"]
+        ],
+        "min_size": 2,
+        "closed_family": [
+          ["a", "b"],
+          ["b", "c"],
+          ["b"]
+        ],
+        "intersection": ["b"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-open-cover-subcover",
+      "claim": "The listed finite open cover has a listed finite subcover.",
+      "expected_result": "sat",
+      "validation": "finite_open_cover_subcover_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-discrete-compactness"],
+      "notes": "The validator checks that the cover and subcover use open sets and both cover the finite universe."
+    },
+    {
+      "id": "minimal-subcover-size-witness",
+      "claim": "The listed finite cover has no one-set subcover, and the listed two-set subcover covers the universe.",
+      "expected_result": "sat",
+      "validation": "finite_minimal_subcover_enumeration",
+      "proof_status": "checked",
+      "witnesses": ["three-point-discrete-compactness"],
+      "notes": "The validator enumerates all smaller subfamilies and confirms none cover the universe."
+    },
+    {
+      "id": "finite-intersection-family-witness",
+      "claim": "The listed closed family has the finite intersection property and total intersection {b}.",
+      "expected_result": "sat",
+      "validation": "finite_intersection_family_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-discrete-compactness"],
+      "notes": "The validator checks closedness and enumerates non-empty finite subfamily intersections."
+    },
+    {
+      "id": "bad-open-cover-rejected",
+      "claim": "The listed family {{a}, {b}} is not an open cover of {a,b,c}.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_open_cover_refutation",
+      "proof_status": "checked",
+      "data": {
+        "universe": ["a", "b", "c"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "cover": [
+          ["a"],
+          ["b"]
+        ],
+        "missing_points": ["c"]
+      },
+      "notes": "The validator recomputes the cover union and rejects the missing point c."
+    },
+    {
+      "id": "general-compactness-lean-horizon",
+      "claim": "General compactness and finite-intersection-property theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "every open cover has a finite subcover, or equivalently every closed family with the finite intersection property has nonempty total intersection",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; arbitrary topological compactness remains a proof-assistant horizon."
+    }
+  ]
+}

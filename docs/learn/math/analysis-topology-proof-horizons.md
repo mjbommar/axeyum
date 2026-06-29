@@ -15,6 +15,7 @@ Example packs:
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
+- [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
@@ -28,9 +29,10 @@ Example packs:
 The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, bounded sequence tails and prefixes, finite epsilon-delta continuity
-checks, polynomial derivative identities, bounded recurrence traces, finite
-invariant witnesses, matrix operator bounds, Chebyshev recurrence values at
-fixed points, and finite stochastic transition systems. The
+checks, finite open-cover/subcover checks, polynomial derivative identities,
+bounded recurrence traces, finite invariant witnesses, matrix operator bounds,
+Chebyshev recurrence values at fixed points, and finite stochastic transition
+systems. The
 spectral-linear-algebra pack adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
@@ -80,6 +82,19 @@ The `metric-continuity-v0` validator checks the finite metric table,
 pairwise Lipschitz bounds, the `delta`-ball around `p0`, the output
 `epsilon`-ball around `f(p0)`, and a checked bad-delta counterexample.
 
+For a finite compactness shadow, encode an explicit finite topology, an open
+cover, and a listed subcover:
+
+```text
+U = {a,b,c}
+cover = {a,b}, {b,c}, {a,c}
+subcover = {a,b}, {b,c}
+```
+
+The `finite-compactness-v0` validator checks the topology, recomputes cover
+unions, enumerates smaller subfamilies for a minimal-subcover claim, checks a
+finite-intersection family, and rejects a bad cover that misses a point.
+
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
 
@@ -115,6 +130,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0

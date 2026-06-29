@@ -14,6 +14,7 @@ Example packs:
 - [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
+- [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
 ## What Axeyum Checks
@@ -27,6 +28,8 @@ checks explicit bijections, proper-subset injections, finite injection and
 surjection refutations, and an infinite-cardinality Lean-horizon row. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
+compactness pack checks finite open covers, subcovers, minimal-subcover
+enumeration, finite-intersection families, and rejection of a bad cover. The
 measure pack checks finite sigma-algebra closure, rational measure tables,
 finite additivity, and event/complement identities.
 
@@ -75,7 +78,18 @@ subset = {b}
 ```
 
 The validator checks the topology axioms and recomputes `interior({b}) = {}`
-and `closure({b}) = {b,c}`. For measure, use the partition
+and `closure({b}) = {b,c}`. For compactness, the checker reuses finite
+topology data and recomputes open-cover unions:
+
+```text
+universe = a,b,c
+cover = {a,b}, {b,c}, {a,c}
+subcover = {a,b}, {b,c}
+```
+
+It checks that the listed subcover covers the universe, enumerates smaller
+subfamilies for the minimality row, and rejects the bad cover `{a}, {b}` because
+it misses `c`. For measure, use the partition
 `{a,b}` / `{c,d}` with masses `1/3` and `2/3`; the checker verifies
 normalization, finite additivity, and the event/complement identity.
 
@@ -86,6 +100,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -94,8 +109,9 @@ For a fuller trace through finite topology and measure replay, read
 
 ## Horizon
 
-The finite set, relation/function, and cardinality packs are now checked finite
-artifacts. The next finite-structure gaps are stronger EUF/Alethe evidence for
-congruence examples and Lean artifacts for infinite theorems. ZFC, ordinals,
-choice, infinite cardinality, arbitrary topological spaces, and countable
-additivity remain proof-horizon material.
+The finite set, relation/function, cardinality, topology, compactness-shadow,
+and measure packs are now checked finite artifacts. The next finite-structure
+gaps are stronger EUF/Alethe evidence for congruence examples and Lean artifacts
+for infinite theorems. ZFC, ordinals, choice, infinite cardinality, arbitrary
+topological spaces, general compactness, and countable additivity remain
+proof-horizon material.
