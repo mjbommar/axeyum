@@ -94,3 +94,4 @@ cargo test -p axeyum-solver --test evidence
 - [support matrix](../../research/08-planning/support-matrix.md)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [QF_BV parity path](../../PARITY-STATUS-AND-PATH.md)
+- [Natural Arithmetic pack](../../../artifacts/examples/math/natural-arithmetic-v0/)

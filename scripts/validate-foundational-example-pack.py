@@ -1283,6 +1283,102 @@ def validate_integer_lia(expected: dict[str, Any]) -> None:
         fail("diophantine-gcd-obstruction data is satisfiable by the gcd criterion")
 
 
+def require_natural(context: str, value: Any) -> int:
+    item = require_int(context, value)
+    if item < 0:
+        fail(f"{context} must be nonnegative")
+    return item
+
+
+def require_bounded_natural_max(context: str, data: dict[str, Any]) -> int:
+    max_value = require_natural(f"{context}.max", data.get("max"))
+    if max_value > 1024:
+        fail(f"{context}.max is too large for deterministic example-pack enumeration")
+    return max_value
+
+
+def validate_natural_arithmetic(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    successor_addition = checks["successor-addition-replay"]
+    if successor_addition["expected_result"] != "sat":
+        fail("successor-addition-replay must expect sat")
+    values = single_witness_values(successor_addition, witnesses)
+    a_value = require_natural("successor addition a", values.get("a"))
+    b_value = require_natural("successor addition b", values.get("b"))
+    successor_b = require_natural("successor addition successor_b", values.get("successor_b"))
+    left = require_natural("successor addition left", values.get("left"))
+    right = require_natural("successor addition right", values.get("right"))
+    if successor_b != b_value + 1:
+        fail("successor-addition-replay successor_b does not equal b + 1")
+    if a_value + successor_b != left:
+        fail("successor-addition-replay left side does not match a + S(b)")
+    if a_value + b_value + 1 != right:
+        fail("successor-addition-replay right side does not match S(a + b)")
+    if left != right:
+        fail("successor-addition-replay sides are not equal")
+
+    commutativity = checks["addition-commutativity-fixed"]
+    if commutativity["expected_result"] != "sat":
+        fail("addition-commutativity-fixed must expect sat")
+    values = single_witness_values(commutativity, witnesses)
+    a_value = require_natural("commutativity a", values.get("a"))
+    b_value = require_natural("commutativity b", values.get("b"))
+    sum_ab = require_natural("commutativity sum_ab", values.get("sum_ab"))
+    sum_ba = require_natural("commutativity sum_ba", values.get("sum_ba"))
+    if a_value + b_value != sum_ab:
+        fail("addition-commutativity-fixed sum_ab does not match")
+    if b_value + a_value != sum_ba:
+        fail("addition-commutativity-fixed sum_ba does not match")
+    if sum_ab != sum_ba:
+        fail("addition-commutativity-fixed sums are not equal")
+
+    distributivity = checks["multiplication-distributivity-fixed"]
+    if distributivity["expected_result"] != "sat":
+        fail("multiplication-distributivity-fixed must expect sat")
+    values = single_witness_values(distributivity, witnesses)
+    a_value = require_natural("distributivity a", values.get("a"))
+    b_value = require_natural("distributivity b", values.get("b"))
+    c_value = require_natural("distributivity c", values.get("c"))
+    left = require_natural("distributivity left", values.get("left"))
+    right = require_natural("distributivity right", values.get("right"))
+    if a_value * (b_value + c_value) != left:
+        fail("multiplication-distributivity-fixed left side does not match")
+    if a_value * b_value + a_value * c_value != right:
+        fail("multiplication-distributivity-fixed right side does not match")
+    if left != right:
+        fail("multiplication-distributivity-fixed sides are not equal")
+
+    injective = checks["successor-injective-bounded"]
+    if injective["expected_result"] != "unsat":
+        fail("successor-injective-bounded must expect unsat")
+    max_value = require_bounded_natural_max("successor-injective-bounded", injective.get("data", {}))
+    for left_value in range(max_value + 1):
+        for right_value in range(max_value + 1):
+            if left_value != right_value and left_value + 1 == right_value + 1:
+                fail("successor-injective-bounded found a counterexample")
+
+    zero = checks["zero-not-successor-bounded"]
+    if zero["expected_result"] != "unsat":
+        fail("zero-not-successor-bounded must expect unsat")
+    max_value = require_bounded_natural_max("zero-not-successor-bounded", zero.get("data", {}))
+    for value in range(max_value + 1):
+        if value + 1 == 0:
+            fail("zero-not-successor-bounded found a predecessor of zero")
+
+    nonnegative = checks["bounded-natural-negative-rejected"]
+    if nonnegative["expected_result"] != "unsat":
+        fail("bounded-natural-negative-rejected must expect unsat")
+    max_value = require_bounded_natural_max(
+        "bounded-natural-negative-rejected",
+        nonnegative.get("data", {}),
+    )
+    for value in range(max_value + 1):
+        if value < 0:
+            fail("bounded-natural-negative-rejected found a negative natural")
+
+
 def require_fraction(context: str, value: Any) -> Fraction:
     if not isinstance(value, str) or not value:
         fail(f"{context} must be a non-empty fraction string")
@@ -2522,6 +2618,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
+    if metadata["id"] == "natural-arithmetic-v0":
+        validate_natural_arithmetic(expected)
     if metadata["id"] == "number-theory-v0":
         validate_number_theory(expected)
     if metadata["id"] == "polynomial-identities-v0":

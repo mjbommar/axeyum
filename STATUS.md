@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Natural arithmetic core number-system pack landed.** Added
+  [`natural-arithmetic-v0`](artifacts/examples/math/natural-arithmetic-v0/README.md)
+  with successor-addition replay, addition commutativity replay,
+  multiplication distributivity replay, checked bounded successor injectivity,
+  checked zero-not-successor, and a checked nonnegative-domain row. The
+  foundational example-pack validator now checks nonnegative natural-number
+  witnesses and bounded-domain enumeration for Peano-style no-counterexample
+  rows; generated dashboards mark the naturals curriculum row's first pack as
+  validated. Continue by closing the remaining `proof-methods-refutation-v0`
+  CNF/LRAT proof gap or by adding `finite-cardinality-v0`.
+
 - **Integer LIA core number-system pack landed.** Added
   [`integer-lia-v0`](artifacts/examples/math/integer-lia-v0/README.md) with
   signed trichotomy replay, order-transitivity replay, integer ring-identity
@@ -167,9 +178,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   foundational example-pack validator now checks fixed integer comparisons,
   exact integer identities, linear dot-product witnesses, interval
   contradictions, and GCD non-divisibility; generated dashboards mark the
-  integers curriculum row's first pack as validated. Continue by closing the
-  remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-  `natural-arithmetic-v0`.
+  integers curriculum row's first pack as validated. `natural-arithmetic-v0`
+  is the follow-on bounded natural-number pack.
 
 - **Bounded number-theory destination pack landed.** Added
   [`number-theory-v0`](artifacts/examples/math/number-theory-v0/README.md)

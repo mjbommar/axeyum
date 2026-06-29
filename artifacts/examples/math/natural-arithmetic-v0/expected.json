@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "pack_id": "natural-arithmetic-v0",
+  "witnesses": [
+    {
+      "id": "successor-addition-5-7",
+      "description": "A fixed replay of a + S(b) = S(a + b).",
+      "values": {
+        "a": 5,
+        "b": 7,
+        "successor_b": 8,
+        "left": 13,
+        "right": 13
+      }
+    },
+    {
+      "id": "commutativity-6-4",
+      "description": "A fixed replay of addition commutativity.",
+      "values": {
+        "a": 6,
+        "b": 4,
+        "sum_ab": 10,
+        "sum_ba": 10
+      }
+    },
+    {
+      "id": "distributivity-2-3-4",
+      "description": "A fixed replay of multiplication distributing over addition.",
+      "values": {
+        "a": 2,
+        "b": 3,
+        "c": 4,
+        "left": 14,
+        "right": 14
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "successor-addition-replay",
+      "claim": "The listed natural values satisfy a + S(b) = S(a + b).",
+      "expected_result": "sat",
+      "validation": "natural_successor_addition_replay",
+      "proof_status": "checked",
+      "witnesses": ["successor-addition-5-7"],
+      "notes": "The validator checks successor_b = b + 1 and both sides equal 13 exactly."
+    },
+    {
+      "id": "addition-commutativity-fixed",
+      "claim": "The listed natural values satisfy a + b = b + a.",
+      "expected_result": "sat",
+      "validation": "natural_addition_replay",
+      "proof_status": "checked",
+      "witnesses": ["commutativity-6-4"],
+      "notes": "The validator recomputes both sums exactly."
+    },
+    {
+      "id": "multiplication-distributivity-fixed",
+      "claim": "The listed natural values satisfy a * (b + c) = a*b + a*c.",
+      "expected_result": "sat",
+      "validation": "natural_multiplication_replay",
+      "proof_status": "checked",
+      "witnesses": ["distributivity-2-3-4"],
+      "notes": "The validator recomputes both sides of the distributivity identity exactly."
+    },
+    {
+      "id": "successor-injective-bounded",
+      "claim": "There exist distinct bounded naturals x,y <= 7 with S(x) = S(y).",
+      "expected_result": "unsat",
+      "validation": "bounded_natural_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "max": 7
+      },
+      "notes": "The validator enumerates all pairs in 0..7 and finds no successor-injectivity counterexample."
+    },
+    {
+      "id": "zero-not-successor-bounded",
+      "claim": "There exists a bounded natural n <= 7 with S(n) = 0.",
+      "expected_result": "unsat",
+      "validation": "bounded_natural_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "max": 7
+      },
+      "notes": "The validator enumerates 0..7 and confirms no successor equals zero."
+    },
+    {
+      "id": "bounded-natural-negative-rejected",
+      "claim": "There exists a negative element in the bounded natural domain 0..7.",
+      "expected_result": "unsat",
+      "validation": "bounded_natural_enumeration",
+      "proof_status": "checked",
+      "data": {
+        "max": 7
+      },
+      "notes": "The validator enumerates the fixed natural domain and confirms every element is nonnegative."
+    }
+  ]
+}

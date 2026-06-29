@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "natural-arithmetic-v0",
+  "title": "Bounded Natural Arithmetic Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_naturals",
+    "field_number_theory",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "number_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "naturals"
+  ],
+  "axeyum_fragments": [
+    "LIA / BV",
+    "bounded natural arithmetic",
+    "finite-domain enumeration",
+    "QF_BV",
+    "QF_LIA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/natural-arithmetic-v0",
+  "source_refs": [
+    "docs/curriculum/01-number-systems/naturals.md",
+    "docs/curriculum/00-foundations/induction.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+  ],
+  "expected_results": [
+    "successor-addition-replay",
+    "addition-commutativity-fixed",
+    "multiplication-distributivity-fixed",
+    "successor-injective-bounded",
+    "zero-not-successor-bounded",
+    "bounded-natural-negative-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode fixed natural arithmetic rows as deterministic QF_BV or QF_LIA.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Emit checked CNF/BV or LIA evidence for bounded no-counterexample rows.",
+    "Keep the full induction schema and universal Nat theorems marked Lean-horizon."
+  ]
+}

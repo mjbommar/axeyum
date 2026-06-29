@@ -2,15 +2,17 @@
 
 Concept rows:
 
-- `curriculum_integers`, `curriculum_divisibility_and_euclid`,
-  `curriculum_modular_arithmetic`, `curriculum_number_theory`,
-  `curriculum_rationals`, and `curriculum_complex` in the
+- `curriculum_naturals`, `curriculum_integers`,
+  `curriculum_divisibility_and_euclid`, `curriculum_modular_arithmetic`,
+  `curriculum_number_theory`, `curriculum_rationals`, and
+  `curriculum_complex` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_number_theory`, `field_real_analysis`, and `field_complex_analysis`
   in the [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
 
 Example packs:
 
+- [natural-arithmetic-v0](../../../artifacts/examples/math/natural-arithmetic-v0/)
 - [integer-lia-v0](../../../artifacts/examples/math/integer-lia-v0/)
 - [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
@@ -20,17 +22,31 @@ Example packs:
 
 ## What Axeyum Checks
 
-The arithmetic path starts with exact replay. It checks signed integer order
-facts, linear integer equations, interval infeasibility, gcd and Bezout
-witnesses, divisibility quotient witnesses, congruences, CRT witnesses,
-modular inverses, bounded quadratic-residue and sum-of-two-squares checks,
-rational density witnesses, trichotomy and order transitivity fixed cases, and
-algebraic complex arithmetic as real-pair data.
+The arithmetic path starts with exact replay. It checks bounded natural
+successor/addition facts, fixed addition and multiplication identities,
+bounded Peano-style no-counterexample rows, signed integer order facts, linear
+integer equations, interval infeasibility, gcd and Bezout witnesses,
+divisibility quotient witnesses, congruences, CRT witnesses, modular inverses,
+bounded quadratic-residue and sum-of-two-squares checks, rational density
+witnesses, trichotomy and order transitivity fixed cases, and algebraic
+complex arithmetic as real-pair data.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.
 
 ## Encode / Check Walkthrough
+
+For natural arithmetic, encode successor and bounded identity rows:
+
+```text
+5 + S(7) = 13
+S(5 + 7) = 13
+2 * (3 + 4) = 2*3 + 2*4
+```
+
+The `natural-arithmetic-v0` validator replays those rows with exact
+nonnegative integer arithmetic and rejects bounded counterexamples to successor
+injectivity, a predecessor of zero, and a negative element in `0..7`.
 
 For signed integer arithmetic, encode fixed comparisons and linear equations:
 
@@ -81,6 +97,7 @@ The checker recomputes pair addition and twisted multiplication.
 Run the checks from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/natural-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/integer-lia-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
