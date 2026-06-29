@@ -15,6 +15,7 @@ Example packs:
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
+- [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
@@ -26,10 +27,11 @@ shadows of real reasoning. It checks density witnesses, additive inverses,
 fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
 samples, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, LP feasibility and infeasibility
-certificates, finite convexity and monotonicity checks, midpoints, collinearity
-determinants, and squared distances. The matrix-invariants pack adds a fixed
-characteristic polynomial, root evaluation, Cayley-Hamilton replay, and exact
-eigenvalue interval checks.
+certificates, finite convexity and monotonicity checks, exact rational
+gradients, Jacobian chain-rule replay, Hessian minor checks, midpoints,
+collinearity determinants, and squared distances. The matrix-invariants pack
+adds a fixed characteristic polynomial, root evaluation, Cayley-Hamilton
+replay, and exact eigenvalue interval checks.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
@@ -98,8 +100,25 @@ chi_A(lambda) = 3 - 4*lambda + lambda^2
 ```
 
 The checker recomputes trace, determinant, root values, and the fixed
-Cayley-Hamilton matrix polynomial exactly. For a coordinate-geometry check,
-encode two endpoints and the proposed midpoint:
+Cayley-Hamilton matrix polynomial exactly.
+
+For a multivariable real-algebra shadow, encode a fixed bivariate polynomial
+and rational point:
+
+```text
+f(x,y) = x^2 + 2xy + 3y^2 + x
+point = (1,2)
+grad f(point) = (7,14)
+H_f(point) = [[2,2],
+              [2,6]]
+```
+
+The `multivariable-calculus-rational-v0` validator differentiates each
+monomial, recomputes the gradient and Hessian exactly, checks a directional
+derivative as a dot product, replays a Jacobian chain-rule matrix product, and
+rejects the false gradient `(7,13)`.
+
+For a coordinate-geometry check, encode two endpoints and the proposed midpoint:
 
 ```text
 A = (0, 0)
@@ -119,6 +138,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0

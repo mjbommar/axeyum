@@ -748,6 +748,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/reals-rcf-shadow-v0",
           "notes": "Algebraic real constraints through LRA/NRA; completeness remains horizon."
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors."
         }
       ],
       "proof_routes": [
@@ -775,7 +781,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/reals-rcf-shadow-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/reals-rcf-shadow-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1540,6 +1546,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
           "notes": "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules."
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows."
         }
       ],
       "proof_routes": [
@@ -1613,6 +1625,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/calculus-riemann-sum-v0",
           "notes": "Finite rational Riemann sums, midpoint/trapezoid replay, antiderivative endpoints, and FTC Lean horizon."
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay."
         }
       ],
       "proof_routes": [
@@ -2368,7 +2386,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, and finite-field linear algebra",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, finite-field linear algebra, Jacobians, and Hessians",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -2377,14 +2395,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, and finite-field linear algebra"
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, finite-field linear algebra, Jacobians, and Hessians"
       ],
       "example_packs": [
         {
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -2493,6 +2511,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/matrix-invariants-v0",
           "notes": "Exact Matrix Invariant And Characteristic Polynomial Checks"
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact Rational Multivariable Calculus Checks"
         },
         {
           "id": "numerical-linear-algebra-v0",
@@ -2922,7 +2946,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied math. First Axeyum slice: Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows",
+      "summary": "Undergraduate / graduate applied math. First Axeyum slice: Interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, floating-point sanity checks, exact rational shadows",
       "prerequisites": [],
       "unlocks": [
         "curriculum_calculus",
@@ -2930,14 +2954,14 @@
       ],
       "decidability": "numerical",
       "axeyum_fragments": [
-        "Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows"
+        "Interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, floating-point sanity checks, exact rational shadows"
       ],
       "example_packs": [
         {
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."
+          "notes": "LU replay, interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -2986,6 +3010,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/matrix-invariants-v0",
           "notes": "Exact Matrix Invariant And Characteristic Polynomial Checks"
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact Rational Multivariable Calculus Checks"
         },
         {
           "id": "random-matrix-finite-v0",
@@ -3044,7 +3074,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied math. First Axeyum slice: LP feasibility, linear certificates, finite rational convexity checks, small quadratic checks, monotonicity/threshold examples",
+      "summary": "Undergraduate / graduate applied math. First Axeyum slice: LP feasibility, linear certificates, finite rational convexity checks, gradients, Hessian minors, small quadratic checks, monotonicity/threshold examples",
       "prerequisites": [],
       "unlocks": [
         "curriculum_linear_algebra",
@@ -3052,7 +3082,7 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "LP feasibility, linear certificates, finite rational convexity checks, small quadratic checks, monotonicity/threshold examples"
+        "LP feasibility, linear certificates, finite rational convexity checks, gradients, Hessian minors, small quadratic checks, monotonicity/threshold examples"
       ],
       "example_packs": [
         {
@@ -3066,6 +3096,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/convexity-rational-v0",
           "notes": "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."
         },
         {
           "id": "least-squares-regression-v0",
@@ -3299,7 +3335,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core proof-based undergraduate / graduate analysis. First Axeyum slice: Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates",
+      "summary": "Core proof-based undergraduate / graduate analysis. First Axeyum slice: Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows",
       "prerequisites": [],
       "unlocks": [
         "curriculum_calculus",
@@ -3310,14 +3346,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates"
+        "Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows"
       ],
       "example_packs": [
         {
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -3464,6 +3500,12 @@
           "notes": "Finite Metric Continuity Checks"
         },
         {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Exact Rational Multivariable Calculus Checks"
+        },
+        {
           "id": "orientation-area-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/orientation-area-geometry-v0",
@@ -3496,7 +3538,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction.",
+          "name": "General completeness, limits, continuity, compactness, differentiability, and convergence proofs need Lean reconstruction.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",

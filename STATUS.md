@@ -179,6 +179,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Multivariable calculus foundations pack landed.** Added
+  [`multivariable-calculus-rational-v0`](artifacts/examples/math/multivariable-calculus-rational-v0/README.md)
+  as the exact finite bridge from one-variable calculus into gradients,
+  Jacobians, Hessians, optimization, and numerical-analysis shadows. The pack
+  validates bivariate-polynomial value/gradient replay, directional
+  derivative replay as a gradient dot product, Jacobian chain-rule matrix
+  replay for a fixed polynomial map composition, Hessian
+  positive-definiteness by exact principal minors, checked rejection of a bad
+  gradient, and a general multivariable-calculus Lean-horizon row. The
+  foundational example-pack validator now checks these rows by exact rational
+  monomial differentiation and matrix replay.
+
 - **Finite order/lattice foundations pack landed.** Added
   [`finite-order-lattices-v0`](artifacts/examples/math/finite-order-lattices-v0/README.md)
   as the exact finite bridge from relations to order and lattice theory. The

@@ -84,6 +84,7 @@ artifacts/examples/math/
   metric-continuity-v0/
   calculus-algebraic-shadow-v0/
   calculus-riemann-sum-v0/
+  multivariable-calculus-rational-v0/
   linear-algebra-rational-v0/
   finite-vector-spaces-v0/
   finite-modules-v0/
@@ -436,6 +437,11 @@ rejection, and a general real-analysis Lean-horizon row.
 [`metric-continuity-v0`](../../artifacts/examples/math/metric-continuity-v0/)
 validates finite Lipschitz, epsilon-delta, and open-ball preimage checks with
 exact rational metrics, plus checked rejection of an overlarge delta.
+[`multivariable-calculus-rational-v0`](../../artifacts/examples/math/multivariable-calculus-rational-v0/)
+adds the exact finite multivariable-calculus bridge: bivariate-polynomial
+value/gradient replay, directional derivatives, Jacobian chain-rule matrix
+replay, Hessian minor checks for local convexity, bad-gradient rejection, and a
+multivariable-calculus Lean-horizon row.
 [`linear-algebra-rational-v0`](../../artifacts/examples/math/linear-algebra-rational-v0/)
 validates exact rational matrix-vector replay, LU factorization replay, and a
 row-scaling inconsistency certificate for a singular system.

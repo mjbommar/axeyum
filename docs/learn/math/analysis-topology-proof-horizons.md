@@ -22,6 +22,7 @@ Example packs:
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
+- [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
@@ -45,7 +46,8 @@ separation checks, finite continuous-map preimages and homeomorphism checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
 rank checks, fixed Betti-number replay, and bad boundary-sign rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
-endpoint replay, bounded recurrence traces, finite invariant witnesses, matrix
+endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
+minor checks, bounded recurrence traces, finite invariant witnesses, matrix
 operator bounds, Chebyshev recurrence values at fixed points,
 finite Chebyshev-system interpolation/sign-pattern checks, finite stochastic
 transition systems, finite first-hit distributions, and expected hitting-time
@@ -199,6 +201,21 @@ trapezoid sums, checks polynomial antiderivative endpoint differences, brackets
 an exact integral between monotone lower and upper sums, and rejects a false
 integral claim.
 
+For a multivariable calculus shadow, encode a bivariate polynomial map and
+exact rational derivative data:
+
+```text
+f(x,y) = x^2 + 2xy + 3y^2 + x
+grad f(1,2) = (7,14)
+direction = (3,-1)
+directional derivative = 7
+```
+
+The `multivariable-calculus-rational-v0` validator recomputes partial
+derivatives, checks the directional derivative as a dot product, verifies a
+Jacobian chain-rule matrix product for a fixed polynomial map composition, and
+checks a positive-definite Hessian by exact minors.
+
 For dynamics, encode a bounded recurrence trace:
 
 ```text
@@ -251,6 +268,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0

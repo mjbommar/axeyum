@@ -142,6 +142,11 @@ schemas, examples, and validation workflows.
   validates exact finite Riemann sums, midpoint/trapezoid replay,
   antiderivative endpoint replay, monotone lower/upper sums, checked false
   integral rejection, and a fundamental-theorem Lean-horizon row.
+- [`artifacts/examples/math/multivariable-calculus-rational-v0/`](../../artifacts/examples/math/multivariable-calculus-rational-v0/)
+  validates exact rational bivariate-polynomial value/gradient replay,
+  directional derivatives, Jacobian chain-rule matrix replay, Hessian
+  positive-definiteness by principal minors, checked bad-gradient rejection,
+  and a multivariable-calculus Lean-horizon row.
 - [`artifacts/examples/math/linear-algebra-rational-v0/`](../../artifacts/examples/math/linear-algebra-rational-v0/)
   validates exact rational matrix-vector solution replay, LU factorization
   replay, and a row-scaling inconsistency certificate for a singular system.
@@ -336,6 +341,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0

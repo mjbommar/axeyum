@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "multivariable-calculus-rational-v0",
+  "title": "Exact Rational Multivariable Calculus Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_calculus",
+    "curriculum_polynomials",
+    "curriculum_reals",
+    "curriculum_linear_algebra",
+    "field_real_analysis",
+    "field_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "linear_algebra",
+    "optimization_and_convexity",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "polynomials",
+    "reals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "NRA / polynomial constraints",
+    "finite rational matrices",
+    "symbolic polynomial differentiation",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "gradient-at-point-replay",
+    "directional-derivative-dot-product",
+    "jacobian-chain-rule-replay",
+    "hessian-positive-definite-replay",
+    "bad-gradient-rejected",
+    "general-multivariable-calculus-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed multivariable polynomial derivative rows as deterministic exact rational arithmetic obligations.",
+    "Replay gradients, directional derivatives, Jacobians, chain-rule matrices, and Hessian minors through Axeyum model evaluation.",
+    "Add checked algebraic certificates for bad derivative rows once the polynomial/NRA proof route is promoted.",
+    "Keep differentiability from limits, inverse/implicit function theorems, manifolds, and general multivariable analysis marked Lean-horizon until no-sorry Lean artifacts exist."
+  ]
+}

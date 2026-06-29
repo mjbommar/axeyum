@@ -5298,6 +5298,240 @@ def polynomial_eval(polynomial: list[Fraction], point: Fraction) -> Fraction:
     return value
 
 
+BivariatePolynomial = list[tuple[Fraction, int, int]]
+
+
+def require_nonnegative_int(context: str, value: Any) -> int:
+    integer = require_int(context, value)
+    if integer < 0:
+        fail(f"{context} must be non-negative")
+    return integer
+
+
+def require_bivariate_polynomial(context: str, value: Any) -> BivariatePolynomial:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list of monomials")
+    polynomial: BivariatePolynomial = []
+    seen_terms: set[tuple[int, int]] = set()
+    for index, term in enumerate(value):
+        if not isinstance(term, dict):
+            fail(f"{context}[{index}] must be a monomial object")
+        require_keys(f"{context}[{index}]", term, {"coeff", "x_power", "y_power"})
+        coefficient = require_fraction(f"{context}[{index}].coeff", term.get("coeff"))
+        x_power = require_nonnegative_int(f"{context}[{index}].x_power", term.get("x_power"))
+        y_power = require_nonnegative_int(f"{context}[{index}].y_power", term.get("y_power"))
+        power_pair = (x_power, y_power)
+        if power_pair in seen_terms:
+            fail(f"{context} repeats monomial powers {power_pair}")
+        seen_terms.add(power_pair)
+        if coefficient != 0:
+            polynomial.append((coefficient, x_power, y_power))
+    if not polynomial:
+        fail(f"{context} must contain a non-zero monomial")
+    return polynomial
+
+
+def require_bivariate_point(context: str, value: Any) -> tuple[Fraction, Fraction]:
+    point = require_fraction_vector(context, value)
+    if len(point) != 2:
+        fail(f"{context} must contain exactly two coordinates")
+    return point[0], point[1]
+
+
+def bivariate_eval(polynomial: BivariatePolynomial, point: tuple[Fraction, Fraction]) -> Fraction:
+    x_value, y_value = point
+    return sum(
+        coefficient * (x_value ** x_power) * (y_value ** y_power)
+        for coefficient, x_power, y_power in polynomial
+    )
+
+
+def bivariate_partial(polynomial: BivariatePolynomial, variable: str) -> BivariatePolynomial:
+    derivative: BivariatePolynomial = []
+    for coefficient, x_power, y_power in polynomial:
+        if variable == "x" and x_power > 0:
+            derivative.append((coefficient * x_power, x_power - 1, y_power))
+        elif variable == "y" and y_power > 0:
+            derivative.append((coefficient * y_power, x_power, y_power - 1))
+    return derivative
+
+
+def bivariate_gradient(polynomial: BivariatePolynomial, point: tuple[Fraction, Fraction]) -> list[Fraction]:
+    return [
+        bivariate_eval(bivariate_partial(polynomial, "x"), point),
+        bivariate_eval(bivariate_partial(polynomial, "y"), point),
+    ]
+
+
+def bivariate_hessian(polynomial: BivariatePolynomial, point: tuple[Fraction, Fraction]) -> list[list[Fraction]]:
+    partial_x = bivariate_partial(polynomial, "x")
+    partial_y = bivariate_partial(polynomial, "y")
+    return [
+        [
+            bivariate_eval(bivariate_partial(partial_x, "x"), point),
+            bivariate_eval(bivariate_partial(partial_x, "y"), point),
+        ],
+        [
+            bivariate_eval(bivariate_partial(partial_y, "x"), point),
+            bivariate_eval(bivariate_partial(partial_y, "y"), point),
+        ],
+    ]
+
+
+def require_bivariate_map(context: str, value: Any) -> list[BivariatePolynomial]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list of component polynomials")
+    return [
+        require_bivariate_polynomial(f"{context}[{index}]", component)
+        for index, component in enumerate(value)
+    ]
+
+
+def bivariate_map_eval(polynomials: list[BivariatePolynomial], point: tuple[Fraction, Fraction]) -> list[Fraction]:
+    return [bivariate_eval(polynomial, point) for polynomial in polynomials]
+
+
+def bivariate_jacobian(polynomials: list[BivariatePolynomial], point: tuple[Fraction, Fraction]) -> list[list[Fraction]]:
+    return [bivariate_gradient(polynomial, point) for polynomial in polynomials]
+
+
+def require_vector_length(context: str, vector: list[Fraction], length: int) -> None:
+    if len(vector) != length:
+        fail(f"{context} must have length {length}")
+
+
+def require_matrix_shape(context: str, matrix: list[list[Fraction]], height: int, width: int) -> None:
+    if len(matrix) != height or any(len(row) != width for row in matrix):
+        fail(f"{context} must have shape {height}x{width}")
+
+
+def matrix_det_2(matrix: list[list[Fraction]]) -> Fraction:
+    require_matrix_shape("2x2 determinant matrix", matrix, 2, 2)
+    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
+
+def validate_multivariable_calculus_rational(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gradient = checks["gradient-at-point-replay"]
+    if gradient["expected_result"] != "sat":
+        fail("gradient-at-point-replay must expect sat")
+    values = single_witness_values(gradient, witnesses)
+    polynomial = require_bivariate_polynomial("multivariable gradient polynomial", values.get("polynomial"))
+    point = require_bivariate_point("multivariable gradient point", values.get("point"))
+    value = require_fraction("multivariable gradient value", values.get("value"))
+    listed_gradient = require_fraction_vector("multivariable gradient", values.get("gradient"))
+    require_vector_length("multivariable gradient", listed_gradient, 2)
+    if bivariate_eval(polynomial, point) != value:
+        fail("gradient-at-point-replay value is incorrect")
+    actual_gradient = bivariate_gradient(polynomial, point)
+    if listed_gradient != actual_gradient:
+        fail("gradient-at-point-replay gradient is incorrect")
+
+    directional = checks["directional-derivative-dot-product"]
+    if directional["expected_result"] != "sat" or directional.get("proof_status") != "checked":
+        fail("directional-derivative-dot-product must be a checked sat row")
+    values = single_witness_values(directional, witnesses)
+    polynomial = require_bivariate_polynomial("directional polynomial", values.get("polynomial"))
+    point = require_bivariate_point("directional point", values.get("point"))
+    direction = require_fraction_vector("directional direction", values.get("direction"))
+    require_vector_length("directional direction", direction, 2)
+    listed_gradient = require_fraction_vector("directional gradient", values.get("gradient"))
+    require_vector_length("directional gradient", listed_gradient, 2)
+    directional_derivative = require_fraction(
+        "directional directional_derivative",
+        values.get("directional_derivative"),
+    )
+    actual_gradient = bivariate_gradient(polynomial, point)
+    if listed_gradient != actual_gradient:
+        fail("directional-derivative-dot-product gradient is incorrect")
+    actual_directional = sum((left * right for left, right in zip(actual_gradient, direction)), Fraction(0))
+    if directional_derivative != actual_directional:
+        fail("directional-derivative-dot-product value is incorrect")
+
+    chain = checks["jacobian-chain-rule-replay"]
+    if chain["expected_result"] != "sat" or chain.get("proof_status") != "checked":
+        fail("jacobian-chain-rule-replay must be a checked sat row")
+    values = single_witness_values(chain, witnesses)
+    point = require_bivariate_point("chain point", values.get("point"))
+    inner_map = require_bivariate_map("chain inner_map", values.get("inner_map"))
+    outer_map = require_bivariate_map("chain outer_map", values.get("outer_map"))
+    if len(inner_map) != 2 or len(outer_map) != 2:
+        fail("jacobian-chain-rule-replay currently expects 2D maps")
+    inner_value = require_fraction_vector("chain inner_value", values.get("inner_value"))
+    require_vector_length("chain inner_value", inner_value, 2)
+    listed_jacobian_inner = require_fraction_matrix("chain jacobian_inner", values.get("jacobian_inner"))
+    listed_jacobian_outer = require_fraction_matrix(
+        "chain jacobian_outer_at_inner",
+        values.get("jacobian_outer_at_inner"),
+    )
+    listed_jacobian_composite = require_fraction_matrix(
+        "chain jacobian_composite",
+        values.get("jacobian_composite"),
+    )
+    require_matrix_shape("chain jacobian_inner", listed_jacobian_inner, 2, 2)
+    require_matrix_shape("chain jacobian_outer_at_inner", listed_jacobian_outer, 2, 2)
+    require_matrix_shape("chain jacobian_composite", listed_jacobian_composite, 2, 2)
+    actual_inner_value = bivariate_map_eval(inner_map, point)
+    if inner_value != actual_inner_value:
+        fail("jacobian-chain-rule-replay inner_value is incorrect")
+    actual_inner_jacobian = bivariate_jacobian(inner_map, point)
+    actual_outer_jacobian = bivariate_jacobian(outer_map, (inner_value[0], inner_value[1]))
+    if listed_jacobian_inner != actual_inner_jacobian:
+        fail("jacobian-chain-rule-replay inner Jacobian is incorrect")
+    if listed_jacobian_outer != actual_outer_jacobian:
+        fail("jacobian-chain-rule-replay outer Jacobian is incorrect")
+    actual_composite = mat_mul(actual_outer_jacobian, actual_inner_jacobian)
+    if listed_jacobian_composite != actual_composite:
+        fail("jacobian-chain-rule-replay composite Jacobian is incorrect")
+
+    hessian = checks["hessian-positive-definite-replay"]
+    if hessian["expected_result"] != "sat" or hessian.get("proof_status") != "checked":
+        fail("hessian-positive-definite-replay must be a checked sat row")
+    values = single_witness_values(hessian, witnesses)
+    polynomial = require_bivariate_polynomial("hessian polynomial", values.get("polynomial"))
+    point = require_bivariate_point("hessian point", values.get("point"))
+    listed_hessian = require_fraction_matrix("hessian matrix", values.get("hessian"))
+    require_matrix_shape("hessian matrix", listed_hessian, 2, 2)
+    leading_minor = require_fraction("hessian leading_minor", values.get("leading_minor"))
+    determinant = require_fraction("hessian determinant", values.get("determinant"))
+    actual_hessian = bivariate_hessian(polynomial, point)
+    if listed_hessian != actual_hessian:
+        fail("hessian-positive-definite-replay Hessian is incorrect")
+    if leading_minor != listed_hessian[0][0]:
+        fail("hessian-positive-definite-replay leading minor is incorrect")
+    if determinant != matrix_det_2(listed_hessian):
+        fail("hessian-positive-definite-replay determinant is incorrect")
+    if leading_minor <= 0 or determinant <= 0:
+        fail("hessian-positive-definite-replay minors must be positive")
+
+    bad = checks["bad-gradient-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-gradient-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    polynomial = require_bivariate_polynomial("bad gradient polynomial", data.get("polynomial"))
+    point = require_bivariate_point("bad gradient point", data.get("point"))
+    claimed = require_fraction_vector("bad gradient claimed_gradient", data.get("claimed_gradient"))
+    actual = require_fraction_vector("bad gradient actual_gradient", data.get("actual_gradient"))
+    require_vector_length("bad gradient claimed_gradient", claimed, 2)
+    require_vector_length("bad gradient actual_gradient", actual, 2)
+    recomputed = bivariate_gradient(polynomial, point)
+    if actual != recomputed:
+        fail("bad-gradient-rejected actual_gradient is incorrect")
+    if claimed == recomputed:
+        fail("bad-gradient-rejected claimed gradient unexpectedly matches")
+
+    horizon = checks["general-multivariable-calculus-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-multivariable-calculus-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-multivariable-calculus-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general multivariable target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general multivariable future_checker", data.get("future_checker"))
+
+
 def validate_polynomial_identities(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12029,6 +12263,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_random_matrix_finite(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
+    if metadata["id"] == "multivariable-calculus-rational-v0":
+        validate_multivariable_calculus_rational(expected)
     if metadata["id"] == "natural-arithmetic-v0":
         validate_natural_arithmetic(expected)
     if metadata["id"] == "numerical-linear-algebra-v0":

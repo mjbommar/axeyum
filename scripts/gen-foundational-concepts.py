@@ -136,6 +136,12 @@ CURRICULUM_MAP = {
         "pack": "reals-rcf-shadow-v0",
         "slice": "Algebraic real constraints through LRA/NRA; completeness remains horizon.",
         "proof": "LRA/NRA replay and future SOS/RCF certificates.",
+        "extra_packs": [
+            (
+                "multivariable-calculus-rational-v0",
+                "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
+            ),
+        ],
     },
     "complex": {
         "field_ids": ["complex_analysis", "linear_algebra"],
@@ -251,6 +257,10 @@ CURRICULUM_MAP = {
                 "finite-modules-v0",
                 "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
+            (
+                "multivariable-calculus-rational-v0",
+                "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows.",
+            ),
         ],
     },
     "calculus": {
@@ -263,6 +273,10 @@ CURRICULUM_MAP = {
                 "calculus-riemann-sum-v0",
                 "Finite rational Riemann sums, midpoint/trapezoid replay, antiderivative endpoints, and FTC Lean horizon.",
             ),
+            (
+                "multivariable-calculus-rational-v0",
+                "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay.",
+            ),
         ],
     },
 }
@@ -273,9 +287,9 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, homomorphism tables, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -284,8 +298,9 @@ FIELD_PACKS = {
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."),
+        ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, distance, midpoint, collinearity, and rigid finite configurations."),
     "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
