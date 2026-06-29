@@ -265,7 +265,9 @@ validator, a validating template pack under `artifacts/examples/math/template-v0
 and the first substantive pack under
 `artifacts/examples/math/proof-methods-refutation-v0/`; the first replay-checked
 number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`;
-the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`.
+the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
+the first exact rational linear-algebra pack lives under
+`artifacts/examples/math/linear-algebra-rational-v0/`.
 
 Deliverables:
 
@@ -435,8 +437,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-7 have landed for the math seed. Continue with item 8:
-`linear-algebra-rational-v0` with LU and inconsistent-system examples.
+Progress: items 1-8 have landed for the math seed. Continue with item 9:
+`graph-coloring-v0` as the first pure field-extension pack.
 
 ## Operating Rules
 

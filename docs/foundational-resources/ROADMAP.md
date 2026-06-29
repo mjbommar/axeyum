@@ -61,6 +61,7 @@ artifacts/examples/math/
   proof-methods-refutation-v0/
   modular-arithmetic-v0/
   rationals-lra-v0/
+  linear-algebra-rational-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -300,6 +301,9 @@ non-invertibility/Fermat-style checks.
 [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/)
 validates exact rational density, additive inverse, trichotomy, and transitivity
 checks without floating-point arithmetic.
+[`linear-algebra-rational-v0`](../../artifacts/examples/math/linear-algebra-rational-v0/)
+validates exact rational matrix-vector replay, LU factorization replay, and a
+row-scaling inconsistency certificate for a singular system.
 
 Exit criteria:
 

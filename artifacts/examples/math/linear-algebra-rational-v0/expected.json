@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "pack_id": "linear-algebra-rational-v0",
+  "witnesses": [
+    {
+      "id": "matrix-vector-solution-witness",
+      "description": "The vector [1, 2] solves Ax = b for a fixed 2x2 rational system.",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "-1"]
+        ],
+        "solution": ["1", "2"],
+        "rhs": ["4", "-1"]
+      }
+    },
+    {
+      "id": "lu-factorization-witness",
+      "description": "A fixed 2x2 rational matrix factors as L*U.",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["4", "3"]
+        ],
+        "l": [
+          ["1", "0"],
+          ["2", "1"]
+        ],
+        "u": [
+          ["2", "1"],
+          ["0", "1"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "matrix-vector-solution",
+      "claim": "There exists a rational vector x such that Ax = b for the fixed 2x2 system.",
+      "expected_result": "sat",
+      "validation": "exact_rational_matrix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["matrix-vector-solution-witness"],
+      "notes": "The validator checks the matrix-vector product exactly over rational numbers."
+    },
+    {
+      "id": "lu-factorization-witness",
+      "claim": "The fixed rational matrix has the listed LU factorization.",
+      "expected_result": "sat",
+      "validation": "exact_rational_matrix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["lu-factorization-witness"],
+      "notes": "The validator checks triangular shape, unit diagonal for L, and L*U = A exactly."
+    },
+    {
+      "id": "singular-system-inconsistent",
+      "claim": "The system x + y = 1 and 2x + 2y = 3 has no rational solution.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_row_scaling_certificate",
+      "proof_status": "replay-only",
+      "data": {
+        "row": ["1", "1"],
+        "rhs": "1",
+        "multiple": "2",
+        "scaled_row": ["2", "2"],
+        "scaled_rhs": "3"
+      },
+      "notes": "The validator checks that the left-hand side scales by 2 while the right-hand side does not, which proves this fixed system inconsistent."
+    }
+  ]
+}

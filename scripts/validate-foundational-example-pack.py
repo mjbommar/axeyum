@@ -315,6 +315,77 @@ def require_fraction(context: str, value: Any) -> Fraction:
         fail(f"{context} is not a valid exact fraction: {error}")
 
 
+def require_fraction_vector(context: str, value: Any) -> list[Fraction]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty vector")
+    return [require_fraction(f"{context}[{index}]", item) for index, item in enumerate(value)]
+
+
+def require_fraction_matrix(context: str, value: Any) -> list[list[Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty matrix")
+    matrix = [
+        require_fraction_vector(f"{context}[{row_index}]", row)
+        for row_index, row in enumerate(value)
+    ]
+    width = len(matrix[0])
+    for row_index, row in enumerate(matrix):
+        if len(row) != width:
+            fail(f"{context}[{row_index}] must have width {width}")
+    return matrix
+
+
+def require_mat_vec_shape(context: str, matrix: list[list[Fraction]], vector: list[Fraction]) -> None:
+    if len(matrix[0]) != len(vector):
+        fail(f"{context} matrix width must match vector length")
+
+
+def require_mat_mul_shape(
+    context: str,
+    left: list[list[Fraction]],
+    right: list[list[Fraction]],
+) -> None:
+    if len(left[0]) != len(right):
+        fail(f"{context} left width must match right height")
+
+
+def mat_vec(matrix: list[list[Fraction]], vector: list[Fraction]) -> list[Fraction]:
+    return [
+        sum((coefficient * vector[index] for index, coefficient in enumerate(row)), Fraction(0))
+        for row in matrix
+    ]
+
+
+def mat_mul(left: list[list[Fraction]], right: list[list[Fraction]]) -> list[list[Fraction]]:
+    columns = list(zip(*right))
+    return [
+        [sum((a * b for a, b in zip(row, column)), Fraction(0)) for column in columns]
+        for row in left
+    ]
+
+
+def require_square_matrix(context: str, matrix: list[list[Fraction]]) -> None:
+    if len(matrix) != len(matrix[0]):
+        fail(f"{context} must be square")
+
+
+def validate_lu_shape(l_matrix: list[list[Fraction]], u_matrix: list[list[Fraction]]) -> None:
+    require_square_matrix("L matrix", l_matrix)
+    require_square_matrix("U matrix", u_matrix)
+    if len(l_matrix) != len(u_matrix):
+        fail("L and U matrices must have the same dimension")
+    dimension = len(l_matrix)
+    for row_index in range(dimension):
+        if l_matrix[row_index][row_index] != 1:
+            fail("L matrix must have unit diagonal")
+        for col_index in range(row_index + 1, dimension):
+            if l_matrix[row_index][col_index] != 0:
+                fail("L matrix must be lower triangular")
+        for col_index in range(row_index):
+            if u_matrix[row_index][col_index] != 0:
+                fail("U matrix must be upper triangular")
+
+
 def validate_rationals_lra(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -364,11 +435,60 @@ def validate_rationals_lra(expected: dict[str, Any]) -> None:
         fail("transitivity fixed data unexpectedly violates a < c")
 
 
+def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    solution = checks["matrix-vector-solution"]
+    if solution["expected_result"] != "sat":
+        fail("matrix-vector-solution must expect sat")
+    values = single_witness_values(solution, witnesses)
+    matrix = require_fraction_matrix("matrix-vector matrix", values.get("matrix"))
+    vector = require_fraction_vector("matrix-vector solution", values.get("solution"))
+    rhs = require_fraction_vector("matrix-vector rhs", values.get("rhs"))
+    require_mat_vec_shape("matrix-vector solution", matrix, vector)
+    if len(matrix) != len(rhs):
+        fail("matrix-vector matrix height must match rhs length")
+    if mat_vec(matrix, vector) != rhs:
+        fail("matrix-vector witness does not satisfy Ax = b")
+
+    lu = checks["lu-factorization-witness"]
+    if lu["expected_result"] != "sat":
+        fail("lu-factorization-witness must expect sat")
+    values = single_witness_values(lu, witnesses)
+    matrix = require_fraction_matrix("LU matrix", values.get("matrix"))
+    l_matrix = require_fraction_matrix("L matrix", values.get("l"))
+    u_matrix = require_fraction_matrix("U matrix", values.get("u"))
+    require_square_matrix("LU target matrix", matrix)
+    validate_lu_shape(l_matrix, u_matrix)
+    require_mat_mul_shape("LU factorization", l_matrix, u_matrix)
+    if mat_mul(l_matrix, u_matrix) != matrix:
+        fail("LU witness does not satisfy L*U = A")
+
+    inconsistent = checks["singular-system-inconsistent"]
+    if inconsistent["expected_result"] != "unsat":
+        fail("singular-system-inconsistent must expect unsat")
+    data = inconsistent.get("data", {})
+    row = require_fraction_vector("inconsistent row", data.get("row"))
+    rhs = require_fraction("inconsistent rhs", data.get("rhs"))
+    multiple = require_fraction("inconsistent multiple", data.get("multiple"))
+    scaled_row = require_fraction_vector("inconsistent scaled row", data.get("scaled_row"))
+    scaled_rhs = require_fraction("inconsistent scaled rhs", data.get("scaled_rhs"))
+    if len(row) != len(scaled_row):
+        fail("inconsistent row and scaled row must have the same width")
+    if scaled_row != [multiple * item for item in row]:
+        fail("inconsistent scaled row must equal multiple times the original row")
+    if scaled_rhs == multiple * rhs:
+        fail("inconsistent scaled rhs must contradict the scaled original rhs")
+
+
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "rationals-lra-v0":
         validate_rationals_lra(expected)
+    if metadata["id"] == "linear-algebra-rational-v0":
+        validate_linear_algebra_rational(expected)
 
 
 def validate_pack(pack_dir: Path, concept_ids: set[str], field_ids: set[str], curriculum_nodes: set[str]) -> None:

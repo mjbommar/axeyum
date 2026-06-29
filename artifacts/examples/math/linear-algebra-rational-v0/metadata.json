@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "linear-algebra-rational-v0",
+  "title": "Exact Rational Linear Algebra Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_fields",
+    "curriculum_rationals",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "fields",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/BACKLOG.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+  ],
+  "expected_results": [
+    "matrix-vector-solution",
+    "lu-factorization-witness",
+    "singular-system-inconsistent"
+  ],
+  "graduation_criteria": [
+    "Encode the matrix equations as deterministic QF_LRA formulas.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Add Farkas certificates for inconsistent linear systems.",
+    "Promote common exact matrix helpers into a reusable example-pack utility only after more packs need them."
+  ]
+}

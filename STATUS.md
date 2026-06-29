@@ -134,6 +134,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Linear algebra rational pack landed.** Added
+  [`artifacts/examples/math/linear-algebra-rational-v0/`](artifacts/examples/math/linear-algebra-rational-v0/)
+  for exact rational matrix-vector solution replay, LU factorization replay,
+  and a row-scaling inconsistency certificate for a singular system. The
+  foundational example-pack validator now has exact rational matrix helpers for
+  this pack, and the next planned math-resource increment is
+  `graph-coloring-v0`.
+
 - **Rationals LRA pack landed.** Added
   [`artifacts/examples/math/rationals-lra-v0/`](artifacts/examples/math/rationals-lra-v0/)
   for exact rational density, additive inverse, trichotomy, and order
