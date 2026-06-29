@@ -4,7 +4,12 @@
 //! operation panics (overflow / underflow / ÷0) on that input, then
 //! `verify_program` must **never** return `Verified` — a reachable panic forbids a
 //! safety claim (the verify analog of a wrong `unsat`). Deterministic, no deps.
-#![allow(clippy::cast_possible_truncation)] // intentional in the PRNG
+// Intentional casts in the PRNG / two's-complement bit-pattern math.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 use axeyum_solver::SolverConfig;
 use axeyum_verify::ast::{BinOp, Expr, Param, Program, Stmt, Ty};
@@ -111,5 +116,102 @@ fn reachable_arithmetic_panic_is_never_verified() {
     assert!(
         checked >= 10,
         "fuzz exercised too few panicking cases ({checked})"
+    );
+}
+
+/// Signed ground truth: does `a <op> b` panic at signed width `w`?
+fn panics_signed(op: BinOp, w: u32, a: i128, b: i128) -> bool {
+    let min = -(1i128 << (w - 1));
+    let max = (1i128 << (w - 1)) - 1;
+    let oob = |r: i128| r < min || r > max;
+    match op {
+        BinOp::Add => oob(a + b),
+        BinOp::Sub => oob(a - b),
+        BinOp::Mul => oob(a * b),
+        BinOp::Div => b == 0 || (a == min && b == -1),
+        BinOp::Rem => b == 0,
+        _ => false,
+    }
+}
+
+/// Two's-complement bit pattern of signed `v` at width `w` (what `IntLit` wants).
+fn bits(v: i128, w: u32) -> u128 {
+    let mask: u128 = (1u128 << w) - 1;
+    (v as u128) & mask
+}
+
+#[test]
+fn reachable_signed_arithmetic_panic_is_never_verified() {
+    let cfg = SolverConfig::default();
+    let mut rng = Rng(0x5167_0000_0000_0009);
+    let mut checked = 0u32;
+    for _ in 0..400 {
+        let op = OPS[(rng.next() as usize) % OPS.len()];
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let min = -(1i128 << (w - 1));
+        let max = (1i128 << (w - 1)) - 1;
+        let span = (max - min + 1) as u128;
+        let mut a = min + ((u128::from(rng.next()) % span) as i128);
+        let mut b = min + ((u128::from(rng.next()) % span) as i128);
+        // Force the MIN/-1 and ÷0 edges occasionally.
+        if rng.next() % 5 == 0 {
+            a = min;
+            b = -1;
+        }
+        if rng.next() % 5 == 0 {
+            b = 0;
+        }
+        if !panics_signed(op, w, a, b) {
+            continue;
+        }
+        checked += 1;
+        let ty = Ty::Int {
+            width: w,
+            signed: true,
+        };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![Param {
+                name: "x".to_string(),
+                ty,
+            }],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "a".to_string(),
+                    ty,
+                    value: Expr::IntLit {
+                        value: bits(a, w),
+                        ty,
+                    },
+                },
+                Stmt::Let {
+                    name: "b".to_string(),
+                    ty,
+                    value: Expr::IntLit {
+                        value: bits(b, w),
+                        ty,
+                    },
+                },
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: Expr::Binary {
+                        op,
+                        lhs: Box::new(Expr::Var("a".to_string())),
+                        rhs: Box::new(Expr::Var("b".to_string())),
+                    },
+                },
+            ],
+        };
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong-safe (signed): {a} {op:?} {b} (i{w}) panics but verify returned {verdict:?}"
+        );
+    }
+    assert!(
+        checked >= 10,
+        "signed fuzz exercised too few panicking cases ({checked})"
     );
 }

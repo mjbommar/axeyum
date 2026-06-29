@@ -10,12 +10,16 @@ use axeyum_verify::bmc::{CounterLoopSystem, LoopSafety, ScalarLoopSystem, check_
 
 const W: u32 = 8;
 
+fn names(xs: &[&str]) -> Vec<String> {
+    xs.iter().map(|s| (*s).to_string()).collect()
+}
+
 /// A generic system replicating `while i < limit { i += 1 }` with bad state
 /// `i == bad`, over state vars `[i, limit]`.
 fn counter_like(bad: u128) -> ScalarLoopSystem {
     ScalarLoopSystem::new(
         W,
-        vec!["i", "limit"],
+        names(&["i", "limit"]),
         // init: i == 0 (limit is a free symbolic input).
         Box::new(
             |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
@@ -76,7 +80,7 @@ fn multi_variable_accumulator_loop_finds_bug() {
     let cfg = SolverConfig::default();
     let system = ScalarLoopSystem::new(
         W,
-        vec!["i", "sum", "limit"],
+        names(&["i", "sum", "limit"]),
         Box::new(
             |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
                 let zero = arena.bv_const(W, 0)?;
@@ -112,7 +116,7 @@ fn accumulator_safe_within_bound() {
     let cfg = SolverConfig::default();
     let system = ScalarLoopSystem::new(
         W,
-        vec!["i", "sum", "limit"],
+        names(&["i", "sum", "limit"]),
         Box::new(
             |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
                 let zero = arena.bv_const(W, 0)?;
@@ -149,7 +153,7 @@ fn conditional_update_in_loop_body_folds_to_ite() {
     let cfg = SolverConfig::default();
     let system = ScalarLoopSystem::new(
         W,
-        vec!["i", "evens", "limit"],
+        names(&["i", "evens", "limit"]),
         Box::new(
             |arena: &mut TermArena, v: &[TermId]| -> Result<TermId, SolverError> {
                 let zero = arena.bv_const(W, 0)?;

@@ -261,6 +261,9 @@ impl Lowerer<'_> {
             BinOp::Div => {
                 self.record_div_zero("division by zero", b)?;
                 if signed {
+                    // Rust also panics on `iN::MIN / -1` (the quotient overflows);
+                    // BV `sdiv` is total, so check it explicitly.
+                    self.record_sdiv_overflow(a, b)?;
                     self.arena.bv_sdiv(a.term, b.term)
                 } else {
                     self.arena.bv_udiv(a.term, b.term)
@@ -346,6 +349,30 @@ impl Lowerer<'_> {
         let zero = self.arena.bv_const(width, 0).map_err(|e| ir(&e))?;
         let is_zero = self.arena.eq(divisor.term, zero).map_err(|e| ir(&e))?;
         self.record(label, is_zero)
+    }
+
+    /// Records `path ∧ a == iN::MIN ∧ b == -1` for signed `/` — the Rust
+    /// division-overflow panic (`bv_sdiv` is total, so we check it explicitly).
+    fn record_sdiv_overflow(&mut self, a: SymVal, b: SymVal) -> Result<(), LowerError> {
+        let width =
+            a.ty.width()
+                .ok_or_else(|| LowerError::TypeError("signed division on a bool".into()))?;
+        // iN::MIN bit pattern = 1 << (width-1); -1 = all ones.
+        let min_pat = 1u128 << (width - 1);
+        let neg_one_pat = if width == 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        let min = self.arena.bv_const(width, min_pat).map_err(|e| ir(&e))?;
+        let neg_one = self
+            .arena
+            .bv_const(width, neg_one_pat)
+            .map_err(|e| ir(&e))?;
+        let a_is_min = self.arena.eq(a.term, min).map_err(|e| ir(&e))?;
+        let b_is_neg1 = self.arena.eq(b.term, neg_one).map_err(|e| ir(&e))?;
+        let ovf = self.arena.and(a_is_min, b_is_neg1).map_err(|e| ir(&e))?;
+        self.record("signed division overflow (MIN / -1)", ovf)
     }
 
     /// `arr[idx]`: records `idx >= len` as out-of-bounds, then returns a chained

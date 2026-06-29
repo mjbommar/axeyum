@@ -143,7 +143,7 @@ type LoopUpdate = Box<dyn Fn(&mut TermArena, &[TermId]) -> Result<Vec<TermId>, S
 /// variable. (The AST→closure lowering is C4.3; this is the reusable engine.)
 pub struct ScalarLoopSystem {
     width: u32,
-    names: Vec<&'static str>,
+    names: Vec<String>,
     init: LoopRel,
     guard: LoopRel,
     update: LoopUpdate,
@@ -157,7 +157,7 @@ impl ScalarLoopSystem {
     #[must_use]
     pub fn new(
         width: u32,
-        names: Vec<&'static str>,
+        names: Vec<String>,
         init: LoopRel,
         guard: LoopRel,
         update: LoopUpdate,
