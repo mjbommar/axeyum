@@ -281,7 +281,7 @@ fn fold_body(
 /// free initial state, pre-loop `let x = <const>` bindings are pinned initial
 /// state, and the `while` body's sequential `Assign`/`Assert` statements thread
 /// into per-variable update expressions and position-correct assertion conditions
-/// via [`substitute`]. Returns `None` for anything outside this fragment (arrays,
+/// via `substitute`. Returns `None` for anything outside this fragment (arrays,
 /// nested control flow in the body, a non-constant `let`, …) — the caller then
 /// falls back to the unroll route.
 #[must_use]
