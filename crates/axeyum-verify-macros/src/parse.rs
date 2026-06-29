@@ -1450,6 +1450,44 @@ impl Lowerer {
                  `checked_{add,sub,mul}(..)` chain in Phase 1",
             ));
         }
+        // `recv.rotate_left(N)` / `recv.rotate_right(N)` by a *constant* amount.
+        if let Some(left) = match method.as_str() {
+            "rotate_left" => Some(true),
+            "rotate_right" => Some(false),
+            _ => None,
+        } {
+            if mc.args.len() != 1 {
+                return Err(syn::Error::new(
+                    mc.span(),
+                    format!("axeyum::verify: `.{method}()` takes exactly one argument"),
+                ));
+            }
+            let arg = mc.args.first().unwrap();
+            let Expr::Lit(el) = arg else {
+                return Err(syn::Error::new(
+                    arg.span(),
+                    "axeyum::verify: rotate amount must be a constant integer literal",
+                ));
+            };
+            let Lit::Int(li) = &el.lit else {
+                return Err(syn::Error::new(
+                    arg.span(),
+                    "axeyum::verify: rotate amount must be an integer literal",
+                ));
+            };
+            let by: u32 = li.base10_parse()?;
+            let (operand, oty) = self.lower_expr(&mc.receiver)?;
+            return Ok((
+                quote! {
+                    axeyum_verify::ast::Expr::Rotate {
+                        left: #left,
+                        by: #by,
+                        operand: Box::new(#operand),
+                    }
+                },
+                oty,
+            ));
+        }
         // `recv.pow(N)` with a *constant* exponent N — fold to N-1 nested checked
         // `Mul`s (N==0 ⇒ 1), exactly matching Rust's `pow` overflow-panic at each
         // step. A symbolic exponent is out of the bounded fragment.

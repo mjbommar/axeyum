@@ -183,6 +183,19 @@ impl Lowerer<'_> {
                     ty: Ty::Bool,
                 })
             }
+            Expr::Rotate { left, by, operand } => {
+                let v = self.lower_expr(operand)?;
+                if !matches!(v.ty, Ty::Int { .. }) {
+                    return Err(LowerError::TypeError("rotate on a non-integer".into()));
+                }
+                let term = if *left {
+                    self.arena.rotate_left(*by, v.term)
+                } else {
+                    self.arena.rotate_right(*by, v.term)
+                }
+                .map_err(|e| ir(&e))?;
+                Ok(SymVal { term, ty: v.ty })
+            }
             Expr::Index { array, index, ty } => self.lower_index(array, index, *ty),
             Expr::UnwrapOption { is_some, value } => {
                 // Reaching the unwrap with `is_some == false` is the bug (the

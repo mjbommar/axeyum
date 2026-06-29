@@ -200,6 +200,11 @@ fn substitute(e: &Expr, env: &HashMap<String, Expr>) -> Expr {
             lhs: Box::new(substitute(lhs, env)),
             rhs: Box::new(substitute(rhs, env)),
         },
+        Expr::Rotate { left, by, operand } => Expr::Rotate {
+            left: *left,
+            by: *by,
+            operand: Box::new(substitute(operand, env)),
+        },
         Expr::IntLit { .. } | Expr::BoolLit(_) => e.clone(),
     }
 }

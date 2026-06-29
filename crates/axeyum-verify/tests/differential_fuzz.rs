@@ -798,6 +798,70 @@ fn overflows_node_and_unwrap_or_value() {
     );
 }
 
+/// Width-`w` rotation oracle (`by` taken modulo `w`).
+fn rotated(left: bool, w: u32, x: u128, by: u32) -> u128 {
+    let mask: u128 = (1u128 << w) - 1;
+    let by = by % w;
+    if by == 0 {
+        return x & mask;
+    }
+    let r = if left {
+        (x << by) | (x >> (w - by))
+    } else {
+        (x >> by) | (x << (w - by))
+    };
+    r & mask
+}
+
+#[test]
+fn rotate_value_matches_concrete() {
+    // `Expr::Rotate` must equal the width-correct rotation. Assert the always-false
+    // `c != <concrete rotate>`; it must stay reachable → never Verified.
+    let cfg = SolverConfig::default();
+    let mut rng = Rng(0x_7012_a7e0_0000_0001);
+    let mut checked = 0u32;
+    for _ in 0..400 {
+        let left = rng.next() % 2 == 0;
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let mask: u128 = (1u128 << w) - 1;
+        let x = u128::from(rng.next()) & mask;
+        let by = (rng.next() % u64::from(w + 3)) as u32; // include by >= w (mod)
+        let expect = rotated(left, w, x, by);
+        let ty = Ty::Int {
+            width: w,
+            signed: false,
+        };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: Expr::Rotate {
+                        left,
+                        by,
+                        operand: Box::new(Expr::IntLit { value: x, ty }),
+                    },
+                },
+                Stmt::Assert(Expr::Binary {
+                    op: BinOp::Ne,
+                    lhs: Box::new(Expr::Var("c".to_string())),
+                    rhs: Box::new(Expr::IntLit { value: expect, ty }),
+                }),
+            ],
+        };
+        checked += 1;
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong rotate: left={left} x={x} by={by} (w{w}) expected {expect}, got {verdict:?}"
+        );
+    }
+    assert!(checked >= 10, "rotate fuzz under-exercised");
+}
+
 #[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index

@@ -148,6 +148,16 @@ pub enum Expr {
         /// Right operand.
         rhs: Box<Expr>,
     },
+    /// `x.rotate_left(by)` / `x.rotate_right(by)` by a *constant* amount (the IR
+    /// normalizes `by` modulo the operand width). Never overflows (no panic).
+    Rotate {
+        /// `true` ⇒ rotate left, `false` ⇒ rotate right.
+        left: bool,
+        /// The (constant) rotation amount.
+        by: u32,
+        /// The integer operand.
+        operand: Box<Expr>,
+    },
     /// `cond.then_else(a, b)` — the lowered form of an `if`/`else` *expression*
     /// (both arms scalar, same type).
     Ite {
