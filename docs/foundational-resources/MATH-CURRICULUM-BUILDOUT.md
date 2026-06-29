@@ -302,6 +302,8 @@ the first algebraic real/RCF-shadow pack lives under
 `artifacts/examples/math/reals-rcf-shadow-v0/`;
 the first bounded sequence/limit shadow pack lives under
 `artifacts/examples/math/sequence-limit-shadow-v0/`;
+the first calculus algebraic-shadow pack lives under
+`artifacts/examples/math/calculus-algebraic-shadow-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
 
@@ -372,9 +374,11 @@ and a completeness/epsilon-delta Lean-horizon row. `sequence-limit-shadow-v0`
 now validates finite epsilon-tail replay, finite limit-counterexample replay,
 monotone bounded prefix replay, a fixed geometric partial-sum identity, a
 bounded Cauchy-tail no-counterexample row, and a general convergence
-Lean-horizon row. Continue by closing the remaining
-`proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`calculus-algebraic-shadow-v0`.
+Lean-horizon row. `calculus-algebraic-shadow-v0` now validates polynomial
+derivative coefficient replay, a checked product-rule polynomial identity,
+tangent-line replay, convex quadratic critical-point replay, false derivative
+rejection, and a general calculus Lean-horizon row. Continue by closing the
+remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
 
 Recommended order:
 
@@ -416,6 +420,9 @@ Recommended order:
 18. `sequence-limit-shadow-v0` (landed): bounded epsilon-tail replay, finite
     counterexamples, monotone bounded prefixes, fixed geometric partial sums,
     and general convergence Lean-horizon metadata.
+19. `calculus-algebraic-shadow-v0` (landed): polynomial derivative replay,
+    product-rule identity checks, tangent-line replay, critical-point checks,
+    and analytic calculus Lean-horizon metadata.
 
 Exit criteria:
 

@@ -63,6 +63,8 @@ Examples that should stay under this template until a real module exists:
 - arbitrary-domain first-order validity, completeness, and model theory;
 - real completeness, least-upper-bound theorems, and epsilon-delta analysis;
 - general sequence convergence, Cauchy completeness, and compactness theorems;
+- differentiability from limits, mean value theorem, integration, and the
+  fundamental theorem of calculus;
 - induction schemas beyond bounded base/step obligations;
 - epsilon-delta limits and continuity;
 - compactness, connectedness, and general topology;
@@ -110,6 +112,7 @@ resource.
 - [Finite Predicate pack](../../../artifacts/examples/math/finite-predicate-v0/)
 - [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [Sequence And Limit Shadow pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
+- [Calculus Algebraic Shadow pack](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [Induction Obligations pack](../../../artifacts/examples/math/induction-obligations-v0/)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [north star](../../research/00-orientation/north-star.md)

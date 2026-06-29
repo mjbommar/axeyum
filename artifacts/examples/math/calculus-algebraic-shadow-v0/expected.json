@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "pack_id": "calculus-algebraic-shadow-v0",
+  "witnesses": [
+    {
+      "id": "cubic-derivative",
+      "description": "Derivative coefficients for 1 - 2*x + x^3.",
+      "values": {
+        "polynomial": ["1", "-2", "0", "1"],
+        "derivative": ["-2", "0", "3"]
+      }
+    },
+    {
+      "id": "product-rule-instance",
+      "description": "Fixed product-rule instance for f = x^2 and g = x + 1.",
+      "values": {
+        "f": ["0", "0", "1"],
+        "g": ["1", "1"],
+        "product_derivative": ["0", "2", "3"],
+        "product_rule_rhs": ["0", "2", "3"]
+      }
+    },
+    {
+      "id": "tangent-x-squared",
+      "description": "Tangent line to x^2 at x = 3, evaluated at x = 4.",
+      "values": {
+        "polynomial": ["0", "0", "1"],
+        "point": "3",
+        "target_x": "4",
+        "derivative_at_point": "6",
+        "tangent_value": "15"
+      }
+    },
+    {
+      "id": "convex-critical-point",
+      "description": "The convex quadratic (x - 2)^2 + 1 has critical point x = 2.",
+      "values": {
+        "polynomial": ["5", "-4", "1"],
+        "critical_point": "2",
+        "value": "1",
+        "second_derivative": "2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "polynomial-derivative-coefficients",
+      "claim": "The listed derivative coefficients match d/dx(1 - 2*x + x^3).",
+      "expected_result": "sat",
+      "validation": "polynomial_derivative_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["cubic-derivative"],
+      "notes": "The validator differentiates the coefficient list exactly."
+    },
+    {
+      "id": "product-rule-polynomial-identity",
+      "claim": "For f = x^2 and g = x + 1, (f*g)' equals f'*g + f*g'.",
+      "expected_result": "sat",
+      "validation": "polynomial_product_rule_replay",
+      "proof_status": "checked",
+      "witnesses": ["product-rule-instance"],
+      "notes": "The validator recomputes both sides as coefficient lists and checks equality."
+    },
+    {
+      "id": "tangent-line-value-witness",
+      "claim": "The tangent line to x^2 at x = 3 has value 15 at x = 4.",
+      "expected_result": "sat",
+      "validation": "polynomial_tangent_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["tangent-x-squared"],
+      "notes": "The validator checks p(3), p'(3), and p(3) + p'(3)*(4 - 3)."
+    },
+    {
+      "id": "convex-quadratic-critical-point",
+      "claim": "The polynomial (x - 2)^2 + 1 has derivative zero at x = 2 and positive second derivative.",
+      "expected_result": "sat",
+      "validation": "polynomial_critical_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["convex-critical-point"],
+      "notes": "The validator checks derivative zero, value 1, and second derivative 2."
+    },
+    {
+      "id": "false-derivative-value-rejected",
+      "claim": "The derivative of x^2 at x = 3 is 5.",
+      "expected_result": "unsat",
+      "validation": "polynomial_derivative_replay",
+      "proof_status": "checked",
+      "data": {
+        "polynomial": ["0", "0", "1"],
+        "point": "3",
+        "claimed_derivative": "5"
+      },
+      "notes": "The validator computes the derivative value exactly as 6 and rejects the false claim."
+    },
+    {
+      "id": "general-calculus-lean-horizon",
+      "claim": "Continuity, differentiability from limits, the mean value theorem, integration, and the fundamental theorem of calculus require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "epsilon-delta differentiability, mean value theorem, integration, and fundamental theorem of calculus",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The algebraic derivative rows are checked; analytic calculus remains proof-assistant territory."
+    }
+  ]
+}

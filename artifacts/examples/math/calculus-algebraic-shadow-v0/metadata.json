@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "calculus-algebraic-shadow-v0",
+  "title": "Calculus Algebraic Shadow",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_calculus",
+    "curriculum_polynomials",
+    "curriculum_reals",
+    "curriculum_sequences_and_limits",
+    "field_real_analysis",
+    "field_differential_equations_and_dynamical_systems",
+    "field_numerical_analysis"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "differential_equations_and_dynamical_systems",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "polynomials",
+    "reals",
+    "sequences-and-limits"
+  ],
+  "axeyum_fragments": [
+    "NRA / polynomial constraints",
+    "LRA (exact rationals)",
+    "symbolic polynomial differentiation",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "polynomial-derivative-coefficients",
+    "product-rule-polynomial-identity",
+    "tangent-line-value-witness",
+    "convex-quadratic-critical-point",
+    "false-derivative-value-rejected",
+    "general-calculus-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode derivative-rule identities as deterministic NRA polynomial equalities.",
+    "Replay tangent and critical-point witnesses through Axeyum model evaluation.",
+    "Emit checked algebraic evidence for false derivative and polynomial-identity UNSAT rows.",
+    "Keep continuity, differentiability from limits, integration, and the fundamental theorem of calculus under Lean horizon until no-sorry Lean artifacts exist."
+  ]
+}

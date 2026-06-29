@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Calculus algebraic-shadow foundations pack landed.** Added
+  [`calculus-algebraic-shadow-v0`](artifacts/examples/math/calculus-algebraic-shadow-v0/README.md)
+  with polynomial derivative coefficient replay, a checked product-rule
+  polynomial identity, tangent-line replay, convex quadratic critical-point
+  replay, false derivative rejection, and a general calculus Lean-horizon row.
+  The foundational example-pack validator now checks polynomial addition,
+  derivatives, product-rule identities, tangent values, critical-point
+  arithmetic, and analytic theorem-horizon metadata. The only remaining
+  first-wave curriculum issue is the explicit `proof-methods-refutation-v0`
+  CNF/LRAT proof gap.
+
 - **Sequence/limit shadow foundations pack landed.** Added
   [`sequence-limit-shadow-v0`](artifacts/examples/math/sequence-limit-shadow-v0/README.md)
   with finite reciprocal-tail epsilon replay, a finite counterexample to a

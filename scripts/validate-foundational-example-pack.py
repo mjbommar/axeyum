@@ -1833,6 +1833,25 @@ def polynomial_mul(left: list[Fraction], right: list[Fraction]) -> list[Fraction
     return normalize_polynomial(result)
 
 
+def polynomial_add(left: list[Fraction], right: list[Fraction]) -> list[Fraction]:
+    width = max(len(left), len(right))
+    result = [Fraction(0) for _ in range(width)]
+    for index, coefficient in enumerate(left):
+        result[index] += coefficient
+    for index, coefficient in enumerate(right):
+        result[index] += coefficient
+    return normalize_polynomial(result)
+
+
+def polynomial_derivative(polynomial: list[Fraction]) -> list[Fraction]:
+    if len(polynomial) == 1:
+        return [Fraction(0)]
+    return normalize_polynomial([
+        coefficient * index
+        for index, coefficient in enumerate(polynomial[1:], start=1)
+    ])
+
+
 def polynomial_eval(polynomial: list[Fraction], point: Fraction) -> Fraction:
     value = Fraction(0)
     for coefficient in reversed(polynomial):
@@ -2205,6 +2224,101 @@ def validate_sequence_limit_shadow(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general limit target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general limit future_checker", data.get("future_checker"))
+
+
+def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    derivative_check = checks["polynomial-derivative-coefficients"]
+    if derivative_check["expected_result"] != "sat":
+        fail("polynomial-derivative-coefficients must expect sat")
+    values = single_witness_values(derivative_check, witnesses)
+    polynomial = require_polynomial("calculus derivative polynomial", values.get("polynomial"))
+    derivative = require_polynomial("calculus derivative coefficients", values.get("derivative"))
+    if polynomial_derivative(polynomial) != derivative:
+        fail("polynomial-derivative-coefficients derivative list is incorrect")
+
+    product_rule = checks["product-rule-polynomial-identity"]
+    if product_rule["expected_result"] != "sat":
+        fail("product-rule-polynomial-identity must expect sat")
+    values = single_witness_values(product_rule, witnesses)
+    f_poly = require_polynomial("product rule f", values.get("f"))
+    g_poly = require_polynomial("product rule g", values.get("g"))
+    product_derivative = require_polynomial(
+        "product rule product_derivative",
+        values.get("product_derivative"),
+    )
+    product_rule_rhs = require_polynomial(
+        "product rule product_rule_rhs",
+        values.get("product_rule_rhs"),
+    )
+    actual_product_derivative = polynomial_derivative(polynomial_mul(f_poly, g_poly))
+    actual_rhs = polynomial_add(
+        polynomial_mul(polynomial_derivative(f_poly), g_poly),
+        polynomial_mul(f_poly, polynomial_derivative(g_poly)),
+    )
+    if product_derivative != actual_product_derivative:
+        fail("product-rule-polynomial-identity product_derivative is incorrect")
+    if product_rule_rhs != actual_rhs:
+        fail("product-rule-polynomial-identity product_rule_rhs is incorrect")
+    if product_derivative != product_rule_rhs:
+        fail("product-rule-polynomial-identity sides differ")
+
+    tangent = checks["tangent-line-value-witness"]
+    if tangent["expected_result"] != "sat":
+        fail("tangent-line-value-witness must expect sat")
+    values = single_witness_values(tangent, witnesses)
+    polynomial = require_polynomial("tangent polynomial", values.get("polynomial"))
+    point = require_fraction("tangent point", values.get("point"))
+    target_x = require_fraction("tangent target_x", values.get("target_x"))
+    derivative_at_point = require_fraction("tangent derivative_at_point", values.get("derivative_at_point"))
+    tangent_value = require_fraction("tangent tangent_value", values.get("tangent_value"))
+    actual_derivative_at_point = polynomial_eval(polynomial_derivative(polynomial), point)
+    if derivative_at_point != actual_derivative_at_point:
+        fail("tangent-line-value-witness derivative_at_point is incorrect")
+    expected_tangent = polynomial_eval(polynomial, point) + derivative_at_point * (target_x - point)
+    if tangent_value != expected_tangent:
+        fail("tangent-line-value-witness tangent_value is incorrect")
+
+    critical = checks["convex-quadratic-critical-point"]
+    if critical["expected_result"] != "sat":
+        fail("convex-quadratic-critical-point must expect sat")
+    values = single_witness_values(critical, witnesses)
+    polynomial = require_quadratic("convex critical polynomial", values.get("polynomial"))
+    critical_point = require_fraction("convex critical_point", values.get("critical_point"))
+    value = require_fraction("convex value", values.get("value"))
+    second_derivative = require_fraction("convex second_derivative", values.get("second_derivative"))
+    derivative = polynomial_derivative(polynomial)
+    actual_second = polynomial_derivative(derivative)
+    if polynomial_eval(derivative, critical_point) != 0:
+        fail("convex-quadratic-critical-point derivative is not zero at critical_point")
+    if polynomial_eval(polynomial, critical_point) != value:
+        fail("convex-quadratic-critical-point value is incorrect")
+    if polynomial_eval(actual_second, critical_point) != second_derivative:
+        fail("convex-quadratic-critical-point second_derivative is incorrect")
+    if second_derivative <= 0:
+        fail("convex-quadratic-critical-point must have positive second derivative")
+
+    false_derivative = checks["false-derivative-value-rejected"]
+    if false_derivative["expected_result"] != "unsat":
+        fail("false-derivative-value-rejected must expect unsat")
+    data = false_derivative.get("data", {})
+    polynomial = require_polynomial("false derivative polynomial", data.get("polynomial"))
+    point = require_fraction("false derivative point", data.get("point"))
+    claimed = require_fraction("false derivative claimed_derivative", data.get("claimed_derivative"))
+    actual = polynomial_eval(polynomial_derivative(polynomial), point)
+    if actual == claimed:
+        fail("false-derivative-value-rejected claimed derivative unexpectedly matches")
+
+    horizon = checks["general-calculus-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-calculus-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-calculus-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general calculus target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general calculus future_checker", data.get("future_checker"))
 
 
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
@@ -3218,6 +3332,8 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
     if metadata["id"] == "bounded-dynamics-v0":
         validate_bounded_dynamics(expected)
+    if metadata["id"] == "calculus-algebraic-shadow-v0":
+        validate_calculus_algebraic_shadow(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "counting-v0":
