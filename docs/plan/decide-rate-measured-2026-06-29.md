@@ -138,6 +138,27 @@ The two clean accessible decide-rate gains above are landed (QF_UF 37→39, QF_A
   - **Not a lever:** raising the int-blast width ladder (`issue5396`) — maintainers
     deliberately narrowed it for performance; widening it is a net loss.
 
+## NAS-corpus probe: a real QF_UF gap, localized (the next high-value target)
+
+The mounted NAS (`/nas3/.../non-incremental/`) has larger slices than the curated
+corpus. Measuring **NAS QF_UF (63 both-parse)**: axeyum **42/63** vs z3 **55/63**
+(**−13**, DISAGREE = 0) — a real gap the curated 48-file slice (−2 after the
+`ite`-elimination) did not reveal. Per-file triage shows a **large share share one
+root cause**: the **euf `build_model` model-replay incompleteness** — the e-graph
+finds a theory-consistent atom assignment but `build_model` (`euf_egraph.rs:576`)
+cannot construct a concrete model (function interpretations / `iff`/`xor`
+structure over `f(a)=d`-style atoms) that `replays()` accepts, so it returns
+`Unknown` ("base-sort semantics outside congruence"). Clusters: `hash_sat_*` (×4
+sat), `uf__cnf-iff`/`cnf-iff-base` (×2), plus `javafe.*` (UF-heavy verification,
+one a deadline-ignore TIMEOUT) and `ooo.tag10`; the rest are genuinely different
+(NRA/NIA/BV/strings/sets). **This is the highest-value QF_UF target:** improving
+`build_model`'s realization closes ~6+ instances at once, and is sound by
+construction (`replays()` guards every `Sat`, so it can only turn `Unknown→Sat`
+for genuinely-sat instances — never a wrong verdict). Needs per-instance
+`replays()` instrumentation to pinpoint the failing assertion + a clean
+validation environment (the `abv`/`uflia`/`qf_uf` differential fuzzes). Tracked as
+the NAS-QF_UF task.
+
 ## Headline: accessible-corpus bounded wins are exhausted
 
 After this session, **on the accessible curated corpus axeyum is at or near z3
