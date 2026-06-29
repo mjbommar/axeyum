@@ -693,6 +693,154 @@ def validate_finite_groups(expected: dict[str, Any]) -> None:
         fail("subtraction-mod3-non-group unexpectedly satisfies the group axioms")
 
 
+def require_binary_table(
+    context: str,
+    carrier: list[str],
+    value: Any,
+) -> dict[tuple[str, str], str]:
+    carrier_set = set(carrier)
+    if not isinstance(value, list) or len(value) != len(carrier):
+        fail(f"{context} must have one row per carrier element")
+    operation: dict[tuple[str, str], str] = {}
+    for row_index, row in enumerate(value):
+        if not isinstance(row, list) or len(row) != len(carrier):
+            fail(f"{context}[{row_index}] must have one entry per carrier element")
+        left = carrier[row_index]
+        for col_index, result in enumerate(row):
+            require_string(f"{context}[{row_index}][{col_index}]", result)
+            if result not in carrier_set:
+                fail(f"{context}[{row_index}][{col_index}] is outside the carrier")
+            operation[(left, carrier[col_index])] = result
+    return operation
+
+
+def require_ring_tables(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], str, str | None, dict[tuple[str, str], str], dict[tuple[str, str], str]]:
+    carrier = require_string_list(f"{context}.carrier", values.get("carrier"))
+    carrier_set = set(carrier)
+    zero = values.get("zero")
+    require_string(f"{context}.zero", zero)
+    if zero not in carrier_set:
+        fail(f"{context}.zero must be in the carrier")
+    one = values.get("one")
+    if one is not None:
+        require_string(f"{context}.one", one)
+        if one not in carrier_set:
+            fail(f"{context}.one must be in the carrier")
+    add_op = require_binary_table(f"{context}.add", carrier, values.get("add"))
+    mul_op = require_binary_table(f"{context}.mul", carrier, values.get("mul"))
+    return carrier, zero, one, add_op, mul_op
+
+
+def is_commutative(carrier: list[str], operation: dict[tuple[str, str], str]) -> bool:
+    return all(table_op(operation, left, right) == table_op(operation, right, left) for left in carrier for right in carrier)
+
+
+def is_associative(carrier: list[str], operation: dict[tuple[str, str], str]) -> bool:
+    for left in carrier:
+        for middle in carrier:
+            for right in carrier:
+                lhs = table_op(operation, table_op(operation, left, middle), right)
+                rhs = table_op(operation, left, table_op(operation, middle, right))
+                if lhs != rhs:
+                    return False
+    return True
+
+
+def distributivity_failures(
+    carrier: list[str],
+    add_op: dict[tuple[str, str], str],
+    mul_op: dict[tuple[str, str], str],
+) -> list[str]:
+    failures: list[str] = []
+    for left in carrier:
+        for middle in carrier:
+            for right in carrier:
+                left_distrib = table_op(mul_op, left, table_op(add_op, middle, right))
+                left_sum = table_op(add_op, table_op(mul_op, left, middle), table_op(mul_op, left, right))
+                if left_distrib != left_sum:
+                    failures.append(f"left distributivity fails for {(left, middle, right)}")
+                    return failures
+                right_distrib = table_op(mul_op, table_op(add_op, left, middle), right)
+                right_sum = table_op(add_op, table_op(mul_op, left, right), table_op(mul_op, middle, right))
+                if right_distrib != right_sum:
+                    failures.append(f"right distributivity fails for {(left, middle, right)}")
+                    return failures
+    return failures
+
+
+def ring_axiom_failures(
+    carrier: list[str],
+    zero: str,
+    one: str | None,
+    add_op: dict[tuple[str, str], str],
+    mul_op: dict[tuple[str, str], str],
+) -> list[str]:
+    failures = group_axiom_failures(carrier, zero, add_op)
+    if failures:
+        return [f"addition {failures[0]}"]
+    if not is_commutative(carrier, add_op):
+        return ["addition is not commutative"]
+    if not is_associative(carrier, mul_op):
+        return ["multiplication is not associative"]
+    if one is not None:
+        for item in carrier:
+            if table_op(mul_op, one, item) != item:
+                return [f"left multiplicative identity fails for {item}"]
+            if table_op(mul_op, item, one) != item:
+                return [f"right multiplicative identity fails for {item}"]
+    return distributivity_failures(carrier, add_op, mul_op)
+
+
+def validate_finite_rings(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    ring_table = checks["z4-ring-table"]
+    if ring_table["expected_result"] != "sat":
+        fail("z4-ring-table must expect sat")
+    values = single_witness_values(ring_table, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("z4 ring", values)
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"z4-ring-table failed ring axioms: {failures[0]}")
+
+    zero_divisor = checks["z4-zero-divisor-witness"]
+    if zero_divisor["expected_result"] != "sat":
+        fail("z4-zero-divisor-witness must expect sat")
+    values = single_witness_values(zero_divisor, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("z4 zero divisor", values)
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"z4-zero-divisor-witness ring table failed axioms: {failures[0]}")
+    witness = values.get("zero_divisor")
+    if not isinstance(witness, dict):
+        fail("z4-zero-divisor-witness zero_divisor must be an object")
+    left = witness.get("left")
+    right = witness.get("right")
+    require_string("zero divisor left", left)
+    require_string("zero divisor right", right)
+    if left not in set(carrier) or right not in set(carrier):
+        fail("zero divisor factors must be in the carrier")
+    if left == zero or right == zero:
+        fail("zero divisor factors must both be nonzero")
+    if table_op(mul_op, left, right) != zero:
+        fail("zero divisor factors do not multiply to zero")
+
+    bad_table = checks["non-distributive-table-rejected"]
+    if bad_table["expected_result"] != "unsat":
+        fail("non-distributive-table-rejected must expect unsat")
+    values = single_witness_values(bad_table, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("non-distributive table", values)
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if not failures:
+        fail("non-distributive-table-rejected unexpectedly satisfies the ring axioms")
+    if not distributivity_failures(carrier, add_op, mul_op):
+        fail("non-distributive-table-rejected must fail distributivity specifically")
+
+
 def require_counting_int(context: str, value: Any) -> int:
     item = require_int(context, value)
     if item < 0:
@@ -2069,6 +2217,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_probability(expected)
     if metadata["id"] == "finite-operator-v0":
         validate_finite_operator(expected)
+    if metadata["id"] == "finite-rings-v0":
+        validate_finite_rings(expected)
     if metadata["id"] == "linear-optimization-v0":
         validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":

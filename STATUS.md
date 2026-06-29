@@ -159,14 +159,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite rings core-structure pack landed.** Added
+  [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/README.md) with
+  `Z/4Z` addition/multiplication table replay, a checked zero-divisor witness,
+  and a checked non-distributive table rejection. The foundational example-pack
+  validator now checks additive abelian group structure, multiplication
+  associativity, multiplicative identity, distributivity, and finite
+  zero-divisor witnesses; generated dashboards mark the rings curriculum row's
+  first pack as validated. Continue with `gcd-bezout-v0` / `number-theory-v0`
+  or close the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
+
 - **Finite groups core-structure pack landed.** Added
   [`finite-groups-v0`](artifacts/examples/math/finite-groups-v0/README.md)
   with `Z/4Z` Cayley-table replay, inverse-table replay, and a checked
   subtraction-mod-3 non-group rejection. The foundational example-pack validator
   now checks finite operation tables, identity, inverses, and associativity;
   generated dashboards include the pack and mark the groups curriculum row's
-  first pack as validated. Continue with `finite-rings-v0` or close the
-  remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
+  first pack as validated. `finite-rings-v0` is the follow-on finite algebra
+  table pack.
 
 - **Counting core curriculum pack landed.** Added
   [`counting-v0`](artifacts/examples/math/counting-v0/README.md) with fixed
@@ -176,7 +186,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   finite pigeonhole placements; generated dashboards mark `counting-v0` as
   validated. The recommended Phase M3 pack list has landed; continue by closing
   the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-  `finite-groups-v0` / `finite-rings-v0`.
+  the next arithmetic core packs.
 
 - **Polynomial identities core curriculum pack landed.** Added
   [`polynomial-identities-v0`](artifacts/examples/math/polynomial-identities-v0/README.md)

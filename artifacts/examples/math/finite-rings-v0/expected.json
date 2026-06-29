@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-rings-v0",
+  "witnesses": [
+    {
+      "id": "z4-ring",
+      "description": "Addition and multiplication tables for Z/4Z.",
+      "values": {
+        "carrier": ["0", "1", "2", "3"],
+        "zero": "0",
+        "one": "1",
+        "add": [
+          ["0", "1", "2", "3"],
+          ["1", "2", "3", "0"],
+          ["2", "3", "0", "1"],
+          ["3", "0", "1", "2"]
+        ],
+        "mul": [
+          ["0", "0", "0", "0"],
+          ["0", "1", "2", "3"],
+          ["0", "2", "0", "2"],
+          ["0", "3", "2", "1"]
+        ],
+        "zero_divisor": {
+          "left": "2",
+          "right": "2"
+        }
+      }
+    },
+    {
+      "id": "bad-distributive-table",
+      "description": "A two-element table with XOR-like addition and left-projection multiplication.",
+      "values": {
+        "carrier": ["0", "1"],
+        "zero": "0",
+        "add": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "mul": [
+          ["0", "0"],
+          ["1", "1"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "z4-ring-table",
+      "claim": "The listed Z/4Z addition and multiplication tables satisfy the finite ring axioms.",
+      "expected_result": "sat",
+      "validation": "finite_ring_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-ring"],
+      "notes": "The validator checks additive abelian group structure, multiplication associativity, identity, and distributivity."
+    },
+    {
+      "id": "z4-zero-divisor-witness",
+      "claim": "The listed nonzero residues are zero divisors in Z/4Z.",
+      "expected_result": "sat",
+      "validation": "finite_ring_zero_divisor_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-ring"],
+      "notes": "The validator checks both factors are nonzero and their product is the additive identity."
+    },
+    {
+      "id": "non-distributive-table-rejected",
+      "claim": "The listed two-operation table satisfies the distributive laws.",
+      "expected_result": "unsat",
+      "validation": "finite_ring_table_replay",
+      "proof_status": "checked",
+      "witnesses": ["bad-distributive-table"],
+      "notes": "The validator enumerates all triples and confirms distributivity fails."
+    }
+  ]
+}
