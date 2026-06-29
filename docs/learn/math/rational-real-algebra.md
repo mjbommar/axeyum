@@ -170,6 +170,8 @@ For matrix characteristic-polynomial replay, read
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md). For exact
 multivariable derivative replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md).
+For exact finite convexity replay, read
+[End To End: Rational Convexity](convexity-rational-end-to-end.md).
 
 ## Horizon
 

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rational convexity end-to-end lesson landed.** Added
+  [`convexity-rational-end-to-end.md`](docs/learn/math/convexity-rational-end-to-end.md)
+  as the learner-facing trace for the convexity pack: exact midpoint Jensen
+  replay, finite-grid second differences, affine threshold monotonicity,
+  checked bad midpoint-convexity rejection, and the Lean horizon for general
+  convex analysis. The lesson is linked from the math learning index plus the
+  rational/real and linear-algebra/optimization paths.
+
 - **Rational multivariable-calculus end-to-end lesson landed.** Added
   [`multivariable-calculus-end-to-end.md`](docs/learn/math/multivariable-calculus-end-to-end.md)
   as the learner-facing trace for the multivariable-calculus pack: exact

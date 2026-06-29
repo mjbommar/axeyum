@@ -107,6 +107,10 @@ validated pack data and the repo-root command that replays it.
   rejection, and the analysis Lean horizon.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
+- [Rational Convexity](convexity-rational-end-to-end.md): follows exact
+  midpoint Jensen replay, finite second differences, affine threshold
+  monotonicity, bad midpoint-convexity rejection, and the convex-analysis
+  Lean horizon.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
   follows exact Gram-matrix replay, fixed Cauchy-Schwarz, orthogonal
   projection, Gram-Schmidt, and checked bad-inner-product rejection.

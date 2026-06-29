@@ -1037,9 +1037,10 @@ finite cut certificates, bounded natural arithmetic, rational arithmetic,
 integer linear arithmetic, gcd/Bezout arithmetic, modular arithmetic, bounded
 number theory, complex algebraic replay, bounded rational real analysis,
 real-algebra RCF shadows, polynomial identities, rational polynomial
-factorization, matrix invariants, linear algebra/optimization,
-probability/statistics, rational multivariable calculus, rational inner
-products, finite sets, finite groups, relations/functions, equivalence classes,
+factorization, matrix invariants, linear algebra/optimization, rational
+convexity, probability/statistics, rational multivariable calculus, rational
+inner products, finite sets, finite groups, relations/functions, equivalence
+classes,
 finite monoids, finite permutation groups, function composition, finite group
 actions, finite order lattices, finite cardinality, cardinality principles,
 finite rings, finite fields, finite algebra homomorphisms, finite ideals and
@@ -1196,6 +1197,10 @@ calculus bridge: bivariate-polynomial gradient/value replay, directional
 derivatives as gradient dot products, Jacobian chain-rule replay, Hessian
 minor checks for local convexity, checked bad-gradient rejection, and a
 multivariable-analysis Lean-horizon row.
+`convexity-rational-v0` now has a learner-facing end-to-end lesson for exact
+midpoint Jensen replay, finite second-difference checks, affine threshold
+monotonicity, checked bad midpoint-convexity rejection, and the general
+convex-analysis Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
