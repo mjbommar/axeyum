@@ -12,6 +12,46 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+## Where we are vs the north star — measured reality check (2026-06-28)
+
+**Blunt status: the plan is NOWHERE NEAR complete, and axeyum is NOT an "A+
+replacement" for Z3, cvc5, or Lean.** It is a sound, pure-Rust reasoning stack
+that is *measurably ahead on a small, growing set of fragments* and far behind on
+most. Scored against [the north-star definition of done](docs/plan/00-north-star.md):
+
+| North-star criterion | Status | Evidence (measured, not asserted) |
+|---|---|---|
+| **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines, 611 oracle-compared instances ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
+| **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
+| **Completeness / decide-rate** | **Partial — the central gap** | **663 / 992 decided (~67%)**, decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
+| **Measured performance (PAR-2 head-to-head)** | **Weak / largely unmeasured** | The north star says *no parity claim without this number*. Only narrow slices measured (public QF_BV: reduction moved 2→7/113; not competitive at scale). |
+| **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
+| **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
+
+**So "100% / A+ replacement of all of Z3/cvc5/Lean" is false today.** The honest
+identity is: *untrusted fast search, trusted small checking* — sound everywhere
+measured, dominant on a growing fragment set, with a pure-Rust/WASM/certifying
+moat — and a long road of decide-rate, performance, and proof-coverage work left.
+
+**Where the remaining work lives (the two load-bearing fronts + two keystones, below):**
+1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread
+   fragment by fragment: SAT inprocessing + word-level reduction, SAT-core
+   modernization, and *committed head-to-head PAR-2 numbers* (no parity claim
+   without them). This is where Z3/cvc5 parity is actually won.
+2. **Reduction certificates → Lean (Track 3)** — drive the trusted-reduction
+   ledger to zero (Alethe emitter → Carcara-checked → per-reduction proofs →
+   kernel), and build the Lean tactic backend (P3.7, **fail not `sorry`**).
+3. **Keystones** — incremental e-graph + CDCL(T) loop (Track 1) and the Alethe
+   term/proof IR + emitter (Track 3): build-once, unlock-many.
+4. **Theory depth (Track 2)** and **consumer/frontend demand-pull (Track 4 +
+   consumer track)** — the latter is mature and fuzz-hardened but does **not**
+   move the core decide-rate; its job is to surface real gaps (it has filed
+   U6/U7/U8) and ship user-facing, certifying value, not to claim parity.
+
+The per-track detail, exit criteria, and current frontier levers are in the
+sections below and under [`docs/plan/`](docs/plan/README.md). **Treat any
+"phase complete" note as an increment, never as the goal.**
+
 When multiple agents or humans are active, use separate topic-branch worktrees
 and one `main` integration owner. The standing protocol lives in
 [`docs/contributor-guide/multi-agent-worktrees.md`](docs/contributor-guide/multi-agent-worktrees.md).

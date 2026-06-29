@@ -9,6 +9,30 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 > so the two never edit the same lines. See
 > [PLAN.md § Consumer-track integration](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
+## Project reality check (2026-06-28)
+
+**Honest status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
+NOT complete; NOT an A+ replacement of Z3/cvc5/Lean.** Sound everywhere measured,
+dominant on a growing fragment set, far behind on decide-rate/performance/proof
+coverage.
+- **Soundness:** `DISAGREE = 0` across all 35 measured baselines (611
+  oracle-compared) — *holding*. (Two consumer-app wrong-safes found by new fuzzes
+  + fixed this session.)
+- **Decide-rate (the central gap):** **663/992 (~67%)**, 0–100% across divisions,
+  **19/35 decide-strong**. Z3/cvc5 decide more on most fragments.
+- **Performance:** PAR-2 head-to-head largely *unmeasured* — no parity claim
+  without it.
+- **Lean:** narrow (~15/35 rows audit-eligible; trusted-reduction ledger ≠ 0;
+  tactic backend P3.7 unbuilt).
+- **Dominance:** **23 fragments** with audited `dominant%` — the real, defensible
+  claim.
+
+**Where to continue (toward the mission):** Track 1 decide-rate + *committed*
+head-to-head PAR-2; Track 3 reduction certs → Lean (ledger → 0) + the e-graph and
+Alethe-emitter keystones; Track 2 theory depth. The consumer track (below) is
+mature + fuzz-hardened but **does not move the core decide-rate** — its role is
+demand-pull (filed U6/U7/U8) and shipping certifying user-facing value.
+
 ## Consumer-track integration lane (2026-06-27) — `WIP`
 
 **Goal.** Merge the diverged consumer apps onto `main`: port `axeyum-evm`,
