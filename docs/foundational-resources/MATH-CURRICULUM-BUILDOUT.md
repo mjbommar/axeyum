@@ -863,7 +863,8 @@ eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
 row through replay result and proof/evidence status, and exact descriptive
 statistics/regression replay for finite samples, count tables, and normal
-equations.
+equations, plus coordinate/affine/oriented geometry replay for finite rational
+points, maps, areas, and barycentric coordinates.
 
 Deliverables:
 
@@ -1227,6 +1228,11 @@ learner-facing end-to-end lesson for exact mean/variance replay, contingency
 table margins, Simpson's paradox counts, least-squares normal equations,
 residual orthogonality, RSS comparison, checked bad-coefficients rejection,
 and the statistical inference/numerical regression horizon.
+`coordinate-geometry-v0`, `affine-geometry-v0`, and
+`orientation-area-geometry-v0` now have a learner-facing end-to-end lesson for
+exact midpoint, collinearity, squared-distance, affine-map, signed-area,
+area-scaling, barycentric, checked bad-distance, checked bad-orientation, and
+general geometry Lean-horizon rows.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

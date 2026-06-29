@@ -20,6 +20,8 @@ Example packs:
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
+- [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
+- [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
 
 ## What Axeyum Checks
 
@@ -31,8 +33,9 @@ fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, LP feasibility and infeasibility
 certificates, finite convexity and monotonicity checks, exact rational
 gradients, Jacobian chain-rule replay, Hessian minor checks, midpoints,
-collinearity determinants, and squared distances. The matrix-invariants pack
-adds a fixed characteristic polynomial, root evaluation, Cayley-Hamilton
+collinearity determinants, squared distances, affine maps, signed areas,
+affine area scaling, and barycentric point-inside checks. The matrix-invariants
+pack adds a fixed characteristic polynomial, root evaluation, Cayley-Hamilton
 replay, and exact eigenvalue interval checks.
 
 This is where Axeyum can teach that many "real" examples have a small rational
@@ -153,6 +156,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```
@@ -173,7 +178,9 @@ finite eigenpair and spectral-decomposition replay, read
 For exact multivariable derivative replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md).
 For exact finite convexity replay, read
-[End To End: Rational Convexity](convexity-rational-end-to-end.md).
+[End To End: Rational Convexity](convexity-rational-end-to-end.md). For exact
+finite coordinate, affine, and oriented geometry replay, read
+[End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md).
 
 ## Horizon
 

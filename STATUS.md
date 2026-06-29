@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Coordinate/affine geometry end-to-end lesson landed.** Added
+  [`coordinate-affine-geometry-end-to-end.md`](docs/learn/math/coordinate-affine-geometry-end-to-end.md)
+  as the learner-facing trace for the coordinate, affine, and orientation/area
+  geometry packs: exact midpoint, collinearity, squared-distance, affine-map,
+  midpoint-preservation, area-scaling, barycentric, checked bad-distance, and
+  checked bad-orientation replay, plus the Lean horizon for general geometry.
+  The lesson is linked from the math learning index plus the rational/real and
+  linear-algebra/optimization paths.
+
 - **Descriptive-statistics/regression end-to-end lesson landed.** Added
   [`descriptive-statistics-regression-end-to-end.md`](docs/learn/math/descriptive-statistics-regression-end-to-end.md)
   as the learner-facing trace for the descriptive-statistics and
