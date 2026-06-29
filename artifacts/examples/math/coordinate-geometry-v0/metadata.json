@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "coordinate-geometry-v0",
+  "title": "Exact Coordinate Geometry Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_geometry",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "curriculum_reals",
+    "curriculum_linear_algebra",
+    "curriculum_polynomials"
+  ],
+  "field_ids": [
+    "geometry",
+    "linear_algebra",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "linear-algebra",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "NRA shadow"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md"
+  ],
+  "expected_results": [
+    "midpoint-witness",
+    "collinearity-witness",
+    "distance-squared-witness"
+  ],
+  "graduation_criteria": [
+    "Encode midpoint and incidence checks as deterministic QF_LRA formulas.",
+    "Encode squared-distance checks as deterministic NRA-shadow formulas with exact replay.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Add non-incidence and rigid-configuration examples once proof routes for polynomial constraints are explicit."
+  ]
+}

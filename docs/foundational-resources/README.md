@@ -68,6 +68,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/linear-optimization-v0/`](../../artifacts/examples/math/linear-optimization-v0/)
   validates exact LP feasibility witnesses, objective-threshold replay, and a
   tiny checked Farkas infeasibility certificate.
+- [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
+  validates exact midpoint, collinearity, and squared-distance coordinate
+  checks.
 
 Validation commands:
 
@@ -84,6 +87,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 ```
 
 ## Principle

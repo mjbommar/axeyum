@@ -148,11 +148,14 @@ one of:
    - Fields: `optimization_and_convexity`, `linear_algebra`, `real_analysis`.
    - Checks: LP feasibility witness, objective-threshold replay, Farkas
      infeasibility certificate.
-6. `artifacts/examples/math/modular-arithmetic-v0/`
+6. `artifacts/examples/math/coordinate-geometry-v0/`
+   - Fields: `geometry`, `linear_algebra`, `real_analysis`.
+   - Checks: midpoint, collinearity determinant, squared-distance replay.
+7. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-7. `artifacts/examples/math/real-analysis-rational-v0/`
+8. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

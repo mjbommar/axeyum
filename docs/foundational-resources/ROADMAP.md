@@ -66,6 +66,7 @@ artifacts/examples/math/
   finite-probability-v0/
   descriptive-statistics-v0/
   linear-optimization-v0/
+  coordinate-geometry-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -320,6 +321,8 @@ Simpson's paradox count-table witness.
 [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/)
 validates exact LP feasibility witnesses, objective-threshold replay, and a
 tiny checked Farkas infeasibility certificate.
+[`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
+validates exact midpoint, collinearity, and squared-distance coordinate checks.
 
 Exit criteria:
 

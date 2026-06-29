@@ -748,6 +748,49 @@ def validate_linear_optimization(expected: dict[str, Any]) -> None:
         fail("farkas certificate must derive 0 <= negative bound")
 
 
+def require_point2(context: str, value: Any) -> tuple[Fraction, Fraction]:
+    vector = require_fraction_vector(context, value)
+    if len(vector) != 2:
+        fail(f"{context} must be a two-dimensional point")
+    return vector[0], vector[1]
+
+
+def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    midpoint = checks["midpoint-witness"]
+    if midpoint["expected_result"] != "sat":
+        fail("midpoint-witness must expect sat")
+    values = single_witness_values(midpoint, witnesses)
+    ax, ay = require_point2("midpoint a", values.get("a"))
+    bx, by = require_point2("midpoint b", values.get("b"))
+    mx, my = require_point2("midpoint midpoint", values.get("midpoint"))
+    if mx != (ax + bx) / 2 or my != (ay + by) / 2:
+        fail("midpoint witness does not match segment endpoints")
+
+    collinearity = checks["collinearity-witness"]
+    if collinearity["expected_result"] != "sat":
+        fail("collinearity-witness must expect sat")
+    values = single_witness_values(collinearity, witnesses)
+    ax, ay = require_point2("collinearity a", values.get("a"))
+    bx, by = require_point2("collinearity b", values.get("b"))
+    cx, cy = require_point2("collinearity c", values.get("c"))
+    determinant = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+    if determinant != 0:
+        fail("collinearity witness determinant is not zero")
+
+    distance = checks["distance-squared-witness"]
+    if distance["expected_result"] != "sat":
+        fail("distance-squared-witness must expect sat")
+    values = single_witness_values(distance, witnesses)
+    px, py = require_point2("distance p", values.get("p"))
+    qx, qy = require_point2("distance q", values.get("q"))
+    claimed = require_fraction("distance squared", values.get("distance_squared"))
+    if (qx - px) * (qx - px) + (qy - py) * (qy - py) != claimed:
+        fail("distance-squared witness does not match point coordinates")
+
+
 def require_probability(context: str, value: Any) -> Fraction:
     probability = require_fraction(context, value)
     if probability < 0 or probability > 1:
@@ -973,6 +1016,8 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
 
 
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
+    if metadata["id"] == "coordinate-geometry-v0":
+        validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":
         validate_descriptive_statistics(expected)
     if metadata["id"] == "graph-coloring-v0":

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "pack_id": "coordinate-geometry-v0",
+  "witnesses": [
+    {
+      "id": "segment-midpoint",
+      "description": "The midpoint of (0, 0) and (4, 2) is (2, 1).",
+      "values": {
+        "a": ["0", "0"],
+        "b": ["4", "2"],
+        "midpoint": ["2", "1"]
+      }
+    },
+    {
+      "id": "collinear-points",
+      "description": "The points (0, 0), (2, 2), and (5, 5) are collinear.",
+      "values": {
+        "a": ["0", "0"],
+        "b": ["2", "2"],
+        "c": ["5", "5"]
+      }
+    },
+    {
+      "id": "distance-points",
+      "description": "The squared distance between (1, 1) and (4, 5) is 25.",
+      "values": {
+        "p": ["1", "1"],
+        "q": ["4", "5"],
+        "distance_squared": "25"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "midpoint-witness",
+      "claim": "The listed point is the midpoint of the fixed segment.",
+      "expected_result": "sat",
+      "validation": "exact_rational_coordinate_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["segment-midpoint"],
+      "notes": "The validator recomputes both midpoint coordinates exactly."
+    },
+    {
+      "id": "collinearity-witness",
+      "claim": "The listed three points are collinear.",
+      "expected_result": "sat",
+      "validation": "exact_rational_coordinate_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["collinear-points"],
+      "notes": "The validator recomputes the determinant for collinearity exactly."
+    },
+    {
+      "id": "distance-squared-witness",
+      "claim": "The listed squared distance between the two fixed points is 25.",
+      "expected_result": "sat",
+      "validation": "exact_rational_coordinate_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["distance-points"],
+      "notes": "The validator recomputes squared Euclidean distance exactly."
+    }
+  ]
+}

@@ -134,13 +134,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Coordinate geometry pack landed.** Added
+  [`artifacts/examples/math/coordinate-geometry-v0/`](artifacts/examples/math/coordinate-geometry-v0/)
+  for exact midpoint, collinearity, and squared-distance coordinate checks. The
+  foundational example-pack validator now checks rational 2D points, determinant
+  collinearity, and squared Euclidean distance exactly. Continue Phase M4 with
+  `finite-topology-v0`.
+
 - **Linear optimization pack landed.** Added
   [`artifacts/examples/math/linear-optimization-v0/`](artifacts/examples/math/linear-optimization-v0/)
   for exact LP feasibility witnesses, objective-threshold replay, and a tiny
   checked Farkas infeasibility certificate. The foundational example-pack
   validator now checks exact rational linear inequalities and nonnegative
-  Farkas multipliers that derive a contradictory bound. Continue Phase M4 with
-  `coordinate-geometry-v0`.
+  Farkas multipliers that derive a contradictory bound.
 
 - **Descriptive statistics pack landed.** Added
   [`artifacts/examples/math/descriptive-statistics-v0/`](artifacts/examples/math/descriptive-statistics-v0/)

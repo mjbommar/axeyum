@@ -1869,7 +1869,7 @@
       "example_packs": [
         {
           "id": "coordinate-geometry-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/coordinate-geometry-v0",
           "notes": "Incidence, distance, midpoint, collinearity, and rigid finite configurations."
         }
@@ -1892,7 +1892,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate."
       ],
       "graduation": {
