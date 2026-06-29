@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Natural-arithmetic end-to-end lesson landed.** Added
+  [`natural-arithmetic-end-to-end.md`](docs/learn/math/natural-arithmetic-end-to-end.md)
+  as the learner-facing trace for the natural-arithmetic pack: successor
+  arithmetic replay, fixed addition and distributivity replay, bounded
+  successor-fact enumeration over `0..7`, and the Lean horizon for universal
+  Nat theorems. The lesson is linked from the math learning index plus the
+  number-systems path.
+
 - **Induction-patterns end-to-end lesson landed.** Added
   [`induction-patterns-end-to-end.md`](docs/learn/math/induction-patterns-end-to-end.md)
   as the learner-facing trace for the induction-patterns pack: finite weak

@@ -66,6 +66,9 @@ validated pack data and the repo-root command that replays it.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.
+- [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
+  arithmetic, fixed addition and multiplication replay, bounded successor
+  no-counterexample enumeration, and the universal Nat theorem horizon.
 - [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact

@@ -106,8 +106,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
-For fuller traces through exact rational replay, prime-field residue replay,
-and modular quotient-ring replay, read
+For fuller traces through bounded natural arithmetic, exact rational replay,
+prime-field residue replay, and modular quotient-ring replay, read
+[End To End: Natural Arithmetic](natural-arithmetic-end-to-end.md),
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md), and
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md).
