@@ -146,12 +146,24 @@ CURRICULUM_MAP = {
         "pack": "finite-groups-v0",
         "slice": "Cayley-table closure, identity, inverse, and associativity checks.",
         "proof": "Finite table replay; general group theory is Lean-horizon.",
+        "extra_packs": [
+            (
+                "finite-algebra-homomorphisms-v0",
+                "Finite group homomorphism tables, kernel/image replay, quotient maps, and first-isomorphism shadows.",
+            ),
+        ],
     },
     "rings": {
         "field_ids": ["abstract_algebra"],
         "pack": "finite-rings-v0",
         "slice": "Two-operation table checks and distributivity.",
         "proof": "Finite table replay; structure theory is Lean-horizon.",
+        "extra_packs": [
+            (
+                "finite-algebra-homomorphisms-v0",
+                "Finite ring homomorphism tables and quotient-map replay.",
+            ),
+        ],
     },
     "fields": {
         "field_ids": ["abstract_algebra", "number_theory"],

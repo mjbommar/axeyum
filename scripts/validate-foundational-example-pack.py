@@ -2023,6 +2023,19 @@ def group_axiom_failures(
     return failures
 
 
+def require_group_structure(
+    context: str,
+    value: Any,
+) -> tuple[list[str], str, dict[tuple[str, str], str]]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    carrier, identity, operation = require_cayley_table(context, value)
+    failures = group_axiom_failures(carrier, identity, operation)
+    if failures:
+        fail(f"{context} is not a group: {failures[0]}")
+    return carrier, identity, operation
+
+
 def require_inverse_table(
     context: str,
     value: Any,
@@ -2040,6 +2053,283 @@ def require_inverse_table(
             fail(f"{context}.{item} must be in the carrier")
         inverses[item] = inverse
     return inverses
+
+
+def require_mapping_object(
+    context: str,
+    value: Any,
+    domain: list[str],
+    codomain: list[str],
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    domain_set = set(domain)
+    codomain_set = set(codomain)
+    if set(value) != domain_set:
+        missing = sorted(domain_set - set(value))
+        extra = sorted(set(value) - domain_set)
+        fail(f"{context} must cover exactly the domain; missing={missing} extra={extra}")
+    mapping: dict[str, str] = {}
+    for source in domain:
+        target = value[source]
+        require_string(f"{context}.{source}", target)
+        if target not in codomain_set:
+            fail(f"{context}.{source} maps outside codomain")
+        mapping[source] = target
+    return mapping
+
+
+def group_homomorphism_failures(
+    domain_carrier: list[str],
+    domain_op: dict[tuple[str, str], str],
+    codomain_op: dict[tuple[str, str], str],
+    mapping: dict[str, str],
+) -> list[tuple[str, str, str, str]]:
+    failures: list[tuple[str, str, str, str]] = []
+    for left in domain_carrier:
+        for right in domain_carrier:
+            source_product = table_op(domain_op, left, right)
+            mapped_product = mapping[source_product]
+            product_of_images = table_op(codomain_op, mapping[left], mapping[right])
+            if mapped_product != product_of_images:
+                failures.append((left, right, mapped_product, product_of_images))
+    return failures
+
+
+def require_subset_exact(
+    context: str,
+    value: Any,
+    universe: list[str],
+    expected: set[str],
+) -> set[str]:
+    subset = set(require_string_list(context, value, nonempty=False))
+    universe_set = set(universe)
+    extra = sorted(subset - universe_set)
+    if extra:
+        fail(f"{context} contains elements outside universe: {extra}")
+    if subset != expected:
+        fail(f"{context} is incorrect: expected={sorted(expected)} actual={sorted(subset)}")
+    return subset
+
+
+def group_kernel(mapping: dict[str, str], codomain_identity: str) -> set[str]:
+    return {source for source, target in mapping.items() if target == codomain_identity}
+
+
+def group_image(mapping: dict[str, str]) -> set[str]:
+    return set(mapping.values())
+
+
+def require_cosets(
+    context: str,
+    value: Any,
+    carrier: list[str],
+) -> tuple[list[str], dict[str, str], dict[str, set[str]]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty coset list")
+    carrier_set = set(carrier)
+    ids: list[str] = []
+    representatives: dict[str, str] = {}
+    members: dict[str, set[str]] = {}
+    seen_members: set[str] = set()
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", item, {"id", "representative", "members"})
+        coset_id = item.get("id")
+        representative = item.get("representative")
+        require_string(f"{context}[{index}].id", coset_id)
+        require_string(f"{context}[{index}].representative", representative)
+        if coset_id in members:
+            fail(f"{context} repeats coset id {coset_id!r}")
+        if representative not in carrier_set:
+            fail(f"{context}[{index}].representative is outside the carrier")
+        member_set = set(require_string_list(f"{context}[{index}].members", item.get("members")))
+        extra = sorted(member_set - carrier_set)
+        if extra:
+            fail(f"{context}[{index}].members contains elements outside carrier: {extra}")
+        overlap = sorted(member_set & seen_members)
+        if overlap:
+            fail(f"{context}[{index}].members overlaps earlier cosets: {overlap}")
+        seen_members.update(member_set)
+        ids.append(coset_id)
+        representatives[coset_id] = representative
+        members[coset_id] = member_set
+    if seen_members != carrier_set:
+        missing = sorted(carrier_set - seen_members)
+        extra = sorted(seen_members - carrier_set)
+        fail(f"{context} must partition the carrier; missing={missing} extra={extra}")
+    return ids, representatives, members
+
+
+def require_quotient_table(
+    context: str,
+    value: Any,
+    coset_ids: list[str],
+) -> dict[tuple[str, str], str]:
+    coset_set = set(coset_ids)
+    if not isinstance(value, list) or len(value) != len(coset_ids):
+        fail(f"{context} must have one row per coset")
+    operation: dict[tuple[str, str], str] = {}
+    for row_index, row in enumerate(value):
+        if not isinstance(row, list) or len(row) != len(coset_ids):
+            fail(f"{context}[{row_index}] must have one entry per coset")
+        left = coset_ids[row_index]
+        for col_index, result in enumerate(row):
+            require_string(f"{context}[{row_index}][{col_index}]", result)
+            if result not in coset_set:
+                fail(f"{context}[{row_index}][{col_index}] is outside the quotient carrier")
+            operation[(left, coset_ids[col_index])] = result
+    return operation
+
+
+def coset_id_for_member(context: str, member: str, coset_members: dict[str, set[str]]) -> str:
+    hits = [coset_id for coset_id, members in coset_members.items() if member in members]
+    if len(hits) != 1:
+        fail(f"{context} member {member!r} is not in exactly one coset")
+    return hits[0]
+
+
+def validate_finite_algebra_homomorphisms(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    hom = checks["z4-to-z2-group-homomorphism"]
+    if hom["expected_result"] != "sat":
+        fail("z4-to-z2-group-homomorphism must expect sat")
+    values = single_witness_values(hom, witnesses)
+    domain_carrier, _, domain_op = require_group_structure("group hom domain", values.get("domain"))
+    codomain_carrier, _, codomain_op = require_group_structure("group hom codomain", values.get("codomain"))
+    mapping = require_mapping_object("group hom map", values.get("map"), domain_carrier, codomain_carrier)
+    if group_homomorphism_failures(domain_carrier, domain_op, codomain_op, mapping):
+        fail("z4-to-z2-group-homomorphism does not preserve the group operation")
+
+    kernel_image = checks["kernel-image-replay"]
+    if kernel_image["expected_result"] != "sat":
+        fail("kernel-image-replay must expect sat")
+    values = single_witness_values(kernel_image, witnesses)
+    domain_carrier, _, domain_op = require_group_structure("kernel image domain", values.get("domain"))
+    codomain_carrier, codomain_identity, codomain_op = require_group_structure(
+        "kernel image codomain",
+        values.get("codomain"),
+    )
+    mapping = require_mapping_object("kernel image map", values.get("map"), domain_carrier, codomain_carrier)
+    if group_homomorphism_failures(domain_carrier, domain_op, codomain_op, mapping):
+        fail("kernel-image-replay map does not preserve the group operation")
+    require_subset_exact("kernel-image-replay kernel", values.get("kernel"), domain_carrier, group_kernel(mapping, codomain_identity))
+    require_subset_exact("kernel-image-replay image", values.get("image"), codomain_carrier, group_image(mapping))
+
+    quotient = checks["quotient-first-isomorphism-replay"]
+    if quotient["expected_result"] != "sat":
+        fail("quotient-first-isomorphism-replay must expect sat")
+    values = single_witness_values(quotient, witnesses)
+    domain_carrier, _, domain_op = require_group_structure("quotient domain", values.get("domain"))
+    codomain_carrier, codomain_identity, codomain_op = require_group_structure("quotient codomain", values.get("codomain"))
+    mapping = require_mapping_object("quotient map", values.get("map"), domain_carrier, codomain_carrier)
+    if group_homomorphism_failures(domain_carrier, domain_op, codomain_op, mapping):
+        fail("quotient-first-isomorphism-replay map does not preserve the group operation")
+    kernel = require_subset_exact("quotient kernel", values.get("kernel"), domain_carrier, group_kernel(mapping, codomain_identity))
+    image = require_subset_exact("quotient image", values.get("image"), codomain_carrier, group_image(mapping))
+    coset_ids, representatives, coset_members = require_cosets("quotient cosets", values.get("cosets"), domain_carrier)
+    quotient_identity = values.get("quotient_identity")
+    require_string("quotient identity", quotient_identity)
+    if quotient_identity not in set(coset_ids):
+        fail("quotient identity must be one of the listed cosets")
+    if coset_members[quotient_identity] != kernel:
+        fail("quotient identity coset must equal the kernel")
+    for coset_id in coset_ids:
+        representative = representatives[coset_id]
+        computed_coset = {table_op(domain_op, representative, kernel_member) for kernel_member in kernel}
+        if computed_coset != coset_members[coset_id]:
+            fail(f"quotient coset {coset_id} does not match representative times kernel")
+        image_values = {mapping[member] for member in coset_members[coset_id]}
+        if len(image_values) != 1:
+            fail(f"quotient coset {coset_id} does not have a well-defined induced image")
+    quotient_op = require_quotient_table("quotient quotient_table", values.get("quotient_table"), coset_ids)
+    for left in coset_ids:
+        for right in coset_ids:
+            representative_product = table_op(domain_op, representatives[left], representatives[right])
+            expected_coset = coset_id_for_member("quotient operation", representative_product, coset_members)
+            if quotient_op[(left, right)] != expected_coset:
+                fail("quotient-first-isomorphism-replay quotient operation is incorrect")
+    induced_map = require_mapping_object("quotient induced_map", values.get("induced_map"), coset_ids, codomain_carrier)
+    if set(induced_map.values()) != image:
+        fail("quotient-first-isomorphism-replay induced map image does not match listed image")
+    if len(set(induced_map.values())) != len(induced_map):
+        fail("quotient-first-isomorphism-replay induced map is not injective")
+    for coset_id in coset_ids:
+        expected_image = mapping[representatives[coset_id]]
+        if induced_map[coset_id] != expected_image:
+            fail(f"quotient induced map for {coset_id} is not the representative image")
+    if group_homomorphism_failures(coset_ids, quotient_op, codomain_op, induced_map):
+        fail("quotient-first-isomorphism-replay induced map is not a homomorphism")
+
+    ring_hom = checks["z4-to-z2-ring-homomorphism"]
+    if ring_hom["expected_result"] != "sat":
+        fail("z4-to-z2-ring-homomorphism must expect sat")
+    values = single_witness_values(ring_hom, witnesses)
+    domain_carrier, domain_zero, domain_one, domain_add, domain_mul = require_ring_tables("ring hom domain", values.get("domain"))
+    codomain_carrier, codomain_zero, codomain_one, codomain_add, codomain_mul = require_ring_tables(
+        "ring hom codomain",
+        values.get("codomain"),
+    )
+    failures = ring_axiom_failures(domain_carrier, domain_zero, domain_one, domain_add, domain_mul)
+    if failures:
+        fail(f"z4-to-z2-ring-homomorphism domain is not a ring: {failures[0]}")
+    failures = ring_axiom_failures(codomain_carrier, codomain_zero, codomain_one, codomain_add, codomain_mul)
+    if failures:
+        fail(f"z4-to-z2-ring-homomorphism codomain is not a ring: {failures[0]}")
+    mapping = require_mapping_object("ring hom map", values.get("map"), domain_carrier, codomain_carrier)
+    if mapping[domain_zero] != codomain_zero:
+        fail("z4-to-z2-ring-homomorphism does not preserve zero")
+    if domain_one is not None and codomain_one is not None and mapping[domain_one] != codomain_one:
+        fail("z4-to-z2-ring-homomorphism does not preserve one")
+    for left in domain_carrier:
+        for right in domain_carrier:
+            if mapping[table_op(domain_add, left, right)] != table_op(codomain_add, mapping[left], mapping[right]):
+                fail("z4-to-z2-ring-homomorphism does not preserve addition")
+            if mapping[table_op(domain_mul, left, right)] != table_op(codomain_mul, mapping[left], mapping[right]):
+                fail("z4-to-z2-ring-homomorphism does not preserve multiplication")
+
+    bad = checks["bad-group-homomorphism-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-group-homomorphism-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    domain_carrier, _, domain_op = require_group_structure("bad hom domain", data.get("domain"))
+    codomain_carrier, _, codomain_op = require_group_structure("bad hom codomain", data.get("codomain"))
+    mapping = require_mapping_object("bad hom map", data.get("map"), domain_carrier, codomain_carrier)
+    failures = group_homomorphism_failures(domain_carrier, domain_op, codomain_op, mapping)
+    if not failures:
+        fail("bad-group-homomorphism-rejected map unexpectedly preserves the group operation")
+    failing_pair = data.get("failing_pair")
+    if not isinstance(failing_pair, list) or len(failing_pair) != 2:
+        fail("bad-group-homomorphism-rejected failing_pair must be a two-element list")
+    left, right = failing_pair
+    require_string("bad hom failing_pair[0]", left)
+    require_string("bad hom failing_pair[1]", right)
+    if left not in set(domain_carrier) or right not in set(domain_carrier):
+        fail("bad-group-homomorphism-rejected failing_pair references a source outside the domain")
+    claimed_image = data.get("claimed_image")
+    actual_homomorphic_image = data.get("actual_homomorphic_image")
+    require_string("bad hom claimed_image", claimed_image)
+    require_string("bad hom actual_homomorphic_image", actual_homomorphic_image)
+    source_product = table_op(domain_op, left, right)
+    if mapping[source_product] != claimed_image:
+        fail("bad-group-homomorphism-rejected claimed_image does not match f(left * right)")
+    computed_homomorphic_image = table_op(codomain_op, mapping[left], mapping[right])
+    if computed_homomorphic_image != actual_homomorphic_image:
+        fail("bad-group-homomorphism-rejected actual_homomorphic_image is incorrect")
+    if claimed_image == actual_homomorphic_image:
+        fail("bad-group-homomorphism-rejected malformed map unexpectedly agrees on failing_pair")
+
+    horizon = checks["general-isomorphism-theorems-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-isomorphism-theorems-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-isomorphism-theorems-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general isomorphism target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general isomorphism future_checker", data.get("future_checker"))
 
 
 def validate_finite_groups(expected: dict[str, Any]) -> None:
@@ -10386,6 +10676,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_sets(expected)
     if metadata["id"] == "finite-fields-v0":
         validate_finite_fields(expected)
+    if metadata["id"] == "finite-algebra-homomorphisms-v0":
+        validate_finite_algebra_homomorphisms(expected)
     if metadata["id"] == "finite-groups-v0":
         validate_finite_groups(expected)
     if metadata["id"] == "finite-integration-v0":

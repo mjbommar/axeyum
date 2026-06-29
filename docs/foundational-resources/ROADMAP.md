@@ -93,6 +93,7 @@ artifacts/examples/math/
   finite-groups-v0/
   finite-rings-v0/
   finite-fields-v0/
+  finite-algebra-homomorphisms-v0/
   polynomial-identities-v0/
   counting-v0/
   generating-functions-v0/
@@ -388,6 +389,10 @@ relation, and an explicit QF_UF/Alethe proof-object gap.
 [`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/)
 validates finite composition, image/preimage, inverse tables, composition
 associativity, and checked non-injective inverse counterexamples.
+[`finite-algebra-homomorphisms-v0`](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
+validates finite group and ring homomorphism replay, kernel/image
+recomputation, quotient/induced-map replay, checked bad-homomorphism
+rejection, and an isomorphism-theorem Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

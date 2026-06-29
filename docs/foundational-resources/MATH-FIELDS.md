@@ -242,6 +242,11 @@ one of:
     - Checks: finite simplicial-complex closure, oriented-boundary replay,
       boundary-squared-zero replay, fixed Betti-rank replay, bad-boundary
       rejection, and a general homology Lean-horizon row.
+24. `artifacts/examples/math/finite-algebra-homomorphisms-v0/`
+    - Fields: `abstract_algebra`, `set_theory_and_foundations`.
+    - Checks: finite group and ring homomorphism replay, kernel/image
+      recomputation, quotient/induced-map replay, bad-homomorphism rejection,
+      and a general isomorphism-theorem Lean-horizon row.
 
 ## Graduation Criteria
 

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "finite-algebra-homomorphisms-v0",
+  "title": "Exact Finite Algebra Homomorphism Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_groups",
+    "curriculum_rings",
+    "curriculum_relations_and_functions",
+    "field_abstract_algebra",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "groups",
+    "rings",
+    "relations-and-functions"
+  ],
+  "axeyum_fragments": [
+    "finite groups",
+    "finite rings",
+    "finite functions",
+    "QF_UF",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/groups.md",
+    "docs/curriculum/02-structures/rings.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "z4-to-z2-group-homomorphism",
+    "kernel-image-replay",
+    "quotient-first-isomorphism-replay",
+    "z4-to-z2-ring-homomorphism",
+    "bad-group-homomorphism-rejected",
+    "general-isomorphism-theorems-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite homomorphism tables as deterministic finite-function and equality obligations.",
+    "Replay kernel, image, quotient, and induced-map witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-homomorphism and quotient rows once proof routes are promoted.",
+    "Keep general isomorphism theorems, module homomorphisms, categorical universal properties, and infinite algebra under Lean horizon until formal routes exist."
+  ]
+}

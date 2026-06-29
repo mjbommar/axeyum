@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-algebra-homomorphisms-v0",
+  "witnesses": [
+    {
+      "id": "z4-to-z2-addition",
+      "description": "Reduction modulo 2 as a group homomorphism from Z/4Z to Z/2Z.",
+      "values": {
+        "domain": {
+          "carrier": ["0", "1", "2", "3"],
+          "identity": "0",
+          "table": [
+            ["0", "1", "2", "3"],
+            ["1", "2", "3", "0"],
+            ["2", "3", "0", "1"],
+            ["3", "0", "1", "2"]
+          ]
+        },
+        "codomain": {
+          "carrier": ["0", "1"],
+          "identity": "0",
+          "table": [
+            ["0", "1"],
+            ["1", "0"]
+          ]
+        },
+        "map": {
+          "0": "0",
+          "1": "1",
+          "2": "0",
+          "3": "1"
+        },
+        "kernel": ["0", "2"],
+        "image": ["0", "1"]
+      }
+    },
+    {
+      "id": "z4-kernel-quotient",
+      "description": "The quotient of Z/4Z by the parity kernel and the induced isomorphism to Z/2Z.",
+      "values": {
+        "domain": {
+          "carrier": ["0", "1", "2", "3"],
+          "identity": "0",
+          "table": [
+            ["0", "1", "2", "3"],
+            ["1", "2", "3", "0"],
+            ["2", "3", "0", "1"],
+            ["3", "0", "1", "2"]
+          ]
+        },
+        "codomain": {
+          "carrier": ["0", "1"],
+          "identity": "0",
+          "table": [
+            ["0", "1"],
+            ["1", "0"]
+          ]
+        },
+        "map": {
+          "0": "0",
+          "1": "1",
+          "2": "0",
+          "3": "1"
+        },
+        "kernel": ["0", "2"],
+        "image": ["0", "1"],
+        "cosets": [
+          {"id": "K", "representative": "0", "members": ["0", "2"]},
+          {"id": "1K", "representative": "1", "members": ["1", "3"]}
+        ],
+        "quotient_identity": "K",
+        "quotient_table": [
+          ["K", "1K"],
+          ["1K", "K"]
+        ],
+        "induced_map": {
+          "K": "0",
+          "1K": "1"
+        }
+      }
+    },
+    {
+      "id": "z4-to-z2-ring",
+      "description": "Reduction modulo 2 as a unital ring homomorphism from Z/4Z to Z/2Z.",
+      "values": {
+        "domain": {
+          "carrier": ["0", "1", "2", "3"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1", "2", "3"],
+            ["1", "2", "3", "0"],
+            ["2", "3", "0", "1"],
+            ["3", "0", "1", "2"]
+          ],
+          "mul": [
+            ["0", "0", "0", "0"],
+            ["0", "1", "2", "3"],
+            ["0", "2", "0", "2"],
+            ["0", "3", "2", "1"]
+          ]
+        },
+        "codomain": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "map": {
+          "0": "0",
+          "1": "1",
+          "2": "0",
+          "3": "1"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "z4-to-z2-group-homomorphism",
+      "claim": "Reduction modulo 2 preserves addition from Z/4Z to Z/2Z.",
+      "expected_result": "sat",
+      "validation": "finite_group_homomorphism_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-to-z2-addition"],
+      "notes": "The validator checks every pair a,b and verifies f(a+b) = f(a)+f(b) in the codomain table."
+    },
+    {
+      "id": "kernel-image-replay",
+      "claim": "The listed kernel and image of the parity homomorphism are correct.",
+      "expected_result": "sat",
+      "validation": "finite_kernel_image_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-to-z2-addition"],
+      "notes": "The validator recomputes the kernel as the preimage of the codomain identity and the image as the map range."
+    },
+    {
+      "id": "quotient-first-isomorphism-replay",
+      "claim": "The quotient by the parity kernel is isomorphic to the image via the listed induced map.",
+      "expected_result": "sat",
+      "validation": "finite_quotient_isomorphism_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-kernel-quotient"],
+      "notes": "The validator checks cosets, quotient operation, well-defined induced map, bijectivity onto the image, and homomorphism preservation."
+    },
+    {
+      "id": "z4-to-z2-ring-homomorphism",
+      "claim": "Reduction modulo 2 preserves zero, one, addition, and multiplication from Z/4Z to Z/2Z.",
+      "expected_result": "sat",
+      "validation": "finite_ring_homomorphism_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z4-to-z2-ring"],
+      "notes": "The validator checks every pair for both addition and multiplication, plus zero and one preservation."
+    },
+    {
+      "id": "bad-group-homomorphism-rejected",
+      "claim": "The listed map from Z/4Z to Z/2Z is a group homomorphism.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_homomorphism_refutation",
+      "proof_status": "checked",
+      "data": {
+        "domain": {
+          "carrier": ["0", "1", "2", "3"],
+          "identity": "0",
+          "table": [
+            ["0", "1", "2", "3"],
+            ["1", "2", "3", "0"],
+            ["2", "3", "0", "1"],
+            ["3", "0", "1", "2"]
+          ]
+        },
+        "codomain": {
+          "carrier": ["0", "1"],
+          "identity": "0",
+          "table": [
+            ["0", "1"],
+            ["1", "0"]
+          ]
+        },
+        "map": {
+          "0": "0",
+          "1": "1",
+          "2": "1",
+          "3": "1"
+        },
+        "failing_pair": ["1", "1"],
+        "claimed_image": "1",
+        "actual_homomorphic_image": "0"
+      },
+      "notes": "The validator checks the pair 1+1: the map sends 2 to 1, while f(1)+f(1) is 0 in Z/2Z."
+    },
+    {
+      "id": "general-isomorphism-theorems-lean-horizon",
+      "claim": "General algebraic isomorphism theorems and structure-theory claims require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "group and ring isomorphism theorems, normal-subgroup/ideal quotient theory, module homomorphisms, categorical universal properties, and infinite algebra",
+        "future_checker": "Lean modules for algebraic structures, quotients, kernels, images, first isomorphism theorems, and proof reconstruction from finite table certificates"
+      },
+      "notes": "The finite rows are checked by table replay; general algebraic structure theory remains a proof-assistant horizon."
+    }
+  ]
+}

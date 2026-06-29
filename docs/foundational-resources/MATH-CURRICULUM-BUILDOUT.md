@@ -189,8 +189,8 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0` | Congruences, inverses, CRT, fixed-modulus enumeration. |
-| `groups` | `abstract_algebra` | `finite-groups-v0` | Cayley-table closure, identity, inverse, associativity checks. |
-| `rings` | `abstract_algebra` | `finite-rings-v0` | Two-operation table checks and distributivity. |
+| `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, and induced-map checks. |
+| `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0` | Two-operation table checks, distributivity, zero divisors, and ring-homomorphism preservation. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0` | Field axioms over small prime fields; composite modulus counterexamples. |
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, coefficient extraction, and finite convolution. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
@@ -303,6 +303,8 @@ the first finite-group core-structure pack lives under
 `artifacts/examples/math/finite-groups-v0/`;
 the first finite-ring core-structure pack lives under
 `artifacts/examples/math/finite-rings-v0/`;
+the first finite algebra homomorphism pack lives under
+`artifacts/examples/math/finite-algebra-homomorphisms-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first algebraic real/RCF-shadow pack lives under
 `artifacts/examples/math/reals-rcf-shadow-v0/`;
@@ -364,7 +366,11 @@ generating-functions Lean-horizon row. The recommended Phase M3 pack list has
 landed. `finite-groups-v0`
 now validates finite Cayley-table group axioms, inverse-table replay, and a
 checked non-group operation. `finite-rings-v0` now validates finite ring tables,
-zero-divisor replay, and a checked non-distributive table. `gcd-bezout-v0` now
+zero-divisor replay, and a checked non-distributive table.
+`finite-algebra-homomorphisms-v0` now extends the algebra core with finite
+group-homomorphism replay, kernel/image recomputation, quotient and induced-map
+checks, ring-homomorphism replay, checked bad-homomorphism rejection, and a
+general isomorphism-theorem Lean-horizon row. `gcd-bezout-v0` now
 validates gcd/common-divisor replay, Bezout coefficient replay, direct
 divisibility witnesses, and a checked linear Diophantine gcd obstruction.
 `number-theory-v0` now validates bounded CRT compatibility, quadratic-residue
@@ -434,8 +440,10 @@ Recommended order:
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
-5. `finite-fields-v0` (landed): prime-field axioms and composite-modulus
-   counterexample.
+5. `finite-fields-v0` (landed) and `finite-algebra-homomorphisms-v0`
+   (landed): prime-field axioms, composite-modulus counterexample, finite
+   homomorphism tables, kernel/image replay, quotient maps, and induced-map
+   checks.
 6. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
 7. `linear-algebra-rational-v0`: fixed matrices, LU replay, inconsistent
    system with Farkas evidence where available.
@@ -851,9 +859,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 71 non-template math example packs validate.
+  Status: 72 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 59 non-template packs have at least one `checked` expected-result row.
+  Status: 60 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -880,7 +888,8 @@ docs link checker clean.
 
 Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`,
-`finite-fields-v0`, `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
+`finite-fields-v0`, `finite-algebra-homomorphisms-v0`,
+`polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `cardinality-principles-v0`,
 `induction-obligations-v0`, `induction-patterns-v0`, `logic-basics-v0`, and
@@ -986,7 +995,10 @@ coefficient, and a generating-functions Lean-horizon row.
 `finite-euler-method-v0` now adds the next exact finite dynamics/numerical
 bridge: explicit Euler replay, polynomial-solution error replay, finite
 invariant checks, checked rejection of a bad Euler step, and an ODE-theory
-Lean-horizon row.
+Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the next exact
+finite algebra bridge after group/ring tables: homomorphism preservation,
+kernel/image replay, quotient/induced-map replay, checked bad-homomorphism
+rejection, and an isomorphism-theorem Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

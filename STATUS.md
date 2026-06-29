@@ -169,6 +169,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite algebra homomorphism foundations pack landed.** Added
+  [`finite-algebra-homomorphisms-v0`](artifacts/examples/math/finite-algebra-homomorphisms-v0/README.md)
+  as the exact finite bridge from group/ring tables to structure-preserving
+  maps. The pack validates `Z/4Z -> Z/2Z` group-homomorphism replay,
+  kernel/image recomputation, quotient and induced-map replay, unital
+  ring-homomorphism replay, checked rejection of a bad group-homomorphism map,
+  and a general isomorphism-theorem Lean-horizon row. The foundational
+  example-pack validator now checks these rows by exact finite table
+  enumeration.
+
 - **Finite simplicial homology foundations pack landed.** Added
   [`finite-simplicial-homology-v0`](artifacts/examples/math/finite-simplicial-homology-v0/README.md)
   as the exact finite algebraic-topology bridge across topology, finite set

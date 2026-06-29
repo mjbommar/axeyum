@@ -166,12 +166,14 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-groups-v0/`](../../artifacts/examples/math/finite-groups-v0/),
   [`artifacts/examples/math/finite-rings-v0/`](../../artifacts/examples/math/finite-rings-v0/),
   [`artifacts/examples/math/finite-fields-v0/`](../../artifacts/examples/math/finite-fields-v0/),
+  [`artifacts/examples/math/finite-algebra-homomorphisms-v0/`](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/),
   [`artifacts/examples/math/polynomial-identities-v0/`](../../artifacts/examples/math/polynomial-identities-v0/),
   [`artifacts/examples/math/counting-v0/`](../../artifacts/examples/math/counting-v0/),
   and [`artifacts/examples/math/generating-functions-v0/`](../../artifacts/examples/math/generating-functions-v0/)
   validate the finite algebra and discrete core: finite group/ring/field table
-  checks, fixed polynomial identities, finite counting/pigeonhole rows, and
-  finite generating-function coefficient/convolution replay.
+  checks, finite homomorphism/kernel/quotient replay, fixed polynomial
+  identities, finite counting/pigeonhole rows, and finite generating-function
+  coefficient/convolution replay.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
@@ -353,6 +355,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0
 ```
 
 ## Principle

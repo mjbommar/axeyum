@@ -991,6 +991,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-groups-v0",
           "notes": "Cayley-table closure, identity, inverse, and associativity checks."
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Finite group homomorphism tables, kernel/image replay, quotient maps, and first-isomorphism shadows."
         }
       ],
       "proof_routes": [
@@ -1019,7 +1025,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-groups-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/finite-groups-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1058,6 +1064,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-rings-v0",
           "notes": "Two-operation table checks and distributivity."
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Finite ring homomorphism tables and quotient-map replay."
         }
       ],
       "proof_routes": [
@@ -1086,7 +1098,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-rings-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/finite-rings-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1614,6 +1626,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/complex-plane-transforms-v0",
           "notes": "Exact Complex Plane Transform Checks"
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Exact Finite Algebra Homomorphism Checks"
         },
         {
           "id": "finite-groups-v0",
@@ -3436,6 +3454,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/equivalence-classes-v0",
           "notes": "Finite Equivalence Classes And Quotients"
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Exact Finite Algebra Homomorphism Checks"
         },
         {
           "id": "finite-cardinality-v0",
