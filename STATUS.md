@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Curriculum resource execution plan landed.** Added
+  [`CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
+  as the forward plan for building the math-curriculum resources past broad
+  validated packs: canonical status and coverage, learner-path completion,
+  proof/certificate upgrades, concept granularity, solver feedback reuse, and
+  eventual consumer/library boundaries. Linked it from the top-level plan,
+  foundational-resources index, roadmap, and math buildout phase contract.
+
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact

@@ -17,6 +17,10 @@ schemas, examples, and validation workflows.
 - [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) is the detailed
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.
+- [CURRICULUM-RESOURCE-EXECUTION-PLAN.md](CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
+  is the forward execution plan for moving those resources from validated packs
+  into learner paths, proof upgrades, solver feedback, and eventual consumer
+  boundaries.
 - [LIBRARY-BOUNDARY-DECISION.md](LIBRARY-BOUNDARY-DECISION.md) records the
   current Phase M8 decision: keep the resources in-repo, expose a stable JSON
   data contract, and defer crates or repo splits until real consumers require

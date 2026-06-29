@@ -9,6 +9,10 @@ every concept row, example pack, learner page, proof route, and dashboard entry
 should trace back to either a curriculum node or an explicit extension field in
 the [University Math Field Taxonomy](MATH-FIELDS.md).
 
+For the current forward work plan, use the
+[Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
+This file remains the phase contract and landed-history log.
+
 The product is not a textbook and not a formal-library clone. It is a set of
 small, checkable resources that make the same point over and over:
 

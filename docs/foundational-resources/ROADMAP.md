@@ -181,6 +181,8 @@ Current base: [formal mathematics curriculum](../curriculum/README.md).
 Field spine: [University Math Field Taxonomy](MATH-FIELDS.md).
 Detailed execution plan:
 [Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md).
+Forward execution plan:
+[Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 
 Add depth in four waves:
 

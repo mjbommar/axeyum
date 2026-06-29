@@ -84,7 +84,10 @@ incubator subfolders. The broader foundational-resource expansion lives in
 university-style math field spine in
 [`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md)
 and the curriculum-to-resource buildout plan in
-[`docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md`](docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md).
+[`docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md`](docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md);
+the forward execution plan for turning validated packs into learner paths,
+proof upgrades, solver feedback, and consumer boundaries is
+[`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 
