@@ -140,6 +140,12 @@ CURRICULUM_MAP = {
         "pack": "modular-arithmetic-v0",
         "slice": "Congruences, inverses, CRT, and fixed-modulus enumeration.",
         "proof": "BV/LIA replay and finite exhaustive checks.",
+        "extra_packs": [
+            (
+                "finite-ideals-v0",
+                "Finite ideals in modular rings, principal ideal closure, quotient rings, and ring-homomorphism kernels.",
+            ),
+        ],
     },
     "groups": {
         "field_ids": ["abstract_algebra"],
@@ -174,6 +180,10 @@ CURRICULUM_MAP = {
             (
                 "finite-modules-v0",
                 "Finite module tables over Z/4Z, submodule span replay, homomorphisms, kernels, images, and quotient modules.",
+            ),
+            (
+                "finite-ideals-v0",
+                "Finite ideals in Z/6Z, principal ideal generation, quotient rings, and ring-homomorphism kernel/image replay.",
             ),
         ],
     },
@@ -248,9 +258,9 @@ FIELD_PACKS = {
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, and cardinality checks."),
     "discrete_math": ("counting-v0", "Finite counting and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
-    "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."),
+    "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, modules, homomorphism tables, and Cayley-table validation."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, homomorphism tables, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),

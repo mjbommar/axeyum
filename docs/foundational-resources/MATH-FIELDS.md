@@ -40,9 +40,9 @@ Use these sources as checks against local taste:
 | `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints | ZFC, ordinals, cardinals, choice, and infinite set facts are proof-horizon material. |
 | `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search | General asymptotic enumeration and deep extremal combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
-| `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
+| `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
 | `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, and finite-field linear algebra | Spectral theorems, general vector-space/module theorems, and conditioning/stability need proof or numerical tracks. |
-| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, modules, homomorphism tables, Cayley-table validators | General group/ring/module/category theory belongs in Lean-backed concept rows. |
+| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, homomorphism tables, Cayley-table validators | General group/ring/ideal/module/category theory belongs in Lean-backed concept rows. |
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates | General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay | General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon. |
@@ -260,6 +260,12 @@ one of:
     - Checks: finite module table replay over `Z/4Z`, submodule/span replay,
       module-homomorphism kernel/image replay, quotient-module replay,
       bad-submodule rejection, and a general module-theory Lean-horizon row.
+27. `artifacts/examples/math/finite-ideals-v0/`
+    - Fields: `abstract_algebra`, `number_theory`,
+      `set_theory_and_foundations`.
+    - Checks: finite ideal table replay over `Z/6Z`, principal ideal
+      generation, ring-homomorphism kernel/image replay, quotient-ring replay,
+      bad-ideal rejection, and a general ideal-theory Lean-horizon row.
 
 ## Graduation Criteria
 

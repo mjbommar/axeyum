@@ -3174,6 +3174,250 @@ def validate_finite_modules(expected: dict[str, Any]) -> None:
     require_string("general module future_checker", data.get("future_checker"))
 
 
+def require_ring_subset(context: str, value: Any, carrier: list[str], *, nonempty: bool = False) -> set[str]:
+    items = require_string_list(context, value, nonempty=nonempty)
+    carrier_set = set(carrier)
+    subset = set(items)
+    extra = sorted(subset - carrier_set)
+    if extra:
+        fail(f"{context} contains ring elements outside the carrier: {extra}")
+    return subset
+
+
+def is_ring_ideal(
+    subset: set[str],
+    carrier: list[str],
+    zero: str,
+    add_op: dict[tuple[str, str], str],
+    mul_op: dict[tuple[str, str], str],
+) -> bool:
+    if zero not in subset:
+        return False
+    for item in subset:
+        if not any(
+            table_op(add_op, item, candidate) == zero and table_op(add_op, candidate, item) == zero
+            for candidate in subset
+        ):
+            return False
+    for left in subset:
+        for right in subset:
+            if table_op(add_op, left, right) not in subset:
+                return False
+    for ring_item in carrier:
+        for ideal_item in subset:
+            if table_op(mul_op, ring_item, ideal_item) not in subset:
+                return False
+            if table_op(mul_op, ideal_item, ring_item) not in subset:
+                return False
+    return True
+
+
+def generated_two_sided_ideal(
+    generators: set[str],
+    carrier: list[str],
+    zero: str,
+    add_op: dict[tuple[str, str], str],
+    mul_op: dict[tuple[str, str], str],
+) -> set[str]:
+    closure = {zero} | set(generators)
+    changed = True
+    while changed:
+        changed = False
+        additions: set[str] = set()
+        for left in closure:
+            for right in closure:
+                additions.add(table_op(add_op, left, right))
+        for ring_item in carrier:
+            for ideal_item in closure:
+                additions.add(table_op(mul_op, ring_item, ideal_item))
+                additions.add(table_op(mul_op, ideal_item, ring_item))
+        for item in additions:
+            if item not in closure:
+                closure.add(item)
+                changed = True
+    return closure
+
+
+def ring_homomorphism_failures(
+    domain_carrier: list[str],
+    domain_zero: str,
+    domain_one: str | None,
+    domain_add: dict[tuple[str, str], str],
+    domain_mul: dict[tuple[str, str], str],
+    codomain_zero: str,
+    codomain_one: str | None,
+    codomain_add: dict[tuple[str, str], str],
+    codomain_mul: dict[tuple[str, str], str],
+    mapping: dict[str, str],
+) -> list[str]:
+    if mapping[domain_zero] != codomain_zero:
+        return ["zero preservation fails"]
+    if domain_one is not None and codomain_one is not None and mapping[domain_one] != codomain_one:
+        return ["one preservation fails"]
+    for left in domain_carrier:
+        for right in domain_carrier:
+            if mapping[table_op(domain_add, left, right)] != table_op(codomain_add, mapping[left], mapping[right]):
+                return [f"addition preservation fails for {(left, right)}"]
+            if mapping[table_op(domain_mul, left, right)] != table_op(codomain_mul, mapping[left], mapping[right]):
+                return [f"multiplication preservation fails for {(left, right)}"]
+    return []
+
+
+def validate_finite_ideals(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    ideal_check = checks["z6-even-ideal"]
+    if ideal_check["expected_result"] != "sat":
+        fail("z6-even-ideal must expect sat")
+    values = single_witness_values(ideal_check, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("z6 ideal ring", values.get("ring"))
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"z6-even-ideal ring failed axioms: {failures[0]}")
+    ideal = require_ring_subset("z6 ideal", values.get("ideal"), carrier, nonempty=True)
+    if not is_ring_ideal(ideal, carrier, zero, add_op, mul_op):
+        fail("z6-even-ideal listed subset is not an ideal")
+
+    span = checks["principal-ideal-span-replay"]
+    if span["expected_result"] != "sat":
+        fail("principal-ideal-span-replay must expect sat")
+    values = single_witness_values(span, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("principal ideal ring", values.get("ring"))
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"principal-ideal-span-replay ring failed axioms: {failures[0]}")
+    ideal = require_ring_subset("principal ideal", values.get("ideal"), carrier, nonempty=True)
+    if not is_ring_ideal(ideal, carrier, zero, add_op, mul_op):
+        fail("principal-ideal-span-replay listed subset is not an ideal")
+    generators = require_ring_subset("principal ideal generators", values.get("generators"), carrier, nonempty=True)
+    expected_ideal = require_ring_subset("principal generated_ideal", values.get("generated_ideal"), carrier, nonempty=True)
+    computed_ideal = generated_two_sided_ideal(generators, carrier, zero, add_op, mul_op)
+    if computed_ideal != expected_ideal:
+        fail("principal-ideal-span-replay generated ideal is incorrect")
+    if computed_ideal != ideal:
+        fail("principal-ideal-span-replay generated ideal does not equal the listed ideal")
+
+    hom = checks["mod-two-ring-hom-kernel-image"]
+    if hom["expected_result"] != "sat":
+        fail("mod-two-ring-hom-kernel-image must expect sat")
+    values = single_witness_values(hom, witnesses)
+    domain_carrier, domain_zero, domain_one, domain_add, domain_mul = require_ring_tables("ring hom domain", values.get("domain"))
+    codomain_carrier, codomain_zero, codomain_one, codomain_add, codomain_mul = require_ring_tables(
+        "ring hom codomain",
+        values.get("codomain"),
+    )
+    failures = ring_axiom_failures(domain_carrier, domain_zero, domain_one, domain_add, domain_mul)
+    if failures:
+        fail(f"mod-two-ring-hom-kernel-image domain failed axioms: {failures[0]}")
+    failures = ring_axiom_failures(codomain_carrier, codomain_zero, codomain_one, codomain_add, codomain_mul)
+    if failures:
+        fail(f"mod-two-ring-hom-kernel-image codomain failed axioms: {failures[0]}")
+    mapping = require_mapping_object("ring hom map", values.get("map"), domain_carrier, codomain_carrier)
+    failures = ring_homomorphism_failures(
+        domain_carrier,
+        domain_zero,
+        domain_one,
+        domain_add,
+        domain_mul,
+        codomain_zero,
+        codomain_one,
+        codomain_add,
+        codomain_mul,
+        mapping,
+    )
+    if failures:
+        fail(f"mod-two-ring-hom-kernel-image map is not a ring homomorphism: {failures[0]}")
+    computed_kernel = {source for source, target in mapping.items() if target == codomain_zero}
+    computed_image = set(mapping.values())
+    kernel = require_ring_subset("ring hom kernel", values.get("kernel"), domain_carrier, nonempty=True)
+    image = require_ring_subset("ring hom image", values.get("image"), codomain_carrier, nonempty=True)
+    if kernel != computed_kernel:
+        fail("mod-two-ring-hom-kernel-image listed kernel is incorrect")
+    if image != computed_image:
+        fail("mod-two-ring-hom-kernel-image listed image is incorrect")
+    if not is_ring_ideal(kernel, domain_carrier, domain_zero, domain_add, domain_mul):
+        fail("mod-two-ring-hom-kernel-image kernel is not an ideal")
+
+    quotient = checks["quotient-ring-replay"]
+    if quotient["expected_result"] != "sat":
+        fail("quotient-ring-replay must expect sat")
+    values = single_witness_values(quotient, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("quotient ring source", values.get("ring"))
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"quotient-ring-replay source ring failed axioms: {failures[0]}")
+    ideal = require_ring_subset("quotient ideal", values.get("ideal"), carrier, nonempty=True)
+    if not is_ring_ideal(ideal, carrier, zero, add_op, mul_op):
+        fail("quotient-ring-replay listed ideal is not an ideal")
+    coset_ids, representatives, coset_members = require_cosets("quotient ring cosets", values.get("cosets"), carrier)
+    quotient_zero = values.get("quotient_zero")
+    quotient_one = values.get("quotient_one")
+    require_string("quotient ring zero", quotient_zero)
+    require_string("quotient ring one", quotient_one)
+    if quotient_zero not in set(coset_ids) or quotient_one not in set(coset_ids):
+        fail("quotient-ring-replay quotient zero/one must be listed cosets")
+    if coset_members[quotient_zero] != ideal:
+        fail("quotient-ring-replay zero coset must equal the ideal")
+    if one is not None and one not in coset_members[quotient_one]:
+        fail("quotient-ring-replay one coset must contain the source ring identity")
+    for coset_id in coset_ids:
+        representative = representatives[coset_id]
+        expected_coset = {table_op(add_op, representative, member) for member in ideal}
+        if expected_coset != coset_members[coset_id]:
+            fail(f"quotient-ring-replay coset {coset_id} does not match representative plus ideal")
+    quotient_add = require_quotient_table("quotient ring add", values.get("quotient_add"), coset_ids)
+    quotient_mul = require_quotient_table("quotient ring mul", values.get("quotient_mul"), coset_ids)
+    for left in coset_ids:
+        for right in coset_ids:
+            representative_sum = table_op(add_op, representatives[left], representatives[right])
+            expected_sum_coset = coset_id_for_member("quotient ring addition", representative_sum, coset_members)
+            if quotient_add[(left, right)] != expected_sum_coset:
+                fail("quotient-ring-replay quotient addition is incorrect")
+            representative_product = table_op(mul_op, representatives[left], representatives[right])
+            expected_product_coset = coset_id_for_member("quotient ring multiplication", representative_product, coset_members)
+            if quotient_mul[(left, right)] != expected_product_coset:
+                fail("quotient-ring-replay quotient multiplication is incorrect")
+    failures = ring_axiom_failures(coset_ids, quotient_zero, quotient_one, quotient_add, quotient_mul)
+    if failures:
+        fail(f"quotient-ring-replay quotient tables failed ring axioms: {failures[0]}")
+
+    bad = checks["bad-ideal-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-ideal-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    carrier, zero, one, add_op, mul_op = require_ring_tables("bad ideal ring", data.get("ring"))
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if failures:
+        fail(f"bad-ideal-rejected ring failed axioms: {failures[0]}")
+    subset = require_ring_subset("bad ideal subset", data.get("subset"), carrier, nonempty=True)
+    if is_ring_ideal(subset, carrier, zero, add_op, mul_op):
+        fail("bad-ideal-rejected subset unexpectedly is an ideal")
+    failing_sum = data.get("failing_sum")
+    if not isinstance(failing_sum, list) or len(failing_sum) != 2:
+        fail("bad-ideal-rejected failing_sum must be a two-element list")
+    left, right = failing_sum
+    require_string("bad ideal failing_sum[0]", left)
+    require_string("bad ideal failing_sum[1]", right)
+    if left not in subset or right not in subset:
+        fail("bad-ideal-rejected failing_sum entries must be in the claimed subset")
+    actual_sum = data.get("actual_sum")
+    require_string("bad ideal actual_sum", actual_sum)
+    if table_op(add_op, left, right) != actual_sum:
+        fail("bad-ideal-rejected actual_sum is incorrect")
+    if actual_sum in subset:
+        fail("bad-ideal-rejected actual_sum unexpectedly belongs to the subset")
+
+    horizon = checks["general-ideal-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-ideal-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-ideal-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general ideal target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general ideal future_checker", data.get("future_checker"))
+
+
 def validate_finite_groups(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -11570,6 +11814,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_vector_spaces(expected)
     if metadata["id"] == "finite-modules-v0":
         validate_finite_modules(expected)
+    if metadata["id"] == "finite-ideals-v0":
+        validate_finite_ideals(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":
         validate_finite_stochastic_kernels(expected)
     if metadata["id"] == "finite-operator-v0":

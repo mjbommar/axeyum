@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "finite-ideals-v0",
+  "title": "Exact Finite Ideal And Quotient Ring Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_rings",
+    "curriculum_modular_arithmetic",
+    "field_abstract_algebra",
+    "field_number_theory",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "number_theory",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "rings",
+    "modular-arithmetic"
+  ],
+  "axeyum_fragments": [
+    "finite rings",
+    "finite ideals",
+    "finite functions",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/rings.md",
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/02-structures/modular-arithmetic.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "z6-even-ideal",
+    "principal-ideal-span-replay",
+    "mod-two-ring-hom-kernel-image",
+    "quotient-ring-replay",
+    "bad-ideal-rejected",
+    "general-ideal-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite ideal and quotient-ring tables as deterministic finite-function and equality obligations.",
+    "Replay ideal membership, principal-ideal generation, ring-homomorphism kernel/image, and quotient-ring witnesses through Axeyum model evaluation.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-ideal and bad-quotient rows once proof routes are promoted.",
+    "Keep general ideal theory, quotient-ring theorems, correspondence theorems, localization, prime/maximal ideals, and algebraic geometry under Lean horizon until formal routes exist."
+  ]
+}

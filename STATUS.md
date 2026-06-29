@@ -179,6 +179,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite ideal foundations pack landed.** Added
+  [`finite-ideals-v0`](artifacts/examples/math/finite-ideals-v0/README.md)
+  as the exact finite quotient-ring bridge for modular algebra. The pack
+  validates `Z/6Z` ideal table replay for `(2) = {0,2,4}`, principal ideal
+  generation, reduction modulo `2` as a ring homomorphism, kernel/image
+  recomputation, quotient-ring addition and multiplication replay, checked
+  rejection of a bad ideal, and a general ideal-theory Lean-horizon row. The
+  foundational example-pack validator now checks these rows by exact finite
+  table enumeration.
+
 - **Finite module foundations pack landed.** Added
   [`finite-modules-v0`](artifacts/examples/math/finite-modules-v0/README.md)
   as the exact finite bridge from ring actions to linear algebra. The pack

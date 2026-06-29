@@ -926,6 +926,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/modular-arithmetic-v0",
           "notes": "Congruences, inverses, CRT, and fixed-modulus enumeration."
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Finite ideals in modular rings, principal ideal closure, quotient rings, and ring-homomorphism kernels."
         }
       ],
       "proof_routes": [
@@ -954,7 +960,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/modular-arithmetic-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/modular-arithmetic-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -1088,6 +1094,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
           "notes": "Finite module tables over Z/4Z, submodule span replay, homomorphisms, kernels, images, and quotient modules."
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Finite ideals in Z/6Z, principal ideal generation, quotient rings, and ring-homomorphism kernel/image replay."
         }
       ],
       "proof_routes": [
@@ -1631,7 +1643,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, modules, homomorphism tables, Cayley-table validators",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, homomorphism tables, Cayley-table validators",
       "prerequisites": [],
       "unlocks": [
         "curriculum_fields",
@@ -1642,14 +1654,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite groups, rings, fields, modules, homomorphism tables, Cayley-table validators"
+        "Finite groups, rings, fields, ideals, modules, homomorphism tables, Cayley-table validators"
       ],
       "example_packs": [
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
-          "notes": "Finite groups, rings, fields, modules, homomorphism tables, and Cayley-table validation."
+          "notes": "Finite groups, rings, fields, ideals, modules, homomorphism tables, and Cayley-table validation."
         },
         {
           "id": "complex-algebraic-v0",
@@ -1674,6 +1686,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-groups-v0",
           "notes": "Finite Group Cayley Table Checks"
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Exact Finite Ideal And Quotient Ring Checks"
         },
         {
           "id": "finite-modules-v0",
@@ -1726,7 +1744,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General group/ring/module/category theory belongs in Lean-backed concept rows.",
+          "name": "General group/ring/ideal/module/category theory belongs in Lean-backed concept rows.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2759,7 +2777,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra and arithmetic. First Axeyum slice: Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks",
+      "summary": "Core undergraduate / graduate algebra and arithmetic. First Axeyum slice: Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks",
       "prerequisites": [],
       "unlocks": [
         "curriculum_divisibility_and_euclid",
@@ -2772,20 +2790,26 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Modular arithmetic, congruences, finite-field examples, bounded Diophantine checks"
+        "Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks"
       ],
       "example_packs": [
         {
           "id": "modular-arithmetic-v0",
           "status": "validated",
           "path": "artifacts/examples/math/modular-arithmetic-v0",
-          "notes": "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."
+          "notes": "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."
         },
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
           "notes": "Prime Field And Composite Modulus Checks"
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Exact Finite Ideal And Quotient Ring Checks"
         },
         {
           "id": "gcd-bezout-v0",
@@ -3562,6 +3586,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-hitting-times-v0",
           "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Exact Finite Ideal And Quotient Ring Checks"
         },
         {
           "id": "finite-martingales-v0",

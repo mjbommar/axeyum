@@ -86,6 +86,7 @@ artifacts/examples/math/
   linear-algebra-rational-v0/
   finite-vector-spaces-v0/
   finite-modules-v0/
+  finite-ideals-v0/
   numerical-linear-algebra-v0/
   spectral-linear-algebra-v0/
   matrix-invariants-v0/
@@ -98,6 +99,7 @@ artifacts/examples/math/
   finite-algebra-homomorphisms-v0/
   finite-vector-spaces-v0/
   finite-modules-v0/
+  finite-ideals-v0/
   polynomial-identities-v0/
   counting-v0/
   generating-functions-v0/
@@ -405,6 +407,10 @@ vector-space/module Lean-horizon row.
 validates finite module laws over `Z/4Z`, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay, checked
 bad-submodule rejection, and a module-theory Lean-horizon row.
+[`finite-ideals-v0`](../../artifacts/examples/math/finite-ideals-v0/)
+validates finite ideal laws over `Z/6Z`, principal ideal generation,
+ring-homomorphism kernel/image replay, quotient-ring table replay, checked
+bad-ideal rejection, and an ideal-theory Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

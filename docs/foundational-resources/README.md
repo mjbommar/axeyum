@@ -151,6 +151,10 @@ schemas, examples, and validation workflows.
   validates finite module laws over `Z/4Z`, submodule and span replay,
   module-homomorphism kernel/image replay, quotient-module table replay,
   checked rejection of a non-submodule, and a module-theory Lean-horizon row.
+- [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/)
+  validates finite ideal laws over `Z/6Z`, principal ideal generation,
+  ring-homomorphism kernel/image replay, quotient-ring table replay, checked
+  rejection of a non-ideal, and an ideal-theory Lean-horizon row.
 - [`artifacts/examples/math/numerical-linear-algebra-v0/`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
   validates exact residual bounds, rational solution boxes, Jacobi one-step
   contraction replay, and checked rejection of a false residual bound.
@@ -177,13 +181,15 @@ schemas, examples, and validation workflows.
   [`artifacts/examples/math/finite-algebra-homomorphisms-v0/`](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/),
   [`artifacts/examples/math/finite-vector-spaces-v0/`](../../artifacts/examples/math/finite-vector-spaces-v0/),
   [`artifacts/examples/math/finite-modules-v0/`](../../artifacts/examples/math/finite-modules-v0/),
+  [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/),
   [`artifacts/examples/math/polynomial-identities-v0/`](../../artifacts/examples/math/polynomial-identities-v0/),
   [`artifacts/examples/math/counting-v0/`](../../artifacts/examples/math/counting-v0/),
   and [`artifacts/examples/math/generating-functions-v0/`](../../artifacts/examples/math/generating-functions-v0/)
   validate the finite algebra and discrete core: finite group/ring/field table
-  checks, finite homomorphism/kernel/quotient replay, finite vector-space and
-  module replay, fixed polynomial identities, finite counting/pigeonhole rows,
-  and finite generating-function coefficient/convolution replay.
+  checks, finite homomorphism/kernel/quotient replay, finite ideal and
+  quotient-ring replay, finite vector-space and module replay, fixed
+  polynomial identities, finite counting/pigeonhole rows, and finite
+  generating-function coefficient/convolution replay.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
@@ -330,6 +336,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
