@@ -157,14 +157,16 @@ events, a transition closure, a bad-state set) compiles to a generic
 `TransitionSystem`; `prove_for_all_traces` (PDR) and `find_bug` (BMC) are the
 entry points. Defining + proving a protocol is **~10–12 lines** vs. the ~50-line
 hand-written `TransitionSystem`. Temporal properties use state-splitting (fold the
-safety automaton into the state). 6 tests green.
+safety automaton into the state). 11 tests green.
 
 | Protocol (declarative) | Property | Result | Time |
 |---|---|---|---|
 | handshake (correct) | no `ESTABLISHED` without handshake | **Safe** (all traces, PDR) | < 5 ms |
-| handshake (blind-injection bug) | — | **Reachable** (PDR + BMC) | < 6 ms |
+| handshake (blind-injection bug) | — | **Reachable** (PDR + BMC + fuzz) | < 6 ms |
 | **capability lifecycle** (correct) | *"a revoked capability is never used"* | **Safe** (all traces, PDR) | **8.3 ms** |
-| capability lifecycle (use-after-revoke bug) | — | **Reachable** (PDR + BMC) | **9.3 ms** |
+| capability lifecycle (use-after-revoke bug) | — | **Reachable** (PDR + BMC + fuzz) | **9.3 ms** |
+| **two-peer handshake** (correct) | no half-open desync (joint client×server state) | **Safe** (all traces, PDR) | **29 ms** |
+| two-peer handshake (desync bug) | — | **Reachable** (PDR + BMC + fuzz) | **52 ms** |
 
 The seL4-flavored capability machine (5 states `EMPTY`/`ALLOCATED`/`GRANTED`/
 `REVOKED`/`USE_AFTER_REVOKE`, 4 events) is a ~12-line `step` table; its unbounded
@@ -173,6 +175,25 @@ headline ergonomics result: a stack author writes the state diagram and gets an
 all-traces proof (or a concrete misuse trace) in milliseconds. The toolkit
 re-derives the same verdicts as the hand-written rung-4 `TransitionSystem` — it
 adds ergonomics, not unsoundness.
+
+**Two-peer protocols, no toolkit change** (design:
+[`fuzzing-and-multi-peer.md`](fuzzing-and-multi-peer.md)): a product of two
+≤3-state peers encodes into one `BV8` state (`product = client*3 + server`), so a
+*joint-state* property — "the server never reaches `ESTABLISHED` while the client
+is not" (half-open desync) — is proven for all message interleavings with the
+single-variable toolkit. Coupling the delivery transitions to the sender's state
+(messages exist only if sent) is what makes the correct protocol safe; dropping
+the ACK guard reaches the desync.
+
+**Fuzzing ⟷ proof (the "verification *and* fuzzing" pairing):** a concrete
+executor (`Fsm::reaches_bad`, independent of the symbolic encoding) fuzzes 50k
+deterministic-LCG traces. On every *proven-safe* machine no trace reaches a bad
+state (a soundness cross-check — DISAGREE = 0 — that also validates the toolkit's
+bit-blasted encoding against direct execution); on every buggy machine fuzzing
+independently finds the bad state (mirroring `Reachable`). Honest measured nuance:
+for these *tiny* FSMs the symbolic proof (~4 ms) actually beats 50k fuzz traces
+(~13 ms) — fuzzing's value is sub-µs single-trace latency and scaling past where
+proofs time out, not batch throughput at this size.
 
 ## Next
 

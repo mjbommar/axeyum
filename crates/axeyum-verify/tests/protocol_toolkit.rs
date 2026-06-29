@@ -404,3 +404,122 @@ fn fuzz_vs_proof_cost() {
          latency and on state spaces too big to prove"
     );
 }
+
+// ---- two-peer handshake: a product FSM in one BV8 state ------------------------
+//
+// Two peers (client, server), each CLOSED/IN-PROGRESS/ESTABLISHED, encoded as one
+// state `product = client*3 + server` (9 joint states, fits BV8). Messages exist
+// only if a peer sent them (a reliable channel): the delivery transitions are
+// *coupled* to the sender's state, which is exactly what makes the correct
+// protocol immune to a half-open desync. NO toolkit changes — just an encoded step.
+
+// client sub-states (0..3) and server sub-states (0..3)
+const C_CLOSED: u8 = 0;
+const C_SYN_SENT: u8 = 1;
+const C_EST: u8 = 2;
+const S_CLOSED: u8 = 0;
+const S_SYN_RCVD: u8 = 1;
+const S_EST: u8 = 2;
+// events = message-delivery actions over the channel
+const EV_CLIENT_SYN: u8 = 0; // client decides to connect (sends SYN)
+const EV_DELIVER_SYN: u8 = 1; // a SYN is delivered to the server
+const EV_DELIVER_SYNACK: u8 = 2; // a SYN-ACK is delivered to the client
+const EV_DELIVER_ACK: u8 = 3; // an ACK is delivered to the server
+
+/// Two-peer handshake transition table over the product state. `buggy` drops the
+/// "client is established" guard on ACK delivery, letting the server establish
+/// from a delivered ACK that no established client could have sent (a desync).
+fn two_peer_step(buggy: bool) -> impl Fn(u8, u8) -> u8 {
+    move |product, event| {
+        let c = product / 3; // client sub-state
+        let s = product % 3; // server sub-state
+        let (nc, ns) = match event {
+            // client sends a SYN
+            EV_CLIENT_SYN => (if c == C_CLOSED { C_SYN_SENT } else { c }, s),
+            // SYN delivered: server advances only if the client actually sent one
+            EV_DELIVER_SYN => (
+                c,
+                if c >= C_SYN_SENT && s == S_CLOSED {
+                    S_SYN_RCVD
+                } else {
+                    s
+                },
+            ),
+            // SYN-ACK delivered: client advances only if the server got the SYN
+            EV_DELIVER_SYNACK => (
+                if s >= S_SYN_RCVD && c == C_SYN_SENT {
+                    C_EST
+                } else {
+                    c
+                },
+                s,
+            ),
+            // ACK delivered: server establishes. Correct: requires an established
+            // client (who alone could have sent the ACK). Buggy: drops that guard.
+            EV_DELIVER_ACK => {
+                let ack_ok = if buggy {
+                    s == S_SYN_RCVD
+                } else {
+                    s == S_SYN_RCVD && c == C_EST
+                };
+                (c, if ack_ok { S_EST } else { s })
+            }
+            _ => (c, s),
+        };
+        nc * 3 + ns
+    }
+}
+
+fn two_peer(buggy: bool) -> Fsm<impl Fn(u8, u8) -> u8> {
+    Fsm {
+        states: 9, // product states 0..9
+        init: C_CLOSED * 3 + S_CLOSED,
+        events: 4,
+        step: two_peer_step(buggy),
+        // half-open desync: the server is ESTABLISHED while the client is not.
+        bad: vec![C_CLOSED * 3 + S_EST, C_SYN_SENT * 3 + S_EST],
+    }
+}
+
+/// No half-open desync, for ALL message interleavings: the server never reaches
+/// `ESTABLISHED` unless the client is too. A property over the *joint* state of
+/// two peers — proven with the single-variable toolkit via product encoding.
+#[test]
+fn two_peer_handshake_no_desync_for_all_traces() {
+    let outcome = two_peer(false).prove_for_all_traces();
+    assert!(
+        matches!(outcome, PdrOutcome::Safe { .. }),
+        "the two-peer handshake must never desync, got {outcome:?}"
+    );
+    // fuzz cross-check: no random interleaving desyncs the proven-safe protocol.
+    let safe = two_peer(false);
+    let mut rng = 0x0BEE_F00D_u32;
+    for _ in 0..50_000 {
+        let t = random_trace(&mut rng);
+        assert!(
+            !safe.reaches_bad(&t),
+            "fuzz desynced a PROVEN-safe two-peer run: {t:?}"
+        );
+    }
+}
+
+/// Dropping the ACK guard lets the server establish without an established client
+/// — a half-open desync, caught for all traces (`Reachable`, PDR) and by both BMC
+/// and the fuzzing oracle.
+#[test]
+fn two_peer_handshake_desync_bug_is_reachable() {
+    let outcome = two_peer(true).prove_for_all_traces();
+    assert!(
+        matches!(outcome, PdrOutcome::Reachable { .. }),
+        "the desync bug must be reachable, got {outcome:?}"
+    );
+    let bmc = two_peer(true).find_bug(8);
+    assert!(
+        matches!(bmc, BmcOutcome::Reachable { .. }),
+        "BMC must independently reach the desync, got {bmc:?}"
+    );
+    assert!(
+        fuzz_finds_bug(&two_peer(true)),
+        "fuzzing must independently find the desync"
+    );
+}
