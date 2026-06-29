@@ -576,7 +576,23 @@ impl Lowerer {
                         ));
                     };
                     let name = path_ident(p)?;
-                    let (val, _ty) = self.lower_expr(&assign.right)?;
+                    // Coerce an untyped int literal RHS to the target's type, as
+                    // the let-init and compound-assignment paths do.
+                    let (val, _ty) = if is_untyped_int_lit(&assign.right) {
+                        if let (Some(lty), Expr::Lit(el)) =
+                            (self.lookup(&name), &*assign.right)
+                        {
+                            if lty.width.is_some() {
+                                lower_lit_as(&el.lit, lty, el.span())?
+                            } else {
+                                self.lower_expr(&assign.right)?
+                            }
+                        } else {
+                            self.lower_expr(&assign.right)?
+                        }
+                    } else {
+                        self.lower_expr(&assign.right)?
+                    };
                     out.push(quote! {
                         axeyum_verify::ast::Stmt::Assign { name: #name.into(), value: #val }
                     });
@@ -729,7 +745,108 @@ impl Lowerer {
             }
             Expr::ForLoop(forloop) => Ok(Some(self.lower_for(forloop)?)),
             Expr::While(w) => Ok(Some(self.lower_while(w)?)),
+            Expr::Match(em) => Ok(Some(self.lower_match(em)?)),
             _ => Ok(None),
+        }
+    }
+
+    /// `match scrut { lit => {..}, .., _ => {..} }` over an integer scrutinee,
+    /// desugared to a nested `if`/`else` chain (`scrut == lit_i`). Arm patterns
+    /// must be integer literals or `_`; a `_` arm is required (exhaustiveness).
+    /// Guards, bindings, and or-patterns are rejected (out of fragment).
+    fn lower_match(&mut self, em: &syn::ExprMatch) -> syn::Result<TokenStream> {
+        let (scrut, scrut_ty) = self.lower_expr(&em.expr)?;
+        let mut lit_arms: Vec<(TokenStream, Vec<TokenStream>)> = Vec::new();
+        let mut wildcard: Option<Vec<TokenStream>> = None;
+        for arm in &em.arms {
+            if arm.guard.is_some() {
+                return Err(syn::Error::new(
+                    arm.pat.span(),
+                    "axeyum::verify: `match` guards are not supported",
+                ));
+            }
+            // Lower the arm body (a block or a single expression) as statements.
+            self.push_scope();
+            let mut body = Vec::new();
+            match &*arm.body {
+                Expr::Block(b) => body = self.lower_block(&b.block)?,
+                other => self.lower_stmt(
+                    &Stmt::Expr(other.clone(), None),
+                    false,
+                    &mut body,
+                )?,
+            }
+            self.pop_scope();
+            match &arm.pat {
+                syn::Pat::Wild(_) => {
+                    if wildcard.is_some() {
+                        return Err(syn::Error::new(
+                            arm.pat.span(),
+                            "axeyum::verify: duplicate `_` arm in `match`",
+                        ));
+                    }
+                    wildcard = Some(body);
+                }
+                syn::Pat::Lit(lit) => {
+                    // Coerce an unsuffixed integer arm literal to the scrutinee's
+                    // integer type so `scrut == lit` type-checks (Rust's literal
+                    // inference, mirroring the binary-operand coercion above).
+                    let lit_tok = if scrut_ty.width.is_some()
+                        && matches!(&lit.lit, Lit::Int(li) if li.suffix().is_empty())
+                    {
+                        let (t, _) = lower_lit_as(&lit.lit, scrut_ty, lit.span())?;
+                        t
+                    } else {
+                        self.lower_expr(&Expr::Lit(lit.clone()))?.0
+                    };
+                    let cond = quote! {
+                        axeyum_verify::ast::Expr::Binary {
+                            op: axeyum_verify::ast::BinOp::Eq,
+                            lhs: Box::new(#scrut),
+                            rhs: Box::new(#lit_tok),
+                        }
+                    };
+                    lit_arms.push((cond, body));
+                }
+                other => {
+                    return Err(syn::Error::new(
+                        other.span(),
+                        "axeyum::verify: `match` arm patterns must be an integer literal or `_`",
+                    ));
+                }
+            }
+        }
+        let wildcard = wildcard.ok_or_else(|| {
+            syn::Error::new(
+                em.span(),
+                "axeyum::verify: `match` must have a `_` arm (exhaustiveness)",
+            )
+        })?;
+        // Fold right: the wildcard is the innermost `else`; each literal arm wraps.
+        let mut els: Vec<TokenStream> = wildcard;
+        for (cond, body) in lit_arms.into_iter().rev() {
+            let if_stmt = quote! {
+                axeyum_verify::ast::Stmt::If {
+                    cond: #cond,
+                    then: vec![ #(#body),* ],
+                    els: vec![ #(#els),* ],
+                }
+            };
+            els = vec![if_stmt];
+        }
+        // `els` now holds the outermost statement(s); wrap in a true-guarded `If`
+        // when there were no literal arms so a single `Stmt` is returned.
+        if els.len() == 1 {
+            let single = &els[0];
+            Ok(quote! { #single })
+        } else {
+            Ok(quote! {
+                axeyum_verify::ast::Stmt::If {
+                    cond: axeyum_verify::ast::Expr::BoolLit(true),
+                    then: vec![ #(#els),* ],
+                    els: vec![],
+                }
+            })
         }
     }
 
