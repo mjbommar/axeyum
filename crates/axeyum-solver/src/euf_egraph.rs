@@ -725,7 +725,18 @@ fn collect_eq_atoms(
     seen: &mut std::collections::HashSet<TermId>,
 ) {
     if let TermNode::App { op, args } = arena.node(term) {
-        if matches!(op, Op::Eq) && args.len() == 2 && seen.insert(term) {
+        // Only equalities over a *data* sort (uninterpreted carrier / BV / …) are
+        // theory atoms for the congruence closure. A Bool-sorted equality is an
+        // `iff` — a logical connective the Boolean skeleton must keep verbatim, not
+        // a congruence atom. Abstracting `iff` as an atom (and merging its Bool
+        // operands as e-graph nodes) is the "base-sort semantics outside
+        // congruence" confusion that makes the model fail to replay. We still
+        // recurse into it to collect the *inner* data-sorted equality atoms.
+        if matches!(op, Op::Eq)
+            && args.len() == 2
+            && !matches!(arena.sort_of(args[0]), Sort::Bool)
+            && seen.insert(term)
+        {
             out.push(term);
         }
         let args = args.clone();

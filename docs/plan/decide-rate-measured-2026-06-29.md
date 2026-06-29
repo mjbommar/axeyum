@@ -159,6 +159,18 @@ for genuinely-sat instances — never a wrong verdict). Needs per-instance
 validation environment (the `abv`/`uflia`/`qf_uf` differential fuzzes). Tracked as
 the NAS-QF_UF task.
 
+**Landed (the `iff` sub-cause):** the root bug for the `cnf-iff` cluster was
+`collect_eq_atoms` collecting **Bool-sorted equalities** (`iff` — e.g. `(= (= (f
+a) d) (= d (f b)))`) as congruence *atoms* and merging their Bool operands as
+e-graph nodes — exactly the "base-sort semantics outside congruence" confusion.
+Fix: only collect equalities over a **data sort** as theory atoms; a Bool
+equality is an `iff` the Boolean skeleton keeps verbatim (we still recurse to
+collect the inner data atoms). Equisatisfiable + `replays()`-guarded (sound).
+**Measured:** **curated QF_UF 39→41/48 = full z3 parity** (gap −2→**0**); **NAS
+QF_UF 42→44/63** (gap −13→−11); DISAGREE=0, no regression (curated rose). The
+`hash_sat_*` cluster is a *different* sub-cause within `build_model` (pure-UF sat,
+no `iff`) — still open.
+
 ## Headline: accessible-corpus bounded wins are exhausted
 
 After this session, **on the accessible curated corpus axeyum is at or near z3

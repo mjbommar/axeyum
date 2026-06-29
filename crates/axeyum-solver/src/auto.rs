@@ -1860,7 +1860,7 @@ fn check_auto_dispatch(
                 ),
             });
             with_recorder(rec, |t| {
-                t.record_result("qf-bv-uninterpreted-decline", &result)
+                t.record_result("qf-bv-uninterpreted-decline", &result);
             });
             Ok(result)
         }
