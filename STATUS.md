@@ -191,6 +191,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Counting and pigeonhole end-to-end lesson landed.** Added
+  [`counting-pigeonhole-end-to-end.md`](docs/learn/math/counting-pigeonhole-end-to-end.md)
+  as the learner-facing trace for the counting pack: fixed permutation count,
+  one Pascal-identity instance, finite pigeonhole enumeration, and the Boolean
+  CNF/LRAT proof-upgrade route. The lesson is linked from the math learning
+  index plus the graph/discrete and probability/statistics paths.
+
 - **Graph d-separation end-to-end lesson landed.** Added
   [`graph-d-separation-end-to-end.md`](docs/learn/math/graph-d-separation-end-to-end.md)
   as the learner-facing trace for the graph-d-separation pack: finite
@@ -246,7 +253,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 80 focused learner links, 4 path-only
+  generated queue: 84 non-template packs, 81 focused learner links, 3 path-only
   links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added

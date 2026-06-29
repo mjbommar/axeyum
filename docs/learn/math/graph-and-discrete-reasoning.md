@@ -229,6 +229,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 ```
 
 For a fuller trace from data row to replay result and evidence status, read
+[End To End: Counting And Pigeonhole](counting-pigeonhole-end-to-end.md),
 [End To End: Triangle Coloring](graph-coloring-end-to-end.md),
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),

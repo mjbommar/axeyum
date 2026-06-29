@@ -237,6 +237,8 @@ For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For exact finite statistical-test p-values, read
 [End To End: Exact Statistical Tests](exact-statistical-tests-end-to-end.md).
+For finite counting identities and the first pigeonhole refutation, read
+[End To End: Counting And Pigeonhole](counting-pigeonhole-end-to-end.md).
 For finite DAG d-separation path replay, read
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md).
 For finite sigma-algebras and exact measure tables, read

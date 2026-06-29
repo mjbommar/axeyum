@@ -63,6 +63,9 @@ validated pack data and the repo-root command that replays it.
 - [Function Composition](function-composition-end-to-end.md): follows finite
   composition, image/preimage, inverse-table, associativity, and
   non-injective inverse-counterexample checks.
+- [Counting And Pigeonhole](counting-pigeonhole-end-to-end.md): follows a fixed
+  permutation count, one Pascal-identity instance, finite pigeonhole
+  enumeration, and the CNF/LRAT proof-upgrade route.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.

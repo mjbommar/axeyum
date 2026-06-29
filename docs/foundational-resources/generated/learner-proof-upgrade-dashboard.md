@@ -13,8 +13,8 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 
 ### Learner Status Totals
 
-- `focused`: 80
-- `path-only`: 4
+- `focused`: 81
+- `path-only`: 3
 
 ### Candidate Proof Route Totals
 
@@ -37,6 +37,7 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `focused` | `complex-plane-transforms-v0` | `complex_analysis,linear_algebra,real_analysis,abstract_algebra` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [algebra-and-number-theory.md](../../learn/math/algebra-and-number-theory.md), [complex-plane-transforms-end-to-end.md](../../learn/math/complex-plane-transforms-end-to-end.md), [number-systems-and-arithmetic.md](../../learn/math/number-systems-and-arithmetic.md) |
 | `focused` | `convexity-rational-v0` | `optimization_and_convexity,real_analysis,linear_algebra` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [convexity-rational-end-to-end.md](../../learn/math/convexity-rational-end-to-end.md), [linear-algebra-and-optimization.md](../../learn/math/linear-algebra-and-optimization.md), [rational-real-algebra.md](../../learn/math/rational-real-algebra.md) |
 | `focused` | `coordinate-geometry-v0` | `geometry,linear_algebra,real_analysis` | `replay-only` | `replay-only`: 3 | [README.md](../../learn/math/README.md), [coordinate-affine-geometry-end-to-end.md](../../learn/math/coordinate-affine-geometry-end-to-end.md), [rational-real-algebra.md](../../learn/math/rational-real-algebra.md) |
+| `focused` | `counting-v0` | `discrete_math,probability_theory` | `checked-evidence` | `checked`: 3 | [README.md](../../learn/math/README.md), [counting-pigeonhole-end-to-end.md](../../learn/math/counting-pigeonhole-end-to-end.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `focused` | `descriptive-statistics-v0` | `statistics,probability_theory,linear_algebra` | `replay-only` | `replay-only`: 3 | [README.md](../../learn/math/README.md), [descriptive-statistics-regression-end-to-end.md](../../learn/math/descriptive-statistics-regression-end-to-end.md), [probability-and-statistics.md](../../learn/math/probability-and-statistics.md) |
 | `focused` | `equivalence-classes-v0` | `set_theory_and_foundations,discrete_math` | `checked-evidence` | `checked`: 1, `proof-gap`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [equivalence-classes-end-to-end.md](../../learn/math/equivalence-classes-end-to-end.md), [sets-relations-and-finite-structures.md](../../learn/math/sets-relations-and-finite-structures.md) |
 | `focused` | `exact-statistical-tests-v0` | `statistics,probability_theory,discrete_math` | `checked-evidence` | `checked`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [exact-statistical-tests-end-to-end.md](../../learn/math/exact-statistical-tests-end-to-end.md), [probability-and-statistics.md](../../learn/math/probability-and-statistics.md) |
@@ -112,7 +113,6 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `focused` | `spectral-linear-algebra-v0` | `linear_algebra,functional_analysis_and_operator_theory,numerical_analysis,optimization_and_convexity` | `checked-evidence` | `checked`: 1, `replay-only`: 4 | [README.md](../../learn/math/README.md), [analysis-dynamics-end-to-end.md](../../learn/math/analysis-dynamics-end-to-end.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md), [linear-algebra-and-optimization.md](../../learn/math/linear-algebra-and-optimization.md), [spectral-linear-algebra-end-to-end.md](../../learn/math/spectral-linear-algebra-end-to-end.md) |
 | `path-only` | `calculus-algebraic-shadow-v0` | `real_analysis,differential_equations_and_dynamical_systems,numerical_analysis` | `checked-evidence` | `checked`: 2, `lean-horizon`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 | `path-only` | `calculus-riemann-sum-v0` | `real_analysis,numerical_analysis,differential_equations_and_dynamical_systems` | `checked-evidence` | `checked`: 5, `lean-horizon`: 1 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
-| `path-only` | `counting-v0` | `discrete_math,probability_theory` | `checked-evidence` | `checked`: 3 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `sequence-limit-shadow-v0` | `real_analysis,topology` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 4 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 
 ## Focused Lesson Queue
@@ -121,7 +121,6 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 |---|---|---|
 | `path-only` | `calculus-algebraic-shadow-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 | `path-only` | `calculus-riemann-sum-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
-| `path-only` | `counting-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `sequence-limit-shadow-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 
 ## Proof Upgrade Queue

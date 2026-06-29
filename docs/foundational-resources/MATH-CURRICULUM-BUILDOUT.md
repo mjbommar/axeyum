@@ -1344,6 +1344,9 @@ horizon.
 active-chain replay, conditioned chain/fork blocking, unconditioned-collider
 blocking, descendant-opened collider replay, and the causal-identification
 proof horizon.
+`counting-v0` now has a learner-facing end-to-end lesson for a fixed
+permutation count, one Pascal-identity instance, finite pigeonhole
+enumeration, and the Boolean CNF/LRAT proof-upgrade route.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
