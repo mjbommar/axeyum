@@ -317,9 +317,11 @@ Exit criteria:
 
 Add the fields users naturally expect from an undergraduate/graduate math map.
 
-Status: first field-extension pack landed.
+Status: first field-extension packs landed.
 `artifacts/examples/math/graph-coloring-v0/` now validates coloring witnesses
 and a tiny exhaustive non-colorability check.
+`artifacts/examples/math/finite-probability-v0/` now validates finite
+probability mass tables, conditional probability, and Bayes posterior replay.
 
 Recommended order:
 
@@ -441,8 +443,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-9 have landed for the math seed. Continue with item 10:
-`finite-probability-v0` and `descriptive-statistics-v0` as the
+Progress: items 1-9 and the `finite-probability-v0` half of item 10 have landed
+for the math seed. Continue with `descriptive-statistics-v0` to complete the
 probability/statistics bridge.
 
 ## Operating Rules

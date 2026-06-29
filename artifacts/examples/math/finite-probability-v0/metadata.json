@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "finite-probability-v0",
+  "title": "Exact Finite Probability Tables",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_statistics",
+    "field_measure_theory",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "curriculum_sets"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "statistics",
+    "measure_theory"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals",
+    "sets"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite enumeration"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/foundational-resources/SOURCES.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/00-foundations/sets.md"
+  ],
+  "expected_results": [
+    "pmf-total-mass",
+    "conditional-probability-witness",
+    "bayes-posterior-witness"
+  ],
+  "graduation_criteria": [
+    "Encode finite probability mass constraints as deterministic QF_LRA formulas.",
+    "Replay probability-table SAT witnesses through Axeyum model evaluation.",
+    "Add generated finite probability tables once at least two packs need shared table helpers.",
+    "Keep continuous distributions and sampling-based claims out of proof status until a separate numerical-honesty track exists."
+  ]
+}

@@ -134,6 +134,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite probability pack landed.** Added
+  [`artifacts/examples/math/finite-probability-v0/`](artifacts/examples/math/finite-probability-v0/)
+  for exact finite probability mass tables, conditional probability, and Bayes
+  posterior replay. The foundational example-pack validator now checks
+  rational probability atoms, normalization, event conditioning, and Bayes rule
+  exactly. Continue item 10 with `descriptive-statistics-v0`.
+
 - **Graph coloring pack landed.** Added
   [`artifacts/examples/math/graph-coloring-v0/`](artifacts/examples/math/graph-coloring-v0/)
   as the first pure field-extension pack for graph theory. The pack validates a

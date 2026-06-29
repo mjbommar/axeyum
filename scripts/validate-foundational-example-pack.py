@@ -580,9 +580,118 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
         fail("inconsistent scaled rhs must contradict the scaled original rhs")
 
 
+def require_probability(context: str, value: Any) -> Fraction:
+    probability = require_fraction(context, value)
+    if probability < 0 or probability > 1:
+        fail(f"{context} must be in [0, 1]")
+    return probability
+
+
+def require_probability_atoms(
+    context: str,
+    value: Any,
+    *,
+    require_events: bool,
+) -> list[tuple[str, Fraction, set[str]]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty atom list")
+    atoms: list[tuple[str, Fraction, set[str]]] = []
+    seen_ids: set[str] = set()
+    for index, atom in enumerate(value):
+        if not isinstance(atom, dict):
+            fail(f"{context}[{index}] must be an object")
+        atom_id = atom.get("id")
+        require_string(f"{context}[{index}].id", atom_id)
+        if atom_id in seen_ids:
+            fail(f"{context} repeats atom id {atom_id!r}")
+        seen_ids.add(atom_id)
+        probability = require_probability(f"{context}[{index}].probability", atom.get("probability"))
+        raw_events = atom.get("events", [])
+        if require_events and not raw_events:
+            fail(f"{context}[{index}].events must be non-empty")
+        events = set(require_string_list(f"{context}[{index}].events", raw_events, nonempty=require_events))
+        atoms.append((atom_id, probability, events))
+    return atoms
+
+
+def require_normalized_atoms(context: str, atoms: list[tuple[str, Fraction, set[str]]]) -> None:
+    total = sum((probability for _, probability, _ in atoms), Fraction(0))
+    if total != 1:
+        fail(f"{context} atom probabilities must sum to exactly 1")
+
+
+def event_probability(atoms: list[tuple[str, Fraction, set[str]]], event: str) -> Fraction:
+    return sum((probability for _, probability, events in atoms if event in events), Fraction(0))
+
+
+def joint_event_probability(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    left_event: str,
+    right_event: str,
+) -> Fraction:
+    return sum(
+        (
+            probability
+            for _, probability, events in atoms
+            if left_event in events and right_event in events
+        ),
+        Fraction(0),
+    )
+
+
+def validate_finite_probability(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    total_mass = checks["pmf-total-mass"]
+    if total_mass["expected_result"] != "sat":
+        fail("pmf-total-mass must expect sat")
+    values = single_witness_values(total_mass, witnesses)
+    atoms = require_probability_atoms("pmf atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("pmf-total-mass", atoms)
+
+    conditional = checks["conditional-probability-witness"]
+    if conditional["expected_result"] != "sat":
+        fail("conditional-probability-witness must expect sat")
+    values = single_witness_values(conditional, witnesses)
+    atoms = require_probability_atoms("conditional atoms", values.get("atoms"), require_events=True)
+    require_normalized_atoms("conditional-probability-witness", atoms)
+    event = values.get("event")
+    condition = values.get("condition")
+    require_string("conditional event", event)
+    require_string("conditional condition", condition)
+    claimed = require_probability("conditional probability", values.get("conditional_probability"))
+    condition_probability = event_probability(atoms, condition)
+    if condition_probability == 0:
+        fail("conditional probability condition must have nonzero probability")
+    joint_probability = joint_event_probability(atoms, event, condition)
+    if joint_probability / condition_probability != claimed:
+        fail("conditional probability witness does not match the atom table")
+
+    bayes = checks["bayes-posterior-witness"]
+    if bayes["expected_result"] != "sat":
+        fail("bayes-posterior-witness must expect sat")
+    values = single_witness_values(bayes, witnesses)
+    prior = require_probability("bayes prior", values.get("prior"))
+    sensitivity = require_probability("bayes sensitivity", values.get("sensitivity"))
+    false_positive_rate = require_probability(
+        "bayes false_positive_rate",
+        values.get("false_positive_rate"),
+    )
+    posterior = require_probability("bayes posterior", values.get("posterior"))
+    numerator = prior * sensitivity
+    denominator = numerator + (1 - prior) * false_positive_rate
+    if denominator == 0:
+        fail("bayes denominator must be nonzero")
+    if numerator / denominator != posterior:
+        fail("bayes posterior witness does not match Bayes rule")
+
+
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "finite-probability-v0":
+        validate_finite_probability(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "rationals-lra-v0":

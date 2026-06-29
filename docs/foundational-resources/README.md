@@ -59,6 +59,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
   validates finite graph coloring witnesses, invalid-coloring replay, and an
   exhaustive two-colorability refutation for `K3`.
+- [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
+  validates exact finite probability mass tables, conditional probability, and
+  Bayes posterior replay.
 
 Validation commands:
 
@@ -72,6 +75,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 ```
 
 ## Principle

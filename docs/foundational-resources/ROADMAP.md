@@ -63,6 +63,7 @@ artifacts/examples/math/
   rationals-lra-v0/
   linear-algebra-rational-v0/
   graph-coloring-v0/
+  finite-probability-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -308,6 +309,9 @@ row-scaling inconsistency certificate for a singular system.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.
+[`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
+validates exact finite probability mass tables, conditional probability, and
+Bayes posterior replay.
 
 Exit criteria:
 

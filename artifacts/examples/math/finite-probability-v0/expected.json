@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-probability-v0",
+  "witnesses": [
+    {
+      "id": "fair-die-pmf",
+      "description": "A fair six-sided die probability mass function.",
+      "values": {
+        "atoms": [
+          {"id": "one", "probability": "1/6"},
+          {"id": "two", "probability": "1/6"},
+          {"id": "three", "probability": "1/6"},
+          {"id": "four", "probability": "1/6"},
+          {"id": "five", "probability": "1/6"},
+          {"id": "six", "probability": "1/6"}
+        ]
+      }
+    },
+    {
+      "id": "rain-late-conditional",
+      "description": "A finite joint table where P(late | rain) is 1/3.",
+      "values": {
+        "atoms": [
+          {"id": "rain_late", "probability": "1/10", "events": ["rain", "late"]},
+          {"id": "rain_on_time", "probability": "1/5", "events": ["rain", "on_time"]},
+          {"id": "dry_late", "probability": "1/5", "events": ["dry", "late"]},
+          {"id": "dry_on_time", "probability": "1/2", "events": ["dry", "on_time"]}
+        ],
+        "event": "late",
+        "condition": "rain",
+        "conditional_probability": "1/3"
+      }
+    },
+    {
+      "id": "diagnostic-bayes",
+      "description": "A diagnostic-test table where the posterior disease probability after a positive test is 2/13.",
+      "values": {
+        "prior": "1/100",
+        "sensitivity": "9/10",
+        "false_positive_rate": "1/20",
+        "posterior": "2/13"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "pmf-total-mass",
+      "claim": "The listed fair-die table is a normalized finite probability mass function.",
+      "expected_result": "sat",
+      "validation": "exact_rational_probability_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["fair-die-pmf"],
+      "notes": "The validator checks every atom mass is in range and the total mass is exactly one."
+    },
+    {
+      "id": "conditional-probability-witness",
+      "claim": "The listed joint table has P(late | rain) = 1/3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_probability_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rain-late-conditional"],
+      "notes": "The validator recomputes P(late and rain) / P(rain) exactly from the atom table."
+    },
+    {
+      "id": "bayes-posterior-witness",
+      "claim": "The listed diagnostic-test parameters imply posterior P(disease | positive) = 2/13.",
+      "expected_result": "sat",
+      "validation": "exact_rational_probability_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagnostic-bayes"],
+      "notes": "The validator recomputes Bayes rule exactly from the prior, sensitivity, and false-positive rate."
+    }
+  ]
+}
