@@ -6,10 +6,12 @@
 > the string `max_len` lever has no verifiable headroom there — while **QF_UF
 > lagged z3 by 4 (37/48 vs 41/48)**, localized to theory-combination routing +
 > uninterpreted-sort `ite`/Ackermann. **Landed since:** a `check_auto`
-> robustness fix (never hard-error on a valid QF_UF instance) + equisatisfiable
-> uninterpreted-sort `ite`-elimination for the e-graph path → **QF_UF 37 → 39**
-> (gap to z3 −4 → **−2**), DISAGREE = 0. Remaining QF_UF gap = UF+theory
-> combination routing (the keystone).
+> robustness fix (never hard-error on a valid QF_UF instance), equisatisfiable
+> uninterpreted-sort `ite`-elimination, and treating **Bool equality as `iff`**
+> (a connective, not a congruence atom) → **curated QF_UF 37 → 41/48 = full z3
+> parity** (gap −4 → **0**); on the larger **NAS QF_UF, 42 → 44/63** (gap −11).
+> DISAGREE = 0. Remaining NAS QF_UF gap = deep LIA+UF CEGAR efficiency
+> (`hash_sat_*`) + a `build_model` sub-cause — engine work, not bounded.
 >
 > **Also landed (QF_ABV):** robustness (no hard-error on a wide-index array
 > equality) + **write-index array extensionality** (decides shared-base
