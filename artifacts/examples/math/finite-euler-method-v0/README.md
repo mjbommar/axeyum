@@ -10,7 +10,7 @@ The pack covers:
 - explicit Euler replay for the linear decay equation `y' = -y`;
 - exact finite error replay for Euler on `y' = 2t` with solution `y = t^2`;
 - a nonnegative monotone invariant over a finite Euler trace;
-- checked rejection of a bad Euler update;
+- checked QF_LRA/Farkas rejection of a bad Euler update;
 - a Lean-horizon row for continuous-time ODE theory and convergence theorems.
 
 ## Concepts
@@ -26,7 +26,8 @@ The pack covers:
 
 The validator parses step sizes, time grids, states, derivatives, exact
 solutions, and errors as exact rational strings. It recomputes every Euler
-update and every listed error without floating point.
+update and every listed error without floating point. The false fixed-step row
+is also routed through Axeyum's checked `UnsatFarkas` evidence path.
 
 This is a finite replay pack. It does not prove existence/uniqueness,
 stability, global convergence rates, stiffness behavior, or PDE theory.

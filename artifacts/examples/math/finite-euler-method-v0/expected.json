@@ -83,9 +83,12 @@
         "state": "1",
         "derivative": "-1",
         "claimed_next": "3/4",
-        "actual_next": "1/2"
+        "actual_next": "1/2",
+        "farkas_step_equation": "next_state = state + (1/2)*derivative",
+        "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas"
       },
-      "notes": "The validator recomputes the Euler update as 1 + (1/2)(-1) = 1/2."
+      "notes": "The validator recomputes the Euler update as 1 + (1/2)(-1) = 1/2; the Axeyum regression refutes the transition equation together with the false claim next_state = 3/4 using rechecked Farkas evidence."
     },
     {
       "id": "general-ode-theory-lean-horizon",

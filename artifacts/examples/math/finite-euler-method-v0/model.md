@@ -43,5 +43,17 @@ The linear-decay trace remains inside `[0, 1]` and is monotone nonincreasing.
 The bad-step row rejects the claim that a single Euler step from `y = 1` gives
 `3/4`; the exact next state is `1/2`.
 
+The checked linear contradiction is:
+
+```text
+state = 1
+derivative = -1
+next_state = state + (1/2)*derivative
+next_state = 3/4
+```
+
+The pack keeps this false fixed-step transition on the checked `UnsatFarkas`
+route.
+
 These rows are finite replay targets, not a full ODE or numerical-analysis
 library.

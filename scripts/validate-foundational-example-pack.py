@@ -14393,6 +14393,17 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
         fail("bad-euler-step-rejected actual_next is incorrect")
     if claimed_next == actual_next:
         fail("bad-euler-step-rejected claimed step unexpectedly matches")
+    farkas_step_equation = data.get("farkas_step_equation")
+    require_string("bad Euler farkas_step_equation", farkas_step_equation)
+    if farkas_step_equation != "next_state = state + (1/2)*derivative":
+        fail("bad-euler-step-rejected must document the Farkas transition equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Euler smt2_artifact", smt2_artifact)
+    check_source("bad Euler smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Euler farkas_regression", regression)
+    if "finite_euler_bad_step_emits_checked_farkas" not in regression:
+        fail("bad-euler-step-rejected must link the Farkas regression")
 
     horizon = checks["general-ode-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

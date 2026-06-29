@@ -133,13 +133,15 @@ First targets:
   (resource-backed Farkas regression landed for the bad linear-delta row)
 - [finite-conditional-expectation-v0](../../artifacts/examples/math/finite-conditional-expectation-v0/)
   (resource-backed Farkas regression landed for the bad high-block table)
+- [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
+  (resource-backed Farkas regression landed for the bad fixed-step transition)
 
 Secondary targets:
 
 - affine and orientation geometry;
 - inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix packs;
-- Euler shadows and Bayes-rule conflicts.
+- Bayes-rule conflicts.
 
 Expected artifact:
 

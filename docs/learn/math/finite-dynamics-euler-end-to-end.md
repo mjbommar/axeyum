@@ -155,6 +155,18 @@ The checker recomputes:
 1 + (1/2)*(-1) = 1/2
 ```
 
+The resource regression checks the bad step as `QF_LRA`:
+
+```text
+state = 1
+derivative = -1
+next_state = state + (1/2)*derivative
+next_state = 3/4
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 so the row is rejected. This is the most important teaching shape in the pack:
 the same arithmetic that accepts a good step rejects a plausible but false
 numerical update.
@@ -210,11 +222,11 @@ This lesson shows Axeyum's current finite dynamics resource pattern:
 
 ```text
 untrusted fast search -> trace, invariant, reachability, step, or error candidate
-trusted small checking -> exact rational transition replay and pointwise checks
+trusted small checking -> exact rational transition replay, pointwise checks, and Farkas certificates for linear refutations
 remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 ```
 
 The next practical graduation step is to lower fixed recurrence and Euler-step
 rows into deterministic QF_LRA or BV transition obligations, then replay SAT
 witnesses and checked refutations through Axeyum instead of pack-local Python
-alone.
+alone. The bad fixed Euler step now exercises that QF_LRA/Farkas route.

@@ -26,6 +26,7 @@
   "axeyum_fragments": [
     "finite transition systems",
     "LRA (exact rationals)",
+    "QF_LRA",
     "bounded numerical replay",
     "Lean horizon"
   ],
@@ -38,7 +39,8 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "linear-decay-euler-trace",
@@ -50,7 +52,7 @@
   "graduation_criteria": [
     "Encode fixed Euler-step and finite-error checks as deterministic QF_LRA transition obligations.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted certificates for bad-step rows once bounded transition proof routes are promoted.",
+    "Route false fixed-step transition rows through checked QF_LRA/Farkas certificates once derivatives are replayed exactly.",
     "Keep continuous-time existence, uniqueness, stability, stiffness, convergence-rate, and PDE claims under Lean horizon or numerical-honesty metadata until formal routes exist."
   ]
 }

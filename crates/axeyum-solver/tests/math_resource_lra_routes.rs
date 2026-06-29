@@ -307,3 +307,33 @@ fn finite_conditional_expectation_bad_table_emits_checked_farkas() {
         &[block_average_equation, false_claim],
     );
 }
+
+#[test]
+fn finite_euler_bad_step_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let state = real(&mut arena, "state");
+    let derivative = real(&mut arena, "derivative");
+    let next_state = real(&mut arena, "next_state");
+    let state_is_one = eq_ratio(&mut arena, state, 1, 1);
+    let derivative_is_minus_one = eq_ratio(&mut arena, derivative, -1, 1);
+
+    // Fixed explicit-Euler transition for y' = -y after derivative replay:
+    // next_state = state + (1/2)*derivative. The bad row claims 3/4, while the
+    // transition forces 1/2.
+    let half = arena.real_ratio(1, 2);
+    let half_derivative = arena.real_mul(half, derivative).unwrap();
+    let transition_rhs = arena.real_add(state, half_derivative).unwrap();
+    let euler_step = arena.eq(next_state, transition_rhs).unwrap();
+    let false_next_state = eq_ratio(&mut arena, next_state, 3, 4);
+
+    assert_farkas_checked(
+        "finite-euler-method-v0 bad-euler-step-rejected",
+        &arena,
+        &[
+            state_is_one,
+            derivative_is_minus_one,
+            euler_step,
+            false_next_state,
+        ],
+    );
+}

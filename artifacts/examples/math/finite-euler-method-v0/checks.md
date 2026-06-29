@@ -28,6 +28,11 @@ Expected result: `unsat`.
 The validator rejects the false one-step claim for `y' = -y`: from `y = 1`
 with step `1/2`, explicit Euler gives `1/2`, not `3/4`.
 
+The resource-backed Axeyum regression checks the transition contradiction as
+`QF_LRA`: `state = 1`, `derivative = -1`,
+`next_state = state + (1/2)*derivative`, and `next_state = 3/4`, requiring
+rechecked `UnsatFarkas` evidence.
+
 ## `general-ode-theory-lean-horizon`
 
 Expected result: `not-run`.

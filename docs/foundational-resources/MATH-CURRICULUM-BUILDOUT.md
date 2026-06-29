@@ -718,7 +718,8 @@ recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
 `artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
 Euler-method traces, polynomial-solution error replay, invariant checks,
-checked rejection of a bad Euler step, and an ODE-theory Lean-horizon row.
+checked QF_LRA/Farkas rejection of a bad Euler step, and an ODE-theory
+Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
 `artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
@@ -786,7 +787,8 @@ Recommended order:
 8. `finite-topology-v0`: finite closure/interior and metric-ball examples.
 9. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
-   Euler step replay, finite error checks, and invariants.
+   Euler step replay, finite error checks, invariants, and QF_LRA/Farkas bad
+   fixed-step rejection.
 11. `finite-operator-v0` and `inner-product-spaces-rational-v0`:
    finite-dimensional norms/operators, exact rational inner products,
    projections, Gram-Schmidt replay, and Chebyshev polynomial examples.
@@ -1188,9 +1190,9 @@ Euclidean GCD replay, square-free decomposition, checked irreducible-quadratic
 rejection, and a general polynomial-factorization Lean-horizon row.
 `finite-euler-method-v0` now adds the next exact finite dynamics/numerical
 bridge: explicit Euler replay, polynomial-solution error replay, finite
-invariant checks, checked rejection of a bad Euler step, and an ODE-theory
-Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the next exact
-finite algebra bridge after group/ring tables: homomorphism preservation,
+invariant checks, checked QF_LRA/Farkas rejection of a bad Euler step, and an
+ODE-theory Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the
+next exact finite algebra bridge after group/ring tables: homomorphism preservation,
 kernel/image replay, quotient/induced-map replay, QF_UF/Alethe preservation
 congruence, checked bad-homomorphism rejection, and an isomorphism-theorem
 Lean-horizon row.
@@ -1280,7 +1282,8 @@ event complements, and the topology/measure Lean horizon.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
 reachability, explicit Euler replay, exact finite error tables, checked bad
-Euler-step rejection, and the ODE/numerical-analysis Lean horizon.
+Euler-step rejection with QF_LRA/Farkas evidence, and the
+ODE/numerical-analysis Lean horizon.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean
@@ -1429,6 +1432,8 @@ same checked Farkas evidence path using the final output-bound contradiction.
 `finite-conditional-expectation-v0` now routes its bad high-block table through
 the same checked Farkas evidence path using the denominator-cleared block
 average contradiction.
+`finite-euler-method-v0` now routes its bad fixed-step transition through the
+same checked Farkas evidence path after exact derivative replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

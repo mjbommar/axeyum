@@ -290,8 +290,8 @@ validated pack data and the repo-root command that replays it.
   horizon.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
-  reachability, explicit Euler replay, finite error tables, and checked bad
-  Euler-step rejection.
+  reachability, explicit Euler replay, finite error tables, and checked
+  QF_LRA/Farkas bad Euler-step rejection.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, Chebyshev recurrence, and
   finite Chebyshev-system replay.
