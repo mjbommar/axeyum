@@ -41,6 +41,9 @@ validated pack data and the repo-root command that replays it.
   equivalence-relation class replay, quotient-map fiber replay, partition
   round-trip checking, checked non-transitivity rejection, and the QF_UF proof
   gap.
+- [Function Composition](function-composition-end-to-end.md): follows finite
+  composition, image/preimage, inverse-table, associativity, and
+  non-injective inverse-counterexample checks.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.

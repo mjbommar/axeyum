@@ -276,11 +276,13 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 ```
 
 For fuller traces through finite sets, relations/functions, equivalence
-classes, finite function-table actions, finite order/lattice replay, finite
-cardinality principles, topology, connectedness, and measure replay, read
+classes, function composition, finite function-table actions, finite
+order/lattice replay, finite cardinality principles, topology, connectedness,
+and measure replay, read
 [End To End: Finite Sets](finite-sets-end-to-end.md),
 [End To End: Relations And Functions](relations-functions-end-to-end.md),
 [End To End: Equivalence Classes](equivalence-classes-end-to-end.md),
+[End To End: Function Composition](function-composition-end-to-end.md),
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),

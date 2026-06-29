@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Function-composition end-to-end lesson landed.** Added
+  [`function-composition-end-to-end.md`](docs/learn/math/function-composition-end-to-end.md)
+  as the learner-facing trace for the function-composition pack: finite
+  composition-table replay, image/preimage recomputation, inverse-table
+  replay, associativity-table replay, checked non-injective inverse
+  counterexample, and the Lean horizon for arbitrary function laws. The lesson
+  is linked from the math learning index plus the sets/relations path.
+
 - **Equivalence-classes end-to-end lesson landed.** Added
   [`equivalence-classes-end-to-end.md`](docs/learn/math/equivalence-classes-end-to-end.md)
   as the learner-facing trace for the equivalence-classes pack: parity
