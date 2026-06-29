@@ -12,6 +12,7 @@ Example packs:
 
 - [finite-groups-v0](../../../artifacts/examples/math/finite-groups-v0/)
 - [finite-rings-v0](../../../artifacts/examples/math/finite-rings-v0/)
+- [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [finite-fields-v0](../../../artifacts/examples/math/finite-fields-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
@@ -20,11 +21,13 @@ Example packs:
 ## What Axeyum Checks
 
 The current algebra path is finite and exact. It checks finite group Cayley
-tables, finite ring operation tables, CRT witnesses, modular inverses,
-composite non-units with no inverse, and a Fermat-style finite unit enumeration.
-The finite-rings pack adds distributivity checks and a `Z/4Z` zero-divisor
-witness. The finite-fields pack adds a complete inverse table for `F_7`,
-exhaustive distributivity checking in `F_5`, and a `Z/6Z` non-field contrast.
+tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
+modular inverses, composite non-units with no inverse, and a Fermat-style finite
+unit enumeration. The finite-rings pack adds distributivity checks and a `Z/4Z`
+zero-divisor witness. The gcd/Bezout pack adds exact divisibility and fixed
+linear Diophantine checks. The finite-fields pack adds a complete inverse table
+for `F_7`, exhaustive distributivity checking in `F_5`, and a `Z/6Z` non-field
+contrast.
 The polynomial pack adds exact coefficient replay, factor-theorem witnesses, and
 fixed false-root rejection. The complex pack adds algebraic real-pair arithmetic
 and a fixed polynomial-root witness.
@@ -51,8 +54,16 @@ associativity for the full Cayley table. For a finite ring example, use `Z/4Z`:
 ```
 
 The `finite-rings-v0` pack checks the addition and multiplication tables, then
-replays `2` and `2` as nonzero zero divisors. Then move to a modular inverse
-witness:
+replays `2` and `2` as nonzero zero divisors. The number-theory bridge starts
+with a Bezout witness:
+
+```text
+252*4 + 198*(-5) = 18
+```
+
+The `gcd-bezout-v0` pack recomputes `gcd(252,198) = 18`, checks the listed
+common divisors, and rejects `6*x + 10*y = 15` because `gcd(6,10)` does not
+divide `15`. Then move to a modular inverse witness:
 
 ```text
 3 * 5 = 15 == 1 mod 7
@@ -93,6 +104,7 @@ Run the checks from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
@@ -103,6 +115,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 
 General group, ring, field, module, and algebraic-number-theory theorems need
 Lean-backed concept rows. Near-term resource gaps are richer polynomial
-factorization packs, `gcd-bezout-v0` / `number-theory-v0`, and stronger BV/CNF
-evidence for finite group, finite ring, finite-field, and fixed-degree
-polynomial universal rows.
+factorization packs, `number-theory-v0`, and stronger BV/CNF evidence for finite
+group, finite ring, finite-field, gcd/Diophantine, and fixed-degree polynomial
+universal rows.

@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **GCD/Bezout core arithmetic pack landed.** Added
+  [`gcd-bezout-v0`](artifacts/examples/math/gcd-bezout-v0/README.md) with exact
+  `gcd(252,198)` common-divisor replay, Bezout coefficient replay, a direct
+  divisibility quotient witness, and a checked `6*x + 10*y = 15`
+  Diophantine obstruction. The foundational example-pack validator now checks
+  gcd/common-divisor lists, Bezout equations, quotient divisibility, and the
+  fixed gcd non-divisibility criterion; generated dashboards mark the
+  divisibility-and-Euclid curriculum row's first pack as validated. Continue
+  with `number-theory-v0` or close the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap.
+
 - **Finite rings core-structure pack landed.** Added
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/README.md) with
   `Z/4Z` addition/multiplication table replay, a checked zero-divisor witness,
@@ -166,8 +177,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validator now checks additive abelian group structure, multiplication
   associativity, multiplicative identity, distributivity, and finite
   zero-divisor witnesses; generated dashboards mark the rings curriculum row's
-  first pack as validated. Continue with `gcd-bezout-v0` / `number-theory-v0`
-  or close the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
+  first pack as validated. `gcd-bezout-v0` is the follow-on arithmetic core
+  pack.
 
 - **Finite groups core-structure pack landed.** Added
   [`finite-groups-v0`](artifacts/examples/math/finite-groups-v0/README.md)

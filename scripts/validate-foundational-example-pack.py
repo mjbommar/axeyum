@@ -988,6 +988,88 @@ def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
             fail(f"fermat counterexample found: a={a}, modulus={modulus}, exponent={exponent}")
 
 
+def positive_divisors(value: int) -> list[int]:
+    value = abs(value)
+    if value == 0:
+        fail("positive divisors are undefined for zero")
+    return [candidate for candidate in range(1, value + 1) if value % candidate == 0]
+
+
+def require_int_list(context: str, value: Any) -> list[int]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty integer list")
+    return [require_int(f"{context}[{index}]", item) for index, item in enumerate(value)]
+
+
+def validate_gcd_bezout(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gcd_check = checks["gcd-common-divisors-replay"]
+    if gcd_check["expected_result"] != "sat":
+        fail("gcd-common-divisors-replay must expect sat")
+    values = single_witness_values(gcd_check, witnesses)
+    a = require_int("gcd witness a", values.get("a"))
+    b = require_int("gcd witness b", values.get("b"))
+    expected_gcd = require_int("gcd witness gcd", values.get("gcd"))
+    if expected_gcd <= 0:
+        fail("gcd witness gcd must be positive")
+    computed_gcd = gcd(abs(a), abs(b))
+    if computed_gcd != expected_gcd:
+        fail("gcd-common-divisors-replay gcd does not match")
+    listed_common_divisors = sorted(
+        require_int_list("gcd witness common_divisors", values.get("common_divisors"))
+    )
+    computed_common_divisors = [
+        divisor
+        for divisor in positive_divisors(computed_gcd)
+        if a % divisor == 0 and b % divisor == 0
+    ]
+    if listed_common_divisors != computed_common_divisors:
+        fail("gcd-common-divisors-replay common divisors do not match")
+
+    bezout = checks["bezout-identity-replay"]
+    if bezout["expected_result"] != "sat":
+        fail("bezout-identity-replay must expect sat")
+    values = single_witness_values(bezout, witnesses)
+    a = require_int("bezout witness a", values.get("a"))
+    b = require_int("bezout witness b", values.get("b"))
+    expected_gcd = require_int("bezout witness gcd", values.get("gcd"))
+    x = require_int("bezout witness x", values.get("x"))
+    y = require_int("bezout witness y", values.get("y"))
+    if expected_gcd <= 0:
+        fail("bezout witness gcd must be positive")
+    if gcd(abs(a), abs(b)) != expected_gcd:
+        fail("bezout-identity-replay gcd does not match")
+    if a * x + b * y != expected_gcd:
+        fail("bezout-identity-replay coefficients do not produce the gcd")
+
+    divisibility = checks["divisibility-quotient-replay"]
+    if divisibility["expected_result"] != "sat":
+        fail("divisibility-quotient-replay must expect sat")
+    values = single_witness_values(divisibility, witnesses)
+    divisor = require_int("divisibility witness divisor", values.get("divisor"))
+    dividend = require_int("divisibility witness dividend", values.get("dividend"))
+    quotient = require_int("divisibility witness quotient", values.get("quotient"))
+    if divisor == 0:
+        fail("divisibility witness divisor must be nonzero")
+    if divisor * quotient != dividend:
+        fail("divisibility-quotient-replay quotient does not match dividend")
+
+    obstruction = checks["diophantine-gcd-obstruction"]
+    if obstruction["expected_result"] != "unsat":
+        fail("diophantine-gcd-obstruction must expect unsat")
+    data = obstruction.get("data", {})
+    a = require_int("diophantine data a", data.get("a"))
+    b = require_int("diophantine data b", data.get("b"))
+    target = require_int("diophantine data target", data.get("target"))
+    coefficient_gcd = gcd(abs(a), abs(b))
+    if coefficient_gcd == 0:
+        fail("diophantine coefficients must not both be zero")
+    if target % coefficient_gcd == 0:
+        fail("diophantine-gcd-obstruction data is satisfiable by the gcd criterion")
+
+
 def require_fraction(context: str, value: Any) -> Fraction:
     if not isinstance(value, str) or not value:
         fail(f"{context} must be a non-empty fraction string")
@@ -2219,6 +2301,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_operator(expected)
     if metadata["id"] == "finite-rings-v0":
         validate_finite_rings(expected)
+    if metadata["id"] == "gcd-bezout-v0":
+        validate_gcd_bezout(expected)
     if metadata["id"] == "linear-optimization-v0":
         validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":

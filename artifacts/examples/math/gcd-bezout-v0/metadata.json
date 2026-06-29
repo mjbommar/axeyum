@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "gcd-bezout-v0",
+  "title": "GCD And Bezout Witness Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_divisibility_and_euclid",
+    "curriculum_integers",
+    "field_number_theory"
+  ],
+  "field_ids": [
+    "number_theory"
+  ],
+  "curriculum_nodes": [
+    "divisibility-and-euclid",
+    "integers"
+  ],
+  "axeyum_fragments": [
+    "integer arithmetic",
+    "LIA / divisibility",
+    "QF_LIA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/divisibility-and-euclid.md",
+    "docs/curriculum/01-number-systems/integers.md",
+    "docs/curriculum/03-destinations/number-theory.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+  ],
+  "expected_results": [
+    "gcd-common-divisors-replay",
+    "bezout-identity-replay",
+    "divisibility-quotient-replay",
+    "diophantine-gcd-obstruction"
+  ],
+  "graduation_criteria": [
+    "Encode gcd and divisibility checks as deterministic LIA or BV/LIA obligations.",
+    "Replay SAT witnesses through Axeyum model evaluation.",
+    "Emit and check UnsatDiophantine evidence for fixed unsolvable linear equations.",
+    "Keep unique factorization and infinite prime-distribution theorems marked Lean-horizon."
+  ]
+}

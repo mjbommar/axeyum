@@ -265,6 +265,8 @@ validator, a validating template pack under `artifacts/examples/math/template-v0
 and the first substantive pack under
 `artifacts/examples/math/proof-methods-refutation-v0/`; the first replay-checked
 number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`;
+the first gcd/Bezout core arithmetic pack lives under
+`artifacts/examples/math/gcd-bezout-v0/`;
 the first finite-set core curriculum pack lives under
 `artifacts/examples/math/finite-sets-v0/`;
 the first relation/function core curriculum pack lives under
@@ -320,9 +322,11 @@ permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
 refutation. The recommended Phase M3 pack list has landed. `finite-groups-v0`
 now validates finite Cayley-table group axioms, inverse-table replay, and a
 checked non-group operation. `finite-rings-v0` now validates finite ring tables,
-zero-divisor replay, and a checked non-distributive table. Continue by closing
-the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`gcd-bezout-v0` / `number-theory-v0`.
+zero-divisor replay, and a checked non-distributive table. `gcd-bezout-v0` now
+validates gcd/common-divisor replay, Bezout coefficient replay, direct
+divisibility witnesses, and a checked linear Diophantine gcd obstruction.
+Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof
+gap or by adding `number-theory-v0`.
 
 Recommended order:
 
@@ -330,15 +334,17 @@ Recommended order:
    or checked route.
 2. `finite-sets-v0` (landed) and `relations-functions-v0` (landed): finite set
    identities, relation properties, function properties.
-3. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
-4. `finite-fields-v0` (landed): prime-field axioms and composite-modulus
+3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
+   Diophantine obstruction checks.
+4. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
+5. `finite-fields-v0` (landed): prime-field axioms and composite-modulus
    counterexample.
-5. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
-6. `linear-algebra-rational-v0`: fixed matrices, LU replay, inconsistent
+6. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
+7. `linear-algebra-rational-v0`: fixed matrices, LU replay, inconsistent
    system with Farkas evidence where available.
-7. `polynomial-identities-v0` (landed): factor theorem and fixed-degree
+8. `polynomial-identities-v0` (landed): factor theorem and fixed-degree
    identities.
-8. `counting-v0` (landed): combinations, pigeonhole, finite counting witnesses.
+9. `counting-v0` (landed): combinations, pigeonhole, finite counting witnesses.
 
 Exit criteria:
 
@@ -545,16 +551,16 @@ docs link checker clean.
 
 Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `relations-functions-v0`, `finite-fields-v0`,
-`polynomial-identities-v0`, and `counting-v0`, Phase M4 items 4-10, and the
-Phase M5 learner-path scaffold plus first encode/check walkthrough layer have
-landed for the math seed. End-to-end lessons now exist for graph coloring,
-rational arithmetic, linear algebra/optimization, probability/statistics, finite
-structures, and analysis/topology horizons. Phase M6 now has cookbook links from
-all current non-template math example packs. Phase M7 now has generated
-pack-level proof-gap rows and a normal foundational-resource check hook.
-Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof
-gap or by adding `gcd-bezout-v0` / `number-theory-v0` as the next arithmetic
-core packs.
+`polynomial-identities-v0`, `counting-v0`, and `gcd-bezout-v0`, Phase M4 items
+4-10, and the Phase M5 learner-path scaffold plus first encode/check walkthrough
+layer have landed for the math seed. End-to-end lessons now exist for graph
+coloring, rational arithmetic, linear algebra/optimization,
+probability/statistics, finite structures, and analysis/topology horizons. Phase
+M6 now has cookbook links from all current non-template math example packs.
+Phase M7 now has generated pack-level proof-gap rows and a normal
+foundational-resource check hook. Continue by closing the remaining
+`proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+`number-theory-v0` as the next arithmetic core pack.
 
 ## Operating Rules
 

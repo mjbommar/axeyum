@@ -2,29 +2,41 @@
 
 Concept rows:
 
-- `curriculum_modular_arithmetic`, `curriculum_rationals`, and
-  `curriculum_complex` in the
+- `curriculum_divisibility_and_euclid`, `curriculum_modular_arithmetic`,
+  `curriculum_rationals`, and `curriculum_complex` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_number_theory`, `field_real_analysis`, and `field_complex_analysis`
   in the [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
 
 Example packs:
 
+- [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 
 ## What Axeyum Checks
 
-The arithmetic path starts with exact replay. It checks congruences, CRT
-witnesses, modular inverses, rational density witnesses, trichotomy and order
-transitivity fixed cases, and algebraic complex arithmetic as real-pair data.
+The arithmetic path starts with exact replay. It checks gcd and Bezout
+witnesses, divisibility quotient witnesses, congruences, CRT witnesses, modular
+inverses, rational density witnesses, trichotomy and order transitivity fixed
+cases, and algebraic complex arithmetic as real-pair data.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.
 
 ## Encode / Check Walkthrough
 
+For gcd and divisibility, encode the integer witness directly:
+
+```text
+gcd(252, 198) = 18
+252*4 + 198*(-5) = 18
+252 = 18 * 14
+```
+
+The `gcd-bezout-v0` validator recomputes the gcd, common divisors, Bezout
+identity, quotient witness, and the fixed obstruction for `6*x + 10*y = 15`.
 For modular arithmetic, encode the witness and its modulus:
 
 ```text
@@ -43,6 +55,7 @@ The checker recomputes pair addition and twisted multiplication.
 Run the checks from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

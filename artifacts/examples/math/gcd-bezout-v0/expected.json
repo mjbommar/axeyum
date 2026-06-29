@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "pack_id": "gcd-bezout-v0",
+  "witnesses": [
+    {
+      "id": "gcd-252-198",
+      "description": "The positive common divisors and gcd of 252 and 198.",
+      "values": {
+        "a": 252,
+        "b": 198,
+        "gcd": 18,
+        "common_divisors": [1, 2, 3, 6, 9, 18]
+      }
+    },
+    {
+      "id": "bezout-252-198",
+      "description": "Bezout coefficients for 252 and 198.",
+      "values": {
+        "a": 252,
+        "b": 198,
+        "gcd": 18,
+        "x": 4,
+        "y": -5
+      }
+    },
+    {
+      "id": "divides-18-252",
+      "description": "The quotient witnessing that 18 divides 252.",
+      "values": {
+        "divisor": 18,
+        "dividend": 252,
+        "quotient": 14
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "gcd-common-divisors-replay",
+      "claim": "The gcd of 252 and 198 is 18, with the listed positive common divisors.",
+      "expected_result": "sat",
+      "validation": "gcd_common_divisor_replay",
+      "proof_status": "checked",
+      "witnesses": ["gcd-252-198"],
+      "notes": "The validator recomputes gcd(252,198) and enumerates all positive common divisors."
+    },
+    {
+      "id": "bezout-identity-replay",
+      "claim": "The listed coefficients satisfy 252*x + 198*y = gcd(252,198).",
+      "expected_result": "sat",
+      "validation": "bezout_integer_replay",
+      "proof_status": "checked",
+      "witnesses": ["bezout-252-198"],
+      "notes": "The validator checks 252*4 + 198*(-5) = 18 and recomputes the gcd."
+    },
+    {
+      "id": "divisibility-quotient-replay",
+      "claim": "The integer 18 divides 252.",
+      "expected_result": "sat",
+      "validation": "divisibility_quotient_replay",
+      "proof_status": "checked",
+      "witnesses": ["divides-18-252"],
+      "notes": "The validator checks divisor * quotient equals the dividend exactly."
+    },
+    {
+      "id": "diophantine-gcd-obstruction",
+      "claim": "There exist integers x and y such that 6*x + 10*y = 15.",
+      "expected_result": "unsat",
+      "validation": "gcd_divisibility_refutation",
+      "proof_status": "checked",
+      "data": {
+        "a": 6,
+        "b": 10,
+        "target": 15
+      },
+      "notes": "The validator checks gcd(6,10) = 2 and 2 does not divide 15."
+    }
+  ]
+}
