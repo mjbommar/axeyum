@@ -67,6 +67,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md):
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
   counting, and checked bad-action rejection.
+- [Finite Order Lattices](finite-order-lattices-end-to-end.md): follows finite
+  partial-order replay, meet/join recomputation, distributivity checks,
+  monotone fixed-point replay, and checked bad-order rejection.
 - [Finite Rings](finite-rings-end-to-end.md): follows `Z/4Z` ring-table replay,
   zero-divisor witness replay, and checked non-distributive-table rejection.
 - [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table

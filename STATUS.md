@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite order-lattices end-to-end lesson landed.** Added
+  [`finite-order-lattices-end-to-end.md`](docs/learn/math/finite-order-lattices-end-to-end.md)
+  as the learner-facing trace for the finite order/lattice pack: Boolean
+  lattice partial-order replay, meet/join recomputation, distributivity
+  checks, monotone fixed-point replay, checked bad-order rejection, and the
+  Lean horizon for complete-lattice and infinite-order theory. The lesson is
+  linked from the math learning index plus the sets/relations path.
+
 - **Finite groups end-to-end lesson landed.** Added
   [`finite-groups-end-to-end.md`](docs/learn/math/finite-groups-end-to-end.md)
   as the learner-facing trace for the finite groups pack: `Z/4Z`
