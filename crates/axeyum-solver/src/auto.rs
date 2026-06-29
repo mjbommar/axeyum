@@ -1859,7 +1859,26 @@ fn check_auto_dispatch(
                      (no Ackermann route engaged): {e}"
                 ),
             });
-            with_recorder(rec, |t| t.record_result("qf-bv-uninterpreted-decline", &result));
+            with_recorder(rec, |t| {
+                t.record_result("qf-bv-uninterpreted-decline", &result)
+            });
+            Ok(result)
+        }
+        // Array elimination can refuse a shape the lazy ROW/extensionality path
+        // also declined — the canonical case being a **wide-index array equality**
+        // (`store-chain = store-chain` over a 32-/64-bit index) that bounded
+        // extensionality cannot enumerate. That surfaces here as a backend error;
+        // convert it to an honest `Unknown` (same soundness floor: never error on a
+        // valid instance). `Err`-arm only, so no decided array instance regresses.
+        Err(e) if features.has_array => {
+            let result = CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!(
+                    "array shape left undecided by the lazy ROW/extensionality path and \
+                     refused by bounded array elimination: {e}"
+                ),
+            });
+            with_recorder(rec, |t| t.record_result("qf-abv-array-decline", &result));
             Ok(result)
         }
         Err(e) => Err(e),
