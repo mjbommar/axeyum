@@ -464,6 +464,9 @@ witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 collinearity, and squared-distance coordinate checks.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
 axioms, closure/interior computation, and exact finite metric-ball replay.
+`artifacts/examples/math/metric-continuity-v0/` now validates finite
+Lipschitz, epsilon-delta, and open-ball preimage checks with exact rational
+metrics, plus checked rejection of an overlarge delta.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, and event/complement measure
 replay.
@@ -526,6 +529,8 @@ Recommended order:
     Rayleigh quotients, and finite spectral decomposition.
 16. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
     roots, Cayley-Hamilton replay, and finite eigenvalue intervals.
+17. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
+    preimage, and bad-delta checks over exact rational metric spaces.
 
 Exit criteria:
 
@@ -686,7 +691,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-16, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-17, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -706,9 +711,10 @@ statistical-test slice for p-values as rational finite sums.
 spectral-linear-algebra slice for eigenpair, Rayleigh quotient, and
 decomposition replay. `matrix-invariants-v0` now adds the characteristic
 polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
-broader spectral claims. Continue by adding the next curriculum-adjacent pack
-or by replacing finite enumeration routes with emitted, checked proof objects
-where appropriate.
+broader spectral claims. `metric-continuity-v0` now adds the finite
+epsilon-delta and open-ball preimage bridge for analysis/topology learners.
+Continue by adding the next curriculum-adjacent pack or by replacing finite
+enumeration routes with emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 

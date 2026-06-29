@@ -73,6 +73,7 @@ artifacts/examples/math/
   rationals-lra-v0/
   reals-rcf-shadow-v0/
   sequence-limit-shadow-v0/
+  metric-continuity-v0/
   calculus-algebraic-shadow-v0/
   linear-algebra-rational-v0/
   numerical-linear-algebra-v0/
@@ -347,6 +348,9 @@ non-invertibility/Fermat-style checks.
 [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/)
 validates exact rational density, additive inverse, trichotomy, and transitivity
 checks without floating-point arithmetic.
+[`metric-continuity-v0`](../../artifacts/examples/math/metric-continuity-v0/)
+validates finite Lipschitz, epsilon-delta, and open-ball preimage checks with
+exact rational metrics, plus checked rejection of an overlarge delta.
 [`linear-algebra-rational-v0`](../../artifacts/examples/math/linear-algebra-rational-v0/)
 validates exact rational matrix-vector replay, LU factorization replay, and a
 row-scaling inconsistency certificate for a singular system.

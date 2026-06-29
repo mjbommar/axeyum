@@ -89,6 +89,9 @@ schemas, examples, and validation workflows.
   validates bounded epsilon-tail replay, finite limit counterexamples,
   monotone bounded prefixes, a fixed geometric partial-sum identity, a bounded
   finite Cauchy-tail check, and a general convergence Lean-horizon row.
+- [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
+  validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
+  with exact rational metrics, plus checked rejection of an overlarge delta.
 - [`artifacts/examples/math/calculus-algebraic-shadow-v0/`](../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
   validates polynomial derivative replay, a product-rule polynomial identity,
   tangent-line replay, a convex quadratic critical point, false-derivative
@@ -184,6 +187,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0

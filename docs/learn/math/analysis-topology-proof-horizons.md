@@ -14,6 +14,7 @@ Example packs:
 
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
+- [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
@@ -26,10 +27,11 @@ Example packs:
 
 The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
-shadows, bounded sequence tails and prefixes, polynomial derivative identities,
-bounded recurrence traces, finite invariant witnesses, matrix operator bounds,
-Chebyshev recurrence values at fixed points, and finite stochastic transition
-systems. The spectral-linear-algebra pack adds exact finite eigenpair,
+shadows, bounded sequence tails and prefixes, finite epsilon-delta continuity
+checks, polynomial derivative identities, bounded recurrence traces, finite
+invariant witnesses, matrix operator bounds, Chebyshev recurrence values at
+fixed points, and finite stochastic transition systems. The
+spectral-linear-algebra pack adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
 
@@ -63,6 +65,20 @@ The `sequence-limit-shadow-v0` validator checks the finite tail only. It also
 checks a finite counterexample to a proposed limit, a monotone bounded prefix,
 a fixed geometric partial-sum identity, and a finite Cauchy-tail
 no-counterexample row.
+
+For a finite epsilon-delta continuity shadow, encode a rational metric-space
+slice and a function table:
+
+```text
+p0 = 0, p1 = 1/4, p2 = 1/2, p3 = 1
+f(x) = 2*x
+epsilon = 1
+delta = 1/2
+```
+
+The `metric-continuity-v0` validator checks the finite metric table,
+pairwise Lipschitz bounds, the `delta`-ball around `p0`, the output
+`epsilon`-ball around `f(p0)`, and a checked bad-delta counterexample.
 
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
@@ -98,6 +114,7 @@ Run the checks from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0

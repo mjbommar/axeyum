@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Metric continuity foundations pack landed.** Added
+  [`metric-continuity-v0`](artifacts/examples/math/metric-continuity-v0/README.md)
+  as the first finite epsilon-delta continuity resource. The pack validates a
+  finite Lipschitz witness, finite epsilon-delta containment, an open-ball
+  preimage, checked rejection of an overlarge delta, and a general continuity
+  Lean-horizon row. The foundational example-pack validator now checks exact
+  rational finite metric tables, function-value distances, finite ball
+  containment, and documented bad-delta counterexamples.
+
 - **Matrix invariant foundations pack landed.** Added
   [`matrix-invariants-v0`](artifacts/examples/math/matrix-invariants-v0/README.md)
   as the characteristic-polynomial follow-up to the finite spectral slice. The

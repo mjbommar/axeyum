@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "pack_id": "metric-continuity-v0",
+  "witnesses": [
+    {
+      "id": "finite-rational-line-double",
+      "description": "A finite rational metric-space slice with f(x) = 2x.",
+      "values": {
+        "points": ["p0", "p1", "p2", "p3"],
+        "distances": [
+          {"pair": ["p0", "p1"], "distance": "1/4"},
+          {"pair": ["p0", "p2"], "distance": "1/2"},
+          {"pair": ["p0", "p3"], "distance": "1"},
+          {"pair": ["p1", "p2"], "distance": "1/4"},
+          {"pair": ["p1", "p3"], "distance": "3/4"},
+          {"pair": ["p2", "p3"], "distance": "1/2"}
+        ],
+        "function_values": {
+          "p0": "0",
+          "p1": "1/2",
+          "p2": "1",
+          "p3": "2"
+        },
+        "lipschitz_constant": "2",
+        "center": "p0",
+        "epsilon": "1",
+        "delta": "1/2",
+        "domain_ball": ["p0", "p1"],
+        "output_ball": ["p0", "p1"],
+        "target_value": "0",
+        "domain_ball_center": "p0",
+        "domain_ball_radius": "1/2",
+        "preimage": ["p0", "p1"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-lipschitz-witness",
+      "claim": "The finite function f(x) = 2x is 2-Lipschitz on the listed rational metric-space slice.",
+      "expected_result": "sat",
+      "validation": "finite_lipschitz_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["finite-rational-line-double"],
+      "notes": "The validator checks every finite pair against |f(x)-f(y)| <= 2*d(x,y)."
+    },
+    {
+      "id": "epsilon-delta-continuity-witness",
+      "claim": "At p0, epsilon = 1 and delta = 1/2 witness finite epsilon-delta continuity.",
+      "expected_result": "sat",
+      "validation": "finite_epsilon_delta_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["finite-rational-line-double"],
+      "notes": "The validator recomputes the domain and output balls and checks containment."
+    },
+    {
+      "id": "open-ball-preimage-witness",
+      "claim": "The preimage of the output ball |y - 0| < 1 is the finite domain ball around p0 of radius 1/2.",
+      "expected_result": "sat",
+      "validation": "finite_open_ball_preimage_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["finite-rational-line-double"],
+      "notes": "The validator recomputes both the output-ball preimage and the matching finite domain ball."
+    },
+    {
+      "id": "bad-delta-rejected",
+      "claim": "Delta = 3/4 is too large for epsilon = 1 at p0 because p2 is inside the delta ball but not inside the output epsilon ball.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_delta_refutation",
+      "proof_status": "checked",
+      "data": {
+        "points": ["p0", "p1", "p2", "p3"],
+        "distances": [
+          {"pair": ["p0", "p1"], "distance": "1/4"},
+          {"pair": ["p0", "p2"], "distance": "1/2"},
+          {"pair": ["p0", "p3"], "distance": "1"},
+          {"pair": ["p1", "p2"], "distance": "1/4"},
+          {"pair": ["p1", "p3"], "distance": "3/4"},
+          {"pair": ["p2", "p3"], "distance": "1/2"}
+        ],
+        "function_values": {
+          "p0": "0",
+          "p1": "1/2",
+          "p2": "1",
+          "p3": "2"
+        },
+        "center": "p0",
+        "epsilon": "1",
+        "claimed_delta": "3/4",
+        "counterexample": "p2",
+        "domain_distance": "1/2",
+        "output_distance": "1"
+      },
+      "notes": "The validator checks the documented counterexample by exact rational metric and output-distance arithmetic."
+    },
+    {
+      "id": "general-continuity-lean-horizon",
+      "claim": "General epsilon-delta continuity over real metric spaces requires future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "forall epsilon > 0, exists delta > 0, forall x, d_X(x,a) < delta -> d_Y(f x, f a) < epsilon",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; the full quantified continuity theorem remains a proof-assistant horizon."
+    }
+  ]
+}

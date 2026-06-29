@@ -4193,6 +4193,32 @@ def finite_metric_distance(
     return distances[frozenset((left, right))]
 
 
+def require_point_values(
+    context: str,
+    value: Any,
+    points: list[str],
+) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    point_set = set(points)
+    if set(value) != point_set:
+        missing = sorted(point_set - set(value))
+        extra = sorted(set(value) - point_set)
+        fail(f"{context} must cover exactly the points; missing={missing} extra={extra}")
+    return {
+        point: require_fraction(f"{context}.{point}", value[point])
+        for point in points
+    }
+
+
+def finite_function_output_distance(
+    function_values: dict[str, Fraction],
+    left: str,
+    right: str,
+) -> Fraction:
+    return abs(function_values[left] - function_values[right])
+
+
 def validate_finite_topology(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -4237,6 +4263,134 @@ def validate_finite_topology(expected: dict[str, Any]) -> None:
     )
     if computed_ball != expected_ball:
         fail("metric-ball witness does not match finite metric")
+
+
+def validate_metric_continuity(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    lipschitz = checks["finite-lipschitz-witness"]
+    if lipschitz["expected_result"] != "sat":
+        fail("finite-lipschitz-witness must expect sat")
+    values = single_witness_values(lipschitz, witnesses)
+    points = require_string_list("Lipschitz points", values.get("points"))
+    distances = require_metric_distances("Lipschitz distances", values.get("distances"), points)
+    function_values = require_point_values("Lipschitz function_values", values.get("function_values"), points)
+    constant = require_fraction("Lipschitz constant", values.get("lipschitz_constant"))
+    if constant <= 0:
+        fail("finite-lipschitz-witness constant must be positive")
+    for left_index, left in enumerate(points):
+        for right in points[left_index + 1 :]:
+            domain_distance = finite_metric_distance(distances, left, right)
+            output_distance = finite_function_output_distance(function_values, left, right)
+            if output_distance > constant * domain_distance:
+                fail("finite-lipschitz-witness violates the claimed bound")
+
+    continuity = checks["epsilon-delta-continuity-witness"]
+    if continuity["expected_result"] != "sat":
+        fail("epsilon-delta-continuity-witness must expect sat")
+    values = single_witness_values(continuity, witnesses)
+    points = require_string_list("epsilon-delta points", values.get("points"))
+    distances = require_metric_distances("epsilon-delta distances", values.get("distances"), points)
+    function_values = require_point_values("epsilon-delta function_values", values.get("function_values"), points)
+    center = values.get("center")
+    require_string("epsilon-delta center", center)
+    if center not in set(points):
+        fail("epsilon-delta-continuity-witness center must be one of the points")
+    epsilon = require_fraction("epsilon-delta epsilon", values.get("epsilon"))
+    delta = require_fraction("epsilon-delta delta", values.get("delta"))
+    if epsilon <= 0 or delta <= 0:
+        fail("epsilon-delta-continuity-witness epsilon and delta must be positive")
+    expected_domain_ball = require_subset("epsilon-delta domain_ball", values.get("domain_ball"), points)
+    expected_output_ball = require_subset("epsilon-delta output_ball", values.get("output_ball"), points)
+    domain_ball = frozenset(
+        point
+        for point in points
+        if finite_metric_distance(distances, center, point) < delta
+    )
+    output_ball = frozenset(
+        point
+        for point in points
+        if finite_function_output_distance(function_values, center, point) < epsilon
+    )
+    if domain_ball != expected_domain_ball:
+        fail("epsilon-delta-continuity-witness domain_ball is incorrect")
+    if output_ball != expected_output_ball:
+        fail("epsilon-delta-continuity-witness output_ball is incorrect")
+    if not domain_ball <= output_ball:
+        fail("epsilon-delta-continuity-witness domain ball is not contained in output ball")
+
+    preimage = checks["open-ball-preimage-witness"]
+    if preimage["expected_result"] != "sat":
+        fail("open-ball-preimage-witness must expect sat")
+    values = single_witness_values(preimage, witnesses)
+    points = require_string_list("preimage points", values.get("points"))
+    distances = require_metric_distances("preimage distances", values.get("distances"), points)
+    function_values = require_point_values("preimage function_values", values.get("function_values"), points)
+    target_value = require_fraction("preimage target_value", values.get("target_value"))
+    epsilon = require_fraction("preimage epsilon", values.get("epsilon"))
+    center = values.get("domain_ball_center")
+    require_string("preimage domain_ball_center", center)
+    if center not in set(points):
+        fail("open-ball-preimage-witness domain_ball_center must be one of the points")
+    radius = require_fraction("preimage domain_ball_radius", values.get("domain_ball_radius"))
+    if epsilon <= 0 or radius <= 0:
+        fail("open-ball-preimage-witness epsilon and radius must be positive")
+    expected_preimage = require_subset("preimage set", values.get("preimage"), points)
+    expected_domain_ball = require_subset("preimage domain_ball", values.get("domain_ball"), points)
+    actual_preimage = frozenset(
+        point
+        for point in points
+        if abs(function_values[point] - target_value) < epsilon
+    )
+    actual_domain_ball = frozenset(
+        point
+        for point in points
+        if finite_metric_distance(distances, center, point) < radius
+    )
+    if actual_preimage != expected_preimage:
+        fail("open-ball-preimage-witness preimage is incorrect")
+    if actual_domain_ball != expected_domain_ball:
+        fail("open-ball-preimage-witness domain_ball is incorrect")
+    if expected_preimage != expected_domain_ball:
+        fail("open-ball-preimage-witness preimage should match the listed domain ball")
+
+    bad_delta = checks["bad-delta-rejected"]
+    if bad_delta["expected_result"] != "unsat":
+        fail("bad-delta-rejected must expect unsat")
+    data = bad_delta.get("data", {})
+    points = require_string_list("bad delta points", data.get("points"))
+    distances = require_metric_distances("bad delta distances", data.get("distances"), points)
+    function_values = require_point_values("bad delta function_values", data.get("function_values"), points)
+    center = data.get("center")
+    counterexample = data.get("counterexample")
+    require_string("bad delta center", center)
+    require_string("bad delta counterexample", counterexample)
+    if center not in set(points) or counterexample not in set(points):
+        fail("bad-delta-rejected center and counterexample must be listed points")
+    epsilon = require_fraction("bad delta epsilon", data.get("epsilon"))
+    claimed_delta = require_fraction("bad delta claimed_delta", data.get("claimed_delta"))
+    domain_distance = require_fraction("bad delta domain_distance", data.get("domain_distance"))
+    output_distance = require_fraction("bad delta output_distance", data.get("output_distance"))
+    if epsilon <= 0 or claimed_delta <= 0:
+        fail("bad-delta-rejected epsilon and claimed_delta must be positive")
+    if finite_metric_distance(distances, center, counterexample) != domain_distance:
+        fail("bad-delta-rejected domain_distance is incorrect")
+    if finite_function_output_distance(function_values, center, counterexample) != output_distance:
+        fail("bad-delta-rejected output_distance is incorrect")
+    if not domain_distance < claimed_delta:
+        fail("bad-delta-rejected counterexample is not inside the claimed delta ball")
+    if output_distance < epsilon:
+        fail("bad-delta-rejected counterexample unexpectedly satisfies epsilon")
+
+    horizon = checks["general-continuity-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-continuity-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-continuity-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general continuity target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general continuity future_checker", data.get("future_checker"))
 
 
 def require_sigma_algebra_data(
@@ -5124,6 +5278,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_groups(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
+    if metadata["id"] == "metric-continuity-v0":
+        validate_metric_continuity(expected)
     if metadata["id"] == "finite-predicate-v0":
         validate_finite_predicate(expected)
     if metadata["id"] == "graph-coloring-v0":
