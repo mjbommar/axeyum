@@ -2435,6 +2435,17 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    **blocked on `UPSTREAM-FEEDBACK` U8** — `axeyum-solver` does not compile for
    `wasm32` (`abv.rs` uses `std::time::Instant` directly instead of the cfg'd
    `web_time` shim). Resume once U8 lands; the vs-hevm part stays install-gated.
+4. **Opcode-precision deepening (DONE, ongoing)** — turn `Unknown`-forcing
+   havoc/unsupported opcodes into precise models (concrete-operand fast path,
+   symbolic→sound `Unknown`), each added to the differential-fuzz pool:
+   - **BYTE** (0x1a) — was havoc'd; concrete index → `(x>>(248-8i))&0xff`
+     (`7b9633b`).
+   - **SIGNEXTEND** (0x0b) — was `Unsupported`; concrete index → `sign_ext`+
+     `extract` (`22bb92e`).
+   - *Next candidates:* EXP (0x0a) for fully-concrete base+exp (constants like
+     `10**18`); symbolic-index BYTE/SIGNEXTEND via a bounded 32-way `ite`; CALL
+     return-data modeling. (EXP/symbolic-index forms are heavier; constant fast
+     paths cover most real bytecode.)
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
