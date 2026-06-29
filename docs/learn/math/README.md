@@ -23,7 +23,7 @@ Source maps:
 | [Rational And Real Algebra](rational-real-algebra.md) | `field_real_analysis`, `curriculum_reals` | `rationals-lra-v0`, `reals-rcf-shadow-v0`, `polynomial-identities-v0`, `matrix-invariants-v0`, `linear-optimization-v0` |
 | [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) | `field_graph_theory`, `field_discrete_math` | `counting-v0`, `graph-coloring-v0`, `graph-reachability-v0`, `graph-matching-v0`, `graph-d-separation-v0`, `graph-cut-v0`, `proof-methods-refutation-v0` |
 | [Linear Algebra And Optimization](linear-algebra-and-optimization.md) | `curriculum_linear_algebra`, `field_optimization_and_convexity` | `linear-algebra-rational-v0`, `numerical-linear-algebra-v0`, `spectral-linear-algebra-v0`, `matrix-invariants-v0`, `random-matrix-finite-v0`, `linear-optimization-v0`, `finite-operator-v0` |
-| [Probability And Statistics](probability-and-statistics.md) | `field_probability_theory`, `field_statistics` | `finite-probability-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-hitting-times-v0`, `finite-martingales-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-markov-chain-v0`, `descriptive-statistics-v0`, `exact-statistical-tests-v0`, `finite-measure-v0`, `random-matrix-finite-v0` |
+| [Probability And Statistics](probability-and-statistics.md) | `field_probability_theory`, `field_statistics` | `finite-probability-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-hitting-times-v0`, `finite-concentration-v0`, `finite-martingales-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-markov-chain-v0`, `descriptive-statistics-v0`, `exact-statistical-tests-v0`, `finite-measure-v0`, `random-matrix-finite-v0` |
 | [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `sequence-limit-shadow-v0`, `metric-continuity-v0`, `finite-compactness-v0`, `finite-connectedness-v0`, `finite-continuous-maps-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `calculus-algebraic-shadow-v0`, `finite-topology-v0`, `bounded-dynamics-v0`, `finite-markov-chain-v0`, `finite-hitting-times-v0`, `finite-operator-v0` |
 
 Each cluster page includes an `Encode / Check Walkthrough` section with
@@ -38,10 +38,11 @@ validated pack data and the repo-root command that replays it.
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
-- [Conditional Probability, Random Variables, Kernels, Martingales, And Product Measures](finite-probability-end-to-end.md):
+- [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
-  random-variable, conditional-expectation, finite stochastic-kernel, finite martingale,
-  product-measure, and simple-function integral replay.
+  random-variable, conditional-expectation, finite stochastic-kernel,
+  concentration, finite martingale, product-measure, and simple-function
+  integral replay.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.

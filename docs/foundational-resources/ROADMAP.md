@@ -104,6 +104,7 @@ artifacts/examples/math/
   finite-martingales-v0/
   finite-stochastic-kernels-v0/
   finite-hitting-times-v0/
+  finite-concentration-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -398,6 +399,9 @@ stationary distributions, and checked rejection of a malformed transition row.
 validates exact finite first-hit distributions, survival probabilities,
 absorption-probability equations, expected hitting-time equations, and checked
 rejection of a malformed expected-time table.
+[`finite-concentration-v0`](../../artifacts/examples/math/finite-concentration-v0/)
+validates exact finite Markov, Chebyshev, and union-bound replays, plus checked
+rejection of a false tail bound.
 [`exact-statistical-tests-v0`](../../artifacts/examples/math/exact-statistical-tests-v0/)
 validates exact binomial tails, hypergeometric point probabilities, one-sided
 Fisher p-values, and checked rejection of a false p-value.
@@ -497,6 +501,8 @@ Exit criteria:
 - Exact finite statistical-test p-values validate as rational finite sums.
 - The first finite random-matrix bridge validates exact matrix-valued
   probability tables without asymptotic or floating-point claims.
+- Finite concentration rows validate Markov, Chebyshev, and union-bound tail
+  checks without claiming general limit theorems.
 - Numerical/probabilistic-programming material has an explicit "not proof"
   status and reproducibility metadata.
 

@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-concentration-v0",
+  "witnesses": [
+    {
+      "id": "two-point-markov-variable",
+      "description": "A nonnegative two-point random variable for Markov's inequality.",
+      "values": {
+        "atoms": [
+          {"id": "low", "probability": "3/4"},
+          {"id": "high", "probability": "1/4"}
+        ],
+        "random_variable_values": {"low": "0", "high": "4"},
+        "threshold": "2",
+        "expectation": "1",
+        "tail_probability": "1/4",
+        "bound": "1/2"
+      }
+    },
+    {
+      "id": "three-point-chebyshev-variable",
+      "description": "A centered three-point random variable for Chebyshev's inequality.",
+      "values": {
+        "atoms": [
+          {"id": "left", "probability": "1/4"},
+          {"id": "center", "probability": "1/2"},
+          {"id": "right", "probability": "1/4"}
+        ],
+        "random_variable_values": {"left": "-2", "center": "0", "right": "2"},
+        "mean": "0",
+        "variance": "2",
+        "radius": "2",
+        "tail_probability": "1/2",
+        "bound": "1/2"
+      }
+    },
+    {
+      "id": "two-event-union-bound",
+      "description": "A four-atom probability space for the union bound.",
+      "values": {
+        "atoms": [
+          {"id": "a", "probability": "1/4", "events": ["A"]},
+          {"id": "b", "probability": "1/4", "events": ["A", "B"]},
+          {"id": "c", "probability": "1/4", "events": ["B"]},
+          {"id": "d", "probability": "1/4", "events": []}
+        ],
+        "events": ["A", "B"],
+        "event_probabilities": {"A": "1/2", "B": "1/2"},
+        "union_probability": "3/4",
+        "bound": "1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "markov-inequality-witness",
+      "claim": "The listed finite nonnegative random variable satisfies Markov's inequality at threshold 2.",
+      "expected_result": "sat",
+      "validation": "finite_markov_inequality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-point-markov-variable"],
+      "notes": "The validator recomputes E[X], P(X >= 2), and the exact Markov bound."
+    },
+    {
+      "id": "chebyshev-inequality-witness",
+      "claim": "The listed finite random variable satisfies Chebyshev's inequality at radius 2.",
+      "expected_result": "sat",
+      "validation": "finite_chebyshev_inequality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-chebyshev-variable"],
+      "notes": "The validator recomputes the mean, variance, tail event, and exact Chebyshev bound."
+    },
+    {
+      "id": "union-bound-witness",
+      "claim": "The listed finite events satisfy the union bound.",
+      "expected_result": "sat",
+      "validation": "finite_union_bound_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-event-union-bound"],
+      "notes": "The validator recomputes P(A), P(B), P(A union B), and the sum bound."
+    },
+    {
+      "id": "bad-concentration-bound-rejected",
+      "claim": "The two-point variable has P(X >= 2) <= 1/8.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_concentration_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "low", "probability": "3/4"},
+          {"id": "high", "probability": "1/4"}
+        ],
+        "random_variable_values": {"low": "0", "high": "4"},
+        "threshold": "2",
+        "claimed_bound": "1/8",
+        "actual_tail_probability": "1/4",
+        "markov_bound": "1/2"
+      },
+      "notes": "The validator rejects the claimed bound because the recomputed tail probability is 1/4."
+    },
+    {
+      "id": "general-concentration-lean-horizon",
+      "claim": "General concentration and limit theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Chernoff bounds, Hoeffding bounds, laws of large numbers, central limit theorems, martingale concentration, and asymptotic statistical inference",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general concentration theory remains a proof-assistant horizon."
+    }
+  ]
+}

@@ -5088,6 +5088,39 @@ def finite_event_measure(
     )
 
 
+def finite_tail_probability(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    values: dict[str, Fraction],
+    predicate: Callable[[Fraction], bool],
+) -> Fraction:
+    return sum(
+        (probability for atom_id, probability, _ in atoms if predicate(values[atom_id])),
+        Fraction(0),
+    )
+
+
+def finite_variance(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    values: dict[str, Fraction],
+    mean: Fraction,
+) -> Fraction:
+    squared_deviations = {
+        atom_id: (value - mean) ** 2
+        for atom_id, value in values.items()
+    }
+    return finite_expected_value(atoms, squared_deviations)
+
+
+def finite_union_probability(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    events: set[str],
+) -> Fraction:
+    return sum(
+        (probability for _, probability, atom_events in atoms if atom_events & events),
+        Fraction(0),
+    )
+
+
 def atom_probability_map(
     atoms: list[tuple[str, Fraction, set[str]]],
 ) -> dict[str, Fraction]:
@@ -6004,6 +6037,151 @@ def validate_finite_random_variables(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general random variable target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general random variable future_checker", data.get("future_checker"))
+
+
+def require_positive_fraction(context: str, value: Any) -> Fraction:
+    fraction = require_fraction(context, value)
+    if fraction <= 0:
+        fail(f"{context} must be positive")
+    return fraction
+
+
+def validate_finite_concentration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    markov = checks["markov-inequality-witness"]
+    if markov["expected_result"] != "sat":
+        fail("markov-inequality-witness must expect sat")
+    values = single_witness_values(markov, witnesses)
+    atoms = require_probability_atoms("Markov atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("markov-inequality-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "Markov random_variable_values",
+        values.get("random_variable_values"),
+        atom_ids,
+    )
+    if any(value < 0 for value in variable_values.values()):
+        fail("markov-inequality-witness requires a nonnegative random variable")
+    threshold = require_positive_fraction("Markov threshold", values.get("threshold"))
+    expectation = require_fraction("Markov expectation", values.get("expectation"))
+    tail_probability = require_probability("Markov tail_probability", values.get("tail_probability"))
+    bound = require_fraction("Markov bound", values.get("bound"))
+    if finite_expected_value(atoms, variable_values) != expectation:
+        fail("markov-inequality-witness expectation is incorrect")
+    computed_tail = finite_tail_probability(
+        atoms,
+        variable_values,
+        lambda item: item >= threshold,
+    )
+    if computed_tail != tail_probability:
+        fail("markov-inequality-witness tail_probability is incorrect")
+    if expectation / threshold != bound:
+        fail("markov-inequality-witness bound is not E[X] / threshold")
+    if tail_probability > bound:
+        fail("markov-inequality-witness violates Markov's inequality")
+
+    chebyshev = checks["chebyshev-inequality-witness"]
+    if chebyshev["expected_result"] != "sat":
+        fail("chebyshev-inequality-witness must expect sat")
+    values = single_witness_values(chebyshev, witnesses)
+    atoms = require_probability_atoms("Chebyshev atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("chebyshev-inequality-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "Chebyshev random_variable_values",
+        values.get("random_variable_values"),
+        atom_ids,
+    )
+    mean = require_fraction("Chebyshev mean", values.get("mean"))
+    variance = require_fraction("Chebyshev variance", values.get("variance"))
+    if variance < 0:
+        fail("Chebyshev variance must be nonnegative")
+    radius = require_positive_fraction("Chebyshev radius", values.get("radius"))
+    tail_probability = require_probability("Chebyshev tail_probability", values.get("tail_probability"))
+    bound = require_fraction("Chebyshev bound", values.get("bound"))
+    if finite_expected_value(atoms, variable_values) != mean:
+        fail("chebyshev-inequality-witness mean is incorrect")
+    if finite_variance(atoms, variable_values, mean) != variance:
+        fail("chebyshev-inequality-witness variance is incorrect")
+    computed_tail = finite_tail_probability(
+        atoms,
+        variable_values,
+        lambda item: abs(item - mean) >= radius,
+    )
+    if computed_tail != tail_probability:
+        fail("chebyshev-inequality-witness tail_probability is incorrect")
+    if variance / (radius ** 2) != bound:
+        fail("chebyshev-inequality-witness bound is not Var(X) / radius^2")
+    if tail_probability > bound:
+        fail("chebyshev-inequality-witness violates Chebyshev's inequality")
+
+    union = checks["union-bound-witness"]
+    if union["expected_result"] != "sat":
+        fail("union-bound-witness must expect sat")
+    values = single_witness_values(union, witnesses)
+    atoms = require_probability_atoms("union bound atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("union-bound-witness", atoms)
+    events = require_string_list("union bound events", values.get("events"))
+    event_probabilities = require_probability_value_map(
+        "union bound event_probabilities",
+        values.get("event_probabilities"),
+        events,
+    )
+    for event in events:
+        if event_probability(atoms, event) != event_probabilities[event]:
+            fail(f"union-bound-witness event probability is incorrect for {event!r}")
+    union_probability = require_probability("union bound union_probability", values.get("union_probability"))
+    bound = require_fraction("union bound bound", values.get("bound"))
+    if finite_union_probability(atoms, set(events)) != union_probability:
+        fail("union-bound-witness union_probability is incorrect")
+    if sum(event_probabilities.values(), Fraction(0)) != bound:
+        fail("union-bound-witness bound must be the sum of event probabilities")
+    if union_probability > bound:
+        fail("union-bound-witness violates the union bound")
+
+    bad = checks["bad-concentration-bound-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-concentration-bound-rejected must expect unsat")
+    data = bad.get("data", {})
+    atoms = require_probability_atoms("bad concentration atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-concentration-bound-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "bad concentration random_variable_values",
+        data.get("random_variable_values"),
+        atom_ids,
+    )
+    if any(value < 0 for value in variable_values.values()):
+        fail("bad-concentration-bound-rejected requires a nonnegative random variable")
+    threshold = require_positive_fraction("bad concentration threshold", data.get("threshold"))
+    claimed_bound = require_probability("bad concentration claimed_bound", data.get("claimed_bound"))
+    actual_tail_probability = require_probability(
+        "bad concentration actual_tail_probability",
+        data.get("actual_tail_probability"),
+    )
+    markov_bound = require_fraction("bad concentration markov_bound", data.get("markov_bound"))
+    computed_tail = finite_tail_probability(
+        atoms,
+        variable_values,
+        lambda item: item >= threshold,
+    )
+    if computed_tail != actual_tail_probability:
+        fail("bad-concentration-bound-rejected actual_tail_probability is incorrect")
+    if finite_expected_value(atoms, variable_values) / threshold != markov_bound:
+        fail("bad-concentration-bound-rejected markov_bound is incorrect")
+    if actual_tail_probability <= claimed_bound:
+        fail("bad-concentration-bound-rejected must document a false upper bound")
+
+    horizon = checks["general-concentration-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-concentration-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-concentration-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general concentration target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general concentration future_checker", data.get("future_checker"))
 
 
 def validate_finite_product_measure(expected: dict[str, Any]) -> None:
@@ -7496,6 +7674,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_product_measure(expected)
     if metadata["id"] == "finite-conditional-expectation-v0":
         validate_finite_conditional_expectation(expected)
+    if metadata["id"] == "finite-concentration-v0":
+        validate_finite_concentration(expected)
     if metadata["id"] == "finite-martingales-v0":
         validate_finite_martingales(expected)
     if metadata["id"] == "finite-random-variables-v0":

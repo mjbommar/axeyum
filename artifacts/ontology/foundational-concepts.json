@@ -2104,19 +2104,19 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, simple-function integrals, and exact finite probability",
+      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, simple-function integrals, and exact finite probability",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, simple-function integrals, and exact finite probability"
+        "Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, simple-function integrals, and exact finite probability"
       ],
       "example_packs": [
         {
           "id": "finite-measure-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
-          "notes": "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, product tables, and exact probability foundations."
+          "notes": "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."
         }
       ],
       "proof_routes": [
@@ -2355,26 +2355,26 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions",
+      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions",
       "prerequisites": [],
       "unlocks": [
         "curriculum_counting"
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions"
+        "Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions"
       ],
       "example_packs": [
         {
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, conditioning, Bayes rule, product measures, and exact discrete distributions."
+          "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."
         }
       ],
       "proof_routes": [
         {
-          "name": "Continuous distributions, stochastic processes, and limit theorems are mostly proof or numerical-honesty tracks.",
+          "name": "Continuous distributions, stochastic processes, concentration inequalities, and limit theorems are mostly proof or numerical-honesty tracks.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2545,19 +2545,19 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied math and data science. First Axeyum slice: Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, small Bayesian tables",
+      "summary": "Undergraduate / graduate applied math and data science. First Axeyum slice: Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, small Bayesian tables",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "numerical",
       "axeyum_fragments": [
-        "Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, small Bayesian tables"
+        "Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, small Bayesian tables"
       ],
       "example_packs": [
         {
           "id": "descriptive-statistics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
-          "notes": "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, and martingale checks, contingency tables, exact tests, and Simpson witnesses."
+          "notes": "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."
         }
       ],
       "proof_routes": [

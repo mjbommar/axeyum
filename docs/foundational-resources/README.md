@@ -205,6 +205,10 @@ schemas, examples, and validation workflows.
   absorption-probability equations, expected hitting-time equations, checked
   rejection of a malformed expected-time table, and a recurrence/transience
   Lean-horizon row.
+- [`artifacts/examples/math/finite-concentration-v0/`](../../artifacts/examples/math/finite-concentration-v0/)
+  validates exact finite Markov, Chebyshev, and union-bound replays over
+  rational atom tables, checked rejection of a false tail bound, and a
+  concentration/limit-theorem Lean-horizon row.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
@@ -262,6 +266,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

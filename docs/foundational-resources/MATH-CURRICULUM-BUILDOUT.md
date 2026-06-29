@@ -208,9 +208,9 @@ losing the curriculum anchor.
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, continuous maps, compactness, and connectedness finite checks. |
-| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, and `finite-hitting-times-v0` over finite universes; Lebesgue theory remains horizon. |
-| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, product tables, exact discrete distributions. |
-| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks. |
+| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
+| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
+| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, LP feasibility, dual/Farkas certificates, threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
@@ -511,6 +511,10 @@ malformed kernel row, and a regular-conditional-probability Lean-horizon row.
 first-hit distributions, survival probabilities, absorption-probability
 fixed-point equations, expected hitting-time equations, checked rejection of a
 false expected-time table, and a recurrence/transience Lean-horizon row.
+`artifacts/examples/math/finite-concentration-v0/` now validates exact finite
+Markov, Chebyshev, and union-bound replays over rational atom tables, checked
+rejection of a false tail bound, and a concentration/limit-theorem
+Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
@@ -598,6 +602,8 @@ Recommended order:
 27. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
     equations, and bad expected-time rejection.
+28. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
+    tail checks, plus rejection of a false concentration bound.
 
 Exit criteria:
 
@@ -758,7 +764,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-27, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-28, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -801,6 +807,9 @@ pushforward, disintegration, and composition bridge toward Markov kernels and
 regular conditional probabilities. `finite-hitting-times-v0` now adds the
 finite first-hit, survival, absorption-probability, and expected-hitting-time
 bridge toward recurrence/transience and potential-theory horizons.
+`finite-concentration-v0` now adds the finite Markov/Chebyshev/union-bound
+tail-probability bridge toward concentration inequalities, limit theorems,
+martingale concentration, and asymptotic statistics.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

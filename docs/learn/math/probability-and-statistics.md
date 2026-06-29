@@ -14,6 +14,7 @@ Example packs:
 - [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/)
 - [finite-stochastic-kernels-v0](../../../artifacts/examples/math/finite-stochastic-kernels-v0/)
 - [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/)
+- [finite-concentration-v0](../../../artifacts/examples/math/finite-concentration-v0/)
 - [finite-martingales-v0](../../../artifacts/examples/math/finite-martingales-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
@@ -35,9 +36,10 @@ expectations, the law of total expectation, tower property replay, finite
 stochastic-kernel normalization, pushforward, joint disintegration, kernel
 composition, finite first-hit distributions, survival probabilities,
 absorption-probability equations, expected hitting-time equations, finite
-filtrations, martingale conditional-expectation equalities, square
-submartingale inequalities, bounded stopping-time replay, finite product-measure
-tables, rectangle probabilities, marginals, finite Fubini sums, exact
+concentration/tail-bound replays, finite filtrations, martingale
+conditional-expectation equalities, square submartingale inequalities, bounded
+stopping-time replay, finite product-measure tables, rectangle probabilities,
+marginals, finite Fubini sums, exact
 mean/variance identities, contingency table margins, and a Simpson's paradox
 count-table witness. The d-separation pack adds a finite DAG bridge:
 it checks whether conditioning blocks or opens paths in small
@@ -117,6 +119,23 @@ h(hit) = 0
 The `finite-hitting-times-v0` validator carries only not-yet-hit mass forward,
 checks the survival mass, and verifies the absorption-probability and expected
 hitting-time linear equations.
+
+For finite concentration checks, it recomputes exact tail probabilities and
+standard finite inequalities:
+
+```text
+P(low) = 3/4
+P(high) = 1/4
+X(low) = 0
+X(high) = 4
+P(X >= 2) = 1/4
+E[X] / 2 = 1/2
+```
+
+The `finite-concentration-v0` validator checks Markov's inequality,
+Chebyshev's inequality, the union bound, and rejects a false claim such as
+`P(X >= 2) <= 1/8` for this table.
+
 For finite martingales, it checks a two-step fair walk against its natural
 filtration:
 
@@ -170,6 +189,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
@@ -182,13 +202,14 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 ```
 
 For a fuller trace through atom-table replay, read
-[End To End: Conditional Probability, Random Variables, Kernels, Martingales, And Product Measures](finite-probability-end-to-end.md).
+[End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
 
 ## Horizon
 
 Continuous distributions, stochastic processes, convergence theorems, random
-matrix spectral laws, concentration bounds, Lebesgue integration, monotone and
-dominated convergence, general product measures, Fubini/Tonelli, conditional
+matrix spectral laws, Chernoff/Hoeffding bounds, laws of large numbers,
+central limit theorems, martingale concentration, Lebesgue integration,
+monotone and dominated convergence, general product measures, Fubini/Tonelli, conditional
 expectation, regular conditional probabilities, disintegration theorems,
 general Markov kernels, recurrence/transience classifications,
 infinite-horizon hitting probabilities, general martingale convergence,

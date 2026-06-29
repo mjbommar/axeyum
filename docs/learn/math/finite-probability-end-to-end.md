@@ -1,13 +1,14 @@
-# End To End: Conditional Probability, Random Variables, Kernels, Martingales, And Product Measures
+# End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures
 
 This lesson follows finite probability resources from atom tables to replayed
 conditional probability, finite random variables, conditional expectation,
-finite stochastic kernels, finite martingales, exact product measures, and
-finite expectations. It uses the
+finite stochastic kernels, finite concentration checks, finite martingales,
+exact product measures, and finite expectations. It uses the
 [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
 [finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/),
 [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/),
 [finite-stochastic-kernels-v0](../../../artifacts/examples/math/finite-stochastic-kernels-v0/),
+[finite-concentration-v0](../../../artifacts/examples/math/finite-concentration-v0/),
 [finite-martingales-v0](../../../artifacts/examples/math/finite-martingales-v0/),
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
@@ -40,6 +41,10 @@ Concept rows:
 | `joint-disintegration-witness` | `sat` | replay-only |
 | `kernel-composition-witness` | `sat` | replay-only |
 | `bad-kernel-row-rejected` | `unsat` | checked |
+| `markov-inequality-witness` | `sat` | replay-only |
+| `chebyshev-inequality-witness` | `sat` | replay-only |
+| `union-bound-witness` | `sat` | replay-only |
+| `bad-concentration-bound-rejected` | `unsat` | checked |
 | `finite-martingale-witness` | `sat` | replay-only |
 | `square-submartingale-witness` | `sat` | replay-only |
 | `bounded-stopping-replay` | `sat` | replay-only |
@@ -125,6 +130,15 @@ M1 = 1 on {uu,ud}, -1 on {du,dd}
 M2(uu), M2(ud), M2(du), M2(dd) = 2, 0, 0, -2
 ```
 
+The finite concentration witness uses a two-point nonnegative random variable:
+
+```text
+P(low) = 3/4
+P(high) = 1/4
+X(low) = 0
+X(high) = 4
+```
+
 ## Replay
 
 The checker recomputes:
@@ -183,6 +197,17 @@ It also checks row normalization, target marginals, recovery of kernel rows
 from a finite joint table, kernel composition, and a malformed row that sums to
 `6/5`.
 
+For concentration, the checker recomputes:
+
+```text
+E[X] = 1
+P(X >= 2) = 1/4
+E[X] / 2 = 1/2
+```
+
+It also checks a finite Chebyshev row, a finite union-bound row, and rejects the
+false claim `P(X >= 2) <= 1/8`.
+
 For the finite martingale row, the checker recomputes:
 
 ```text
@@ -222,6 +247,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
@@ -239,6 +265,7 @@ The search side may propose a probability table or posterior. The trusted side
 only recomputes finite sums and exact rational divisions. Continuous
 probability, general product measures, Fubini/Tonelli, Lebesgue integration,
 conditional expectation, regular conditional probabilities, disintegration
-theorems, general Markov kernels, general martingale convergence, optional
-stopping, Doob inequalities, convergence theorems, and statistical inference
-are outside this proof claim.
+theorems, general Markov kernels, general concentration inequalities,
+Chernoff/Hoeffding bounds, laws of large numbers, central limit theorems,
+general martingale convergence, optional stopping, Doob inequalities,
+convergence theorems, and statistical inference are outside this proof claim.
