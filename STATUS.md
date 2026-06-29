@@ -272,6 +272,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   sorts; the resource regression requires `prove_qf_uf_unsat_alethe` to emit a
   pure EUF `Evidence::UnsatAletheProof` and rechecks it independently.
 
+- **Relations/functions QF_UF/Alethe regression landed.**
+  [`relations-functions-v0`](artifacts/examples/math/relations-functions-v0/)
+  now has a checked proof-object row for function single-valuedness. The new
+  SMT-LIB artifact asserts `f(x0) = y0`, `f(x0) = y1`, and `y0 != y1`; the
+  shared UF resource regression requires a pure EUF `Evidence::UnsatAletheProof`
+  and rechecks it independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -738,9 +745,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`relations-functions-end-to-end.md`](docs/learn/math/relations-functions-end-to-end.md)
   as the learner-facing trace for the relations/functions pack: finite
   divisibility partial-order replay, bijective function-table replay, checked
-  rejection of a multi-valued graph, and the Bool/BV or QF_UF graduation route
-  for stronger function-consistency evidence. The lesson is linked from the
-  math learning index plus the sets/relations path.
+  rejection of a multi-valued graph, and the QF_UF/Alethe function
+  single-valuedness proof row. The lesson is linked from the math learning
+  index plus the sets/relations path.
 
 - **Finite sets end-to-end lesson landed.** Added
   [`finite-sets-end-to-end.md`](docs/learn/math/finite-sets-end-to-end.md)
@@ -1600,11 +1607,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Relations/functions core curriculum pack landed.** Added
   [`relations-functions-v0`](artifacts/examples/math/relations-functions-v0/README.md)
   with finite relation-property replay, bijective function-table replay, and a
-  checked rejection of a multi-valued graph. The foundational example-pack
-  validator now checks relation pairs, partial-order properties, function
-  totality/single-valuedness, injectivity, and surjectivity; generated
-  dashboards mark `relations-functions-v0` as validated and link the QF_UF
-  congruence/Alethe recipe as the graduation route. Continue Phase M3 with
+  checked rejection of a multi-valued graph. It now also carries a checked
+  QF_UF/Alethe function single-valuedness artifact. The foundational
+  example-pack validator now checks relation pairs, partial-order properties,
+  function totality/single-valuedness, injectivity, surjectivity, and the linked
+  proof artifact/regression. Continue Phase M3 with
   `finite-fields-v0`, or close the remaining `proof-methods-refutation-v0`
   CNF/LRAT proof gap.
 

@@ -413,6 +413,23 @@ def validate_relations_functions(expected: dict[str, Any]) -> None:
     if is_total_function(domain, pairs) and is_single_valued(domain, pairs):
         fail("non-function-rejected graph unexpectedly is a function")
 
+    qf_uf = checks["qf-uf-function-single-valued-alethe"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-function-single-valued-alethe must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-function-single-valued-alethe must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-function-single-valued-alethe must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf function single-valued smt2_artifact", smt2_artifact)
+    check_source("qf-uf function single-valued smt2_artifact", smt2_artifact)
+    require_string("qf-uf function single-valued proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-uf function single-valued certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf function single-valued certificate must document zero-trust Alethe evidence")
+
 
 def is_partial_order(elements: list[str], pairs: set[tuple[str, str]]) -> bool:
     return is_reflexive(elements, pairs) and is_antisymmetric(pairs) and is_transitive(pairs)

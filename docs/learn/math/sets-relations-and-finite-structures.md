@@ -33,8 +33,9 @@ The current finite-structure path starts with plain finite sets, then moves to
 relations, functions, cardinality, and set families. The finite-set pack replays
 union/intersection identities, subset transitivity, and a fixed false set claim.
 The relations/functions pack checks partial-order properties, bijective function
-tables, and rejection of a multi-valued graph. The equivalence-classes pack
-checks finite equivalence classes, quotient-map fibers, partition-to-relation
+tables, rejection of a multi-valued graph, and a QF_UF/Alethe function
+single-valuedness row. The equivalence-classes pack checks finite equivalence
+classes, quotient-map fibers, partition-to-relation
 round trips, rejection of a non-transitive relation, and a checked QF_UF/Alethe
 quotient congruence row. The function-composition pack checks finite composition,
 image/preimage replay, inverse tables, associativity, and non-injective inverse

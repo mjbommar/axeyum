@@ -22,3 +22,11 @@ Expected result: `unsat`.
 The checked query is the fixed false claim that a graph with both
 `x0 -> y0` and `x0 -> y1` is a function. The validator confirms the graph
 violates single-valuedness.
+
+## `qf-uf-function-single-valued-alethe`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact asserts that an uninterpreted function sends `x0` to both
+`y0` and `y1`, while also asserting `y0 != y1`. The solver regression requires a
+pure EUF `Evidence::UnsatAletheProof` and rechecks it independently.

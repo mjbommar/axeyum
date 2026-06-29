@@ -367,7 +367,8 @@ curriculum node with finite universe membership, subset transitivity,
 union/intersection identity replay, and a bounded rejection of a malformed fixed
 set identity. `relations-functions-v0` now validates the next set-theory
 dependency with finite relation properties, bijective function-table replay, and
-a checked rejection of a multi-valued graph. `equivalence-classes-v0` now
+a checked rejection of a multi-valued graph plus a QF_UF/Alethe
+function-consistency proof row. `equivalence-classes-v0` now
 deepens that node with finite equivalence classes, quotient-map fibers,
 partition-to-relation round trips, checked rejection of a non-transitive
 relation, and a resource-backed QF_UF/Alethe quotient-map congruence proof row.
@@ -928,8 +929,8 @@ Priority recipes:
 3. Finite-function/EUF congruence for relation/function packs. Status: base
    recipe landed as
    [QF_UF Congruence And Alethe Evidence](../proof-cookbook/recipes/qf-uf-congruence-alethe.md);
-   `relations-functions-v0` now links it as the graduation route beyond finite
-   table replay.
+   `relations-functions-v0` now has a checked function single-valuedness artifact,
+   and `equivalence-classes-v0` has a checked quotient-map congruence artifact.
 4. Bounded arithmetic/Diophantine route for number-theory packs. Status:
    landed as [QF_LIA Diophantine Evidence](../proof-cookbook/recipes/qf-lia-diophantine.md)
    and linked from `modular-arithmetic-v0` as the graduation route beyond finite

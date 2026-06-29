@@ -8,7 +8,8 @@ The examples are the finite-domain shadow of Axeyum's Bool/BV and EUF routes:
 
 - replay a partial-order relation over a three-element finite universe;
 - replay a bijective function table between two finite sets;
-- reject a malformed function graph with two outputs for one input.
+- reject a malformed function graph with two outputs for one input;
+- certify a QF_UF function-consistency conflict with Alethe evidence.
 
 These checks are intentionally finite. They do not claim general function
 theory, choice principles, or infinite-domain cardinality facts. They create the
@@ -31,9 +32,10 @@ accepted only after replaying the listed finite table. The malformed function
 row is accepted only because the validator confirms the fixed table violates
 single-valuedness.
 
-This pack does not yet emit Axeyum EUF terms or checked Alethe evidence. The
-QF_UF congruence route is linked as the graduation target once a future pack
-adds explicit congruence-conflict artifacts.
+This pack also includes one proof-object row: the SMT-LIB artifact in
+`smt2/function-single-valued-conflict.smt2` asserts that one function application
+has two distinct results. The resource regression requires a pure EUF
+`Evidence::UnsatAletheProof` and rechecks it independently.
 
 Validation:
 

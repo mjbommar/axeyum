@@ -11,25 +11,43 @@ use axeyum_solver::{CheckResult, Evidence, SolverConfig, check_auto, prove_qf_uf
 const EQUIVALENCE_CLASSES_QUOTIENT_CONGRUENCE: &str = include_str!(
     "../../../artifacts/examples/math/equivalence-classes-v0/smt2/quotient-map-congruence-conflict.smt2"
 );
+const RELATIONS_FUNCTIONS_SINGLE_VALUED_CONFLICT: &str = include_str!(
+    "../../../artifacts/examples/math/relations-functions-v0/smt2/function-single-valued-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
-    let mut script = parse_script(EQUIVALENCE_CLASSES_QUOTIENT_CONGRUENCE)
-        .expect("resource SMT-LIB artifact parses");
+    assert_resource_euf_alethe(
+        "equivalence-classes-v0 quotient-map congruence",
+        EQUIVALENCE_CLASSES_QUOTIENT_CONGRUENCE,
+    );
+}
+
+#[test]
+fn relations_functions_single_valued_conflict_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "relations-functions-v0 function single-valued conflict",
+        RELATIONS_FUNCTIONS_SINGLE_VALUED_CONFLICT,
+    );
+}
+
+fn assert_resource_euf_alethe(label: &str, smt2: &str) {
+    let mut script = parse_script(smt2)
+        .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
     let assertions = script.assertions.clone();
 
     assert_eq!(
         check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
         CheckResult::Unsat,
-        "resource obligation must be unsat"
+        "{label}: resource obligation must be unsat"
     );
 
     let proof = prove_qf_uf_unsat_alethe(&script.arena, &assertions)
-        .expect("resource obligation emits a pure EUF Alethe proof");
+        .unwrap_or_else(|| panic!("{label}: resource obligation emits a pure EUF Alethe proof"));
     let evidence = Evidence::UnsatAletheProof(proof);
     assert!(evidence.is_certified());
     assert!(
         evidence.check(&script.arena, &assertions).unwrap(),
-        "Alethe certificate must independently re-check"
+        "{label}: Alethe certificate must independently re-check"
     );
 }

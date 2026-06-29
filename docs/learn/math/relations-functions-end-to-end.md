@@ -19,10 +19,12 @@ Concept rows:
 | `partial-order-witness` | `sat` | replay-only |
 | `bijection-table-witness` | `sat` | replay-only |
 | `non-function-rejected` | `unsat` | checked |
+| `qf-uf-function-single-valued-alethe` | `unsat` | checked |
 
-The rows are finite table checks. The pack does not claim general function
-theory, choice principles, quotient constructions, or infinite-domain
-cardinality facts.
+The first three rows are finite table checks. The final row is a concrete
+QF_UF proof-object check for function consistency. The pack does not claim
+general function theory, choice principles, quotient constructions, or
+infinite-domain cardinality facts.
 
 ## Encode
 
@@ -45,9 +47,9 @@ injective:     distinct inputs have distinct outputs
 surjective:    every codomain element is hit
 ```
 
-The intended Axeyum graduation route is either Bool/BV enumeration of pair
-membership or a QF_UF route where function consistency and congruence are
-checked by EUF evidence. This pack currently replays finite tables directly.
+The proof-object row uses the QF_UF route where function consistency and
+congruence are checked by EUF evidence. The finite table rows still replay
+directly.
 
 ## Replay A Partial Order
 
@@ -119,6 +121,22 @@ y0 != y1
 The result is checked `unsat` for this fixed graph. It is a finite table
 refutation, not a theorem about all malformed graphs.
 
+## Check The QF_UF Function Conflict
+
+The proof-object row encodes the same single-valuedness idea as a pure EUF
+conflict:
+
+```text
+f(x0) = y0
+f(x0) = y1
+y0 != y1
+```
+
+The artifact lives at
+`artifacts/examples/math/relations-functions-v0/smt2/function-single-valued-conflict.smt2`.
+The resource regression checks that Axeyum emits `Evidence::UnsatAletheProof`
+with the pure EUF Alethe emitter and then rechecks the proof independently.
+
 ## Run It
 
 From the repository root:
@@ -140,7 +158,7 @@ base layer:
 
 ```text
 untrusted fast search -> candidate relation or function graph
-trusted small checking -> relation laws, function totality, single-valuedness, bijection replay
+trusted small checking -> relation laws, function totality, single-valuedness, bijection replay, Alethe equality proof
 ```
 
 General function-space theorems, choice-dependent existence principles,

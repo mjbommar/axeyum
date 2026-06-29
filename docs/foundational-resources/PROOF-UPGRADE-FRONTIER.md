@@ -159,6 +159,7 @@ First targets:
 - [equivalence-classes-v0](../../artifacts/examples/math/equivalence-classes-v0/)
   (resource-backed QF_UF/Alethe regression landed for quotient-map congruence)
 - [relations-functions-v0](../../artifacts/examples/math/relations-functions-v0/)
+  (resource-backed QF_UF/Alethe regression landed for function single-valuedness)
 - [finite-groups-v0](../../artifacts/examples/math/finite-groups-v0/)
 - [function-composition-v0](../../artifacts/examples/math/function-composition-v0/)
 - [finite-algebra-homomorphisms-v0](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)

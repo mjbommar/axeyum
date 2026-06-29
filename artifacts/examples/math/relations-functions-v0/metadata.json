@@ -4,7 +4,7 @@
   "title": "Finite Relations And Function Tables",
   "domain": "mathematics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "curriculum_relations_and_functions",
     "curriculum_sets",
@@ -37,12 +37,13 @@
   "expected_results": [
     "partial-order-witness",
     "bijection-table-witness",
-    "non-function-rejected"
+    "non-function-rejected",
+    "qf-uf-function-single-valued-alethe"
   ],
   "graduation_criteria": [
     "Encode finite relation predicates as deterministic Bool/BV formulas.",
     "Replay finite function tables through Axeyum model evaluation.",
-    "Add explicit QF_UF congruence-conflict examples with checked Alethe evidence.",
+    "Keep the QF_UF function-consistency artifact tied to a checked Alethe evidence regression.",
     "Promote reusable finite-relation helpers only after cardinality or finite-algebra packs duplicate the same logic."
   ]
 }
