@@ -134,15 +134,18 @@ concrete oracle (DISAGREE=0), clippy-gated, pushed:
   `Expr::Overflows` node). Also fixed a latent literal-coercion gap in bare
   `name = <lit>` assignment. Verify corpus 9→14 (4/7 Lean-cert). Method gaps that
   need core IR (popcount/clz/ctz, symbolic-amount rotate) filed as **U9**.
-- **`axeyum-evm`** turned three `Unknown`-forcing opcodes into precise models
-  (concrete-operand fast path, symbolic→sound `Unknown`), each added to the
-  differential-fuzz pool: **BYTE** (0x1a), **SIGNEXTEND** (0x0b), **EXP** (0x0a,
-  constant-fold via `Word::pow`). EVM corpus 13→16. Aggregate track: 46 cases,
-  DISAGREE=0.
+- **`axeyum-evm`** turned five `Unknown`-forcing opcode classes into sound models,
+  each added to the differential-fuzz pool: **BYTE** (0x1a) and **SIGNEXTEND**
+  (0x0b) — *fully precise* (concrete shift/extract + symbolic bounded-`ite`);
+  **EXP** (0x0a) — concrete constant-fold via `Word::pow`; **CALL-family return
+  data** — witnessed fresh memory bytes for a concrete/32-aligned/bounded region
+  (over-approximating any callee return, witness replays); **LOG0–LOG4** (0xa0–
+  0xa4) — no-op pops (the biggest false-`Unknown` source: a LOG before a bug hid
+  it). EVM corpus 13→17. Aggregate track: 47 cases, DISAGREE=0.
 
-**Next.** A3/C6 stay U8/install-gated. Buildable threads: symbolic-index
-BYTE/SIGNEXTEND via a bounded `ite`; first-class `Option` value flow in verify;
-CALL return-data modeling; an EVM Lean-cert column (needs a small core accessor).
+**Next.** A3/C6 stay U8/install-gated. Buildable threads: first-class `Option`
+value flow in verify; symbolic-exponent EXP / RETURNDATACOPY (heavier); an EVM
+Lean-cert column (needs a small core accessor).
 Forward backlog in
 [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
