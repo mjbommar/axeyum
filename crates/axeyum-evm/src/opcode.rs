@@ -143,6 +143,10 @@ pub enum Op {
     /// **witnessed symbolic input** (fresh symbol symbolically; replayed from the
     /// witness concretely) so paths explore past it soundly instead of halting.
     Env(u8),
+    /// `CALLDATACOPY` (0x37): copy `length` bytes of calldata at `offset` into
+    /// memory at `destOffset` (pops destOffset, offset, length). Modeled precisely
+    /// (the calldata is already symbolic) for a concrete, 32-aligned, bounded copy.
+    CallDataCopy,
     /// `LOG0`–`LOG4` (0xa0–0xa4): pops `2 + n` args (offset, length, `n` topics)
     /// and pushes nothing. Logs are observable side effects only — they do not
     /// affect execution state — so for reachability analysis they are a no-op pop.
@@ -227,6 +231,7 @@ impl Op {
             0xf3 => Op::Return,
             0xfd => Op::Revert,
             0xfe => Op::Invalid,
+            0x37 => Op::CallDataCopy,
             0xa0..=0xa4 => Op::Log(byte - 0xa0),
             other => Op::Unsupported(other),
         }

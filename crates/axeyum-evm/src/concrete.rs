@@ -17,6 +17,11 @@ use axeyum_ir::WideUint;
 use crate::opcode::{Op, Program};
 use crate::word::{WIDTH, Word};
 
+/// Upper bound on a single `CALLDATACOPY` byte count, to avoid pathological loops
+/// on adversarial lengths. The symbolic side only *models* (and thus only
+/// witness-replays) copies of ≤ `MAX_COPY_WORDS * 32` bytes, well within this.
+const COPY_CAP_BYTES: usize = 4096;
+
 /// Why a concrete run stopped.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Halt {
@@ -580,6 +585,19 @@ fn run_core(
                     .unwrap_or_else(Word::zero);
                 *env_cursor += 1;
                 stack.push(value);
+            }
+            Op::CallDataCopy => {
+                // Copy calldata[offset..offset+length] (zero-padded) into memory.
+                // Capped against adversarial lengths; the modeled domain (the only
+                // place a witness is replayed) is well within the cap.
+                let (dest, off, len) = (pop!(), pop!(), pop!());
+                if let (Some(d), Some(o), Some(l)) = (dest.to_usize(), off.to_usize(), len.to_usize())
+                {
+                    for i in 0..l.min(COPY_CAP_BYTES) {
+                        let b = env.calldata.get(o + i).copied().unwrap_or(0);
+                        memory.insert(d + i, b);
+                    }
+                }
             }
             Op::Log(topics) => {
                 // LOG0..LOG4: pop offset, length, and `topics` topics; no output.

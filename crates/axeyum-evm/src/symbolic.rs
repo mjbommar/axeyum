@@ -63,6 +63,10 @@ const MAX_CALLDATA_BYTES: usize = 256;
 /// fresh bytes written to memory. Larger (or non-32-aligned / symbolic-length)
 /// return regions stay a sound `Unknown`. Most ABI returns are ≤ 2 words.
 pub(crate) const MAX_RETURN_WORDS: usize = 4;
+/// Largest `CALLDATACOPY` region (in 32-byte words) modeled precisely; larger /
+/// non-aligned / symbolic copies stay a sound `Unknown`. 8 words = the modeled
+/// `MAX_CALLDATA_BYTES`.
+pub(crate) const MAX_COPY_WORDS: usize = 8;
 /// Largest keccak preimage (in bytes) we model symbolically. The dominant
 /// mapping-storage pattern hashes a 32-byte slot or a 64-byte `(key . slot)`
 /// pair; longer preimages are havoc'd to a sound `Unknown`.
@@ -1092,6 +1096,35 @@ fn run_from(
                 let (value, sym) = env.fresh_env(arena)?;
                 state.env_syms.push(sym);
                 state.stack.push(value);
+            }
+            Op::CallDataCopy => {
+                // Copy calldata[offset..offset+length] into memory[dest..].
+                // Precise (calldata is already symbolic) for a concrete, 32-aligned,
+                // bounded region; otherwise a sound Unknown.
+                let dest = pop_or_unknown!();
+                let off = pop_or_unknown!();
+                let len = pop_or_unknown!();
+                let d = concrete_usize(arena, dest);
+                let o = concrete_usize(arena, off);
+                let l = concrete_usize(arena, len);
+                match (d, o, l) {
+                    (_, _, Some(0)) => {} // nothing to copy
+                    (Some(d), Some(o), Some(l))
+                        if l % 32 == 0 && l / 32 <= MAX_COPY_WORDS =>
+                    {
+                        for k in 0..(l / 32) {
+                            let word = calldata_word(arena, env, state.tx, o + 32 * k)?;
+                            let at = d + 32 * k;
+                            mem_store(arena, state, at, word)?;
+                            let off_word = arena.bv_const(W, at as u128)?;
+                            state.sym_memory.push(Write {
+                                key: off_word,
+                                value: word,
+                            });
+                        }
+                    }
+                    _ => *saw_unknown = true,
+                }
             }
             Op::Log(topics) => {
                 // LOG0..LOG4: pop offset, length, and `topics` topic words; push
