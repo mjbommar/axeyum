@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Numerical linear algebra foundations pack landed.** Added
+  [`numerical-linear-algebra-v0`](artifacts/examples/math/numerical-linear-algebra-v0/README.md)
+  as the first exact numerical-analysis error-bound resource. The pack validates
+  residual infinity-norm replay, rational solution-box replay, one Jacobi step
+  with an exact row-sum contraction bound, and checked rejection of a false
+  residual bound. The foundational example-pack validator now checks exact
+  residual vectors, infinity norms, interval membership, Jacobi updates, and
+  finite contraction inequalities without using floating-point tolerances.
+
 - **Graph cut foundations pack landed.** Added
   [`graph-cut-v0`](artifacts/examples/math/graph-cut-v0/README.md)
   to close the first richer-cut slice in the graph lane. The pack validates a

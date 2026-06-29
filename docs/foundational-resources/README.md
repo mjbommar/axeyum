@@ -96,6 +96,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/linear-algebra-rational-v0/`](../../artifacts/examples/math/linear-algebra-rational-v0/)
   validates exact rational matrix-vector solution replay, LU factorization
   replay, and a row-scaling inconsistency certificate for a singular system.
+- [`artifacts/examples/math/numerical-linear-algebra-v0/`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
+  validates exact residual bounds, rational solution boxes, Jacobi one-step
+  contraction replay, and checked rejection of a false residual bound.
 - [`artifacts/examples/math/finite-groups-v0/`](../../artifacts/examples/math/finite-groups-v0/),
   [`artifacts/examples/math/finite-rings-v0/`](../../artifacts/examples/math/finite-rings-v0/),
   [`artifacts/examples/math/finite-fields-v0/`](../../artifacts/examples/math/finite-fields-v0/),
@@ -166,6 +169,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0

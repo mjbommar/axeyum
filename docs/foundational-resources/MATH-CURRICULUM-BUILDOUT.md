@@ -475,6 +475,9 @@ finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
 arithmetic, conjugate/norm replay, and a fixed polynomial-root witness using
 real-pair algebra.
+`artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
+residual bounds, rational solution boxes, Jacobi one-step contraction replay,
+and checked rejection of a false residual bound.
 
 Recommended order:
 
@@ -494,6 +497,8 @@ Recommended order:
 9. `finite-operator-v0`: finite-dimensional norms/operators and Chebyshev
    polynomial examples.
 10. `complex-algebraic-v0`: complex arithmetic as real-pair algebra.
+11. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
+    and exact iterative-method error replay.
 
 Exit criteria:
 
@@ -654,7 +659,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-10, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-11, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -663,8 +668,10 @@ analysis/topology horizons. Phase M6 now has cookbook links from all current
 non-template math example packs, and `proof-methods-refutation-v0` has a checked
 finite CNF truth-table route for its pigeonhole refutation. Phase M7 now has
 generated pack-level proof-gap rows and a normal foundational-resource check
-hook. Continue by adding the next curriculum-adjacent pack or by replacing
-finite enumeration routes with emitted, checked proof objects where appropriate.
+hook. `numerical-linear-algebra-v0` now adds the first exact residual/error-bound
+numerical-analysis slice. Continue by adding the next curriculum-adjacent pack
+or by replacing finite enumeration routes with emitted, checked proof objects
+where appropriate.
 
 ## Operating Rules
 

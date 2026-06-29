@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
+- [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 
@@ -19,7 +20,9 @@ Example packs:
 The linear path uses exact rational matrices. It replays `A*x = b`, checks
 `L*U = A`, validates a row-scaling inconsistency certificate, checks LP
 feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
-replays finite-dimensional norm/operator examples.
+replays finite-dimensional norm/operator examples. The numerical-linear-algebra
+slice adds exact residual bounds, rational interval boxes for solutions, and a
+one-step Jacobi contraction check.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -38,7 +41,9 @@ b = [4,-1]
 The validator recomputes `A*x` and checks it equals `b`. For an LU witness, it
 recomputes `L*U = A` and checks triangular shape. For optimization, it evaluates
 each linear inequality at the candidate point and checks Farkas multipliers when
-the pack claims infeasibility.
+the pack claims infeasibility. For the numerical pack, it recomputes
+`A*x_hat - b`, infinity norms, interval membership, and the first Jacobi update
+using exact rational arithmetic.
 
 For an operator example, the finite-operator pack checks:
 
@@ -52,6 +57,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 ```

@@ -3279,13 +3279,18 @@ def linf_norm(vector: list[Fraction]) -> Fraction:
     return max(abs(item) for item in vector)
 
 
-def row_sum_norm(matrix: list[list[Fraction]]) -> Fraction:
-    return max(sum((abs(item) for item in row), Fraction(0)) for row in matrix)
-
-
 def require_same_vector_length(context: str, left: list[Fraction], right: list[Fraction]) -> None:
     if len(left) != len(right):
         fail(f"{context} vectors must have the same length")
+
+
+def vector_sub(left: list[Fraction], right: list[Fraction]) -> list[Fraction]:
+    require_same_vector_length("vector subtraction", left, right)
+    return [left_item - right_item for left_item, right_item in zip(left, right)]
+
+
+def row_sum_norm(matrix: list[list[Fraction]]) -> Fraction:
+    return max(sum((abs(item) for item in row), Fraction(0)) for row in matrix)
 
 
 def validate_finite_operator(expected: dict[str, Any]) -> None:
@@ -3361,6 +3366,134 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         expected_next = 2 * x_value * chebyshev_values[index] - chebyshev_values[index - 1]
         if chebyshev_values[index + 1] != expected_next:
             fail(f"chebyshev T{index + 1} does not match the recurrence")
+
+
+def jacobi_step(matrix: list[list[Fraction]], rhs: list[Fraction], point: list[Fraction]) -> list[Fraction]:
+    require_square_matrix("Jacobi matrix", matrix)
+    require_mat_vec_shape("Jacobi point", matrix, point)
+    if len(matrix) != len(rhs):
+        fail("Jacobi matrix height must match rhs length")
+    result: list[Fraction] = []
+    for row_index, row in enumerate(matrix):
+        diagonal = row[row_index]
+        if diagonal == 0:
+            fail("Jacobi matrix diagonal entries must be nonzero")
+        off_diagonal = sum(
+            (coefficient * point[col_index] for col_index, coefficient in enumerate(row) if col_index != row_index),
+            Fraction(0),
+        )
+        result.append((rhs[row_index] - off_diagonal) / diagonal)
+    return result
+
+
+def jacobi_contraction_bound(matrix: list[list[Fraction]]) -> Fraction:
+    require_square_matrix("Jacobi contraction matrix", matrix)
+    bounds: list[Fraction] = []
+    for row_index, row in enumerate(matrix):
+        diagonal = row[row_index]
+        if diagonal == 0:
+            fail("Jacobi contraction diagonal entries must be nonzero")
+        bounds.append(
+            sum(
+                (abs(coefficient / diagonal) for col_index, coefficient in enumerate(row) if col_index != row_index),
+                Fraction(0),
+            )
+        )
+    return max(bounds)
+
+
+def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    residual_bound = checks["residual-norm-bound-witness"]
+    if residual_bound["expected_result"] != "sat":
+        fail("residual-norm-bound-witness must expect sat")
+    values = single_witness_values(residual_bound, witnesses)
+    matrix = require_fraction_matrix("residual matrix", values.get("matrix"))
+    candidate = require_fraction_vector("residual candidate", values.get("candidate"))
+    rhs = require_fraction_vector("residual rhs", values.get("rhs"))
+    residual = require_fraction_vector("residual vector", values.get("residual"))
+    require_mat_vec_shape("residual system", matrix, candidate)
+    if len(matrix) != len(rhs):
+        fail("residual matrix height must match rhs length")
+    computed_residual = vector_sub(mat_vec(matrix, candidate), rhs)
+    if residual != computed_residual:
+        fail("residual vector does not equal A*x_hat - b")
+    residual_norm = require_fraction("residual infinity norm", values.get("residual_inf_norm"))
+    claimed_bound = require_fraction("residual claimed bound", values.get("claimed_bound"))
+    if linf_norm(residual) != residual_norm:
+        fail("residual infinity norm does not match the listed residual")
+    if residual_norm > claimed_bound:
+        fail("residual-norm-bound-witness violates the claimed residual bound")
+
+    solution_box = checks["solution-box-replay"]
+    if solution_box["expected_result"] != "sat":
+        fail("solution-box-replay must expect sat")
+    values = single_witness_values(solution_box, witnesses)
+    matrix = require_fraction_matrix("solution box matrix", values.get("matrix"))
+    solution = require_fraction_vector("solution box exact_solution", values.get("exact_solution"))
+    rhs = require_fraction_vector("solution box rhs", values.get("rhs"))
+    lower_bounds = require_fraction_vector("solution box lower_bounds", values.get("lower_bounds"))
+    upper_bounds = require_fraction_vector("solution box upper_bounds", values.get("upper_bounds"))
+    residual = require_fraction_vector("solution box residual", values.get("residual"))
+    require_mat_vec_shape("solution box system", matrix, solution)
+    if len(matrix) != len(rhs):
+        fail("solution box matrix height must match rhs length")
+    require_same_vector_length("solution box lower/exact", lower_bounds, solution)
+    require_same_vector_length("solution box upper/exact", upper_bounds, solution)
+    computed_residual = vector_sub(mat_vec(matrix, solution), rhs)
+    if computed_residual != residual:
+        fail("solution-box-replay residual does not equal A*x - b")
+    if any(item != 0 for item in residual):
+        fail("solution-box-replay must use an exact zero residual")
+    for index, item in enumerate(solution):
+        if not lower_bounds[index] <= item <= upper_bounds[index]:
+            fail("solution-box-replay exact solution lies outside the listed box")
+
+    jacobi = checks["jacobi-contraction-witness"]
+    if jacobi["expected_result"] != "sat":
+        fail("jacobi-contraction-witness must expect sat")
+    values = single_witness_values(jacobi, witnesses)
+    matrix = require_fraction_matrix("Jacobi matrix", values.get("matrix"))
+    rhs = require_fraction_vector("Jacobi rhs", values.get("rhs"))
+    initial = require_fraction_vector("Jacobi initial", values.get("initial"))
+    first_step = require_fraction_vector("Jacobi first_step", values.get("first_step"))
+    exact_solution = require_fraction_vector("Jacobi exact_solution", values.get("exact_solution"))
+    error0_norm = require_fraction("Jacobi error0_inf_norm", values.get("error0_inf_norm"))
+    error1_norm = require_fraction("Jacobi error1_inf_norm", values.get("error1_inf_norm"))
+    contraction_bound = require_fraction("Jacobi contraction_bound", values.get("contraction_bound"))
+    if jacobi_step(matrix, rhs, initial) != first_step:
+        fail("jacobi-contraction-witness first_step is not the Jacobi update")
+    if mat_vec(matrix, exact_solution) != rhs:
+        fail("jacobi-contraction-witness exact_solution does not solve A*x = b")
+    if linf_norm(vector_sub(initial, exact_solution)) != error0_norm:
+        fail("jacobi-contraction-witness error0_inf_norm is incorrect")
+    if linf_norm(vector_sub(first_step, exact_solution)) != error1_norm:
+        fail("jacobi-contraction-witness error1_inf_norm is incorrect")
+    if jacobi_contraction_bound(matrix) != contraction_bound:
+        fail("jacobi-contraction-witness contraction_bound is incorrect")
+    if contraction_bound >= 1:
+        fail("jacobi-contraction-witness requires a strict contraction bound")
+    if error1_norm > contraction_bound * error0_norm:
+        fail("jacobi-contraction-witness violates the claimed contraction inequality")
+
+    bad_bound = checks["bad-residual-bound-rejected"]
+    if bad_bound["expected_result"] != "unsat":
+        fail("bad-residual-bound-rejected must expect unsat")
+    data = bad_bound.get("data", {})
+    matrix = require_fraction_matrix("bad residual matrix", data.get("matrix"))
+    candidate = require_fraction_vector("bad residual candidate", data.get("candidate"))
+    rhs = require_fraction_vector("bad residual rhs", data.get("rhs"))
+    claimed_bound = require_fraction("bad residual claimed_bound", data.get("claimed_bound"))
+    actual_norm = require_fraction("bad residual actual_residual_inf_norm", data.get("actual_residual_inf_norm"))
+    require_mat_vec_shape("bad residual system", matrix, candidate)
+    if len(matrix) != len(rhs):
+        fail("bad residual matrix height must match rhs length")
+    if linf_norm(vector_sub(mat_vec(matrix, candidate), rhs)) != actual_norm:
+        fail("bad-residual-bound-rejected actual norm is incorrect")
+    if actual_norm <= claimed_bound:
+        fail("bad-residual-bound-rejected claimed bound unexpectedly holds")
 
 
 def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:
@@ -4291,6 +4424,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_modular_arithmetic(expected)
     if metadata["id"] == "natural-arithmetic-v0":
         validate_natural_arithmetic(expected)
+    if metadata["id"] == "numerical-linear-algebra-v0":
+        validate_numerical_linear_algebra(expected)
     if metadata["id"] == "number-theory-v0":
         validate_number_theory(expected)
     if metadata["id"] == "polynomial-identities-v0":

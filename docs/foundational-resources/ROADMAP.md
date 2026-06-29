@@ -75,6 +75,7 @@ artifacts/examples/math/
   sequence-limit-shadow-v0/
   calculus-algebraic-shadow-v0/
   linear-algebra-rational-v0/
+  numerical-linear-algebra-v0/
   finite-groups-v0/
   finite-rings-v0/
   finite-fields-v0/
@@ -140,8 +141,9 @@ Practical first backlog:
 3. Graph coloring examples with coloring witnesses and unsat/proof-route status.
 4. Rational density and trichotomy examples, backed by LRA evidence.
 5. Finite-field inverse examples over small primes.
-6. Matrix inverse, LU, and inconsistent linear system examples with Farkas
-   evidence where applicable.
+6. Matrix inverse, LU, residual bounds, interval boxes, iterative-method error
+   replay, and inconsistent linear system examples with Farkas evidence where
+   applicable.
 7. Finite probability examples: total mass, conditional probability table,
    Bayes rule over finite domains.
 
@@ -343,6 +345,9 @@ checks without floating-point arithmetic.
 [`linear-algebra-rational-v0`](../../artifacts/examples/math/linear-algebra-rational-v0/)
 validates exact rational matrix-vector replay, LU factorization replay, and a
 row-scaling inconsistency certificate for a singular system.
+[`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
+validates exact residual bounds, rational solution boxes, Jacobi one-step
+contraction replay, and checked rejection of a false residual bound.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.
