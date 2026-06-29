@@ -15,6 +15,7 @@ Example packs:
 - [graph-reachability-v0](../../../artifacts/examples/math/graph-reachability-v0/)
 - [graph-matching-v0](../../../artifacts/examples/math/graph-matching-v0/)
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
+- [graph-cut-v0](../../../artifacts/examples/math/graph-cut-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
 ## What Axeyum Checks
@@ -29,7 +30,8 @@ order, disconnected no-path claims, and edge-cut separation. The graph matching
 pack checks finite matching witnesses, invalid overlapping edges, augmenting
 path flips, and a perfect-matching obstruction. The DAG d-separation pack
 checks chains, forks, colliders, and descendant-opened colliders by enumerating
-finite skeleton paths.
+finite skeleton paths. The graph cut pack checks minimum edge and vertex cut
+certificates by replaying separation and enumerating smaller candidate cuts.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
@@ -39,7 +41,9 @@ matching, the search can propose edges or an augmenting path; the checker
 verifies disjoint endpoints and enumerates the small matching space when a
 maximum or obstruction is claimed. For d-separation, the search can propose an
 active path, but the checker recomputes every simple path and applies the
-collider/non-collider blocking rules.
+collider/non-collider blocking rules. For cuts, the search can propose a cut
+set and a partition; the checker removes edges or vertices, recomputes
+reachability, and enumerates smaller cuts.
 
 ## Encode / Check Walkthrough
 
@@ -113,6 +117,21 @@ conditioning set = {d}
 
 opens the path through `b` because `d` is a descendant of the collider.
 
+For cut certificates, encode a finite graph, a source/target pair, and the
+proposed cut:
+
+```text
+vertices = s, a, b, t
+edges = (s,a), (a,t), (s,b), (b,t)
+edge cut = (s,a), (s,b)
+source side = {s}
+target side = {a,b,t}
+```
+
+The validator checks that the cut edges are exactly the partition crossing
+edges, removes them, confirms `t` is unreachable from `s`, and enumerates all
+one-edge removals to justify the minimum size.
+
 Run the check from the repository root:
 
 ```sh
@@ -121,6 +140,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
 ```
 
 For a fuller trace from data row to replay result and evidence status, read
@@ -130,8 +150,7 @@ For a fuller trace from data row to replay result and evidence status, read
 
 The current pigeonhole refutation is checked by finite enumeration; deterministic
 CNF plus LRAT/DRAT remains the stronger certificate route. Reachability,
-single-edge cut separation, traversal traces, matching, and d-separation now
-have dedicated finite packs. Richer cut certificates still need dedicated
-schemas. Extremal graph theory, graph minors, asymptotic graph families, causal
-identification, and runtime-pathology proofs need theorem-proving support beyond
-the current finite examples.
+traversal traces, matching, d-separation, and cut certificates now have
+dedicated finite packs. Weighted max-flow/min-cut, extremal graph theory, graph
+minors, asymptotic graph families, causal identification, and runtime-pathology
+proofs need theorem-proving support beyond the current finite examples.

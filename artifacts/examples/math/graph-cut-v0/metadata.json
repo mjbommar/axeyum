@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "graph-cut-v0",
+  "title": "Finite Graph Cut Certificates",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_graph_theory",
+    "field_discrete_math",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting"
+  ],
+  "field_ids": [
+    "graph_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite graphs",
+    "finite-domain enumeration",
+    "Bool"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md"
+  ],
+  "expected_results": [
+    "min-edge-cut-partition-witness",
+    "one-edge-cut-rejected",
+    "min-vertex-cut-witness",
+    "one-vertex-cut-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode finite cut constraints as deterministic Bool or pseudo-Boolean formulas.",
+    "Add weighted min-cut and max-flow witness rows before claiming algorithmic coverage.",
+    "Connect cut certificates to matching and reachability helpers only after duplicate pack logic justifies a shared graph utility.",
+    "Keep general max-flow/min-cut theorem proofs and asymptotic graph algorithms as theorem-prover horizons."
+  ]
+}

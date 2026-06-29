@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph cut foundations pack landed.** Added
+  [`graph-cut-v0`](artifacts/examples/math/graph-cut-v0/README.md)
+  to close the first richer-cut slice in the graph lane. The pack validates a
+  minimum `s-t` edge cut with a partition certificate, rejection of a
+  non-separating one-edge cut, a minimum internal vertex cut, and rejection of a
+  non-separating one-vertex cut. The foundational example-pack validator now
+  checks cut partition crossing edges, reachability after removals, and
+  exhaustive smaller edge/vertex cut enumeration.
+
 - **Graph d-separation foundations pack landed.** Added
   [`graph-d-separation-v0`](artifacts/examples/math/graph-d-separation-v0/README.md)
   as the next graph/probability bridge resource. The pack validates active

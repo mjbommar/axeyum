@@ -355,6 +355,9 @@ flip replay, and a perfect-matching obstruction by exhaustive enumeration.
 [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/)
 validates finite DAG d-separation checks for chains, forks, colliders, and
 descendant-opened colliders.
+[`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/)
+validates finite minimum edge-cut and vertex-cut certificates, plus checked
+rejection of non-separating one-edge and one-vertex cuts.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
 validates exact finite probability mass tables, conditional probability, and
 Bayes posterior replay.

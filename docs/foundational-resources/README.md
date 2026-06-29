@@ -116,6 +116,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/graph-d-separation-v0/`](../../artifacts/examples/math/graph-d-separation-v0/)
   validates finite DAG d-separation checks for chains, forks, colliders, and
   descendant-opened colliders.
+- [`artifacts/examples/math/graph-cut-v0/`](../../artifacts/examples/math/graph-cut-v0/)
+  validates finite minimum edge-cut and vertex-cut certificates, plus checked
+  rejection of non-separating one-edge and one-vertex cuts.
 - [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
   validates exact finite probability mass tables, conditional probability, and
   Bayes posterior replay.
@@ -167,6 +170,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0

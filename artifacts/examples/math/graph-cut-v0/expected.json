@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "pack_id": "graph-cut-v0",
+  "witnesses": [
+    {
+      "id": "diamond-min-edge-cut",
+      "description": "A two-edge source-side cut separates s from t in the diamond graph.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "t"],
+          ["s", "b"],
+          ["b", "t"]
+        ],
+        "source": "s",
+        "target": "t",
+        "source_side": ["s"],
+        "target_side": ["a", "b", "t"],
+        "cut_edges": [
+          ["s", "a"],
+          ["s", "b"]
+        ],
+        "min_cut_size": 2
+      }
+    },
+    {
+      "id": "single-edge-noncut",
+      "description": "Removing one source edge leaves the other s-to-t path.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "t"],
+          ["s", "b"],
+          ["b", "t"]
+        ],
+        "source": "s",
+        "target": "t",
+        "cut_edges": [
+          ["s", "a"]
+        ]
+      }
+    },
+    {
+      "id": "diamond-min-vertex-cut",
+      "description": "Removing both internal vertices separates s from t.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "t"],
+          ["s", "b"],
+          ["b", "t"]
+        ],
+        "source": "s",
+        "target": "t",
+        "cut_vertices": ["a", "b"],
+        "min_cut_size": 2
+      }
+    },
+    {
+      "id": "single-vertex-noncut",
+      "description": "Removing one internal vertex leaves the other s-to-t path.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "edges": [
+          ["s", "a"],
+          ["a", "t"],
+          ["s", "b"],
+          ["b", "t"]
+        ],
+        "source": "s",
+        "target": "t",
+        "cut_vertices": ["a"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "min-edge-cut-partition-witness",
+      "claim": "The diamond graph has a minimum s-t edge cut of size 2.",
+      "expected_result": "sat",
+      "validation": "finite_min_edge_cut_enumeration",
+      "proof_status": "checked",
+      "witnesses": ["diamond-min-edge-cut"],
+      "notes": "The validator checks the partition crossing edges, replayed separation, and enumerates all smaller edge cuts."
+    },
+    {
+      "id": "one-edge-cut-rejected",
+      "claim": "Removing the listed one edge separates s from t.",
+      "expected_result": "unsat",
+      "validation": "finite_edge_cut_rejection",
+      "proof_status": "checked",
+      "witnesses": ["single-edge-noncut"],
+      "notes": "The validator confirms the remaining path s-b-t still reaches the target."
+    },
+    {
+      "id": "min-vertex-cut-witness",
+      "claim": "The diamond graph has a minimum internal s-t vertex cut of size 2.",
+      "expected_result": "sat",
+      "validation": "finite_min_vertex_cut_enumeration",
+      "proof_status": "checked",
+      "witnesses": ["diamond-min-vertex-cut"],
+      "notes": "The validator removes the listed internal vertices and enumerates all smaller internal vertex cuts."
+    },
+    {
+      "id": "one-vertex-cut-rejected",
+      "claim": "Removing the listed one internal vertex separates s from t.",
+      "expected_result": "unsat",
+      "validation": "finite_vertex_cut_rejection",
+      "proof_status": "checked",
+      "witnesses": ["single-vertex-noncut"],
+      "notes": "The validator confirms the remaining path through b still reaches the target."
+    }
+  ]
+}

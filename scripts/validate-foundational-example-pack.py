@@ -13,7 +13,7 @@ import re
 import sys
 from collections import deque
 from fractions import Fraction
-from itertools import product
+from itertools import combinations, product
 from math import gcd
 from pathlib import Path
 from typing import Any
@@ -1134,6 +1134,164 @@ def validate_graph_d_separation(expected: dict[str, Any]) -> None:
     if collider_open["expected_result"] != "sat" or collider_open.get("proof_status") != "checked":
         fail("collider-descendant-opens must be a checked sat row")
     validate_active_path_witness("collider-descendant-opens", single_witness_values(collider_open, witnesses))
+
+
+def graph_separates(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+) -> bool:
+    return target not in shortest_distances(vertices, edges, source)
+
+
+def minimum_edge_cut_size(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+) -> int:
+    if graph_separates(vertices, edges, source, target):
+        return 0
+    for size in range(1, len(edges) + 1):
+        for removed in combinations(edges, size):
+            if graph_separates(vertices, remove_edges(edges, list(removed)), source, target):
+                return size
+    fail("minimum edge cut search failed to separate a finite connected graph")
+
+
+def remove_vertices(edges: list[tuple[str, str]], removed_vertices: set[str]) -> list[tuple[str, str]]:
+    return [
+        edge
+        for edge in edges
+        if edge[0] not in removed_vertices and edge[1] not in removed_vertices
+    ]
+
+
+def minimum_vertex_cut_size(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+) -> int:
+    if graph_separates(vertices, edges, source, target):
+        return 0
+    candidates = [vertex for vertex in vertices if vertex not in {source, target}]
+    for size in range(1, len(candidates) + 1):
+        for removed in combinations(candidates, size):
+            if graph_separates(vertices, remove_vertices(edges, set(removed)), source, target):
+                return size
+    return len(candidates) + 1
+
+
+def require_graph_cut_partition(
+    context: str,
+    data: dict[str, Any],
+    vertices: list[str],
+    source: str,
+    target: str,
+) -> tuple[set[str], set[str]]:
+    source_side = require_vertex_set(
+        f"{context}.source_side",
+        data.get("source_side"),
+        vertices,
+        nonempty=True,
+    )
+    target_side = require_vertex_set(
+        f"{context}.target_side",
+        data.get("target_side"),
+        vertices,
+        nonempty=True,
+    )
+    if source_side & target_side:
+        fail(f"{context} partition sides must be disjoint")
+    if source_side | target_side != set(vertices):
+        fail(f"{context} partition sides must cover every vertex")
+    if source not in source_side:
+        fail(f"{context} source must be in source_side")
+    if target not in target_side:
+        fail(f"{context} target must be in target_side")
+    return source_side, target_side
+
+
+def crossing_edges(edges: list[tuple[str, str]], source_side: set[str], target_side: set[str]) -> list[tuple[str, str]]:
+    return [
+        edge
+        for edge in edges
+        if (edge[0] in source_side and edge[1] in target_side)
+        or (edge[1] in source_side and edge[0] in target_side)
+    ]
+
+
+def require_cut_vertices(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    source: str,
+    target: str,
+) -> set[str]:
+    cut_vertices = require_vertex_set(context, value, vertices, nonempty=True)
+    if source in cut_vertices or target in cut_vertices:
+        fail(f"{context} must not remove source or target")
+    return cut_vertices
+
+
+def validate_graph_cut(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    edge_cut = checks["min-edge-cut-partition-witness"]
+    if edge_cut["expected_result"] != "sat" or edge_cut.get("proof_status") != "checked":
+        fail("min-edge-cut-partition-witness must be a checked sat row")
+    values = single_witness_values(edge_cut, witnesses)
+    vertices, edges = require_finite_graph("min edge cut", values)
+    source = require_graph_vertex("min edge cut source", values.get("source"), vertices)
+    target = require_graph_vertex("min edge cut target", values.get("target"), vertices)
+    cut_edges = require_graph_edge_list("min edge cut.cut_edges", values.get("cut_edges"), vertices, edges)
+    source_side, target_side = require_graph_cut_partition("min edge cut", values, vertices, source, target)
+    if normalized_edge_set(cut_edges) != normalized_edge_set(crossing_edges(edges, source_side, target_side)):
+        fail("min-edge-cut-partition-witness cut_edges do not match the partition crossing edges")
+    if not graph_separates(vertices, remove_edges(edges, cut_edges), source, target):
+        fail("min-edge-cut-partition-witness cut does not separate source and target")
+    min_size = require_int("min edge cut min_cut_size", values.get("min_cut_size"))
+    if min_size != len(cut_edges) or min_size != minimum_edge_cut_size(vertices, edges, source, target):
+        fail("min-edge-cut-partition-witness minimum edge cut size is wrong")
+
+    bad_edge_cut = checks["one-edge-cut-rejected"]
+    if bad_edge_cut["expected_result"] != "unsat" or bad_edge_cut.get("proof_status") != "checked":
+        fail("one-edge-cut-rejected must be a checked unsat row")
+    values = single_witness_values(bad_edge_cut, witnesses)
+    vertices, edges = require_finite_graph("bad edge cut", values)
+    source = require_graph_vertex("bad edge cut source", values.get("source"), vertices)
+    target = require_graph_vertex("bad edge cut target", values.get("target"), vertices)
+    cut_edges = require_graph_edge_list("bad edge cut.cut_edges", values.get("cut_edges"), vertices, edges)
+    if graph_separates(vertices, remove_edges(edges, cut_edges), source, target):
+        fail("one-edge-cut-rejected unexpectedly separates source and target")
+
+    vertex_cut = checks["min-vertex-cut-witness"]
+    if vertex_cut["expected_result"] != "sat" or vertex_cut.get("proof_status") != "checked":
+        fail("min-vertex-cut-witness must be a checked sat row")
+    values = single_witness_values(vertex_cut, witnesses)
+    vertices, edges = require_finite_graph("min vertex cut", values)
+    source = require_graph_vertex("min vertex cut source", values.get("source"), vertices)
+    target = require_graph_vertex("min vertex cut target", values.get("target"), vertices)
+    cut_vertices = require_cut_vertices("min vertex cut.cut_vertices", values.get("cut_vertices"), vertices, source, target)
+    if not graph_separates(vertices, remove_vertices(edges, cut_vertices), source, target):
+        fail("min-vertex-cut-witness cut does not separate source and target")
+    min_size = require_int("min vertex cut min_cut_size", values.get("min_cut_size"))
+    if min_size != len(cut_vertices) or min_size != minimum_vertex_cut_size(vertices, edges, source, target):
+        fail("min-vertex-cut-witness minimum vertex cut size is wrong")
+
+    bad_vertex_cut = checks["one-vertex-cut-rejected"]
+    if bad_vertex_cut["expected_result"] != "unsat" or bad_vertex_cut.get("proof_status") != "checked":
+        fail("one-vertex-cut-rejected must be a checked unsat row")
+    values = single_witness_values(bad_vertex_cut, witnesses)
+    vertices, edges = require_finite_graph("bad vertex cut", values)
+    source = require_graph_vertex("bad vertex cut source", values.get("source"), vertices)
+    target = require_graph_vertex("bad vertex cut target", values.get("target"), vertices)
+    cut_vertices = require_cut_vertices("bad vertex cut.cut_vertices", values.get("cut_vertices"), vertices, source, target)
+    if graph_separates(vertices, remove_vertices(edges, cut_vertices), source, target):
+        fail("one-vertex-cut-rejected unexpectedly separates source and target")
 
 
 def has_mod_inverse(a: int, modulus: int) -> bool:
@@ -4103,6 +4261,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_predicate(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "graph-cut-v0":
+        validate_graph_cut(expected)
     if metadata["id"] == "graph-d-separation-v0":
         validate_graph_d_separation(expected)
     if metadata["id"] == "graph-matching-v0":

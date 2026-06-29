@@ -450,6 +450,9 @@ perfect-matching obstruction by exhaustive enumeration.
 `artifacts/examples/math/graph-d-separation-v0/` now validates finite DAG
 d-separation checks for chains, forks, colliders, and descendant-opened
 colliders.
+`artifacts/examples/math/graph-cut-v0/` now validates finite minimum edge-cut
+and vertex-cut certificates, plus checked rejection of non-separating one-edge
+and one-vertex cuts.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, and Bayes posterior replay.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
@@ -475,11 +478,11 @@ real-pair algebra.
 
 Recommended order:
 
-1. `graph-coloring-v0` (landed), `graph-reachability-v0` (landed), and
-   `graph-matching-v0` (landed), and `graph-d-separation-v0` (landed): SAT
-   colorings, non-colorability, finite reachability, traversal traces, cut
-   separation, matching witnesses, augmenting paths, and finite DAG
-   d-separation.
+1. Graph resources landed: `graph-coloring-v0`, `graph-reachability-v0`,
+   `graph-matching-v0`, `graph-d-separation-v0`, and `graph-cut-v0` validate
+   SAT colorings, non-colorability, finite reachability, traversal traces,
+   cut separation, matching witnesses, augmenting paths, finite DAG
+   d-separation, and minimum cut certificates.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule.
 3. `descriptive-statistics-v0`: mean/variance identities, contingency tables,
    Simpson witness.
@@ -654,15 +657,14 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 Phase M4 items 4-10, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
-finite DAG d-separation, rational arithmetic, linear algebra/optimization,
-probability/statistics, finite structures, and analysis/topology horizons.
-Phase M6 now has cookbook links from all current non-template math example
-packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
-route for its pigeonhole refutation. Phase M7 now has generated pack-level
-proof-gap rows and a normal foundational-resource check hook. Continue by
-adding richer cut certificates, by adding the next curriculum-adjacent pack, or
-by replacing finite enumeration routes with emitted, checked proof objects
-where appropriate.
+finite DAG d-separation, finite cut certificates, rational arithmetic, linear
+algebra/optimization, probability/statistics, finite structures, and
+analysis/topology horizons. Phase M6 now has cookbook links from all current
+non-template math example packs, and `proof-methods-refutation-v0` has a checked
+finite CNF truth-table route for its pigeonhole refutation. Phase M7 now has
+generated pack-level proof-gap rows and a normal foundational-resource check
+hook. Continue by adding the next curriculum-adjacent pack or by replacing
+finite enumeration routes with emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 
