@@ -160,6 +160,8 @@ integral f dP = 0*(1/4) + 2*(1/4) + 4*(1/2) = 5/2
 
 It also checks an indicator integral, finite linearity, and rejects the false
 claim `integral f dP = 3`.
+For a fuller focused trace, read
+[End To End: Finite Integration](finite-integration-end-to-end.md).
 
 For the random-variable row, the checker recomputes:
 

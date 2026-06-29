@@ -205,6 +205,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 
 For a fuller trace through atom-table replay, read
 [End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
+For exact simple-function integration over finite atom tables, read
+[End To End: Finite Integration](finite-integration-end-to-end.md).
 For exact finite statistics and regression replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
 For finite matrix-valued probability tables, read

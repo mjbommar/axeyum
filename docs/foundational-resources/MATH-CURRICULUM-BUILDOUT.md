@@ -860,7 +860,8 @@ finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
 finite topology/measure, bounded dynamics/operators, finite
 Euler-step/error replay, finite compactness/connectedness/continuous-map
-replay, finite simplicial-homology replay, and finite Chebyshev-system
+replay, finite simplicial-homology replay, finite integration replay, and
+finite Chebyshev-system
 interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
@@ -1273,6 +1274,9 @@ continuous-map Lean horizon.
 finite simplicial-complex closure, oriented-boundary replay, `boundary^2 = 0`,
 Betti-rank replay over `Q`, checked bad-boundary rejection, and the homology
 Lean horizon.
+`finite-integration-v0` now has a learner-facing end-to-end lesson for finite
+simple-function integrals, indicator integrals, integral linearity, checked bad
+expectation rejection, and the Lebesgue-integration Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

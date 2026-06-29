@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-integration end-to-end lesson landed.** Added
+  [`finite-integration-end-to-end.md`](docs/learn/math/finite-integration-end-to-end.md)
+  as the learner-facing trace for the finite-integration pack: finite
+  simple-function integrals, indicator integrals, integral linearity, checked
+  bad-expectation rejection, and the Lebesgue-integration Lean horizon. The
+  lesson is linked from the math learning index plus the probability/statistics
+  and analysis/topology paths.
+
 - **Finite simplicial-homology end-to-end lesson landed.** Added
   [`finite-simplicial-homology-end-to-end.md`](docs/learn/math/finite-simplicial-homology-end-to-end.md)
   as the learner-facing trace for the finite-simplicial-homology pack:

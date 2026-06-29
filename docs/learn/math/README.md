@@ -194,6 +194,9 @@ validated pack data and the repo-root command that replays it.
   random-variable, conditional-expectation, finite stochastic-kernel,
   concentration, finite martingale, product-measure, and simple-function
   integral replay.
+- [Finite Integration](finite-integration-end-to-end.md): follows finite
+  simple-function integrals, indicator integrals, integral linearity, checked
+  bad-expectation rejection, and the Lebesgue-integration Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
