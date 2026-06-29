@@ -36,7 +36,8 @@ Example packs:
 The current algebra path is finite and exact. It checks finite group Cayley
 tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
 modular inverses, composite non-units with no inverse, and a Fermat-style finite
-unit enumeration. The finite-rings pack adds distributivity checks and a `Z/4Z`
+unit enumeration. The finite-groups pack now also carries a QF_UF/Alethe
+binary-operation congruence row. The finite-rings pack adds distributivity checks and a `Z/4Z`
 zero-divisor witness. The finite-monoids pack checks a finite transformation
 monoid under function composition, recomputes its units and idempotents, and
 rejects a non-associative table. The finite-permutation-groups pack checks
@@ -95,7 +96,9 @@ Z/4Z under addition
 The `finite-groups-v0` pack checks closure, identity, inverses, and
 associativity for the full Cayley table. It also replays the inverse table
 `0 -> 0`, `1 -> 3`, `2 -> 2`, `3 -> 1`, and rejects subtraction modulo `3`
-as a group operation because `0 - 1 = 2`, so `0` is not a left identity.
+as a group operation because `0 - 1 = 2`, so `0` is not a left identity. Its
+QF_UF/Alethe artifact separately certifies that a binary operation preserves
+pairwise-equal operands.
 
 For a finite monoid example, use all total functions on `{0,1}` under
 composition:

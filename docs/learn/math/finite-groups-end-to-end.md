@@ -18,9 +18,11 @@ Concept rows:
 | `z4-addition-group-table` | `sat` | replay-only |
 | `z4-inverse-table` | `sat` | replay-only |
 | `subtraction-mod3-non-group` | `unsat` | checked |
+| `qf-uf-group-operation-congruence-alethe` | `unsat` | checked |
 
-The checked rows are finite Cayley-table replay rows. The pack does not claim
-Lagrange's theorem, Sylow theory, classification of finite groups, or
+The first three rows are finite Cayley-table replay rows. The final row is a
+concrete QF_UF proof-object check for operation congruence. The pack does not
+claim Lagrange's theorem, Sylow theory, classification of finite groups, or
 quantified group theory.
 
 ## Encode
@@ -109,6 +111,22 @@ It already fails the left-identity requirement:
 
 A two-sided identity would require `0 * 1 = 1`, so the group claim is rejected.
 
+## Check The Operation Congruence Certificate
+
+The proof-object row treats the group operation as a binary uninterpreted
+function:
+
+```text
+a = b
+c = d
+mul(a, c) != mul(b, d)
+```
+
+The artifact lives at
+`artifacts/examples/math/finite-groups-v0/smt2/group-operation-congruence-conflict.smt2`.
+The resource regression checks that Axeyum emits `Evidence::UnsatAletheProof`
+with the pure EUF Alethe emitter and then rechecks the proof independently.
+
 ## Run It
 
 From the repository root:
@@ -129,7 +147,7 @@ This lesson shows Axeyum's resource pattern for finite algebra:
 
 ```text
 untrusted fast search -> candidate Cayley table and inverse table
-trusted small checking -> closure, identity, inverses, associativity, counterexample row
+trusted small checking -> closure, identity, inverses, associativity, counterexample row, Alethe congruence proof
 ```
 
 General group theory, quotient groups, Sylow theory, representation theory, and

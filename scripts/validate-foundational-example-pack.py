@@ -4593,6 +4593,23 @@ def validate_finite_groups(expected: dict[str, Any]) -> None:
     if not group_axiom_failures(carrier, identity, operation):
         fail("subtraction-mod3-non-group unexpectedly satisfies the group axioms")
 
+    qf_uf = checks["qf-uf-group-operation-congruence-alethe"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-group-operation-congruence-alethe must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-group-operation-congruence-alethe must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-group-operation-congruence-alethe must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf group operation smt2_artifact", smt2_artifact)
+    check_source("qf-uf group operation smt2_artifact", smt2_artifact)
+    require_string("qf-uf group operation proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-uf group operation certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf group operation certificate must document zero-trust Alethe evidence")
+
 
 def monoid_axiom_failures(
     carrier: list[str],

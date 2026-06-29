@@ -279,6 +279,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   shared UF resource regression requires a pure EUF `Evidence::UnsatAletheProof`
   and rechecks it independently.
 
+- **Finite-groups QF_UF/Alethe regression landed.**
+  [`finite-groups-v0`](artifacts/examples/math/finite-groups-v0/) now has a
+  checked proof-object row for binary-operation congruence. The new SMT-LIB
+  artifact asserts `a = b`, `c = d`, and `mul(a,c) != mul(b,d)`; the shared UF
+  resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
+  rechecks it independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -786,9 +793,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-groups-end-to-end.md`](docs/learn/math/finite-groups-end-to-end.md)
   as the learner-facing trace for the finite groups pack: `Z/4Z`
   Cayley-table replay, inverse-table replay, checked rejection of subtraction
-  modulo `3` as a group operation, and the Lean horizon for general group
-  theory. The lesson is linked from the math learning index plus the algebra
-  path.
+  modulo `3` as a group operation, the QF_UF/Alethe operation-congruence proof
+  row, and the Lean horizon for general group theory. The lesson is linked
+  from the math learning index plus the algebra path.
 
 - **Finite fields end-to-end lesson landed.** Added
   [`finite-fields-end-to-end.md`](docs/learn/math/finite-fields-end-to-end.md)
@@ -1568,11 +1575,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Finite groups core-structure pack landed.** Added
   [`finite-groups-v0`](artifacts/examples/math/finite-groups-v0/README.md)
   with `Z/4Z` Cayley-table replay, inverse-table replay, and a checked
-  subtraction-mod-3 non-group rejection. The foundational example-pack validator
-  now checks finite operation tables, identity, inverses, and associativity;
-  generated dashboards include the pack and mark the groups curriculum row's
-  first pack as validated. `finite-rings-v0` is the follow-on finite algebra
-  table pack.
+  subtraction-mod-3 non-group rejection. It now also carries a checked
+  QF_UF/Alethe binary-operation congruence artifact. The foundational
+  example-pack validator now checks finite operation tables, identity,
+  inverses, associativity, and the linked proof artifact/regression. Generated
+  dashboards include the pack and mark the groups curriculum row's first pack
+  as validated. `finite-rings-v0` is the follow-on finite algebra table pack.
 
 - **Counting core curriculum pack landed.** Added
   [`counting-v0`](artifacts/examples/math/counting-v0/README.md) with fixed

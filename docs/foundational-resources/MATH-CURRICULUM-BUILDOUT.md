@@ -396,7 +396,8 @@ replay, checked rejection of a bad convolution coefficient, and a
 generating-functions Lean-horizon row. The recommended Phase M3 pack list has
 landed. `finite-groups-v0`
 now validates finite Cayley-table group axioms, inverse-table replay, and a
-checked non-group operation. `finite-permutation-groups-v0` now validates
+checked non-group operation plus a QF_UF/Alethe binary-operation congruence row.
+`finite-permutation-groups-v0` now validates
 `S3` as bijective function tables under composition, cycle/sign replay, natural
 action orbit/stabilizer replay, checked bad-nonbijection rejection, and a
 general permutation-group Lean-horizon row. `finite-group-actions-v0` now

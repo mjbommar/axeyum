@@ -34,12 +34,13 @@
   "expected_results": [
     "z4-addition-group-table",
     "z4-inverse-table",
-    "subtraction-mod3-non-group"
+    "subtraction-mod3-non-group",
+    "qf-uf-group-operation-congruence-alethe"
   ],
   "graduation_criteria": [
     "Encode finite group tables as deterministic BV or finite-function formulas.",
     "Replay Cayley-table witnesses through Axeyum model evaluation.",
-    "Add checked proof/evidence routes for failed axiom and universal table claims.",
+    "Keep the QF_UF binary-operation congruence artifact tied to checked Alethe evidence.",
     "Keep Lagrange's theorem, Sylow theory, and classification results marked Lean-horizon."
   ]
 }

@@ -63,6 +63,19 @@
       "proof_status": "checked",
       "witnesses": ["subtraction-mod3"],
       "notes": "The validator recomputes the group axioms and confirms the fixed operation fails them."
+    },
+    {
+      "id": "qf-uf-group-operation-congruence-alethe",
+      "claim": "A binary group operation must preserve equality of both operands.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "smt2_artifact": "artifacts/examples/math/finite-groups-v0/smt2/group-operation-congruence-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_groups_operation_congruence_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
+      },
+      "notes": "The SMT-LIB artifact asserts a = b and c = d while demanding mul(a,c) != mul(b,d). Axeyum emits a pure EUF Alethe refutation for the binary congruence conflict."
     }
   ]
 }

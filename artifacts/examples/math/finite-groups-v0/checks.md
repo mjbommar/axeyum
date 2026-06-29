@@ -28,3 +28,12 @@ Expected result: `unsat`.
 
 The checked query is the fixed false claim that subtraction modulo `3` forms a
 group operation. The validator confirms the table fails the group axioms.
+
+## `qf-uf-group-operation-congruence-alethe`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact treats the group operation as a binary uninterpreted
+function. It asserts equal operands pairwise, but demands unequal products. The
+solver regression requires a pure EUF `Evidence::UnsatAletheProof` and rechecks
+it independently.
