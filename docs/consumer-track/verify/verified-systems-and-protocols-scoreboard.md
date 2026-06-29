@@ -195,6 +195,24 @@ for these *tiny* FSMs the symbolic proof (~4 ms) actually beats 50k fuzz traces
 (~13 ms) — fuzzing's value is sub-µs single-trace latency and scaling past where
 proofs time out, not batch throughput at this size.
 
+## Verifying real Rust, not a DSL (direction A)
+
+Closing the gap from "verify a hand-built table" to "verify actual Rust" (design +
+feasibility: [`real-rust-frontend.md`](real-rust-frontend.md)). Two driverless,
+no-new-deps paths landed:
+
+| Path | What it verifies | Result |
+|---|---|---|
+| **Finite reflection** (`protocol_toolkit.rs`) | a real idiomatic `fn step(State,Event)->State` over `#[repr(u8)]` enums | capability lifecycle Safe for all traces; **same verdicts** as the hand-encoded `u8` version — faithful |
+| **MIR-text reflection** (`mir_reflection.rs`, prototype) | the *compiled* MIR of a real function → `axeyum-ir` term | reflected term **equals the real Rust on all 256 inputs** (exhaustive cross-check) |
+
+Finite reflection partial-evaluates the user's real `step` over the finite domain
+(sound + complete for finite state; the same fn is run *and* proven — "two readings
+of one Rust function"). The MIR prototype parses a committed `-Zunpretty=mir`
+fixture (CI-robust: no rustc at test time) and proves the reflected term is exactly
+the function — evidence the MIR pipeline is real. The arbitrary-Rust `stable_mir`
+front end is deferred behind an ADR (it changes the dependency/trust surface).
+
 ## Next
 
 - **Widen the Lean reconstructor to lift this domain's coverage off 1/7**: the

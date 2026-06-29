@@ -77,10 +77,38 @@ decision (it changes the build's trust/dependency surface).
   the achievable, driverless, lean-build-respecting steps that make "verify real
   Rust" concrete *today* and de-risk the bigger investment.
 
-## Plan
+## Status (2026-06-29)
 
-- A2: finite-reflection adapter + an idiomatic enum-based real-Rust protocol
-  verified through it (cross-checked vs the existing toolkit verdicts).
-- A3: the MIR-text reflection prototype on one tiny function, cross-checked vs
-  finite reflection; honest limits documented.
-- A4: gates, scoreboard, plan the `stable_mir` decision.
+- **A2 — finite reflection: DONE** (`tests/protocol_toolkit.rs`). A `Finite` trait
+  + `reflect()` adapter lets a user write idiomatic `#[repr(u8)]` enums and a real
+  `fn step(State, Event) -> State`; the capability lifecycle re-expressed this way
+  proves Safe for all traces and yields the *same* verdicts as the hand-encoded
+  `u8` version — the enum reflection is faithful. The same `step` is run (fuzz)
+  and proven (IR): two readings of one real Rust function.
+- **A3 — MIR-text reflection: DONE (prototype)** (`tests/mir_reflection.rs`).
+  Parses a committed real-MIR fixture into an `axeyum-ir` term and exhaustively
+  verifies the term equals the real Rust function on all 256 inputs — the
+  *compiled* semantics reflected into the solver, faithfully. Tiny opcode subset,
+  unstable-format fixture; a proof-of-concept, not a maintained front end.
+
+## The `stable_mir` decision (deferred — needs an ADR)
+
+The production path to *arbitrary* Rust is a `stable_mir` (or `charon`) front end
+behind a rustc driver. It is deferred deliberately, and the call is **not** a
+consumer-lane one to make unilaterally, because it changes the project's
+dependency and trust surface:
+
+- **Pro:** arbitrary real Rust → IR; the genuine "verify your network stack"
+  capability; the documented Phase-3 target.
+- **Con:** pulls a rustc driver + compiler-internal crates (`rustc_private`) or an
+  external tool (`charon`) — a heavy, version-pinned dependency that cuts against
+  the lean-build hard rule (default build = no heavy/non-leaf deps). It also adds a
+  *large new trusted component* (the MIR extractor) to the soundness story.
+
+Recommendation: open an ADR scoping (a) the dependency/feature-gating model
+(extractor as an optional, feature-gated tool — never in the default build), and
+(b) the trust story (the extractor is untrusted; faithfulness is established the
+way A3 does it — cross-check the reflected IR against execution, now symbolically
+over the input domain rather than exhaustively). Until that ADR lands, finite
+reflection (A2) is the robust real-Rust path and the MIR prototype (A3) is the
+de-risking evidence that the bigger investment will pay off.
