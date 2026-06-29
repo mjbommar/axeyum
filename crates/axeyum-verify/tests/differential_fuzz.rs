@@ -403,6 +403,119 @@ fn wrapping_value_matches_concrete_modular_result() {
     assert!(checked >= 10, "wrapping fuzz exercised too few cases");
 }
 
+/// Concrete saturating result at unsigned width `w`.
+fn saturated_unsigned(op: BinOp, w: u32, a: u128, b: u128) -> u128 {
+    let mask: u128 = (1u128 << w) - 1;
+    match op {
+        BinOp::SaturatingAdd => (a + b).min(mask),
+        BinOp::SaturatingSub => a.saturating_sub(b),
+        BinOp::SaturatingMul => (a * b).min(mask),
+        _ => unreachable!(),
+    }
+}
+
+/// Concrete saturating result at signed width `w` (clamped to `[min, max]`).
+fn saturated_signed(op: BinOp, w: u32, a: i128, b: i128) -> i128 {
+    let min = -(1i128 << (w - 1));
+    let max = (1i128 << (w - 1)) - 1;
+    let r = match op {
+        BinOp::SaturatingAdd => a + b,
+        BinOp::SaturatingSub => a - b,
+        BinOp::SaturatingMul => a * b,
+        _ => unreachable!(),
+    };
+    r.clamp(min, max)
+}
+
+#[test]
+fn saturating_value_matches_concrete_clamp() {
+    // Soundness floor for `saturating_*` (the signed clamp direction is the
+    // delicate part): the lowered value must equal the concrete clamped result.
+    // We assert the always-false `c != <concrete>`; it must be reachable, so
+    // verify must never return Verified. Covers both signednesses.
+    let cfg = SolverConfig::default();
+    let sops = [
+        BinOp::SaturatingAdd,
+        BinOp::SaturatingSub,
+        BinOp::SaturatingMul,
+    ];
+    let mut rng = Rng(0x_5a7c_c1a3_0000_0007);
+    let mut checked_u = 0u32;
+    let mut checked_s = 0u32;
+    for _ in 0..600 {
+        let op = sops[(rng.next() as usize) % sops.len()];
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let signed = rng.next() % 2 == 0;
+        let (val, expect, ty) = if signed {
+            let min = -(1i128 << (w - 1));
+            let max = (1i128 << (w - 1)) - 1;
+            let span = (max - min + 1) as u128;
+            let a = min + ((u128::from(rng.next()) % span) as i128);
+            let b = min + ((u128::from(rng.next()) % span) as i128);
+            let e = saturated_signed(op, w, a, b);
+            checked_s += 1;
+            (
+                (a, b),
+                bits(e, w),
+                Ty::Int {
+                    width: w,
+                    signed: true,
+                },
+            )
+        } else {
+            let mask: u128 = (1u128 << w) - 1;
+            let a = u128::from(rng.next()) & mask;
+            let b = u128::from(rng.next()) & mask;
+            let e = saturated_unsigned(op, w, a, b);
+            checked_u += 1;
+            (
+                (a as i128, b as i128),
+                e,
+                Ty::Int {
+                    width: w,
+                    signed: false,
+                },
+            )
+        };
+        let (a_pat, b_pat) = if signed {
+            (bits(val.0, w), bits(val.1, w))
+        } else {
+            (val.0 as u128, val.1 as u128)
+        };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: Expr::Binary {
+                        op,
+                        lhs: Box::new(Expr::IntLit { value: a_pat, ty }),
+                        rhs: Box::new(Expr::IntLit { value: b_pat, ty }),
+                    },
+                },
+                Stmt::Assert(Expr::Binary {
+                    op: BinOp::Ne,
+                    lhs: Box::new(Expr::Var("c".to_string())),
+                    rhs: Box::new(Expr::IntLit { value: expect, ty }),
+                }),
+            ],
+        };
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong saturating value: {op:?} signed={signed} (w{w}) expected bit-pattern \
+             {expect}, but the always-false assert was proved unreachable ({verdict:?})"
+        );
+    }
+    assert!(
+        checked_u >= 10 && checked_s >= 10,
+        "saturating fuzz under-exercised (u={checked_u}, s={checked_s})"
+    );
+}
+
 #[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index

@@ -55,6 +55,12 @@ pub enum BinOp {
     WrappingSub,
     /// `wrapping_mul` — modular multiplication; never panics.
     WrappingMul,
+    /// `saturating_add` — clamps to the type's bound on overflow; never panics.
+    SaturatingAdd,
+    /// `saturating_sub` — clamps to the type's bound on overflow; never panics.
+    SaturatingSub,
+    /// `saturating_mul` — clamps to the type's bound on overflow; never panics.
+    SaturatingMul,
     /// `/` (checked for divide-by-zero; signedness from operand type).
     Div,
     /// `%` (checked for modulo-by-zero).

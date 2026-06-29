@@ -42,3 +42,39 @@ fn wrap_is_not_monotone_finds_counterexample() {
         other => panic!("wrap_is_not_monotone must find a counterexample, got {other:?}"),
     }
 }
+
+/// Safe: `saturating_add` of a non-negative amount never decreases an unsigned
+/// value, so `s >= x` always holds (and it never panics).
+#[verify]
+fn saturating_does_not_decrease(x: u8) -> u8 {
+    let s: u8 = x.saturating_add(10);
+    assert!(s >= x);
+    s
+}
+
+#[test]
+fn saturating_does_not_decrease_verifies() {
+    match saturating_does_not_decrease__axeyum_verdict() {
+        Verdict::Verified { certified, .. } => {
+            assert!(certified, "saturating_does_not_decrease proof must re-check");
+        }
+        other => panic!("saturating_does_not_decrease must verify, got {other:?}"),
+    }
+}
+
+/// Bug: at `x == 255`, `saturating_add(1)` clamps back to 255, so `s > x` is
+/// reachably false.
+#[verify(expect_bug)]
+fn saturating_is_not_strictly_increasing(x: u8) -> u8 {
+    let s: u8 = x.saturating_add(1);
+    assert!(s > x);
+    s
+}
+
+#[test]
+fn saturating_is_not_strictly_increasing_finds_counterexample() {
+    match saturating_is_not_strictly_increasing__axeyum_verdict() {
+        Verdict::Counterexample { .. } => {}
+        other => panic!("saturating_is_not_strictly_increasing must find a cex, got {other:?}"),
+    }
+}

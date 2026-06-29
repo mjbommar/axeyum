@@ -284,6 +284,10 @@ impl Lowerer<'_> {
             BinOp::WrappingAdd => self.arena.bv_add(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::WrappingSub => self.arena.bv_sub(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::WrappingMul => self.arena.bv_mul(a.term, b.term).map_err(|e| ir(&e))?,
+            // Saturating arithmetic: clamp to the type bound on overflow (no panic).
+            BinOp::SaturatingAdd | BinOp::SaturatingSub | BinOp::SaturatingMul => {
+                self.lower_saturating(op, a, b)?
+            }
             BinOp::BitAnd => self.arena.bv_and(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitOr => self.arena.bv_or(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitXor => self.arena.bv_xor(a.term, b.term).map_err(|e| ir(&e))?,
@@ -378,6 +382,91 @@ impl Lowerer<'_> {
         let b_is_neg1 = self.arena.eq(b.term, neg_one).map_err(|e| ir(&e))?;
         let ovf = self.arena.and(a_is_min, b_is_neg1).map_err(|e| ir(&e))?;
         self.record("signed division overflow (MIN / -1)", ovf)
+    }
+
+    /// Saturating arithmetic: `ite(overflow, clamp, base)` where `base` is the
+    /// total BV op and `clamp` is the type bound the result saturates to. No
+    /// panic class is recorded — saturating ops never panic. The overflow
+    /// predicates (`bv_*addo`/`*subo`/`*mulo`) are the same ones the checked ops
+    /// use, so this is exact w.r.t. Rust's `saturating_*` semantics.
+    fn lower_saturating(
+        &mut self,
+        op: BinOp,
+        a: SymVal,
+        b: SymVal,
+    ) -> Result<TermId, LowerError> {
+        let width =
+            a.ty.width()
+                .ok_or_else(|| LowerError::TypeError("saturating op on a bool".into()))?;
+        let signed = a.ty.is_signed();
+        let all_ones = if width == 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        let (base, ovf) = match op {
+            BinOp::SaturatingAdd => (
+                self.arena.bv_add(a.term, b.term).map_err(|e| ir(&e))?,
+                if signed {
+                    self.arena.bv_saddo(a.term, b.term)
+                } else {
+                    self.arena.bv_uaddo(a.term, b.term)
+                }
+                .map_err(|e| ir(&e))?,
+            ),
+            BinOp::SaturatingSub => (
+                self.arena.bv_sub(a.term, b.term).map_err(|e| ir(&e))?,
+                if signed {
+                    self.arena.bv_ssubo(a.term, b.term)
+                } else {
+                    self.arena.bv_usubo(a.term, b.term)
+                }
+                .map_err(|e| ir(&e))?,
+            ),
+            BinOp::SaturatingMul => (
+                self.arena.bv_mul(a.term, b.term).map_err(|e| ir(&e))?,
+                if signed {
+                    self.arena.bv_smulo(a.term, b.term)
+                } else {
+                    self.arena.bv_umulo(a.term, b.term)
+                }
+                .map_err(|e| ir(&e))?,
+            ),
+            _ => unreachable!("lower_saturating only handles saturating ops"),
+        };
+        let clamp = if signed {
+            // Signed bound: MAX = 0b0111..1, MIN = 0b1000..0. On overflow the
+            // result saturates to MAX when the (would-be) result is positive,
+            // else MIN. For add/sub that is decided by `a`'s sign; for mul by
+            // whether the operands share a sign.
+            let maxv = self
+                .arena
+                .bv_const(width, (1u128 << (width - 1)) - 1)
+                .map_err(|e| ir(&e))?;
+            let minv = self
+                .arena
+                .bv_const(width, 1u128 << (width - 1))
+                .map_err(|e| ir(&e))?;
+            let zero = self.arena.bv_const(width, 0).map_err(|e| ir(&e))?;
+            let a_nonneg = self.arena.bv_sge(a.term, zero).map_err(|e| ir(&e))?;
+            if matches!(op, BinOp::SaturatingMul) {
+                let b_nonneg = self.arena.bv_sge(b.term, zero).map_err(|e| ir(&e))?;
+                let not_a = self.arena.not(a_nonneg).map_err(|e| ir(&e))?;
+                let not_b = self.arena.not(b_nonneg).map_err(|e| ir(&e))?;
+                let both_pos = self.arena.and(a_nonneg, b_nonneg).map_err(|e| ir(&e))?;
+                let both_neg = self.arena.and(not_a, not_b).map_err(|e| ir(&e))?;
+                let same_sign = self.arena.or(both_pos, both_neg).map_err(|e| ir(&e))?;
+                self.arena.ite(same_sign, maxv, minv).map_err(|e| ir(&e))?
+            } else {
+                self.arena.ite(a_nonneg, maxv, minv).map_err(|e| ir(&e))?
+            }
+        } else if matches!(op, BinOp::SaturatingSub) {
+            // Unsigned underflow saturates to 0; add/mul overflow to all-ones.
+            self.arena.bv_const(width, 0).map_err(|e| ir(&e))?
+        } else {
+            self.arena.bv_const(width, all_ones).map_err(|e| ir(&e))?
+        };
+        self.arena.ite(ovf, clamp, base).map_err(|e| ir(&e))
     }
 
     /// `arr[idx]`: records `idx >= len` as out-of-bounds, then returns a chained

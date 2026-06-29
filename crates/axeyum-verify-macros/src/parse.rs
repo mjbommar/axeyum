@@ -1154,6 +1154,9 @@ impl Lowerer {
             "wrapping_add" => Some("WrappingAdd"),
             "wrapping_sub" => Some("WrappingSub"),
             "wrapping_mul" => Some("WrappingMul"),
+            "saturating_add" => Some("SaturatingAdd"),
+            "saturating_sub" => Some("SaturatingSub"),
+            "saturating_mul" => Some("SaturatingMul"),
             _ => None,
         } {
             if mc.args.len() != 1 {
