@@ -6,7 +6,8 @@ macro:
 
 - `crates/axeyum-verify/tests/network_examples.rs` (Block A)
 - `crates/axeyum-verify/tests/systems_examples.rs` (Block B)
-- `crates/axeyum-verify/tests/protocol_fsm_examples.rs` (Block C — protocol FSMs)
+- `crates/axeyum-verify/tests/protocol_fsm_examples.rs` (Block C — bounded protocol FSMs)
+- `crates/axeyum-verify/tests/protocol_unbounded.rs` (rung 4 — *unbounded* protocol safety)
 - `crates/axeyum-verify/tests/spec_oracle_gradient.rs` (the fuzz↔proof gradient)
 
 Reproduce: `cargo test -p axeyum-verify --test network_examples --test
@@ -114,6 +115,39 @@ lane, **not** a soundness issue):
 Bug-finding (`Sat`, one model) is fast and width-insensitive throughout; the wall
 is specific to the *all-inputs* proof + certificate path.
 
+## Rung 4 — unbounded protocol safety (`protocol_unbounded.rs`)
+
+The handshake FSM as a `TransitionSystem` trait impl, proven for **every trace**
+(not just `#[unwind(K)]`-bounded) via the solver's k-induction / PDR / certified-PDR
+engines (design: [`unbounded-protocol-safety.md`](unbounded-protocol-safety.md)).
+All verdicts are cross-corroborated; 5 tests green.
+
+| Property | Engine | Result | Note |
+|---|---|---|---|
+| validity (`state ≤ 2`) | `prove_safety_k_induction` | **Safe** (all traces) | k-inductive |
+| ordering (`ESTABLISHED ⇒ handshake`) | k-induction **and** PDR | **Safe** / **Safe** | two engines agree (the cross-check) |
+| ordering, certified | `prove_safety_pdr_certified` | **Safe** + `recheck()` ✓ | 3 DRAT obligations (initiation/consecution/safety) — the first *protocol* property with an unbounded checkable proof (~16 s) |
+| blind-injection bug | PDR **and** `bounded_model_check` | **Reachable** / **Reachable** | unbounded counterexample, BMC-corroborated |
+
+**Bounded-vs-unbounded benchmark** (`bounded_vs_unbounded_validity`, single run):
+bounded model checking gives a *weaker* result at each depth and its cost grows
+with depth; one unbounded proof subsumes all depths — and is *cheaper* than BMC at
+moderate depth.
+
+| Approach | Result | Time | Guarantee |
+|---|---|---|---|
+| BMC depth 2 | `UnreachableWithinBound` | 1.9 ms | safe ≤ 2 steps (not a proof) |
+| BMC depth 8 | `UnreachableWithinBound` | 12.9 ms | safe ≤ 8 steps (not a proof) |
+| BMC depth 32 | `UnreachableWithinBound` | 99.9 ms | safe ≤ 32 steps (not a proof) |
+| **k-induction** | **`Safe`** | **5.6 ms** | **safe for EVERY trace (a proof)** |
+
+Honest note: I expected k-induction to be `Inconclusive` on the ordering invariant
+(needing the `SYN_SENT ⇒ seen` strengthening) and PDR to fill the gap; the engine's
+k-induction is stronger and closed it at `k=1`, so this example does **not** show
+the k-induction-vs-PDR gap (the solver's own `tests/pdr.rs` `StuckCounter` does).
+Comments were corrected to match what was measured. The unbounded certificate is
+**DRAT**, not yet Lean — consistent with the 1/7 coverage above.
+
 ## Next
 
 - **Widen the Lean reconstructor to lift this domain's coverage off 1/7**: the
@@ -121,13 +155,15 @@ is specific to the *all-inputs* proof + certificate path.
   (memory-safety) refutations, and FSM-invariant refutations all route through
   DRAT today. Each is a tracked reconstructor-fragment target (UPSTREAM-FEEDBACK
   U1/U4); this scoreboard is the regression metric for that work.
-- **Unbounded protocol safety**: lift one Block C FSM invariant from bounded
-  (`#[unwind(K)]`) to all-traces via an inductive invariant on the same
-  transition relation — the CHC/PDR route
-  ([ADR-0048](../../research/09-decisions/adr-0048-chc-pdr-verify-guarded-invariant-discovery.md)),
-  the first rung-4 result and the first *protocol* property with an inductive
-  proof. (Design: [`protocol-state-machines.md`](protocol-state-machines.md) §
-  rung-4 bridge.)
+- ~~**Unbounded protocol safety**~~ — **DONE** (rung 4 above): handshake validity
+  and ordering proven for all traces (k-induction + PDR), with a recheckable
+  certified-PDR proof and unbounded bug detection.
+- **Lift the rung-4 certificate from DRAT to Lean**: the certified-PDR
+  initiation/consecution/safety obligations are DRAT today — the same
+  reconstructor-fragment work as the bounded cases, now for CHC obligations.
+- **Richer protocol coverage**: more TCP states (simultaneous open, close
+  handshake) and an **array-aware** unbounded route so buffer/window protocols
+  (rung-3 today) can also be proven unbounded.
 - A *generated* scoreboard (mirroring `measure_verify.rs`'s `ast::Program`
   construction) folding in these per-suite numbers automatically.
 - Feed the perf-wall finding to the QF_BV word-level reduction / SAT-core lane.

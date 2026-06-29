@@ -306,3 +306,43 @@ fn skip_bug_is_an_unbounded_counterexample() {
         "BMC must independently reach the bad state, got {bmc:?}"
     );
 }
+
+/// Benchmark: bounded model checking gives a *weaker* guarantee at each depth
+/// (`UnreachableWithinBound` — never a proof), and you would have to re-run it at
+/// every depth forever; one unbounded `prove_safety_k_induction` subsumes all
+/// depths with a single `Safe`. Verdicts are asserted; times are printed
+/// (indicative, `--nocapture`), not asserted.
+#[test]
+fn bounded_vs_unbounded_validity() {
+    use std::time::Instant;
+
+    for bound in [2usize, 8, 32] {
+        let mut arena = TermArena::new();
+        let t = Instant::now();
+        let bmc = bounded_model_check(
+            &mut arena,
+            &HandshakeValidity,
+            bound,
+            &SolverConfig::default(),
+        )
+        .expect("solver should not hard-error");
+        let dt = t.elapsed();
+        assert!(
+            matches!(bmc, BmcOutcome::UnreachableWithinBound { .. }),
+            "bounded check at depth {bound} must be safe-within-bound, got {bmc:?}"
+        );
+        eprintln!("BMC depth {bound:>2}: {bmc:?} in {dt:?} (bounded — NOT a proof)");
+    }
+
+    let mut arena = TermArena::new();
+    let t = Instant::now();
+    let outcome =
+        prove_safety_k_induction(&mut arena, &HandshakeValidity, 4, &SolverConfig::default())
+            .expect("solver should not hard-error");
+    let dt = t.elapsed();
+    assert!(
+        matches!(outcome, SafetyOutcome::Safe { .. }),
+        "the unbounded proof must subsume all depths, got {outcome:?}"
+    );
+    eprintln!("k-induction (all depths): {outcome:?} in {dt:?} (a proof for EVERY trace)");
+}
