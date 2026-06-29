@@ -1394,11 +1394,24 @@ fn dispatch_uf_fast_paths(
         }
     }
 
+    // Eliminate uninterpreted-sort `ite` *only for the e-graph deciders* (which
+    // treat `ite` opaquely): equisatisfiable, so verdicts are unchanged. Confined
+    // to **pure-UF** instances (no arithmetic) so the UF+arithmetic dispatch path
+    // — which tries the e-graph first before its combination route — never pays
+    // the lift's cost (provably zero impact on its wall-clock budget).
+    let lifted_euf;
+    let euf_assertions: &[TermId] = if features.has_int || features.has_real {
+        assertions
+    } else {
+        lifted_euf = lift_uninterpreted_sort_ite(arena, assertions)?;
+        &lifted_euf
+    };
+
     // Try the **online** DPLL(T) decider on the backtrackable e-graph first: it
     // keeps one incremental congruence graph across the Boolean search. Both its
     // `sat` (replay-checked) and `unsat` (root-level congruence conflict) are
     // sound. On `unknown` fall through to the offline enumeration, then bit-blast.
-    match crate::euf_egraph::solve_qf_uf_online(arena, assertions) {
+    match crate::euf_egraph::solve_qf_uf_online(arena, euf_assertions) {
         CheckResult::Sat(model) => {
             with_recorder(rec, |t| t.record_decided("euf-online", Verdict::Sat));
             return Ok(Some(CheckResult::Sat(model)));
@@ -1413,7 +1426,7 @@ fn dispatch_uf_fast_paths(
             });
         }
     }
-    match crate::euf_egraph::check_qf_uf_with_config(arena, assertions, config) {
+    match crate::euf_egraph::check_qf_uf_with_config(arena, euf_assertions, config) {
         CheckResult::Sat(model) => {
             with_recorder(rec, |t| t.record_decided("euf-offline", Verdict::Sat));
             return Ok(Some(CheckResult::Sat(model)));
@@ -4018,6 +4031,30 @@ fn lift_arith_ite(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<Vec<TermId>, SolverError> {
+    // Int/Real `ite`: the arith linearizers want a plain variable.
+    lift_ite_matching(arena, assertions, |s| matches!(s, Sort::Int | Sort::Real))
+}
+
+/// Eliminate **uninterpreted-sort** `ite` equisatisfiably (`ite(c,a,b)` → fresh
+/// `t` with `(c→t=a)∧(¬c→t=b)`). The e-graph congruence treats `ite` opaquely, so
+/// `x = ite(c, a, b)` over an uninterpreted sort is otherwise undecidable to it.
+/// Applied **only** on the slice handed to the e-graph deciders (not globally) so
+/// it never adds variables to the UF+arithmetic dispatch budget.
+fn lift_uninterpreted_sort_ite(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    lift_ite_matching(arena, assertions, |s| matches!(s, Sort::Uninterpreted(_)))
+}
+
+/// Equisatisfiable `ite`-elimination for every `ite` whose result sort matches
+/// `want`: replace it with a fresh variable `t` and add `(c→t=a)∧(¬c→t=b)`. A
+/// verdict-preserving rewrite (so it can never change `sat`/`unsat`).
+fn lift_ite_matching(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    want: impl Fn(Sort) -> bool,
+) -> Result<Vec<TermId>, SolverError> {
     let mut ites: Vec<TermId> = Vec::new();
     let mut seen = BTreeSet::new();
     let mut stack: Vec<TermId> = assertions.to_vec();
@@ -4027,7 +4064,7 @@ fn lift_arith_ite(
         }
         if let TermNode::App { op, args } = arena.node(t) {
             let (op, args) = (*op, args.clone());
-            if op == Op::Ite && matches!(arena.sort_of(t), Sort::Int | Sort::Real) {
+            if op == Op::Ite && want(arena.sort_of(t)) {
                 ites.push(t);
             }
             stack.extend(args);

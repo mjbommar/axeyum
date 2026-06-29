@@ -60,6 +60,34 @@ the frontier's "uninterpreted-sort IR keystone" / "e-graph + CDCL(T) combination
   instance no longer gets a hard error. The actual decide-rate gain (`ite3` is
   trivially `unsat`) needs the next step.
 
+## Landed: uninterpreted-sort `ite` elimination (decide-rate gain)
+
+Uninterpreted-sort `ite` is now eliminated equisatisfiably (`ite(c,a,b)` → fresh
+`t` with `(c→t=a)∧(¬c→t=b)`) **for the e-graph deciders only**
+(`lift_uninterpreted_sort_ite`, applied to the slice handed to
+`solve_qf_uf_online`/`check_qf_uf_with_config`). The e-graph congruence treats
+`ite` opaquely, so `x = ite(c, a, b)` over an uninterpreted sort was undecidable
+to it; after the lift it decides by congruence over `t`. `ite3` now decides
+**unsat** (was the hard error above). The transform is textbook ite-elimination —
+**equisatisfiable, so it cannot change a verdict** (DISAGREE stays 0); BV/Bool
+`ite` are untouched (handled natively downstream).
+
+**Confinement matters.** A first attempt applied the lift *globally* (in
+`check_auto_dispatch`) — it gained `ite3`, DISAGREE = 0, but added variables to
+every dispatch. The final form is doubly confined: the lift runs only on the
+slice handed to the e-graph deciders **and only for pure-UF instances** (`!has_int
+&& !has_real`), so the UF+arithmetic dispatch path provably never pays for it.
+(Note: `uf_arith_dispatch_differential` asserts a tight wall-clock budget bound
+`budget_excused ≤ 4`; under the heavy concurrent build load during this session it
+read `8` — **but the no-lift baseline read the identical `8`**, confirming the
+failure is environmental (load), not this change. Re-confirm on an unloaded
+machine.)
+
+**Measured (curated QF_UF, release, vs z3), DISAGREE = 0:** at a 5 s cap axeyum
+rises **37/48 → 39/48** (gap to z3 −4 → −2). At a tight 2 s cap the net is flat
+(`ite3` gained; one borderline instance recovers only at 5 s — a slowdown, not a
+regression). The gain dominates at an adequate budget.
+
 ## Recommended next core step (focused session)
 
 1. **Uninterpreted-sort Ackermann in the BV/auto route** so `ite3`-style
