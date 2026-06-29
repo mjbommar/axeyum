@@ -215,3 +215,59 @@ fn reachable_signed_arithmetic_panic_is_never_verified() {
         "signed fuzz exercised too few panicking cases ({checked})"
     );
 }
+
+#[test]
+fn reachable_index_out_of_bounds_is_never_verified() {
+    // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index
+    // panics (OOB); verify must then never return Verified.
+    use axeyum_verify::ast::ArrayParam;
+    let cfg = SolverConfig::default();
+    let mut rng = Rng(0x1d_e000_0000_0007);
+    let u8t = Ty::Int {
+        width: 8,
+        signed: false,
+    };
+    let mut checked = 0u32;
+    for _ in 0..300 {
+        let n = [1u128, 2, 4, 8][(rng.next() as usize) % 4];
+        let i = u128::from(rng.next() & 0xff);
+        if i < n {
+            continue; // in bounds — no panic to require
+        }
+        checked += 1;
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![ArrayParam {
+                name: "arr".to_string(),
+                elem: u8t,
+                len: n,
+            }],
+            body: vec![
+                Stmt::Let {
+                    name: "i".to_string(),
+                    ty: u8t,
+                    value: Expr::IntLit { value: i, ty: u8t },
+                },
+                Stmt::Let {
+                    name: "x".to_string(),
+                    ty: u8t,
+                    value: Expr::Index {
+                        array: "arr".to_string(),
+                        index: Box::new(Expr::Var("i".to_string())),
+                        ty: u8t,
+                    },
+                },
+            ],
+        };
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong-safe (index): arr[{i}] on [u8; {n}] is OOB but verify returned {verdict:?}"
+        );
+    }
+    assert!(
+        checked >= 10,
+        "index fuzz exercised too few OOB cases ({checked})"
+    );
+}
