@@ -716,21 +716,30 @@ fn run_from(
                 // a symbolic b havocs + saw_unknown (sound).
                 let b = pop_or_unknown!();
                 let x = pop_or_unknown!();
+                // Sign-extend x keeping `(bb+1)` low bytes, for a constant bb < 31.
+                let sext_keeping = |arena: &mut TermArena, bb: u32| -> Result<TermId, SolverError> {
+                    let keep = (bb + 1) * 8;
+                    let low = arena.extract(keep - 1, 0, x)?;
+                    Ok(arena.sign_ext(W - keep, low)?)
+                };
                 if let Some(bb) = concrete_usize(arena, b) {
                     let result = if bb >= 31 {
-                        x
+                        x // `bb < 31`, so the cast below is exact.
                     } else {
-                        // bits to keep (and sign-extend from): (b+1) bytes.
-                        // `bb < 31`, so the cast is exact.
-                        let keep = (u32::try_from(bb).unwrap_or(31) + 1) * 8;
-                        let low = arena.extract(keep - 1, 0, x)?;
-                        arena.sign_ext(W - keep, low)?
+                        sext_keeping(arena, u32::try_from(bb).unwrap_or(31))?
                     };
                     state.stack.push(result);
                 } else {
-                    let h = env.havoc(arena)?;
-                    state.stack.push(h);
-                    *saw_unknown = true;
+                    // Symbolic b: a bounded 31-way `ite` (b >= 31 is the no-op
+                    // default x). Precise — no `saw_unknown`.
+                    let mut result = x;
+                    for bb in (0..31u32).rev() {
+                        let ext = sext_keeping(arena, bb)?;
+                        let bc = arena.bv_const(W, u128::from(bb))?;
+                        let cond = arena.eq(b, bc)?;
+                        result = arena.ite(cond, ext, result)?;
+                    }
+                    state.stack.push(result);
                 }
             }
             Op::Byte => {
@@ -741,20 +750,31 @@ fn run_from(
                 // index stays sound via havoc + `saw_unknown`.
                 let i = pop_or_unknown!();
                 let x = pop_or_unknown!();
+                let mask = arena.bv_const(W, 0xff)?;
+                let byte_at = |arena: &mut TermArena, k: usize| -> Result<TermId, SolverError> {
+                    let shift = arena.bv_const(W, (248 - k * 8) as u128)?;
+                    let shifted = arena.bv_lshr(x, shift)?;
+                    Ok(arena.bv_and(shifted, mask)?)
+                };
                 if let Some(idx) = concrete_usize(arena, i) {
+                    // Concrete index: a single shift+mask (or 0 for i >= 32).
                     let result = if idx >= 32 {
                         arena.bv_const(W, 0)?
                     } else {
-                        let shift = arena.bv_const(W, (248 - idx * 8) as u128)?;
-                        let shifted = arena.bv_lshr(x, shift)?;
-                        let mask = arena.bv_const(W, 0xff)?;
-                        arena.bv_and(shifted, mask)?
+                        byte_at(arena, idx)?
                     };
                     state.stack.push(result);
                 } else {
-                    let h = env.havoc(arena)?;
-                    state.stack.push(h);
-                    *saw_unknown = true;
+                    // Symbolic index: a bounded 32-way `ite` over byte positions
+                    // (0 for i >= 32). Precise — no `saw_unknown`.
+                    let mut result = arena.bv_const(W, 0)?;
+                    for k in (0..32usize).rev() {
+                        let byte_k = byte_at(arena, k)?;
+                        let kc = arena.bv_const(W, k as u128)?;
+                        let cond = arena.eq(i, kc)?;
+                        result = arena.ite(cond, byte_k, result)?;
+                    }
+                    state.stack.push(result);
                 }
             }
             Op::Sha3 => {

@@ -40,6 +40,31 @@ fn revert_gated_on_signextend_sign_is_found() {
 }
 
 #[test]
+fn symbolic_index_signextend_is_decided_with_valid_witness() {
+    // b = calldata[0], x = calldata[32]; r = signextend(b, x); if (r <s 0) revert.
+    // The byte index is symbolic, exercising the bounded 31-way `ite`; the
+    // reported witness is auto-revalidated (concrete must match the model).
+    #[rustfmt::skip]
+    let bytecode = [
+        PUSH1, 0x00,                 // 0..1  zero (comparison rhs)
+        PUSH1, 0x20, CALLDATALOAD,   // 2..4  x = calldata[32:64]   -> [0, x]
+        PUSH1, 0x00, CALLDATALOAD,   // 5..7  b = calldata[0:32]     -> [0, x, b]
+        SIGNEXTEND,                  // 8     signextend(b, x)        -> [0, r]
+        SLT,                         // 9     r <s 0
+        PUSH1, 0x0e, JUMPI,          // 10..12 if (r <s 0) jump 0x0e
+        STOP,                        // 13
+        JUMPDEST,                    // 14 (0x0e)
+        PUSH1, 0x00, PUSH1, 0x00, REVERT, // 15..19
+    ];
+    let report = analyze(&bytecode, &AnalyzeConfig::default());
+    assert!(
+        report.has_findings(),
+        "a negative signextend result is reachable and must be found with a valid witness"
+    );
+    assert_eq!(report.findings[0].kind, FindingKind::Revert);
+}
+
+#[test]
 fn signextend_using_safe_contract_is_no_longer_unknown() {
     // signextend(0, calldataload(0)); pop; stop — uses SIGNEXTEND but has no bug.
     let bytecode = [
