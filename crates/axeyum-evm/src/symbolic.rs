@@ -843,11 +843,15 @@ fn run_from(
                     return Ok(None);
                 };
                 let Some(next) = program.index_at(d) else {
-                    // Bad jump destination = an INVALID-style halt; not a tracked
-                    // bug here (no JUMPDEST). Terminate the path.
+                    // Bad jump destination: concretely an EVM exceptional halt
+                    // (`Halt::Invalid`). We do not model that as a bug class, so we
+                    // must NOT let this path contribute to a `SafeUpToBound` proof —
+                    // flag it `Unknown` (sound: never a wrong "no bug").
+                    *saw_unknown = true;
                     return Ok(None);
                 };
                 if !program.is_jumpdest(d) {
+                    *saw_unknown = true;
                     return Ok(None);
                 }
                 idx = next;
@@ -871,33 +875,38 @@ fn run_from(
                     if matches!(branch.if_true, PathStatus::Unknown(_)) {
                         *saw_unknown = true;
                     }
-                    if let Some(next) = program.index_at(d) {
-                        if program.is_jumpdest(d) {
-                            exec.enter()?;
-                            let status = exec.assume_auto(arena, taken)?;
-                            if !status.is_infeasible() {
-                                let mut forked = state.clone();
-                                let found = run_from(
-                                    program,
-                                    arena,
-                                    exec,
-                                    env,
-                                    &mut forked,
-                                    next,
-                                    steps,
-                                    max_steps,
-                                    track_overflow,
-                                    max_txs,
-                                    saw_unknown,
-                                    obligations,
-                                )?;
-                                if found.is_some() {
-                                    exec.backtrack();
-                                    return Ok(found);
-                                }
+                    let valid_dest = program.index_at(d).is_some() && program.is_jumpdest(d);
+                    if let Some(next) = program.index_at(d).filter(|_| valid_dest) {
+                        exec.enter()?;
+                        let status = exec.assume_auto(arena, taken)?;
+                        if !status.is_infeasible() {
+                            let mut forked = state.clone();
+                            let found = run_from(
+                                program,
+                                arena,
+                                exec,
+                                env,
+                                &mut forked,
+                                next,
+                                steps,
+                                max_steps,
+                                track_overflow,
+                                max_txs,
+                                saw_unknown,
+                                obligations,
+                            )?;
+                            if found.is_some() {
+                                exec.backtrack();
+                                return Ok(found);
                             }
-                            exec.backtrack();
                         }
+                        exec.backtrack();
+                    } else {
+                        // The jump is taken on a feasible path but the destination
+                        // is not a valid `JUMPDEST` — concretely an EVM exceptional
+                        // halt we do not model as a bug. Flag `Unknown` so the
+                        // fall-through path cannot yield a wrong `SafeUpToBound`.
+                        *saw_unknown = true;
                     }
                 }
 
