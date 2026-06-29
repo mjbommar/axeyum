@@ -96,6 +96,52 @@ fn concrete_reachable_bug_is_never_reported_safe() {
 }
 
 #[test]
+fn concrete_reachable_bug_across_two_txs_is_never_reported_safe() {
+    // The multi-tx analog: if a two-call concrete sequence (storage persisting)
+    // reaches a bug, analyze with max_txs=2 must not prove SafeUpToBound.
+    let mut rng = Rng(0xb167_0000_0000_0003);
+    let mut checked = 0u32;
+    for _ in 0..300 {
+        let len = rng.range(4, 16);
+        let bytecode: Vec<u8> = (0..len).map(|_| rng.byte_from(POOL)).collect();
+        let mk_env = |rng: &mut Rng| Env {
+            calldata: (0..64).map(|_| (rng.next() & 0xff) as u8).collect(),
+            callvalue: Word::zero(),
+            caller: Word::zero(),
+        };
+        let e1 = mk_env(&mut rng);
+        let e2 = mk_env(&mut rng);
+        let program = decode(&bytecode);
+        let halt = concrete::run_sequence(&program, &[e1, e2], STEPS, &[]);
+        if !matches!(halt, Halt::Revert(_) | Halt::Invalid) {
+            continue;
+        }
+        checked += 1;
+        let report = analyze(
+            &bytecode,
+            &AnalyzeConfig {
+                max_steps: STEPS,
+                max_txs: 2,
+                ..AnalyzeConfig::default()
+            },
+        );
+        let claimed_safe = matches!(
+            report.verdict,
+            Some(axeyum_evm::Verdict::SafeUpToBound { .. })
+        ) && !report.has_findings();
+        assert!(
+            !claimed_safe,
+            "wrong-safe (multi-tx): a 2-tx sequence halts {halt:?} but analyze(max_txs=2) \
+             proved SafeUpToBound for {bytecode:02x?}"
+        );
+    }
+    assert!(
+        checked >= 3,
+        "multi-tx fuzz exercised too few reverting sequences ({checked})"
+    );
+}
+
+#[test]
 fn analyze_is_total_on_random_bytecode() {
     // analyze must never panic and always return a well-formed report on arbitrary
     // bytecode (sound totality: a finding xor a verdict).
