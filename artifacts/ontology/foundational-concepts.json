@@ -2104,19 +2104,19 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks, product measures, simple-function integrals, and exact finite probability",
+      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks, product measures, random variables, simple-function integrals, and exact finite probability",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite measures, sigma-algebra sanity checks, product measures, simple-function integrals, and exact finite probability"
+        "Finite measures, sigma-algebra sanity checks, product measures, random variables, simple-function integrals, and exact finite probability"
       ],
       "example_packs": [
         {
           "id": "finite-measure-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
-          "notes": "Finite sigma-algebras, finite measures, product tables, and exact probability foundations."
+          "notes": "Finite sigma-algebras, finite measures, random variables, product tables, and exact probability foundations."
         }
       ],
       "proof_routes": [
@@ -2355,21 +2355,21 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions",
+      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, random variables, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions",
       "prerequisites": [],
       "unlocks": [
         "curriculum_counting"
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite probability tables, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions"
+        "Finite probability tables, random variables, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions"
       ],
       "example_packs": [
         {
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite mass tables, conditioning, Bayes rule, product measures, and exact discrete distributions."
+          "notes": "Finite mass tables, random variables, conditioning, Bayes rule, product measures, and exact discrete distributions."
         }
       ],
       "proof_routes": [
@@ -2557,7 +2557,7 @@
           "id": "descriptive-statistics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
-          "notes": "Mean/variance identities, contingency tables, exact tests, and Simpson witnesses."
+          "notes": "Mean/variance identities, random variables, contingency tables, exact tests, and Simpson witnesses."
         }
       ],
       "proof_routes": [

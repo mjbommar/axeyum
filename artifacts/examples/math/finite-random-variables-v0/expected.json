@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-random-variables-v0",
+  "witnesses": [
+    {
+      "id": "weather-commute-random-variable",
+      "description": "A three-atom finite probability space with a commute-time random variable.",
+      "values": {
+        "atoms": [
+          {"id": "clear", "probability": "1/2"},
+          {"id": "rain", "probability": "1/4"},
+          {"id": "storm", "probability": "1/4"}
+        ],
+        "random_variable": {
+          "clear": "short",
+          "rain": "medium",
+          "storm": "long"
+        },
+        "pushforward_distribution": {
+          "short": "1/2",
+          "medium": "1/4",
+          "long": "1/4"
+        },
+        "outcome_values": {
+          "short": "10",
+          "medium": "20",
+          "long": "40"
+        },
+        "source_expectation": "20",
+        "pushforward_expectation": "20"
+      }
+    },
+    {
+      "id": "coin-signal-independent-random-variables",
+      "description": "Two independent finite random variables over a four-atom product table.",
+      "values": {
+        "atoms": [
+          {"id": "heads_green", "probability": "1/4"},
+          {"id": "heads_red", "probability": "1/4"},
+          {"id": "tails_green", "probability": "1/4"},
+          {"id": "tails_red", "probability": "1/4"}
+        ],
+        "left_random_variable": {
+          "heads_green": "heads",
+          "heads_red": "heads",
+          "tails_green": "tails",
+          "tails_red": "tails"
+        },
+        "right_random_variable": {
+          "heads_green": "green",
+          "heads_red": "red",
+          "tails_green": "green",
+          "tails_red": "red"
+        },
+        "left_distribution": {
+          "heads": "1/2",
+          "tails": "1/2"
+        },
+        "right_distribution": {
+          "green": "1/2",
+          "red": "1/2"
+        },
+        "joint_distribution": [
+          {"left": "heads", "right": "green", "probability": "1/4"},
+          {"left": "heads", "right": "red", "probability": "1/4"},
+          {"left": "tails", "right": "green", "probability": "1/4"},
+          {"left": "tails", "right": "red", "probability": "1/4"}
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "pushforward-distribution-witness",
+      "claim": "The listed commute-time random variable has pushforward distribution short:1/2, medium:1/4, long:1/4.",
+      "expected_result": "sat",
+      "validation": "finite_random_variable_pushforward_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["weather-commute-random-variable"],
+      "notes": "The validator recomputes each outcome mass by summing source atom probabilities mapped to that outcome."
+    },
+    {
+      "id": "expectation-through-pushforward-witness",
+      "claim": "The commute-time expectation is 20 whether computed from source atoms or from the pushforward distribution.",
+      "expected_result": "sat",
+      "validation": "finite_random_variable_expectation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["weather-commute-random-variable"],
+      "notes": "The validator recomputes both exact rational weighted sums and checks they match."
+    },
+    {
+      "id": "independent-random-variables-witness",
+      "claim": "The coin random variable and signal random variable are independent over the listed four-atom table.",
+      "expected_result": "sat",
+      "validation": "finite_random_variable_independence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["coin-signal-independent-random-variables"],
+      "notes": "The validator recomputes joint and marginal distributions and checks every joint mass equals the product of marginals."
+    },
+    {
+      "id": "bad-pushforward-rejected",
+      "claim": "The commute-time random variable has pushforward probability P(long) = 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_pushforward_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "clear", "probability": "1/2"},
+          {"id": "rain", "probability": "1/4"},
+          {"id": "storm", "probability": "1/4"}
+        ],
+        "random_variable": {
+          "clear": "short",
+          "rain": "medium",
+          "storm": "long"
+        },
+        "claimed_distribution": {
+          "short": "1/2",
+          "medium": "1/4",
+          "long": "1/2"
+        },
+        "actual_distribution": {
+          "short": "1/2",
+          "medium": "1/4",
+          "long": "1/4"
+        }
+      },
+      "notes": "The validator rejects the claim because the exact source mass mapped to long is 1/4, not 1/2."
+    },
+    {
+      "id": "general-random-variable-lean-horizon",
+      "claim": "General measurable random variables and conditional expectation require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "measurable random variables, distribution laws, conditional expectation, stochastic kernels, martingales, and continuous random variables",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general random-variable theory remains a proof-assistant horizon."
+    }
+  ]
+}

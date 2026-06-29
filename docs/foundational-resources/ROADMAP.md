@@ -99,6 +99,7 @@ artifacts/examples/math/
   finite-measure-v0/
   finite-integration-v0/
   finite-product-measure-v0/
+  finite-random-variables-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -430,6 +431,10 @@ Lebesgue-integration Lean-horizon row.
 validates exact finite product-measure tables, rectangle probabilities,
 left and right marginals, finite Fubini replay, checked rejection of a false
 product probability, and a Fubini/Tonelli Lean-horizon row.
+[`finite-random-variables-v0`](../../artifacts/examples/math/finite-random-variables-v0/)
+validates exact finite random-variable pushforwards, expectation through
+pushforward distributions, finite independence checks, checked rejection of a
+false pushforward distribution, and a general random-variable Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.

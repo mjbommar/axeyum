@@ -46,8 +46,8 @@ Use these sources as checks against local taste:
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates | General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces | General topological spaces, compactness, connectedness, and homotopy are proof-horizon. |
-| `measure_theory` | Measure theory | Graduate analysis / probability foundation | Finite measures, sigma-algebra sanity checks, product measures, simple-function integrals, and exact finite probability | Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean. |
-| `probability_theory` | Probability theory | Undergraduate / graduate applied and pure math | Finite probability tables, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions | Continuous distributions, stochastic processes, and limit theorems are mostly proof or numerical-honesty tracks. |
+| `measure_theory` | Measure theory | Graduate analysis / probability foundation | Finite measures, sigma-algebra sanity checks, product measures, random variables, simple-function integrals, and exact finite probability | Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean. |
+| `probability_theory` | Probability theory | Undergraduate / graduate applied and pure math | Finite probability tables, random variables, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions | Continuous distributions, stochastic processes, and limit theorems are mostly proof or numerical-honesty tracks. |
 | `statistics` | Statistics | Undergraduate / graduate applied math and data science | Descriptive statistics, contingency tables, exact finite tests, small Bayesian tables | Floating-point inference, MCMC, VI, and model calibration are reproducibility claims, not proof claims. |
 | `optimization_and_convexity` | Optimization and convexity | Undergraduate / graduate applied math | LP feasibility, linear certificates, small quadratic/convexity checks, monotonicity/threshold examples | General convex analysis, SDP, duality theorems, and algorithm convergence need broader proof support. |
 | `numerical_analysis` | Numerical analysis | Undergraduate / graduate applied math | Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows | Stability and convergence theorems need proof support; floating-point experiments need tolerances and seeds. |
@@ -162,25 +162,31 @@ one of:
    - Fields: `measure_theory`, `probability_theory`, `statistics`, `real_analysis`.
    - Checks: finite product probability tables, marginals, rectangle measures,
      finite Fubini replay, and bad product-probability rejection.
-10. `artifacts/examples/math/bounded-dynamics-v0/`
+10. `artifacts/examples/math/finite-random-variables-v0/`
+    - Fields: `probability_theory`, `statistics`, `measure_theory`,
+      `real_analysis`, `set_theory_and_foundations`.
+    - Checks: finite random-variable pushforwards, expectation through
+      pushforward distributions, independence checks, and bad pushforward
+      rejection.
+11. `artifacts/examples/math/bounded-dynamics-v0/`
    - Fields: `differential_equations_and_dynamical_systems`,
      `numerical_analysis`, `linear_algebra`.
    - Checks: recurrence trace replay, bounded invariant witness, threshold
      reachability witness.
-11. `artifacts/examples/math/finite-operator-v0/`
+12. `artifacts/examples/math/finite-operator-v0/`
    - Fields: `functional_analysis_and_operator_theory`, `linear_algebra`,
      `numerical_analysis`, `real_analysis`.
    - Checks: finite-dimensional norm replay, matrix operator bound,
      Chebyshev recurrence witness.
-12. `artifacts/examples/math/modular-arithmetic-v0/`
+13. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-13. `artifacts/examples/math/real-analysis-rational-v0/`
+14. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.
-14. `artifacts/examples/math/complex-algebraic-v0/`
+15. `artifacts/examples/math/complex-algebraic-v0/`
    - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
      `abstract_algebra`.
    - Checks: real-pair complex arithmetic, conjugate norm replay, fixed

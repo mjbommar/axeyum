@@ -1,8 +1,9 @@
-# End To End: Conditional Probability, Product Measures, And Finite Expectation
+# End To End: Conditional Probability, Random Variables, Product Measures, And Finite Expectation
 
 This lesson follows finite probability resources from atom tables to replayed
 conditional probability, exact product measures, and finite expectations. It
 uses the [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
+[finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/),
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 packs.
@@ -21,6 +22,10 @@ Concept rows:
 | `pmf-total-mass` | `sat` | replay-only |
 | `conditional-probability-witness` | `sat` | replay-only |
 | `bayes-posterior-witness` | `sat` | replay-only |
+| `pushforward-distribution-witness` | `sat` | replay-only |
+| `expectation-through-pushforward-witness` | `sat` | replay-only |
+| `independent-random-variables-witness` | `sat` | replay-only |
+| `bad-pushforward-rejected` | `unsat` | checked |
 | `product-measure-table-witness` | `sat` | replay-only |
 | `marginalization-witness` | `sat` | replay-only |
 | `finite-fubini-witness` | `sat` | replay-only |
@@ -64,6 +69,14 @@ Q(one) = Q(two) = Q(three) = 1/3
 R(x,y) = P(x) * Q(y)
 ```
 
+The random-variable witness maps weather atoms to commute-time outcomes:
+
+```text
+P(clear) = 1/2
+P(rain) = P(storm) = 1/4
+X(clear), X(rain), X(storm) = short, medium, long
+```
+
 ## Replay
 
 The checker recomputes:
@@ -85,6 +98,18 @@ integral f dP = 0*(1/4) + 2*(1/4) + 4*(1/2) = 5/2
 
 It also checks an indicator integral, finite linearity, and rejects the false
 claim `integral f dP = 3`.
+
+For the random-variable row, the checker recomputes:
+
+```text
+P(X = short) = 1/2
+P(X = medium) = 1/4
+P(X = long) = 1/4
+E[X] = 10*(1/2) + 20*(1/4) + 40*(1/4) = 20
+```
+
+It also checks a four-atom independence witness by recomputing the joint table
+and comparing each joint mass to the product of its marginals.
 
 For the product-measure row, the checker recomputes:
 
@@ -110,6 +135,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 ```
@@ -125,4 +151,5 @@ validated 1 foundational example pack(s)
 The search side may propose a probability table or posterior. The trusted side
 only recomputes finite sums and exact rational divisions. Continuous
 probability, general product measures, Fubini/Tonelli, Lebesgue integration,
-convergence theorems, and statistical inference are outside this proof claim.
+conditional expectation, martingales, stochastic kernels, convergence theorems,
+and statistical inference are outside this proof claim.

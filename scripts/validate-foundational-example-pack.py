@@ -5265,6 +5265,219 @@ def finite_product_integral(
     )
 
 
+def require_atom_outcome_table(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    atom_set = set(atom_ids)
+    if set(value) != atom_set:
+        missing = sorted(atom_set - set(value))
+        extra = sorted(set(value) - atom_set)
+        fail(f"{context} must cover exactly atoms; missing={missing} extra={extra}")
+    outcomes: dict[str, str] = {}
+    for atom_id in atom_ids:
+        outcome = value[atom_id]
+        require_string(f"{context}.{atom_id}", outcome)
+        outcomes[atom_id] = outcome
+    return outcomes
+
+
+def random_variable_outcomes(atom_ids: list[str], random_variable: dict[str, str]) -> list[str]:
+    outcomes: list[str] = []
+    seen: set[str] = set()
+    for atom_id in atom_ids:
+        outcome = random_variable[atom_id]
+        if outcome not in seen:
+            seen.add(outcome)
+            outcomes.append(outcome)
+    return outcomes
+
+
+def finite_pushforward_distribution(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    random_variable: dict[str, str],
+) -> dict[str, Fraction]:
+    distribution: dict[str, Fraction] = {}
+    for atom_id, probability, _ in atoms:
+        outcome = random_variable[atom_id]
+        distribution[outcome] = distribution.get(outcome, Fraction(0)) + probability
+    return distribution
+
+
+def require_normalized_probability_map(context: str, distribution: dict[str, Fraction]) -> None:
+    total = sum(distribution.values(), Fraction(0))
+    if total != 1:
+        fail(f"{context} probabilities must sum to exactly 1")
+
+
+def finite_expectation_from_outcomes(
+    distribution: dict[str, Fraction],
+    outcome_values: dict[str, Fraction],
+) -> Fraction:
+    return sum(
+        (probability * outcome_values[outcome] for outcome, probability in distribution.items()),
+        Fraction(0),
+    )
+
+
+def finite_random_variable_expectation(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    random_variable: dict[str, str],
+    outcome_values: dict[str, Fraction],
+) -> Fraction:
+    return sum(
+        (
+            probability * outcome_values[random_variable[atom_id]]
+            for atom_id, probability, _ in atoms
+        ),
+        Fraction(0),
+    )
+
+
+def finite_joint_random_variable_distribution(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    left_random_variable: dict[str, str],
+    right_random_variable: dict[str, str],
+) -> dict[tuple[str, str], Fraction]:
+    distribution: dict[tuple[str, str], Fraction] = {}
+    for atom_id, probability, _ in atoms:
+        pair = (left_random_variable[atom_id], right_random_variable[atom_id])
+        distribution[pair] = distribution.get(pair, Fraction(0)) + probability
+    return distribution
+
+
+def validate_finite_random_variables(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    pushforward = checks["pushforward-distribution-witness"]
+    if pushforward["expected_result"] != "sat":
+        fail("pushforward-distribution-witness must expect sat")
+    values = single_witness_values(pushforward, witnesses)
+    atoms = require_probability_atoms("pushforward atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("pushforward-distribution-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    random_variable = require_atom_outcome_table("pushforward random_variable", values.get("random_variable"), atom_ids)
+    outcome_ids = random_variable_outcomes(atom_ids, random_variable)
+    expected_distribution = require_probability_value_map(
+        "pushforward distribution",
+        values.get("pushforward_distribution"),
+        outcome_ids,
+    )
+    require_normalized_probability_map("pushforward-distribution-witness", expected_distribution)
+    if finite_pushforward_distribution(atoms, random_variable) != expected_distribution:
+        fail("pushforward-distribution-witness distribution is incorrect")
+
+    expectation = checks["expectation-through-pushforward-witness"]
+    if expectation["expected_result"] != "sat":
+        fail("expectation-through-pushforward-witness must expect sat")
+    values = single_witness_values(expectation, witnesses)
+    atoms = require_probability_atoms("expectation atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("expectation-through-pushforward-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    random_variable = require_atom_outcome_table("expectation random_variable", values.get("random_variable"), atom_ids)
+    outcome_ids = random_variable_outcomes(atom_ids, random_variable)
+    distribution = require_probability_value_map(
+        "expectation pushforward_distribution",
+        values.get("pushforward_distribution"),
+        outcome_ids,
+    )
+    require_normalized_probability_map("expectation-through-pushforward-witness", distribution)
+    if finite_pushforward_distribution(atoms, random_variable) != distribution:
+        fail("expectation-through-pushforward-witness pushforward distribution is incorrect")
+    outcome_values = require_atom_value_table("expectation outcome_values", values.get("outcome_values"), outcome_ids)
+    source_expectation = require_fraction("expectation source_expectation", values.get("source_expectation"))
+    pushforward_expectation = require_fraction(
+        "expectation pushforward_expectation",
+        values.get("pushforward_expectation"),
+    )
+    if finite_random_variable_expectation(atoms, random_variable, outcome_values) != source_expectation:
+        fail("expectation-through-pushforward-witness source expectation is incorrect")
+    if finite_expectation_from_outcomes(distribution, outcome_values) != pushforward_expectation:
+        fail("expectation-through-pushforward-witness pushforward expectation is incorrect")
+    if source_expectation != pushforward_expectation:
+        fail("expectation-through-pushforward-witness expectations do not match")
+
+    independence = checks["independent-random-variables-witness"]
+    if independence["expected_result"] != "sat":
+        fail("independent-random-variables-witness must expect sat")
+    values = single_witness_values(independence, witnesses)
+    atoms = require_probability_atoms("independence atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("independent-random-variables-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    left_random_variable = require_atom_outcome_table(
+        "independence left_random_variable",
+        values.get("left_random_variable"),
+        atom_ids,
+    )
+    right_random_variable = require_atom_outcome_table(
+        "independence right_random_variable",
+        values.get("right_random_variable"),
+        atom_ids,
+    )
+    left_outcomes = random_variable_outcomes(atom_ids, left_random_variable)
+    right_outcomes = random_variable_outcomes(atom_ids, right_random_variable)
+    left_distribution = require_probability_value_map(
+        "independence left_distribution",
+        values.get("left_distribution"),
+        left_outcomes,
+    )
+    right_distribution = require_probability_value_map(
+        "independence right_distribution",
+        values.get("right_distribution"),
+        right_outcomes,
+    )
+    require_normalized_probability_map("independence left_distribution", left_distribution)
+    require_normalized_probability_map("independence right_distribution", right_distribution)
+    if finite_pushforward_distribution(atoms, left_random_variable) != left_distribution:
+        fail("independent-random-variables-witness left distribution is incorrect")
+    if finite_pushforward_distribution(atoms, right_random_variable) != right_distribution:
+        fail("independent-random-variables-witness right distribution is incorrect")
+    joint_distribution = require_product_distribution(
+        "independence joint_distribution",
+        values.get("joint_distribution"),
+        left_outcomes,
+        right_outcomes,
+    )
+    if finite_joint_random_variable_distribution(atoms, left_random_variable, right_random_variable) != joint_distribution:
+        fail("independent-random-variables-witness joint distribution is incorrect")
+    validate_product_probabilities(
+        "independent-random-variables-witness",
+        left_distribution,
+        right_distribution,
+        joint_distribution,
+    )
+
+    bad = checks["bad-pushforward-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-pushforward-rejected must expect unsat")
+    data = bad.get("data", {})
+    atoms = require_probability_atoms("bad pushforward atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-pushforward-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    random_variable = require_atom_outcome_table("bad pushforward random_variable", data.get("random_variable"), atom_ids)
+    outcome_ids = random_variable_outcomes(atom_ids, random_variable)
+    claimed = require_probability_value_map("bad pushforward claimed_distribution", data.get("claimed_distribution"), outcome_ids)
+    actual = require_probability_value_map("bad pushforward actual_distribution", data.get("actual_distribution"), outcome_ids)
+    computed = finite_pushforward_distribution(atoms, random_variable)
+    if computed != actual:
+        fail("bad-pushforward-rejected actual_distribution is incorrect")
+    if claimed == actual:
+        fail("bad-pushforward-rejected must document a false pushforward distribution")
+
+    horizon = checks["general-random-variable-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-random-variable-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-random-variable-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general random variable target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general random variable future_checker", data.get("future_checker"))
+
+
 def validate_finite_product_measure(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -6184,6 +6397,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_probability(expected)
     if metadata["id"] == "finite-product-measure-v0":
         validate_finite_product_measure(expected)
+    if metadata["id"] == "finite-random-variables-v0":
+        validate_finite_random_variables(expected)
     if metadata["id"] == "finite-markov-chain-v0":
         validate_finite_markov_chain(expected)
     if metadata["id"] == "finite-operator-v0":

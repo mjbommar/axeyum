@@ -159,6 +159,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite random-variable foundations pack landed.** Added
+  [`finite-random-variables-v0`](artifacts/examples/math/finite-random-variables-v0/README.md)
+  as the exact finite random-variable bridge between finite probability,
+  measure, functions, and statistics. The pack validates pushforward
+  distributions, expectation through pushforward distributions, finite
+  independence checks, checked rejection of a false pushforward distribution,
+  and a general random-variable/conditional-expectation Lean-horizon row. The
+  foundational example-pack validator now checks finite atom-to-outcome maps,
+  pushforward mass, exact source and pushforward expectations, joint
+  distributions, and independence by product-of-marginals replay.
+
 - **Finite product-measure foundations pack landed.** Added
   [`finite-product-measure-v0`](artifacts/examples/math/finite-product-measure-v0/README.md)
   as the exact finite product-measure bridge between finite probability,
