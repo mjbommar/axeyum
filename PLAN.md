@@ -44,6 +44,15 @@ moat — and a long road of decide-rate, performance, and proof-coverage work le
    gap — bounded length ≤16, not missing operators — so the **best ROI is the
    uninterpreted-sort IR keystone (QF_UF)**; try the cheap string-bound lever
    before the big unbounded-string DP; NRA/CAD depth is the genuine catch-up, last).
+   **Landed (2026-06-29, measured on the accessible curated corpus vs z3,
+   DISAGREE=0; see [decide-rate-measured-2026-06-29](docs/plan/decide-rate-measured-2026-06-29.md)):**
+   QF_S is already at z3 parity on accessible data (so the string `max_len` lever
+   has no verifiable headroom there); **QF_UF 37→39/48** (equisatisfiable
+   uninterpreted-sort `ite`-elimination + a no-hard-error robustness fix);
+   **QF_ABV 173→176/177** (write-index array extensionality for shared-base
+   `store-chain = store-chain` over wide indices, + robustness). Remaining leads:
+   the UF+theory-combination keystone, and a `check_auto` deadline-not-honored
+   hang on a few QF_LIA/QF_AUFLIA instances.
 2. **Reduction certificates → Lean (Track 3)** — drive the trusted-reduction
    ledger to zero (Alethe emitter → Carcara-checked → per-reduction proofs →
    kernel), and build the Lean tactic backend (P3.7, **fail not `sorry`**).
