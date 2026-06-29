@@ -125,7 +125,8 @@ eigenpair row, with matrix invariants now promoted for its bad characteristic
 polynomial row. The first secondary QF_LRA/Farkas target set is now covered,
 the initial equality-heavy QF_UF/Alethe secondary set is now covered, and the
 first QF_BV bit-blast/DRAT resource promotion now covers the finite-rings bad
-distributivity row plus the finite-fields composite no-inverse row;
+distributivity row, the finite-fields composite no-inverse row, and the
+graph-coloring one-bit triangle two-coloring obstruction;
 prefer the next proof-frontier lane or equality-heavy pack that can carry a
 small checked certificate and a resource-backed regression.
 

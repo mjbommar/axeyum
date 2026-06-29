@@ -86,7 +86,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `logic_and_proof` | foundations layer | proof-object lessons and proof-pattern atlas rows | CNF/LRAT, Alethe, Lean reconstruction |
 | `set_theory_and_foundations` | sets, relations, cardinality | quotients, lattices, finite/infinite boundary rows | QF_UF/Alethe, finite replay, Lean horizon |
 | `discrete_math` | counting, relations | graph search, matching, cuts, generating functions, asymptotic horizons | SAT/CNF, finite replay, Lean horizon |
-| `graph_theory` | sets, relations, counting | focused graph lessons for reachability, search runtime, matching, cuts, d-separation | SAT/CNF, BV/LIA counters, model replay |
+| `graph_theory` | sets, relations, counting | extend graph lessons and proof routes beyond coloring into reachability, search runtime, matching, cuts, and d-separation | SAT/CNF, QF_BV for fixed color encodings, BV/LIA counters, model replay |
 | `number_theory` | divisibility, modular, fields | bounded Diophantine and residue-family packs | QF_LIA, QF_BV |
 | `linear_algebra` | fields, polynomials, relations | LU, rank/nullity, residual, spectral, tensor and module rows | QF_LRA/Farkas, finite-field replay |
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |
@@ -185,8 +185,9 @@ Build sequence:
    counterexample proof, and Lean horizon.
 2. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
-3. Promote the remaining QF_BV first-target pack: the BV side of graph coloring
-   where appropriate; finite rings and finite fields now have first DRAT rows.
+3. Continue QF_BV promotions only for fixed-width educational claims that are
+   not better served by existing CNF/LRA/LIA routes; the first finite
+   rings/fields/graph-coloring DRAT rows are covered.
 4. Add route-specific proof-upgrade notes to the highest-use learner pages:
    logic/proof, graph/discrete, linear algebra/optimization, probability, and
    algebra.

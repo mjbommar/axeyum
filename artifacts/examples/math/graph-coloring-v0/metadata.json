@@ -47,13 +47,15 @@
   "expected_results": [
     "triangle-3-coloring-witness",
     "bad-edge-coloring-rejected",
-    "triangle-not-2-colorable"
+    "triangle-not-2-colorable",
+    "triangle-not-2-colorable-qf-bv-drat"
   ],
   "graduation_criteria": [
-    "Encode finite graph coloring constraints as deterministic Bool/CNF formulas.",
+    "Encode finite graph coloring constraints as deterministic Bool/CNF and fixed-width BV formulas.",
     "Replay SAT color assignments through Axeyum model evaluation.",
     "Produce and check LRAT/DRAT evidence for non-colorability examples.",
     "Keep the resource-backed triangle non-2-colorability CNF regression checking generated DRAT and elaborated LRAT proofs.",
+    "Keep the resource-backed triangle non-2-colorability QF_BV regression checking generated DRAT proof for the one-bit color encoding.",
     "Promote graph helpers into a reusable example-pack utility only after reachability or matching packs need them."
   ]
 }

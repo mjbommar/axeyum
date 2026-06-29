@@ -16,6 +16,9 @@ const FINITE_RINGS_BAD_DISTRIBUTIVITY: &str = include_str!(
 const FINITE_FIELDS_COMPOSITE_NONFIELD: &str = include_str!(
     "../../../artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2"
 );
+const GRAPH_COLORING_TRIANGLE_NOT_2_COLORABLE: &str = include_str!(
+    "../../../artifacts/examples/math/graph-coloring-v0/smt2/triangle-not-2-colorable-bitblast-conflict.smt2"
+);
 
 #[test]
 fn finite_rings_bad_distributivity_emits_checked_drat() {
@@ -30,6 +33,14 @@ fn finite_fields_composite_nonfield_emits_checked_drat() {
     assert_resource_qf_bv_drat(
         "finite-fields-v0 composite modulus nonfield bit-blast conflict",
         FINITE_FIELDS_COMPOSITE_NONFIELD,
+    );
+}
+
+#[test]
+fn graph_coloring_triangle_not_2_colorable_emits_checked_bv_drat() {
+    assert_resource_qf_bv_drat(
+        "graph-coloring-v0 triangle not 2-colorable bit-blast conflict",
+        GRAPH_COLORING_TRIANGLE_NOT_2_COLORABLE,
     );
 }
 

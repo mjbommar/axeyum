@@ -640,6 +640,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   adds a distinct fixed-width educational claim beyond the existing CNF/LRAT
   route.
 
+- **QF_BV first-target resource set covered.**
+  [`graph-coloring-v0`](artifacts/examples/math/graph-coloring-v0/) now has a
+  source-linked SMT-LIB artifact for the one-bit triangle two-coloring
+  obstruction:
+  [`triangle-not-2-colorable-bitblast-conflict.smt2`](artifacts/examples/math/graph-coloring-v0/smt2/triangle-not-2-colorable-bitblast-conflict.smt2).
+  The `math_resource_bv_routes` regression now checks finite-rings,
+  finite-fields, and graph-coloring QF_BV resource artifacts by parsing each
+  SMT-LIB file, proving it `unsat`, exporting the bit-blasted DIMACS plus DRAT
+  refutation, and rechecking the certificate. The validator enforces the K3
+  two-color data, one-bit encoding, artifact path, regression command, and
+  bit-blast/Tseitin trust-boundary note. The first QF_BV proof-frontier target
+  set is now covered; continue with fixed-width BV promotions only when the
+  encoding teaches a distinct finite-domain claim.
+
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact

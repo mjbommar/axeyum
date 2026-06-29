@@ -301,6 +301,14 @@ First targets:
   (resource-backed QF_BV/DRAT regression landed for the composite-modulus
   no-inverse row)
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
+  (resource-backed QF_BV/DRAT regression landed for the one-bit triangle
+  two-coloring obstruction)
+
+Secondary targets:
+
+- first QF_BV bit-blast target set is covered; pick the next fixed-width pack
+  only when the BV encoding teaches a distinct finite-domain claim rather than
+  duplicating a cleaner CNF/LRA/LIA route.
 
 Expected artifact:
 

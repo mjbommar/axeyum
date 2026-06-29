@@ -73,6 +73,27 @@
         "proof_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat"
       },
       "notes": "The validator enumerates all eight assignments and confirms each has a monochromatic edge; the CNF proof regression parses the DIMACS artifact, emits DRAT, elaborates LRAT, and checks both proofs."
+    },
+    {
+      "id": "triangle-not-2-colorable-qf-bv-drat",
+      "claim": "There exists a proper 2-coloring of the triangle K3, encoded as one 1-bit BV color per vertex.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["a", "c"]
+        ],
+        "colors": ["red", "blue"],
+        "color_width": 1,
+        "smt2_artifact": "artifacts/examples/math/graph-coloring-v0/smt2/triangle-not-2-colorable-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes graph_coloring_triangle_not_2_colorable_emits_checked_bv_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while graph-to-BV lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The SMT-LIB artifact declares one 1-bit BV color for each triangle vertex and asserts pairwise disequality along all three edges. The generated DIMACS/DRAT pair is rechecked by the regression."
     }
   ]
 }

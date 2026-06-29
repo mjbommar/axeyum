@@ -1154,6 +1154,34 @@ def validate_graph_coloring(expected: dict[str, Any]) -> None:
     if has_proper_coloring(vertices, edges, colors):
         fail("triangle-not-2-colorable found a proper 2-coloring unexpectedly")
 
+    qf_bv = checks["triangle-not-2-colorable-qf-bv-drat"]
+    if qf_bv["expected_result"] != "unsat":
+        fail("triangle-not-2-colorable-qf-bv-drat must expect unsat")
+    if qf_bv["proof_status"] != "checked":
+        fail("triangle-not-2-colorable-qf-bv-drat must be checked")
+    if qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("triangle-not-2-colorable-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = qf_bv.get("data", {})
+    vertices, edges, colors = require_graph_data("triangle-not-2-colorable QF_BV data", data)
+    if len(vertices) != 3 or len(edges) != 3 or len(colors) != 2:
+        fail("triangle-not-2-colorable-qf-bv-drat must use K3 with exactly two colors")
+    if has_proper_coloring(vertices, edges, colors):
+        fail("triangle-not-2-colorable-qf-bv-drat found a proper 2-coloring unexpectedly")
+    color_width = require_int("triangle-not-2-colorable QF_BV color_width", data.get("color_width"))
+    if color_width != 1:
+        fail("triangle-not-2-colorable-qf-bv-drat must use one-bit colors")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("triangle-not-2-colorable-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("triangle-not-2-colorable-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("triangle-not-2-colorable-qf-bv-drat proof_regression", proof_regression)
+    if "graph_coloring_triangle_not_2_colorable_emits_checked_bv_drat" not in proof_regression:
+        fail("triangle-not-2-colorable-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("triangle-not-2-colorable-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("triangle-not-2-colorable-qf-bv-drat certificate must document DRAT and lowering trust")
+
 
 def require_finite_graph(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]]]:
     vertices = require_string_list(f"{context}.vertices", values.get("vertices"))

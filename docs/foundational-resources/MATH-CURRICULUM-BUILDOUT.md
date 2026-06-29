@@ -614,7 +614,8 @@ Add the fields users naturally expect from an undergraduate/graduate math map.
 
 Status: first field-extension packs landed.
 `artifacts/examples/math/graph-coloring-v0/` now validates coloring witnesses
-and a tiny exhaustive non-colorability check.
+and a tiny exhaustive non-colorability check, with both CNF/LRAT and one-bit
+QF_BV/DRAT proof-route regressions for triangle non-2-colorability.
 `artifacts/examples/math/graph-reachability-v0/` now validates finite BFS
 shortest-distance replay, deterministic DFS traversal replay, disconnected
 no-path refutation, and edge-cut separation replay.

@@ -67,3 +67,17 @@ deterministic finite examples. The triangle non-2-colorability row now also has
 a checked CNF proof regression: untrusted SAT search emits DRAT, the DRAT proof
 is checked independently, and the DRAT proof is elaborated to search-free LRAT
 that also checks.
+
+The QF_BV artifact
+[`smt2/triangle-not-2-colorable-bitblast-conflict.smt2`](smt2/triangle-not-2-colorable-bitblast-conflict.smt2)
+uses the same graph and two colors, but represents each vertex color as a
+1-bit bit-vector. The three edge constraints are pairwise disequalities:
+
+```text
+a != b
+b != c
+a != c
+```
+
+Because a 1-bit domain has only two values, the bit-blasted CNF is refutable by
+checked DRAT evidence.

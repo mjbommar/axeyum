@@ -33,3 +33,20 @@ cargo test -p axeyum-cnf --test math_resource_boolean_routes graph_coloring_tria
 
 parses that CNF, emits a DRAT proof with untrusted search, checks the DRAT proof
 independently, elaborates it to LRAT, and checks the LRAT proof independently.
+
+## `triangle-not-2-colorable-qf-bv-drat`
+
+Expected result: `unsat`.
+
+The QF_BV artifact encodes the same fixed graph with one 1-bit color variable
+per vertex:
+
+```text
+a != b
+b != c
+a != c
+```
+
+The solver regression parses the SMT-LIB artifact, proves it `unsat`, exports
+the bit-blasted CNF with a DRAT refutation, and rechecks the certificate
+independently.
