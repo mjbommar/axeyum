@@ -69,6 +69,7 @@ artifacts/examples/math/
   coordinate-geometry-v0/
   finite-topology-v0/
   finite-measure-v0/
+  bounded-dynamics-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -331,6 +332,9 @@ metric-ball replay.
 [`finite-measure-v0`](../../artifacts/examples/math/finite-measure-v0/)
 validates finite sigma-algebra axioms, exact finite additivity, and
 event/complement measure replay.
+[`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
+validates exact rational recurrence traces, bounded invariant witnesses, and
+threshold reachability replay.
 
 Exit criteria:
 

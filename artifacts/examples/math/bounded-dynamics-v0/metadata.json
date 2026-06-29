@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "bounded-dynamics-v0",
+  "title": "Bounded Recurrence And Invariant Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_differential_equations_and_dynamical_systems",
+    "field_numerical_analysis",
+    "field_linear_algebra",
+    "curriculum_calculus",
+    "curriculum_linear_algebra",
+    "curriculum_sequences_and_limits"
+  ],
+  "field_ids": [
+    "differential_equations_and_dynamical_systems",
+    "numerical_analysis",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "linear-algebra",
+    "sequences-and-limits"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "bounded model checking",
+    "LRA (exact rationals)"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md"
+  ],
+  "expected_results": [
+    "linear-recurrence-trace",
+    "bounded-invariant-witness",
+    "unsafe-threshold-reachable"
+  ],
+  "graduation_criteria": [
+    "Encode bounded recurrence traces as deterministic LRA/BV transition systems.",
+    "Replay safe invariant witnesses through Axeyum model evaluation.",
+    "Add UNSAT safety proofs only after the certificate route for bounded transition systems is explicit.",
+    "Keep continuous-time existence, uniqueness, stability, chaos, and PDE theory marked Lean-horizon."
+  ]
+}

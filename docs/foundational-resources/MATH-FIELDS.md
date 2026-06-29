@@ -158,11 +158,16 @@ one of:
    - Fields: `measure_theory`, `probability_theory`, `set_theory_and_foundations`.
    - Checks: finite sigma-algebra axioms, finite additivity, event/complement
      measure replay.
-9. `artifacts/examples/math/modular-arithmetic-v0/`
+9. `artifacts/examples/math/bounded-dynamics-v0/`
+   - Fields: `differential_equations_and_dynamical_systems`,
+     `numerical_analysis`, `linear_algebra`.
+   - Checks: recurrence trace replay, bounded invariant witness, threshold
+     reachability witness.
+10. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-10. `artifacts/examples/math/real-analysis-rational-v0/`
+11. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

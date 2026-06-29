@@ -1311,7 +1311,66 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
         fail("simpson witness must have B beating A in aggregate")
 
 
+def require_recurrence_trace(context: str, values: dict[str, Any]) -> list[Fraction]:
+    initial = require_fraction(f"{context}.initial", values.get("initial"))
+    delta = require_fraction(f"{context}.delta", values.get("delta"))
+    steps = require_nonnegative_int(f"{context}.steps", values.get("steps"))
+    trace = require_fraction_vector(f"{context}.trace", values.get("trace"))
+    if len(trace) != steps + 1:
+        fail(f"{context}.trace must contain steps + 1 states")
+    if trace[0] != initial:
+        fail(f"{context}.trace must start at the initial state")
+    for index in range(steps):
+        if trace[index + 1] != trace[index] + delta:
+            fail(f"{context}.trace transition {index}->{index + 1} does not match delta")
+    return trace
+
+
+def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    recurrence = checks["linear-recurrence-trace"]
+    if recurrence["expected_result"] != "sat":
+        fail("linear-recurrence-trace must expect sat")
+    values = single_witness_values(recurrence, witnesses)
+    require_recurrence_trace("linear recurrence", values)
+
+    invariant = checks["bounded-invariant-witness"]
+    if invariant["expected_result"] != "sat":
+        fail("bounded-invariant-witness must expect sat")
+    values = single_witness_values(invariant, witnesses)
+    trace = require_recurrence_trace("bounded invariant", values)
+    lower_bound = require_fraction("bounded invariant lower_bound", values.get("lower_bound"))
+    upper_bound = require_fraction("bounded invariant upper_bound", values.get("upper_bound"))
+    if lower_bound > upper_bound:
+        fail("bounded invariant lower_bound must be <= upper_bound")
+    for index, state in enumerate(trace):
+        if state < lower_bound or state > upper_bound:
+            fail(f"bounded invariant trace state {index} is outside the claimed bounds")
+
+    reachable = checks["unsafe-threshold-reachable"]
+    if reachable["expected_result"] != "sat":
+        fail("unsafe-threshold-reachable must expect sat")
+    values = single_witness_values(reachable, witnesses)
+    trace = require_recurrence_trace("threshold reachability", values)
+    threshold = require_fraction("threshold reachability threshold", values.get("threshold"))
+    first_step = require_nonnegative_int(
+        "threshold reachability first_reaching_step",
+        values.get("first_reaching_step"),
+    )
+    if first_step >= len(trace):
+        fail("threshold reachability first_reaching_step is outside the trace")
+    if trace[first_step] < threshold:
+        fail("threshold reachability first_reaching_step does not reach the threshold")
+    for index, state in enumerate(trace[:first_step]):
+        if state >= threshold:
+            fail(f"threshold reachability state {index} reaches before first_reaching_step")
+
+
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
+    if metadata["id"] == "bounded-dynamics-v0":
+        validate_bounded_dynamics(expected)
     if metadata["id"] == "coordinate-geometry-v0":
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":

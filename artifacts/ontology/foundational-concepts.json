@@ -1686,7 +1686,7 @@
       "example_packs": [
         {
           "id": "bounded-dynamics-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/bounded-dynamics-v0",
           "notes": "Recurrence systems, discretized dynamics, and invariant checks."
         }
@@ -1709,7 +1709,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate."
       ],
       "graduation": {

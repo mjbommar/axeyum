@@ -77,6 +77,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-measure-v0/`](../../artifacts/examples/math/finite-measure-v0/)
   validates finite sigma-algebra axioms, exact finite additivity, and
   event/complement measure replay.
+- [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
+  validates exact rational recurrence traces, bounded invariant witnesses, and
+  threshold reachability replay.
 
 Validation commands:
 
@@ -96,6 +99,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 ```
 
 ## Principle

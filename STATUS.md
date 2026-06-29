@@ -134,13 +134,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded dynamics pack landed.** Added
+  [`artifacts/examples/math/bounded-dynamics-v0/`](artifacts/examples/math/bounded-dynamics-v0/)
+  for exact rational recurrence traces, bounded invariant witnesses, and
+  threshold reachability replay. The foundational example-pack validator now
+  checks finite recurrence traces, invariant bounds over traces, and first
+  threshold-reaching steps. Continue Phase M4 with `finite-operator-v0`.
+
 - **Finite measure pack landed.** Added
   [`artifacts/examples/math/finite-measure-v0/`](artifacts/examples/math/finite-measure-v0/)
   for finite sigma-algebra axioms, exact finite additivity, and
   event/complement measure replay. The foundational example-pack validator now
   checks finite measurable families, complement/union closure, rational measure
-  tables, normalization, and additivity over disjoint measurable sets. Continue
-  Phase M4 with `bounded-dynamics-v0`.
+  tables, normalization, and additivity over disjoint measurable sets.
 
 - **Finite topology pack landed.** Added
   [`artifacts/examples/math/finite-topology-v0/`](artifacts/examples/math/finite-topology-v0/)

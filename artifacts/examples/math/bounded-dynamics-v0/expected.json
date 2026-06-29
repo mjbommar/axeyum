@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "pack_id": "bounded-dynamics-v0",
+  "witnesses": [
+    {
+      "id": "plus-two-trace",
+      "description": "A four-step exact trace for x(t+1) = x(t) + 2 from x(0) = 0.",
+      "values": {
+        "initial": "0",
+        "delta": "2",
+        "steps": 4,
+        "trace": ["0", "2", "4", "6", "8"]
+      }
+    },
+    {
+      "id": "plus-two-bounded-invariant",
+      "description": "The plus-two trace stays inside the closed interval [0, 8].",
+      "values": {
+        "initial": "0",
+        "delta": "2",
+        "steps": 4,
+        "trace": ["0", "2", "4", "6", "8"],
+        "lower_bound": "0",
+        "upper_bound": "8"
+      }
+    },
+    {
+      "id": "plus-three-threshold",
+      "description": "A three-step exact trace for x(t+1) = x(t) + 3 reaches x >= 7 at step 3.",
+      "values": {
+        "initial": "0",
+        "delta": "3",
+        "steps": 3,
+        "trace": ["0", "3", "6", "9"],
+        "threshold": "7",
+        "first_reaching_step": 3
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "linear-recurrence-trace",
+      "claim": "The listed finite trace follows the fixed linear recurrence exactly.",
+      "expected_result": "sat",
+      "validation": "exact_rational_recurrence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["plus-two-trace"],
+      "notes": "The validator checks the initial state, horizon length, and every transition."
+    },
+    {
+      "id": "bounded-invariant-witness",
+      "claim": "The listed trace satisfies the closed-interval invariant at every step.",
+      "expected_result": "sat",
+      "validation": "exact_rational_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["plus-two-bounded-invariant"],
+      "notes": "The validator replays the recurrence and checks every state lies within the claimed bounds."
+    },
+    {
+      "id": "unsafe-threshold-reachable",
+      "claim": "The listed trace reaches the threshold within the bounded horizon.",
+      "expected_result": "sat",
+      "validation": "exact_rational_reachability_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["plus-three-threshold"],
+      "notes": "The validator replays the recurrence and checks the first threshold-reaching step."
+    }
+  ]
+}
