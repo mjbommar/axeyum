@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite integration foundations pack landed.** Added
+  [`finite-integration-v0`](artifacts/examples/math/finite-integration-v0/README.md)
+  as the exact finite simple-function bridge between finite measure,
+  probability, and statistics. The pack validates exact rational
+  simple-function integrals, indicator integrals, finite integral linearity,
+  checked rejection of a false expectation, and a Lebesgue-integration
+  Lean-horizon row. The foundational example-pack validator now checks finite
+  atom probabilities, exact weighted sums, event measures, linear combinations,
+  and bad-expectation counterexamples.
+
 - **Finite continuous-map foundations pack landed.** Added
   [`finite-continuous-maps-v0`](artifacts/examples/math/finite-continuous-maps-v0/README.md)
   as the finite preimage/homeomorphism bridge for topology. The pack validates

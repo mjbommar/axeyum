@@ -172,6 +172,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-measure-v0/`](../../artifacts/examples/math/finite-measure-v0/)
   validates finite sigma-algebra axioms, exact finite additivity, and
   event/complement measure replay.
+- [`artifacts/examples/math/finite-integration-v0/`](../../artifacts/examples/math/finite-integration-v0/)
+  validates exact finite simple-function integrals, indicator integrals,
+  integral linearity, checked rejection of a false expectation, and a
+  Lebesgue-integration Lean-horizon row.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
@@ -222,6 +226,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

@@ -2104,12 +2104,12 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks over finite universes, exact finite probability",
+      "summary": "Graduate analysis / probability foundation. First Axeyum slice: Finite measures, sigma-algebra sanity checks, simple-function integrals, and exact finite probability",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite measures, sigma-algebra sanity checks over finite universes, exact finite probability"
+        "Finite measures, sigma-algebra sanity checks, simple-function integrals, and exact finite probability"
       ],
       "example_packs": [
         {
@@ -2121,7 +2121,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Lebesgue measure, integration, convergence theorems, and almost-everywhere reasoning need Lean.",
+          "name": "Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean.",
           "status": "lean-horizon",
           "checker": "planned foundational example-pack validator",
           "lean_status": "required",
@@ -2355,14 +2355,14 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, conditional probability, Bayes rule, exact discrete distributions",
+      "summary": "Undergraduate / graduate applied and pure math. First Axeyum slice: Finite probability tables, conditional probability, Bayes rule, finite expectations, exact discrete distributions",
       "prerequisites": [],
       "unlocks": [
         "curriculum_counting"
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite probability tables, conditional probability, Bayes rule, exact discrete distributions"
+        "Finite probability tables, conditional probability, Bayes rule, finite expectations, exact discrete distributions"
       ],
       "example_packs": [
         {

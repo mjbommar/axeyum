@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-integration-v0",
+  "witnesses": [
+    {
+      "id": "three-atom-simple-function",
+      "description": "A three-atom finite probability space with a rational-valued simple function.",
+      "values": {
+        "atoms": [
+          {"id": "low", "probability": "1/4"},
+          {"id": "mid", "probability": "1/4"},
+          {"id": "high", "probability": "1/2"}
+        ],
+        "function_values": {
+          "low": "0",
+          "mid": "2",
+          "high": "4"
+        },
+        "integral": "5/2",
+        "event_atoms": ["high"],
+        "event_measure": "1/2",
+        "indicator_integral": "1/2"
+      }
+    },
+    {
+      "id": "linearity-simple-functions",
+      "description": "Two rational-valued simple functions over the same three-atom probability space.",
+      "values": {
+        "atoms": [
+          {"id": "low", "probability": "1/4"},
+          {"id": "mid", "probability": "1/4"},
+          {"id": "high", "probability": "1/2"}
+        ],
+        "left_values": {
+          "low": "0",
+          "mid": "2",
+          "high": "4"
+        },
+        "right_values": {
+          "low": "1",
+          "mid": "1",
+          "high": "3"
+        },
+        "left_scale": "2",
+        "right_scale": "-1",
+        "left_integral": "5/2",
+        "right_integral": "2",
+        "combined_integral": "3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "simple-function-integral-witness",
+      "claim": "The listed finite simple function has integral 5/2.",
+      "expected_result": "sat",
+      "validation": "finite_simple_integral_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-atom-simple-function"],
+      "notes": "The validator recomputes sum_x f(x) * P(x) with exact rational arithmetic."
+    },
+    {
+      "id": "indicator-integral-witness",
+      "claim": "The integral of the indicator of {high} is the event measure 1/2.",
+      "expected_result": "sat",
+      "validation": "finite_indicator_integral_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-atom-simple-function"],
+      "notes": "The validator recomputes the event measure and checks that the indicator integral matches it."
+    },
+    {
+      "id": "integral-linearity-witness",
+      "claim": "The integral of 2*f - g is 2*integral(f) - integral(g) = 3.",
+      "expected_result": "sat",
+      "validation": "finite_integral_linearity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linearity-simple-functions"],
+      "notes": "The validator recomputes both integrals, the pointwise linear combination, and the combined integral exactly."
+    },
+    {
+      "id": "bad-expectation-rejected",
+      "claim": "The listed simple function has integral 3.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_expectation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "low", "probability": "1/4"},
+          {"id": "mid", "probability": "1/4"},
+          {"id": "high", "probability": "1/2"}
+        ],
+        "function_values": {
+          "low": "0",
+          "mid": "2",
+          "high": "4"
+        },
+        "claimed_integral": "3",
+        "actual_integral": "5/2"
+      },
+      "notes": "The validator rejects the claim because the exact weighted sum is 5/2, not 3."
+    },
+    {
+      "id": "lebesgue-integration-lean-horizon",
+      "claim": "General Lebesgue integration and convergence theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "monotone convergence, dominated convergence, Fubini/Tonelli, and almost-everywhere equivalence for integrals",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general integration theory remains a proof-assistant horizon."
+    }
+  ]
+}

@@ -21,6 +21,7 @@ Example packs:
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
+- [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
@@ -30,8 +31,9 @@ Example packs:
 
 The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
-shadows, bounded sequence tails and prefixes, finite epsilon-delta continuity
-checks, finite open-cover/subcover checks, finite clopen-subset and open
+shadows, finite simple-function integrals, bounded sequence tails and prefixes,
+finite epsilon-delta continuity checks, finite open-cover/subcover checks,
+finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 polynomial derivative identities, bounded recurrence traces, finite invariant
 witnesses, matrix operator bounds, Chebyshev recurrence values at fixed points,
@@ -157,6 +159,11 @@ an initial distribution. The `finite-markov-chain-v0` validator applies exact
 row-vector multiplication for a fixed horizon and checks stationary
 distributions by recomputing `pi * P`.
 
+For finite integration, encode a finite atom table and a rational-valued simple
+function. The `finite-integration-v0` validator recomputes weighted sums,
+indicator integrals, linearity, and a false expectation counterexample using
+exact rational arithmetic.
+
 Run the checks from the repository root:
 
 ```sh
@@ -168,6 +175,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0

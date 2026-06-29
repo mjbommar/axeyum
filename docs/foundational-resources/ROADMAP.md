@@ -97,6 +97,7 @@ artifacts/examples/math/
   finite-connectedness-v0/
   finite-continuous-maps-v0/
   finite-measure-v0/
+  finite-integration-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -420,6 +421,10 @@ metric-ball replay.
 [`finite-measure-v0`](../../artifacts/examples/math/finite-measure-v0/)
 validates finite sigma-algebra axioms, exact finite additivity, and
 event/complement measure replay.
+[`finite-integration-v0`](../../artifacts/examples/math/finite-integration-v0/)
+validates exact finite simple-function integrals, indicator integrals,
+integral linearity, checked rejection of a false expectation, and a
+Lebesgue-integration Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.

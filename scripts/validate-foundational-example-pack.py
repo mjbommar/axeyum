@@ -5041,6 +5041,141 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
         fail("bayes posterior witness does not match Bayes rule")
 
 
+def require_atom_value_table(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    atom_set = set(atom_ids)
+    if set(value) != atom_set:
+        missing = sorted(atom_set - set(value))
+        extra = sorted(set(value) - atom_set)
+        fail(f"{context} must cover exactly atoms; missing={missing} extra={extra}")
+    return {
+        atom_id: require_fraction(f"{context}.{atom_id}", value[atom_id])
+        for atom_id in atom_ids
+    }
+
+
+def require_atom_subset(context: str, value: Any, atom_ids: list[str]) -> set[str]:
+    subset = set(require_string_list(context, value, nonempty=False))
+    atom_set = set(atom_ids)
+    missing = sorted(subset - atom_set)
+    if missing:
+        fail(f"{context} contains atoms outside the distribution: {missing}")
+    return subset
+
+
+def finite_expected_value(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    values: dict[str, Fraction],
+) -> Fraction:
+    return sum(
+        (probability * values[atom_id] for atom_id, probability, _ in atoms),
+        Fraction(0),
+    )
+
+
+def finite_event_measure(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    event_atoms: set[str],
+) -> Fraction:
+    return sum(
+        (probability for atom_id, probability, _ in atoms if atom_id in event_atoms),
+        Fraction(0),
+    )
+
+
+def validate_finite_integration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    simple = checks["simple-function-integral-witness"]
+    if simple["expected_result"] != "sat":
+        fail("simple-function-integral-witness must expect sat")
+    values = single_witness_values(simple, witnesses)
+    atoms = require_probability_atoms("simple integral atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("simple-function-integral-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    function_values = require_atom_value_table("simple integral function_values", values.get("function_values"), atom_ids)
+    expected_integral = require_fraction("simple integral integral", values.get("integral"))
+    if finite_expected_value(atoms, function_values) != expected_integral:
+        fail("simple-function-integral-witness integral is incorrect")
+
+    indicator = checks["indicator-integral-witness"]
+    if indicator["expected_result"] != "sat":
+        fail("indicator-integral-witness must expect sat")
+    values = single_witness_values(indicator, witnesses)
+    atoms = require_probability_atoms("indicator integral atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("indicator-integral-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    event_atoms = require_atom_subset("indicator integral event_atoms", values.get("event_atoms"), atom_ids)
+    event_measure = require_probability("indicator integral event_measure", values.get("event_measure"))
+    indicator_integral = require_probability("indicator integral integral", values.get("indicator_integral"))
+    computed_measure = finite_event_measure(atoms, event_atoms)
+    if computed_measure != event_measure:
+        fail("indicator-integral-witness event_measure is incorrect")
+    if indicator_integral != event_measure:
+        fail("indicator-integral-witness integral must equal event measure")
+
+    linearity = checks["integral-linearity-witness"]
+    if linearity["expected_result"] != "sat":
+        fail("integral-linearity-witness must expect sat")
+    values = single_witness_values(linearity, witnesses)
+    atoms = require_probability_atoms("linearity atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("integral-linearity-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    left_values = require_atom_value_table("linearity left_values", values.get("left_values"), atom_ids)
+    right_values = require_atom_value_table("linearity right_values", values.get("right_values"), atom_ids)
+    left_scale = require_fraction("linearity left_scale", values.get("left_scale"))
+    right_scale = require_fraction("linearity right_scale", values.get("right_scale"))
+    expected_left_integral = require_fraction("linearity left_integral", values.get("left_integral"))
+    expected_right_integral = require_fraction("linearity right_integral", values.get("right_integral"))
+    expected_combined_integral = require_fraction("linearity combined_integral", values.get("combined_integral"))
+    left_integral = finite_expected_value(atoms, left_values)
+    right_integral = finite_expected_value(atoms, right_values)
+    combined_values = {
+        atom_id: left_scale * left_values[atom_id] + right_scale * right_values[atom_id]
+        for atom_id in atom_ids
+    }
+    combined_integral = finite_expected_value(atoms, combined_values)
+    if left_integral != expected_left_integral:
+        fail("integral-linearity-witness left integral is incorrect")
+    if right_integral != expected_right_integral:
+        fail("integral-linearity-witness right integral is incorrect")
+    if combined_integral != expected_combined_integral:
+        fail("integral-linearity-witness combined integral is incorrect")
+    if combined_integral != left_scale * left_integral + right_scale * right_integral:
+        fail("integral-linearity-witness violates linearity")
+
+    bad = checks["bad-expectation-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-expectation-rejected must expect unsat")
+    data = bad.get("data", {})
+    atoms = require_probability_atoms("bad expectation atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-expectation-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    function_values = require_atom_value_table("bad expectation function_values", data.get("function_values"), atom_ids)
+    claimed = require_fraction("bad expectation claimed_integral", data.get("claimed_integral"))
+    actual = require_fraction("bad expectation actual_integral", data.get("actual_integral"))
+    computed = finite_expected_value(atoms, function_values)
+    if computed != actual:
+        fail("bad-expectation-rejected actual_integral is incorrect")
+    if claimed == actual:
+        fail("bad-expectation-rejected claimed integral unexpectedly matches actual")
+
+    horizon = checks["lebesgue-integration-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("lebesgue-integration-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("lebesgue-integration-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("Lebesgue integration target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("Lebesgue integration future_checker", data.get("future_checker"))
+
+
 def require_matrix_distribution(
     context: str,
     value: Any,
@@ -5693,6 +5828,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_fields(expected)
     if metadata["id"] == "finite-groups-v0":
         validate_finite_groups(expected)
+    if metadata["id"] == "finite-integration-v0":
+        validate_finite_integration(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
     if metadata["id"] == "metric-continuity-v0":

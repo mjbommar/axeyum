@@ -1,9 +1,10 @@
-# End To End: Conditional Probability
+# End To End: Conditional Probability And Finite Expectation
 
-This lesson follows a finite probability resource from atom table to replayed
-conditional probability. It uses the
+This lesson follows finite probability resources from atom tables to replayed
+conditional probability and exact finite expectations. It uses the
 [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/)
-pack.
+and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
+packs.
 
 Concept rows:
 
@@ -19,6 +20,8 @@ Concept rows:
 | `pmf-total-mass` | `sat` | replay-only |
 | `conditional-probability-witness` | `sat` | replay-only |
 | `bayes-posterior-witness` | `sat` | replay-only |
+| `simple-function-integral-witness` | `sat` | replay-only |
+| `bad-expectation-rejected` | `unsat` | checked |
 
 Every check is exact finite replay over rational numbers.
 
@@ -39,6 +42,15 @@ The claimed query is:
 P(late | rain) = 1/3
 ```
 
+The finite integration witness is a three-atom table:
+
+```text
+P(low) = 1/4
+P(mid) = 1/4
+P(high) = 1/2
+f(low), f(mid), f(high) = 0, 2, 4
+```
+
 ## Replay
 
 The checker recomputes:
@@ -52,15 +64,25 @@ P(late | rain) = (1/10) / (3/10) = 1/3
 It also checks that the table is normalized and that every atom probability is
 in `[0,1]`.
 
+For the integration row, the checker recomputes:
+
+```text
+integral f dP = 0*(1/4) + 2*(1/4) + 4*(1/2) = 5/2
+```
+
+It also checks an indicator integral, finite linearity, and rejects the false
+claim `integral f dP = 3`.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 ```
 
-Expected output:
+Expected output for each command:
 
 ```text
 validated 1 foundational example pack(s)
@@ -70,5 +92,5 @@ validated 1 foundational example pack(s)
 
 The search side may propose a probability table or posterior. The trusted side
 only recomputes finite sums and exact rational divisions. Continuous
-probability, convergence, and statistical inference are outside this proof
-claim.
+probability, Lebesgue integration, convergence theorems, and statistical
+inference are outside this proof claim.
