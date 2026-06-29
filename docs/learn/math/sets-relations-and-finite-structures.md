@@ -14,6 +14,7 @@ Example packs:
 - [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
 - [equivalence-classes-v0](../../../artifacts/examples/math/equivalence-classes-v0/)
 - [function-composition-v0](../../../artifacts/examples/math/function-composition-v0/)
+- [finite-order-lattices-v0](../../../artifacts/examples/math/finite-order-lattices-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [cardinality-principles-v0](../../../artifacts/examples/math/cardinality-principles-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
@@ -34,7 +35,9 @@ checks finite equivalence classes, quotient-map fibers, partition-to-relation
 round trips, rejection of a non-transitive relation, and an explicit QF_UF/Alethe
 proof gap. The function-composition pack checks finite composition,
 image/preimage replay, inverse tables, associativity, and non-injective inverse
-counterexamples. The finite-cardinality pack checks explicit bijections,
+counterexamples. The finite-order-lattices pack checks finite partial orders,
+Boolean-lattice meet/join tables, distributivity, monotone maps, fixed points,
+and bad-order counterexamples. The finite-cardinality pack checks explicit bijections,
 proper-subset injections, finite injection and surjection refutations, and an
 infinite-cardinality Lean-horizon row. The cardinality-principles pack checks
 inclusion-exclusion, disjoint-union additivity, double counting, powerset
@@ -102,6 +105,21 @@ g(b0)=c2, g(b1)=c0
 The validator recomputes composition, image/preimage sets, inverse tables for
 bijections, associativity of three concrete functions, and a collision witness
 showing that a non-injective function has no two-sided inverse.
+For finite order theory, encode the four-element Boolean lattice:
+
+```text
+elements = 0, A, B, AB
+0 <= A, 0 <= B, A <= AB, B <= AB
+A meet B = 0
+A join B = AB
+f(x) = x join A
+fixed_points(f) = A, AB
+```
+
+The `finite-order-lattices-v0` validator checks the partial-order laws,
+recomputes meet and join as greatest lower and least upper bounds, checks both
+distributive laws over all triples, checks monotonicity of `f`, and recomputes
+the fixed points.
 For finite cardinality, encode the same function graph as a cardinality witness:
 
 ```text
@@ -188,6 +206,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
@@ -204,11 +223,12 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 ## Horizon
 
 The finite set, relation/function, equivalence-class, function-composition,
-cardinality, cardinality-principles, topology, compactness-shadow,
-connectedness-shadow, continuous-map, finite-simplicial-homology, and measure
-packs are now checked finite artifacts. The next finite-structure gaps are
-stronger EUF/Alethe evidence for congruence examples and Lean artifacts for
-infinite theorems. ZFC, ordinals, choice, infinite cardinality, arbitrary
+finite-order/lattice, cardinality, cardinality-principles, topology,
+compactness-shadow, connectedness-shadow, continuous-map,
+finite-simplicial-homology, and measure packs are now checked finite artifacts.
+The next finite-structure gaps are stronger EUF/Alethe evidence for congruence
+examples and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
+infinite cardinality, complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,
 continuous-image/homeomorphism theorems, homology invariance, exact sequences,
 and countable additivity remain proof-horizon material.

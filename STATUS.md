@@ -179,6 +179,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite order/lattice foundations pack landed.** Added
+  [`finite-order-lattices-v0`](artifacts/examples/math/finite-order-lattices-v0/README.md)
+  as the exact finite bridge from relations to order and lattice theory. The
+  pack validates a four-element Boolean-lattice partial order, bottom/top
+  replay, meet/join table replay as greatest lower and least upper bounds,
+  distributivity over all triples, monotone-map fixed-point replay, checked
+  rejection of a bad partial order, and a general order/lattice Lean-horizon
+  row. The foundational example-pack validator now checks these rows by exact
+  finite relation and table enumeration.
+
 - **Finite ideal foundations pack landed.** Added
   [`finite-ideals-v0`](artifacts/examples/math/finite-ideals-v0/README.md)
   as the exact finite quotient-ring bridge for modular algebra. The pack

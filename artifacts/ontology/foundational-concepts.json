@@ -313,6 +313,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-sets-v0",
           "notes": "Membership, subset, union/intersection, and finite identities."
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Finite partial orders, lattice meet/join tables, distributivity, monotone maps, and fixed-point replay."
         }
       ],
       "proof_routes": [
@@ -341,7 +347,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-sets-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/finite-sets-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -393,6 +399,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/function-composition-v0",
           "notes": "Finite function composition, image/preimage, inverse tables, associativity, and function-law Lean horizon."
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Finite partial orders, meet/join lattice tables, monotone maps, fixed points, and bad-order counterexamples."
         }
       ],
       "proof_routes": [
@@ -462,6 +474,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/cardinality-principles-v0",
           "notes": "Finite inclusion-exclusion, disjoint unions, double counting, powersets, and infinite-cardinality Lean horizon."
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Finite Boolean lattice over a two-element powerset, meet/join replay, and monotone fixed points."
         }
       ],
       "proof_routes": [
@@ -1958,7 +1976,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate bridge into CS and proof. First Axeyum slice: Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search",
+      "summary": "Core undergraduate bridge into CS and proof. First Axeyum slice: Finite counting identities, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search",
       "prerequisites": [],
       "unlocks": [
         "curriculum_cardinality",
@@ -1968,14 +1986,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search"
+        "Finite counting identities, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search"
       ],
       "example_packs": [
         {
           "id": "counting-v0",
           "status": "validated",
           "path": "artifacts/examples/math/counting-v0",
-          "notes": "Finite counting and combinatorial witness checks."
+          "notes": "Finite counting, order/lattice, and combinatorial witness checks."
         },
         {
           "id": "cardinality-principles-v0",
@@ -2000,6 +2018,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-cardinality-v0",
           "notes": "Finite Cardinality And Bijection Checks"
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Exact Finite Order And Lattice Checks"
         },
         {
           "id": "function-composition-v0",
@@ -2070,7 +2094,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General asymptotic enumeration and deep extremal combinatorics usually require theorem proving.",
+          "name": "General asymptotic enumeration and deep extremal/order-theoretic combinatorics usually require theorem proving.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2545,7 +2569,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Foundation for every other field. First Axeyum slice: Propositional logic, SAT, finite proof-pattern checks, tiny SMT examples, proof object anatomy",
+      "summary": "Foundation for every other field. First Axeyum slice: Propositional logic, SAT, finite proof-pattern checks, finite order counterexamples, tiny SMT examples, proof object anatomy",
       "prerequisites": [],
       "unlocks": [
         "curriculum_induction",
@@ -2555,14 +2579,20 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Propositional logic, SAT, finite proof-pattern checks, tiny SMT examples, proof object anatomy"
+        "Propositional logic, SAT, finite proof-pattern checks, finite order counterexamples, tiny SMT examples, proof object anatomy"
       ],
       "example_packs": [
         {
           "id": "proof-methods-refutation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/proof-methods-refutation-v0",
-          "notes": "Negation-as-query, finite CNF checks, and proof-object lessons."
+          "notes": "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Exact Finite Order And Lattice Checks"
         },
         {
           "id": "finite-predicate-v0",
@@ -3508,7 +3538,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints",
+      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, equivalence classes, partitions, order/lattice tables, small cardinality constraints",
       "prerequisites": [],
       "unlocks": [
         "curriculum_cardinality",
@@ -3518,14 +3548,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints"
+        "Finite sets, relations, functions, equivalence classes, partitions, order/lattice tables, small cardinality constraints"
       ],
       "example_packs": [
         {
           "id": "finite-sets-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-sets-v0",
-          "notes": "Finite set, relation, function, and cardinality checks."
+          "notes": "Finite set, relation, function, order, lattice, and cardinality checks."
         },
         {
           "id": "cardinality-principles-v0",
@@ -3612,6 +3642,12 @@
           "notes": "Exact Finite Module Checks"
         },
         {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Exact Finite Order And Lattice Checks"
+        },
+        {
           "id": "finite-predicate-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-predicate-v0",
@@ -3662,7 +3698,7 @@
       ],
       "proof_routes": [
         {
-          "name": "ZFC, ordinals, cardinals, choice, and infinite set facts are proof-horizon material.",
+          "name": "ZFC, ordinals, cardinals, choice, infinite set facts, and complete-lattice theorems are proof-horizon material.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",

@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "finite-order-lattices-v0",
+  "title": "Exact Finite Order And Lattice Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_cardinality",
+    "field_set_theory_and_foundations",
+    "field_discrete_math",
+    "field_logic_and_proof"
+  ],
+  "field_ids": [
+    "set_theory_and_foundations",
+    "discrete_math",
+    "logic_and_proof"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "cardinality"
+  ],
+  "axeyum_fragments": [
+    "finite relations",
+    "finite functions",
+    "finite lattices",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/00-foundations/cardinality.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "boolean-lattice-poset",
+    "meet-join-table-replay",
+    "distributive-lattice-replay",
+    "monotone-map-fixed-points",
+    "bad-partial-order-rejected",
+    "general-order-lattice-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite order and lattice tables as deterministic finite-relation and finite-function obligations.",
+    "Replay poset, meet, join, distributivity, monotone-map, and fixed-point witnesses through Axeyum model evaluation.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-order and bad-lattice rows once proof routes are promoted.",
+    "Keep general lattice theory, complete lattices, fixed-point theorems, domain theory, and order-enriched algebra under Lean horizon until formal routes exist."
+  ]
+}

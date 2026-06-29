@@ -414,6 +414,195 @@ def validate_relations_functions(expected: dict[str, Any]) -> None:
         fail("non-function-rejected graph unexpectedly is a function")
 
 
+def is_partial_order(elements: list[str], pairs: set[tuple[str, str]]) -> bool:
+    return is_reflexive(elements, pairs) and is_antisymmetric(pairs) and is_transitive(pairs)
+
+
+def leq(pairs: set[tuple[str, str]], left: str, right: str) -> bool:
+    return (left, right) in pairs
+
+
+def greatest_lower_bound(
+    elements: list[str],
+    pairs: set[tuple[str, str]],
+    left: str,
+    right: str,
+) -> str:
+    lower_bounds = [candidate for candidate in elements if leq(pairs, candidate, left) and leq(pairs, candidate, right)]
+    greatest = [candidate for candidate in lower_bounds if all(leq(pairs, other, candidate) for other in lower_bounds)]
+    if len(greatest) != 1:
+        fail(f"expected a unique greatest lower bound for {(left, right)}, got {greatest}")
+    return greatest[0]
+
+
+def least_upper_bound(
+    elements: list[str],
+    pairs: set[tuple[str, str]],
+    left: str,
+    right: str,
+) -> str:
+    upper_bounds = [candidate for candidate in elements if leq(pairs, left, candidate) and leq(pairs, right, candidate)]
+    least = [candidate for candidate in upper_bounds if all(leq(pairs, candidate, other) for other in upper_bounds)]
+    if len(least) != 1:
+        fail(f"expected a unique least upper bound for {(left, right)}, got {least}")
+    return least[0]
+
+
+def require_lattice_data(
+    context: str,
+    values: Any,
+) -> tuple[list[str], set[tuple[str, str]], str, str, dict[tuple[str, str], str], dict[tuple[str, str], str]]:
+    if not isinstance(values, dict):
+        fail(f"{context} must be an object")
+    elements, pairs = require_relation_data(context, values)
+    element_set = set(elements)
+    bottom = values.get("bottom")
+    top = values.get("top")
+    require_string(f"{context}.bottom", bottom)
+    require_string(f"{context}.top", top)
+    if bottom not in element_set:
+        fail(f"{context}.bottom must be in the carrier")
+    if top not in element_set:
+        fail(f"{context}.top must be in the carrier")
+    meet = require_binary_table(f"{context}.meet", elements, values.get("meet"))
+    join = require_binary_table(f"{context}.join", elements, values.get("join"))
+    return elements, pairs, bottom, top, meet, join
+
+
+def check_bottom_top(context: str, elements: list[str], pairs: set[tuple[str, str]], bottom: str, top: str) -> None:
+    for element in elements:
+        if not leq(pairs, bottom, element):
+            fail(f"{context} bottom is not below {element}")
+        if not leq(pairs, element, top):
+            fail(f"{context} top is not above {element}")
+
+
+def check_lattice_tables(
+    context: str,
+    elements: list[str],
+    pairs: set[tuple[str, str]],
+    meet: dict[tuple[str, str], str],
+    join: dict[tuple[str, str], str],
+) -> None:
+    for left in elements:
+        for right in elements:
+            if table_op(meet, left, right) != greatest_lower_bound(elements, pairs, left, right):
+                fail(f"{context} meet table is incorrect for {(left, right)}")
+            if table_op(join, left, right) != least_upper_bound(elements, pairs, left, right):
+                fail(f"{context} join table is incorrect for {(left, right)}")
+
+
+def check_distributive_lattice(
+    context: str,
+    elements: list[str],
+    meet: dict[tuple[str, str], str],
+    join: dict[tuple[str, str], str],
+) -> None:
+    for x_value in elements:
+        for y_value in elements:
+            for z_value in elements:
+                lhs = table_op(meet, x_value, table_op(join, y_value, z_value))
+                rhs = table_op(join, table_op(meet, x_value, y_value), table_op(meet, x_value, z_value))
+                if lhs != rhs:
+                    fail(f"{context} meet-over-join distributivity fails for {(x_value, y_value, z_value)}")
+                dual_lhs = table_op(join, x_value, table_op(meet, y_value, z_value))
+                dual_rhs = table_op(meet, table_op(join, x_value, y_value), table_op(join, x_value, z_value))
+                if dual_lhs != dual_rhs:
+                    fail(f"{context} join-over-meet distributivity fails for {(x_value, y_value, z_value)}")
+
+
+def validate_finite_order_lattices(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    poset = checks["boolean-lattice-poset"]
+    if poset["expected_result"] != "sat":
+        fail("boolean-lattice-poset must expect sat")
+    values = single_witness_values(poset, witnesses)
+    elements, pairs, bottom, top, meet, join = require_lattice_data("boolean lattice", values)
+    if not is_partial_order(elements, pairs):
+        fail("boolean-lattice-poset relation is not a partial order")
+    check_bottom_top("boolean-lattice-poset", elements, pairs, bottom, top)
+
+    lattice = checks["meet-join-table-replay"]
+    if lattice["expected_result"] != "sat":
+        fail("meet-join-table-replay must expect sat")
+    values = single_witness_values(lattice, witnesses)
+    elements, pairs, bottom, top, meet, join = require_lattice_data("meet join lattice", values)
+    if not is_partial_order(elements, pairs):
+        fail("meet-join-table-replay relation is not a partial order")
+    check_bottom_top("meet-join-table-replay", elements, pairs, bottom, top)
+    check_lattice_tables("meet-join-table-replay", elements, pairs, meet, join)
+
+    distributive = checks["distributive-lattice-replay"]
+    if distributive["expected_result"] != "sat":
+        fail("distributive-lattice-replay must expect sat")
+    values = single_witness_values(distributive, witnesses)
+    elements, pairs, bottom, top, meet, join = require_lattice_data("distributive lattice", values)
+    if not is_partial_order(elements, pairs):
+        fail("distributive-lattice-replay relation is not a partial order")
+    check_bottom_top("distributive-lattice-replay", elements, pairs, bottom, top)
+    check_lattice_tables("distributive-lattice-replay", elements, pairs, meet, join)
+    check_distributive_lattice("distributive-lattice-replay", elements, meet, join)
+
+    monotone = checks["monotone-map-fixed-points"]
+    if monotone["expected_result"] != "sat":
+        fail("monotone-map-fixed-points must expect sat")
+    values = single_witness_values(monotone, witnesses)
+    elements, pairs = require_relation_data("monotone map order", values)
+    if not is_partial_order(elements, pairs):
+        fail("monotone-map-fixed-points relation is not a partial order")
+    mapping = require_mapping_object("monotone map", values.get("map"), elements, elements)
+    for left in elements:
+        for right in elements:
+            if leq(pairs, left, right) and not leq(pairs, mapping[left], mapping[right]):
+                fail(f"monotone-map-fixed-points map is not monotone for {(left, right)}")
+    computed_fixed = {element for element in elements if mapping[element] == element}
+    fixed_points = set(require_string_list("monotone fixed_points", values.get("fixed_points"), nonempty=True))
+    extra = sorted(fixed_points - set(elements))
+    if extra:
+        fail(f"monotone-map-fixed-points fixed_points contain elements outside the carrier: {extra}")
+    if fixed_points != computed_fixed:
+        fail("monotone-map-fixed-points fixed point set is incorrect")
+    least_fixed_point = values.get("least_fixed_point")
+    require_string("monotone least_fixed_point", least_fixed_point)
+    if least_fixed_point not in fixed_points:
+        fail("monotone-map-fixed-points least_fixed_point is not fixed")
+    if not all(leq(pairs, least_fixed_point, fixed_point) for fixed_point in fixed_points):
+        fail("monotone-map-fixed-points least_fixed_point is not below every fixed point")
+
+    bad = checks["bad-partial-order-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-partial-order-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    elements, pairs = require_relation_data("bad partial order", data)
+    if not is_reflexive(elements, pairs):
+        fail("bad-partial-order-rejected should document a reflexive relation")
+    if not is_transitive(pairs):
+        fail("bad-partial-order-rejected should document a transitive relation")
+    if is_antisymmetric(pairs):
+        fail("bad-partial-order-rejected relation unexpectedly is antisymmetric")
+    failing_pair = data.get("failing_pair")
+    if not isinstance(failing_pair, list) or len(failing_pair) != 2:
+        fail("bad-partial-order-rejected failing_pair must be a two-element list")
+    left, right = failing_pair
+    require_string("bad partial order failing_pair[0]", left)
+    require_string("bad partial order failing_pair[1]", right)
+    if left == right:
+        fail("bad-partial-order-rejected failing_pair must contain distinct elements")
+    if (left, right) not in pairs or (right, left) not in pairs:
+        fail("bad-partial-order-rejected failing_pair must witness antisymmetry failure")
+
+    horizon = checks["general-order-lattice-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-order-lattice-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-order-lattice-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general order target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general order future_checker", data.get("future_checker"))
+
+
 def require_total_mapping(
     context: str,
     domain: list[str],
@@ -11816,6 +12005,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_modules(expected)
     if metadata["id"] == "finite-ideals-v0":
         validate_finite_ideals(expected)
+    if metadata["id"] == "finite-order-lattices-v0":
+        validate_finite_order_lattices(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":
         validate_finite_stochastic_kernels(expected)
     if metadata["id"] == "finite-operator-v0":

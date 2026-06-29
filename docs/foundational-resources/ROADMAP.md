@@ -69,6 +69,7 @@ artifacts/examples/math/
   relations-functions-v0/
   equivalence-classes-v0/
   function-composition-v0/
+  finite-order-lattices-v0/
   finite-cardinality-v0/
   cardinality-principles-v0/
   natural-arithmetic-v0/
@@ -411,6 +412,10 @@ bad-submodule rejection, and a module-theory Lean-horizon row.
 validates finite ideal laws over `Z/6Z`, principal ideal generation,
 ring-homomorphism kernel/image replay, quotient-ring table replay, checked
 bad-ideal rejection, and an ideal-theory Lean-horizon row.
+[`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/)
+validates finite partial-order replay, Boolean-lattice meet/join tables,
+distributivity, monotone-map fixed points, checked bad-order rejection, and an
+order/lattice Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

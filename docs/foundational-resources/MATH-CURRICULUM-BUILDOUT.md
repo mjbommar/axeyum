@@ -179,9 +179,9 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `predicate-logic` | `logic_and_proof`, `set_theory_and_foundations` | `finite-predicate-v0` | Finite-domain quantifier expansion and counterexamples. |
 | `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Negate-and-decide examples, direct proof, contrapositive, proof by cases, contradiction, and invalid-proof counterexamples. |
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0`, `induction-patterns-v0` | Bounded base/step obligations, weak/strong induction prefixes, loop invariants, bad-step counterexamples; general induction marked Lean-horizon. |
-| `sets` | `set_theory_and_foundations` | `finite-sets-v0` | Membership, subset, union/intersection, finite identities. |
-| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0` | Finite relation properties, injective/surjective checks, function composition, image/preimage, inverse tables, equivalence classes, quotient maps, and EUF slices. |
-| `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets; infinite cardinality marked Lean-horizon. |
+| `sets` | `set_theory_and_foundations` | `finite-sets-v0`, `finite-order-lattices-v0` | Membership, subset, union/intersection, finite identities, finite Boolean lattices, and order-theoretic set structure. |
+| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`, `finite-order-lattices-v0` | Finite relation properties, partial orders, lattices, monotone maps, injective/surjective checks, function composition, image/preimage, inverse tables, equivalence classes, quotient maps, and EUF slices. |
+| `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets, finite Boolean lattices; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0` | Exact rational order/field facts, density, trichotomy, Farkas links. |
@@ -291,6 +291,8 @@ the first finite-set core curriculum pack lives under
 `artifacts/examples/math/finite-sets-v0/`;
 the first relation/function core curriculum pack lives under
 `artifacts/examples/math/relations-functions-v0/`;
+the first finite order/lattice pack lives under
+`artifacts/examples/math/finite-order-lattices-v0/`;
 the first finite-cardinality foundations pack lives under
 `artifacts/examples/math/finite-cardinality-v0/`;
 the first finite-field core curriculum pack lives under
@@ -358,7 +360,11 @@ relation, and an explicit QF_UF/Alethe proof-gap row.
 `function-composition-v0` now validates finite composition tables,
 image/preimage replay, inverse tables for bijections, composition
 associativity, non-injective inverse counterexamples, and a general
-function-law Lean-horizon row. `finite-fields-v0` now
+function-law Lean-horizon row. `finite-order-lattices-v0` now deepens the
+finite relation path with Boolean-lattice partial-order replay, meet/join
+table replay, distributivity checks, monotone-map fixed-point replay, checked
+bad-order rejection, and a general order/lattice Lean-horizon row.
+`finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
 prime field, and a checked composite-modulus non-field contrast.
 `polynomial-identities-v0`
@@ -451,10 +457,11 @@ Recommended order:
    counterexamples, and checked finite CNF/truth-table refutations; LRAT/DRAT
    remains the stronger proof-object graduation route.
 2. `finite-sets-v0` (landed), `relations-functions-v0` (landed),
-   `equivalence-classes-v0` (landed), and `function-composition-v0` (landed):
-   finite set identities, relation properties, function properties,
-   composition, image/preimage, inverse tables, equivalence classes,
-   partitions, and quotient maps.
+   `equivalence-classes-v0` (landed), `function-composition-v0` (landed),
+   and `finite-order-lattices-v0` (landed): finite set identities, relation
+   properties, partial orders, lattice meet/join tables, monotone maps,
+   function properties, composition, image/preimage, inverse tables,
+   equivalence classes, partitions, and quotient maps.
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0` and `finite-ideals-v0`: CRT, modular inverse,
@@ -482,11 +489,12 @@ Recommended order:
     interval infeasibility, and GCD-test refutations.
 12. `natural-arithmetic-v0` (landed): bounded successor/addition replay,
     commutativity, distributivity, and Peano-style bounded no-counterexamples.
-13. `finite-cardinality-v0` (landed) and
-    `cardinality-principles-v0` (landed): finite bijections, finite cardinal
+13. `finite-cardinality-v0` (landed),
+    `cardinality-principles-v0` (landed), and
+    `finite-order-lattices-v0` (landed): finite bijections, finite cardinal
     inequalities, injection/surjection refutations, inclusion-exclusion,
-    disjoint unions, double counting, powersets, and infinite-cardinality
-    Lean-horizon metadata.
+    disjoint unions, double counting, powersets, finite Boolean lattices, and
+    infinite-cardinality Lean-horizon metadata.
 14. `induction-obligations-v0` (landed) and `induction-patterns-v0` (landed):
     bounded base/step obligations, finite weak and strong induction patterns,
     loop-invariant replay, bad-step witnesses, and full-schema Lean-horizon
@@ -884,9 +892,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 75 non-template math example packs validate.
+  Status: 76 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 63 non-template packs have at least one `checked` expected-result row.
+  Status: 64 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -913,6 +921,7 @@ docs link checker clean.
 
 Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`,
+`finite-order-lattices-v0`,
 `finite-fields-v0`, `finite-algebra-homomorphisms-v0`,
 `finite-ideals-v0`,
 `finite-vector-spaces-v0`,
@@ -1039,6 +1048,10 @@ and a module-theory Lean-horizon row.
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring tables, checked non-ideal rejection, and an
 ideal-theory Lean-horizon row.
+`finite-order-lattices-v0` now adds the exact finite order-theory bridge:
+Boolean-lattice partial-order replay, meet/join table checks, distributivity,
+monotone-map fixed-point replay, checked bad-order rejection, and an
+order/lattice Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

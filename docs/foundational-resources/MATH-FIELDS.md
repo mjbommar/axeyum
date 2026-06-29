@@ -36,9 +36,9 @@ Use these sources as checks against local taste:
 
 | ID | Field | Curriculum Role | First Axeyum Slice | Proof Horizon / Limits |
 |---|---|---|---|---|
-| `logic_and_proof` | Logic and proof | Foundation for every other field | Propositional logic, SAT, finite proof-pattern checks, tiny SMT examples, proof object anatomy | Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge. |
-| `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints | ZFC, ordinals, cardinals, choice, and infinite set facts are proof-horizon material. |
-| `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search | General asymptotic enumeration and deep extremal combinatorics usually require theorem proving. |
+| `logic_and_proof` | Logic and proof | Foundation for every other field | Propositional logic, SAT, finite proof-pattern checks, finite order counterexamples, tiny SMT examples, proof object anatomy | Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge. |
+| `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, equivalence classes, partitions, order/lattice tables, small cardinality constraints | ZFC, ordinals, cardinals, choice, infinite set facts, and complete-lattice theorems are proof-horizon material. |
+| `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search | General asymptotic enumeration and deep extremal/order-theoretic combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
 | `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, and finite-field linear algebra | Spectral theorems, general vector-space/module theorems, and conditioning/stability need proof or numerical tracks. |
@@ -266,6 +266,12 @@ one of:
     - Checks: finite ideal table replay over `Z/6Z`, principal ideal
       generation, ring-homomorphism kernel/image replay, quotient-ring replay,
       bad-ideal rejection, and a general ideal-theory Lean-horizon row.
+28. `artifacts/examples/math/finite-order-lattices-v0/`
+    - Fields: `set_theory_and_foundations`, `discrete_math`,
+      `logic_and_proof`.
+    - Checks: finite partial-order replay, Boolean-lattice meet/join table
+      replay, distributivity replay, monotone-map fixed-point replay,
+      bad-order rejection, and a general order/lattice Lean-horizon row.
 
 ## Graduation Criteria
 

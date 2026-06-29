@@ -70,6 +70,12 @@ CURRICULUM_MAP = {
         "pack": "finite-sets-v0",
         "slice": "Membership, subset, union/intersection, and finite identities.",
         "proof": "Finite enumeration replay and SAT evidence for refutations.",
+        "extra_packs": [
+            (
+                "finite-order-lattices-v0",
+                "Finite partial orders, lattice meet/join tables, distributivity, monotone maps, and fixed-point replay.",
+            ),
+        ],
     },
     "relations-and-functions": {
         "field_ids": ["set_theory_and_foundations", "discrete_math"],
@@ -85,6 +91,10 @@ CURRICULUM_MAP = {
                 "function-composition-v0",
                 "Finite function composition, image/preimage, inverse tables, associativity, and function-law Lean horizon.",
             ),
+            (
+                "finite-order-lattices-v0",
+                "Finite partial orders, meet/join lattice tables, monotone maps, fixed points, and bad-order counterexamples.",
+            ),
         ],
     },
     "cardinality": {
@@ -96,6 +106,10 @@ CURRICULUM_MAP = {
             (
                 "cardinality-principles-v0",
                 "Finite inclusion-exclusion, disjoint unions, double counting, powersets, and infinite-cardinality Lean horizon.",
+            ),
+            (
+                "finite-order-lattices-v0",
+                "Finite Boolean lattice over a two-element powerset, meet/join replay, and monotone fixed points.",
             ),
         ],
     },
@@ -254,9 +268,9 @@ CURRICULUM_MAP = {
 }
 
 FIELD_PACKS = {
-    "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, and proof-object lessons."),
-    "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, and cardinality checks."),
-    "discrete_math": ("counting-v0", "Finite counting and combinatorial witness checks."),
+    "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."),
+    "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, order, lattice, and cardinality checks."),
+    "discrete_math": ("counting-v0", "Finite counting, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, and infeasibility."),

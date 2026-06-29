@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-order-lattices-v0",
+  "witnesses": [
+    {
+      "id": "boolean-two-element-lattice",
+      "description": "The powerset lattice of {a,b}, encoded as four finite elements.",
+      "values": {
+        "elements": ["0", "A", "B", "AB"],
+        "pairs": [
+          ["0", "0"],
+          ["0", "A"],
+          ["0", "B"],
+          ["0", "AB"],
+          ["A", "A"],
+          ["A", "AB"],
+          ["B", "B"],
+          ["B", "AB"],
+          ["AB", "AB"]
+        ],
+        "bottom": "0",
+        "top": "AB",
+        "meet": [
+          ["0", "0", "0", "0"],
+          ["0", "A", "0", "A"],
+          ["0", "0", "B", "B"],
+          ["0", "A", "B", "AB"]
+        ],
+        "join": [
+          ["0", "A", "B", "AB"],
+          ["A", "A", "AB", "AB"],
+          ["B", "AB", "B", "AB"],
+          ["AB", "AB", "AB", "AB"]
+        ]
+      }
+    },
+    {
+      "id": "closure-add-a",
+      "description": "The monotone map that adds A to each element of the Boolean lattice.",
+      "values": {
+        "elements": ["0", "A", "B", "AB"],
+        "pairs": [
+          ["0", "0"],
+          ["0", "A"],
+          ["0", "B"],
+          ["0", "AB"],
+          ["A", "A"],
+          ["A", "AB"],
+          ["B", "B"],
+          ["B", "AB"],
+          ["AB", "AB"]
+        ],
+        "map": {
+          "0": "A",
+          "A": "A",
+          "B": "AB",
+          "AB": "AB"
+        },
+        "fixed_points": ["A", "AB"],
+        "least_fixed_point": "A"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "boolean-lattice-poset",
+      "claim": "The listed subset relation is a partial order on the four Boolean-lattice elements.",
+      "expected_result": "sat",
+      "validation": "finite_poset_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["boolean-two-element-lattice"],
+      "notes": "The validator checks reflexivity, antisymmetry, transitivity, and the listed top/bottom elements."
+    },
+    {
+      "id": "meet-join-table-replay",
+      "claim": "The listed meet and join tables are greatest lower bound and least upper bound operations for the finite order.",
+      "expected_result": "sat",
+      "validation": "finite_lattice_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["boolean-two-element-lattice"],
+      "notes": "The validator recomputes every finite lower and upper bound set and checks the listed meet/join entries."
+    },
+    {
+      "id": "distributive-lattice-replay",
+      "claim": "The listed finite lattice is distributive.",
+      "expected_result": "sat",
+      "validation": "finite_distributive_lattice_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["boolean-two-element-lattice"],
+      "notes": "The validator checks x meet (y join z) = (x meet y) join (x meet z) and the dual law for all triples."
+    },
+    {
+      "id": "monotone-map-fixed-points",
+      "claim": "The map that adds A is monotone and has the listed fixed points with A least.",
+      "expected_result": "sat",
+      "validation": "finite_monotone_fixed_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["closure-add-a"],
+      "notes": "The validator checks monotonicity over every comparable pair, recomputes fixed points, and checks the listed least fixed point."
+    },
+    {
+      "id": "bad-partial-order-rejected",
+      "claim": "The listed relation is a partial order.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_partial_order_refutation",
+      "proof_status": "checked",
+      "data": {
+        "elements": ["x", "y"],
+        "pairs": [
+          ["x", "x"],
+          ["y", "y"],
+          ["x", "y"],
+          ["y", "x"]
+        ],
+        "failing_pair": ["x", "y"]
+      },
+      "notes": "The validator checks the relation is reflexive and transitive but violates antisymmetry because x <= y and y <= x while x != y."
+    },
+    {
+      "id": "general-order-lattice-theory-lean-horizon",
+      "claim": "General order, lattice, and fixed-point theory requires future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "complete lattice fixed-point theorems, order-theoretic induction, domain theory, Galois connections, abstract interpretation, distributive/Boolean algebra representation, and infinite posets",
+        "future_checker": "Lean modules for order theory, lattice theory, complete lattices, fixed-point theorems, Galois connections, and proof reconstruction from finite relation certificates"
+      },
+      "notes": "The finite rows are checked by exact table replay; general lattice and fixed-point theory remains proof-assistant territory."
+    }
+  ]
+}
