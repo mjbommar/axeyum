@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Exact statistical-tests end-to-end lesson landed.** Added
+  [`exact-statistical-tests-end-to-end.md`](docs/learn/math/exact-statistical-tests-end-to-end.md)
+  as the learner-facing trace for the exact-statistical-tests pack: exact
+  binomial-tail replay, hypergeometric point probability, one-sided Fisher
+  tail replay, checked bad p-value rejection, and the statistical
+  numerical-honesty horizon. The lesson is linked from the math learning index
+  plus the probability/statistics path.
+
 - **Complex-plane transform end-to-end lesson landed.** Added
   [`complex-plane-transforms-end-to-end.md`](docs/learn/math/complex-plane-transforms-end-to-end.md)
   as the learner-facing trace for the complex-plane transform pack: unit-root

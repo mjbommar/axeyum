@@ -1249,6 +1249,10 @@ Euler-step rejection, and the ODE/numerical-analysis Lean horizon.
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean
 horizon.
+`exact-statistical-tests-v0` now has a learner-facing end-to-end lesson for
+one-sided exact binomial tails, hypergeometric point probability, one-sided
+Fisher tail replay, checked bad p-value rejection, and the statistical
+numerical-honesty horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

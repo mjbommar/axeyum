@@ -209,6 +209,8 @@ For exact finite statistics and regression replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
+For exact finite statistical-test p-values, read
+[End To End: Exact Statistical Tests](exact-statistical-tests-end-to-end.md).
 For finite sigma-algebras and exact measure tables, read
 [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
