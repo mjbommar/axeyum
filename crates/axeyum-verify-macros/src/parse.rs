@@ -1450,6 +1450,54 @@ impl Lowerer {
                  `checked_{add,sub,mul}(..)` chain in Phase 1",
             ));
         }
+        // `recv.pow(N)` with a *constant* exponent N — fold to N-1 nested checked
+        // `Mul`s (N==0 ⇒ 1), exactly matching Rust's `pow` overflow-panic at each
+        // step. A symbolic exponent is out of the bounded fragment.
+        if method == "pow" {
+            if mc.args.len() != 1 {
+                return Err(syn::Error::new(
+                    mc.span(),
+                    "axeyum::verify: `.pow()` takes exactly one argument",
+                ));
+            }
+            let arg = mc.args.first().unwrap();
+            let Expr::Lit(el) = arg else {
+                return Err(syn::Error::new(
+                    arg.span(),
+                    "axeyum::verify: `.pow()` exponent must be a constant integer literal",
+                ));
+            };
+            let Lit::Int(li) = &el.lit else {
+                return Err(syn::Error::new(
+                    arg.span(),
+                    "axeyum::verify: `.pow()` exponent must be an integer literal",
+                ));
+            };
+            let n: u32 = li.base10_parse()?;
+            if n > 64 {
+                return Err(syn::Error::new(
+                    arg.span(),
+                    "axeyum::verify: `.pow()` exponent is bounded to ≤ 64 in this fragment",
+                ));
+            }
+            let (base, bty) = self.lower_expr(&mc.receiver)?;
+            if n == 0 {
+                let one = syn::LitInt::new("1", mc.span());
+                let (one_tok, _) = lower_lit_as(&Lit::Int(one), bty, mc.span())?;
+                return Ok((one_tok, bty));
+            }
+            let mut acc = base.clone();
+            for _ in 1..n {
+                acc = quote! {
+                    axeyum_verify::ast::Expr::Binary {
+                        op: axeyum_verify::ast::BinOp::Mul,
+                        lhs: Box::new(#acc),
+                        rhs: Box::new(#base),
+                    }
+                };
+            }
+            return Ok((acc, bty));
+        }
         // `recv.abs()` (signed) — desugar to `ite(a < 0, -a, a)`. The `-a` arm
         // records the `iN::MIN` negation-overflow panic, which is *exactly* the
         // condition under which `abs` panics, so this is sound and precise.
