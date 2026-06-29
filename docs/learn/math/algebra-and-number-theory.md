@@ -267,7 +267,9 @@ divide `15`. Then move to a modular inverse witness:
 
 The `modular-arithmetic-v0` pack encodes that as `a = 3`, `modulus = 7`, and
 `inverse = 5`. The validator recomputes the product modulo `7`; no theorem
-about all moduli is needed to trust this witness.
+about all moduli is needed to trust this witness. The same pack now also
+promotes the composite non-unit obstruction to QF_LIA by checking
+`2*b - 6*k = 1` with an `UnsatDiophantine` certificate.
 
 The bounded destination pack adds fixed number-theory shapes:
 

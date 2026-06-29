@@ -80,8 +80,9 @@ x == 3 mod 5
 ```
 
 The validator checks both congruences and confirms the moduli are coprime. For
-the destination number-theory slice, encode bounded residue and square-sum
-witnesses:
+the nonunit inverse row, the pack also encodes `2*b == 1 mod 6` as
+`2*b - 6*k = 1` and checks the Diophantine gcd obstruction. For the destination
+number-theory slice, encode bounded residue and square-sum witnesses:
 
 ```text
 4^2 == 5 mod 11

@@ -202,6 +202,8 @@ Graduation:
 First targets:
 
 - [modular-arithmetic-v0](../../artifacts/examples/math/modular-arithmetic-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the nonunit inverse
+  obstruction)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
 - [finite-simplicial-homology-v0](../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [induction-patterns-v0](../../artifacts/examples/math/induction-patterns-v0/)

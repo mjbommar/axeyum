@@ -301,6 +301,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   source pair; the shared UF resource regression requires a pure EUF
   `Evidence::UnsatAletheProof` and rechecks it independently.
 
+- **Modular-arithmetic QF_LIA/Diophantine regression landed.**
+  [`modular-arithmetic-v0`](artifacts/examples/math/modular-arithmetic-v0/)
+  now has a checked proof-object row for the composite nonunit inverse
+  obstruction. The new SMT-LIB artifact encodes `2*b == 1 mod 6` as
+  `2*b - 6*k = 1`; the shared LIA resource regression requires
+  `Evidence::UnsatDiophantine` and rechecks the gcd certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -1809,11 +1816,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Modular arithmetic pack landed.** Added
   [`artifacts/examples/math/modular-arithmetic-v0/`](artifacts/examples/math/modular-arithmetic-v0/)
   for small CRT, modular inverse, composite non-unit, and Fermat-style finite
-  checks. The foundational example-pack validator now replays this pack's
-  arithmetic: congruence witnesses, modular inverse witnesses, exhaustive
-  non-invertibility over a composite modulus, and exhaustive absence of
-  Fermat-counterexamples over units modulo 5. The concept atlas and generated
-  dashboards now mark `modular-arithmetic-v0` as validated.
+  checks, plus a checked QF_LIA/Diophantine nonunit obstruction. The
+  foundational example-pack validator now replays this pack's arithmetic:
+  congruence witnesses, modular inverse witnesses, exhaustive non-invertibility
+  over a composite modulus, the solver-form gcd obstruction, and exhaustive
+  absence of Fermat-counterexamples over units modulo 5. The concept atlas and
+  generated dashboards now mark `modular-arithmetic-v0` as validated.
 
 - **First substantive math example pack landed.** Added
   [`artifacts/examples/math/proof-methods-refutation-v0/`](artifacts/examples/math/proof-methods-refutation-v0/)

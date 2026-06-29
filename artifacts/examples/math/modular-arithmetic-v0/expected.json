@@ -55,6 +55,22 @@
       "notes": "The validator exhaustively checks all residues modulo 6 and confirms no inverse exists."
     },
     {
+      "id": "qf-lia-nonunit-diophantine",
+      "claim": "There exist integers b and k such that 2*b - 6*k = 1.",
+      "expected_result": "unsat",
+      "validation": "qf_lia_diophantine_evidence",
+      "proof_status": "checked",
+      "data": {
+        "a": 2,
+        "modulus": 6,
+        "rhs": 1,
+        "smt2_artifact": "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check; the certificate records gcd(2,6) does not divide 1"
+      },
+      "notes": "The SMT-LIB artifact encodes the modular inverse equation 2*b == 1 (mod 6) as 2*b - 6*k = 1. Axeyum emits a Diophantine certificate for the gcd divisibility obstruction."
+    },
+    {
       "id": "fermat-units-mod-prime",
       "claim": "There exists a unit a modulo 5 such that a^4 != 1 mod 5.",
       "expected_result": "unsat",

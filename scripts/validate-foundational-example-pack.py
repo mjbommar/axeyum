@@ -5797,6 +5797,32 @@ def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     if has_mod_inverse(a, modulus):
         fail("nonunit check found an inverse unexpectedly")
 
+    qf_lia = checks["qf-lia-nonunit-diophantine"]
+    if qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-nonunit-diophantine must expect unsat")
+    if qf_lia["proof_status"] != "checked":
+        fail("qf-lia-nonunit-diophantine must be checked")
+    if qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-nonunit-diophantine must use qf_lia_diophantine_evidence validation")
+    data = qf_lia.get("data", {})
+    a = require_int("qf-lia nonunit data a", data.get("a"))
+    modulus = require_int("qf-lia nonunit data modulus", data.get("modulus"))
+    rhs = require_int("qf-lia nonunit data rhs", data.get("rhs"))
+    if modulus <= 1:
+        fail("qf-lia nonunit modulus must be > 1")
+    if gcd(a, modulus) == 1:
+        fail("qf-lia nonunit data must use a non-coprime residue")
+    if gcd(a, modulus) == 0 or rhs % gcd(a, modulus) == 0:
+        fail("qf-lia nonunit data must record a gcd divisibility obstruction")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia nonunit smt2_artifact", smt2_artifact)
+    check_source("qf-lia nonunit smt2_artifact", smt2_artifact)
+    require_string("qf-lia nonunit proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-lia nonunit certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia nonunit certificate must document checked Diophantine evidence")
+
     fermat = checks["fermat-units-mod-prime"]
     if fermat["expected_result"] != "unsat":
         fail("fermat-units-mod-prime must expect unsat")

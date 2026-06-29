@@ -20,6 +20,14 @@ Expected result: `unsat`.
 The claim "there exists an inverse for `2` modulo `6`" is false. The validator
 checks every candidate residue modulo `6`.
 
+## `qf-lia-nonunit-diophantine`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact encodes the same non-unit inverse question as
+`2*b - 6*k = 1` over integers. Axeyum emits and checks an
+`UnsatDiophantine` certificate: `gcd(2,6) = 2` does not divide `1`.
+
 ## `fermat-units-mod-prime`
 
 Expected result: `unsat`.

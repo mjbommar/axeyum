@@ -95,8 +95,9 @@ validated pack data and the repo-root command that replays it.
   replay, Bezout coefficient checking, divisibility quotient replay, and a
   fixed Diophantine gcd obstruction.
 - [Modular Arithmetic](modular-arithmetic-end-to-end.md): follows a CRT
-  witness, modular inverse witness, finite composite non-unit search, and a
-  Fermat-style finite unit search at replay-only evidence status.
+  witness, modular inverse witness, finite composite non-unit search, a
+  checked QF_LIA/Diophantine nonunit obstruction, and a Fermat-style finite
+  unit search.
 - [Bounded Number Theory](number-theory-end-to-end.md): follows compatible
   non-coprime CRT replay, quadratic residue and nonresidue checks,
   sum-of-two-squares replay and rejection, and a Diophantine witness.

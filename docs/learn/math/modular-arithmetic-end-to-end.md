@@ -20,11 +20,13 @@ Concept rows:
 | `crt-coprime-witness` | `sat` | replay-only |
 | `modular-inverse-witness` | `sat` | replay-only |
 | `composite-nonunit-no-inverse` | `unsat` | replay-only |
+| `qf-lia-nonunit-diophantine` | `unsat` | checked |
 | `fermat-units-mod-prime` | `unsat` | replay-only |
 
-The validator recomputes the arithmetic, but the pack does not yet carry
-solver-level proof artifacts. Its status stays `replay-only` until the finite
-search and congruence checks have checked evidence routes.
+The finite rows still recompute arithmetic directly. The
+`qf-lia-nonunit-diophantine` row is the first promoted solver-form proof
+artifact in this pack: Axeyum emits and checks an `UnsatDiophantine`
+certificate for the nonunit inverse obstruction.
 
 ## Replay A CRT Witness
 
@@ -78,6 +80,28 @@ The validator enumerates residues `b = 0..5` and finds no inverse for `2`
 modulo `6`. This is finite residue search, not a general theorem about all
 composite moduli.
 
+## Check A Diophantine Non-Unit Obstruction
+
+The QF_LIA row rewrites the same inverse question into an integer equation:
+
+```text
+2*b == 1 mod 6
+```
+
+means there are integers `b` and `k` with:
+
+```text
+2*b - 6*k = 1
+```
+
+The coefficients on the left have gcd `2`, so every integer value of
+`2*b - 6*k` is even. The right-hand side is `1`, which is not divisible by
+`2`.
+
+Axeyum records that as an `UnsatDiophantine` certificate. The checker
+recombines the original equality and verifies the gcd non-divisibility
+obstruction; it does not trust the search result alone.
+
 ## Search Fermat Counterexamples
 
 The Fermat-style row asks for a unit modulo `5` with:
@@ -123,9 +147,11 @@ This lesson shows Axeyum's current modular-arithmetic resource pattern:
 
 ```text
 untrusted fast search -> congruence witness or residue-search claim
-trusted small checking -> exact modular arithmetic replay
-remaining gap -> checked solver/proof evidence for the finite-search rows
+trusted small checking -> exact modular arithmetic replay,
+                          QF_LIA/Diophantine certificate checking
+remaining gap -> checked solver/proof evidence for the remaining finite-search rows
 ```
 
-The natural graduation target is deterministic BV/LIA encoding with checked
-evidence for the replayed `sat` rows and finite-search `unsat` rows.
+The next graduation target is deterministic BV/LIA encoding with checked
+evidence for the replayed `sat` rows and the remaining finite-search `unsat`
+rows.
