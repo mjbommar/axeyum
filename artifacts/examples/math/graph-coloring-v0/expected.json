@@ -68,9 +68,11 @@
           ["b", "c"],
           ["a", "c"]
         ],
-        "colors": ["red", "blue"]
+        "colors": ["red", "blue"],
+        "cnf_artifact": "artifacts/examples/math/graph-coloring-v0/cnf/triangle-not-2-colorable.cnf",
+        "proof_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat"
       },
-      "notes": "The validator enumerates all eight assignments and confirms each has a monochromatic edge."
+      "notes": "The validator enumerates all eight assignments and confirms each has a monochromatic edge; the CNF proof regression parses the DIMACS artifact, emits DRAT, elaborates LRAT, and checks both proofs."
     }
   ]
 }

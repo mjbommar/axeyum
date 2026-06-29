@@ -40,7 +40,9 @@
     "docs/curriculum/00-foundations/propositional-logic.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
-    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "artifacts/examples/math/graph-coloring-v0/cnf/triangle-not-2-colorable.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "triangle-3-coloring-witness",
@@ -51,6 +53,7 @@
     "Encode finite graph coloring constraints as deterministic Bool/CNF formulas.",
     "Replay SAT color assignments through Axeyum model evaluation.",
     "Produce and check LRAT/DRAT evidence for non-colorability examples.",
+    "Keep the resource-backed triangle non-2-colorability CNF regression checking generated DRAT and elaborated LRAT proofs.",
     "Promote graph helpers into a reusable example-pack utility only after reachability or matching packs need them."
   ]
 }

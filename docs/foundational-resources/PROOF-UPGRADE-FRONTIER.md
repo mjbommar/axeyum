@@ -68,7 +68,8 @@ only when new packs enter the dashboard without an upgrade recipe.
 
 First targets:
 
-- [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
+- [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/) (first
+  DIMACS-backed DRAT/LRAT regression landed for triangle non-2-colorability)
 - [finite-sets-v0](../../artifacts/examples/math/finite-sets-v0/)
 - [proof-methods-patterns-v0](../../artifacts/examples/math/proof-methods-patterns-v0/)
 

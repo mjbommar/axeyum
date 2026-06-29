@@ -22,8 +22,9 @@ There are three checks in the pack:
 | `triangle-not-2-colorable` | `unsat` | checked |
 
 The first check is a model witness. The last two checks are refutations of
-specific finite claims. The pack does not yet emit CNF or LRAT/DRAT proof
-artifacts.
+specific finite claims. The triangle non-2-colorability row now also has a
+resource-backed CNF proof regression that emits and checks DRAT, then elaborates
+and checks LRAT.
 
 ## Encode
 
@@ -62,12 +63,21 @@ The two-colorability refutation fixes `K3` and two colors. There are only
 `2^3 = 8` assignments, so the validator enumerates all of them and confirms
 that each assignment has at least one monochromatic edge.
 
+The CNF proof route uses one Boolean variable per vertex: true means `red`,
+false means `blue`. Each edge contributes two clauses, `(u or v)` and
+`(not u or not v)`, so endpoints must differ. For the triangle this produces
+the DIMACS artifact
+[`triangle-not-2-colorable.cnf`](../../../artifacts/examples/math/graph-coloring-v0/cnf/triangle-not-2-colorable.cnf).
+The proof-producing SAT core is untrusted search; the accepted evidence is the
+independent DRAT check and the elaborated LRAT check.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -85,8 +95,8 @@ untrusted fast search -> candidate coloring
 trusted small checking -> edge-by-edge replay
 ```
 
-For the finite `unsat` rows, the current trusted checker is exhaustive
-enumeration. The next graduation step is to add a SAT/CNF encoding and a small
-checked proof artifact for non-colorability claims using the
+For the finite `unsat` rows, exhaustive enumeration remains the pack validator.
+The triangle non-2-colorability row also exercises a SAT/CNF encoding and small
+checked DRAT/LRAT proof path using the
 [Boolean CNF DRAT/LRAT Evidence](../../proof-cookbook/recipes/boolean-cnf-lrat.md)
 recipe.

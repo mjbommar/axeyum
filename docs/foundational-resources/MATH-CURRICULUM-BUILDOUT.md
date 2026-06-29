@@ -1364,6 +1364,10 @@ The current `needs-proof-route` cleanup is now classified: descriptive
 statistics points to finite replay plus QF_LRA/Farkas and QF_LIA/Diophantine
 graduation routes, and finite probability points to finite replay plus
 QF_LRA/Farkas graduation routes.
+The Boolean proof-upgrade lane has its first concrete resource-backed proof
+regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
+non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and
+checks both proof objects.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

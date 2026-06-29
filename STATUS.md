@@ -210,6 +210,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated proof-upgrade queue has no `needs-proof-route` rows; QF_LRA/Farkas
   now covers 22 packs and QF_LIA/Diophantine covers 5.
 
+- **First Boolean CNF/LRAT resource proof regression landed.**
+  [`graph-coloring-v0`](artifacts/examples/math/graph-coloring-v0/) now has a
+  deterministic DIMACS artifact for triangle non-2-colorability. The focused
+  `axeyum-cnf` regression parses that artifact, emits DRAT from the
+  proof-producing SAT core, elaborates to LRAT, and checks both proof objects,
+  making the first CNF/LRAT proof-upgrade lane concrete without trusting search.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
