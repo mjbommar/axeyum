@@ -13,6 +13,7 @@ Concept rows:
 Example packs:
 
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
+- [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/)
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
@@ -36,8 +37,8 @@ The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, finite simple-function integrals, bounded sequence tails and prefixes,
 finite product-measure tables, rectangle probabilities, finite Fubini sums,
-finite epsilon-delta continuity checks, finite open-cover/subcover checks,
-finite clopen-subset and open
+bounded rational interval/ball inclusions, finite epsilon-delta continuity
+checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 polynomial derivative identities, bounded recurrence traces, finite invariant
 witnesses, matrix operator bounds, Chebyshev recurrence values at fixed points,
@@ -78,6 +79,22 @@ The `sequence-limit-shadow-v0` validator checks the finite tail only. It also
 checks a finite counterexample to a proposed limit, a monotone bounded prefix,
 a fixed geometric partial-sum identity, and a finite Cauchy-tail
 no-counterexample row.
+
+For a bounded real-analysis shadow, encode exact rational neighborhoods and a
+linear epsilon-delta sample:
+
+```text
+[1/4, 3/4] inside {x | |x - 1/2| < 1/3}
+f(x) = 2*x + 1
+epsilon = 1
+delta = 1/2
+finite domain sample = -1/4, 0, 1/4
+```
+
+The `real-analysis-rational-v0` validator checks interval containment, finite
+linear epsilon-delta replay, finite polynomial side conditions, and a checked
+bad-delta counterexample. It keeps the fully quantified real theorem as a
+Lean-horizon row.
 
 For a finite epsilon-delta continuity shadow, encode a rational metric-space
 slice and a function table:
@@ -192,6 +209,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0

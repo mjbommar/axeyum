@@ -85,6 +85,10 @@ schemas, examples, and validation workflows.
   validates exact ordered-field replay, nonlinear product replay, a quadratic
   real-root witness, two tiny quadratic infeasibility checks, and a
   real-completeness Lean-horizon row.
+- [`artifacts/examples/math/real-analysis-rational-v0/`](../../artifacts/examples/math/real-analysis-rational-v0/)
+  validates exact rational interval/ball inclusion, bounded linear
+  epsilon-delta replay, squeeze-style polynomial side conditions, checked
+  bad-delta rejection, and a general real-analysis Lean-horizon row.
 - [`artifacts/examples/math/sequence-limit-shadow-v0/`](../../artifacts/examples/math/sequence-limit-shadow-v0/)
   validates bounded epsilon-tail replay, finite limit counterexamples,
   monotone bounded prefixes, a fixed geometric partial-sum identity, a bounded
@@ -243,6 +247,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0

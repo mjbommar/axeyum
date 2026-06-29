@@ -119,7 +119,7 @@ one of:
 
 | Question Family | Fields | What Axeyum Can Do First | What We Still Need |
 |---|---|---|---|
-| Delta-epsilon balls and limits | `real_analysis`, `topology`, `logic_and_proof` | Check bounded rational witnesses/counterexamples, metric-ball inclusions in finite/rational examples, and algebraic side-conditions. | A quantified-real story, Lean-backed limit/topology lemmas, and examples that separate bounded evidence from general epsilon-delta theorems. |
+| Delta-epsilon balls and limits | `real_analysis`, `topology`, `logic_and_proof` | Check `real-analysis-rational-v0` bounded rational interval/ball inclusions, finite epsilon-delta witnesses/counterexamples, and algebraic side-conditions. | A quantified-real story, Lean-backed limit/topology lemmas, and examples that separate bounded evidence from general epsilon-delta theorems. |
 | Chebyshev spaces | `functional_analysis_and_operator_theory`, `numerical_analysis`, `linear_algebra`, `real_analysis` | Check `finite-chebyshev-systems-v0` finite-dimensional polynomial bases, interpolation matrices, sign-pattern examples, and small approximation identities. | General function-space definitions, Haar/Chebyshev-system theorems, compactness/continuity lemmas, and proof-assistant reconstruction. |
 | Graph coloring | `graph_theory`, `discrete_math`, `logic_and_proof` | Encode finite coloring as SAT/SMT, produce colorings as models, and produce unsat evidence for small non-colorability examples when proof routes exist. | A graph example-pack schema, graph-to-SMT compiler metadata, and proof recipes for unsat coloring certificates. |
 | BFS vs DFS pathological runtime | `discrete_math`, `graph_theory`; companion CS algorithms track | Check `graph-search-runtime-v0` finite shortcut-tail families, replay BFS/DFS target-discovery orders, compare visited-node counters, and reject false finite cost bounds. | A CS algorithms resource track, asymptotic/runtime-proof rows, and Lean-backed recurrence/asymptotic lemmas. |
@@ -227,8 +227,9 @@ one of:
       bounded Diophantine examples.
 21. `artifacts/examples/math/real-analysis-rational-v0/`
     - Fields: `real_analysis`, `logic_and_proof`.
-    - Checks: rational inequalities, interval inclusions, bounded
-      epsilon-delta templates with proof-horizon labels.
+    - Checks: rational interval/ball inclusions, bounded epsilon-delta
+      samples, polynomial side conditions, bad-delta rejection, and a
+      general real-analysis Lean-horizon row.
 22. `artifacts/examples/math/complex-algebraic-v0/`
     - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
       `abstract_algebra`.

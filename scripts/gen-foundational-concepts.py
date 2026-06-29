@@ -176,7 +176,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."),
-    "real_analysis": ("reals-rcf-shadow-v0", "Rational/real algebraic shadows of order, limits, and inequalities."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure, and interior checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),

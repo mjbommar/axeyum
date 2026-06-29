@@ -185,7 +185,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0` | Exact rational order/field facts, density, trichotomy, Farkas links. |
-| `reals` | `real_analysis`, `optimization_and_convexity` | `reals-rcf-shadow-v0` | Algebraic real constraints through LRA/NRA; completeness marked horizon. |
+| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0` | Bounded rational neighborhoods and algebraic real constraints through LRA/NRA; completeness marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0` | Complex arithmetic as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0` | Congruences, inverses, CRT, fixed-modulus enumeration. |
@@ -193,11 +193,11 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `rings` | `abstract_algebra` | `finite-rings-v0` | Two-operation table checks and distributivity. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0` | Field axioms over small prime fields; composite modulus counterexamples. |
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0` | Fixed-degree identities, factor theorem, root witness replay. |
-| `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0` | Bounded epsilon/N templates and algebraic sequence checks; general limits marked Lean-horizon. |
+| `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0` | Bounded epsilon/N and epsilon-delta templates plus algebraic sequence checks; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0` | Permutations, combinations, pigeonhole finite instances. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
 | `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0` | Fixed rational matrices, LU replay, inverse checks, inconsistent systems. |
-| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0` | Polynomial derivative identities and algebraic inequalities; epsilon-delta/integration marked Lean-horizon. |
+| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, bounded epsilon-delta shadows, and algebraic inequalities; integration marked Lean-horizon. |
 
 ## Field Extensions Beyond The Current Curriculum
 
@@ -300,6 +300,8 @@ the first finite-ring core-structure pack lives under
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first algebraic real/RCF-shadow pack lives under
 `artifacts/examples/math/reals-rcf-shadow-v0/`;
+the first bounded rational real-analysis pack lives under
+`artifacts/examples/math/real-analysis-rational-v0/`;
 the first bounded sequence/limit shadow pack lives under
 `artifacts/examples/math/sequence-limit-shadow-v0/`;
 the first calculus algebraic-shadow pack lives under
@@ -370,11 +372,14 @@ relation asymmetry replay, and a general first-order Lean-horizon row.
 `reals-rcf-shadow-v0` now validates exact ordered-field midpoint replay,
 nonlinear real product replay, a quadratic real-root witness, checked
 `x^2 < 0` infeasibility, checked negative-discriminant no-root infeasibility,
-and a completeness/epsilon-delta Lean-horizon row. `sequence-limit-shadow-v0`
-now validates finite epsilon-tail replay, finite limit-counterexample replay,
-monotone bounded prefix replay, a fixed geometric partial-sum identity, a
-bounded Cauchy-tail no-counterexample row, and a general convergence
-Lean-horizon row. `calculus-algebraic-shadow-v0` now validates polynomial
+and a completeness/epsilon-delta Lean-horizon row. `real-analysis-rational-v0`
+now validates exact rational interval/ball inclusion, a bounded linear
+epsilon-delta sample, finite squeeze-style polynomial side conditions, checked
+rejection of a false delta, and a general real-analysis Lean-horizon row.
+`sequence-limit-shadow-v0` now validates finite epsilon-tail replay, finite
+limit-counterexample replay, monotone bounded prefix replay, a fixed geometric
+partial-sum identity, a bounded Cauchy-tail no-counterexample row, and a
+general convergence Lean-horizon row. `calculus-algebraic-shadow-v0` now validates polynomial
 derivative coefficient replay, a checked product-rule polynomial identity,
 tangent-line replay, convex quadratic critical-point replay, false derivative
 rejection, and a general calculus Lean-horizon row. `proof-methods-refutation-v0`
@@ -426,6 +431,10 @@ Recommended order:
 19. `calculus-algebraic-shadow-v0` (landed): polynomial derivative replay,
     product-rule identity checks, tangent-line replay, critical-point checks,
     and analytic calculus Lean-horizon metadata.
+20. `real-analysis-rational-v0` (landed): exact rational interval/ball
+    inclusion, bounded epsilon-delta samples, squeeze-style polynomial side
+    conditions, bad-delta rejection, and general real-analysis Lean-horizon
+    metadata.
 
 Exit criteria:
 
@@ -775,11 +784,11 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `relations-functions-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
-`finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 graph-resource group and items 4-29, and the Phase M5 learner-path
-scaffold plus first encode/check walkthrough layer have landed for the math
-seed. End-to-end lessons now exist for graph coloring, graph
-reachability/traversal/search runtime/matching, finite DAG d-separation,
+`finite-cardinality-v0`, `induction-obligations-v0`, `logic-basics-v0`, and
+`real-analysis-rational-v0`, Phase M4 graph-resource group and items 4-29, and
+the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
+have landed for the math seed. End-to-end lessons now exist for graph coloring,
+graph reachability/traversal/search runtime/matching, finite DAG d-separation,
 finite cut certificates, rational arithmetic, linear algebra/optimization,
 probability/statistics, finite structures, and analysis/topology horizons.
 Phase M6 now has cookbook links from all current non-template math example

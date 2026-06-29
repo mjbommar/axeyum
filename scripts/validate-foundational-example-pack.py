@@ -3209,6 +3209,146 @@ def validate_reals_rcf_shadow(expected: dict[str, Any]) -> None:
     require_string("real completeness future_checker", data.get("future_checker"))
 
 
+def require_fraction_interval(context: str, value: Any) -> tuple[Fraction, Fraction, bool]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    lower = require_fraction(f"{context}.lower", value.get("lower"))
+    upper = require_fraction(f"{context}.upper", value.get("upper"))
+    closed = require_bool(f"{context}.closed", value.get("closed"))
+    if lower > upper:
+        fail(f"{context} lower must be <= upper")
+    return lower, upper, closed
+
+
+def linear_fraction_value(slope: Fraction, intercept: Fraction, point: Fraction) -> Fraction:
+    return slope * point + intercept
+
+
+def validate_real_analysis_rational(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    interval = checks["nested-rational-neighborhood-witness"]
+    if interval["expected_result"] != "sat":
+        fail("nested-rational-neighborhood-witness must expect sat")
+    values = single_witness_values(interval, witnesses)
+    lower, upper, closed = require_fraction_interval("nested rational inner_interval", values.get("inner_interval"))
+    if not closed:
+        fail("nested-rational-neighborhood-witness currently documents a closed inner interval")
+    outer_ball = values.get("outer_ball")
+    if not isinstance(outer_ball, dict):
+        fail("nested rational outer_ball must be an object")
+    center = require_fraction("nested rational outer_ball.center", outer_ball.get("center"))
+    radius = require_fraction("nested rational outer_ball.radius", outer_ball.get("radius"))
+    strict = require_bool("nested rational outer_ball.strict", outer_ball.get("strict"))
+    if radius <= 0:
+        fail("nested-rational-neighborhood-witness radius must be positive")
+    samples = require_fraction_vector("nested rational sample_points", values.get("sample_points"))
+    if not samples:
+        fail("nested-rational-neighborhood-witness sample_points must be non-empty")
+    for point in samples:
+        if not lower <= point <= upper:
+            fail("nested-rational-neighborhood-witness sample point is outside the inner interval")
+        distance = abs(point - center)
+        if strict and not distance < radius:
+            fail("nested-rational-neighborhood-witness sample point is outside the open ball")
+        if not strict and not distance <= radius:
+            fail("nested-rational-neighborhood-witness sample point is outside the closed ball")
+    endpoint_distance = max(abs(lower - center), abs(upper - center))
+    listed_endpoint_distance = require_fraction(
+        "nested rational max_endpoint_distance",
+        values.get("max_endpoint_distance"),
+    )
+    if endpoint_distance != listed_endpoint_distance:
+        fail("nested-rational-neighborhood-witness max endpoint distance is incorrect")
+    if strict and not endpoint_distance < radius:
+        fail("nested-rational-neighborhood-witness inner interval is not inside the open ball")
+    if not strict and not endpoint_distance <= radius:
+        fail("nested-rational-neighborhood-witness inner interval is not inside the closed ball")
+
+    linear = checks["linear-epsilon-delta-rational-witness"]
+    if linear["expected_result"] != "sat":
+        fail("linear-epsilon-delta-rational-witness must expect sat")
+    values = single_witness_values(linear, witnesses)
+    slope = require_fraction("linear epsilon-delta slope", values.get("slope"))
+    intercept = require_fraction("linear epsilon-delta intercept", values.get("intercept"))
+    center = require_fraction("linear epsilon-delta center", values.get("center"))
+    center_value = require_fraction("linear epsilon-delta center_value", values.get("center_value"))
+    epsilon = require_fraction("linear epsilon-delta epsilon", values.get("epsilon"))
+    delta = require_fraction("linear epsilon-delta delta", values.get("delta"))
+    samples = require_fraction_vector("linear epsilon-delta sample_points", values.get("sample_points"))
+    listed_domain = set(require_fraction_vector("linear epsilon-delta domain_points", values.get("domain_points")))
+    if epsilon <= 0 or delta <= 0:
+        fail("linear-epsilon-delta-rational-witness epsilon and delta must be positive")
+    if linear_fraction_value(slope, intercept, center) != center_value:
+        fail("linear-epsilon-delta-rational-witness center_value is incorrect")
+    if abs(slope) * delta > epsilon:
+        fail("linear-epsilon-delta-rational-witness delta does not satisfy the linear side condition")
+    actual_domain = {point for point in samples if abs(point - center) < delta}
+    if actual_domain != listed_domain:
+        fail("linear-epsilon-delta-rational-witness domain_points are incorrect")
+    for point in actual_domain:
+        output_distance = abs(linear_fraction_value(slope, intercept, point) - center_value)
+        if output_distance >= epsilon:
+            fail("linear-epsilon-delta-rational-witness found a finite epsilon violation")
+
+    squeeze = checks["squeeze-polynomial-bound-witness"]
+    if squeeze["expected_result"] != "sat":
+        fail("squeeze-polynomial-bound-witness must expect sat")
+    values = single_witness_values(squeeze, witnesses)
+    radius = require_fraction("squeeze radius", values.get("radius"))
+    square_bound = require_fraction("squeeze square_bound", values.get("square_bound"))
+    cube_bound = require_fraction("squeeze cube_bound", values.get("cube_bound"))
+    samples = require_fraction_vector("squeeze sample_points", values.get("sample_points"))
+    if radius <= 0:
+        fail("squeeze-polynomial-bound-witness radius must be positive")
+    if square_bound != radius * radius:
+        fail("squeeze-polynomial-bound-witness square_bound must equal radius^2")
+    if cube_bound != radius * radius * radius:
+        fail("squeeze-polynomial-bound-witness cube_bound must equal radius^3")
+    for point in samples:
+        if abs(point) > radius:
+            fail("squeeze-polynomial-bound-witness sample point is outside the radius")
+        if point * point > square_bound:
+            fail("squeeze-polynomial-bound-witness square bound fails")
+        if abs(point * point * point) > cube_bound:
+            fail("squeeze-polynomial-bound-witness cube bound fails")
+
+    bad_delta = checks["bad-linear-delta-rejected"]
+    if bad_delta["expected_result"] != "unsat" or bad_delta.get("proof_status") != "checked":
+        fail("bad-linear-delta-rejected must be a checked unsat row")
+    data = bad_delta.get("data", {})
+    slope = require_fraction("bad linear delta slope", data.get("slope"))
+    intercept = require_fraction("bad linear delta intercept", data.get("intercept"))
+    center = require_fraction("bad linear delta center", data.get("center"))
+    epsilon = require_fraction("bad linear delta epsilon", data.get("epsilon"))
+    claimed_delta = require_fraction("bad linear delta claimed_delta", data.get("claimed_delta"))
+    counterexample = require_fraction("bad linear delta counterexample", data.get("counterexample"))
+    domain_distance = require_fraction("bad linear delta domain_distance", data.get("domain_distance"))
+    output_distance = require_fraction("bad linear delta output_distance", data.get("output_distance"))
+    if epsilon <= 0 or claimed_delta <= 0:
+        fail("bad-linear-delta-rejected epsilon and claimed_delta must be positive")
+    if abs(counterexample - center) != domain_distance:
+        fail("bad-linear-delta-rejected domain_distance is incorrect")
+    center_value = linear_fraction_value(slope, intercept, center)
+    counterexample_value = linear_fraction_value(slope, intercept, counterexample)
+    if abs(counterexample_value - center_value) != output_distance:
+        fail("bad-linear-delta-rejected output_distance is incorrect")
+    if not domain_distance < claimed_delta:
+        fail("bad-linear-delta-rejected counterexample is not inside the claimed delta ball")
+    if output_distance < epsilon:
+        fail("bad-linear-delta-rejected counterexample unexpectedly satisfies epsilon")
+
+    horizon = checks["general-real-analysis-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-real-analysis-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-real-analysis-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general real-analysis target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general real-analysis future_checker", data.get("future_checker"))
+
+
 def require_fraction_sequence(context: str, value: Any) -> list[Fraction]:
     return require_fraction_vector(context, value)
 
@@ -8088,6 +8228,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_polynomial_identities(expected)
     if metadata["id"] == "rationals-lra-v0":
         validate_rationals_lra(expected)
+    if metadata["id"] == "real-analysis-rational-v0":
+        validate_real_analysis_rational(expected)
     if metadata["id"] == "reals-rcf-shadow-v0":
         validate_reals_rcf_shadow(expected)
     if metadata["id"] == "relations-functions-v0":

@@ -2431,10 +2431,10 @@
       ],
       "example_packs": [
         {
-          "id": "reals-rcf-shadow-v0",
+          "id": "real-analysis-rational-v0",
           "status": "validated",
-          "path": "artifacts/examples/math/reals-rcf-shadow-v0",
-          "notes": "Rational/real algebraic shadows of order, limits, and inequalities."
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."
         }
       ],
       "proof_routes": [
@@ -2461,7 +2461,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/reals-rcf-shadow-v0.",
+          "Create and validate artifacts/examples/math/real-analysis-rational-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "real-analysis-rational-v0",
+  "title": "Bounded Rational Real-Analysis Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_real_analysis",
+    "field_topology",
+    "field_logic_and_proof",
+    "curriculum_reals",
+    "curriculum_sequences_and_limits",
+    "curriculum_calculus"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "topology",
+    "logic_and_proof"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "sequences-and-limits",
+    "calculus"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "bounded epsilon-delta templates",
+    "finite rational neighborhoods",
+    "polynomial side conditions",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "nested-rational-neighborhood-witness",
+    "linear-epsilon-delta-rational-witness",
+    "squeeze-polynomial-bound-witness",
+    "bad-linear-delta-rejected",
+    "general-real-analysis-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode bounded rational interval, ball, and epsilon-delta checks as exact QF_LRA obligations.",
+    "Replay finite SAT witnesses through exact rational arithmetic rather than floating-point tolerances.",
+    "Emit checked counterexample evidence for false bounded delta claims.",
+    "Keep general real-analysis theorems, completeness, and fully quantified limits marked Lean-horizon until no-sorry Lean artifacts exist."
+  ]
+}
