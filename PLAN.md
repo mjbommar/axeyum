@@ -2442,10 +2442,11 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      (`7b9633b`).
    - **SIGNEXTEND** (0x0b) — was `Unsupported`; concrete index → `sign_ext`+
      `extract` (`22bb92e`).
-   - *Next candidates:* EXP (0x0a) for fully-concrete base+exp (constants like
-     `10**18`); symbolic-index BYTE/SIGNEXTEND via a bounded 32-way `ite`; CALL
-     return-data modeling. (EXP/symbolic-index forms are heavier; constant fast
-     paths cover most real bytecode.)
+   - **EXP** (0x0a) — was `Unsupported`; concrete base+exp → constant-fold via
+     `Word::pow` (`74c6b6a`).
+   - *Next candidates:* symbolic-index BYTE/SIGNEXTEND via a bounded 32-way `ite`;
+     symbolic-exponent EXP (heavy); CALL return-data modeling. (The symbolic
+     forms are heavier; the constant fast paths cover most real bytecode.)
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
