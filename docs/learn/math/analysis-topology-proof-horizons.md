@@ -20,6 +20,7 @@ Example packs:
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
+- [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
@@ -40,8 +41,9 @@ finite product-measure tables, rectangle probabilities, finite Fubini sums,
 bounded rational interval/ball inclusions, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
-polynomial derivative identities, bounded recurrence traces, finite invariant
-witnesses, matrix operator bounds, Chebyshev recurrence values at fixed points,
+polynomial derivative identities, exact finite Riemann sums, antiderivative
+endpoint replay, bounded recurrence traces, finite invariant witnesses, matrix
+operator bounds, Chebyshev recurrence values at fixed points,
 finite Chebyshev-system interpolation/sign-pattern checks, finite stochastic
 transition systems, finite first-hit distributions, and expected hitting-time
 equation checks. The
@@ -165,6 +167,20 @@ The `calculus-algebraic-shadow-v0` validator differentiates coefficient lists,
 checks a product-rule identity for fixed polynomials, replays a tangent-line
 value, checks a convex quadratic critical point, and rejects a false derivative
 value.
+For a finite Riemann-sum calculus shadow, encode an exact rational partition:
+
+```text
+f(x) = x
+partition = 0, 1/4, 1/2, 3/4, 1
+left_sum = 3/8
+right_sum = 5/8
+trapezoid_sum = 1/2
+```
+
+The `calculus-riemann-sum-v0` validator recomputes left, right, midpoint, and
+trapezoid sums, checks polynomial antiderivative endpoint differences, brackets
+an exact integral between monotone lower and upper sums, and rejects a false
+integral claim.
 
 For dynamics, encode a bounded recurrence trace:
 
@@ -216,6 +232,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0

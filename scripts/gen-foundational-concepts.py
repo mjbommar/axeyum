@@ -189,6 +189,12 @@ CURRICULUM_MAP = {
         "pack": "calculus-algebraic-shadow-v0",
         "slice": "Polynomial derivative identities and algebraic inequalities.",
         "proof": "Algebraic LRA/NRA replay; epsilon-delta and integration require Lean.",
+        "extra_packs": [
+            (
+                "calculus-riemann-sum-v0",
+                "Finite rational Riemann sums, midpoint/trapezoid replay, antiderivative endpoints, and FTC Lean horizon.",
+            ),
+        ],
     },
 }
 

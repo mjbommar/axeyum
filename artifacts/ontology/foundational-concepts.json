@@ -1522,6 +1522,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
           "notes": "Polynomial derivative identities and algebraic inequalities."
+        },
+        {
+          "id": "calculus-riemann-sum-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-riemann-sum-v0",
+          "notes": "Finite rational Riemann sums, midpoint/trapezoid replay, antiderivative endpoints, and FTC Lean horizon."
         }
       ],
       "proof_routes": [
@@ -1550,7 +1556,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/calculus-algebraic-shadow-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/calculus-algebraic-shadow-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]

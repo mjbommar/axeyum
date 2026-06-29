@@ -80,6 +80,7 @@ artifacts/examples/math/
   sequence-limit-shadow-v0/
   metric-continuity-v0/
   calculus-algebraic-shadow-v0/
+  calculus-riemann-sum-v0/
   linear-algebra-rational-v0/
   numerical-linear-algebra-v0/
   spectral-linear-algebra-v0/

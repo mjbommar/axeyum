@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "pack_id": "calculus-riemann-sum-v0",
+  "witnesses": [
+    {
+      "id": "linear-riemann-partition",
+      "description": "Left, right, and trapezoid sums for f(x) = x on a four-cell partition of [0, 1].",
+      "values": {
+        "polynomial": ["0", "1"],
+        "a": "0",
+        "b": "1",
+        "partition": ["0", "1/4", "1/2", "3/4", "1"],
+        "left_sum": "3/8",
+        "right_sum": "5/8",
+        "trapezoid_sum": "1/2",
+        "exact_integral": "1/2"
+      }
+    },
+    {
+      "id": "affine-midpoint-partition",
+      "description": "Midpoint sum for f(x) = 1 + 2x on [0, 2].",
+      "values": {
+        "polynomial": ["1", "2"],
+        "a": "0",
+        "b": "2",
+        "partition": ["0", "1/2", "1", "3/2", "2"],
+        "midpoints": ["1/4", "3/4", "5/4", "7/4"],
+        "midpoint_sum": "6",
+        "exact_integral": "6"
+      }
+    },
+    {
+      "id": "two-x-antiderivative",
+      "description": "Endpoint replay for integral of 2x from 1 to 3 using antiderivative x^2.",
+      "values": {
+        "integrand": ["0", "2"],
+        "antiderivative": ["0", "0", "1"],
+        "a": "1",
+        "b": "3",
+        "endpoint_difference": "8"
+      }
+    },
+    {
+      "id": "quadratic-lower-upper-sums",
+      "description": "Lower and upper sums for x^2 on [0, 1] with two equal cells.",
+      "values": {
+        "polynomial": ["0", "0", "1"],
+        "a": "0",
+        "b": "1",
+        "partition": ["0", "1/2", "1"],
+        "monotone_direction": "increasing",
+        "lower_sum": "1/8",
+        "upper_sum": "5/8",
+        "exact_integral": "1/3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "riemann-sums-linear-partition",
+      "claim": "The listed left, right, and trapezoid sums for f(x) = x on [0, 1] are exact for the fixed partition.",
+      "expected_result": "sat",
+      "validation": "finite_riemann_sum_replay",
+      "proof_status": "checked",
+      "witnesses": ["linear-riemann-partition"],
+      "notes": "The validator recomputes polynomial values, cell widths, left/right sums, trapezoid sum, and exact polynomial integral."
+    },
+    {
+      "id": "midpoint-rule-affine-exact",
+      "claim": "The midpoint rule gives the exact integral for the fixed affine function on the listed partition.",
+      "expected_result": "sat",
+      "validation": "finite_midpoint_rule_replay",
+      "proof_status": "checked",
+      "witnesses": ["affine-midpoint-partition"],
+      "notes": "The validator checks every midpoint and recomputes the finite midpoint sum exactly."
+    },
+    {
+      "id": "antiderivative-endpoint-replay",
+      "claim": "The endpoint difference of x^2 from 1 to 3 equals the integral of 2x over that interval.",
+      "expected_result": "sat",
+      "validation": "polynomial_antiderivative_endpoint_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-x-antiderivative"],
+      "notes": "The validator differentiates the antiderivative and checks the endpoint difference."
+    },
+    {
+      "id": "monotone-quadratic-lower-upper-bounds",
+      "claim": "The listed lower and upper sums for x^2 bound the exact integral on [0, 1].",
+      "expected_result": "sat",
+      "validation": "monotone_lower_upper_sum_replay",
+      "proof_status": "checked",
+      "witnesses": ["quadratic-lower-upper-sums"],
+      "notes": "The validator recomputes the lower and upper sums from monotone endpoint values."
+    },
+    {
+      "id": "false-integral-claim-rejected",
+      "claim": "The integral of x over [0, 1] is 3/4.",
+      "expected_result": "unsat",
+      "validation": "false_polynomial_integral_replay",
+      "proof_status": "checked",
+      "data": {
+        "polynomial": ["0", "1"],
+        "a": "0",
+        "b": "1",
+        "claimed_integral": "3/4",
+        "actual_integral": "1/2"
+      },
+      "notes": "The validator recomputes the exact polynomial integral and confirms the listed claim is false."
+    },
+    {
+      "id": "fundamental-theorem-lean-horizon",
+      "claim": "General Riemann integrability, convergence of tagged partitions, and the fundamental theorem of calculus require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Riemann integrability, convergence of tagged partitions, and the fundamental theorem of calculus",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite polynomial rows are checked; general analytic integration remains proof-assistant territory."
+    }
+  ]
+}

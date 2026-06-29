@@ -197,7 +197,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0` | Permutations, combinations, pigeonhole finite instances. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
 | `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0` | Fixed rational matrices, LU replay, inverse checks, inconsistent systems. |
-| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, bounded epsilon-delta shadows, and algebraic inequalities; integration marked Lean-horizon. |
+| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, and algebraic inequalities; general integration marked Lean-horizon. |
 
 ## Field Extensions Beyond The Current Curriculum
 
@@ -395,10 +395,14 @@ rejection of a false delta, and a general real-analysis Lean-horizon row.
 `sequence-limit-shadow-v0` now validates finite epsilon-tail replay, finite
 limit-counterexample replay, monotone bounded prefix replay, a fixed geometric
 partial-sum identity, a bounded Cauchy-tail no-counterexample row, and a
-general convergence Lean-horizon row. `calculus-algebraic-shadow-v0` now validates polynomial
-derivative coefficient replay, a checked product-rule polynomial identity,
-tangent-line replay, convex quadratic critical-point replay, false derivative
-rejection, and a general calculus Lean-horizon row. `proof-methods-refutation-v0`
+general convergence Lean-horizon row. `calculus-algebraic-shadow-v0` now
+validates polynomial derivative coefficient replay, a checked product-rule
+polynomial identity, tangent-line replay, convex quadratic critical-point
+replay, false derivative rejection, and a general calculus Lean-horizon row.
+`calculus-riemann-sum-v0` now validates exact finite Riemann sums, midpoint
+and trapezoid replay, polynomial antiderivative endpoint replay, monotone lower
+and upper sums, checked false integral rejection, and a fundamental-theorem
+Lean-horizon row. `proof-methods-refutation-v0`
 now validates the `PHP(2,2)` control witness and the `PHP(3,2)` refutation by
 deterministic CNF truth-table enumeration; LRAT/DRAT proof objects remain its
 graduation route, not a pack-level proof gap.
@@ -451,9 +455,11 @@ Recommended order:
 18. `sequence-limit-shadow-v0` (landed): bounded epsilon-tail replay, finite
     counterexamples, monotone bounded prefixes, fixed geometric partial sums,
     and general convergence Lean-horizon metadata.
-19. `calculus-algebraic-shadow-v0` (landed): polynomial derivative replay,
+19. `calculus-algebraic-shadow-v0` (landed) and
+    `calculus-riemann-sum-v0` (landed): polynomial derivative replay,
     product-rule identity checks, tangent-line replay, critical-point checks,
-    and analytic calculus Lean-horizon metadata.
+    finite Riemann sums, antiderivative endpoint replay, false integral
+    rejection, and analytic calculus Lean-horizon metadata.
 20. `real-analysis-rational-v0` (landed): exact rational interval/ball
     inclusion, bounded epsilon-delta samples, squeeze-style polynomial side
     conditions, bad-delta rejection, and general real-analysis Lean-horizon
@@ -815,7 +821,8 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `cardinality-principles-v0`,
 `induction-obligations-v0`, `induction-patterns-v0`, `logic-basics-v0`, and
-`real-analysis-rational-v0`, Phase M4 graph-resource group and items 4-30, and
+`real-analysis-rational-v0`, `calculus-riemann-sum-v0`, Phase M4 graph-resource
+group and items 4-30, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
 have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
@@ -842,6 +849,10 @@ counterexamples, and full-schema Lean-horizon examples.
 finite inclusion-exclusion, disjoint-union additivity, bipartite-edge double
 counting, powerset enumeration, invalid additivity counterexamples, and
 infinite-cardinality Lean-horizon examples.
+`calculus-riemann-sum-v0` now deepens the calculus curriculum row with exact
+finite Riemann sums, midpoint/trapezoid replay, antiderivative endpoint
+replay, monotone lower/upper sums, false integral counterexamples, and
+fundamental-theorem Lean-horizon examples.
 `equivalence-classes-v0` now deepens the relations/functions curriculum row
 with exact finite equivalence classes, quotient-map fibers, partition
 round-trips, a checked non-transitive counterexample, and an explicit

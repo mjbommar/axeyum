@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "calculus-riemann-sum-v0",
+  "title": "Finite Riemann Sum Calculus Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_calculus",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "curriculum_sequences_and_limits",
+    "curriculum_polynomials",
+    "field_real_analysis",
+    "field_numerical_analysis",
+    "field_differential_equations_and_dynamical_systems"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "numerical_analysis",
+    "differential_equations_and_dynamical_systems"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "reals",
+    "rationals",
+    "sequences-and-limits",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "NRA / polynomial constraints",
+    "finite partitions",
+    "finite summation",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "riemann-sums-linear-partition",
+    "midpoint-rule-affine-exact",
+    "antiderivative-endpoint-replay",
+    "monotone-quadratic-lower-upper-bounds",
+    "false-integral-claim-rejected",
+    "fundamental-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay finite rational partitions, sample values, Riemann sums, and antiderivative endpoint differences exactly.",
+    "Reject false polynomial integral claims by recomputing exact antiderivatives.",
+    "Keep general Riemann integrability, arbitrary tagged-partition convergence, and the fundamental theorem of calculus under Lean horizon.",
+    "Promote finite UNSAT variants only after proof-object evidence checks the same polynomial-integral refutations."
+  ]
+}

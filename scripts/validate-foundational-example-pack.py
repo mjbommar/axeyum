@@ -4144,6 +4144,187 @@ def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     require_string("general calculus future_checker", data.get("future_checker"))
 
 
+def polynomial_antiderivative(polynomial: list[Fraction]) -> list[Fraction]:
+    return normalize_polynomial([
+        Fraction(0),
+        *[
+            coefficient / Fraction(index + 1)
+            for index, coefficient in enumerate(polynomial)
+        ],
+    ])
+
+
+def polynomial_integral(polynomial: list[Fraction], left: Fraction, right: Fraction) -> Fraction:
+    antiderivative = polynomial_antiderivative(polynomial)
+    return polynomial_eval(antiderivative, right) - polynomial_eval(antiderivative, left)
+
+
+def require_interval_endpoints(context: str, values: dict[str, Any]) -> tuple[Fraction, Fraction]:
+    left = require_fraction(f"{context}.a", values.get("a"))
+    right = require_fraction(f"{context}.b", values.get("b"))
+    if not left < right:
+        fail(f"{context} requires a < b")
+    return left, right
+
+
+def require_partition(context: str, value: Any, left: Fraction, right: Fraction) -> list[Fraction]:
+    partition = require_fraction_vector(context, value)
+    if len(partition) < 2:
+        fail(f"{context} must have at least two endpoints")
+    if partition[0] != left or partition[-1] != right:
+        fail(f"{context} endpoints must match the listed interval")
+    for previous, current in zip(partition, partition[1:]):
+        if not previous < current:
+            fail(f"{context} must be strictly increasing")
+    return partition
+
+
+def riemann_left_sum(polynomial: list[Fraction], partition: list[Fraction]) -> Fraction:
+    return sum(
+        polynomial_eval(polynomial, partition[index]) * (partition[index + 1] - partition[index])
+        for index in range(len(partition) - 1)
+    )
+
+
+def riemann_right_sum(polynomial: list[Fraction], partition: list[Fraction]) -> Fraction:
+    return sum(
+        polynomial_eval(polynomial, partition[index + 1]) * (partition[index + 1] - partition[index])
+        for index in range(len(partition) - 1)
+    )
+
+
+def riemann_midpoints(partition: list[Fraction]) -> list[Fraction]:
+    return [
+        (partition[index] + partition[index + 1]) / 2
+        for index in range(len(partition) - 1)
+    ]
+
+
+def riemann_midpoint_sum(polynomial: list[Fraction], partition: list[Fraction]) -> Fraction:
+    return sum(
+        polynomial_eval(polynomial, midpoint) * (partition[index + 1] - partition[index])
+        for index, midpoint in enumerate(riemann_midpoints(partition))
+    )
+
+
+def riemann_trapezoid_sum(polynomial: list[Fraction], partition: list[Fraction]) -> Fraction:
+    return sum(
+        (
+            polynomial_eval(polynomial, partition[index])
+            + polynomial_eval(polynomial, partition[index + 1])
+        )
+        / 2
+        * (partition[index + 1] - partition[index])
+        for index in range(len(partition) - 1)
+    )
+
+
+def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    linear = checks["riemann-sums-linear-partition"]
+    if linear["expected_result"] != "sat" or linear.get("proof_status") != "checked":
+        fail("riemann-sums-linear-partition must be a checked sat row")
+    values = single_witness_values(linear, witnesses)
+    polynomial = require_polynomial("linear Riemann polynomial", values.get("polynomial"))
+    left, right = require_interval_endpoints("linear Riemann interval", values)
+    partition = require_partition("linear Riemann partition", values.get("partition"), left, right)
+    left_sum = require_fraction("linear Riemann left_sum", values.get("left_sum"))
+    right_sum = require_fraction("linear Riemann right_sum", values.get("right_sum"))
+    trapezoid_sum = require_fraction("linear Riemann trapezoid_sum", values.get("trapezoid_sum"))
+    exact_integral = require_fraction("linear Riemann exact_integral", values.get("exact_integral"))
+    if left_sum != riemann_left_sum(polynomial, partition):
+        fail("riemann-sums-linear-partition left_sum is wrong")
+    if right_sum != riemann_right_sum(polynomial, partition):
+        fail("riemann-sums-linear-partition right_sum is wrong")
+    if trapezoid_sum != riemann_trapezoid_sum(polynomial, partition):
+        fail("riemann-sums-linear-partition trapezoid_sum is wrong")
+    if exact_integral != polynomial_integral(polynomial, left, right):
+        fail("riemann-sums-linear-partition exact_integral is wrong")
+
+    midpoint = checks["midpoint-rule-affine-exact"]
+    if midpoint["expected_result"] != "sat" or midpoint.get("proof_status") != "checked":
+        fail("midpoint-rule-affine-exact must be a checked sat row")
+    values = single_witness_values(midpoint, witnesses)
+    polynomial = require_polynomial("midpoint polynomial", values.get("polynomial"))
+    left, right = require_interval_endpoints("midpoint interval", values)
+    partition = require_partition("midpoint partition", values.get("partition"), left, right)
+    listed_midpoints = require_fraction_vector("midpoint midpoints", values.get("midpoints"))
+    midpoint_sum = require_fraction("midpoint midpoint_sum", values.get("midpoint_sum"))
+    exact_integral = require_fraction("midpoint exact_integral", values.get("exact_integral"))
+    if listed_midpoints != riemann_midpoints(partition):
+        fail("midpoint-rule-affine-exact listed midpoints are wrong")
+    if midpoint_sum != riemann_midpoint_sum(polynomial, partition):
+        fail("midpoint-rule-affine-exact midpoint_sum is wrong")
+    if exact_integral != polynomial_integral(polynomial, left, right):
+        fail("midpoint-rule-affine-exact exact_integral is wrong")
+    if midpoint_sum != exact_integral:
+        fail("midpoint-rule-affine-exact should be exact for this affine row")
+
+    endpoint = checks["antiderivative-endpoint-replay"]
+    if endpoint["expected_result"] != "sat" or endpoint.get("proof_status") != "checked":
+        fail("antiderivative-endpoint-replay must be a checked sat row")
+    values = single_witness_values(endpoint, witnesses)
+    integrand = require_polynomial("endpoint integrand", values.get("integrand"))
+    antiderivative = require_polynomial("endpoint antiderivative", values.get("antiderivative"))
+    left, right = require_interval_endpoints("endpoint interval", values)
+    endpoint_difference = require_fraction("endpoint endpoint_difference", values.get("endpoint_difference"))
+    if polynomial_derivative(antiderivative) != integrand:
+        fail("antiderivative-endpoint-replay derivative does not match integrand")
+    if endpoint_difference != polynomial_eval(antiderivative, right) - polynomial_eval(antiderivative, left):
+        fail("antiderivative-endpoint-replay endpoint difference is wrong")
+
+    bounds = checks["monotone-quadratic-lower-upper-bounds"]
+    if bounds["expected_result"] != "sat" or bounds.get("proof_status") != "checked":
+        fail("monotone-quadratic-lower-upper-bounds must be a checked sat row")
+    values = single_witness_values(bounds, witnesses)
+    polynomial = require_polynomial("monotone bounds polynomial", values.get("polynomial"))
+    left, right = require_interval_endpoints("monotone bounds interval", values)
+    partition = require_partition("monotone bounds partition", values.get("partition"), left, right)
+    direction = values.get("monotone_direction")
+    require_string("monotone bounds monotone_direction", direction)
+    if direction != "increasing":
+        fail("monotone-quadratic-lower-upper-bounds currently documents an increasing row")
+    lower_sum = require_fraction("monotone bounds lower_sum", values.get("lower_sum"))
+    upper_sum = require_fraction("monotone bounds upper_sum", values.get("upper_sum"))
+    exact_integral = require_fraction("monotone bounds exact_integral", values.get("exact_integral"))
+    endpoint_values = [polynomial_eval(polynomial, point) for point in partition]
+    for previous, current in zip(endpoint_values, endpoint_values[1:]):
+        if previous > current:
+            fail("monotone-quadratic-lower-upper-bounds endpoint values are not increasing")
+    if lower_sum != riemann_left_sum(polynomial, partition):
+        fail("monotone-quadratic-lower-upper-bounds lower_sum is wrong")
+    if upper_sum != riemann_right_sum(polynomial, partition):
+        fail("monotone-quadratic-lower-upper-bounds upper_sum is wrong")
+    if exact_integral != polynomial_integral(polynomial, left, right):
+        fail("monotone-quadratic-lower-upper-bounds exact_integral is wrong")
+    if not lower_sum <= exact_integral <= upper_sum:
+        fail("monotone-quadratic-lower-upper-bounds exact integral is not bracketed")
+
+    false_claim = checks["false-integral-claim-rejected"]
+    if false_claim["expected_result"] != "unsat" or false_claim.get("proof_status") != "checked":
+        fail("false-integral-claim-rejected must be a checked unsat row")
+    data = false_claim.get("data", {})
+    polynomial = require_polynomial("false integral polynomial", data.get("polynomial"))
+    left, right = require_interval_endpoints("false integral interval", data)
+    claimed = require_fraction("false integral claimed_integral", data.get("claimed_integral"))
+    actual = require_fraction("false integral actual_integral", data.get("actual_integral"))
+    if actual != polynomial_integral(polynomial, left, right):
+        fail("false-integral-claim-rejected actual_integral is wrong")
+    if claimed == actual:
+        fail("false-integral-claim-rejected claim unexpectedly matches the exact integral")
+
+    horizon = checks["fundamental-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("fundamental-theorem-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("fundamental-theorem-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("fundamental theorem target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("fundamental theorem future_checker", data.get("future_checker"))
+
+
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -8848,6 +9029,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_bounded_dynamics(expected)
     if metadata["id"] == "calculus-algebraic-shadow-v0":
         validate_calculus_algebraic_shadow(expected)
+    if metadata["id"] == "calculus-riemann-sum-v0":
+        validate_calculus_riemann_sum(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
     if metadata["id"] == "convexity-rational-v0":
