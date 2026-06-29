@@ -10,6 +10,12 @@
 > uninterpreted-sort `ite`-elimination for the e-graph path → **QF_UF 37 → 39**
 > (gap to z3 −4 → **−2**), DISAGREE = 0. Remaining QF_UF gap = UF+theory
 > combination routing (the keystone).
+>
+> **Also landed (QF_ABV):** robustness (no hard-error on a wide-index array
+> equality) + **write-index array extensionality** (decides shared-base
+> `store-chain = store-chain` over 32-/64-bit indices without `2^iw` enumeration)
+> → **QF_ABV 173 → 176/177** (gap to z3 **−1**), DISAGREE = 0,
+> `abv_differential_fuzz` clean.
 
 The [north star](00-north-star.md) makes **completeness / decide-rate** and
 **measured performance** the two criteria that actually decide Z3/cvc5 parity,
