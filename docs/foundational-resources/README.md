@@ -206,6 +206,10 @@ schemas, examples, and validation workflows.
   validates exact affine point-image replay, midpoint preservation,
   collinearity preservation, checked rejection of false distance preservation,
   and an affine-geometry Lean-horizon row.
+- [`artifacts/examples/math/orientation-area-geometry-v0/`](../../artifacts/examples/math/orientation-area-geometry-v0/)
+  validates exact signed-area/orientation replay, affine area scaling,
+  barycentric point-inside replay, checked rejection of a false orientation
+  claim, and an oriented-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
   validates finite topology axioms, closure/interior computation, and exact
   finite metric-ball replay.
@@ -310,6 +314,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/de
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0

@@ -2083,6 +2083,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/affine-geometry-v0",
           "notes": "Exact Affine Geometry Checks"
+        },
+        {
+          "id": "orientation-area-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/orientation-area-geometry-v0",
+          "notes": "Exact Orientation And Area Geometry Checks"
         }
       ],
       "proof_routes": [
@@ -2319,6 +2325,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
           "notes": "Exact Numerical Linear Algebra Error Bounds"
+        },
+        {
+          "id": "orientation-area-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/orientation-area-geometry-v0",
+          "notes": "Exact Orientation And Area Geometry Checks"
         },
         {
           "id": "random-matrix-finite-v0",
@@ -3228,6 +3240,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/metric-continuity-v0",
           "notes": "Finite Metric Continuity Checks"
+        },
+        {
+          "id": "orientation-area-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/orientation-area-geometry-v0",
+          "notes": "Exact Orientation And Area Geometry Checks"
         },
         {
           "id": "polynomial-identities-v0",

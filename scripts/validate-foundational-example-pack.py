@@ -5665,6 +5665,14 @@ def collinearity_determinant(
     return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 
 
+def orientation_from_signed_double_area(value: Fraction) -> str:
+    if value > 0:
+        return "ccw"
+    if value < 0:
+        return "cw"
+    return "collinear"
+
+
 def distance_squared2(left: tuple[Fraction, Fraction], right: tuple[Fraction, Fraction]) -> Fraction:
     dx = right[0] - left[0]
     dy = right[1] - left[1]
@@ -5814,6 +5822,149 @@ def validate_affine_geometry(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general affine geometry target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general affine geometry future_checker", data.get("future_checker"))
+
+
+def validate_orientation_area_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    orientation = checks["triangle-orientation-witness"]
+    if orientation["expected_result"] != "sat":
+        fail("triangle-orientation-witness must expect sat")
+    values = single_witness_values(orientation, witnesses)
+    raw_points = values.get("points")
+    if not isinstance(raw_points, list):
+        fail("triangle-orientation-witness points must be a list")
+    points = [
+        require_point2(f"triangle orientation points[{index}]", point)
+        for index, point in enumerate(raw_points)
+    ]
+    if len(points) != 3:
+        fail("triangle-orientation-witness requires exactly three points")
+    signed_double_area = require_fraction(
+        "triangle orientation signed_double_area",
+        values.get("signed_double_area"),
+    )
+    area = require_fraction("triangle orientation area", values.get("area"))
+    claimed_orientation = values.get("orientation")
+    require_string("triangle orientation orientation", claimed_orientation)
+    computed_signed_double_area = collinearity_determinant(points[0], points[1], points[2])
+    if computed_signed_double_area != signed_double_area:
+        fail("triangle-orientation-witness signed double area is incorrect")
+    if area != abs(signed_double_area) / 2:
+        fail("triangle-orientation-witness ordinary area is incorrect")
+    if orientation_from_signed_double_area(signed_double_area) != claimed_orientation:
+        fail("triangle-orientation-witness orientation label is incorrect")
+    if claimed_orientation != "ccw":
+        fail("triangle-orientation-witness should be counterclockwise")
+
+    affine_area = checks["affine-area-scaling"]
+    if affine_area["expected_result"] != "sat":
+        fail("affine-area-scaling must expect sat")
+    values = single_witness_values(affine_area, witnesses)
+    matrix = require_matrix2("affine area matrix", values.get("matrix"))
+    translation = require_point2("affine area translation", values.get("translation"))
+    determinant = require_fraction("affine area determinant", values.get("determinant"))
+    if matrix_determinant(matrix) != determinant:
+        fail("affine-area-scaling determinant does not match matrix")
+    raw_source_points = values.get("source_points")
+    raw_image_points = values.get("image_points")
+    if not isinstance(raw_source_points, list) or not isinstance(raw_image_points, list):
+        fail("affine-area-scaling source_points and image_points must be lists")
+    source_points = [
+        require_point2(f"affine area source_points[{index}]", point)
+        for index, point in enumerate(raw_source_points)
+    ]
+    image_points = [
+        require_point2(f"affine area image_points[{index}]", point)
+        for index, point in enumerate(raw_image_points)
+    ]
+    if len(source_points) != 3 or len(image_points) != 3:
+        fail("affine-area-scaling requires exactly three source points and three image points")
+    source_area = require_fraction(
+        "affine area source_signed_double_area",
+        values.get("source_signed_double_area"),
+    )
+    image_area = require_fraction(
+        "affine area image_signed_double_area",
+        values.get("image_signed_double_area"),
+    )
+    if [affine_image(matrix, translation, point) for point in source_points] != image_points:
+        fail("affine-area-scaling image points do not match A*p + b")
+    if collinearity_determinant(source_points[0], source_points[1], source_points[2]) != source_area:
+        fail("affine-area-scaling source signed double area is incorrect")
+    if collinearity_determinant(image_points[0], image_points[1], image_points[2]) != image_area:
+        fail("affine-area-scaling image signed double area is incorrect")
+    if image_area != determinant * source_area:
+        fail("affine-area-scaling image area does not equal det(A) times source area")
+
+    barycentric = checks["barycentric-point-inside"]
+    if barycentric["expected_result"] != "sat":
+        fail("barycentric-point-inside must expect sat")
+    values = single_witness_values(barycentric, witnesses)
+    raw_points = values.get("points")
+    if not isinstance(raw_points, list):
+        fail("barycentric-point-inside points must be a list")
+    points = [
+        require_point2(f"barycentric points[{index}]", point)
+        for index, point in enumerate(raw_points)
+    ]
+    weights = require_fraction_vector("barycentric weights", values.get("weights"))
+    if len(points) != 3 or len(weights) != 3:
+        fail("barycentric-point-inside requires three points and three weights")
+    weight_sum = require_fraction("barycentric weight_sum", values.get("weight_sum"))
+    point = require_point2("barycentric point", values.get("point"))
+    if sum(weights, Fraction(0)) != weight_sum:
+        fail("barycentric-point-inside weight_sum is incorrect")
+    if weight_sum != 1:
+        fail("barycentric-point-inside weights must sum to one")
+    if any(weight < 0 for weight in weights):
+        fail("barycentric-point-inside weights must be nonnegative")
+    recomputed = (
+        sum(weight * vertex[0] for weight, vertex in zip(weights, points, strict=True)),
+        sum(weight * vertex[1] for weight, vertex in zip(weights, points, strict=True)),
+    )
+    if recomputed != point:
+        fail("barycentric-point-inside point does not match weighted vertex combination")
+    if collinearity_determinant(points[0], points[1], points[2]) == 0:
+        fail("barycentric-point-inside triangle must be non-collinear")
+
+    bad_orientation = checks["bad-orientation-rejected"]
+    if bad_orientation["expected_result"] != "unsat" or bad_orientation.get("proof_status") != "checked":
+        fail("bad-orientation-rejected must be a checked unsat row")
+    data = bad_orientation.get("data", {})
+    raw_points = data.get("points")
+    if not isinstance(raw_points, list):
+        fail("bad-orientation-rejected points must be a list")
+    points = [
+        require_point2(f"bad orientation points[{index}]", point)
+        for index, point in enumerate(raw_points)
+    ]
+    if len(points) != 3:
+        fail("bad-orientation-rejected requires exactly three points")
+    claimed_orientation = data.get("claimed_orientation")
+    actual_orientation = data.get("actual_orientation")
+    require_string("bad orientation claimed_orientation", claimed_orientation)
+    require_string("bad orientation actual_orientation", actual_orientation)
+    signed_double_area = require_fraction(
+        "bad orientation signed_double_area",
+        data.get("signed_double_area"),
+    )
+    if collinearity_determinant(points[0], points[1], points[2]) != signed_double_area:
+        fail("bad-orientation-rejected signed double area is incorrect")
+    if orientation_from_signed_double_area(signed_double_area) != actual_orientation:
+        fail("bad-orientation-rejected actual orientation is incorrect")
+    if claimed_orientation == actual_orientation:
+        fail("bad-orientation-rejected should contain a false orientation claim")
+
+    horizon = checks["general-oriented-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-oriented-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-oriented-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general oriented geometry target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general oriented geometry future_checker", data.get("future_checker"))
 
 
 def require_subset(context: str, value: Any, universe: list[str]) -> frozenset[str]:
@@ -9377,6 +9528,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":
         validate_descriptive_statistics(expected)
+    if metadata["id"] == "orientation-area-geometry-v0":
+        validate_orientation_area_geometry(expected)
     if metadata["id"] == "equivalence-classes-v0":
         validate_equivalence_classes(expected)
     if metadata["id"] == "exact-statistical-tests-v0":

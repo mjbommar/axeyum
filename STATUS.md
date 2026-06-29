@@ -169,6 +169,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Orientation/area geometry foundations pack landed.** Added
+  [`orientation-area-geometry-v0`](artifacts/examples/math/orientation-area-geometry-v0/README.md)
+  as the exact finite signed-area bridge after coordinate and affine geometry.
+  The pack validates triangle orientation/area replay, affine area scaling by
+  determinant, barycentric point-inside replay, checked rejection of a false
+  orientation claim, and a general oriented-geometry Lean-horizon row. The
+  foundational example-pack validator now checks these rows by exact rational
+  determinant and barycentric replay.
+
 - **Affine geometry foundations pack landed.** Added
   [`affine-geometry-v0`](artifacts/examples/math/affine-geometry-v0/README.md)
   as the exact finite affine-map bridge after coordinate geometry. The pack

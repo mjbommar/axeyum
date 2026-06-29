@@ -214,7 +214,7 @@ losing the curriculum anchor.
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, LP feasibility, dual/Farkas certificates, finite convexity, and threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
-| `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `affine-geometry-v0`, incidence, distance, midpoint, collinearity, affine maps, and finite incidence preservation. |
+| `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, incidence, distance, midpoint, collinearity, affine maps, signed area, barycentric replay, and finite incidence preservation. |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `finite-chebyshev-systems-v0`, norms, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
 
 ## Phased Build Plan
@@ -521,6 +521,10 @@ collinearity, and squared-distance coordinate checks.
 point-image replay, midpoint preservation, collinearity preservation, checked
 rejection of a false affine distance-preservation claim, and a general
 affine-geometry Lean-horizon row.
+`artifacts/examples/math/orientation-area-geometry-v0/` now validates exact
+signed-area/orientation replay, affine area scaling by determinant,
+barycentric point-inside replay, checked rejection of a false orientation
+claim, and a general oriented-geometry Lean-horizon row.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
 axioms, closure/interior computation, and exact finite metric-ball replay.
 `artifacts/examples/math/metric-continuity-v0/` now validates finite
@@ -621,9 +625,11 @@ Recommended order:
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
 5. `convexity-rational-v0`: midpoint convexity, finite second differences,
    monotonicity thresholds, and bad midpoint-convexity rejection.
-6. `coordinate-geometry-v0` and `affine-geometry-v0`: collinearity, midpoint,
-   distance constraints, affine maps, finite incidence preservation, and false
-   distance-preservation rejection.
+6. `coordinate-geometry-v0`, `affine-geometry-v0`, and
+   `orientation-area-geometry-v0`: collinearity, midpoint, distance
+   constraints, affine maps, signed area/orientation, barycentric replay,
+   finite incidence preservation, false distance-preservation rejection, and
+   false orientation rejection.
 7. `finite-topology-v0`: finite closure/interior and metric-ball examples.
 8. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
 9. `bounded-dynamics-v0`: recurrence systems and invariant checks.
@@ -816,9 +822,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 65 non-template math example packs validate.
+  Status: 66 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 53 non-template packs have at least one `checked` expected-result row.
+  Status: 54 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -929,6 +935,10 @@ approximation-theory horizons.
 point-image replay, midpoint preservation, collinearity preservation, checked
 rejection of false distance preservation, and an affine-geometry Lean-horizon
 row.
+`orientation-area-geometry-v0` now adds the exact finite orientation/area
+bridge for geometry: signed-area replay, affine determinant area scaling,
+barycentric point-inside replay, checked rejection of false orientation, and an
+oriented-geometry Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

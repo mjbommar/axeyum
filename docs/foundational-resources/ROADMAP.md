@@ -107,6 +107,7 @@ artifacts/examples/math/
   convexity-rational-v0/
   coordinate-geometry-v0/
   affine-geometry-v0/
+  orientation-area-geometry-v0/
   finite-topology-v0/
   finite-compactness-v0/
   finite-connectedness-v0/
@@ -477,6 +478,14 @@ affine threshold monotonicity, checked bad midpoint-convexity rejection, and a
 general convex-analysis Lean-horizon row.
 [`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
 validates exact midpoint, collinearity, and squared-distance coordinate checks.
+[`affine-geometry-v0`](../../artifacts/examples/math/affine-geometry-v0/)
+validates exact affine point-image replay, midpoint preservation, collinearity
+preservation, checked rejection of false distance preservation, and an
+affine-geometry Lean-horizon row.
+[`orientation-area-geometry-v0`](../../artifacts/examples/math/orientation-area-geometry-v0/)
+validates exact signed-area/orientation replay, affine area scaling,
+barycentric point-inside replay, checked rejection of a false orientation
+claim, and an oriented-geometry Lean-horizon row.
 [`finite-topology-v0`](../../artifacts/examples/math/finite-topology-v0/)
 validates finite topology axioms, closure/interior computation, and exact finite
 metric-ball replay.
