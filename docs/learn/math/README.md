@@ -37,6 +37,10 @@ validated pack data and the repo-root command that replays it.
 - [Relations And Functions](relations-functions-end-to-end.md): follows finite
   partial-order replay, bijective function-table replay, and checked rejection
   of a multi-valued graph.
+- [Equivalence Classes](equivalence-classes-end-to-end.md): follows finite
+  equivalence-relation class replay, quotient-map fiber replay, partition
+  round-trip checking, checked non-transitivity rejection, and the QF_UF proof
+  gap.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Equivalence-classes end-to-end lesson landed.** Added
+  [`equivalence-classes-end-to-end.md`](docs/learn/math/equivalence-classes-end-to-end.md)
+  as the learner-facing trace for the equivalence-classes pack: parity
+  equivalence-class replay, quotient-map fiber replay, partition-to-relation
+  round-trip checking, checked non-transitivity rejection, and the explicit
+  QF_UF/Alethe proof gap for quotient congruence evidence. The lesson is
+  linked from the math learning index plus the sets/relations path.
+
 - **Relations/functions end-to-end lesson landed.** Added
   [`relations-functions-end-to-end.md`](docs/learn/math/relations-functions-end-to-end.md)
   as the learner-facing trace for the relations/functions pack: finite
