@@ -290,7 +290,8 @@ and measure replay, read
 [End To End: Finite Cardinality](finite-cardinality-end-to-end.md),
 [End To End: Cardinality Principles](cardinality-principles-end-to-end.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
-and [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md).
+[End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md),
+and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
 ## Horizon
 

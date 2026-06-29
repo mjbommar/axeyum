@@ -185,6 +185,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
+- [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
+  follows finite topology axioms, closure/interior, metric balls,
+  sigma-algebra closure, finite additivity, and event-complement replay.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, Chebyshev recurrence, and
   finite Chebyshev-system replay.

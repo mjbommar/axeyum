@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite topology/measure end-to-end lesson landed.** Added
+  [`finite-topology-measure-end-to-end.md`](docs/learn/math/finite-topology-measure-end-to-end.md)
+  as the learner-facing trace for the finite-topology and finite-measure packs:
+  finite topology axioms, closure/interior replay, exact metric balls, finite
+  sigma-algebra closure, exact additivity, event-complement replay, and the
+  topology/measure Lean horizon. The lesson is linked from the math learning
+  index plus the sets/finite-structures, probability/statistics, and
+  analysis/topology paths.
+
 - **Coordinate/affine geometry end-to-end lesson landed.** Added
   [`coordinate-affine-geometry-end-to-end.md`](docs/learn/math/coordinate-affine-geometry-end-to-end.md)
   as the learner-facing trace for the coordinate, affine, and orientation/area

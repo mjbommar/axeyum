@@ -864,7 +864,9 @@ plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
 row through replay result and proof/evidence status, and exact descriptive
 statistics/regression replay for finite samples, count tables, and normal
 equations, plus coordinate/affine/oriented geometry replay for finite rational
-points, maps, areas, and barycentric coordinates.
+points, maps, areas, and barycentric coordinates, plus finite topology/measure
+replay for set-family axioms, metric balls, sigma-algebras, additivity, and
+event complements.
 
 Deliverables:
 
@@ -1233,6 +1235,10 @@ and the statistical inference/numerical regression horizon.
 exact midpoint, collinearity, squared-distance, affine-map, signed-area,
 area-scaling, barycentric, checked bad-distance, checked bad-orientation, and
 general geometry Lean-horizon rows.
+`finite-topology-v0` and `finite-measure-v0` now have a learner-facing
+end-to-end lesson for finite topology axioms, closure/interior, finite
+metric-ball replay, finite sigma-algebra closure, exact finite additivity,
+event complements, and the topology/measure Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
