@@ -182,6 +182,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite dual-spaces end-to-end lesson landed.** Added
+  [`finite-dual-spaces-end-to-end.md`](docs/learn/math/finite-dual-spaces-end-to-end.md)
+  as the learner-facing trace for the finite dual-spaces pack: covector
+  linearity, pointwise dual operations, dual-basis pairing, annihilator
+  recomputation, transpose-map replay, checked bad-covector rejection, and the
+  Lean horizon for general duality and functional analysis. The lesson is
+  linked from the math learning index plus the algebra and linear-algebra
+  paths.
+
 - **Finite vector-spaces end-to-end lesson landed.** Added
   [`finite-vector-spaces-end-to-end.md`](docs/learn/math/finite-vector-spaces-end-to-end.md)
   as the learner-facing trace for the finite vector-spaces pack: `F2^2`

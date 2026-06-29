@@ -41,6 +41,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Vector Spaces](finite-vector-spaces-end-to-end.md): follows `F2^2`
   table replay, subspace/span recomputation, linear-map kernel/image replay,
   rank-nullity by finite cardinality, and checked bad-subspace rejection.
+- [Finite Dual Spaces](finite-dual-spaces-end-to-end.md): follows covector
+  linearity, pointwise dual operations, dual-basis pairing, annihilator replay,
+  transpose-map replay, and checked bad-covector rejection.
 - [Finite Monoids](finite-monoids-end-to-end.md): follows a two-point
   transformation monoid through function-composition replay, identity and
   associativity checks, unit/idempotent recomputation, and checked
