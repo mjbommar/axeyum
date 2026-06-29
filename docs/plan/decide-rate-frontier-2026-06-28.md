@@ -1,5 +1,12 @@
 # Decide-rate frontier — where the Z3/cvc5 parity gap actually is (2026-06-28)
 
+> **Measured follow-up (2026-06-29):** the *accessible* (curated) corpus slices
+> are re-measured in [decide-rate-measured-2026-06-29](decide-rate-measured-2026-06-29.md).
+> Key correction: on accessible data **QF_S is already at z3 parity (56/56)** —
+> the string `max_len` lever has no verifiable headroom there — while **QF_UF
+> lags z3 by 4 (37/48 vs 41/48)**, localized to theory-combination routing +
+> uninterpreted-sort Ackermann (the keystone), not a missing bound. Attack QF_UF.
+
 The [north star](00-north-star.md) makes **completeness / decide-rate** and
 **measured performance** the two criteria that actually decide Z3/cvc5 parity,
 and the [reality check](../../PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28)
