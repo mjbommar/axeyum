@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [finite-groups-v0](../../../artifacts/examples/math/finite-groups-v0/)
+- [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [finite-rings-v0](../../../artifacts/examples/math/finite-rings-v0/)
 - [finite-algebra-homomorphisms-v0](../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
 - [finite-ideals-v0](../../../artifacts/examples/math/finite-ideals-v0/)
@@ -32,7 +33,10 @@ The current algebra path is finite and exact. It checks finite group Cayley
 tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
 modular inverses, composite non-units with no inverse, and a Fermat-style finite
 unit enumeration. The finite-rings pack adds distributivity checks and a `Z/4Z`
-zero-divisor witness. The finite-algebra-homomorphisms pack adds exact
+zero-divisor witness. The finite-group-actions pack checks a finite group
+acting on a finite set, recomputes orbits and stabilizers, replays the
+orbit-stabilizer cardinality equation, and checks Burnside fixed-point
+averaging for the same action. The finite-algebra-homomorphisms pack adds exact
 structure-preserving map checks: group homomorphism replay, kernel/image
 recomputation, quotient and induced-map replay, ring homomorphism replay, and
 bad-homomorphism rejection. The finite-ideals pack checks finite ideals,
@@ -75,7 +79,29 @@ Z/4Z under addition
 ```
 
 The `finite-groups-v0` pack checks closure, identity, inverses, and
-associativity for the full Cayley table. For a finite ring example, use `Z/4Z`:
+associativity for the full Cayley table.
+
+For a finite group-action example, let `C2 = {e,s}` act on two-bit strings by
+swapping the middle strings:
+
+```text
+s.00 = 00
+s.01 = 10
+s.10 = 01
+s.11 = 11
+orbit(01) = {01, 10}
+stabilizer(01) = {e}
+fixed(e) = 4
+fixed(s) = 2
+orbits = (4 + 2) / 2 = 3
+```
+
+The `finite-group-actions-v0` pack checks the identity and compatibility
+action laws, recomputes the sample orbit and stabilizer, verifies
+`|orbit(x)| * |stabilizer(x)| = |G|`, recomputes all action orbits, and
+checks Burnside's fixed-point average.
+
+For a finite ring example, use `Z/4Z`:
 
 ```text
 2 * 2 = 0 mod 4
@@ -242,6 +268,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-groups-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0
@@ -260,10 +287,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 
 ## Horizon
 
-General group, ring, field, module, isomorphism-theorem, quotient, and
+General group, group-action, ring, field, module, isomorphism-theorem, quotient, and
 algebraic-number-theory theorems need Lean-backed concept rows. Near-term
 resource gaps are stronger BV/CNF or EUF/Alethe evidence for finite group,
-finite ring, finite homomorphism,
+finite group-action, finite ring, finite homomorphism,
 finite ideal, finite vector-space, finite dual-space, finite-field, finite-module,
 gcd/Diophantine, bounded number-theory, and fixed-degree polynomial universal
 rows.

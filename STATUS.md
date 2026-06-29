@@ -179,6 +179,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite group-action foundations pack landed.** Added
+  [`finite-group-actions-v0`](artifacts/examples/math/finite-group-actions-v0/README.md)
+  as the exact finite bridge between groups, functions, and counting. The pack
+  validates a `C2` action on two-bit strings, action identity/compatibility
+  laws, orbit and stabilizer recomputation, orbit-stabilizer cardinality replay,
+  Burnside fixed-point counting, checked bad-action rejection, and a general
+  group-action-theory Lean-horizon row. The foundational example-pack validator,
+  concept atlas, dashboards, library-boundary counts, and learner-facing math
+  pages now include the new pack.
+
 - **Exact rational polynomial-factorization pack landed.** Added
   [`polynomial-factorization-rational-v0`](artifacts/examples/math/polynomial-factorization-rational-v0/README.md)
   as the next curriculum-adjacent deepening of the polynomial and rational

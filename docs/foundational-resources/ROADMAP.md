@@ -99,6 +99,7 @@ artifacts/examples/math/
   finite-markov-chain-v0/
   exact-statistical-tests-v0/
   finite-groups-v0/
+  finite-group-actions-v0/
   finite-rings-v0/
   finite-fields-v0/
   finite-algebra-homomorphisms-v0/
@@ -196,10 +197,12 @@ Practical first backlog:
 3. Graph coloring examples with coloring witnesses and unsat/proof-route status.
 4. Rational density and trichotomy examples, backed by LRA evidence.
 5. Finite-field inverse examples over small primes.
-6. Matrix inverse, LU, residual bounds, interval boxes, iterative-method error
+6. Finite group-action examples with action-law replay, orbit/stabilizer
+   recomputation, and Burnside fixed-point averaging over small finite sets.
+7. Matrix inverse, LU, residual bounds, interval boxes, iterative-method error
    replay, and inconsistent linear system examples with Farkas evidence where
    applicable.
-7. Finite probability examples: total mass, conditional probability table,
+8. Finite probability examples: total mass, conditional probability table,
    Bayes rule over finite domains, finite random variables, finite conditional
    expectations, finite stochastic kernels, and finite martingale/stopping-time
    replay, plus finite hitting/absorption checks.

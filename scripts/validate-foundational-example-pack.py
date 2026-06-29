@@ -4569,6 +4569,216 @@ def validate_finite_groups(expected: dict[str, Any]) -> None:
         fail("subtraction-mod3-non-group unexpectedly satisfies the group axioms")
 
 
+def require_action_table(
+    context: str,
+    group: list[str],
+    points: list[str],
+    value: Any,
+) -> dict[tuple[str, str], str]:
+    group_set = set(group)
+    point_set = set(points)
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object keyed by group element")
+    if set(value) != group_set:
+        fail(f"{context} must contain exactly one action row per group element")
+    action: dict[tuple[str, str], str] = {}
+    for group_element in group:
+        row = value.get(group_element)
+        if not isinstance(row, dict):
+            fail(f"{context}.{group_element} must be an object keyed by point")
+        if set(row) != point_set:
+            fail(f"{context}.{group_element} must contain exactly one image per point")
+        for point in points:
+            image = row.get(point)
+            require_string(f"{context}.{group_element}.{point}", image)
+            if image not in point_set:
+                fail(f"{context}.{group_element}.{point} is outside the acted-on set")
+            action[(group_element, point)] = image
+    return action
+
+
+def action_law_failures(
+    group: list[str],
+    identity: str,
+    operation: dict[tuple[str, str], str],
+    points: list[str],
+    action: dict[tuple[str, str], str],
+) -> list[str]:
+    failures: list[str] = []
+    for point in points:
+        if action[(identity, point)] != point:
+            failures.append(f"identity action fails for {point}")
+    for left in group:
+        for right in group:
+            product_element = table_op(operation, left, right)
+            for point in points:
+                lhs = action[(left, action[(right, point)])]
+                rhs = action[(product_element, point)]
+                if lhs != rhs:
+                    failures.append(f"compatibility fails for {left},{right},{point}")
+    return failures
+
+
+def orbit_of(
+    group: list[str],
+    action: dict[tuple[str, str], str],
+    point: str,
+) -> set[str]:
+    return {action[(group_element, point)] for group_element in group}
+
+
+def stabilizer_of(
+    group: list[str],
+    action: dict[tuple[str, str], str],
+    point: str,
+) -> set[str]:
+    return {
+        group_element
+        for group_element in group
+        if action[(group_element, point)] == point
+    }
+
+
+def action_orbits(
+    group: list[str],
+    points: list[str],
+    action: dict[tuple[str, str], str],
+) -> set[frozenset[str]]:
+    unseen = set(points)
+    orbits: set[frozenset[str]] = set()
+    while unseen:
+        point = sorted(unseen)[0]
+        orbit = orbit_of(group, action, point)
+        orbits.add(frozenset(orbit))
+        unseen -= orbit
+    return orbits
+
+
+def require_group_action_values(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], str, dict[tuple[str, str], str], list[str], dict[tuple[str, str], str]]:
+    group_data = values.get("group")
+    if not isinstance(group_data, dict):
+        fail(f"{context}.group must be an object")
+    group, identity, operation = require_cayley_table(f"{context}.group", group_data)
+    failures = group_axiom_failures(group, identity, operation)
+    if failures:
+        fail(f"{context}.group is not a group: {failures[0]}")
+    points = require_string_list(f"{context}.set", values.get("set"))
+    action = require_action_table(f"{context}.action", group, points, values.get("action"))
+    return group, identity, operation, points, action
+
+
+def validate_finite_group_actions(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    laws = checks["c2-swap-action-laws"]
+    if laws["expected_result"] != "sat" or laws.get("proof_status") != "checked":
+        fail("c2-swap-action-laws must be a checked sat row")
+    values = single_witness_values(laws, witnesses)
+    group, identity, operation, points, action = require_group_action_values("C2 action", values)
+    failures = action_law_failures(group, identity, operation, points, action)
+    if failures:
+        fail(f"c2-swap-action-laws failed: {failures[0]}")
+
+    orbit_check = checks["orbit-stabilizer-replay"]
+    if orbit_check["expected_result"] != "sat" or orbit_check.get("proof_status") != "checked":
+        fail("orbit-stabilizer-replay must be a checked sat row")
+    values = single_witness_values(orbit_check, witnesses)
+    group, identity, operation, points, action = require_group_action_values("orbit stabilizer action", values)
+    sample_point = values.get("sample_point")
+    require_string("orbit sample_point", sample_point)
+    if sample_point not in set(points):
+        fail("orbit-stabilizer-replay sample_point is outside the acted-on set")
+    listed_orbit = set(require_string_list("orbit-stabilizer orbit", values.get("orbit")))
+    listed_stabilizer = set(require_string_list("orbit-stabilizer stabilizer", values.get("stabilizer")))
+    orbit_size = require_int("orbit-stabilizer orbit_size", values.get("orbit_size"))
+    stabilizer_size = require_int("orbit-stabilizer stabilizer_size", values.get("stabilizer_size"))
+    group_size = require_int("orbit-stabilizer group_size", values.get("group_size"))
+    actual_orbit = orbit_of(group, action, sample_point)
+    actual_stabilizer = stabilizer_of(group, action, sample_point)
+    if listed_orbit != actual_orbit:
+        fail("orbit-stabilizer-replay listed orbit is incorrect")
+    if listed_stabilizer != actual_stabilizer:
+        fail("orbit-stabilizer-replay listed stabilizer is incorrect")
+    if orbit_size != len(actual_orbit):
+        fail("orbit-stabilizer-replay orbit_size is incorrect")
+    if stabilizer_size != len(actual_stabilizer):
+        fail("orbit-stabilizer-replay stabilizer_size is incorrect")
+    if group_size != len(group):
+        fail("orbit-stabilizer-replay group_size is incorrect")
+    if orbit_size * stabilizer_size != group_size:
+        fail("orbit-stabilizer-replay orbit-stabilizer product is incorrect")
+
+    burnside = checks["burnside-orbit-count-replay"]
+    if burnside["expected_result"] != "sat" or burnside.get("proof_status") != "checked":
+        fail("burnside-orbit-count-replay must be a checked sat row")
+    values = single_witness_values(burnside, witnesses)
+    group, identity, operation, points, action = require_group_action_values("Burnside action", values)
+    fixed_counts_raw = values.get("fixed_counts")
+    if not isinstance(fixed_counts_raw, dict) or set(fixed_counts_raw) != set(group):
+        fail("burnside fixed_counts must contain exactly one count per group element")
+    fixed_counts = {
+        group_element: require_int(f"burnside fixed_counts.{group_element}", fixed_counts_raw[group_element])
+        for group_element in group
+    }
+    for group_element in group:
+        actual_fixed = sum(1 for point in points if action[(group_element, point)] == point)
+        if fixed_counts[group_element] != actual_fixed:
+            fail(f"burnside fixed count is incorrect for {group_element}")
+    orbit_count = require_int("burnside orbit count", values.get("burnside_orbit_count"))
+    fixed_sum = sum(fixed_counts.values())
+    if fixed_sum % len(group) != 0:
+        fail("burnside fixed-count sum must be divisible by group size")
+    if fixed_sum // len(group) != orbit_count:
+        fail("burnside orbit count is not the fixed-point average")
+    listed_orbits_raw = values.get("orbits")
+    if not isinstance(listed_orbits_raw, list) or not listed_orbits_raw:
+        fail("burnside orbits must be a non-empty list")
+    listed_orbits = {
+        frozenset(require_string_list(f"burnside orbits[{index}]", orbit))
+        for index, orbit in enumerate(listed_orbits_raw)
+    }
+    actual_orbits = action_orbits(group, points, action)
+    if listed_orbits != actual_orbits:
+        fail("burnside listed orbits are incorrect")
+    if len(actual_orbits) != orbit_count:
+        fail("burnside direct orbit enumeration disagrees with orbit count")
+
+    bad = checks["bad-action-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-action-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if not isinstance(data, dict):
+        fail("bad-action-rejected data must be an object")
+    group, identity, operation, points, action = require_group_action_values("bad action", data)
+    failing_law = data.get("failing_law")
+    require_string("bad action failing_law", failing_law)
+    failing_point = data.get("failing_point")
+    require_string("bad action failing_point", failing_point)
+    actual = data.get("actual")
+    require_string("bad action actual", actual)
+    if failing_law != "identity_action":
+        fail("bad-action-rejected currently expects identity_action")
+    if failing_point not in set(points):
+        fail("bad-action-rejected failing_point is outside the acted-on set")
+    if action[(identity, failing_point)] != actual:
+        fail("bad-action-rejected actual value is incorrect")
+    if action[(identity, failing_point)] == failing_point:
+        fail("bad-action-rejected identity action unexpectedly holds")
+
+    horizon = checks["general-group-action-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-group-action-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-group-action-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general group action target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general group action future_checker", data.get("future_checker"))
+
+
 def require_binary_table(
     context: str,
     carrier: list[str],
@@ -13541,6 +13751,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_algebra_homomorphisms(expected)
     if metadata["id"] == "finite-groups-v0":
         validate_finite_groups(expected)
+    if metadata["id"] == "finite-group-actions-v0":
+        validate_finite_group_actions(expected)
     if metadata["id"] == "finite-integration-v0":
         validate_finite_integration(expected)
     if metadata["id"] == "finite-measure-v0":

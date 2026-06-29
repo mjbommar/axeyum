@@ -14,6 +14,7 @@ Example packs:
 - [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
 - [equivalence-classes-v0](../../../artifacts/examples/math/equivalence-classes-v0/)
 - [function-composition-v0](../../../artifacts/examples/math/function-composition-v0/)
+- [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [finite-order-lattices-v0](../../../artifacts/examples/math/finite-order-lattices-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [cardinality-principles-v0](../../../artifacts/examples/math/cardinality-principles-v0/)
@@ -35,13 +36,16 @@ checks finite equivalence classes, quotient-map fibers, partition-to-relation
 round trips, rejection of a non-transitive relation, and an explicit QF_UF/Alethe
 proof gap. The function-composition pack checks finite composition,
 image/preimage replay, inverse tables, associativity, and non-injective inverse
-counterexamples. The finite-order-lattices pack checks finite partial orders,
-Boolean-lattice meet/join tables, distributivity, monotone maps, fixed points,
-and bad-order counterexamples. The finite-cardinality pack checks explicit bijections,
-proper-subset injections, finite injection and surjection refutations, and an
-infinite-cardinality Lean-horizon row. The cardinality-principles pack checks
-inclusion-exclusion, disjoint-union additivity, double counting, powerset
-cardinality, and invalid additivity counterexamples. The
+counterexamples. The finite-group-actions pack treats each group element as a
+total function on a finite set, then checks action laws, orbit/stabilizer
+replay, and Burnside fixed-point counting. The finite-order-lattices pack
+checks finite partial orders, Boolean-lattice meet/join tables, distributivity,
+monotone maps, fixed points, and bad-order counterexamples. The
+finite-cardinality pack checks explicit bijections, proper-subset injections,
+finite injection and surjection refutations, and an infinite-cardinality
+Lean-horizon row. The cardinality-principles pack checks inclusion-exclusion,
+disjoint-union additivity, double counting, powerset cardinality, and invalid
+additivity counterexamples. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
 compactness pack checks finite open covers, subcovers, minimal-subcover
@@ -105,6 +109,21 @@ g(b0)=c2, g(b1)=c0
 The validator recomputes composition, image/preimage sets, inverse tables for
 bijections, associativity of three concrete functions, and a collision witness
 showing that a non-injective function has no two-sided inverse.
+For a finite group action, the same total-function representation is indexed
+by group elements:
+
+```text
+e(x) = x for every point x
+s(01) = 10
+s(10) = 01
+s(00) = 00
+s(11) = 11
+```
+
+The `finite-group-actions-v0` validator checks that `e` acts as the identity,
+that `(g*h).x = g.(h.x)` for the listed group table, and that the resulting
+function tables produce the claimed orbits and stabilizers.
+
 For finite order theory, encode the four-element Boolean lattice:
 
 ```text
@@ -206,6 +225,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
@@ -223,12 +243,13 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 ## Horizon
 
 The finite set, relation/function, equivalence-class, function-composition,
-finite-order/lattice, cardinality, cardinality-principles, topology,
-compactness-shadow, connectedness-shadow, continuous-map,
+finite group-action, finite-order/lattice, cardinality,
+cardinality-principles, topology, compactness-shadow, connectedness-shadow, continuous-map,
 finite-simplicial-homology, and measure packs are now checked finite artifacts.
 The next finite-structure gaps are stronger EUF/Alethe evidence for congruence
 examples and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
-infinite cardinality, complete-lattice fixed-point theorems, arbitrary
+infinite cardinality, general group-action theorems,
+complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,
 continuous-image/homeomorphism theorems, homology invariance, exact sequences,
 and countable additivity remain proof-horizon material.

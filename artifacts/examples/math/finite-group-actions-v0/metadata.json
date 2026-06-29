@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "finite-group-actions-v0",
+  "title": "Finite Group Action Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_groups",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "field_abstract_algebra",
+    "field_discrete_math",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "discrete_math",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "groups",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite groups",
+    "finite functions",
+    "finite counting",
+    "finite table replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/groups.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "c2-swap-action-laws",
+    "orbit-stabilizer-replay",
+    "burnside-orbit-count-replay",
+    "bad-action-rejected",
+    "general-group-action-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite group actions as deterministic table obligations.",
+    "Replay action-law, orbit, stabilizer, orbit-stabilizer, and Burnside rows through Axeyum model evaluation over finite tables.",
+    "Add proof-object routes for finite action laws once finite-function/EUF evidence is promoted.",
+    "Keep arbitrary group-action theorems, Burnside/Cauchy-Frobenius in full generality, group actions on algebraic/topological structures, and representation theory under Lean horizon until formal routes exist."
+  ]
+}
