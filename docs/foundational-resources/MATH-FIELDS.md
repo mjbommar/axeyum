@@ -46,9 +46,9 @@ Use these sources as checks against local taste:
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates | General completeness, limits, continuity, compactness, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces | General topological spaces, compactness, connectedness, and homotopy are proof-horizon. |
-| `measure_theory` | Measure theory | Graduate analysis / probability foundation | Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, simple-function integrals, and exact finite probability | Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean. |
-| `probability_theory` | Probability theory | Undergraduate / graduate applied and pure math | Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions | Continuous distributions, stochastic processes, and limit theorems are mostly proof or numerical-honesty tracks. |
-| `statistics` | Statistics | Undergraduate / graduate applied math and data science | Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite martingale checks, small Bayesian tables | Floating-point inference, MCMC, VI, and model calibration are reproducibility claims, not proof claims. |
+| `measure_theory` | Measure theory | Graduate analysis / probability foundation | Finite measures, sigma-algebra sanity checks, product measures, random variables, conditional expectations, finite stochastic kernels, finite martingales, finite hitting times, simple-function integrals, and exact finite probability | Lebesgue measure, convergence theorems, and almost-everywhere reasoning need Lean. |
+| `probability_theory` | Probability theory | Undergraduate / graduate applied and pure math | Finite probability tables, random variables, conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, conditional probability, Bayes rule, finite expectations, product tables, and exact discrete distributions | Continuous distributions, stochastic processes, and limit theorems are mostly proof or numerical-honesty tracks. |
+| `statistics` | Statistics | Undergraduate / graduate applied math and data science | Descriptive statistics, contingency tables, exact finite tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, small Bayesian tables | Floating-point inference, MCMC, VI, and model calibration are reproducibility claims, not proof claims. |
 | `optimization_and_convexity` | Optimization and convexity | Undergraduate / graduate applied math | LP feasibility, linear certificates, small quadratic/convexity checks, monotonicity/threshold examples | General convex analysis, SDP, duality theorems, and algorithm convergence need broader proof support. |
 | `numerical_analysis` | Numerical analysis | Undergraduate / graduate applied math | Interval bounds, fixed-step error recurrences, floating-point sanity checks, exact rational shadows | Stability and convergence theorems need proof support; floating-point experiments need tolerances and seeds. |
 | `differential_equations_and_dynamical_systems` | Differential equations and dynamical systems | Undergraduate / graduate applied math | Bounded transition systems, linear recurrences, invariant checks, discretized systems | Existence/uniqueness, continuous dynamics, chaos, and PDE theory are proof-horizon. |
@@ -187,25 +187,32 @@ one of:
     - Checks: finite kernel normalization, pushforward distributions, joint
       factorization/disintegration, kernel composition, and bad kernel-row
       rejection.
-14. `artifacts/examples/math/bounded-dynamics-v0/`
+14. `artifacts/examples/math/finite-hitting-times-v0/`
+    - Fields: `probability_theory`, `differential_equations_and_dynamical_systems`,
+      `linear_algebra`, `statistics`, `measure_theory`,
+      `set_theory_and_foundations`.
+    - Checks: finite first-hit distributions, survival probabilities,
+      absorption-probability equations, expected hitting-time equations, and
+      bad expected-time rejection.
+15. `artifacts/examples/math/bounded-dynamics-v0/`
    - Fields: `differential_equations_and_dynamical_systems`,
      `numerical_analysis`, `linear_algebra`.
    - Checks: recurrence trace replay, bounded invariant witness, threshold
      reachability witness.
-15. `artifacts/examples/math/finite-operator-v0/`
+16. `artifacts/examples/math/finite-operator-v0/`
    - Fields: `functional_analysis_and_operator_theory`, `linear_algebra`,
      `numerical_analysis`, `real_analysis`.
    - Checks: finite-dimensional norm replay, matrix operator bound,
      Chebyshev recurrence witness.
-16. `artifacts/examples/math/modular-arithmetic-v0/`
+17. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-17. `artifacts/examples/math/real-analysis-rational-v0/`
+18. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.
-18. `artifacts/examples/math/complex-algebraic-v0/`
+19. `artifacts/examples/math/complex-algebraic-v0/`
    - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
      `abstract_algebra`.
    - Checks: real-pair complex arithmetic, conjugate norm replay, fixed

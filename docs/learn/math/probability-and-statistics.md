@@ -13,6 +13,7 @@ Example packs:
 - [finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/)
 - [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/)
 - [finite-stochastic-kernels-v0](../../../artifacts/examples/math/finite-stochastic-kernels-v0/)
+- [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/)
 - [finite-martingales-v0](../../../artifacts/examples/math/finite-martingales-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
@@ -32,11 +33,13 @@ integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, finite partition conditional
 expectations, the law of total expectation, tower property replay, finite
 stochastic-kernel normalization, pushforward, joint disintegration, kernel
-composition, finite filtrations, martingale conditional-expectation equalities,
-square submartingale inequalities, bounded stopping-time replay, finite
-product-measure tables, rectangle probabilities, marginals, finite Fubini sums,
-exact mean/variance identities, contingency table margins, and a Simpson's
-paradox count-table witness. The d-separation pack adds a finite DAG bridge:
+composition, finite first-hit distributions, survival probabilities,
+absorption-probability equations, expected hitting-time equations, finite
+filtrations, martingale conditional-expectation equalities, square
+submartingale inequalities, bounded stopping-time replay, finite product-measure
+tables, rectangle probabilities, marginals, finite Fubini sums, exact
+mean/variance identities, contingency table margins, and a Simpson's paradox
+count-table witness. The d-separation pack adds a finite DAG bridge:
 it checks whether conditioning blocks or opens paths in small
 causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
@@ -98,6 +101,22 @@ nu(walk) = 2/3*3/4 + 1/3*1/5 = 17/30
 The `finite-stochastic-kernels-v0` validator checks row normalization,
 pushforward distributions, joint-table factorization and disintegration, and
 kernel composition.
+For finite hitting times in an absorbing Markov chain, it checks:
+
+```text
+P(T = 1) = 0
+P(T = 2) = 1/4
+P(T = 3) = 1/4
+P(T = 4) = 3/16
+P(T > 4) = 5/16
+h(start) = 4
+h(middle) = 2
+h(hit) = 0
+```
+
+The `finite-hitting-times-v0` validator carries only not-yet-hit mass forward,
+checks the survival mass, and verifies the absorption-probability and expected
+hitting-time linear equations.
 For finite martingales, it checks a two-step fair walk against its natural
 filtration:
 
@@ -150,6 +169,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
@@ -170,9 +190,10 @@ Continuous distributions, stochastic processes, convergence theorems, random
 matrix spectral laws, concentration bounds, Lebesgue integration, monotone and
 dominated convergence, general product measures, Fubini/Tonelli, conditional
 expectation, regular conditional probabilities, disintegration theorems,
-general Markov kernels, general martingale convergence, optional stopping,
-Doob inequalities, MCMC, HMC, variational inference, asymptotic statistical
-tests, calibration, causal identification, do-calculus, and floating-point
-diagnostics are not proof claims. They need either Lean-backed
-probability/measure formalization or explicit reproducibility metadata with
-seeds and tolerances.
+general Markov kernels, recurrence/transience classifications,
+infinite-horizon hitting probabilities, general martingale convergence,
+optional stopping, Doob inequalities, MCMC, HMC, variational inference,
+asymptotic statistical tests, calibration, causal identification, do-calculus,
+and floating-point diagnostics are not proof claims. They need either
+Lean-backed probability/measure formalization or explicit reproducibility
+metadata with seeds and tolerances.

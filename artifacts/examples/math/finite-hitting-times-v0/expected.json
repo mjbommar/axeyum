@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-hitting-times-v0",
+  "witnesses": [
+    {
+      "id": "three-state-hitting-chain",
+      "description": "A three-state absorbing chain with target state hit.",
+      "values": {
+        "states": ["start", "middle", "hit"],
+        "transition_matrix": [
+          ["1/2", "1/2", "0"],
+          ["0", "1/2", "1/2"],
+          ["0", "0", "1"]
+        ],
+        "initial_state": "start",
+        "target_states": ["hit"],
+        "first_hit_probabilities": [
+          {"time": 1, "probability": "0"},
+          {"time": 2, "probability": "1/4"},
+          {"time": 3, "probability": "1/4"},
+          {"time": 4, "probability": "3/16"}
+        ],
+        "survival_after_horizon": "5/16",
+        "total_accounted": "1"
+      }
+    },
+    {
+      "id": "three-state-absorption-probability",
+      "description": "Exact absorption probabilities for the three-state chain.",
+      "values": {
+        "states": ["start", "middle", "hit"],
+        "transition_matrix": [
+          ["1/2", "1/2", "0"],
+          ["0", "1/2", "1/2"],
+          ["0", "0", "1"]
+        ],
+        "target_states": ["hit"],
+        "absorption_probabilities": {"start": "1", "middle": "1", "hit": "1"}
+      }
+    },
+    {
+      "id": "three-state-expected-hitting-time",
+      "description": "Exact expected hitting times for the three-state chain.",
+      "values": {
+        "states": ["start", "middle", "hit"],
+        "transition_matrix": [
+          ["1/2", "1/2", "0"],
+          ["0", "1/2", "1/2"],
+          ["0", "0", "1"]
+        ],
+        "target_states": ["hit"],
+        "hitting_times": {"start": "4", "middle": "2", "hit": "0"},
+        "initial_state": "start",
+        "expected_time_from_initial": "4"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "first-hit-distribution-witness",
+      "claim": "The listed first-hit probabilities and survival mass are correct through horizon 4.",
+      "expected_result": "sat",
+      "validation": "finite_first_hit_distribution_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-state-hitting-chain"],
+      "notes": "The validator carries only not-yet-hit mass forward and recomputes first-hit probabilities exactly."
+    },
+    {
+      "id": "absorption-probability-equations",
+      "claim": "The listed absorption probabilities satisfy the finite fixed-point equations.",
+      "expected_result": "sat",
+      "validation": "finite_absorption_probability_equation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-state-absorption-probability"],
+      "notes": "The validator checks target states equal 1 and non-target rows equal transition-weighted successor probabilities."
+    },
+    {
+      "id": "expected-hitting-time-equations",
+      "claim": "The listed expected hitting times satisfy the finite linear equations.",
+      "expected_result": "sat",
+      "validation": "finite_expected_hitting_time_equation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-state-expected-hitting-time"],
+      "notes": "The validator checks h(target)=0 and h(i)=1+sum_j P(i,j)h(j) for non-target states."
+    },
+    {
+      "id": "bad-expected-time-rejected",
+      "claim": "The malformed expected hitting-time table satisfies the finite equations.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_expected_hitting_time_refutation",
+      "proof_status": "checked",
+      "data": {
+        "states": ["start", "middle", "hit"],
+        "transition_matrix": [
+          ["1/2", "1/2", "0"],
+          ["0", "1/2", "1/2"],
+          ["0", "0", "1"]
+        ],
+        "target_states": ["hit"],
+        "claimed_hitting_times": {"start": "3", "middle": "2", "hit": "0"},
+        "failing_state": "start",
+        "actual_rhs": "7/2"
+      },
+      "notes": "The validator recomputes the start equation as 7/2, not 3."
+    },
+    {
+      "id": "general-hitting-theory-lean-horizon",
+      "claim": "General recurrence, transience, and stopping theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "recurrence/transience classifications, infinite-horizon hitting probabilities, optional stopping, mixing bounds, and Markov-chain potential theory",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general hitting-time theory remains a proof-assistant horizon."
+    }
+  ]
+}

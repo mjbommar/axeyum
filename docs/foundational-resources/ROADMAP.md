@@ -103,6 +103,7 @@ artifacts/examples/math/
   finite-conditional-expectation-v0/
   finite-martingales-v0/
   finite-stochastic-kernels-v0/
+  finite-hitting-times-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -162,7 +163,7 @@ Practical first backlog:
 7. Finite probability examples: total mass, conditional probability table,
    Bayes rule over finite domains, finite random variables, finite conditional
    expectations, finite stochastic kernels, and finite martingale/stopping-time
-   replay.
+   replay, plus finite hitting/absorption checks.
 
 Boundary:
 
@@ -393,6 +394,10 @@ probabilities, and checked rejection of a false trace-square moment.
 [`finite-markov-chain-v0`](../../artifacts/examples/math/finite-markov-chain-v0/)
 validates exact stochastic matrices, finite-horizon distribution evolution,
 stationary distributions, and checked rejection of a malformed transition row.
+[`finite-hitting-times-v0`](../../artifacts/examples/math/finite-hitting-times-v0/)
+validates exact finite first-hit distributions, survival probabilities,
+absorption-probability equations, expected hitting-time equations, and checked
+rejection of a malformed expected-time table.
 [`exact-statistical-tests-v0`](../../artifacts/examples/math/exact-statistical-tests-v0/)
 validates exact binomial tails, hypergeometric point probabilities, one-sided
 Fisher p-values, and checked rejection of a false p-value.

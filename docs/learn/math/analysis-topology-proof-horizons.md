@@ -25,6 +25,7 @@ Example packs:
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
+- [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 
@@ -39,7 +40,8 @@ finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 polynomial derivative identities, bounded recurrence traces, finite invariant
 witnesses, matrix operator bounds, Chebyshev recurrence values at fixed points,
-and finite stochastic transition systems. The
+finite stochastic transition systems, finite first-hit distributions, and
+expected hitting-time equation checks. The
 spectral-linear-algebra pack adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
@@ -161,6 +163,11 @@ an initial distribution. The `finite-markov-chain-v0` validator applies exact
 row-vector multiplication for a fixed horizon and checks stationary
 distributions by recomputing `pi * P`.
 
+For a finite hitting-time shadow, encode a target set in a finite transition
+matrix. The `finite-hitting-times-v0` validator computes first-hit
+probabilities by carrying only non-hit mass forward, then checks absorption
+probability and expected hitting-time equations over exact rationals.
+
 For finite integration, encode a finite atom table and a rational-valued simple
 function. The `finite-integration-v0` validator recomputes weighted sums,
 indicator integrals, linearity, and a false expectation counterexample using
@@ -194,6 +201,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
@@ -208,6 +216,7 @@ theorem, fundamental theorem of calculus, Cauchy completeness, monotone
 convergence, compactness, connectedness, Lebesgue measure, integration,
 convergence theorems, product-measure construction, Fubini/Tonelli, ODE
 existence and uniqueness, Banach/Hilbert space
-theorems, compact operators, countably infinite Markov chains, mixing-time
-bounds, general Chebyshev spaces, and infinite-dimensional spectral theory
-remain Lean-horizon material.
+theorems, compact operators, countably infinite Markov chains,
+recurrence/transience classifications, optional stopping, mixing-time bounds,
+general Chebyshev spaces, and infinite-dimensional spectral theory remain
+Lean-horizon material.

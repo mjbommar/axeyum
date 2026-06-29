@@ -5,7 +5,9 @@ replayed result. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
 [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/),
 with the finite stochastic transition slice in
-[finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
+[finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/),
+the finite hitting-time slice in
+[finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/),
 and the finite spectral slice in
 [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/).
 
@@ -24,6 +26,10 @@ Concept rows:
 | `unsafe-threshold-reachable` | `sat` | replay-only |
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
+| `first-hit-distribution-witness` | `sat` | replay-only |
+| `absorption-probability-equations` | `sat` | replay-only |
+| `expected-hitting-time-equations` | `sat` | replay-only |
+| `bad-expected-time-rejected` | `unsat` | checked |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
 | `spectral-decomposition-witness` | `sat` | replay-only |
@@ -87,6 +93,16 @@ For the Markov-chain row, it checks exact stochastic evolution:
 [1/2,1/2,0] * P = [1/4,1/2,1/4]
 ```
 
+For the hitting-time row, it carries only not-yet-hit mass forward:
+
+```text
+P(T = 2) = 1/4
+P(T = 3) = 1/4
+P(T = 4) = 3/16
+P(T > 4) = 5/16
+h(start) = 1 + 1/2*h(start) + 1/2*h(middle) = 4
+```
+
 For the spectral row, it checks exact rational eigenpair and decomposition
 arithmetic:
 
@@ -102,6 +118,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
@@ -118,5 +135,5 @@ The trusted checker handles finite traces, exact rational matrices, and finite
 recurrence lists. General limits, ODE existence and uniqueness, stability,
 compact operators, Banach/Hilbert-space theorems, and general Chebyshev spaces
 remain Lean-horizon material. Infinite-dimensional spectral theory,
-infinite-state Markov chains, and mixing-time theorems also remain proof-horizon
-material.
+infinite-state Markov chains, recurrence/transience classifications, optional
+stopping, and mixing-time theorems also remain proof-horizon material.

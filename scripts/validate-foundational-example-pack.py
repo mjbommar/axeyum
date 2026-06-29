@@ -6566,6 +6566,241 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
         fail("bad-stochastic-row-rejected bad row unexpectedly sums to 1")
 
 
+def require_state_transition_matrix(
+    context: str,
+    value: Any,
+    states: list[str],
+) -> list[list[Fraction]]:
+    matrix = require_stochastic_matrix(context, value)
+    if len(matrix) != len(states):
+        fail(f"{context} dimension must match the state list")
+    return matrix
+
+
+def require_state(context: str, value: Any, states: list[str]) -> str:
+    require_string(context, value)
+    if value not in set(states):
+        fail(f"{context} is not in the state list")
+    return value
+
+
+def require_hitting_probability_rows(context: str, value: Any) -> dict[int, Fraction]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list")
+    rows: dict[int, Fraction] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        time = require_nonnegative_int(f"{context}[{index}].time", item.get("time"))
+        if time == 0:
+            fail(f"{context}[{index}].time must be positive")
+        if time in rows:
+            fail(f"{context} repeats time {time}")
+        rows[time] = require_probability(f"{context}[{index}].probability", item.get("probability"))
+    return rows
+
+
+def first_hitting_distribution(
+    matrix: list[list[Fraction]],
+    initial_index: int,
+    target_indexes: set[int],
+    horizon: int,
+) -> tuple[dict[int, Fraction], Fraction]:
+    if initial_index in target_indexes:
+        fail("finite hitting-time pack expects the initial state outside the target set")
+    active = [Fraction(0) for _ in matrix]
+    active[initial_index] = Fraction(1)
+    first_hits: dict[int, Fraction] = {}
+    for time in range(1, horizon + 1):
+        next_active = row_vec_mat(active, matrix)
+        first_hits[time] = sum((next_active[index] for index in target_indexes), Fraction(0))
+        for index in target_indexes:
+            next_active[index] = Fraction(0)
+        active = next_active
+    return first_hits, sum(active, Fraction(0))
+
+
+def validate_absorption_probability_equations(
+    context: str,
+    matrix: list[list[Fraction]],
+    states: list[str],
+    target_states: set[str],
+    probabilities: dict[str, Fraction],
+) -> None:
+    for state in target_states:
+        if probabilities[state] != 1:
+            fail(f"{context} target state {state!r} must have absorption probability 1")
+    for row_index, state in enumerate(states):
+        if state in target_states:
+            continue
+        rhs = sum(
+            (
+                matrix[row_index][col_index] * probabilities[successor]
+                for col_index, successor in enumerate(states)
+            ),
+            Fraction(0),
+        )
+        if probabilities[state] != rhs:
+            fail(f"{context} absorption equation fails at state {state!r}")
+
+
+def validate_expected_hitting_time_equations(
+    context: str,
+    matrix: list[list[Fraction]],
+    states: list[str],
+    target_states: set[str],
+    hitting_times: dict[str, Fraction],
+) -> None:
+    for state, value in hitting_times.items():
+        if value < 0:
+            fail(f"{context} hitting time for {state!r} must be nonnegative")
+    for state in target_states:
+        if hitting_times[state] != 0:
+            fail(f"{context} target state {state!r} must have expected hitting time 0")
+    for row_index, state in enumerate(states):
+        if state in target_states:
+            continue
+        rhs = Fraction(1) + sum(
+            (
+                matrix[row_index][col_index] * hitting_times[successor]
+                for col_index, successor in enumerate(states)
+            ),
+            Fraction(0),
+        )
+        if hitting_times[state] != rhs:
+            fail(f"{context} expected hitting-time equation fails at state {state!r}")
+
+
+def expected_hitting_time_rhs(
+    matrix: list[list[Fraction]],
+    states: list[str],
+    state: str,
+    hitting_times: dict[str, Fraction],
+) -> Fraction:
+    row_index = states.index(state)
+    return Fraction(1) + sum(
+        (
+            matrix[row_index][col_index] * hitting_times[successor]
+            for col_index, successor in enumerate(states)
+        ),
+        Fraction(0),
+    )
+
+
+def validate_finite_hitting_times(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    first_hit = checks["first-hit-distribution-witness"]
+    if first_hit["expected_result"] != "sat":
+        fail("first-hit-distribution-witness must expect sat")
+    values = single_witness_values(first_hit, witnesses)
+    states = require_string_list("first hit states", values.get("states"))
+    matrix = require_state_transition_matrix("first hit transition_matrix", values.get("transition_matrix"), states)
+    initial_state = require_state("first hit initial_state", values.get("initial_state"), states)
+    target_states = require_atom_subset("first hit target_states", values.get("target_states"), states)
+    if not target_states:
+        fail("first-hit-distribution-witness target_states must be non-empty")
+    rows = require_hitting_probability_rows("first hit first_hit_probabilities", values.get("first_hit_probabilities"))
+    times = sorted(rows)
+    if times != list(range(1, times[-1] + 1)):
+        fail("first-hit-distribution-witness times must be consecutive from 1")
+    state_index = {state: index for index, state in enumerate(states)}
+    computed_rows, survival = first_hitting_distribution(
+        matrix,
+        state_index[initial_state],
+        {state_index[state] for state in target_states},
+        times[-1],
+    )
+    if computed_rows != rows:
+        fail("first-hit-distribution-witness first-hit probabilities are incorrect")
+    expected_survival = require_probability("first hit survival_after_horizon", values.get("survival_after_horizon"))
+    if survival != expected_survival:
+        fail("first-hit-distribution-witness survival_after_horizon is incorrect")
+    total_accounted = require_probability("first hit total_accounted", values.get("total_accounted"))
+    if sum(rows.values(), Fraction(0)) + survival != total_accounted:
+        fail("first-hit-distribution-witness total_accounted is incorrect")
+
+    absorption = checks["absorption-probability-equations"]
+    if absorption["expected_result"] != "sat":
+        fail("absorption-probability-equations must expect sat")
+    values = single_witness_values(absorption, witnesses)
+    states = require_string_list("absorption states", values.get("states"))
+    matrix = require_state_transition_matrix("absorption transition_matrix", values.get("transition_matrix"), states)
+    target_states = require_atom_subset("absorption target_states", values.get("target_states"), states)
+    if not target_states:
+        fail("absorption-probability-equations target_states must be non-empty")
+    absorption_probabilities = require_probability_value_map(
+        "absorption probabilities",
+        values.get("absorption_probabilities"),
+        states,
+    )
+    validate_absorption_probability_equations(
+        "absorption-probability-equations",
+        matrix,
+        states,
+        target_states,
+        absorption_probabilities,
+    )
+
+    expected_time = checks["expected-hitting-time-equations"]
+    if expected_time["expected_result"] != "sat":
+        fail("expected-hitting-time-equations must expect sat")
+    values = single_witness_values(expected_time, witnesses)
+    states = require_string_list("expected time states", values.get("states"))
+    matrix = require_state_transition_matrix("expected time transition_matrix", values.get("transition_matrix"), states)
+    target_states = require_atom_subset("expected time target_states", values.get("target_states"), states)
+    if not target_states:
+        fail("expected-hitting-time-equations target_states must be non-empty")
+    hitting_times = require_atom_value_table("expected time hitting_times", values.get("hitting_times"), states)
+    validate_expected_hitting_time_equations(
+        "expected-hitting-time-equations",
+        matrix,
+        states,
+        target_states,
+        hitting_times,
+    )
+    initial_state = require_state("expected time initial_state", values.get("initial_state"), states)
+    expected_from_initial = require_fraction(
+        "expected time expected_time_from_initial",
+        values.get("expected_time_from_initial"),
+    )
+    if hitting_times[initial_state] != expected_from_initial:
+        fail("expected-hitting-time-equations expected_time_from_initial is incorrect")
+
+    bad = checks["bad-expected-time-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-expected-time-rejected must expect unsat")
+    data = bad.get("data", {})
+    states = require_string_list("bad expected time states", data.get("states"))
+    matrix = require_state_transition_matrix("bad expected time transition_matrix", data.get("transition_matrix"), states)
+    target_states = require_atom_subset("bad expected time target_states", data.get("target_states"), states)
+    if not target_states:
+        fail("bad-expected-time-rejected target_states must be non-empty")
+    claimed_times = require_atom_value_table("bad expected time claimed_hitting_times", data.get("claimed_hitting_times"), states)
+    for state in target_states:
+        if claimed_times[state] != 0:
+            fail("bad-expected-time-rejected target states must still be listed as 0")
+    failing_state = require_state("bad expected time failing_state", data.get("failing_state"), states)
+    if failing_state in target_states:
+        fail("bad-expected-time-rejected failing_state must be outside target_states")
+    actual_rhs = require_fraction("bad expected time actual_rhs", data.get("actual_rhs"))
+    computed_rhs = expected_hitting_time_rhs(matrix, states, failing_state, claimed_times)
+    if computed_rhs != actual_rhs:
+        fail("bad-expected-time-rejected actual_rhs is incorrect")
+    if claimed_times[failing_state] == actual_rhs:
+        fail("bad-expected-time-rejected malformed table unexpectedly satisfies the failing equation")
+
+    horizon = checks["general-hitting-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-hitting-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-hitting-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general hitting target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general hitting future_checker", data.get("future_checker"))
+
+
 def require_finite_kernel(
     context: str,
     value: Any,
@@ -7267,6 +7502,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_random_variables(expected)
     if metadata["id"] == "finite-markov-chain-v0":
         validate_finite_markov_chain(expected)
+    if metadata["id"] == "finite-hitting-times-v0":
+        validate_finite_hitting_times(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":
         validate_finite_stochastic_kernels(expected)
     if metadata["id"] == "finite-operator-v0":

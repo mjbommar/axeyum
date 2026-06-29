@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "finite-hitting-times-v0",
+  "title": "Finite Hitting-Time Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_differential_equations_and_dynamical_systems",
+    "field_linear_algebra",
+    "field_statistics",
+    "field_measure_theory",
+    "field_set_theory_and_foundations",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "differential_equations_and_dynamical_systems",
+    "linear_algebra",
+    "statistics",
+    "measure_theory",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting",
+    "rationals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "finite matrices",
+    "finite probability",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "first-hit-distribution-witness",
+    "absorption-probability-equations",
+    "expected-hitting-time-equations",
+    "bad-expected-time-rejected",
+    "general-hitting-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite hitting events and absorbing targets over explicit finite transition matrices.",
+    "Replay first-hit distributions, survival probabilities, absorption probabilities, and expected hitting-time equations by exact rational arithmetic.",
+    "Emit checked finite counterexample evidence for malformed potential/hitting-time tables.",
+    "Keep recurrence, transience, stopping theorems, and infinite-horizon convergence marked Lean-horizon until no-sorry Lean artifacts exist."
+  ]
+}

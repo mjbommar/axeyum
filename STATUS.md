@@ -159,6 +159,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite hitting-time foundations pack landed.** Added
+  [`finite-hitting-times-v0`](artifacts/examples/math/finite-hitting-times-v0/README.md)
+  as the exact finite Markov-chain bridge from transition matrices into
+  first-hit, absorption, and expected-time reasoning. The pack validates
+  first-hit probabilities through a finite horizon, survival mass,
+  absorption-probability fixed-point equations, expected hitting-time
+  equations, checked rejection of a false expected-time table, and a
+  recurrence/transience Lean-horizon row. The foundational example-pack
+  validator now checks finite state transition matrices, target-state hitting
+  events, first-hit distributions, absorption-probability equations, and
+  expected hitting-time equations.
+
 - **Finite stochastic-kernel foundations pack landed.** Added
   [`finite-stochastic-kernels-v0`](artifacts/examples/math/finite-stochastic-kernels-v0/README.md)
   as the exact finite conditional-distribution bridge across probability,
