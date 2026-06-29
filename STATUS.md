@@ -174,13 +174,31 @@ relaxation — eager Ackermann / e-graph recursion — does not check the deadli
 the lazy-row CEGAR and QF_LIA *are* clean). A solver must honor its budget; thread
 the deadline through that inner path → graceful Unknown. *(Correction: an earlier
 note over-broadly "ruled out" the hang from QF_LIA evidence; `bug330` confirms it
-is real, scoped to the QF_AUFLIA UFLIA path.)*
+is real, scoped to the QF_AUFLIA path — and verified **pre-existing**, not from
+the write-index change.)*
+
+**Headline (honest):** after this session, **on the accessible curated corpus
+axeyum is at/near z3 parity across the board** — most divisions tie, QF_SEQ leads,
+and the residual gaps are the *known-hard frontier* (`issue5836-2` is actually
+UF+**NRA**; deep array extensionality; budget), not cheap bounded wins. The big
+remaining decide-rate work lives on the **full NAS corpus** (strings ~117 →
+unbounded-string DP; NRA/CAD depth) — multi-week *engine* work gated on NAS-corpus
+access, where Z3/cvc5 parity is next won.
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 **DISAGREE = 0**; build/test via `scripts/mem-run.sh` (64 GB cap).
 
 ## Process/documentation lane (2026-06-27) — `WIP`
+
+- **Finite algebra-homomorphisms end-to-end lesson landed.** Added
+  [`finite-algebra-homomorphisms-end-to-end.md`](docs/learn/math/finite-algebra-homomorphisms-end-to-end.md)
+  as the learner-facing trace for the finite algebra homomorphisms pack:
+  parity-map group-homomorphism replay, kernel/image recomputation,
+  quotient/induced-map replay, unital ring-homomorphism replay, checked
+  bad-homomorphism rejection, and the Lean horizon for general isomorphism
+  theorems. The lesson is linked from the math learning index plus the algebra
+  and finite-structure paths.
 
 - **Rational inner-product end-to-end lesson landed.** Added
   [`inner-product-spaces-end-to-end.md`](docs/learn/math/inner-product-spaces-end-to-end.md)

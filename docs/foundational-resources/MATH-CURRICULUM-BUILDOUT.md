@@ -845,10 +845,10 @@ walkthrough using validated pack data. The end-to-end lessons now trace graph
 coloring, rational midpoint replay, linear-system/LP replay, finite conditional
 probability, rational inner-product replay, finite monoid replay, finite
 permutation-group replay, finite group-action/Burnside replay, finite ideal
-and quotient-ring replay, finite vector-space replay, finite dual-space replay,
-finite module replay, finite tensor-product replay, finite topology/measure,
-and bounded dynamics/operators from data row through replay result and
-proof/evidence status.
+and quotient-ring replay, finite algebra-homomorphism replay, finite
+vector-space replay, finite dual-space replay, finite module replay, finite
+tensor-product replay, finite topology/measure, and bounded dynamics/operators
+from data row through replay result and proof/evidence status.
 
 Deliverables:
 
@@ -1023,9 +1023,9 @@ have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
 finite cut certificates, rational arithmetic, linear algebra/optimization,
 probability/statistics, rational inner products, finite monoids, finite
-permutation groups, finite ideals and quotient rings, finite vector spaces,
-finite dual spaces, finite modules, finite tensor products, finite structures,
-and analysis/topology horizons.
+permutation groups, finite algebra homomorphisms, finite ideals and quotient
+rings, finite vector spaces, finite dual spaces, finite modules, finite tensor
+products, finite structures, and analysis/topology horizons.
 Phase M6 now has cookbook links from all current non-template math example
 packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
 route for its pigeonhole refutation. Phase M7 now has
