@@ -93,6 +93,10 @@ validated pack data and the repo-root command that replays it.
 - [Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md):
   follows rational interval/ball replay, bounded epsilon-delta samples,
   polynomial side conditions, a bad-delta counterexample, and the Lean horizon.
+- [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
+  table replay, finite Lipschitz checks, epsilon-delta containment,
+  open-ball preimage replay, bad-delta rejection, and the continuity Lean
+  horizon.
 - [Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md): follows ordered
   field and nonlinear product witnesses, a quadratic root replay, square
   nonnegativity, negative-discriminant rejection, and the completeness horizon.

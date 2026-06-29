@@ -848,9 +848,9 @@ induction-pattern replay, graph coloring, bounded natural-arithmetic replay,
 signed integer-LIA replay, gcd/Bezout replay, modular-arithmetic replay,
 bounded number-theory replay, complex real-pair replay, rational midpoint
 replay, bounded rational real-analysis replay, real-algebra RCF-shadow replay,
-polynomial-identity replay, rational polynomial-factorization replay, complex
-plane transform replay, matrix-invariant replay, linear-system/LP replay,
-finite conditional
+metric-continuity replay, polynomial-identity replay, rational
+polynomial-factorization replay, complex plane transform replay,
+matrix-invariant replay, linear-system/LP replay, finite conditional
 probability, rational multivariable-calculus replay, rational inner-product
 replay, finite set and relation/function replay, equivalence-class replay,
 function-composition replay, finite group table replay, finite monoid replay,
@@ -1253,6 +1253,10 @@ horizon.
 one-sided exact binomial tails, hypergeometric point probability, one-sided
 Fisher tail replay, checked bad p-value rejection, and the statistical
 numerical-honesty horizon.
+`metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
+metric-table replay, finite Lipschitz checks, epsilon-delta containment,
+open-ball preimage replay, checked bad-delta rejection, and the continuity Lean
+horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Metric-continuity end-to-end lesson landed.** Added
+  [`metric-continuity-end-to-end.md`](docs/learn/math/metric-continuity-end-to-end.md)
+  as the learner-facing trace for the metric-continuity pack: finite
+  metric-table replay, finite Lipschitz checks, epsilon-delta containment,
+  open-ball preimage replay, checked bad-delta rejection, and the continuity
+  Lean horizon. The lesson is linked from the math learning index plus the
+  analysis/topology path.
+
 - **Exact statistical-tests end-to-end lesson landed.** Added
   [`exact-statistical-tests-end-to-end.md`](docs/learn/math/exact-statistical-tests-end-to-end.md)
   as the learner-facing trace for the exact-statistical-tests pack: exact
