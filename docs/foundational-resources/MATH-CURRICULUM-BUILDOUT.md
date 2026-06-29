@@ -385,7 +385,9 @@ table replay, distributivity checks, monotone-map fixed-point replay, checked
 QF_UF/Alethe bad-order rejection, and a general order/lattice Lean-horizon row.
 `finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
-prime field, and a checked composite-modulus non-field contrast.
+prime field, a checked composite-modulus non-field contrast, and a
+resource-backed QF_BV/DRAT proof-route row for the composite no-inverse
+obstruction.
 `polynomial-identities-v0`
 now validates exact coefficient identity replay, a factor-theorem root witness,
 and a checked false rational-root rejection. `counting-v0` now validates fixed

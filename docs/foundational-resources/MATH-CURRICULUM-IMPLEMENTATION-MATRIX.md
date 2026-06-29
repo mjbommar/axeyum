@@ -71,7 +71,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `modular-arithmetic` | modular arithmetic and finite ideals | Add quotient-ring and CRT bridge rows. | QF_LIA/Diophantine and QF_BV fixed-width finite residues. | Nonunit inverse rows carry checked arithmetic evidence. |
 | `groups` | finite groups, monoids, permutations, actions, homomorphisms | Add concept rows for kernels/images, orbit-stabilizer, Burnside, quotient groups. | QF_UF/Alethe for table congruence and action-law conflicts. | Table checks keep associativity/action-law replay explicit. |
 | `rings` | finite rings, ideals, modules, homomorphisms | Extend the landed finite-ring BV route from bad distributivity to more fixed finite ring-table contradictions. | QF_BV bit-blast/DRAT plus QF_UF/Alethe for homomorphism preservation. | Unsat finite-ring rows carry checked CNF evidence without overclaiming Lean. |
-| `fields` | finite fields, vector/dual/tensor packs | Add field-linear-algebra bridge rows for bases, covectors, bilinear maps. | QF_BV for finite fields; QF_UF/Alethe for table equality conflicts. | Composite-modulus non-field contrast has a checked route. |
+| `fields` | finite fields, vector/dual/tensor packs | Extend the landed finite-field BV route from composite no-inverse to more fixed finite-field arithmetic contradictions, then add field-linear-algebra bridge rows for bases, covectors, and bilinear maps. | QF_BV for finite fields; QF_UF/Alethe for table equality conflicts. | Composite-modulus non-field contrast has a checked route. |
 | `polynomials` | identities, rational factorization, generating functions | Add coefficient-ring and polynomial-division reusable rows. | Finite replay, QF_LIA/LRA coefficient constraints, Lean horizon for general factorization. | Factorization rows replay product and degree/leading constraints. |
 | `sequences-and-limits` | sequence-limit shadow, real-analysis, generating functions | Add bounded tail, Cauchy, recurrence, and convergence-horizon rows. | Finite replay/LRA for bounded tails; Lean horizon for general convergence. | Lessons keep finite prefix evidence separate from convergence theorems. |
 | `counting` | counting, permutations, actions, generating functions | Add finite double-counting, Burnside, coefficient extraction, and asymptotic horizon rows. | CNF/LRAT for pigeonhole; finite replay for enumerative witnesses. | Count rows include deterministic universe, enumeration, and replay checksum. |
@@ -185,9 +185,8 @@ Build sequence:
    counterexample proof, and Lean horizon.
 2. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
-3. Promote the remaining QF_BV first-target packs: finite fields and the BV
-   side of graph coloring where appropriate; finite rings has the first
-   bad-distributivity DRAT row.
+3. Promote the remaining QF_BV first-target pack: the BV side of graph coloring
+   where appropriate; finite rings and finite fields now have first DRAT rows.
 4. Add route-specific proof-upgrade notes to the highest-use learner pages:
    logic/proof, graph/discrete, linear algebra/optimization, probability, and
    algebra.

@@ -13,12 +13,23 @@ use axeyum_solver::{
 const FINITE_RINGS_BAD_DISTRIBUTIVITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-rings-v0/smt2/non-distributive-table-bitblast-conflict.smt2"
 );
+const FINITE_FIELDS_COMPOSITE_NONFIELD: &str = include_str!(
+    "../../../artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2"
+);
 
 #[test]
 fn finite_rings_bad_distributivity_emits_checked_drat() {
     assert_resource_qf_bv_drat(
         "finite-rings-v0 bad distributivity bit-blast conflict",
         FINITE_RINGS_BAD_DISTRIBUTIVITY,
+    );
+}
+
+#[test]
+fn finite_fields_composite_nonfield_emits_checked_drat() {
+    assert_resource_qf_bv_drat(
+        "finite-fields-v0 composite modulus nonfield bit-blast conflict",
+        FINITE_FIELDS_COMPOSITE_NONFIELD,
     );
 }
 

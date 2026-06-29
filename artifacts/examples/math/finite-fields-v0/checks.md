@@ -28,3 +28,20 @@ Expected result: `unsat`.
 The checked query is the existence of an inverse for `2` modulo `6`. The
 validator enumerates all residues and confirms none multiply with `2` to
 `1 mod 6`.
+
+## `composite-modulus-nonfield-qf-bv-drat`
+
+Expected result: `unsat`.
+
+The QF_BV artifact encodes the same no-inverse claim using a 3-bit residue
+variable:
+
+```text
+inv < 6
+(2 * inv) mod 6 = 1
+```
+
+The product is computed at 6-bit width before `bvurem 6`, so this is an exact
+fixed-width encoding of the residue equation for the listed finite domain. The
+solver regression exports the bit-blasted CNF with a DRAT refutation and
+rechecks the certificate independently.

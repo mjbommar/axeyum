@@ -2209,6 +2209,40 @@ def validate_finite_fields(expected: dict[str, Any]) -> None:
     if has_mod_inverse(element, modulus):
         fail(f"element {element} unexpectedly has an inverse modulo {modulus}")
 
+    qf_bv = checks["composite-modulus-nonfield-qf-bv-drat"]
+    if qf_bv["expected_result"] != "unsat":
+        fail("composite-modulus-nonfield-qf-bv-drat must expect unsat")
+    if qf_bv["proof_status"] != "checked":
+        fail("composite-modulus-nonfield-qf-bv-drat must be checked")
+    if qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("composite-modulus-nonfield-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = qf_bv.get("data", {})
+    modulus = require_modulus("composite QF_BV modulus", data.get("modulus"))
+    if is_prime(modulus):
+        fail("composite-modulus-nonfield-qf-bv-drat must use a composite modulus")
+    element = require_int("composite QF_BV element", data.get("element"))
+    if element <= 0 or element >= modulus:
+        fail("composite QF_BV element must be a nonzero residue")
+    if has_mod_inverse(element, modulus):
+        fail(f"QF_BV element {element} unexpectedly has an inverse modulo {modulus}")
+    residue_width = require_int("composite QF_BV residue_width", data.get("residue_width"))
+    product_width = require_int("composite QF_BV product_width", data.get("product_width"))
+    if 2**residue_width <= modulus:
+        fail("composite QF_BV residue_width must encode every residue and the modulus guard")
+    if 2**product_width <= element * (modulus - 1):
+        fail("composite QF_BV product_width must encode the maximum listed product exactly")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("composite-modulus-nonfield-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("composite-modulus-nonfield-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("composite-modulus-nonfield-qf-bv-drat proof_regression", proof_regression)
+    if "finite_fields_composite_nonfield_emits_checked_drat" not in proof_regression:
+        fail("composite-modulus-nonfield-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("composite-modulus-nonfield-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("composite-modulus-nonfield-qf-bv-drat certificate must document DRAT and lowering trust")
+
 
 def require_cayley_table(
     context: str,

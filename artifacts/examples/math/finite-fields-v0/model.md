@@ -24,4 +24,8 @@ forall a != 0 in F_p, exists inv. (a * inv) mod p = 1
 not exists b in Z/6Z. (2 * b) mod 6 = 1
 ```
 
-The current pack checks those finite statements directly in the validator.
+The satisfiable inverse-table row still uses direct finite replay. The
+composite-modulus no-inverse row now also carries a QF_BV artifact: a 3-bit
+residue `inv` is guarded by `inv < 6`, zero-extended to 6 bits, multiplied by
+`2`, reduced by `bvurem 6`, and constrained to equal `1`. The generated CNF is
+refuted by checked DRAT evidence.

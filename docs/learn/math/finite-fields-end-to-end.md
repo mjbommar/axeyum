@@ -18,10 +18,13 @@ Concept rows:
 | `prime-field-inverse-table` | `sat` | replay-only |
 | `prime-field-distributivity-no-counterexample` | `unsat` | checked |
 | `composite-modulus-nonfield` | `unsat` | checked |
+| `composite-modulus-nonfield-qf-bv-drat` | `unsat` | checked DRAT |
 
-The checked rows are fixed finite residue computations. The pack does not
-claim general field theory, field extensions, algebraic closure, or
-quantification over all fields.
+The checked rows are fixed finite residue computations. The QF_BV row
+additionally records the composite-modulus no-inverse claim as a fixed-width
+bit-vector formula whose generated CNF carries a rechecked DRAT certificate.
+The pack does not claim general field theory, field extensions, algebraic
+closure, or quantification over all fields.
 
 ## Encode
 
@@ -108,12 +111,34 @@ The checker enumerates all residues:
 None equals `1`, so the inverse-existence claim is checked `unsat`. This is the
 smallest practical lesson in why composite residue rings can fail to be fields.
 
+## Check The Bit-Blast Certificate
+
+The pack also records the same no-inverse row as a QF_BV artifact:
+
+```text
+artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2
+```
+
+The formula declares a 3-bit residue `inv`, guards it with `inv < 6`, then
+zero-extends it to 6 bits so `2*inv` is exact before `bvurem 6`. It asserts:
+
+```text
+(2 * inv) mod 6 = 1
+```
+
+The resource regression parses that SMT-LIB file, proves it `unsat`, exports the
+bit-blasted DIMACS plus DRAT refutation, and runs `UnsatProof::recheck` on the
+saved text. This checks the clausal refutation; the modular lowering and
+bit-blast/Tseitin steps remain named trust steps until a Lean reconstruction
+covers the original formula directly.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
 ```
 
 Expected output:
@@ -129,6 +154,7 @@ This lesson shows Axeyum's resource pattern for finite field arithmetic:
 ```text
 untrusted fast search -> inverse table or counterexample candidate
 trusted small checking -> modular products and bounded enumeration
+trusted small checking -> DIMACS/DRAT recheck for the bit-blasted no-inverse row
 ```
 
 General field theory, field extensions, algebraic closure, Galois theory, and

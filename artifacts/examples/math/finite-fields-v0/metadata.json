@@ -39,12 +39,13 @@
   "expected_results": [
     "prime-field-inverse-table",
     "prime-field-distributivity-no-counterexample",
-    "composite-modulus-nonfield"
+    "composite-modulus-nonfield",
+    "composite-modulus-nonfield-qf-bv-drat"
   ],
   "graduation_criteria": [
-    "Encode fixed prime-field operations as deterministic BV formulas or finite tables.",
+    "Encode fixed prime-field operations as deterministic BV formulas or finite tables; the first composite-modulus no-inverse row now has a checked QF_BV/DRAT artifact.",
     "Replay inverse-table witnesses through Axeyum model evaluation.",
-    "Emit checked BV/CNF evidence for exhaustive no-counterexample and no-inverse rows.",
+    "Continue emitting checked BV/CNF evidence for exhaustive no-counterexample and no-inverse rows.",
     "Keep field extensions, algebraic closure, and quantification over all fields marked Lean-horizon."
   ]
 }

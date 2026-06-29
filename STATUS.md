@@ -627,6 +627,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   trust-boundary note. Next QF_BV resource targets are `finite-fields-v0` and
   the BV side of `graph-coloring-v0`.
 
+- **Second QF_BV resource proof-route row landed.**
+  [`finite-fields-v0`](artifacts/examples/math/finite-fields-v0/) now has a
+  source-linked SMT-LIB artifact for the composite-modulus no-inverse row:
+  [`composite-modulus-nonfield-bitblast-conflict.smt2`](artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2).
+  The same `math_resource_bv_routes` regression now also parses the finite-field
+  artifact, proves the 3-bit residue inverse equation `unsat`, exports the
+  bit-blasted DIMACS plus DRAT refutation, and rechecks the certificate. The
+  pack validator enforces the modulus/element, exact product-width encoding,
+  artifact path, regression command, and bit-blast/Tseitin trust-boundary note.
+  Next QF_BV resource target is the BV side of `graph-coloring-v0` where it
+  adds a distinct fixed-width educational claim beyond the existing CNF/LRAT
+  route.
+
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact

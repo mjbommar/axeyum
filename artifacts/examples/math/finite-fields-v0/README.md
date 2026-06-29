@@ -30,12 +30,17 @@ the table is accepted because each row multiplies to `1 mod 7`. The
 distributivity and composite no-inverse rows are checked finite rejections:
 the validator enumerates the entire relevant residue space.
 
-This pack does not yet emit Axeyum BV terms or proof certificates. The
-graduation route is deterministic BV/CNF emission plus checked bit-blast
-evidence for the fixed finite obligations.
+The composite no-inverse row also has a QF_BV proof-route artifact:
+[`smt2/composite-modulus-nonfield-bitblast-conflict.smt2`](smt2/composite-modulus-nonfield-bitblast-conflict.smt2).
+It represents a candidate inverse as a 3-bit residue with `inv < 6`, computes
+`2*inv` exactly after zero-extension, and refutes `(2*inv) mod 6 = 1` with a
+DIMACS/DRAT certificate that `UnsatProof::recheck` validates. The modular
+lowering and bit-blast/Tseitin steps remain explicit trust steps until Lean
+reconstruction covers the original formula.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
 ```

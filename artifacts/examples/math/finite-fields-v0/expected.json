@@ -50,6 +50,23 @@
         "element": 2
       },
       "notes": "The validator enumerates all residues modulo 6 and confirms none is an inverse for 2."
+    },
+    {
+      "id": "composite-modulus-nonfield-qf-bv-drat",
+      "claim": "The non-invertibility of 2 modulo 6 lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 6,
+        "element": 2,
+        "residue_width": 3,
+        "product_width": 6,
+        "smt2_artifact": "artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while modular lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The artifact quantifies a 3-bit residue inv with inv < 6, computes 2*inv exactly after zero-extension, and refutes (2*inv) mod 6 = 1 through a checked DIMACS/DRAT pair."
     }
   ]
 }

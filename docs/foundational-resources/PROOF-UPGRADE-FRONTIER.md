@@ -298,6 +298,8 @@ First targets:
 - [finite-rings-v0](../../artifacts/examples/math/finite-rings-v0/)
   (resource-backed QF_BV/DRAT regression landed for the bad distributivity row)
 - [finite-fields-v0](../../artifacts/examples/math/finite-fields-v0/)
+  (resource-backed QF_BV/DRAT regression landed for the composite-modulus
+  no-inverse row)
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
 
 Expected artifact:
