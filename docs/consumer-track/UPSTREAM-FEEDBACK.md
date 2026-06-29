@@ -23,6 +23,41 @@ Last reconciled with `main`: 2026-06-27.
 
 ## Open / Partial
 
+### U9 - low - ir/lowering - bit-manipulation & checked-arithmetic intrinsics need IR helpers
+- **What:** the `#[verify]` fragment now models the common integer methods that
+  lower to existing IR ops — `wrapping_{add,sub,mul}`, `saturating_{add,sub,mul}`,
+  `min`/`max`, and `abs` (commits in the C5 lane). Three further-wanted families
+  are blocked on **missing or constant-only IR primitives**, so the consumer
+  cannot add them without a core change:
+  - **Population count / leading-/trailing-zeros** (`count_ones`, `leading_zeros`,
+    `trailing_zeros`, `count_zeros`): no `bv_popcount`/`bv_clz`/`bv_ctz` exists in
+    `axeyum-ir/src/arena.rs`. These are standard bit-blast gadgets (a popcount
+    adder tree; clz/ctz via priority encoders or the standard "smear + popcount"
+    identity). Without them these methods are `Unknown`.
+  - **Symbolic-amount rotate/shift** (`rotate_left`/`rotate_right` with a runtime
+    amount): `arena.rotate_left/right(by: u32, a)` take a **compile-time constant**
+    `by`, so only `x.rotate_left(8)`-style constants are expressible. Rust's
+    `rotate_*` take a runtime `u32`; a symbolic-amount form needs an IR op
+    (rotate-by-term, or the shift-or composition with the `n == 0` edge handled).
+  - **`checked_{add,sub,mul}`** returning `Option`: the bare op is easy
+    (`opt(!overflow, wrapping_op)`), but the fragment has **no first-class
+    `Option`-typed value** that flows through `let`/`match`/`unwrap_or` — only the
+    `opt(is_some, value)` ctor consumed immediately by `.unwrap()`/`.expect()`.
+    `a.checked_add(b).unwrap()` is expressible as a sugar (it equals the checked
+    op with overflow recorded as the unwrap-None panic), but `match
+    a.checked_add(b) { Some(v) => .., None => .. }` needs Option as a lowered type.
+- **Why it matters:** these three families cover a large slice of real systems
+  Rust (hashing, bit twiddling, overflow-aware arithmetic). They are *capability*
+  gaps, not soundness gaps — today they are honest `Unknown`, never wrong.
+- **Ask:** (1) add `bv_popcount`/`bv_clz`/`bv_ctz` to the IR arena (with the usual
+  bit-width tests + an eval cross-check); (2) a rotate/shift-by-term IR op; (3) a
+  decision on first-class `Option` in the verify AST/lowering (consumer-ownable
+  once the IR ops exist). (1) and (2) are core/IR-owned; (3) is consumer work that
+  only needs (1)/(2) for the value side.
+- **Source:** `grep 'pub fn rotate' crates/axeyum-ir/src/arena.rs` (constant-only);
+  no `popcount`/`clz`/`ctz` in that file; the method allow-list is
+  `axeyum-verify-macros/src/parse.rs` `lower_method_call`.
+
 ### U8 - medium - build/wasm - `axeyum-solver` does not build for `wasm32`
 - **What:** `cargo build -p axeyum-solver --lib --target wasm32-unknown-unknown`
   fails with `E0308` mismatches: `web_time::Instant` (the wasm clock shim) vs
