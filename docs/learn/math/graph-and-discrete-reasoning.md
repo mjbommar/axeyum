@@ -231,6 +231,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 For a fuller trace from data row to replay result and evidence status, read
 [End To End: Triangle Coloring](graph-coloring-end-to-end.md),
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
+[End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
 For coefficient-level finite recurrence and convolution replay, read

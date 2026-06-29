@@ -1328,6 +1328,10 @@ the general generating-function Lean horizon.
 `graph-reachability-v0` now has a learner-facing end-to-end lesson for finite
 BFS shortest-distance replay, deterministic DFS traversal replay, checked
 disconnected no-path refutation, and edge-cut separation.
+`graph-search-runtime-v0` now has a learner-facing end-to-end lesson for
+finite BFS/DFS visited-node counter replay, shortcut-tail family checks,
+checked bad DFS-bound rejection, and the asymptotic graph-search runtime
+Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

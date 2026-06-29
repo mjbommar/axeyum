@@ -69,6 +69,9 @@ validated pack data and the repo-root command that replays it.
 - [Graph Reachability And Traversal](graph-reachability-end-to-end.md):
   follows BFS shortest-distance replay, deterministic DFS traversal replay,
   disconnected no-path refutation, and edge-cut separation over finite graphs.
+- [Graph Search Runtime Counters](graph-search-runtime-end-to-end.md):
+  follows finite BFS and DFS visited-node counter replay, shortcut-tail family
+  checks, bad DFS-bound rejection, and the asymptotic runtime Lean horizon.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
   no-counterexample enumeration, and the universal Nat theorem horizon.
