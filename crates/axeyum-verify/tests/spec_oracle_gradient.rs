@@ -20,19 +20,19 @@
 
 /// Reference: 16-bit ones-complement end-around-carry fold, carry added back in.
 fn ic_fold_spec(x: u16, y: u16) -> u32 {
-    let s: u32 = x as u32 + y as u32;
+    let s: u32 = u32::from(x) + u32::from(y);
     (s & 0xffff) + (s >> 16)
 }
 
 /// Fast impl: end-around carry as a conditional subtract of `0xffff`.
 fn ic_fold_fast(x: u16, y: u16) -> u32 {
-    let s: u32 = x as u32 + y as u32;
+    let s: u32 = u32::from(x) + u32::from(y);
     if s > 0xffff { s - 0xffff } else { s }
 }
 
 /// Buggy impl: drops the end-around carry (just masks).
 fn ic_fold_buggy(x: u16, y: u16) -> u32 {
-    let s: u32 = x as u32 + y as u32;
+    let s: u32 = u32::from(x) + u32::from(y);
     s & 0xffff
 }
 

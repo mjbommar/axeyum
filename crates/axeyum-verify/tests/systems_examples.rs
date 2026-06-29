@@ -61,7 +61,7 @@ fn ring_unwrapped_oob_reproduces() {
         panic!("dropping the modular wrap must reach an out-of-bounds index");
     };
     assert_eq!(class, "index out of bounds");
-    let start = int_bits(&inputs, "start") as usize;
+    let start = usize::try_from(int_bits(&inputs, "start")).unwrap();
     assert!(
         axeyum_verify::reproduce::panics_on(move || {
             let _ = ring_unwrapped_read_oob([0u8; 4], start);
@@ -110,7 +110,7 @@ fn unbounded_read_oob_reproduces() {
         panic!("an unclamped length must read past the buffer");
     };
     assert_eq!(class, "index out of bounds");
-    let len = int_bits(&inputs, "len") as usize;
+    let len = usize::try_from(int_bits(&inputs, "len")).unwrap();
     assert!(
         len >= 4,
         "OOB witness len={len} must reach index >= buffer len 4"

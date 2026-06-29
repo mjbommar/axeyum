@@ -75,11 +75,11 @@ fn ic_missing_carry_witness_reproduces() {
     // `assert_eq!(a, b)` desugars to `assert!(a == b)`, so the class is the
     // generic assert label.
     assert_eq!(class, "assert! violated");
-    let x = int_bits(&inputs, "x");
-    let y = int_bits(&inputs, "y");
+    let x = u32::try_from(int_bits(&inputs, "x")).unwrap();
+    let y = u32::try_from(int_bits(&inputs, "y")).unwrap();
     assert!(
         axeyum_verify::reproduce::panics_on(move || {
-            let _ = ic_missing_carry_bug(x as u32, y as u32);
+            let _ = ic_missing_carry_bug(x, y);
         }),
         "witness ({x},{y}) must trip the assert_eq! in the original fn"
     );
@@ -120,8 +120,6 @@ fn seq_advance_roundtrip(seq: u8, n: u8) -> u8 {
     seq
 }
 
-/// Window membership via wrapping subtraction (`seq - start < len`) is invariant
-/// under translating both `seq` and `start` by the same offset `d` — because
 // NOTE (measured perf wall, 2026-06-29): the window *offset shift-invariance*
 // lemma `(seq - start) == ((seq + d) - (start + d))` — two wrapping subtractions
 // over the same `d` — is deliberately NOT committed as a live example. Although
@@ -150,11 +148,11 @@ fn naive_window_overflow_reproduces() {
         panic!("the naive window upper bound must be able to overflow");
     };
     assert_eq!(class, "add overflow");
-    let start = int_bits(&inputs, "start");
-    let len = int_bits(&inputs, "len");
+    let start = u32::try_from(int_bits(&inputs, "start")).unwrap();
+    let len = u32::try_from(int_bits(&inputs, "len")).unwrap();
     assert!(
         axeyum_verify::reproduce::panics_on(move || {
-            let _ = naive_window_upper_overflows(start as u32, len as u32);
+            let _ = naive_window_upper_overflows(start, len);
         }),
         "witness start={start}, len={len} must overflow-panic in the original fn"
     );
