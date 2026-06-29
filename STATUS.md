@@ -303,6 +303,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   source pair; the shared UF resource regression requires a pure EUF
   `Evidence::UnsatAletheProof` and rechecks it independently.
 
+- **Finite-monoids QF_UF/Alethe regression landed.**
+  [`finite-monoids-v0`](artifacts/examples/math/finite-monoids-v0/) now has a
+  checked proof-object row for the bad associativity conflict. The new
+  SMT-LIB artifact asserts the failing table equations, the associativity
+  claim `(b*b)*b = b*(b*b)`, and `a != b`; the shared UF resource regression
+  requires a pure EUF `Evidence::UnsatAletheProof` and rechecks it
+  independently.
+
 - **Modular-arithmetic QF_LIA/Diophantine regression landed.**
   [`modular-arithmetic-v0`](artifacts/examples/math/modular-arithmetic-v0/)
   now has a checked proof-object row for the composite nonunit inverse

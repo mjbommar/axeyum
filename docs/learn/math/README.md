@@ -202,7 +202,7 @@ validated pack data and the repo-root command that replays it.
 - [Finite Monoids](finite-monoids-end-to-end.md): follows a two-point
   transformation monoid through function-composition replay, identity and
   associativity checks, unit/idempotent recomputation, and checked
-  non-associativity rejection.
+  QF_UF/Alethe non-associativity rejection.
 - [Finite Permutation Groups](finite-permutation-groups-end-to-end.md):
   follows `S3` point maps through bijection checks, composition-table replay,
   cycle/sign replay, natural action orbit-stabilizer counting, and checked

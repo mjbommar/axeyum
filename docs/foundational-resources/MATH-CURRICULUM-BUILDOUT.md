@@ -406,8 +406,8 @@ validates finite action laws, orbit/stabilizer replay, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked bad-action rejection, and a
 general group-action Lean-horizon row. `finite-monoids-v0` now validates finite monoid
 identity/associativity, transformation-composition table replay from finite
-functions, units/idempotents, checked non-associative table rejection, and a
-general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
+functions, units/idempotents, a checked QF_UF/Alethe non-associative table
+rejection, and a general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
 zero-divisor replay, and a checked non-distributive table.
 `finite-algebra-homomorphisms-v0` now extends the algebra core with finite
 group-homomorphism replay, kernel/image recomputation, quotient and induced-map
@@ -1221,8 +1221,8 @@ cardinality, Burnside fixed-point counting, checked bad-action rejection, and
 a group-action Lean-horizon row.
 `finite-monoids-v0` now adds the exact finite function/algebra bridge:
 monoid identity/associativity replay, transformation-composition table replay,
-unit and idempotent recomputation, checked non-associative table rejection, and
-a monoid/semigroup Lean-horizon row.
+unit and idempotent recomputation, checked QF_UF/Alethe non-associative table
+rejection, and a monoid/semigroup Lean-horizon row.
 `finite-permutation-groups-v0` now adds the exact finite permutation bridge:
 `S3` group-law replay, composition-table replay from bijective function maps,
 cycle-length and sign homomorphism replay, natural action orbit/stabilizer

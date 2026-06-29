@@ -82,9 +82,13 @@
         ],
         "failing_triple": ["b", "b", "b"],
         "left_associated": "a",
-        "right_associated": "b"
+        "right_associated": "b",
+        "alethe_associativity_claim": "(b*b)*b = b*(b*b)",
+        "smt2_artifact": "artifacts/examples/math/finite-monoids-v0/smt2/nonassociative-table-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_monoids_associativity_failure_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks that (b*b)*b differs from b*(b*b)."
+      "notes": "The validator checks that (b*b)*b differs from b*(b*b), and the linked QF_UF artifact emits a zero-trust Alethe refutation for the associativity conflict."
     },
     {
       "id": "general-monoid-theory-lean-horizon",

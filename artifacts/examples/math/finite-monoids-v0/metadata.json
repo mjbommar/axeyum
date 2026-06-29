@@ -25,7 +25,7 @@
     "finite functions",
     "finite algebraic structures",
     "finite table replay",
-    "QF_UF horizon",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0",
@@ -36,7 +36,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "two-point-transformation-monoid-laws",
@@ -48,7 +49,7 @@
   "graduation_criteria": [
     "Encode fixed finite monoids as deterministic table obligations.",
     "Replay transformation-monoid multiplication from finite function tables.",
-    "Add proof-object routes for finite associativity and identity obligations once finite-function/EUF evidence is promoted.",
+    "Route finite associativity conflicts through checked QF_UF/Alethe evidence once exact table replay identifies the failing triple.",
     "Keep free monoids, presentations, Green's relations, and general semigroup/monoid theory under Lean horizon until formal routes exist."
   ]
 }

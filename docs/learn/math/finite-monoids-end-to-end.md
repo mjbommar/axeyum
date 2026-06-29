@@ -145,7 +145,10 @@ b*(b*b) = b*a = b
 ```
 
 Because `a != b`, the fixed claim that this table is an associative monoid is
-rejected.
+rejected. The linked `QF_UF` artifact states the three table equalities, the
+associativity claim `(b*b)*b = b*(b*b)`, and `a != b`; Axeyum emits and
+independently rechecks an `UnsatAletheProof` for the resulting EUF
+contradiction.
 
 ## Run It
 
@@ -168,6 +171,7 @@ This lesson shows Axeyum's resource pattern for finite algebra:
 ```text
 untrusted fast search -> candidate function tables, operation table, units
 trusted small checking -> composition replay, identity, associativity, units, idempotents
+checked proof object -> QF_UF/Alethe certificate for the bad associativity row
 ```
 
 General semigroup and monoid theory, free monoids, presentations, quotient

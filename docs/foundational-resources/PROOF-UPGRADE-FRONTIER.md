@@ -195,10 +195,12 @@ First targets:
   (resource-backed QF_UF/Alethe regression landed for composition application)
 - [finite-algebra-homomorphisms-v0](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
   (resource-backed QF_UF/Alethe regression landed for homomorphism preservation)
+- [finite-monoids-v0](../../artifacts/examples/math/finite-monoids-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad associativity conflict)
 
 Secondary targets:
 
-- monoids, lattices, permutation groups, vector spaces, dual spaces, modules,
+- lattices, permutation groups, vector spaces, dual spaces, modules,
   ideals, and tensor products where the finite table problem is equality-heavy.
 
 Expected artifact:
