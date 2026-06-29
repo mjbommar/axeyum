@@ -276,11 +276,12 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 ```
 
 For fuller traces through finite function-table actions, finite order/lattice
-replay, topology, connectedness, and measure replay, read
+replay, finite cardinality, topology, connectedness, and measure replay, read
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
 [End To End: Finite Order Lattices](finite-order-lattices-end-to-end.md),
+[End To End: Finite Cardinality](finite-cardinality-end-to-end.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
 and [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md).
 

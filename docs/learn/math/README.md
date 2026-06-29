@@ -70,6 +70,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Order Lattices](finite-order-lattices-end-to-end.md): follows finite
   partial-order replay, meet/join recomputation, distributivity checks,
   monotone fixed-point replay, and checked bad-order rejection.
+- [Finite Cardinality](finite-cardinality-end-to-end.md): follows finite
+  bijection and proper-subset injection witnesses, finite no-injection and
+  no-surjection enumeration refutations, and the Cantor Lean horizon.
 - [Finite Rings](finite-rings-end-to-end.md): follows `Z/4Z` ring-table replay,
   zero-divisor witness replay, and checked non-distributive-table rejection.
 - [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table

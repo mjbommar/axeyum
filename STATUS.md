@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cardinality end-to-end lesson landed.** Added
+  [`finite-cardinality-end-to-end.md`](docs/learn/math/finite-cardinality-end-to-end.md)
+  as the learner-facing trace for the finite cardinality pack: finite
+  bijection replay, proper-subset injection replay, checked no-injection and
+  no-surjection enumeration refutations, and the Lean horizon for Cantor and
+  infinite cardinality. The lesson is linked from the math learning index plus
+  the sets/relations path.
+
 - **Finite order-lattices end-to-end lesson landed.** Added
   [`finite-order-lattices-end-to-end.md`](docs/learn/math/finite-order-lattices-end-to-end.md)
   as the learner-facing trace for the finite order/lattice pack: Boolean
