@@ -169,6 +169,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/proof-methods-refutation-v0",
           "notes": "Negate-and-decide examples; proof by contradiction as UNSAT."
+        },
+        {
+          "id": "proof-methods-patterns-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/proof-methods-patterns-v0",
+          "notes": "Finite direct proof, contrapositive, proof-by-cases, contradiction, and invalid-converse checks."
         }
       ],
       "proof_routes": [
@@ -196,7 +202,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/proof-methods-refutation-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/proof-methods-refutation-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -2046,7 +2052,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Foundation for every other field. First Axeyum slice: Propositional logic, SAT, tiny SMT examples, proof object anatomy",
+      "summary": "Foundation for every other field. First Axeyum slice: Propositional logic, SAT, finite proof-pattern checks, tiny SMT examples, proof object anatomy",
       "prerequisites": [],
       "unlocks": [
         "curriculum_induction",
@@ -2056,7 +2062,7 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Propositional logic, SAT, tiny SMT examples, proof object anatomy"
+        "Propositional logic, SAT, finite proof-pattern checks, tiny SMT examples, proof object anatomy"
       ],
       "example_packs": [
         {

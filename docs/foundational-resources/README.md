@@ -59,6 +59,11 @@ schemas, examples, and validation workflows.
   pigeonhole examples, with `PHP(2,2)` witness replay and `PHP(3,2)` checked
   by deterministic CNF truth-table enumeration. LRAT/DRAT remains the
   proof-object graduation target.
+- [`artifacts/examples/math/proof-methods-patterns-v0/`](../../artifacts/examples/math/proof-methods-patterns-v0/)
+  validates finite proof-method patterns: direct proof/modus ponens,
+  contrapositive equivalence, proof by cases, contradiction refutation,
+  invalid-converse counterexample evidence, and a natural-deduction
+  Lean-horizon row.
 - [`artifacts/examples/math/induction-obligations-v0/`](../../artifacts/examples/math/induction-obligations-v0/)
   validates bounded induction base, step, and conclusion obligations while
   keeping the full induction schema under Lean horizon.
@@ -247,6 +252,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/te
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0

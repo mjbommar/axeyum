@@ -36,7 +36,7 @@ Use these sources as checks against local taste:
 
 | ID | Field | Curriculum Role | First Axeyum Slice | Proof Horizon / Limits |
 |---|---|---|---|---|
-| `logic_and_proof` | Logic and proof | Foundation for every other field | Propositional logic, SAT, tiny SMT examples, proof object anatomy | Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge. |
+| `logic_and_proof` | Logic and proof | Foundation for every other field | Propositional logic, SAT, finite proof-pattern checks, tiny SMT examples, proof object anatomy | Quantified logic, induction-heavy metatheory, and full proof-assistant automation need the Lean bridge. |
 | `set_theory_and_foundations` | Set theory and foundations | Foundation / early proof course / graduate logic | Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints | ZFC, ordinals, cardinals, choice, and infinite set facts are proof-horizon material. |
 | `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, combinatorial search | General asymptotic enumeration and deep extremal combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |

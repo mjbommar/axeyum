@@ -61,6 +61,7 @@ artifacts/examples/math/
   logic-basics-v0/
   finite-predicate-v0/
   proof-methods-refutation-v0/
+  proof-methods-patterns-v0/
   induction-obligations-v0/
   finite-sets-v0/
   relations-functions-v0/
@@ -357,6 +358,10 @@ checks, De Morgan equivalence, and a tiny CNF refutation.
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
 now validates with a SAT witness control case and a checked deterministic
 CNF truth-table refutation for `PHP(3,2)`.
+[`proof-methods-patterns-v0`](../../artifacts/examples/math/proof-methods-patterns-v0/)
+validates direct proof/modus ponens, contrapositive equivalence, proof by
+cases, contradiction refutation, invalid-converse counterexample evidence, and
+a natural-deduction Lean-horizon row.
 [`induction-obligations-v0`](../../artifacts/examples/math/induction-obligations-v0/)
 validates bounded induction base, step, and conclusion obligations with the
 full induction schema kept as a Lean-horizon row.

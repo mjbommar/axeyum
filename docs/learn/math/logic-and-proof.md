@@ -14,6 +14,7 @@ Example packs:
 - [logic-basics-v0](../../../artifacts/examples/math/logic-basics-v0/)
 - [finite-predicate-v0](../../../artifacts/examples/math/finite-predicate-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
+- [proof-methods-patterns-v0](../../../artifacts/examples/math/proof-methods-patterns-v0/)
 - [induction-obligations-v0](../../../artifacts/examples/math/induction-obligations-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
 
@@ -23,12 +24,14 @@ The first proof lesson is Boolean: replay a SAT witness, negate a tautology and
 check no counterexample exists, and enumerate tiny CNF rows. The predicate
 logic pack expands finite-domain quantifiers into explicit predicate-table
 checks, including finite universal/existential replay and relation
-counterexamples. The proof-methods pack records a small pigeonhole SAT witness
-and checks the `PHP(3,2)` UNSAT pigeonhole claim by deterministic CNF
-truth-table enumeration. The induction pack checks bounded base, step, and
-conclusion obligations while keeping the full induction schema under Lean
-horizon. The graph-coloring pack adds a finite non-colorability example that
-can be exhaustively checked.
+counterexamples. The proof-methods refutation pack records a small pigeonhole
+SAT witness and checks the `PHP(3,2)` UNSAT pigeonhole claim by deterministic
+CNF truth-table enumeration. The proof-patterns pack checks direct proof,
+contrapositive, proof by cases, contradiction, and invalid converse examples
+by assignment replay and truth-table enumeration. The induction pack checks
+bounded base, step, and conclusion obligations while keeping the full induction
+schema under Lean horizon. The graph-coloring pack adds a finite
+non-colorability example that can be exhaustively checked.
 
 ## Encode / Check Walkthrough
 
@@ -59,6 +62,19 @@ placement. The LRAT/DRAT certificate route is still a stronger graduation
 target, but the finite UNSAT claim is no longer just a schema-level proof gap.
 That distinction is part of the lesson: a replayed model, a finite exhaustive
 refutation, and a checked proof object are different artifacts.
+For proof patterns, encode each proof move as a finite Boolean obligation:
+
+```text
+direct proof:       p, p -> q therefore q
+contrapositive:     p -> q iff !q -> !p
+proof by cases:     (p -> r) and (!p -> r) imply r
+contradiction row:  p and (p -> q) and !q is unsat
+bad converse:       p -> q does not imply q -> p
+```
+
+The validator enumerates the small truth tables for the no-counterexample rows
+and accepts the bad-converse row only because `p = false`, `q = true` makes
+`p -> q` true while falsifying `q -> p`.
 For predicate logic, keep the universe finite and make predicate values
 explicit:
 
@@ -91,6 +107,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "pack_id": "proof-methods-patterns-v0",
+  "witnesses": [
+    {
+      "id": "modus-ponens-assignment",
+      "description": "A direct proof witness where p and p -> q establish q.",
+      "values": {
+        "assignment": {
+          "p": true,
+          "q": true
+        }
+      }
+    },
+    {
+      "id": "converse-counterexample-assignment",
+      "description": "A counterexample to the invalid converse step from p -> q to q -> p.",
+      "values": {
+        "assignment": {
+          "p": false,
+          "q": true
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "direct-proof-modus-ponens-witness",
+      "claim": "The listed assignment witnesses the direct proof pattern p, p -> q therefore q.",
+      "expected_result": "sat",
+      "validation": "boolean_modus_ponens_replay",
+      "proof_status": "checked",
+      "witnesses": ["modus-ponens-assignment"],
+      "notes": "The validator checks p is true, p -> q is true, and q is true under the listed assignment."
+    },
+    {
+      "id": "contrapositive-equivalence-no-counterexample",
+      "claim": "There is no Boolean assignment separating p -> q from not q -> not p.",
+      "expected_result": "unsat",
+      "validation": "truth_table_contrapositive_equivalence",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p", "q"]
+      },
+      "notes": "The validator enumerates all four assignments and finds no counterexample to contrapositive equivalence."
+    },
+    {
+      "id": "proof-by-cases-no-counterexample",
+      "claim": "There is no Boolean assignment with p -> r and not p -> r both true while r is false.",
+      "expected_result": "unsat",
+      "validation": "truth_table_cases_refutation",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p", "r"]
+      },
+      "notes": "The validator enumerates all four assignments and checks the finite proof-by-cases pattern."
+    },
+    {
+      "id": "contradiction-refutation-unsat",
+      "claim": "There is no Boolean assignment satisfying p, p -> q, and not q.",
+      "expected_result": "unsat",
+      "validation": "truth_table_contradiction_refutation",
+      "proof_status": "checked",
+      "data": {
+        "variables": ["p", "q"]
+      },
+      "notes": "The validator enumerates all four assignments and rejects the contradictory premise set."
+    },
+    {
+      "id": "invalid-converse-counterexample",
+      "claim": "The converse inference from p -> q to q -> p is valid.",
+      "expected_result": "sat",
+      "validation": "boolean_invalid_converse_counterexample",
+      "proof_status": "checked",
+      "witnesses": ["converse-counterexample-assignment"],
+      "notes": "The validator checks p -> q is true while q -> p is false, so the alleged proof rule is invalid."
+    },
+    {
+      "id": "general-natural-deduction-lean-horizon",
+      "claim": "General natural-deduction soundness and proof reconstruction require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "soundness of direct, contrapositive, cases, contradiction, and contradiction-elimination proof rules for a formal proof system",
+        "future_checker": "Lean module or kernel-checked proof reconstruction without sorryAx dependencies"
+      },
+      "notes": "The finite Boolean rows are checked; general proof-system soundness remains a proof-assistant horizon."
+    }
+  ]
+}

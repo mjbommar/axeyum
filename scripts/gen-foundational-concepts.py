@@ -45,6 +45,12 @@ CURRICULUM_MAP = {
         "pack": "proof-methods-refutation-v0",
         "slice": "Negate-and-decide examples; proof by contradiction as UNSAT.",
         "proof": "Finite CNF enumeration now; LRAT/DRAT proof-object graduation remains.",
+        "extra_packs": [
+            (
+                "proof-methods-patterns-v0",
+                "Finite direct proof, contrapositive, proof-by-cases, contradiction, and invalid-converse checks.",
+            ),
+        ],
     },
     "induction": {
         "field_ids": ["logic_and_proof", "number_theory"],

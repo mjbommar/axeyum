@@ -2813,6 +2813,10 @@ def eval_boolean_literal(literal: str, assignment: dict[str, bool]) -> bool:
     return assignment[literal]
 
 
+def boolean_implies(left: bool, right: bool) -> bool:
+    return (not left) or right
+
+
 def require_cnf_clauses(context: str, value: Any) -> list[list[str]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list")
@@ -2940,6 +2944,90 @@ def validate_proof_methods_refutation(expected: dict[str, Any]) -> None:
     for assignment in boolean_assignments(variables):
         if cnf_satisfied(clauses, assignment):
             fail("php-3-2-unsat CNF is satisfied by an assignment")
+
+
+def validate_proof_methods_patterns(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    direct = checks["direct-proof-modus-ponens-witness"]
+    if direct["expected_result"] != "sat" or direct.get("proof_status") != "checked":
+        fail("direct-proof-modus-ponens-witness must be a checked sat row")
+    values = single_witness_values(direct, witnesses)
+    assignment = require_bool_assignment(
+        "direct proof assignment",
+        values.get("assignment"),
+        ["p", "q"],
+    )
+    if not assignment["p"]:
+        fail("direct-proof-modus-ponens-witness premise p is false")
+    if not boolean_implies(assignment["p"], assignment["q"]):
+        fail("direct-proof-modus-ponens-witness implication p -> q is false")
+    if not assignment["q"]:
+        fail("direct-proof-modus-ponens-witness conclusion q is false")
+
+    contrapositive = checks["contrapositive-equivalence-no-counterexample"]
+    if contrapositive["expected_result"] != "unsat" or contrapositive.get("proof_status") != "checked":
+        fail("contrapositive-equivalence-no-counterexample must be a checked unsat row")
+    variables = require_boolean_variables(
+        "contrapositive-equivalence-no-counterexample",
+        contrapositive.get("data", {}),
+        ["p", "q"],
+    )
+    for assignment in boolean_assignments(variables):
+        left = boolean_implies(assignment["p"], assignment["q"])
+        right = boolean_implies(not assignment["q"], not assignment["p"])
+        if left != right:
+            fail("contrapositive-equivalence-no-counterexample found a counterexample")
+
+    cases = checks["proof-by-cases-no-counterexample"]
+    if cases["expected_result"] != "unsat" or cases.get("proof_status") != "checked":
+        fail("proof-by-cases-no-counterexample must be a checked unsat row")
+    variables = require_boolean_variables(
+        "proof-by-cases-no-counterexample",
+        cases.get("data", {}),
+        ["p", "r"],
+    )
+    for assignment in boolean_assignments(variables):
+        premise_left = boolean_implies(assignment["p"], assignment["r"])
+        premise_right = boolean_implies(not assignment["p"], assignment["r"])
+        if premise_left and premise_right and not assignment["r"]:
+            fail("proof-by-cases-no-counterexample found a counterexample")
+
+    contradiction = checks["contradiction-refutation-unsat"]
+    if contradiction["expected_result"] != "unsat" or contradiction.get("proof_status") != "checked":
+        fail("contradiction-refutation-unsat must be a checked unsat row")
+    variables = require_boolean_variables(
+        "contradiction-refutation-unsat",
+        contradiction.get("data", {}),
+        ["p", "q"],
+    )
+    for assignment in boolean_assignments(variables):
+        if assignment["p"] and boolean_implies(assignment["p"], assignment["q"]) and not assignment["q"]:
+            fail("contradiction-refutation-unsat found a satisfying assignment")
+
+    converse = checks["invalid-converse-counterexample"]
+    if converse["expected_result"] != "sat" or converse.get("proof_status") != "checked":
+        fail("invalid-converse-counterexample must be a checked sat row")
+    values = single_witness_values(converse, witnesses)
+    assignment = require_bool_assignment(
+        "invalid converse assignment",
+        values.get("assignment"),
+        ["p", "q"],
+    )
+    if not boolean_implies(assignment["p"], assignment["q"]):
+        fail("invalid-converse-counterexample requires p -> q to hold")
+    if boolean_implies(assignment["q"], assignment["p"]):
+        fail("invalid-converse-counterexample does not falsify q -> p")
+
+    horizon = checks["general-natural-deduction-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-natural-deduction-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-natural-deduction-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general natural deduction target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general natural deduction future_checker", data.get("future_checker"))
 
 
 def require_predicate_table(context: str, universe: list[str], value: Any) -> dict[str, bool]:
@@ -8560,6 +8648,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_matrix_invariants(expected)
     if metadata["id"] == "proof-methods-refutation-v0":
         validate_proof_methods_refutation(expected)
+    if metadata["id"] == "proof-methods-patterns-v0":
+        validate_proof_methods_patterns(expected)
     if metadata["id"] == "random-matrix-finite-v0":
         validate_random_matrix_finite(expected)
     if metadata["id"] == "modular-arithmetic-v0":

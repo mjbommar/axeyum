@@ -177,7 +177,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 |---|---|---|---|
 | `propositional-logic` | `logic_and_proof` | `logic-basics-v0` | SAT/UNSAT Boolean formulas, truth tables, CNF refutations. |
 | `predicate-logic` | `logic_and_proof`, `set_theory_and_foundations` | `finite-predicate-v0` | Finite-domain quantifier expansion and counterexamples. |
-| `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0` | Negate-and-decide examples; proof by contradiction as UNSAT. |
+| `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Negate-and-decide examples, direct proof, contrapositive, proof by cases, contradiction, and invalid-proof counterexamples. |
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0` | Bounded base/step obligations; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0` | Membership, subset, union/intersection, finite identities. |
 | `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0` | Finite relation properties, injective/surjective checks, equivalence classes, quotient maps, and EUF slices. |
@@ -369,7 +369,10 @@ base-case replay, bounded step-obligation enumeration, bounded conclusion
 checking, a bad-step counterexample witness, and a full-schema Lean-horizon
 row. `logic-basics-v0` now validates SAT witness replay, tautology and
 contradiction truth-table checks, De Morgan equivalence, and a tiny CNF
-refutation by enumeration. `finite-predicate-v0` now validates finite-domain
+refutation by enumeration. `proof-methods-patterns-v0` now validates finite
+direct-proof/modus-ponens replay, contrapositive equivalence, proof by cases,
+contradiction refutation, invalid-converse counterexample evidence, and a
+natural-deduction Lean-horizon row. `finite-predicate-v0` now validates finite-domain
 universal/existential predicate replay, an exhaustive non-empty finite
 `forall -> exists` row, an `exists`-not-`forall` counterexample, binary
 relation asymmetry replay, and a general first-order Lean-horizon row.
@@ -393,9 +396,11 @@ graduation route, not a pack-level proof gap.
 
 Recommended order:
 
-1. `proof-methods-refutation-v0` (landed): negation-as-query, pigeonhole,
-   checked finite CNF refutation; LRAT/DRAT remains the stronger proof-object
-   graduation route.
+1. `proof-methods-refutation-v0` (landed) and
+   `proof-methods-patterns-v0` (landed): negation-as-query, pigeonhole,
+   direct proof, contrapositive, cases, contradiction, invalid converse
+   counterexamples, and checked finite CNF/truth-table refutations; LRAT/DRAT
+   remains the stronger proof-object graduation route.
 2. `finite-sets-v0` (landed), `relations-functions-v0` (landed), and
    `equivalence-classes-v0` (landed): finite set identities, relation
    properties, function properties, equivalence classes, partitions, and
@@ -792,7 +797,7 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10, Phase M3 `finite-sets-v0`,
+Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `relations-functions-v0`, `equivalence-classes-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
@@ -814,6 +819,9 @@ numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics. `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums.
+`proof-methods-patterns-v0` now deepens the proof-methods curriculum row with
+finite direct proof, contrapositive, proof-by-cases, contradiction, invalid
+converse counterexample, and natural-deduction Lean-horizon examples.
 `equivalence-classes-v0` now deepens the relations/functions curriculum row
 with exact finite equivalence classes, quotient-map fibers, partition
 round-trips, a checked non-transitive counterexample, and an explicit
