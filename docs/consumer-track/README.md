@@ -79,6 +79,8 @@ in-flight change). This track:
   apps + first-pass leverage×tractability×moat×demand ranking.
 - (iteration 2) per-candidate SOTA research notes.
 - (iteration 3) `decision.md` — the final 3-5 picks + rationale.
+- [`SCOREBOARD.md`](SCOREBOARD.md) — **aggregate** measured state across all
+  apps (App D): 38 cases, DISAGREE=0, plus the differential-fuzz hardening.
 - [`UPSTREAM-FEEDBACK.md`](UPSTREAM-FEEDBACK.md) — consumer-discovered core /
   solver asks, reconciled against what has landed.
 - [`property/`](property/) — bounded-property SDK plan/status/scoreboard/JSON.
