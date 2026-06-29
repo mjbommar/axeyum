@@ -237,8 +237,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
-For a fuller trace through finite topology, connectedness, and measure replay,
-read [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md).
+For fuller traces through finite function-table actions, topology,
+connectedness, and measure replay, read
+[End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md)
+and [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md).
 
 ## Horizon
 

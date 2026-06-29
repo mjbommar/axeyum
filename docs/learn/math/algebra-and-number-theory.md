@@ -285,6 +285,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
+For a fuller trace from action-table data through orbit/stabilizer replay and
+Burnside counting, read
+[End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
+
 ## Horizon
 
 General group, group-action, ring, field, module, isomorphism-theorem, quotient, and

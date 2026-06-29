@@ -179,6 +179,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite group-action end-to-end lesson landed.** Added
+  [`finite-group-actions-end-to-end.md`](docs/learn/math/finite-group-actions-end-to-end.md)
+  as the learner-facing trace for the finite group-action pack: action-table
+  encoding, identity/compatibility replay, orbit/stabilizer recomputation,
+  Burnside fixed-point counting, bad-action rejection, and the Lean horizon for
+  general group-action theory. The lesson is linked from the math learning
+  index plus the algebra, discrete-reasoning, and finite-structures paths.
+
 - **Finite group-action foundations pack landed.** Added
   [`finite-group-actions-v0`](artifacts/examples/math/finite-group-actions-v0/README.md)
   as the exact finite bridge between groups, functions, and counting. The pack

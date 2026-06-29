@@ -825,8 +825,9 @@ each cluster page links concept rows, validated example packs, current
 checkable slices, proof/numerical horizons, and a concrete encode/check
 walkthrough using validated pack data. The end-to-end lessons now trace graph
 coloring, rational midpoint replay, linear-system/LP replay, finite conditional
-probability, finite topology/measure, and bounded dynamics/operators from data
-row through replay result and proof/evidence status.
+probability, finite group-action/Burnside replay, finite topology/measure, and
+bounded dynamics/operators from data row through replay result and
+proof/evidence status.
 
 Deliverables:
 
