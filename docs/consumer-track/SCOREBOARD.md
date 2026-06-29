@@ -13,8 +13,8 @@ generated corpus test).
 |---|---|---:|---:|---:|---:|---:|---|---|
 | Bounded-property SDK | `axeyum-property` | 16 | 11 | 5 | 0 | **0** | 1/1 required | [property/](property/SCOREBOARD.md) |
 | EVM bug-hunter | `axeyum-evm` | 13 | 9 | 4 | 0 | **0** | (needs core accessor) | [evm/](evm/SCOREBOARD.md) |
-| Rust verifier | `axeyum-verify` | 9 | 6 | 3 | 0 | **0** | 2/3 verified | [verify/](verify/SCOREBOARD.md) |
-| **Total** | — | **38** | **26** | **12** | **0** | **0** | — | — |
+| Rust verifier | `axeyum-verify` | 14 | 7 | 7 | 0 | **0** | 4/7 verified | [verify/](verify/SCOREBOARD.md) |
+| **Total** | — | **43** | **27** | **16** | **0** | **0** | — | — |
 
 ## Soundness hardening (beyond the construction-known corpora)
 
@@ -29,6 +29,11 @@ a real wrong-safe that was fixed:
 - **verify** (`axeyum-verify/tests/differential_fuzz.rs`): random `a op b` (unsigned
   + signed + array index) with a trivially-correct evaluator; a reachable panic is
   never `Verified`. *Found & fixed:* the `iN::MIN / -1` signed division overflow.
+  Also value-checks the widened fragment (C5) against std oracles — `wrapping_*`
+  modular result, `saturating_*` clamp (both signednesses), `min`/`max` selection,
+  `abs` (MIN-overflow edge + value), and the `match`-on-int dispatch desugar
+  (per-branch panic folding): an always-false assertion over each computed value
+  must stay reachable, so a wrong value surfaces as a wrong-safe.
 
 ## Honest scope
 
