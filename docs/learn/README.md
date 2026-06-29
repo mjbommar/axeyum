@@ -28,6 +28,12 @@ flowchart LR
 | 06 | 06-proofs-certificates-and-trust.md *(planned)* | why an answer can be *checked* |
 | 07 | [How Axeyum solves a query](07-how-axeyum-solves-a-query.md) | the full pipeline + trust boundary |
 
+## Math Resource Path
+
+The [math learner path](math/README.md) connects the curriculum and foundational
+example packs. It is organized by concept cluster and keeps a hard boundary
+between finite checkable slices and Lean or numerical horizons.
+
 > Pages marked *(planned)* are stubs in the [documentation plan](../documentation-plan.md);
 > the linked ones are written. See the [glossary](glossary.md) for terms like
 > QF_BV, CNF, DRAT, and Alethe before they're defined inline.

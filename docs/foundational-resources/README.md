@@ -18,6 +18,8 @@ schemas, examples, and validation workflows.
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
+- [../learn/math/README.md](../learn/math/README.md) is the learner-facing
+  math path built from the curriculum, concept atlas, and validated packs.
 - [generated/math-coverage.md](generated/math-coverage.md) is generated
   curriculum-node coverage from the current concept atlas.
 - [generated/math-field-dashboard.md](generated/math-field-dashboard.md) is

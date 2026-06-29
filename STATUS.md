@@ -152,6 +152,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Math learner path scaffold landed.** Added
+  [`docs/learn/math/README.md`](docs/learn/math/README.md) and the nine Phase
+  M5 cluster pages for logic/proof, finite structures, number systems, algebra,
+  rational/real algebra, graph/discrete reasoning, linear algebra/optimization,
+  probability/statistics, and analysis/topology horizons. Each page links
+  concept rows, validated example packs, current Axeyum-checkable slices, and
+  the Lean/numerical horizon. Continue Phase M5 by turning these scaffolds into
+  concrete encode/check walkthroughs.
+
 - **Complex algebraic pack landed.** Added
   [`artifacts/examples/math/complex-algebraic-v0/`](artifacts/examples/math/complex-algebraic-v0/)
   for exact complex arithmetic, conjugate/norm replay, and a fixed
