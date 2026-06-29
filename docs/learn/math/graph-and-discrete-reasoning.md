@@ -13,6 +13,7 @@ Example packs:
 - [counting-v0](../../../artifacts/examples/math/counting-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
 - [graph-reachability-v0](../../../artifacts/examples/math/graph-reachability-v0/)
+- [graph-matching-v0](../../../artifacts/examples/math/graph-matching-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
 ## What Axeyum Checks
@@ -23,12 +24,17 @@ injection from three pigeons into two holes. The graph coloring pack replays a
 coloring witness against every edge, rejects an invalid coloring, and checks a
 tiny `K3` two-colorability refutation by exhaustive finite search. The graph
 reachability pack checks finite BFS distances, deterministic DFS traversal
-order, disconnected no-path claims, and edge-cut separation.
+order, disconnected no-path claims, and edge-cut separation. The graph matching
+pack checks finite matching witnesses, invalid overlapping edges, augmenting
+path flips, and a perfect-matching obstruction.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
 candidate assignment. For traversal, the search can propose a path or trace,
-but the checker recomputes reachability from the raw finite graph.
+but the checker recomputes reachability from the raw finite graph. For
+matching, the search can propose edges or an augmenting path; the checker
+verifies disjoint endpoints and enumerates the small matching space when a
+maximum or obstruction is claimed.
 
 ## Encode / Check Walkthrough
 
@@ -72,12 +78,26 @@ The direct edge makes the BFS distance from `s` to `t` equal to `1`, while the
 deterministic DFS order walks the long tail first. The validator recomputes the
 distance map and the traversal order instead of trusting either list.
 
+For matching, list graph edges and the chosen matching:
+
+```text
+vertices = a, b, c, d
+edges = (a,b), (b,c), (c,d)
+matching = (a,b), (c,d)
+augmenting path from current matching (b,c) = a, b, c, d
+```
+
+The validator checks that matching edges are real graph edges with no shared
+endpoints. For the augmenting path it checks unmatched endpoints, alternating
+matched/unmatched edges, and the exact flip to `(a,b), (c,d)`.
+
 Run the check from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 ```
 
 For a fuller trace from data row to replay result and evidence status, read
@@ -87,8 +107,8 @@ For a fuller trace from data row to replay result and evidence status, read
 
 The current pigeonhole refutation is checked by finite enumeration; deterministic
 CNF plus LRAT/DRAT remains the stronger certificate route. Reachability,
-single-edge cut separation, and traversal traces now have a dedicated finite
-pack. Matching, richer cut certificates, and d-separation still need dedicated
+single-edge cut separation, traversal traces, and matching now have dedicated
+finite packs. Richer cut certificates and d-separation still need dedicated
 schemas. Extremal graph theory, graph minors, asymptotic graph families, and
 runtime-pathology proofs need theorem-proving support beyond the current finite
 examples.

@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph matching foundations pack landed.** Added
+  [`graph-matching-v0`](artifacts/examples/math/graph-matching-v0/README.md)
+  as the next graph-theory resource after reachability. The pack validates
+  finite matching replay, invalid overlapping-edge rejection, an augmenting
+  path flip, and a checked `K3` no-perfect-matching obstruction by exhaustive
+  enumeration. The foundational example-pack validator now checks finite
+  matching disjointness, maximum size by enumeration, augmenting-path
+  alternation, and perfect-matching absence.
+
 - **Graph reachability foundations pack landed.** Added
   [`graph-reachability-v0`](artifacts/examples/math/graph-reachability-v0/README.md)
   as the second graph-theory resource after coloring. The pack validates finite

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "pack_id": "graph-matching-v0",
+  "witnesses": [
+    {
+      "id": "path-p4-perfect-matching",
+      "description": "A size-2 matching covers all four vertices of a path graph.",
+      "values": {
+        "vertices": ["a", "b", "c", "d"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["c", "d"]
+        ],
+        "matching": [
+          ["a", "b"],
+          ["c", "d"]
+        ],
+        "size": 2
+      }
+    },
+    {
+      "id": "overlapping-two-edge-nonmatching",
+      "description": "Two listed edges share vertex b, so they are not a matching.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["a", "c"]
+        ],
+        "matching": [
+          ["a", "b"],
+          ["b", "c"]
+        ]
+      }
+    },
+    {
+      "id": "augmenting-path-flip",
+      "description": "The path a-b-c-d augments the current matching {b-c}.",
+      "values": {
+        "vertices": ["a", "b", "c", "d"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["c", "d"]
+        ],
+        "current_matching": [
+          ["b", "c"]
+        ],
+        "augmenting_path": ["a", "b", "c", "d"],
+        "improved_matching": [
+          ["a", "b"],
+          ["c", "d"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "matching-size-two-witness",
+      "claim": "The listed path graph has a maximum matching of size 2.",
+      "expected_result": "sat",
+      "validation": "finite_matching_replay_and_enumeration",
+      "proof_status": "checked",
+      "witnesses": ["path-p4-perfect-matching"],
+      "notes": "The validator checks edge disjointness, covered vertices, and enumerates all matchings to confirm maximum size."
+    },
+    {
+      "id": "overlapping-matching-rejected",
+      "claim": "The listed two edges form a matching.",
+      "expected_result": "unsat",
+      "validation": "invalid_matching_replay",
+      "proof_status": "checked",
+      "witnesses": ["overlapping-two-edge-nonmatching"],
+      "notes": "The validator confirms both edges are real graph edges but share vertex b."
+    },
+    {
+      "id": "augmenting-path-improves",
+      "claim": "The listed augmenting path flips a size-1 matching into a size-2 matching.",
+      "expected_result": "sat",
+      "validation": "augmenting_path_flip_replay",
+      "proof_status": "checked",
+      "witnesses": ["augmenting-path-flip"],
+      "notes": "The validator checks unmatched endpoints, alternating matched/unmatched edges, and the exact symmetric-difference flip."
+    },
+    {
+      "id": "triangle-no-perfect-matching",
+      "claim": "The triangle K3 has a perfect matching.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_perfect_matching_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["a", "c"]
+        ],
+        "maximum_size": 1
+      },
+      "notes": "The validator enumerates all matchings and confirms no matching covers all three vertices."
+    }
+  ]
+}

@@ -715,6 +715,191 @@ def validate_graph_reachability(expected: dict[str, Any]) -> None:
         fail("edge-cut-separates cut edges do not separate source and target")
 
 
+def require_graph_edge_list(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    graph_edges: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    vertex_set = set(vertices)
+    available_edges = graph_edge_set(graph_edges)
+    parsed_edges: list[tuple[str, str]] = []
+    seen_edges: set[tuple[str, str]] = set()
+    for index, edge in enumerate(value):
+        if not isinstance(edge, list) or len(edge) != 2:
+            fail(f"{context}[{index}] must be a two-element list")
+        left, right = edge
+        require_string(f"{context}[{index}][0]", left)
+        require_string(f"{context}[{index}][1]", right)
+        if left == right:
+            fail(f"{context}[{index}] must not be a self-loop")
+        if left not in vertex_set or right not in vertex_set:
+            fail(f"{context}[{index}] references a missing vertex")
+        normalized = tuple(sorted((left, right)))
+        if normalized not in available_edges:
+            fail(f"{context}[{index}] is not an edge of the graph")
+        if normalized in seen_edges:
+            fail(f"{context} repeats edge {normalized}")
+        seen_edges.add(normalized)
+        parsed_edges.append((left, right))
+    return parsed_edges
+
+
+def is_matching(edge_list: list[tuple[str, str]]) -> bool:
+    used: set[str] = set()
+    for left, right in edge_list:
+        if left in used or right in used:
+            return False
+        used.add(left)
+        used.add(right)
+    return True
+
+
+def covered_vertices(edge_list: list[tuple[str, str]]) -> set[str]:
+    covered: set[str] = set()
+    for left, right in edge_list:
+        covered.add(left)
+        covered.add(right)
+    return covered
+
+
+def enumerate_matchings(edges: list[tuple[str, str]]) -> list[list[tuple[str, str]]]:
+    matchings: list[list[tuple[str, str]]] = []
+
+    def visit(index: int, current: list[tuple[str, str]], used: set[str]) -> None:
+        if index == len(edges):
+            matchings.append(list(current))
+            return
+        visit(index + 1, current, used)
+        left, right = edges[index]
+        if left not in used and right not in used:
+            current.append((left, right))
+            visit(index + 1, current, used | {left, right})
+            current.pop()
+
+    visit(0, [], set())
+    return matchings
+
+
+def maximum_matching_size(edges: list[tuple[str, str]]) -> int:
+    return max(len(matching) for matching in enumerate_matchings(edges))
+
+
+def has_perfect_matching(vertices: list[str], edges: list[tuple[str, str]]) -> bool:
+    vertex_set = set(vertices)
+    return any(covered_vertices(matching) == vertex_set for matching in enumerate_matchings(edges))
+
+
+def normalized_edge_set(edges: list[tuple[str, str]]) -> set[tuple[str, str]]:
+    return {tuple(sorted(edge)) for edge in edges}
+
+
+def validate_augmenting_path(
+    context: str,
+    graph_edges: list[tuple[str, str]],
+    current_matching: list[tuple[str, str]],
+    path: list[str],
+    improved_matching: list[tuple[str, str]],
+) -> None:
+    if not is_matching(current_matching):
+        fail(f"{context} current matching is not a matching")
+    if not is_matching(improved_matching):
+        fail(f"{context} improved matching is not a matching")
+    if len(path) < 2:
+        fail(f"{context} augmenting path must contain at least two vertices")
+    if len(set(path)) != len(path):
+        fail(f"{context} augmenting path must be simple")
+    if not path_is_valid(path, graph_edges):
+        fail(f"{context} augmenting path contains a non-edge")
+
+    current_set = normalized_edge_set(current_matching)
+    path_edges = [
+        tuple(sorted((left, right)))
+        for left, right in zip(path, path[1:])
+    ]
+    if len(path_edges) % 2 == 0:
+        fail(f"{context} augmenting path must have odd edge length")
+    current_covered = covered_vertices(current_matching)
+    if path[0] in current_covered or path[-1] in current_covered:
+        fail(f"{context} augmenting path endpoints must be unmatched")
+    for index, edge in enumerate(path_edges):
+        edge_is_matched = edge in current_set
+        if index % 2 == 0 and edge_is_matched:
+            fail(f"{context} even path edge {index} must be unmatched")
+        if index % 2 == 1 and not edge_is_matched:
+            fail(f"{context} odd path edge {index} must be matched")
+    flipped = current_set ^ set(path_edges)
+    if flipped != normalized_edge_set(improved_matching):
+        fail(f"{context} improved matching is not the path flip")
+    if len(improved_matching) != len(current_matching) + 1:
+        fail(f"{context} improved matching must increase size by one")
+    if not normalized_edge_set(improved_matching).issubset(graph_edge_set(graph_edges)):
+        fail(f"{context} improved matching contains an edge outside the graph")
+
+
+def validate_graph_matching(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    size_two = checks["matching-size-two-witness"]
+    if size_two["expected_result"] != "sat" or size_two.get("proof_status") != "checked":
+        fail("matching-size-two-witness must be a checked sat row")
+    values = single_witness_values(size_two, witnesses)
+    vertices, edges = require_finite_graph("matching-size-two", values)
+    matching = require_graph_edge_list("matching-size-two.matching", values.get("matching"), vertices, edges)
+    if not is_matching(matching):
+        fail("matching-size-two-witness listed edges are not a matching")
+    size = require_int("matching-size-two.size", values.get("size"))
+    if len(matching) != size:
+        fail("matching-size-two-witness size does not match listed matching")
+    if size != maximum_matching_size(edges):
+        fail("matching-size-two-witness is not maximum for the graph")
+    if covered_vertices(matching) != set(vertices):
+        fail("matching-size-two-witness should cover every vertex in the path graph")
+
+    overlapping = checks["overlapping-matching-rejected"]
+    if overlapping["expected_result"] != "unsat" or overlapping.get("proof_status") != "checked":
+        fail("overlapping-matching-rejected must be a checked unsat row")
+    values = single_witness_values(overlapping, witnesses)
+    vertices, edges = require_finite_graph("overlapping matching", values)
+    matching = require_graph_edge_list("overlapping matching.matching", values.get("matching"), vertices, edges)
+    if is_matching(matching):
+        fail("overlapping-matching-rejected unexpectedly is a valid matching")
+
+    augmenting = checks["augmenting-path-improves"]
+    if augmenting["expected_result"] != "sat" or augmenting.get("proof_status") != "checked":
+        fail("augmenting-path-improves must be a checked sat row")
+    values = single_witness_values(augmenting, witnesses)
+    vertices, edges = require_finite_graph("augmenting path", values)
+    current_matching = require_graph_edge_list(
+        "augmenting path.current_matching",
+        values.get("current_matching"),
+        vertices,
+        edges,
+    )
+    improved_matching = require_graph_edge_list(
+        "augmenting path.improved_matching",
+        values.get("improved_matching"),
+        vertices,
+        edges,
+    )
+    path = require_graph_path("augmenting path.path", values.get("augmenting_path"), vertices)
+    validate_augmenting_path("augmenting-path-improves", edges, current_matching, path, improved_matching)
+
+    no_perfect = checks["triangle-no-perfect-matching"]
+    if no_perfect["expected_result"] != "unsat" or no_perfect.get("proof_status") != "checked":
+        fail("triangle-no-perfect-matching must be a checked unsat row")
+    data = no_perfect.get("data", {})
+    vertices, edges = require_finite_graph("triangle no perfect matching", data)
+    maximum_size = require_int("triangle no perfect matching maximum_size", data.get("maximum_size"))
+    if maximum_size != maximum_matching_size(edges):
+        fail("triangle-no-perfect-matching maximum_size does not match enumeration")
+    if has_perfect_matching(vertices, edges):
+        fail("triangle-no-perfect-matching unexpectedly has a perfect matching")
+
+
 def has_mod_inverse(a: int, modulus: int) -> bool:
     return any((a * candidate) % modulus == 1 for candidate in range(modulus))
 
@@ -3682,6 +3867,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_predicate(expected)
     if metadata["id"] == "graph-coloring-v0":
         validate_graph_coloring(expected)
+    if metadata["id"] == "graph-matching-v0":
+        validate_graph_matching(expected)
     if metadata["id"] == "graph-reachability-v0":
         validate_graph_reachability(expected)
     if metadata["id"] == "induction-obligations-v0":

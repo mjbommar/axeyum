@@ -349,6 +349,9 @@ exhaustive two-colorability refutation for `K3`.
 [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/)
 validates finite BFS shortest-distance replay, deterministic DFS traversal
 replay, disconnected no-path refutation, and edge-cut separation replay.
+[`graph-matching-v0`](../../artifacts/examples/math/graph-matching-v0/)
+validates finite matching witnesses, invalid-overlap rejection, augmenting-path
+flip replay, and a perfect-matching obstruction by exhaustive enumeration.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
 validates exact finite probability mass tables, conditional probability, and
 Bayes posterior replay.

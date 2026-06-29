@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "graph-matching-v0",
+  "title": "Finite Graph Matching And Augmenting Paths",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_graph_theory",
+    "field_discrete_math",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting"
+  ],
+  "field_ids": [
+    "graph_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite graphs",
+    "finite-domain enumeration",
+    "Bool"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md"
+  ],
+  "expected_results": [
+    "matching-size-two-witness",
+    "overlapping-matching-rejected",
+    "augmenting-path-improves",
+    "triangle-no-perfect-matching"
+  ],
+  "graduation_criteria": [
+    "Encode matching constraints as deterministic Bool or pseudo-Boolean formulas.",
+    "Add checked certificate routes for maximum matching and minimum vertex cover where the theorem applies.",
+    "Extend the graph resource family with richer cut certificates and d-separation witnesses.",
+    "Move reusable graph helpers out of the validator only after matching, cuts, and d-separation duplicate the same logic."
+  ]
+}
