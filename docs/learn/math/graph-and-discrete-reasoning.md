@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [counting-v0](../../../artifacts/examples/math/counting-v0/)
+- [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-permutation-groups-v0](../../../artifacts/examples/math/finite-permutation-groups-v0/)
 - [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
@@ -25,12 +26,14 @@ Example packs:
 
 The discrete path starts with finite counting and graph coloring. The counting
 pack checks fixed permutation and binomial counts, then exhaustively rejects an
-injection from three pigeons into two holes. The finite-permutation-groups pack
-adds symmetry data: it checks `S3` as bijective function tables, recomputes
-cycle lengths and parity signs, and replays the natural action's orbit and
-stabilizer. The finite-group-actions pack adds finite orbit counting: it checks
-action laws, recomputes orbits and stabilizers, and verifies Burnside's
-fixed-point average for one small action.
+injection from three pigeons into two holes. The generating-functions pack
+checks finite coefficient extraction, Cauchy product convolution, a bounded
+Fibonacci generating-function identity, and a bad convolution coefficient. The
+finite-permutation-groups pack adds symmetry data: it checks `S3` as bijective
+function tables, recomputes cycle lengths and parity signs, and replays the
+natural action's orbit and stabilizer. The finite-group-actions pack adds
+finite orbit counting: it checks action laws, recomputes orbits and
+stabilizers, and verifies Burnside's fixed-point average for one small action.
 The graph coloring pack replays a
 coloring witness against every edge, rejects an invalid coloring, and checks a
 tiny `K3` two-colorability refutation by exhaustive finite search. The graph
@@ -71,7 +74,23 @@ C(6,3) = C(5,2) + C(5,3)
 ```
 
 For pigeonhole, the validator enumerates every placement of three pigeons into
-two holes and confirms every placement has a collision. For orbit counting,
+two holes and confirms every placement has a collision.
+
+For generating functions, encode finite ordinary generating polynomials as
+coefficient lists:
+
+```text
+A(x) = 1 + 2*x + x^2
+B(x) = 1 + x + x^2
+A(x)B(x) = 1 + 3*x + 4*x^2 + 3*x^3 + x^4
+```
+
+The `generating-functions-v0` pack recomputes the Cauchy convolution exactly.
+It also checks a bounded Fibonacci prefix identity for
+`(1 - x - x^2)F(x) = x` through a fixed degree and rejects a product with one
+bad coefficient.
+
+For orbit counting,
 first encode finite permutations as bijections:
 
 ```text
@@ -198,6 +217,7 @@ Run the check from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
@@ -212,6 +232,8 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Triangle Coloring](graph-coloring-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
+For coefficient-level finite recurrence and convolution replay, read
+[End To End: Generating Functions](generating-functions-end-to-end.md).
 
 ## Horizon
 
@@ -220,7 +242,8 @@ CNF plus LRAT/DRAT remains the stronger certificate route. Finite permutation
 cycle/sign data, finite group-action orbit counts, reachability, traversal
 traces, finite traversal-cost counters, matching, d-separation, and cut
 certificates now have dedicated finite packs. General permutation-group theory,
-Burnside/orbit-stabilizer theory, weighted max-flow/min-cut, extremal graph
-theory, graph minors, asymptotic graph families, causal identification,
-average-case search, parallel search, and runtime-pathology proofs need
-theorem-proving support beyond the current finite examples.
+Burnside/orbit-stabilizer theory, closed-form generating-function extraction,
+weighted max-flow/min-cut, extremal graph theory, graph minors, asymptotic
+graph families, causal identification, average-case search, parallel search,
+and runtime-pathology proofs need theorem-proving support beyond the current
+finite examples.

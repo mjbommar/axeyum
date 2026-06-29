@@ -1321,6 +1321,10 @@ horizon.
 row-stochastic transition matrices, finite-horizon distribution replay,
 stationary distributions, checked bad transition-row rejection, and the
 Markov-chain convergence Lean horizon.
+`generating-functions-v0` now has a learner-facing end-to-end lesson for finite
+coefficient extraction, Cauchy product convolution, bounded Fibonacci
+generating-function prefix replay, checked bad Cauchy-product rejection, and
+the general generating-function Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

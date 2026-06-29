@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Generating-functions end-to-end lesson landed.** Added
+  [`generating-functions-end-to-end.md`](docs/learn/math/generating-functions-end-to-end.md)
+  as the learner-facing trace for the generating-functions pack: finite
+  coefficient extraction, Cauchy product convolution, bounded Fibonacci
+  generating-function prefix replay, checked bad Cauchy-product rejection, and
+  the general generating-functions Lean horizon. The lesson is linked from the
+  math learning index plus the algebra/number-theory, graph/discrete,
+  rational/real algebra, and analysis/topology paths.
+
 - **Learner/proof-upgrade dashboard landed.** Extended
   [`gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py) to
   generate
@@ -198,8 +207,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 74 focused learner links, 9 path-only
-  links, 1 missing learner link, and 73 packs with non-checked proof rows.
+  generated queue: 84 non-template packs, 75 focused learner links, 9 path-only
+  links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added
   [`CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md)

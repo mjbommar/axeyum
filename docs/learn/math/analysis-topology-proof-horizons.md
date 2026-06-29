@@ -15,6 +15,7 @@ Example packs:
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/)
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
+- [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
@@ -42,7 +43,8 @@ The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, finite simple-function integrals, bounded sequence tails and prefixes,
 finite product-measure tables, rectangle probabilities, finite Fubini sums,
-bounded rational interval/ball inclusions, finite epsilon-delta continuity
+bounded rational interval/ball inclusions, finite generating-function
+coefficient and recurrence-prefix identities, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
@@ -90,6 +92,19 @@ The `sequence-limit-shadow-v0` validator checks the finite tail only. It also
 checks a finite counterexample to a proposed limit, a monotone bounded prefix,
 a fixed geometric partial-sum identity, and a finite Cauchy-tail
 no-counterexample row.
+
+For a finite generating-function shadow, encode a sequence prefix as a fixed
+coefficient list:
+
+```text
+F = [0, 1, 1, 2, 3, 5, 8]
+(1 - x - x^2)F(x) = x  through degree 6
+```
+
+The `generating-functions-v0` validator checks the bounded coefficient identity
+only. It also replays coefficient extraction, finite Cauchy convolution, and a
+bad convolution coefficient. General recurrence solving, convergence, and
+asymptotics remain Lean-horizon.
 
 For a bounded real-analysis shadow, encode exact rational neighborhoods and a
 linear epsilon-delta sample:
@@ -300,6 +315,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
@@ -326,6 +342,7 @@ real-algebra shadow checks, exact multivariable derivative replay, exact
 rational inner products, bounded dynamics, and finite-dimensional operator
 replay, read
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
+[End To End: Generating Functions](generating-functions-end-to-end.md),
 [End To End: Metric Continuity](metric-continuity-end-to-end.md),
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
@@ -351,6 +368,7 @@ convergence, compactness, connectedness, Lebesgue measure, integration,
 convergence theorems, product-measure construction, Fubini/Tonelli, ODE
 existence and uniqueness, Banach/Hilbert space
 theorems, Hilbert projection/Riesz representation, compact operators,
+closed-form generating-function extraction, asymptotic coefficient estimates,
 countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
 general Chebyshev spaces, homology invariance, exact sequences, homotopy

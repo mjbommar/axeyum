@@ -27,6 +27,7 @@ Example packs:
 - [finite-fields-v0](../../../artifacts/examples/math/finite-fields-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+- [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 - [complex-plane-transforms-v0](../../../artifacts/examples/math/complex-plane-transforms-v0/)
 
@@ -69,7 +70,10 @@ The polynomial pack adds exact coefficient replay, factor-theorem witnesses, and
 fixed false-root rejection. The rational polynomial-factorization pack adds
 factor-list product replay, polynomial long division, Euclidean GCD replay,
 square-free decomposition replay, and a checked irreducible-quadratic rejection.
-The complex pack adds algebraic real-pair arithmetic and a fixed polynomial-root
+The generating-functions pack treats finite ordinary generating functions as
+coefficient polynomials, checking coefficient extraction, Cauchy products,
+bounded recurrence-prefix identities, and a bad convolution coefficient. The
+complex pack adds algebraic real-pair arithmetic and a fixed polynomial-root
 witness. The complex-plane pack adds unit-root cycles, conjugation over
 products, rational Mobius-transform replay, and a checked false unit-square
 claim.

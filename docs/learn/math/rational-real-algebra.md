@@ -15,6 +15,7 @@ Example packs:
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+- [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -30,13 +31,14 @@ shadows of real reasoning. It checks density witnesses, additive inverses,
 fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
 samples, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
-factorization/division/GCD/square-free replay, LP feasibility and infeasibility
-certificates, finite convexity and monotonicity checks, exact rational
-gradients, Jacobian chain-rule replay, Hessian minor checks, midpoints,
-collinearity determinants, squared distances, affine maps, signed areas,
-affine area scaling, and barycentric point-inside checks. The matrix-invariants
-pack adds a fixed characteristic polynomial, root evaluation, Cayley-Hamilton
-replay, and exact eigenvalue interval checks.
+factorization/division/GCD/square-free replay, finite generating-function
+coefficient extraction and Cauchy-product replay, LP feasibility and
+infeasibility certificates, finite convexity and monotonicity checks, exact
+rational gradients, Jacobian chain-rule replay, Hessian minor checks,
+midpoints, collinearity determinants, squared distances, affine maps, signed
+areas, affine area scaling, and barycentric point-inside checks. The
+matrix-invariants pack adds a fixed characteristic polynomial, root evaluation,
+Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
@@ -105,8 +107,20 @@ gcd(x^3 - x, x^2 - 1) = x^2 - 1
 ```
 
 It also rejects rational linear factors for `x^2 + 1` by recomputing the
-negative discriminant. For a matrix-invariant check, encode a fixed matrix and
-its characteristic polynomial:
+negative discriminant. For a finite generating-function check, encode
+coefficient lists and replay convolution:
+
+```text
+(1 + 2*x + x^2)(1 + x + x^2)
+  = 1 + 3*x + 4*x^2 + 3*x^3 + x^4
+```
+
+The `generating-functions-v0` validator recomputes every coefficient exactly
+and separately checks a bounded Fibonacci prefix identity for
+`(1 - x - x^2)F(x) = x`.
+
+For a matrix-invariant check, encode a fixed matrix and its characteristic
+polynomial:
 
 ```text
 A = [[2, 1],
@@ -153,6 +167,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
@@ -171,6 +186,8 @@ polynomial replay, read
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md). For
 factorization, division, and GCD replay, read
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
+For finite coefficient extraction and convolution replay, read
+[End To End: Generating Functions](generating-functions-end-to-end.md).
 For matrix characteristic-polynomial replay, read
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md). For exact
 finite eigenpair and spectral-decomposition replay, read
@@ -186,4 +203,5 @@ finite coordinate, affine, and oriented geometry replay, read
 
 Completeness, arbitrary limits, continuity, compactness, integration, and
 general real-analysis theorems remain Lean-horizon. Nonlinear real arithmetic
-and SOS/RCF certificates are future proof-route work, not assumed coverage.
+closed-form generating-function extraction, asymptotics, and SOS/RCF
+certificates are future proof-route work, not assumed coverage.
