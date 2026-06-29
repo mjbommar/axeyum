@@ -124,6 +124,17 @@ The trusted checker recomputes:
 Since `1` is not at most `1/2`, the false residual-bound claim is checked
 `unsat`.
 
+The resource regression checks the final residual-bound contradiction as
+`QF_LRA`:
+
+```text
+residual_inf_norm = 1
+residual_inf_norm <= 1/2
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Name The Horizon
 
 The pack does not claim broad numerical analysis:
@@ -161,10 +172,11 @@ This lesson shows Axeyum's current numerical-linear-algebra resource pattern:
 
 ```text
 untrusted fast search -> residual, box, iterate, or bad-bound candidate
-trusted small checking -> exact rational matrix, norm, and interval replay
+trusted small checking -> exact rational matrix, norm, interval replay, and Farkas certificates for linear refutations
 remaining horizon -> floating-point, stability, conditioning, and convergence
 ```
 
 The graduation route is deterministic exact-rational checking plus emitted
 proof objects for bad bounds before floating-point or algorithmic convergence
-claims are promoted.
+claims are promoted. The bad residual-bound row now exercises that
+QF_LRA/Farkas route.

@@ -92,9 +92,12 @@
         "candidate": ["1", "1"],
         "rhs": ["6", "6"],
         "claimed_bound": "1/2",
-        "actual_residual_inf_norm": "1"
+        "actual_residual_inf_norm": "1",
+        "farkas_bound_claim": "residual_inf_norm <= claimed_bound",
+        "smt2_artifact": "artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-residual-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_residual_bound_emits_checked_farkas"
       },
-      "notes": "The validator recomputes the exact residual norm as 1, so the claimed 1/2 bound is rejected."
+      "notes": "The validator recomputes the exact residual norm as 1, so the claimed 1/2 bound is rejected; the Axeyum regression refutes residual_inf_norm = 1 together with residual_inf_norm <= 1/2 using rechecked Farkas evidence."
     }
   ]
 }

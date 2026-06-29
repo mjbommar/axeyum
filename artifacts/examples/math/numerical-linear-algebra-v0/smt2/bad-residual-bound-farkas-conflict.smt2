@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const residual_inf_norm Real)
+(assert (= residual_inf_norm 1))
+(assert (<= residual_inf_norm (/ 1 2)))
+(check-sat)

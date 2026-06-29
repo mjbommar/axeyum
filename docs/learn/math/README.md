@@ -151,7 +151,8 @@ validated pack data and the repo-root command that replays it.
   matrices, rank probabilities, and checked bad trace-square rejection.
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md): follows
   exact residual infinity norms, rational solution boxes, one-step Jacobi
-  contraction replay, bad residual-bound rejection, and the numerical horizon.
+  contraction replay, QF_LRA/Farkas bad residual-bound rejection, and the
+  numerical horizon.
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md):
   follows exact mean/variance replay, contingency-table margins, Simpson's
   paradox counts, a QF_LIA/Diophantine bad total-count certificate,

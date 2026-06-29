@@ -37,7 +37,8 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "residual-norm-bound-witness",
@@ -48,7 +49,7 @@
   "graduation_criteria": [
     "Encode residual bounds, solution boxes, and fixed-point iteration steps as deterministic QF_LRA obligations.",
     "Replay every SAT witness through exact rational matrix and norm evaluation.",
-    "Replace checked bad-bound rows with emitted Farkas-style or interval certificates where possible.",
+    "Route false residual-bound rows through checked QF_LRA/Farkas certificates once residual norms are replayed exactly.",
     "Keep floating-point rounding, backward-error theorems, and broad convergence claims out of scope until the numerical-honesty schema exists."
   ]
 }

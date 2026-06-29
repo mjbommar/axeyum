@@ -741,7 +741,7 @@ replay, checked rejection of a false unit-square real-part claim, and a
 complex-analysis Lean-horizon row.
 `artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
 residual bounds, rational solution boxes, Jacobi one-step contraction replay,
-and checked rejection of a false residual bound.
+and checked QF_LRA/Farkas rejection of a false residual bound.
 `artifacts/examples/math/spectral-linear-algebra-v0/` now validates exact
 finite eigenpair replay, orthogonal eigenbasis checks, Rayleigh quotients,
 spectral decomposition replay, and checked rejection of a false eigenpair.
@@ -1095,8 +1095,9 @@ packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
 route for its pigeonhole refutation. Phase M7 now has
 generated pack-level proof-gap rows and a normal foundational-resource check
 hook. `numerical-linear-algebra-v0` now adds the first exact residual/error-bound
-numerical-analysis slice, and `random-matrix-finite-v0` adds the first exact
-finite random-matrix bridge across linear algebra, probability, statistics, and
+numerical-analysis slice with a checked QF_LRA/Farkas bad-bound certificate,
+and `random-matrix-finite-v0` adds the first exact finite random-matrix bridge
+across linear algebra, probability, statistics, and
 numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics, with a checked QF_LRA/Farkas bad stochastic-row regression.
@@ -1264,8 +1265,8 @@ matrices, rank probabilities, checked bad trace-square rejection, and the
 asymptotic random-matrix/numerical horizon.
 `numerical-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact residual infinity-norm replay, rational solution-box checking, one-step
-Jacobi contraction replay, checked bad residual-bound rejection, and the
-floating-point/stability/convergence horizon.
+Jacobi contraction replay, checked QF_LRA/Farkas bad residual-bound rejection,
+and the floating-point/stability/convergence horizon.
 `descriptive-statistics-v0` and `least-squares-regression-v0` now have a
 learner-facing end-to-end lesson for exact mean/variance replay, contingency
 table margins, Simpson's paradox counts, least-squares normal equations,
@@ -1441,6 +1442,8 @@ average contradiction.
 same checked Farkas evidence path after exact derivative replay.
 `orientation-area-geometry-v0` now routes its bad fixed-orientation row through
 the same checked Farkas evidence path after exact signed-area replay.
+`numerical-linear-algebra-v0` now routes its bad residual-bound row through the
+same checked Farkas evidence path after exact residual-norm replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

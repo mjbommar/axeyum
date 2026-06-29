@@ -32,6 +32,16 @@ b = [6, 6]
 
 the residual is `[-1, -1]`, so `||r||_inf = 1`.
 
+The checked bad-bound row uses the same replayed residual norm:
+
+```text
+residual_inf_norm = 1
+residual_inf_norm <= 1/2
+```
+
+The pack keeps this false residual-bound claim on the checked `UnsatFarkas`
+route.
+
 ## Solution Box
 
 For the same system, the exact solution is `[6/5, 6/5]`. The validator checks

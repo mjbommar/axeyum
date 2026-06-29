@@ -8703,6 +8703,18 @@ def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-residual-bound-rejected actual norm is incorrect")
     if actual_norm <= claimed_bound:
         fail("bad-residual-bound-rejected claimed bound unexpectedly holds")
+    farkas_bound_claim = data.get("farkas_bound_claim")
+    require_string("bad residual farkas_bound_claim", farkas_bound_claim)
+    if farkas_bound_claim != "residual_inf_norm <= claimed_bound":
+        fail("bad-residual-bound-rejected must document the Farkas bound claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad residual smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-residual-bound-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad residual farkas_regression", regression)
+    if "numerical_linear_algebra_bad_residual_bound_emits_checked_farkas" not in regression:
+        fail("bad-residual-bound-rejected must link the Farkas regression")
 
 
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:

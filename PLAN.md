@@ -108,8 +108,9 @@ linear-delta row, with finite conditional expectation now promoted for the bad
 high-block table and finite Euler method now promoted for the bad fixed-step
 transition, and finite probability now promoted for a bad Bayes-posterior
 conflict, with orientation/area geometry now promoted for its bad fixed
-orientation claim. Prefer the next secondary equality-heavy pack that can carry
-a small checked certificate and a resource-backed regression.
+orientation claim and numerical linear algebra now promoted for its bad
+residual-bound row. Prefer the next secondary equality-heavy pack that can
+carry a small checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

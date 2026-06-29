@@ -408,6 +408,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `signed_double_area > 0`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Numerical-linear-algebra QF_LRA/Farkas regression landed.**
+  [`numerical-linear-algebra-v0`](artifacts/examples/math/numerical-linear-algebra-v0/)
+  now binds its bad residual-bound row to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `residual_inf_norm = 1` and the false claim
+  `residual_inf_norm <= 1/2`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

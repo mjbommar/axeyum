@@ -372,3 +372,18 @@ fn orientation_area_bad_orientation_emits_checked_farkas() {
         &[area_is_negative_one, false_ccw_claim],
     );
 }
+
+#[test]
+fn numerical_linear_algebra_bad_residual_bound_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let residual_inf_norm = real(&mut arena, "residual_inf_norm");
+    let norm_is_one = eq_ratio(&mut arena, residual_inf_norm, 1, 1);
+    let claimed_bound = arena.real_ratio(1, 2);
+    let false_bound = arena.real_le(residual_inf_norm, claimed_bound).unwrap();
+
+    assert_farkas_checked(
+        "numerical-linear-algebra-v0 bad-residual-bound-rejected",
+        &arena,
+        &[norm_is_one, false_bound],
+    );
+}

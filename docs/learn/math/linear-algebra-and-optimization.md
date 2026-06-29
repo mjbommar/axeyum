@@ -54,7 +54,8 @@ tables, and checked non-submodule rejection. The finite-tensor-product slice
 adds bilinear maps, finite universal-factorization shadows, Kronecker products,
 and bad-bilinear-map rejection over `F2`. The numerical-linear-algebra slice
 adds exact residual bounds, rational interval boxes for solutions, and a
-one-step Jacobi contraction check. The finite random-matrix slice adds exact
+one-step Jacobi contraction check, with a checked QF_LRA/Farkas bad-bound
+certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, and rank distributions. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and

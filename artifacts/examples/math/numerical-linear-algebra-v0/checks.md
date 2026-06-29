@@ -27,5 +27,8 @@ contraction inequality.
 Expected result: `unsat`.
 
 The same candidate vector has exact residual infinity norm `1`, so the claimed
-bound `1/2` is false. This is a checked arithmetic rejection, not an emitted
-proof object yet.
+bound `1/2` is false.
+
+The resource-backed Axeyum regression checks the final residual-bound
+contradiction as `QF_LRA`: `residual_inf_norm = 1` and
+`residual_inf_norm <= 1/2`, requiring rechecked `UnsatFarkas` evidence.
