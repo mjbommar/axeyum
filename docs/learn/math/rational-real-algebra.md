@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
+- [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
 
@@ -18,8 +19,9 @@ Example packs:
 
 The real-algebra path is currently exact rational arithmetic plus algebraic
 shadows of real reasoning. It checks density witnesses, additive inverses,
-fixed order facts, LP feasibility and infeasibility certificates, midpoints,
-collinearity determinants, and squared distances.
+fixed order facts, fixed-degree polynomial identities and roots, LP feasibility
+and infeasibility certificates, midpoints, collinearity determinants, and
+squared distances.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
@@ -35,7 +37,17 @@ midpoint = 1/2
 ```
 
 The validator checks both the ordering and the exact arithmetic identity. For a
-coordinate-geometry check, encode two endpoints and the proposed midpoint:
+polynomial check, encode a coefficient list:
+
+```text
+p = [6, -5, 1]  means  6 - 5*x + x^2
+root = 2
+quotient = [-3, 1]
+```
+
+The checker evaluates `p(2)` exactly and verifies
+`p = (x - 2)(x - 3)`. For a coordinate-geometry check, encode two endpoints and
+the proposed midpoint:
 
 ```text
 A = (0, 0)
@@ -51,6 +63,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 ```

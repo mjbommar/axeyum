@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "pack_id": "polynomial-identities-v0",
+  "witnesses": [
+    {
+      "id": "binomial-square",
+      "description": "Coefficient-level expansion of (x + 1)^2.",
+      "values": {
+        "factor": ["1", "1"],
+        "expanded": ["1", "2", "1"]
+      }
+    },
+    {
+      "id": "quadratic-factor-root",
+      "description": "A root and quotient witness for x^2 - 5x + 6 at x = 2.",
+      "values": {
+        "polynomial": ["6", "-5", "1"],
+        "root": "2",
+        "factor": ["-2", "1"],
+        "quotient": ["-3", "1"]
+      }
+    },
+    {
+      "id": "bad-rational-root",
+      "description": "A fixed false root claim for x^2 + 1 over the rationals.",
+      "values": {
+        "polynomial": ["1", "0", "1"],
+        "candidate_root": "1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "binomial-square-identity",
+      "claim": "The square of x + 1 has coefficients [1, 2, 1].",
+      "expected_result": "sat",
+      "validation": "exact_polynomial_identity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["binomial-square"],
+      "notes": "The validator multiplies the factor by itself and compares exact normalized coefficients."
+    },
+    {
+      "id": "factor-theorem-root-witness",
+      "claim": "The polynomial x^2 - 5x + 6 has root 2 and factorization (x - 2)(x - 3).",
+      "expected_result": "sat",
+      "validation": "exact_polynomial_factor_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-factor-root"],
+      "notes": "The validator evaluates p(2) exactly and checks factor * quotient equals p."
+    },
+    {
+      "id": "false-rational-root-rejected",
+      "claim": "The rational number 1 is a root of x^2 + 1.",
+      "expected_result": "unsat",
+      "validation": "exact_polynomial_evaluation_replay",
+      "proof_status": "checked",
+      "witnesses": ["bad-rational-root"],
+      "notes": "The validator evaluates 1^2 + 1 exactly and confirms it is not zero."
+    }
+  ]
+}

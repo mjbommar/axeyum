@@ -664,6 +664,71 @@ def require_fraction_vector(context: str, value: Any) -> list[Fraction]:
     return [require_fraction(f"{context}[{index}]", item) for index, item in enumerate(value)]
 
 
+def normalize_polynomial(polynomial: list[Fraction]) -> list[Fraction]:
+    normalized = list(polynomial)
+    while len(normalized) > 1 and normalized[-1] == 0:
+        normalized.pop()
+    return normalized
+
+
+def require_polynomial(context: str, value: Any) -> list[Fraction]:
+    return normalize_polynomial(require_fraction_vector(context, value))
+
+
+def polynomial_mul(left: list[Fraction], right: list[Fraction]) -> list[Fraction]:
+    result = [Fraction(0) for _ in range(len(left) + len(right) - 1)]
+    for left_index, left_coeff in enumerate(left):
+        for right_index, right_coeff in enumerate(right):
+            result[left_index + right_index] += left_coeff * right_coeff
+    return normalize_polynomial(result)
+
+
+def polynomial_eval(polynomial: list[Fraction], point: Fraction) -> Fraction:
+    value = Fraction(0)
+    for coefficient in reversed(polynomial):
+        value = value * point + coefficient
+    return value
+
+
+def validate_polynomial_identities(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    binomial = checks["binomial-square-identity"]
+    if binomial["expected_result"] != "sat":
+        fail("binomial-square-identity must expect sat")
+    values = single_witness_values(binomial, witnesses)
+    factor = require_polynomial("binomial factor", values.get("factor"))
+    expanded = require_polynomial("binomial expanded", values.get("expanded"))
+    if polynomial_mul(factor, factor) != expanded:
+        fail("binomial-square-identity expansion does not match factor * factor")
+
+    factor_theorem = checks["factor-theorem-root-witness"]
+    if factor_theorem["expected_result"] != "sat":
+        fail("factor-theorem-root-witness must expect sat")
+    values = single_witness_values(factor_theorem, witnesses)
+    polynomial = require_polynomial("factor theorem polynomial", values.get("polynomial"))
+    root = require_fraction("factor theorem root", values.get("root"))
+    factor = require_polynomial("factor theorem factor", values.get("factor"))
+    quotient = require_polynomial("factor theorem quotient", values.get("quotient"))
+    if polynomial_eval(polynomial, root) != 0:
+        fail("factor-theorem-root-witness root does not evaluate to zero")
+    expected_linear_factor = normalize_polynomial([-root, Fraction(1)])
+    if factor != expected_linear_factor:
+        fail("factor-theorem-root-witness factor must be x - root")
+    if polynomial_mul(factor, quotient) != polynomial:
+        fail("factor-theorem-root-witness factor * quotient does not reconstruct polynomial")
+
+    false_root = checks["false-rational-root-rejected"]
+    if false_root["expected_result"] != "unsat":
+        fail("false-rational-root-rejected must expect unsat")
+    values = single_witness_values(false_root, witnesses)
+    polynomial = require_polynomial("false root polynomial", values.get("polynomial"))
+    candidate = require_fraction("false root candidate", values.get("candidate_root"))
+    if polynomial_eval(polynomial, candidate) == 0:
+        fail("false-rational-root-rejected candidate unexpectedly is a root")
+
+
 def require_fraction_matrix(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty matrix")
@@ -1813,6 +1878,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
+    if metadata["id"] == "polynomial-identities-v0":
+        validate_polynomial_identities(expected)
     if metadata["id"] == "rationals-lra-v0":
         validate_rationals_lra(expected)
     if metadata["id"] == "relations-functions-v0":

@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Polynomial identities core curriculum pack landed.** Added
+  [`polynomial-identities-v0`](artifacts/examples/math/polynomial-identities-v0/README.md)
+  with exact coefficient replay for `(x + 1)^2`, a factor-theorem witness for
+  `x^2 - 5x + 6` at `2`, and a checked false-root rejection for `x^2 + 1` over
+  the rationals. The foundational example-pack validator now checks exact
+  polynomial coefficient normalization, multiplication, and evaluation;
+  generated dashboards mark `polynomial-identities-v0` as validated. Continue
+  Phase M3 with `counting-v0`, or close the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap.
+
 - **Finite fields core curriculum pack landed.** Added
   [`finite-fields-v0`](artifacts/examples/math/finite-fields-v0/README.md)
   with `F_7` inverse-table replay, exhaustive `F_5` distributivity
