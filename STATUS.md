@@ -123,9 +123,27 @@ covering single-tx/multi-tx/totality over arith/mem/storage/env/call; the verify
 fuzz hardens the arithmetic fragment. Filed **U8** (axeyum-solver fails to build
 for `wasm32` — blocks the A3 client-side moat).
 
-**Next.** A3/C5/C6 are install/toolchain/U8-gated. Buildable threads: extend the
-fuzzes (signed arith, verify array/index fragment), an EVM Lean-cert column
-(needs a small core accessor — deferred), and corpus breadth. Forward backlog in
+**C5 fragment-widening + EVM opcode-precision (this session, all DONE, gated).**
+Two parallel capability pushes, every increment soundness-fuzzed against a std/
+concrete oracle (DISAGREE=0), clippy-gated, pushed:
+- **`#[verify]` fragment** now covers the common real-Rust integer idioms:
+  `match`-on-int (desugar to `if`/`else`), `wrapping_{add,sub,mul}`,
+  `saturating_{add,sub,mul}` (signed+unsigned clamp), `min`/`max`, `abs` (with its
+  `iN::MIN` overflow panic), `checked_{add,sub,mul}.unwrap()/.expect()`,
+  `.unwrap_or(d)` and `match … { Some(v) => .., None => .. }` (via a new boolean
+  `Expr::Overflows` node). Also fixed a latent literal-coercion gap in bare
+  `name = <lit>` assignment. Verify corpus 9→14 (4/7 Lean-cert). Method gaps that
+  need core IR (popcount/clz/ctz, symbolic-amount rotate) filed as **U9**.
+- **`axeyum-evm`** turned three `Unknown`-forcing opcodes into precise models
+  (concrete-operand fast path, symbolic→sound `Unknown`), each added to the
+  differential-fuzz pool: **BYTE** (0x1a), **SIGNEXTEND** (0x0b), **EXP** (0x0a,
+  constant-fold via `Word::pow`). EVM corpus 13→16. Aggregate track: 46 cases,
+  DISAGREE=0.
+
+**Next.** A3/C6 stay U8/install-gated. Buildable threads: symbolic-index
+BYTE/SIGNEXTEND via a bounded `ite`; first-class `Option` value flow in verify;
+CALL return-data modeling; an EVM Lean-cert column (needs a small core accessor).
+Forward backlog in
 [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
