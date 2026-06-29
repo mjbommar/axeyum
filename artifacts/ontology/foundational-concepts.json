@@ -386,6 +386,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/equivalence-classes-v0",
           "notes": "Finite equivalence classes, quotient-map fibers, partition round trips, and explicit QF_UF/Alethe proof gaps."
+        },
+        {
+          "id": "function-composition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/function-composition-v0",
+          "notes": "Finite function composition, image/preimage, inverse tables, associativity, and function-law Lean horizon."
         }
       ],
       "proof_routes": [

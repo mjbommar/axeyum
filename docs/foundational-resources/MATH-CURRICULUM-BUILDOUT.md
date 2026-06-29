@@ -180,7 +180,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Negate-and-decide examples, direct proof, contrapositive, proof by cases, contradiction, and invalid-proof counterexamples. |
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0`, `induction-patterns-v0` | Bounded base/step obligations, weak/strong induction prefixes, loop invariants, bad-step counterexamples; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0` | Membership, subset, union/intersection, finite identities. |
-| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0` | Finite relation properties, injective/surjective checks, equivalence classes, quotient maps, and EUF slices. |
+| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0` | Finite relation properties, injective/surjective checks, function composition, image/preimage, inverse tables, equivalence classes, quotient maps, and EUF slices. |
 | `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
@@ -342,7 +342,11 @@ dependency with finite relation properties, bijective function-table replay, and
 a checked rejection of a multi-valued graph. `equivalence-classes-v0` now
 deepens that node with finite equivalence classes, quotient-map fibers,
 partition-to-relation round trips, checked rejection of a non-transitive
-relation, and an explicit QF_UF/Alethe proof-gap row. `finite-fields-v0` now
+relation, and an explicit QF_UF/Alethe proof-gap row.
+`function-composition-v0` now validates finite composition tables,
+image/preimage replay, inverse tables for bijections, composition
+associativity, non-injective inverse counterexamples, and a general
+function-law Lean-horizon row. `finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
 prime field, and a checked composite-modulus non-field contrast.
 `polynomial-identities-v0`
@@ -414,10 +418,11 @@ Recommended order:
    direct proof, contrapositive, cases, contradiction, invalid converse
    counterexamples, and checked finite CNF/truth-table refutations; LRAT/DRAT
    remains the stronger proof-object graduation route.
-2. `finite-sets-v0` (landed), `relations-functions-v0` (landed), and
-   `equivalence-classes-v0` (landed): finite set identities, relation
-   properties, function properties, equivalence classes, partitions, and
-   quotient maps.
+2. `finite-sets-v0` (landed), `relations-functions-v0` (landed),
+   `equivalence-classes-v0` (landed), and `function-composition-v0` (landed):
+   finite set identities, relation properties, function properties,
+   composition, image/preimage, inverse tables, equivalence classes,
+   partitions, and quotient maps.
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
@@ -816,8 +821,8 @@ Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
 Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
-`relations-functions-v0`, `equivalence-classes-v0`, `finite-fields-v0`,
-`polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
+`relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`,
+`finite-fields-v0`, `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `cardinality-principles-v0`,
 `induction-obligations-v0`, `induction-patterns-v0`, `logic-basics-v0`, and
@@ -857,6 +862,10 @@ fundamental-theorem Lean-horizon examples.
 with exact finite equivalence classes, quotient-map fibers, partition
 round-trips, a checked non-transitive counterexample, and an explicit
 QF_UF/Alethe proof-object gap.
+`function-composition-v0` now deepens the relations/functions curriculum row
+with finite composition, image/preimage, inverse-table, associativity,
+non-injective inverse counterexample, and general function-law Lean-horizon
+examples.
 `convexity-rational-v0` now adds the first exact finite convexity bridge for
 optimization learners: midpoint Jensen replay, finite second differences,
 affine threshold monotonicity, and bad midpoint-convexity rejection.

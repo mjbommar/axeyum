@@ -414,6 +414,197 @@ def validate_relations_functions(expected: dict[str, Any]) -> None:
         fail("non-function-rejected graph unexpectedly is a function")
 
 
+def require_total_mapping(
+    context: str,
+    domain: list[str],
+    codomain: list[str],
+    pairs: set[tuple[str, str]],
+) -> dict[str, str]:
+    if not is_total_function(domain, pairs):
+        fail(f"{context} graph is not total")
+    if not is_single_valued(domain, pairs):
+        fail(f"{context} graph is not single-valued")
+    mapping = function_mapping(domain, pairs)
+    extra_outputs = sorted(set(mapping.values()) - set(codomain))
+    if extra_outputs:
+        fail(f"{context} maps outside codomain: {extra_outputs}")
+    return mapping
+
+
+def graph_from_mapping(domain: list[str], mapping: dict[str, str]) -> set[tuple[str, str]]:
+    return {(item, mapping[item]) for item in domain}
+
+
+def compose_mapping(
+    context: str,
+    domain: list[str],
+    left: dict[str, str],
+    right: dict[str, str],
+) -> dict[str, str]:
+    composed: dict[str, str] = {}
+    for item in domain:
+        middle = left[item]
+        if middle not in right:
+            fail(f"{context} composition is undefined at {item!r} through {middle!r}")
+        composed[item] = right[middle]
+    return composed
+
+
+def require_subset_labels(context: str, value: Any, universe: list[str]) -> set[str]:
+    items = require_string_list(context, value, nonempty=False)
+    universe_set = set(universe)
+    extra = sorted(set(items) - universe_set)
+    if extra:
+        fail(f"{context} contains labels outside the universe: {extra}")
+    return set(items)
+
+
+def is_bijection_mapping(mapping: dict[str, str], codomain: list[str]) -> bool:
+    return len(set(mapping.values())) == len(mapping) and set(mapping.values()) == set(codomain)
+
+
+def inverse_mapping(mapping: dict[str, str]) -> dict[str, str]:
+    inverse: dict[str, str] = {}
+    for left, right in mapping.items():
+        if right in inverse:
+            fail("cannot invert a non-injective mapping")
+        inverse[right] = left
+    return inverse
+
+
+def identity_graph(elements: list[str]) -> set[tuple[str, str]]:
+    return {(item, item) for item in elements}
+
+
+def validate_function_composition(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    composition = checks["composition-table-replay"]
+    if composition["expected_result"] != "sat" or composition.get("proof_status") != "checked":
+        fail("composition-table-replay must be a checked sat row")
+    values = single_witness_values(composition, witnesses)
+    domain = require_string_list("composition domain", values.get("domain"))
+    middle = require_string_list("composition middle", values.get("middle"))
+    codomain = require_string_list("composition codomain", values.get("codomain"))
+    f_pairs = require_pair_set("composition f_pairs", values.get("f_pairs"), set(domain), set(middle))
+    g_pairs = require_pair_set("composition g_pairs", values.get("g_pairs"), set(middle), set(codomain))
+    composite_pairs = require_pair_set("composition composite_pairs", values.get("composite_pairs"), set(domain), set(codomain))
+    f_map = require_total_mapping("composition f", domain, middle, f_pairs)
+    g_map = require_total_mapping("composition g", middle, codomain, g_pairs)
+    composite = compose_mapping("composition", domain, f_map, g_map)
+    if composite_pairs != graph_from_mapping(domain, composite):
+        fail("composition-table-replay composite table is wrong")
+
+    image = checks["image-preimage-replay"]
+    if image["expected_result"] != "sat" or image.get("proof_status") != "checked":
+        fail("image-preimage-replay must be a checked sat row")
+    values = single_witness_values(image, witnesses)
+    domain = require_string_list("image domain", values.get("domain"))
+    codomain = require_string_list("image codomain", values.get("codomain"))
+    pairs = require_pair_set("image pairs", values.get("pairs"), set(domain), set(codomain))
+    mapping = require_total_mapping("image function", domain, codomain, pairs)
+    subset_domain = require_subset_labels("image subset_domain", values.get("subset_domain"), domain)
+    listed_image = require_subset_labels("image image", values.get("image"), codomain)
+    subset_codomain = require_subset_labels("image subset_codomain", values.get("subset_codomain"), codomain)
+    listed_preimage = require_subset_labels("image preimage", values.get("preimage"), domain)
+    actual_image = {mapping[item] for item in subset_domain}
+    actual_preimage = {item for item in domain if mapping[item] in subset_codomain}
+    if listed_image != actual_image:
+        fail("image-preimage-replay listed image is wrong")
+    if listed_preimage != actual_preimage:
+        fail("image-preimage-replay listed preimage is wrong")
+
+    inverse = checks["bijection-inverse-table"]
+    if inverse["expected_result"] != "sat" or inverse.get("proof_status") != "checked":
+        fail("bijection-inverse-table must be a checked sat row")
+    values = single_witness_values(inverse, witnesses)
+    domain = require_string_list("inverse domain", values.get("domain"))
+    codomain = require_string_list("inverse codomain", values.get("codomain"))
+    pairs = require_pair_set("inverse pairs", values.get("pairs"), set(domain), set(codomain))
+    inverse_pairs = require_pair_set("inverse inverse_pairs", values.get("inverse_pairs"), set(codomain), set(domain))
+    left_identity = require_pair_set("inverse left_identity", values.get("left_identity"), set(domain), set(domain))
+    right_identity = require_pair_set("inverse right_identity", values.get("right_identity"), set(codomain), set(codomain))
+    mapping = require_total_mapping("inverse function", domain, codomain, pairs)
+    if not is_bijection_mapping(mapping, codomain):
+        fail("bijection-inverse-table function is not bijective")
+    actual_inverse = inverse_mapping(mapping)
+    if inverse_pairs != graph_from_mapping(codomain, actual_inverse):
+        fail("bijection-inverse-table inverse table is wrong")
+    if left_identity != identity_graph(domain):
+        fail("bijection-inverse-table left identity table is wrong")
+    if right_identity != identity_graph(codomain):
+        fail("bijection-inverse-table right identity table is wrong")
+    inverse_then_function = compose_mapping("inverse left identity", domain, mapping, actual_inverse)
+    function_then_inverse = compose_mapping("inverse right identity", codomain, actual_inverse, mapping)
+    if graph_from_mapping(domain, inverse_then_function) != left_identity:
+        fail("bijection-inverse-table inverse-after-function is not identity")
+    if graph_from_mapping(codomain, function_then_inverse) != right_identity:
+        fail("bijection-inverse-table function-after-inverse is not identity")
+
+    assoc = checks["composition-associativity-table"]
+    if assoc["expected_result"] != "sat" or assoc.get("proof_status") != "checked":
+        fail("composition-associativity-table must be a checked sat row")
+    values = single_witness_values(assoc, witnesses)
+    set_a = require_string_list("associativity A", values.get("A"))
+    set_b = require_string_list("associativity B", values.get("B"))
+    set_c = require_string_list("associativity C", values.get("C"))
+    set_d = require_string_list("associativity D", values.get("D"))
+    f_pairs = require_pair_set("associativity f_pairs", values.get("f_pairs"), set(set_a), set(set_b))
+    g_pairs = require_pair_set("associativity g_pairs", values.get("g_pairs"), set(set_b), set(set_c))
+    h_pairs = require_pair_set("associativity h_pairs", values.get("h_pairs"), set(set_c), set(set_d))
+    g_after_f_pairs = require_pair_set("associativity g_after_f", values.get("g_after_f"), set(set_a), set(set_c))
+    h_after_g_pairs = require_pair_set("associativity h_after_g", values.get("h_after_g"), set(set_b), set(set_d))
+    left_pairs = require_pair_set("associativity left", values.get("h_after_g_after_f_left"), set(set_a), set(set_d))
+    right_pairs = require_pair_set("associativity right", values.get("h_after_g_after_f_right"), set(set_a), set(set_d))
+    f_map = require_total_mapping("associativity f", set_a, set_b, f_pairs)
+    g_map = require_total_mapping("associativity g", set_b, set_c, g_pairs)
+    h_map = require_total_mapping("associativity h", set_c, set_d, h_pairs)
+    g_after_f = compose_mapping("associativity g after f", set_a, f_map, g_map)
+    h_after_g = compose_mapping("associativity h after g", set_b, g_map, h_map)
+    if g_after_f_pairs != graph_from_mapping(set_a, g_after_f):
+        fail("composition-associativity-table g_after_f is wrong")
+    if h_after_g_pairs != graph_from_mapping(set_b, h_after_g):
+        fail("composition-associativity-table h_after_g is wrong")
+    left_map = compose_mapping("associativity h after (g after f)", set_a, g_after_f, h_map)
+    right_map = compose_mapping("associativity (h after g) after f", set_a, f_map, h_after_g)
+    if left_pairs != graph_from_mapping(set_a, left_map):
+        fail("composition-associativity-table left table is wrong")
+    if right_pairs != graph_from_mapping(set_a, right_map):
+        fail("composition-associativity-table right table is wrong")
+    if left_pairs != right_pairs:
+        fail("composition-associativity-table left and right tables differ")
+
+    noninjective = checks["non-injective-inverse-rejected"]
+    if noninjective["expected_result"] != "sat" or noninjective.get("proof_status") != "checked":
+        fail("non-injective-inverse-rejected must be a checked sat row")
+    values = single_witness_values(noninjective, witnesses)
+    domain = require_string_list("noninjective domain", values.get("domain"))
+    codomain = require_string_list("noninjective codomain", values.get("codomain"))
+    pairs = require_pair_set("noninjective pairs", values.get("pairs"), set(domain), set(codomain))
+    mapping = require_total_mapping("noninjective function", domain, codomain, pairs)
+    collision_output = values.get("collision_output")
+    require_string("noninjective collision_output", collision_output)
+    if collision_output not in codomain:
+        fail("non-injective-inverse-rejected collision_output is outside codomain")
+    collision_inputs = require_subset_labels("noninjective collision_inputs", values.get("collision_inputs"), domain)
+    if len(collision_inputs) < 2:
+        fail("non-injective-inverse-rejected must list at least two collision inputs")
+    if any(mapping[item] != collision_output for item in collision_inputs):
+        fail("non-injective-inverse-rejected collision inputs do not map to collision_output")
+    if len(set(mapping.values())) == len(mapping):
+        fail("non-injective-inverse-rejected function unexpectedly is injective")
+
+    horizon = checks["general-function-laws-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-function-laws-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-function-laws-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general function laws target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general function laws future_checker", data.get("future_checker"))
+
+
 def require_named_blocks(
     context: str,
     value: Any,
@@ -9057,6 +9248,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":
         validate_finite_continuous_maps(expected)
+    if metadata["id"] == "function-composition-v0":
+        validate_function_composition(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":

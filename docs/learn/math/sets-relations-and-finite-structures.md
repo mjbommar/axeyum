@@ -13,6 +13,7 @@ Example packs:
 - [finite-sets-v0](../../../artifacts/examples/math/finite-sets-v0/)
 - [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
 - [equivalence-classes-v0](../../../artifacts/examples/math/equivalence-classes-v0/)
+- [function-composition-v0](../../../artifacts/examples/math/function-composition-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [cardinality-principles-v0](../../../artifacts/examples/math/cardinality-principles-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
@@ -30,7 +31,9 @@ The relations/functions pack checks partial-order properties, bijective function
 tables, and rejection of a multi-valued graph. The equivalence-classes pack
 checks finite equivalence classes, quotient-map fibers, partition-to-relation
 round trips, rejection of a non-transitive relation, and an explicit QF_UF/Alethe
-proof gap. The finite-cardinality pack checks explicit bijections,
+proof gap. The function-composition pack checks finite composition,
+image/preimage replay, inverse tables, associativity, and non-injective inverse
+counterexamples. The finite-cardinality pack checks explicit bijections,
 proper-subset injections, finite injection and surjection refutations, and an
 infinite-cardinality Lean-horizon row. The cardinality-principles pack checks
 inclusion-exclusion, disjoint-union additivity, double counting, powerset
@@ -85,6 +88,17 @@ x ~ y iff q(x) = q(y)
 ```
 
 It rejects a relation with `a ~ b` and `b ~ c` but missing `a ~ c`.
+For function composition, encode total function tables:
+
+```text
+f(a0)=b0, f(a1)=b1, f(a2)=b0
+g(b0)=c2, g(b1)=c0
+(g o f)(a0)=c2, (g o f)(a1)=c0, (g o f)(a2)=c2
+```
+
+The validator recomputes composition, image/preimage sets, inverse tables for
+bijections, associativity of three concrete functions, and a collision witness
+showing that a non-injective function has no two-sided inverse.
 For finite cardinality, encode the same function graph as a cardinality witness:
 
 ```text
@@ -161,6 +175,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
@@ -175,11 +190,11 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 
 ## Horizon
 
-The finite set, relation/function, equivalence-class, cardinality,
-cardinality-principles, topology, compactness-shadow, connectedness-shadow,
-continuous-map, and measure packs are now checked finite artifacts. The next
-finite-structure gaps are stronger EUF/Alethe evidence for congruence examples
-and Lean artifacts for infinite theorems. ZFC, ordinals, choice, infinite
-cardinality, arbitrary topological spaces, general compactness, general connectedness,
-continuous-image/homeomorphism theorems, and countable additivity remain
-proof-horizon material.
+The finite set, relation/function, equivalence-class, function-composition,
+cardinality, cardinality-principles, topology, compactness-shadow,
+connectedness-shadow, continuous-map, and measure packs are now checked finite
+artifacts. The next finite-structure gaps are stronger EUF/Alethe evidence for
+congruence examples and Lean artifacts for infinite theorems. ZFC, ordinals,
+choice, infinite cardinality, arbitrary topological spaces, general compactness,
+general connectedness, continuous-image/homeomorphism theorems, and countable
+additivity remain proof-horizon material.

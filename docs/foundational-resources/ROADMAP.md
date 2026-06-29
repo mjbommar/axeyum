@@ -67,6 +67,7 @@ artifacts/examples/math/
   finite-sets-v0/
   relations-functions-v0/
   equivalence-classes-v0/
+  function-composition-v0/
   finite-cardinality-v0/
   cardinality-principles-v0/
   natural-arithmetic-v0/
@@ -375,6 +376,9 @@ checked bad-step rejection while keeping the full schema as a Lean-horizon row.
 validates finite equivalence relations, quotient-map fibers,
 partition-to-relation round trips, checked rejection of a non-transitive
 relation, and an explicit QF_UF/Alethe proof-object gap.
+[`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/)
+validates finite composition, image/preimage, inverse tables, composition
+associativity, and checked non-injective inverse counterexamples.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

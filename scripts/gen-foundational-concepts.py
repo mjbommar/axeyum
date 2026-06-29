@@ -80,6 +80,10 @@ CURRICULUM_MAP = {
                 "equivalence-classes-v0",
                 "Finite equivalence classes, quotient-map fibers, partition round trips, and explicit QF_UF/Alethe proof gaps.",
             ),
+            (
+                "function-composition-v0",
+                "Finite function composition, image/preimage, inverse tables, associativity, and function-law Lean horizon.",
+            ),
         ],
     },
     "cardinality": {

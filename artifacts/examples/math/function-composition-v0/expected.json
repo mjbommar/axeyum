@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "pack_id": "function-composition-v0",
+  "witnesses": [
+    {
+      "id": "two-step-composition",
+      "description": "Two finite functions and their composite.",
+      "values": {
+        "domain": ["a0", "a1", "a2"],
+        "middle": ["b0", "b1"],
+        "codomain": ["c0", "c1", "c2"],
+        "f_pairs": [["a0", "b0"], ["a1", "b1"], ["a2", "b0"]],
+        "g_pairs": [["b0", "c2"], ["b1", "c0"]],
+        "composite_pairs": [["a0", "c2"], ["a1", "c0"], ["a2", "c2"]]
+      }
+    },
+    {
+      "id": "image-preimage-table",
+      "description": "A finite function with a concrete image and preimage query.",
+      "values": {
+        "domain": ["x0", "x1", "x2", "x3"],
+        "codomain": ["y0", "y1", "y2"],
+        "pairs": [["x0", "y0"], ["x1", "y1"], ["x2", "y1"], ["x3", "y2"]],
+        "subset_domain": ["x0", "x2"],
+        "image": ["y0", "y1"],
+        "subset_codomain": ["y1", "y2"],
+        "preimage": ["x1", "x2", "x3"]
+      }
+    },
+    {
+      "id": "bijection-with-inverse",
+      "description": "A finite bijection and its inverse table.",
+      "values": {
+        "domain": ["p0", "p1", "p2"],
+        "codomain": ["q0", "q1", "q2"],
+        "pairs": [["p0", "q2"], ["p1", "q0"], ["p2", "q1"]],
+        "inverse_pairs": [["q0", "p1"], ["q1", "p2"], ["q2", "p0"]],
+        "left_identity": [["p0", "p0"], ["p1", "p1"], ["p2", "p2"]],
+        "right_identity": [["q0", "q0"], ["q1", "q1"], ["q2", "q2"]]
+      }
+    },
+    {
+      "id": "three-step-associativity",
+      "description": "Three finite functions for composition associativity.",
+      "values": {
+        "A": ["a0", "a1"],
+        "B": ["b0", "b1"],
+        "C": ["c0", "c1"],
+        "D": ["d0", "d1"],
+        "f_pairs": [["a0", "b1"], ["a1", "b0"]],
+        "g_pairs": [["b0", "c0"], ["b1", "c1"]],
+        "h_pairs": [["c0", "d1"], ["c1", "d0"]],
+        "g_after_f": [["a0", "c1"], ["a1", "c0"]],
+        "h_after_g": [["b0", "d1"], ["b1", "d0"]],
+        "h_after_g_after_f_left": [["a0", "d0"], ["a1", "d1"]],
+        "h_after_g_after_f_right": [["a0", "d0"], ["a1", "d1"]]
+      }
+    },
+    {
+      "id": "non-injective-function",
+      "description": "A total function that cannot have an inverse because two inputs share one output.",
+      "values": {
+        "domain": ["u0", "u1", "u2"],
+        "codomain": ["v0", "v1"],
+        "pairs": [["u0", "v0"], ["u1", "v0"], ["u2", "v1"]],
+        "collision_output": "v0",
+        "collision_inputs": ["u0", "u1"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "composition-table-replay",
+      "claim": "The listed composite table equals g after f.",
+      "expected_result": "sat",
+      "validation": "finite_function_composition_replay",
+      "proof_status": "checked",
+      "witnesses": ["two-step-composition"],
+      "notes": "The validator checks both input functions and recomputes every composite graph entry."
+    },
+    {
+      "id": "image-preimage-replay",
+      "claim": "The listed image and preimage match the finite function table.",
+      "expected_result": "sat",
+      "validation": "finite_image_preimage_replay",
+      "proof_status": "checked",
+      "witnesses": ["image-preimage-table"],
+      "notes": "The validator recomputes the image and preimage sets exactly."
+    },
+    {
+      "id": "bijection-inverse-table",
+      "claim": "The listed inverse table is the inverse of a finite bijection.",
+      "expected_result": "sat",
+      "validation": "finite_inverse_table_replay",
+      "proof_status": "checked",
+      "witnesses": ["bijection-with-inverse"],
+      "notes": "The validator checks bijectivity, inverse graph entries, and both identity compositions."
+    },
+    {
+      "id": "composition-associativity-table",
+      "claim": "The two listed finite composition-associativity tables agree.",
+      "expected_result": "sat",
+      "validation": "finite_composition_associativity_replay",
+      "proof_status": "checked",
+      "witnesses": ["three-step-associativity"],
+      "notes": "The validator recomputes g o f, h o g, h o (g o f), and (h o g) o f."
+    },
+    {
+      "id": "non-injective-inverse-rejected",
+      "claim": "The listed non-injective function has a two-sided inverse.",
+      "expected_result": "sat",
+      "validation": "finite_noninjective_inverse_counterexample",
+      "proof_status": "checked",
+      "witnesses": ["non-injective-function"],
+      "notes": "The validator checks the function is total but not injective, with the listed collision."
+    },
+    {
+      "id": "general-function-laws-lean-horizon",
+      "claim": "Function extensionality, inverse laws, and categorical composition laws over arbitrary types require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "function extensionality, inverse laws, image/preimage laws, and associativity of composition for arbitrary types",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite table rows are checked; general function theory remains proof-assistant territory."
+    }
+  ]
+}

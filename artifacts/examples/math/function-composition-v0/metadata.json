@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "function-composition-v0",
+  "title": "Finite Function Composition Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_relations_and_functions",
+    "curriculum_sets",
+    "curriculum_cardinality",
+    "field_set_theory_and_foundations",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "set_theory_and_foundations",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "relations-and-functions",
+    "sets",
+    "cardinality"
+  ],
+  "axeyum_fragments": [
+    "finite functions",
+    "finite relations",
+    "finite sets",
+    "QF_UF",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/cardinality.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "composition-table-replay",
+    "image-preimage-replay",
+    "bijection-inverse-table",
+    "composition-associativity-table",
+    "non-injective-inverse-rejected",
+    "general-function-laws-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay finite composition, image, preimage, inverse, and associativity tables from explicit function graphs.",
+    "Represent invalid inverse claims with concrete finite collision evidence.",
+    "Add QF_UF/Alethe proof-object examples for reusable congruence and extensional-equality obligations.",
+    "Keep arbitrary-type function laws under Lean horizon until no-sorry kernel-checked artifacts exist."
+  ]
+}
