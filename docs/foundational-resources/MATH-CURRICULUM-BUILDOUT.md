@@ -843,9 +843,10 @@ each cluster page links concept rows, validated example packs, current
 checkable slices, proof/numerical horizons, and a concrete encode/check
 walkthrough using validated pack data. The end-to-end lessons now trace graph
 coloring, rational midpoint replay, linear-system/LP replay, finite conditional
-probability, rational inner-product replay, finite monoid replay, finite
-permutation-group replay, finite group-action/Burnside replay, finite ring
-replay, finite field replay, finite ideal and quotient-ring replay, finite
+probability, rational inner-product replay, finite group Cayley-table replay,
+finite monoid replay, finite permutation-group replay, finite
+group-action/Burnside replay, finite ring replay, finite field replay, finite
+ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space replay, finite dual-space
 replay, finite module replay, finite tensor-product replay, finite
 topology/measure, and bounded dynamics/operators from data row through replay
@@ -1023,10 +1024,10 @@ the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
 have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
 finite cut certificates, rational arithmetic, linear algebra/optimization,
-probability/statistics, rational inner products, finite monoids, finite
-permutation groups, finite rings, finite fields, finite algebra homomorphisms,
-finite ideals and quotient rings, finite vector spaces, finite dual spaces,
-finite modules, finite tensor products, finite structures, and
+probability/statistics, rational inner products, finite groups, finite monoids,
+finite permutation groups, finite rings, finite fields, finite algebra
+homomorphisms, finite ideals and quotient rings, finite vector spaces, finite
+dual spaces, finite modules, finite tensor products, finite structures, and
 analysis/topology horizons.
 Phase M6 now has cookbook links from all current non-template math example
 packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table

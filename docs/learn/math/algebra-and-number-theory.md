@@ -86,7 +86,9 @@ Z/4Z under addition
 ```
 
 The `finite-groups-v0` pack checks closure, identity, inverses, and
-associativity for the full Cayley table.
+associativity for the full Cayley table. It also replays the inverse table
+`0 -> 0`, `1 -> 3`, `2 -> 2`, `3 -> 1`, and rejects subtraction modulo `3`
+as a group operation because `0 - 1 = 2`, so `0` is not a left identity.
 
 For a finite monoid example, use all total functions on `{0,1}` under
 composition:
@@ -330,8 +332,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 ```
 
 For fuller traces from transformation-monoid, permutation, action-table,
-finite-ring, homomorphism, quotient-ring, finite-vector-space,
+finite-group, finite-ring, homomorphism, quotient-ring, finite-vector-space,
 finite-dual-space, and module data through replay, read
+[End To End: Finite Groups](finite-groups-end-to-end.md),
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),

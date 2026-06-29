@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite groups end-to-end lesson landed.** Added
+  [`finite-groups-end-to-end.md`](docs/learn/math/finite-groups-end-to-end.md)
+  as the learner-facing trace for the finite groups pack: `Z/4Z`
+  Cayley-table replay, inverse-table replay, checked rejection of subtraction
+  modulo `3` as a group operation, and the Lean horizon for general group
+  theory. The lesson is linked from the math learning index plus the algebra
+  path.
+
 - **Finite fields end-to-end lesson landed.** Added
   [`finite-fields-end-to-end.md`](docs/learn/math/finite-fields-end-to-end.md)
   as the learner-facing trace for the finite fields pack: `F_7` inverse-table
