@@ -32,5 +32,27 @@ For a finite linear map `T : V -> W`, the transpose row checks:
 
 for every listed finite covector and vector.
 
+## Bad Covector Certificate
+
+For the rejected functional, exact replay computes:
+
+```text
+10 + 01 = 11
+f(10) = 1
+f(01) = 1
+f(11) = 1
+1 + 1 = 0
+```
+
+Additivity of a covector would require:
+
+```text
+f(10 + 01) = f(10) + f(01)
+```
+
+The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
+The resource regression checks that Axeyum emits independently rechecked
+`UnsatAletheProof` evidence with no trusted reduction step.
+
 General duality over arbitrary vector spaces, topological duals, adjoints, and
 Hahn-Banach-style theorems remain Lean-horizon.

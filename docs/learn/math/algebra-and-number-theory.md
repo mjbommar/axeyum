@@ -58,10 +58,10 @@ acting on finite additive groups, subspaces, spans, linear maps, kernels,
 images, rank-nullity, and a checked QF_UF/Alethe bad-subspace row. The
 finite-dual-spaces pack checks covectors as
 finite field-valued function tables, pointwise dual operations, dual-basis
-pairing, annihilator recomputation, transpose maps, and bad-covector
-refutations. The finite-modules pack checks finite rings acting on finite
-additive groups, generated submodules, module homomorphisms, quotient module
-tables, kernels, images, and bad-submodule refutations. The
+pairing, annihilator recomputation, transpose maps, and checked QF_UF/Alethe
+bad-covector refutations. The finite-modules pack checks finite rings acting
+on finite additive groups, generated submodules, module homomorphisms,
+quotient module tables, kernels, images, and bad-submodule refutations. The
 finite-tensor-products pack checks finite tensor-product basis/dimension
 replay, bilinear maps, factorization through a tensor map, Kronecker products,
 and bad-bilinear-map refutations. The gcd/Bezout

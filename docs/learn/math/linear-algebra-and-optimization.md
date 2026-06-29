@@ -43,8 +43,8 @@ subspace/span replay,
 linear-map kernel/image replay, rank-nullity by finite cardinality, and
 checked QF_UF/Alethe non-subspace rejection. The finite-dual-space slice adds covectors as
 finite function tables, pointwise dual operations, dual-basis pairings,
-annihilator recomputation, transpose-map replay, and checked bad-covector
-rejection. The exact rational inner-product slice adds symmetric
+annihilator recomputation, transpose-map replay, and checked QF_UF/Alethe
+bad-covector rejection. The exact rational inner-product slice adds symmetric
 positive-definite Gram matrices, Cauchy-Schwarz replay for fixed vectors,
 orthogonal projection replay, Gram-Schmidt orthogonalization replay, and
 QF_LRA/Farkas rejection of an indefinite bilinear form. The finite-module
@@ -123,7 +123,9 @@ annihilator({00,10}) = {zero,y}
 The `finite-dual-spaces-v0` validator checks that `x`, `y`, and `x+y` are
 linear functionals, dual addition is pointwise, the listed dual basis pairs
 with `10,01` as the identity matrix, annihilators are recomputed from the
-evaluation table, and transpose maps satisfy `(T* phi)(v) = phi(Tv)`.
+evaluation table, and transpose maps satisfy `(T* phi)(v) = phi(Tv)`. The bad
+covector row links the failed additivity equation to checked QF_UF/Alethe
+evidence.
 
 For rational inner-product examples, encode the Gram matrix and the vectors:
 

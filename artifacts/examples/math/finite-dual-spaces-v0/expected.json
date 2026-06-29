@@ -289,9 +289,13 @@
           "right": "01",
           "claimed": "1",
           "actual_sum": "0"
-        }
+        },
+        "alethe_additivity_claim": "f(10+01) = f(10)+f(01)",
+        "smt2_artifact": "artifacts/examples/math/finite-dual-spaces-v0/smt2/bad-covector-additivity-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_dual_spaces_bad_covector_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks f(10 + 01) differs from f(10) + f(01), so the function is not linear."
+      "notes": "The validator checks f(10 + 01) differs from f(10) + f(01), so the function is not linear; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed additivity equality claim."
     },
     {
       "id": "general-duality-theory-lean-horizon",

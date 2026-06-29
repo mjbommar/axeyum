@@ -335,6 +335,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   shared UF resource regression requires a pure EUF
   `Evidence::UnsatAletheProof` and rechecks it independently.
 
+- **Finite-dual-spaces QF_UF/Alethe regression landed.**
+  [`finite-dual-spaces-v0`](artifacts/examples/math/finite-dual-spaces-v0/)
+  now has a checked proof-object row for the bad covector-additivity conflict.
+  The new SMT-LIB artifact records `10 + 01 = 11`, the malformed evaluation
+  table, `1 + 1 = 0`, and the fixed additivity equality; the shared UF
+  resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
+  rechecks it independently.
+
 - **Modular-arithmetic QF_LIA/Diophantine regression landed.**
   [`modular-arithmetic-v0`](artifacts/examples/math/modular-arithmetic-v0/)
   now has a checked proof-object row for the composite nonunit inverse

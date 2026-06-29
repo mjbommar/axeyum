@@ -31,6 +31,7 @@
     "finite dual spaces",
     "finite functions",
     "Bool / enumeration",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0",
@@ -42,7 +43,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "dual-space-table-replay",
@@ -55,7 +57,7 @@
   "graduation_criteria": [
     "Encode fixed finite dual-space, pairing, annihilator, and transpose-map rows as deterministic finite-function obligations.",
     "Replay covector linearity, pointwise dual operations, dual-basis pairings, annihilators, and transpose maps through Axeyum model evaluation.",
-    "Add emitted EUF/Alethe or finite-table certificates for bad-covector rows once proof routes are promoted.",
+    "Route bad finite covector-additivity conflicts through checked QF_UF/Alethe evidence once exact evaluation replay identifies the failing pair.",
     "Keep general duality, bidual theorems, adjoints, topological duals, Hahn-Banach, and functional analysis under Lean horizon until formal routes exist."
   ]
 }

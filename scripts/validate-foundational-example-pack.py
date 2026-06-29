@@ -3455,6 +3455,21 @@ def validate_finite_dual_spaces(expected: dict[str, Any]) -> None:
         fail("bad-covector-rejected actual_sum does not match f(left) + f(right)")
     if claimed == actual_sum:
         fail("bad-covector-rejected failing_additivity unexpectedly agrees")
+    alethe_claim = data.get("alethe_additivity_claim")
+    require_string("bad covector alethe_additivity_claim", alethe_claim)
+    if alethe_claim != f"f({left}+{right}) = f({left})+f({right})":
+        fail("bad-covector-rejected must document the Alethe additivity claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad covector smt2_artifact", smt2_artifact)
+    check_source("bad covector smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad covector proof_regression", proof_regression)
+    if "finite_dual_spaces_bad_covector_emits_checked_alethe" not in proof_regression:
+        fail("bad-covector-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad covector certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-covector-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-duality-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

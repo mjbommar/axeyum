@@ -423,8 +423,9 @@ module-homomorphism kernel/image replay, quotient-module table replay,
 checked non-submodule rejection, and a general module-theory Lean-horizon row.
 `finite-dual-spaces-v0` now adds the finite dual-space bridge with `F2^2`
 covector linearity replay, pointwise dual operations, dual-basis pairing,
-annihilator recomputation, transpose-map replay, checked bad-covector
-rejection, and a general duality/functional-analysis Lean-horizon row.
+annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
+bad-covector rejection, and a general duality/functional-analysis Lean-horizon
+row.
 `finite-tensor-products-v0` now adds the finite multilinear-algebra bridge:
 `F2^2 tensor F2` basis/dimension replay, finite bilinear-map table replay,
 universal-factorization shadow through a linear map, Kronecker-product matrix
@@ -1213,8 +1214,8 @@ rank-nullity by finite cardinality, checked QF_UF/Alethe non-subspace
 rejection, and a vector-space/module Lean-horizon row.
 `finite-dual-spaces-v0` now adds the exact finite dual-space bridge over `F2`:
 covector linearity, pointwise dual operations, dual-basis pairing,
-annihilator recomputation, transpose-map replay, checked bad-covector
-rejection, and a duality/functional-analysis Lean-horizon row.
+annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
+bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
 `finite-group-actions-v0` now adds the exact finite group-action bridge:
 action-law replay, orbit/stabilizer recomputation, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked bad-action rejection, and

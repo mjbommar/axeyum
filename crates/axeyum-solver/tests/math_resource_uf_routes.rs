@@ -35,6 +35,9 @@ const FINITE_PERMUTATION_GROUPS_BAD_NONBIJECTION: &str = include_str!(
 const FINITE_VECTOR_SPACES_BAD_SUBSPACE: &str = include_str!(
     "../../../artifacts/examples/math/finite-vector-spaces-v0/smt2/bad-subspace-addition-closure-conflict.smt2"
 );
+const FINITE_DUAL_SPACES_BAD_COVECTOR: &str = include_str!(
+    "../../../artifacts/examples/math/finite-dual-spaces-v0/smt2/bad-covector-additivity-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -105,6 +108,14 @@ fn finite_vector_spaces_bad_subspace_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-vector-spaces-v0 bad subspace",
         FINITE_VECTOR_SPACES_BAD_SUBSPACE,
+    );
+}
+
+#[test]
+fn finite_dual_spaces_bad_covector_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-dual-spaces-v0 bad covector",
+        FINITE_DUAL_SPACES_BAD_COVECTOR,
     );
 }
 
