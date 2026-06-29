@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Real-algebra RCF-shadow end-to-end lesson landed.** Added
+  [`reals-rcf-shadow-end-to-end.md`](docs/learn/math/reals-rcf-shadow-end-to-end.md)
+  as the learner-facing trace for the reals-RCF-shadow pack: ordered-field
+  midpoint replay, nonlinear product replay, quadratic-root replay, checked
+  square-nonnegative and negative-discriminant `unsat` rows, and the Lean
+  horizon for real completeness. The lesson is linked from the math learning
+  index plus the rational/real and analysis/topology paths.
+
 - **Bounded rational real-analysis end-to-end lesson landed.** Added
   [`real-analysis-rational-end-to-end.md`](docs/learn/math/real-analysis-rational-end-to-end.md)
   as the learner-facing trace for the real-analysis-rational pack: exact

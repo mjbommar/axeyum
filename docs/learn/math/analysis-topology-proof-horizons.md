@@ -298,10 +298,11 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```
 
-For fuller traces through bounded rational real-analysis evidence, exact
-rational inner products, bounded dynamics, and finite-dimensional operator
-replay, read
+For fuller traces through bounded rational real-analysis evidence,
+real-algebra shadow checks, exact rational inner products, bounded dynamics,
+and finite-dimensional operator replay, read
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
+[End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 and [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md).
 
