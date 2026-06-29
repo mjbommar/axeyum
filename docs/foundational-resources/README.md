@@ -47,6 +47,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
   is the first substantive math pack: proof-by-refutation over finite
   pigeonhole examples, with the UNSAT proof route still marked as a proof gap.
+- [`artifacts/examples/math/modular-arithmetic-v0/`](../../artifacts/examples/math/modular-arithmetic-v0/)
+  validates small CRT, modular inverse, composite non-unit, and Fermat-style
+  finite checks by replay/exhaustive search.
 
 Validation commands:
 
@@ -56,6 +59,7 @@ python3 scripts/validate-foundational-concepts.py
 python3 scripts/gen-foundational-dashboards.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 ```
 
 ## Principle

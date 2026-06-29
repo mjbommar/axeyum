@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "pack_id": "modular-arithmetic-v0",
+  "witnesses": [
+    {
+      "id": "crt-x-8",
+      "description": "CRT witness satisfying x == 2 mod 3 and x == 3 mod 5.",
+      "values": {
+        "x": 8,
+        "congruences": [
+          {"remainder": 2, "modulus": 3},
+          {"remainder": 3, "modulus": 5}
+        ]
+      }
+    },
+    {
+      "id": "inverse-3-mod-7",
+      "description": "The residue 5 is a multiplicative inverse of 3 modulo 7.",
+      "values": {
+        "a": 3,
+        "modulus": 7,
+        "inverse": 5
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "crt-coprime-witness",
+      "claim": "There exists x satisfying x == 2 mod 3 and x == 3 mod 5.",
+      "expected_result": "sat",
+      "validation": "modular_arithmetic_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["crt-x-8"],
+      "notes": "The validator checks each congruence and pairwise coprimality of the moduli."
+    },
+    {
+      "id": "modular-inverse-witness",
+      "claim": "The residue 3 has inverse 5 modulo 7.",
+      "expected_result": "sat",
+      "validation": "modular_arithmetic_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["inverse-3-mod-7"],
+      "notes": "The validator checks gcd(3, 7) = 1 and 3 * 5 == 1 mod 7."
+    },
+    {
+      "id": "composite-nonunit-no-inverse",
+      "claim": "There exists b such that 2 * b == 1 mod 6.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_modular_search",
+      "proof_status": "replay-only",
+      "data": {
+        "a": 2,
+        "modulus": 6
+      },
+      "notes": "The validator exhaustively checks all residues modulo 6 and confirms no inverse exists."
+    },
+    {
+      "id": "fermat-units-mod-prime",
+      "claim": "There exists a unit a modulo 5 such that a^4 != 1 mod 5.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_modular_search",
+      "proof_status": "replay-only",
+      "data": {
+        "modulus": 5,
+        "exponent": 4
+      },
+      "notes": "The validator checks every unit modulo 5 and finds no counterexample."
+    }
+  ]
+}

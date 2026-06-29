@@ -290,10 +290,17 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
     route_status = "lean-horizon" if lean_required else "planned"
     lean_status = "required" if lean_required else "planned"
     doc_path = curriculum_doc_path(node)
-    gaps = [
-        "Dedicated foundational example pack is not yet validated.",
-        "Generated dashboards currently track planned packs, not replayed pack results.",
-    ]
+    is_pack_validated = pack_status(mapping["pack"]) == "validated"
+    if is_pack_validated:
+        gaps = [
+            "Validated example pack exists; solver/proof integration still needs promotion where noted.",
+            "Generated dashboards currently track planned packs, not replayed pack results.",
+        ]
+    else:
+        gaps = [
+            "Dedicated foundational example pack is not yet validated.",
+            "Generated dashboards currently track planned packs, not replayed pack results.",
+        ]
     if node["status"] == "covered" and node["family"]:
         gaps.append(
             f"Existing curriculum family {node['family']} still needs migration into example-pack metadata."
@@ -351,10 +358,17 @@ def make_field_row(field_id: str, field: dict[str, str], curriculum_rows: list[d
     decidability = FIELD_DECIDABILITY.get(field_id, "bounded")
     route_status = "lean-horizon" if decidability == "proof-horizon" else "planned"
     lean_status = "required" if decidability == "proof-horizon" else "planned"
-    gaps = [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
-        "Concept rows still need generated dashboard coverage before field status can graduate.",
-    ]
+    is_pack_validated = pack_status(pack_id) == "validated"
+    if is_pack_validated:
+        gaps = [
+            "Field-level example pack exists; broader field concept coverage remains incomplete.",
+            "Concept rows still need generated dashboard coverage before field status can graduate.",
+        ]
+    else:
+        gaps = [
+            "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+            "Concept rows still need generated dashboard coverage before field status can graduate.",
+        ]
     if decidability == "proof-horizon":
         gaps.append("Most general field theorems require Lean/mathlib-scale proof reconstruction.")
     return {

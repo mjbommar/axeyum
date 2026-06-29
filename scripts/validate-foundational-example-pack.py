@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from math import gcd
 from pathlib import Path
 from typing import Any
 
@@ -200,6 +201,8 @@ def validate_expected(metadata: dict[str, Any], expected: dict[str, Any], expect
         for witness_id in check.get("witnesses", []):
             if witness_id not in witness_ids:
                 fail(f"{check_id} references unknown witness {witness_id}")
+        if "data" in check and not isinstance(check["data"], dict):
+            fail(f"{check_id}.data must be an object when present")
         require_string(f"checks[{index}].notes", check["notes"])
 
     if set(expected_ids) != check_ids:
@@ -207,6 +210,104 @@ def validate_expected(metadata: dict[str, Any], expected: dict[str, Any], expect
             "metadata.expected_results must match expected.checks ids: "
             f"metadata={sorted(expected_ids)} expected={sorted(check_ids)}"
         )
+    validate_pack_semantics(metadata, expected)
+
+
+def require_int(context: str, value: Any) -> int:
+    if not isinstance(value, int):
+        fail(f"{context} must be an integer")
+    return value
+
+
+def witness_by_id(expected: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {witness["id"]: witness for witness in expected["witnesses"]}
+
+
+def single_witness_values(check: dict[str, Any], witnesses: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    ids = check.get("witnesses", [])
+    if len(ids) != 1:
+        fail(f"{check['id']} must reference exactly one witness")
+    values = witnesses[ids[0]]["values"]
+    if not isinstance(values, dict):
+        fail(f"{check['id']} witness values must be an object")
+    return values
+
+
+def has_mod_inverse(a: int, modulus: int) -> bool:
+    return any((a * candidate) % modulus == 1 for candidate in range(modulus))
+
+
+def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    crt = checks["crt-coprime-witness"]
+    if crt["expected_result"] != "sat":
+        fail("crt-coprime-witness must expect sat")
+    crt_values = single_witness_values(crt, witnesses)
+    x = require_int("crt witness x", crt_values.get("x"))
+    congruences = crt_values.get("congruences")
+    if not isinstance(congruences, list) or len(congruences) < 2:
+        fail("crt witness congruences must contain at least two congruences")
+    moduli: list[int] = []
+    for index, congruence in enumerate(congruences):
+        if not isinstance(congruence, dict):
+            fail(f"crt congruence {index} must be an object")
+        remainder = require_int(f"crt congruence {index}.remainder", congruence.get("remainder"))
+        modulus = require_int(f"crt congruence {index}.modulus", congruence.get("modulus"))
+        if modulus <= 1:
+            fail(f"crt congruence {index}.modulus must be > 1")
+        if x % modulus != remainder % modulus:
+            fail(f"crt witness does not satisfy x == {remainder} mod {modulus}")
+        moduli.append(modulus)
+    for left_index, left in enumerate(moduli):
+        for right in moduli[left_index + 1 :]:
+            if gcd(left, right) != 1:
+                fail(f"CRT moduli must be coprime: {left}, {right}")
+
+    inverse = checks["modular-inverse-witness"]
+    if inverse["expected_result"] != "sat":
+        fail("modular-inverse-witness must expect sat")
+    inv_values = single_witness_values(inverse, witnesses)
+    a = require_int("inverse witness a", inv_values.get("a"))
+    modulus = require_int("inverse witness modulus", inv_values.get("modulus"))
+    inv = require_int("inverse witness inverse", inv_values.get("inverse"))
+    if modulus <= 1:
+        fail("inverse modulus must be > 1")
+    if gcd(a, modulus) != 1:
+        fail("inverse witness a must be coprime to modulus")
+    if (a * inv) % modulus != 1:
+        fail("inverse witness does not multiply to 1 modulo modulus")
+
+    nonunit = checks["composite-nonunit-no-inverse"]
+    if nonunit["expected_result"] != "unsat":
+        fail("composite-nonunit-no-inverse must expect unsat")
+    data = nonunit.get("data", {})
+    a = require_int("nonunit data a", data.get("a"))
+    modulus = require_int("nonunit data modulus", data.get("modulus"))
+    if modulus <= 1:
+        fail("nonunit modulus must be > 1")
+    if gcd(a, modulus) == 1:
+        fail("nonunit data must use a non-coprime residue")
+    if has_mod_inverse(a, modulus):
+        fail("nonunit check found an inverse unexpectedly")
+
+    fermat = checks["fermat-units-mod-prime"]
+    if fermat["expected_result"] != "unsat":
+        fail("fermat-units-mod-prime must expect unsat")
+    data = fermat.get("data", {})
+    modulus = require_int("fermat data modulus", data.get("modulus"))
+    exponent = require_int("fermat data exponent", data.get("exponent"))
+    if modulus <= 1:
+        fail("fermat modulus must be > 1")
+    for a in range(1, modulus):
+        if gcd(a, modulus) == 1 and pow(a, exponent, modulus) != 1:
+            fail(f"fermat counterexample found: a={a}, modulus={modulus}, exponent={exponent}")
+
+
+def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
+    if metadata["id"] == "modular-arithmetic-v0":
+        validate_modular_arithmetic(expected)
 
 
 def validate_pack(pack_dir: Path, concept_ids: set[str], field_ids: set[str], curriculum_nodes: set[str]) -> None:

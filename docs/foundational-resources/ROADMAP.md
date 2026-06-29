@@ -59,6 +59,7 @@ artifacts/ontology/
 artifacts/examples/math/
   template-v0/
   proof-methods-refutation-v0/
+  modular-arithmetic-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -292,6 +293,9 @@ Status: example-pack schema and validating template scaffold landed; the first
 substantive pack,
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
 now validates with a SAT witness control case and an explicit UNSAT proof gap.
+[`modular-arithmetic-v0`](../../artifacts/examples/math/modular-arithmetic-v0/)
+also validates with replayed CRT/inverse witnesses and exhaustive finite
+non-invertibility/Fermat-style checks.
 
 Exit criteria:
 

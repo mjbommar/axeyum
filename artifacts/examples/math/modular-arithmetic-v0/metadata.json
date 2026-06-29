@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "modular-arithmetic-v0",
+  "title": "Modular Arithmetic Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "curriculum_modular_arithmetic",
+    "curriculum_divisibility_and_euclid",
+    "curriculum_fields",
+    "field_number_theory",
+    "field_abstract_algebra"
+  ],
+  "field_ids": ["number_theory", "abstract_algebra"],
+  "curriculum_nodes": ["modular-arithmetic", "divisibility-and-euclid", "fields"],
+  "axeyum_fragments": ["BV / LIA", "LIA / enumeration"],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/modular-arithmetic.md",
+    "docs/curriculum/02-structures/divisibility-and-euclid.md",
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/BACKLOG.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+  ],
+  "expected_results": [
+    "crt-coprime-witness",
+    "modular-inverse-witness",
+    "composite-nonunit-no-inverse",
+    "fermat-units-mod-prime"
+  ],
+  "graduation_criteria": [
+    "Encode each check as deterministic Bool/BV or LIA formulas.",
+    "Replay all SAT witnesses through Axeyum model evaluation.",
+    "Add checked proof evidence for each UNSAT finite-search claim or keep the proof gap explicit.",
+    "Promote related finite-field examples into finite-fields-v0."
+  ]
+}

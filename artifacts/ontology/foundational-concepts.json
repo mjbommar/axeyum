@@ -190,7 +190,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
         "Generated dashboards currently track planned packs, not replayed pack results."
       ],
       "graduation": {
@@ -892,7 +892,7 @@
       "example_packs": [
         {
           "id": "modular-arithmetic-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/modular-arithmetic-v0",
           "notes": "Congruences, inverses, CRT, and fixed-modulus enumeration."
         }
@@ -916,7 +916,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
         "Generated dashboards currently track planned packs, not replayed pack results.",
         "Existing curriculum family NumberTheory still needs migration into example-pack metadata."
       ],
@@ -2078,7 +2078,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate."
       ],
       "graduation": {
@@ -2182,7 +2182,7 @@
       "example_packs": [
         {
           "id": "modular-arithmetic-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/modular-arithmetic-v0",
           "notes": "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."
         }
@@ -2205,7 +2205,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate."
       ],
       "graduation": {

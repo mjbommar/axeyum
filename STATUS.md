@@ -134,6 +134,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Modular arithmetic pack landed.** Added
+  [`artifacts/examples/math/modular-arithmetic-v0/`](artifacts/examples/math/modular-arithmetic-v0/)
+  for small CRT, modular inverse, composite non-unit, and Fermat-style finite
+  checks. The foundational example-pack validator now replays this pack's
+  arithmetic: congruence witnesses, modular inverse witnesses, exhaustive
+  non-invertibility over a composite modulus, and exhaustive absence of
+  Fermat-counterexamples over units modulo 5. The concept atlas and generated
+  dashboards now mark `modular-arithmetic-v0` as validated.
+
 - **First substantive math example pack landed.** Added
   [`artifacts/examples/math/proof-methods-refutation-v0/`](artifacts/examples/math/proof-methods-refutation-v0/)
   for proof-by-refutation over finite pigeonhole examples. The pack validates
@@ -8978,6 +8987,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-29** — **Modular arithmetic pack landed.**
+  Added
+  [`artifacts/examples/math/modular-arithmetic-v0/`](artifacts/examples/math/modular-arithmetic-v0/)
+  with replayed CRT and modular-inverse witnesses plus exhaustive finite checks
+  for a composite non-unit and a Fermat-style prime-modulus property. Extended
+  [`validate-foundational-example-pack.py`](scripts/validate-foundational-example-pack.py)
+  with pack-specific arithmetic replay so this is a checked resource artifact,
+  not only a structural metadata row.
 
 - **2026-06-29** — **First substantive math example pack landed.**
   Added
