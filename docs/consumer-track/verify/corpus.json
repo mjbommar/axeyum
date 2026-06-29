@@ -1,5 +1,5 @@
 {
-  "total": 9, "disagree": 0,
+  "total": 14, "disagree": 0,
   "cases": [
     { "name": "add-overflow", "class": "overflow", "outcome": "bug-found" },
     { "name": "mask-safe", "class": "overflow", "outcome": "verified" },
@@ -8,6 +8,11 @@
     { "name": "div-by-zero", "class": "div0", "outcome": "bug-found" },
     { "name": "assert-violation", "class": "assert", "outcome": "bug-found" },
     { "name": "assert-safe", "class": "assert", "outcome": "verified" },
+    { "name": "wrapping-add-no-overflow", "class": "wrapping", "outcome": "verified" },
+    { "name": "wrapping-not-monotone", "class": "wrapping", "outcome": "bug-found" },
+    { "name": "saturating-sub-no-underflow", "class": "saturating", "outcome": "verified" },
+    { "name": "min-clamp-safe", "class": "minmax", "outcome": "verified" },
+    { "name": "max-floor-safe", "class": "minmax", "outcome": "verified" },
     { "name": "loop-assert-bug", "class": "loop", "outcome": "bug-found" },
     { "name": "loop-safe", "class": "loop", "outcome": "verified" }
   ]

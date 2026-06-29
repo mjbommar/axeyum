@@ -219,6 +219,71 @@ fn corpus() -> Vec<Case> {
                 vec![Stmt::Assert(bin(BinOp::Eq, var("a"), var("a")))],
             ),
         },
+        // --- Widened fragment: wrapping / saturating / min-max (C5) ----------
+        Case {
+            // Modular add never panics — a program of only wrapping ops is safe.
+            name: "wrapping-add-no-overflow",
+            class: "wrapping",
+            expect: Expect::Safe,
+            program: prog(
+                "wrap",
+                vec![param("a"), param("b")],
+                vec![let_("c", bin(BinOp::WrappingAdd, var("a"), var("b")))],
+            ),
+        },
+        Case {
+            // `wrapping_add(a, 1) > a` is false at a = 255 (wraps to 0).
+            name: "wrapping-not-monotone",
+            class: "wrapping",
+            expect: Expect::Bug,
+            program: prog(
+                "wrap_mono",
+                vec![param("a")],
+                vec![
+                    let_("c", bin(BinOp::WrappingAdd, var("a"), lit(1))),
+                    Stmt::Assert(bin(BinOp::Gt, var("c"), var("a"))),
+                ],
+            ),
+        },
+        Case {
+            // Saturating sub never panics (clamps at 0).
+            name: "saturating-sub-no-underflow",
+            class: "saturating",
+            expect: Expect::Safe,
+            program: prog(
+                "sat",
+                vec![param("a"), param("b")],
+                vec![let_("c", bin(BinOp::SaturatingSub, var("a"), var("b")))],
+            ),
+        },
+        Case {
+            // `min(a, 10) <= 10` always holds.
+            name: "min-clamp-safe",
+            class: "minmax",
+            expect: Expect::Safe,
+            program: prog(
+                "minc",
+                vec![param("a")],
+                vec![
+                    let_("c", bin(BinOp::Min, var("a"), lit(10))),
+                    Stmt::Assert(bin(BinOp::Le, var("c"), lit(10))),
+                ],
+            ),
+        },
+        Case {
+            // `max(a, 10) >= 10` always holds.
+            name: "max-floor-safe",
+            class: "minmax",
+            expect: Expect::Safe,
+            program: prog(
+                "maxf",
+                vec![param("a")],
+                vec![
+                    let_("c", bin(BinOp::Max, var("a"), lit(10))),
+                    Stmt::Assert(bin(BinOp::Ge, var("c"), lit(10))),
+                ],
+            ),
+        },
         Case {
             name: "loop-assert-bug",
             class: "loop",
