@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-method patterns end-to-end lesson landed.** Added
+  [`proof-methods-patterns-end-to-end.md`](docs/learn/math/proof-methods-patterns-end-to-end.md)
+  as the learner-facing trace for the proof-methods patterns pack: direct
+  proof/modus-ponens replay, contrapositive equivalence, proof-by-cases,
+  contradiction refutation, invalid-converse counterexample, and the Lean
+  horizon for natural-deduction soundness. The lesson is linked from the math
+  learning index plus the logic/proof path.
+
 - **Proof-by-refutation end-to-end lesson landed.** Added
   [`proof-methods-refutation-end-to-end.md`](docs/learn/math/proof-methods-refutation-end-to-end.md)
   as the learner-facing trace for the proof-methods refutation pack:
