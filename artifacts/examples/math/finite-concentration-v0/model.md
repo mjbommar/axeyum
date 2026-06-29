@@ -66,3 +66,13 @@ P(X >= 2) <= 1/8
 ```
 
 The checker rejects it because the actual probability is `1/4`.
+The Axeyum regression checks the same final contradiction as a linear rational
+system:
+
+```text
+tail_probability = 1/4
+tail_probability <= 1/8
+```
+
+That query emits `UnsatFarkas` evidence, and the certificate arithmetic is
+rechecked independently.

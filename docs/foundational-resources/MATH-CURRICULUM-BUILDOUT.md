@@ -1385,6 +1385,9 @@ replay.
 `convexity-rational-v0` now routes its bad midpoint-convexity row through the
 same checked Farkas evidence path after reducing the midpoint inequality to
 division-free linear form.
+`finite-concentration-v0` now routes its bad finite tail-bound row through the
+same checked Farkas evidence path after finite replay computes the tail
+probability.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

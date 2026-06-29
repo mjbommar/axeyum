@@ -258,6 +258,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `2*f(midpoint) <= f(left)+f(right)` over the fixed values, requires
   `UnsatFarkas` evidence, and rechecks the certificate independently.
 
+- **Finite-concentration QF_LRA/Farkas regression landed.**
+  [`finite-concentration-v0`](artifacts/examples/math/finite-concentration-v0/)
+  now binds its bad finite tail-bound row to Axeyum's evidence path. The
+  shared LRA resource regression builds `tail_probability = 1/4` and
+  `tail_probability <= 1/8`, requires `UnsatFarkas` evidence, and rechecks the
+  certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

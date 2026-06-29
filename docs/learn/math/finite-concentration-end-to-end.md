@@ -171,6 +171,17 @@ and rejects the claim because:
 The candidate tail bound is untrusted; the small checker rebuilds the event
 probability directly from the atom table.
 
+The solver regression then checks the final false bound as linear rational
+arithmetic:
+
+```text
+tail_probability = 1/4
+tail_probability <= 1/8
+```
+
+The search result is not trusted by itself. The trusted part is the independent
+Farkas certificate check over exact rational multipliers.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -205,6 +216,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas
 ```
 
 Expected output:
@@ -219,7 +231,7 @@ This lesson shows Axeyum's current finite concentration resource pattern:
 
 ```text
 untrusted fast search -> tail event, event union, bound, or counterexample row
-trusted small checking -> exact rational expectations, variances, and finite event sums
+trusted small checking -> exact rational expectations, variances, finite event sums, Farkas certificate checks
 remaining horizon -> general concentration and limit theorems
 ```
 

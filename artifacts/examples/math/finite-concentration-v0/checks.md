@@ -28,6 +28,10 @@ Expected result: `unsat`.
 The validator rejects the claimed tail bound because the actual finite tail
 probability is `1/4`, which is greater than the claimed `1/8`.
 
+The resource-backed Axeyum regression checks the final bound obligation as
+`QF_LRA`: `tail_probability = 1/4` and `tail_probability <= 1/8`, requiring
+rechecked `UnsatFarkas` evidence.
+
 ## `general-concentration-lean-horizon`
 
 Expected result: `not-run`.

@@ -166,3 +166,18 @@ fn convexity_bad_midpoint_claim_emits_checked_farkas() {
         ],
     );
 }
+
+#[test]
+fn finite_concentration_bad_tail_bound_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let tail_probability = real(&mut arena, "tail_probability");
+    let tail_is_quarter = eq_ratio(&mut arena, tail_probability, 1, 4);
+    let claimed_bound = arena.real_ratio(1, 8);
+    let false_tail_bound = arena.real_le(tail_probability, claimed_bound).unwrap();
+
+    assert_farkas_checked(
+        "finite-concentration-v0 bad-concentration-bound-rejected",
+        &arena,
+        &[tail_is_quarter, false_tail_bound],
+    );
+}

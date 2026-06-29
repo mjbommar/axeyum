@@ -94,9 +94,10 @@
         "threshold": "2",
         "claimed_bound": "1/8",
         "actual_tail_probability": "1/4",
-        "markov_bound": "1/2"
+        "markov_bound": "1/2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas"
       },
-      "notes": "The validator rejects the claimed bound because the recomputed tail probability is 1/4."
+      "notes": "The validator rejects the claimed bound because the recomputed tail probability is 1/4; the Axeyum regression refutes the final linear claim tail_probability <= 1/8 with rechecked Farkas evidence."
     },
     {
       "id": "general-concentration-lean-horizon",

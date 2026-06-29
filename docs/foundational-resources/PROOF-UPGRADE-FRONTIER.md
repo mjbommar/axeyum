@@ -119,6 +119,7 @@ First targets:
   (resource-backed Farkas regression landed for the bad midpoint-convexity
   row)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
+  (resource-backed Farkas regression landed for the bad finite tail-bound row)
 
 Secondary targets:
 
