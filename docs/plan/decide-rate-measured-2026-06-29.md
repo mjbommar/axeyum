@@ -88,6 +88,32 @@ rises **37/48 → 39/48** (gap to z3 −4 → −2). At a tight 2 s cap the net 
 (`ite3` gained; one borderline instance recovers only at 5 s — a slowdown, not a
 regression). The gain dominates at an adequate budget.
 
+## Landed: QF_ABV write-index array extensionality (decide-rate gain)
+
+Batch-measuring the accessible curated slices found **QF_ABV** the next verifiable
+gap (axeyum 173/177 vs z3 177/177 at 1.5 s; 175/177 at 8 s). Triage: several
+wide-index (32-/64-bit) `store-chain = store-chain` array equalities **hard-
+errored** ("bounded extensionality supports indices up to 8 bits") because
+`eliminate_array_eq` enumerated all `2^iw` concrete indices. Two fixes:
+
+1. **Robustness** (`auto.rs`): the final fallback now converts that backend error
+   to honest `Unknown` when `features.has_array` (Err-arm only — no decided
+   instance regresses). `check_auto` no longer errors on a valid QF_ABV instance.
+2. **Decide-rate** (`arrays.rs::eliminate_array_eq`): **write-index
+   extensionality**. Peel both sides' store chains; if they share a base array
+   `S`, then any index not written by either chain satisfies `a[i] = S[i] = b[i]`
+   automatically, so `a = b` iff `a` and `b` agree at the *finite set of written
+   indices* — no `2^iw` enumeration. (Write indices are themselves rewritten
+   first, since they may contain nested `select`s.) Sound and **complete for
+   shared-base store chains**; different-base falls back to the concrete
+   enumeration (small index) or `Unknown` (wide). Decides issue8106_2 (sat),
+   issue8274/9518_2 (unsat), issue8809 (sat), ext29 (unsat) — all previously hard
+   errors.
+
+**Measured (curated QF_ABV, release, vs z3):** 175/177 → **176/177** at an 8 s cap
+(gap to z3 −2 → **−1**), DISAGREE = 0. Validated: axeyum-rewrite 88/88, solver lib
+613/613, `abv_differential_fuzz` DISAGREE = 0.
+
 ## Recommended next core step (focused session)
 
 1. **Uninterpreted-sort Ackermann in the BV/auto route** so `ite3`-style

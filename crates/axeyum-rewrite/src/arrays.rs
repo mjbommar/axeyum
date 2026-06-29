@@ -338,6 +338,36 @@ impl Eliminator {
                     .to_owned(),
             ));
         };
+        // **Write-index extensionality** (sound, and complete for store chains over
+        // a *shared base*): peel both sides' store chains. If they bottom out at the
+        // same base array term `S`, then for any index `i` not written by either
+        // chain, `a[i] = S[i] = b[i]` automatically — so `a = b` iff `a` and `b`
+        // agree at the (finite) set of *written* indices. This decides wide-index
+        // `store-chain = store-chain` equalities (e.g. 64-bit indices) that the
+        // `2^iw` concrete enumeration below cannot, without enumerating the domain.
+        let (base_a, idx_a) = peel_store_chain(arena, a);
+        let (base_b, idx_b) = peel_store_chain(arena, b);
+        if base_a == base_b && !(idx_a.is_empty() && idx_b.is_empty()) {
+            let mut indices = idx_a;
+            indices.extend(idx_b);
+            let mut seen = std::collections::HashSet::new();
+            indices.retain(|t| seen.insert(*t));
+            let mut acc: Option<TermId> = None;
+            for w in indices {
+                // A write index may itself contain array reads (e.g.
+                // `store(a, select(a, b), v)`); eliminate those first so the
+                // resolved selects carry no raw `Select` into the backend.
+                let w = self.rewrite(arena, w)?;
+                let sa = self.resolve_select(arena, a, w)?;
+                let sb = self.resolve_select(arena, b, w)?;
+                let eq_w = arena.eq(sa, sb)?;
+                acc = Some(match acc {
+                    None => eq_w,
+                    Some(prev) => arena.and(prev, eq_w)?,
+                });
+            }
+            return Ok(acc.unwrap_or_else(|| arena.bool_const(true)));
+        }
         if iw > MAX_ARRAY_EQ_INDEX_BITS {
             return Err(ArrayElimError::Unsupported(format!(
                 "array equality over a {iw}-bit index (bounded extensionality supports \
@@ -402,6 +432,22 @@ impl Eliminator {
         }
         Ok(constraints)
     }
+}
+
+/// Peels a `store` chain `store(store(…base…, i₁, v₁), …, iₙ, vₙ)` into its base
+/// array term and the list of written indices `[iₙ, …, i₁]`. Stops at the first
+/// non-`store` term (a variable, `ite`, `const-array`, …), which is the base.
+fn peel_store_chain(arena: &TermArena, mut t: TermId) -> (TermId, Vec<TermId>) {
+    let mut indices = Vec::new();
+    while let TermNode::App {
+        op: Op::Store,
+        args,
+    } = arena.node(t)
+    {
+        indices.push(args[1]);
+        t = args[0];
+    }
+    (t, indices)
 }
 
 fn is_array(arena: &TermArena, term: TermId) -> bool {
