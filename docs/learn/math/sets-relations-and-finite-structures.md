@@ -43,6 +43,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
+For a fuller trace through finite topology and measure replay, read
+[End To End: Finite Topology And Measure](finite-structures-end-to-end.md).
+
 ## Horizon
 
 Dedicated `finite-sets-v0` and `relations-functions-v0` packs are still needed.

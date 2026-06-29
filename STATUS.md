@@ -155,6 +155,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Phase M5 end-to-end lesson coverage completed.** Added finite
+  topology/measure and bounded dynamics/operator end-to-end lessons under
+  [`docs/learn/math/`](docs/learn/math/), and linked them from the finite
+  structures and analysis/topology cluster pages. Phase M5 now has scaffold,
+  walkthroughs, and end-to-end lessons for every planned math cluster. Continue
+  Phase M6 with proof-cookbook recipe links from example packs.
+
 - **Math end-to-end lesson set widened.** Added rational midpoint,
   linear-system/LP, and finite conditional-probability end-to-end lessons under
   [`docs/learn/math/`](docs/learn/math/), and linked them from the relevant

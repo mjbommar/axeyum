@@ -60,6 +60,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 ```
 
+For a fuller trace through bounded dynamics and finite-dimensional operator
+replay, read [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md).
+
 ## Horizon
 
 General epsilon-delta limits, compactness, connectedness, Lebesgue measure,

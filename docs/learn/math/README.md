@@ -40,6 +40,10 @@ validated pack data and the repo-root command that replays it.
   matrix replay and a tiny checked Farkas-style LP certificate.
 - [Conditional Probability](finite-probability-end-to-end.md): follows a finite
   atom table through exact conditional-probability replay.
+- [Finite Topology And Measure](finite-structures-end-to-end.md): follows
+  finite set-family, closure/interior, and measure replay.
+- [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
+  bounded recurrence, invariant, operator-bound, and Chebyshev replay.
 
 ## How To Read These Pages
 
