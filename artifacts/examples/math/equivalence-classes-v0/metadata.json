@@ -42,12 +42,12 @@
     "quotient-map-fiber-witness",
     "partition-relation-roundtrip",
     "bad-equivalence-rejected",
-    "qf-uf-congruence-proof-gap"
+    "qf-uf-quotient-congruence-alethe"
   ],
   "graduation_criteria": [
     "Replay finite equivalence relations and partitions from raw tables.",
     "Check that quotient-map fibers exactly match equivalence classes.",
     "Emit checked counterexample evidence for false equivalence-relation claims.",
-    "Add explicit QF_UF congruence-conflict artifacts with checked Alethe evidence before claiming proof-object coverage."
+    "Keep the QF_UF quotient-map congruence artifact tied to a zero-trust Alethe proof regression before claiming proof-object coverage."
   ]
 }

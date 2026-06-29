@@ -12,7 +12,7 @@ The examples are:
 - a quotient map whose fibers are exactly the equivalence classes;
 - a partition-to-relation round trip;
 - checked rejection of a symmetric, reflexive, but non-transitive relation;
-- an explicit proof-gap row for future QF_UF/Alethe congruence evidence.
+- a QF_UF/Alethe quotient-map congruence conflict.
 
 ## Concepts
 
@@ -29,10 +29,11 @@ checks that listed blocks form a partition, that induced relations match the
 listed pair set, that quotient maps are total and single-valued, and that
 quotient-map fibers agree with the equivalence classes.
 
-This is finite checked evidence. It does not prove quotient constructions over
-arbitrary sets, choice principles, or infinite cardinality facts. It also does
-not yet emit an Alethe proof for QF_UF congruence conflicts; that remains the
-pack's graduation path.
+This is finite checked evidence plus one proof-object row. The proof-object row
+uses the SMT-LIB artifact in `smt2/quotient-map-congruence-conflict.smt2` and a
+solver regression requiring zero-trust `Evidence::UnsatAletheProof`. It does not
+prove quotient constructions over arbitrary sets, choice principles, or infinite
+cardinality facts.
 
 Validation:
 

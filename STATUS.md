@@ -265,6 +265,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `tail_probability <= 1/8`, requires `UnsatFarkas` evidence, and rechecks the
   certificate independently.
 
+- **Equivalence-classes QF_UF/Alethe regression landed.**
+  [`equivalence-classes-v0`](artifacts/examples/math/equivalence-classes-v0/)
+  now upgrades its quotient-map congruence row from proof-gap to checked. The
+  new SMT-LIB artifact asserts `a = c` and `q(a) != q(c)` over declared carrier
+  sorts; the resource regression requires `prove_qf_uf_unsat_alethe` to emit a
+  pure EUF `Evidence::UnsatAletheProof` and rechecks it independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -723,9 +730,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`equivalence-classes-end-to-end.md`](docs/learn/math/equivalence-classes-end-to-end.md)
   as the learner-facing trace for the equivalence-classes pack: parity
   equivalence-class replay, quotient-map fiber replay, partition-to-relation
-  round-trip checking, checked non-transitivity rejection, and the explicit
-  QF_UF/Alethe proof gap for quotient congruence evidence. The lesson is
-  linked from the math learning index plus the sets/relations path.
+  round-trip checking, checked non-transitivity rejection, and the QF_UF/Alethe
+  quotient congruence proof row. The lesson is linked from the math learning
+  index plus the sets/relations path.
 
 - **Relations/functions end-to-end lesson landed.** Added
   [`relations-functions-end-to-end.md`](docs/learn/math/relations-functions-end-to-end.md)
@@ -1149,10 +1156,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the finite quotient/equivalence-class bridge for the
   relations-and-functions curriculum row. The pack validates finite
   equivalence relations, quotient-map fibers, partition-to-relation round
-  trips, checked rejection of a non-transitive relation, and an explicit
-  QF_UF/Alethe proof-object gap. The foundational example-pack validator now
-  checks exact finite equivalence classes, quotient fibers, induced partition
-  relations, representatives, and transitivity counterexamples.
+  trips, checked rejection of a non-transitive relation, and a checked
+  QF_UF/Alethe quotient-map congruence row. The foundational example-pack
+  validator now checks exact finite equivalence classes, quotient fibers,
+  induced partition relations, representatives, transitivity counterexamples,
+  and the presence of the linked proof artifact/regression.
 
 - **Convexity rational foundations pack landed.** Added
   [`convexity-rational-v0`](artifacts/examples/math/convexity-rational-v0/README.md)
@@ -10672,10 +10680,11 @@ plan is built and committed on the current branch:
   [`artifacts/examples/math/equivalence-classes-v0/`](artifacts/examples/math/equivalence-classes-v0/)
   with finite equivalence relation replay, quotient-map fiber checks,
   partition-to-relation round trips, checked rejection of a non-transitive
-  relation, and an explicit QF_UF/Alethe proof-object gap. Extended
+  relation, and a checked QF_UF/Alethe quotient-map congruence row. Extended
   [`validate-foundational-example-pack.py`](scripts/validate-foundational-example-pack.py)
   to check finite equivalence classes, quotient-map fibers, induced
-  partition relations, representatives, and transitivity counterexamples.
+  partition relations, representatives, transitivity counterexamples, and the
+  linked proof artifact/regression.
 
 - **2026-06-29** — **Convexity rational pack landed.**
   Added

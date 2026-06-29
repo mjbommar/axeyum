@@ -991,14 +991,22 @@ def validate_equivalence_classes(expected: dict[str, Any]) -> None:
     if missing_pair in pairs:
         fail("bad-equivalence-rejected missing transitivity pair is present")
 
-    proof_gap = checks["qf-uf-congruence-proof-gap"]
-    if proof_gap["expected_result"] != "not-run":
-        fail("qf-uf-congruence-proof-gap must be not-run")
-    if proof_gap["proof_status"] != "proof-gap":
-        fail("qf-uf-congruence-proof-gap must remain proof-gap")
-    data = proof_gap.get("data", {})
-    require_string("qf-uf congruence target_artifact", data.get("target_artifact"))
-    require_string("qf-uf congruence future_checker", data.get("future_checker"))
+    congruence = checks["qf-uf-quotient-congruence-alethe"]
+    if congruence["expected_result"] != "unsat":
+        fail("qf-uf-quotient-congruence-alethe must expect unsat")
+    if congruence["proof_status"] != "checked":
+        fail("qf-uf-quotient-congruence-alethe must be checked")
+    if congruence["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-quotient-congruence-alethe must use qf_uf_congruence_alethe validation")
+    data = congruence.get("data", {})
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf quotient congruence smt2_artifact", smt2_artifact)
+    check_source("qf-uf quotient congruence smt2_artifact", smt2_artifact)
+    require_string("qf-uf quotient congruence proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-uf quotient congruence certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf quotient congruence certificate must document zero-trust Alethe evidence")
 
 
 def require_graph_data(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]], list[str]]:

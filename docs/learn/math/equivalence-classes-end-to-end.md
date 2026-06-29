@@ -22,7 +22,7 @@ Concept rows:
 | `quotient-map-fiber-witness` | `sat` | replay-only |
 | `partition-relation-roundtrip` | `sat` | replay-only |
 | `bad-equivalence-rejected` | `unsat` | checked |
-| `qf-uf-congruence-proof-gap` | `not-run` | proof-gap |
+| `qf-uf-quotient-congruence-alethe` | `unsat` | checked |
 
 The checked rows are finite relation, partition, and quotient-map rows. The
 pack does not claim general quotient constructions, quotient types,
@@ -52,9 +52,9 @@ elements to class labels:
 q(x) = label of the block containing x
 ```
 
-The intended Axeyum graduation route is a QF_UF view where quotient-style
-equality and congruence conflicts are certified through Alethe evidence. This
-pack currently replays finite tables.
+The proof-object row uses a QF_UF view where quotient-style equality and
+congruence conflicts are certified through Alethe evidence. The finite table
+rows still replay directly.
 
 ## Replay Same-Parity Classes
 
@@ -144,18 +144,22 @@ a ~ c
 The validator confirms reflexivity and symmetry, then rejects the equivalence
 claim because transitivity fails on the triple `(a,b,c)`.
 
-## Keep The Proof Gap Visible
+## Check The QF_UF Certificate
 
-The final row is not a replayed theorem. It records the missing proof-object
-route:
+The final row is not a finite table replay. It is a concrete SMT-LIB
+congruence conflict:
 
 ```text
-QF_UF/Alethe certificate for quotient congruence conflicts
+a = c
+q(a) != q(c)
 ```
 
-Finite table replay is enough for the examples above. Equality-heavy quotient
-reasoning should not be called proof-object covered until the Alethe route is
-implemented and checked.
+The artifact lives at
+`artifacts/examples/math/equivalence-classes-v0/smt2/quotient-map-congruence-conflict.smt2`.
+The resource regression checks that Axeyum emits a pure EUF
+`Evidence::UnsatAletheProof`, then rechecks the proof independently. This shows
+the congruence step is derived by the certificate route rather than trusted as a
+silent rewrite.
 
 ## Run It
 
@@ -177,7 +181,7 @@ This lesson shows Axeyum's resource pattern for quotient-shaped finite data:
 
 ```text
 untrusted fast search -> relation table, partition blocks, quotient map
-trusted small checking -> equivalence laws, classes, fibers, round trip, counterexample
+trusted small checking -> equivalence laws, classes, fibers, round trip, counterexample, Alethe congruence proof
 ```
 
 General quotient types, representative-choice theorems, arbitrary quotient

@@ -157,6 +157,7 @@ Graduation:
 First targets:
 
 - [equivalence-classes-v0](../../artifacts/examples/math/equivalence-classes-v0/)
+  (resource-backed QF_UF/Alethe regression landed for quotient-map congruence)
 - [relations-functions-v0](../../artifacts/examples/math/relations-functions-v0/)
 - [finite-groups-v0](../../artifacts/examples/math/finite-groups-v0/)
 - [function-composition-v0](../../artifacts/examples/math/function-composition-v0/)
@@ -176,6 +177,7 @@ Expected artifact:
 Validation:
 
 ```sh
+cargo test -p axeyum-solver --test math_resource_uf_routes
 cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean

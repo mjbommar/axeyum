@@ -131,16 +131,17 @@
       "notes": "The validator confirms reflexivity and symmetry hold, then rejects the relation because transitivity would require (a, c)."
     },
     {
-      "id": "qf-uf-congruence-proof-gap",
-      "claim": "A future QF_UF/Alethe artifact should certify quotient congruence conflicts instead of only replaying finite tables.",
-      "expected_result": "not-run",
-      "validation": "proof_gap_metadata",
-      "proof_status": "proof-gap",
+      "id": "qf-uf-quotient-congruence-alethe",
+      "claim": "A quotient map cannot send equal elements to different class labels.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
       "data": {
-        "target_artifact": "Alethe proof for a QF_UF congruence conflict induced by quotient-map equality",
-        "future_checker": "Carcara/Alethe route linked to Axeyum proof certificates"
+        "smt2_artifact": "artifacts/examples/math/equivalence-classes-v0/smt2/quotient-map-congruence-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The finite rows are replayed today; proof-object coverage for equality-heavy quotient reasoning is intentionally explicit as a gap."
+      "notes": "The SMT-LIB artifact asserts a = c and not q(a) = q(c). Axeyum emits a pure EUF Alethe refutation whose checker re-derives the congruence step."
     }
   ]
 }

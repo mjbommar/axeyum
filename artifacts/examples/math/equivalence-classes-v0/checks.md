@@ -31,9 +31,11 @@ The checked query is the fixed false claim that a relation containing `a ~ b`
 and `b ~ c`, but missing `a ~ c`, is an equivalence relation. The validator
 confirms the relation is reflexive and symmetric, then rejects transitivity.
 
-## `qf-uf-congruence-proof-gap`
+## `qf-uf-quotient-congruence-alethe`
 
-Expected result: `not-run`.
+Expected result: `unsat`.
 
-This row records the future proof-object route: a QF_UF/Alethe congruence
-certificate for quotient-style equality reasoning.
+The SMT-LIB artifact asserts `a = c` while also asserting `q(a) != q(c)` for a
+quotient-map-style uninterpreted function `q`. The solver regression requires
+`Evidence::UnsatAletheProof`, rechecks it with `Evidence::check`, and confirms
+there are no trusted reduction steps.

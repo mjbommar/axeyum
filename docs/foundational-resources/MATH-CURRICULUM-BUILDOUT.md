@@ -370,7 +370,7 @@ dependency with finite relation properties, bijective function-table replay, and
 a checked rejection of a multi-valued graph. `equivalence-classes-v0` now
 deepens that node with finite equivalence classes, quotient-map fibers,
 partition-to-relation round trips, checked rejection of a non-transitive
-relation, and an explicit QF_UF/Alethe proof-gap row.
+relation, and a resource-backed QF_UF/Alethe quotient-map congruence proof row.
 `function-composition-v0` now validates finite composition tables,
 image/preimage replay, inverse tables for bijections, composition
 associativity, non-injective inverse counterexamples, and a general
@@ -1097,8 +1097,8 @@ replay, monotone lower/upper sums, false integral counterexamples, and
 fundamental-theorem Lean-horizon examples.
 `equivalence-classes-v0` now deepens the relations/functions curriculum row
 with exact finite equivalence classes, quotient-map fibers, partition
-round-trips, a checked non-transitive counterexample, and an explicit
-QF_UF/Alethe proof-object gap.
+round-trips, a checked non-transitive counterexample, and a QF_UF/Alethe
+proof-object row for quotient-map congruence.
 `function-composition-v0` now deepens the relations/functions curriculum row
 with finite composition, image/preimage, inverse-table, associativity,
 non-injective inverse counterexample, and general function-law Lean-horizon

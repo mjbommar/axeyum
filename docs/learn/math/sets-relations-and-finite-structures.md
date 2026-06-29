@@ -35,8 +35,8 @@ union/intersection identities, subset transitivity, and a fixed false set claim.
 The relations/functions pack checks partial-order properties, bijective function
 tables, and rejection of a multi-valued graph. The equivalence-classes pack
 checks finite equivalence classes, quotient-map fibers, partition-to-relation
-round trips, rejection of a non-transitive relation, and an explicit QF_UF/Alethe
-proof gap. The function-composition pack checks finite composition,
+round trips, rejection of a non-transitive relation, and a checked QF_UF/Alethe
+quotient congruence row. The function-composition pack checks finite composition,
 image/preimage replay, inverse tables, associativity, and non-injective inverse
 counterexamples. The finite-monoids pack checks when a closed set of finite
 functions forms a monoid under composition, including units and idempotents.

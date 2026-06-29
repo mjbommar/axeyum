@@ -407,7 +407,7 @@ checked bad-step rejection while keeping the full schema as a Lean-horizon row.
 [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/)
 validates finite equivalence relations, quotient-map fibers,
 partition-to-relation round trips, checked rejection of a non-transitive
-relation, and an explicit QF_UF/Alethe proof-object gap.
+relation, and a checked QF_UF/Alethe quotient-map congruence row.
 [`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/)
 validates finite composition, image/preimage, inverse tables, composition
 associativity, and checked non-injective inverse counterexamples.
