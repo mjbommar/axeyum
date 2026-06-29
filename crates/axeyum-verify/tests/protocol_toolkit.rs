@@ -523,3 +523,158 @@ fn two_peer_handshake_desync_bug_is_reachable() {
         "fuzzing must independently find the desync"
     );
 }
+
+// ---- verifying REAL idiomatic Rust by finite reflection ------------------------
+//
+// The user writes ordinary Rust — `#[repr(u8)]` enums and a real
+// `fn step(State, Event) -> State` (match on enum tuples) — not `u8` magic
+// numbers. `reflect` enumerates the finite state/event space, calls the *real*
+// `step`, and builds the toolkit `Fsm`. The same `step` is both run (the fuzzing
+// oracle) and proven (the IR): "two readings of one Rust function", sound and
+// complete for finite state. (Design: `docs/.../real-rust-frontend.md`.)
+
+/// A type with a finite, indexable set of values — the only thing the reflection
+/// adapter needs from a user's state/event enum.
+trait Finite: Copy {
+    const COUNT: u8;
+    fn from_index(i: u8) -> Self;
+    fn index(self) -> u8;
+}
+
+/// Reflect a real `fn step(State, Event) -> State` into a toolkit `Fsm` by
+/// partial evaluation over the finite domain. No DSL: `step` is ordinary Rust.
+fn reflect<S: Finite, E: Finite>(
+    init: S,
+    bad: &[S],
+    step: impl Fn(S, E) -> S,
+) -> Fsm<impl Fn(u8, u8) -> u8> {
+    Fsm {
+        states: S::COUNT,
+        init: init.index(),
+        events: E::COUNT,
+        step: move |si, ei| step(S::from_index(si), E::from_index(ei)).index(),
+        bad: bad.iter().map(|s| s.index()).collect(),
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+#[repr(u8)]
+enum Cap {
+    Empty = 0,
+    Allocated = 1,
+    Granted = 2,
+    Revoked = 3,
+    UseAfterRevoke = 4,
+}
+
+#[derive(Clone, Copy)]
+#[repr(u8)]
+enum CapEvent {
+    Alloc = 0,
+    Grant = 1,
+    Use = 2,
+    Revoke = 3,
+}
+
+impl Finite for Cap {
+    const COUNT: u8 = 5;
+    fn from_index(i: u8) -> Self {
+        match i {
+            0 => Cap::Empty,
+            1 => Cap::Allocated,
+            2 => Cap::Granted,
+            3 => Cap::Revoked,
+            _ => Cap::UseAfterRevoke,
+        }
+    }
+    fn index(self) -> u8 {
+        self as u8
+    }
+}
+
+impl Finite for CapEvent {
+    const COUNT: u8 = 4;
+    fn from_index(i: u8) -> Self {
+        match i {
+            0 => CapEvent::Alloc,
+            1 => CapEvent::Grant,
+            2 => CapEvent::Use,
+            _ => CapEvent::Revoke,
+        }
+    }
+    fn index(self) -> u8 {
+        self as u8
+    }
+}
+
+/// The capability lifecycle as a real, idiomatic Rust function (`buggy` routes a
+/// use-after-revoke to the bad state instead of ignoring it). This is the kind of
+/// code a stack author actually writes — verified directly, no `u8` plumbing.
+fn cap_step(buggy: bool) -> impl Fn(Cap, CapEvent) -> Cap {
+    use Cap::{Allocated, Empty, Granted, Revoked, UseAfterRevoke};
+    use CapEvent::{Alloc, Grant, Revoke, Use};
+    move |state, event| match (state, event) {
+        (Empty, Alloc) => Allocated,
+        (Allocated, Grant) => Granted,
+        (Granted, Use) => Granted,
+        (Revoked, Use) => {
+            if buggy {
+                UseAfterRevoke
+            } else {
+                Revoked
+            }
+        }
+        (_, Revoke) => Revoked,
+        (s, _) => s,
+    }
+}
+
+fn idiomatic_capability(buggy: bool) -> Fsm<impl Fn(u8, u8) -> u8> {
+    reflect(Cap::Empty, &[Cap::UseAfterRevoke], cap_step(buggy))
+}
+
+/// The idiomatic enum-based capability function — *real Rust* reflected into the
+/// IR — proves "a revoked capability is never used" for all traces.
+#[test]
+fn idiomatic_real_rust_capability_verifies() {
+    let outcome = idiomatic_capability(false).prove_for_all_traces();
+    assert!(
+        matches!(outcome, PdrOutcome::Safe { .. }),
+        "the idiomatic capability fn must verify for all traces, got {outcome:?}"
+    );
+    // fuzz the SAME real Rust function (the other reading): never reaches bad.
+    let safe = idiomatic_capability(false);
+    let mut rng = 0x00FE_ED01_u32;
+    for _ in 0..50_000 {
+        let t = random_trace(&mut rng);
+        assert!(
+            !safe.reaches_bad(&t),
+            "fuzz of the real capability fn reached bad: {t:?}"
+        );
+    }
+}
+
+/// Reflecting the idiomatic Rust yields the SAME verdicts as the hand-encoded
+/// `u8` capability (`capability(..)` above): Safe for correct, Reachable for
+/// buggy. The enum reflection is faithful — it adds idiom, not unsoundness.
+#[test]
+fn idiomatic_reflection_matches_the_u8_encoding() {
+    let idiomatic_buggy = idiomatic_capability(true).prove_for_all_traces();
+    assert!(
+        matches!(idiomatic_buggy, PdrOutcome::Reachable { .. }),
+        "the idiomatic use-after-revoke bug must be reachable, got {idiomatic_buggy:?}"
+    );
+    // both encodings agree on both verdicts.
+    assert!(matches!(
+        idiomatic_capability(false).prove_for_all_traces(),
+        PdrOutcome::Safe { .. }
+    ));
+    assert!(matches!(
+        capability(false).prove_for_all_traces(),
+        PdrOutcome::Safe { .. }
+    ));
+    assert!(matches!(
+        capability(true).prove_for_all_traces(),
+        PdrOutcome::Reachable { .. }
+    ));
+}
