@@ -89,10 +89,19 @@ established unroll route** (`verify_program`): the two agree on buggy and safe
 loops (straight-line and branching). Scalar state only (arrays-in-loop stay
 one-shot, off U6).
 
-**Next.** A3/C5/C6 are install-gated or MIR-toolchain-gated. Build a **verify
-capability scoreboard** (App-C measurement, mirroring the EVM one: construction-
-known programs, verified/counterexample/unknown, warm-vs-unroll agreement,
-DISAGREE=0), then C4.6 (`#[verify]` entry auto-routing). Forward backlog in
+**Since C4 (all DONE, gated):** verify capability scoreboard (9 cases,
+DISAGREE=0, with **Lean-cert coverage 2/3** + a warm-vs-unroll depth-scaling sweep
+showing the warm route ~40× faster at depth — the *opposite* of the EVM I4b
+result); `verify_program_warm` entry routing (C4.6); and **adversarial
+differential fuzzes for both apps** — the EVM fuzz **found & fixed a real
+wrong-safe** (bad jump destination treated as a safe path end; `b1cd4a2`), now
+covering single-tx/multi-tx/totality over arith/mem/storage/env/call; the verify
+fuzz hardens the arithmetic fragment. Filed **U8** (axeyum-solver fails to build
+for `wasm32` — blocks the A3 client-side moat).
+
+**Next.** A3/C5/C6 are install/toolchain/U8-gated. Buildable threads: extend the
+fuzzes (signed arith, verify array/index fragment), an EVM Lean-cert column
+(needs a small core accessor — deferred), and corpus breadth. Forward backlog in
 [PLAN.md](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
@@ -100,6 +109,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 **DISAGREE = 0**; build/test via `scripts/mem-run.sh` (64 GB cap).
 
 ## Process/documentation lane (2026-06-27) — `WIP`
+
+- **Foundational math field taxonomy added.** Added
+  [`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md)
+  as the university-style mathematics spine for the Foundational Concept Atlas.
+  It records 18 undergraduate/graduate fields, priority bands, source
+  grounding, atlas schema implications, first example-pack targets, and honest
+  proof horizons for examples such as delta-epsilon limits, Chebyshev spaces,
+  graph coloring, traversal runtime, random matrices, and LU decomposition.
+  The foundational resource roadmap now treats those fields as the math
+  `field_id` authority for future concept rows.
 
 - **Foundational resource expansion researched and planned.** Added
   [`docs/foundational-resources/`](docs/foundational-resources/) with a source
@@ -8897,6 +8916,13 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-29** — **Foundational math field taxonomy added.**
+  [`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md)
+  now grounds the Foundational Concept Atlas math lane in 18 undergraduate and
+  graduate fields, maps them to Axeyum slices/proof horizons, and names the
+  first example packs. The roadmap, source ledger, docs hub, mdBook summary,
+  sibling notes, and `PLAN.md` now link the taxonomy.
 
 - **2026-06-29** — **Foundational resource expansion researched and planned.**
   Added [`docs/foundational-resources/`](docs/foundational-resources/) with a

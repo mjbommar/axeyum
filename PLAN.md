@@ -22,7 +22,10 @@ incubator roadmaps live in [`docs/atlas/`](docs/atlas/),
 [`docs/proof-cookbook/`](docs/proof-cookbook/), and
 [`docs/rules-as-code/`](docs/rules-as-code/); their first validated artifacts
 live under [`artifacts/ontology/`](artifacts/ontology/) and the corresponding
-incubator subfolders.
+incubator subfolders. The broader foundational-resource expansion lives in
+[`docs/foundational-resources/`](docs/foundational-resources/), including the
+university-style math field spine in
+[`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md).
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 
@@ -2437,10 +2440,20 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
 *Cross-cutting:*
 7. **Lean-cert coverage** rises for free as upstream U1/U4 widen the
    reconstructable fragment; add more in-fragment safe examples to each app's
-   metric set as it does.
+   metric set as it does. *Progress:* the verify scoreboard now reports Lean-cert
+   coverage (2/3); EVM Lean coverage is pending a small core accessor on
+   `EvidenceReport` (deferred — core territory).
 8. **Port the per-app `PLAN.md`/`STATUS.md`** for `evm`/`verify` from the
    `consumer-track` worktree into `docs/consumer-track/{evm,verify}/` on `main`
    (docs-only) so each app's detailed plan lives beside its scoreboard.
+9. **Soundness fuzzing (DISAGREE=0 hardening)** — adversarial differential fuzzes
+   with an independent concrete oracle. *Done:* EVM fuzz (random bytecode +
+   calldata; concrete REVERT/INVALID ⟹ never `SafeUpToBound`; single-tx +
+   multi-tx + totality; pool covers arith/mem/storage/env/call) — **found and
+   fixed a real wrong-safe** (bad jump destination treated as a safe path end,
+   `b1cd4a2`); verify fuzz (random `a op b`; reachable panic ⟹ never `Verified`).
+   *Next:* extend to signed arithmetic + the verify array/index fragment; a
+   shrinking pass on any future fuzz failure.
 
 **Coordination.** `main` is clean and compiling at takeover; the solver agent
 actively rewrites STATUS.md's *Current focus*, so consumer-integration status
