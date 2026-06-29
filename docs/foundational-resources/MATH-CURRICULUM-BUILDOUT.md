@@ -857,8 +857,9 @@ finite permutation-group replay, finite group-action/Burnside replay, finite
 order/lattice replay, finite cardinality replay, cardinality-principle replay,
 finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
-finite topology/measure, and bounded dynamics/operators from data row through
-replay result and proof/evidence status.
+finite topology/measure, bounded dynamics/operators, and finite
+Chebyshev-system interpolation/alternation from data row through replay result
+and proof/evidence status.
 
 Deliverables:
 
@@ -1201,6 +1202,10 @@ multivariable-analysis Lean-horizon row.
 midpoint Jensen replay, finite second-difference checks, affine threshold
 monotonicity, checked bad midpoint-convexity rejection, and the general
 convex-analysis Lean horizon.
+`finite-chebyshev-systems-v0` now has a learner-facing end-to-end lesson for
+exact Vandermonde unisolvence, interpolation, alternating residual signs,
+checked duplicate-node-grid rejection, and the Chebyshev/Haar/minimax Lean
+horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

@@ -172,6 +172,9 @@ validated pack data and the repo-root command that replays it.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, Chebyshev recurrence, and
   finite Chebyshev-system replay.
+- [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md): follows
+  exact Vandermonde unisolvence, interpolation, alternating residual signs,
+  duplicate-node rejection, and the Chebyshev/Haar/minimax Lean horizon.
 
 ## How To Read These Pages
 

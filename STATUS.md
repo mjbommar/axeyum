@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Chebyshev-systems end-to-end lesson landed.** Added
+  [`finite-chebyshev-systems-end-to-end.md`](docs/learn/math/finite-chebyshev-systems-end-to-end.md)
+  as the learner-facing trace for the Chebyshev pack: exact Vandermonde
+  unisolvence, interpolation replay, alternating residual signs, checked
+  duplicate-node-grid rejection, and the Lean horizon for general
+  Chebyshev/Haar/minimax approximation theorems. The lesson is linked from the
+  math learning index plus the linear-algebra/optimization and
+  analysis/topology paths.
+
 - **Rational convexity end-to-end lesson landed.** Added
   [`convexity-rational-end-to-end.md`](docs/learn/math/convexity-rational-end-to-end.md)
   as the learner-facing trace for the convexity pack: exact midpoint Jensen
