@@ -1635,6 +1635,121 @@ def cnf_satisfied(clauses: list[list[str]], assignment: dict[str, bool]) -> bool
     return all(any(eval_boolean_literal(literal, assignment) for literal in clause) for clause in clauses)
 
 
+def php_variable(pigeon: int, hole: int) -> str:
+    return f"x_p{pigeon}_h{hole}"
+
+
+def php_variables(pigeons: int, holes: int) -> list[str]:
+    return [
+        php_variable(pigeon, hole)
+        for pigeon in range(pigeons)
+        for hole in range(holes)
+    ]
+
+
+def php_cnf(pigeons: int, holes: int) -> list[list[str]]:
+    clauses: list[list[str]] = []
+
+    for pigeon in range(pigeons):
+        clauses.append([php_variable(pigeon, hole) for hole in range(holes)])
+        for left_hole in range(holes):
+            for right_hole in range(left_hole + 1, holes):
+                clauses.append(
+                    [
+                        f"!{php_variable(pigeon, left_hole)}",
+                        f"!{php_variable(pigeon, right_hole)}",
+                    ]
+                )
+
+    for hole in range(holes):
+        for left_pigeon in range(pigeons):
+            for right_pigeon in range(left_pigeon + 1, pigeons):
+                clauses.append(
+                    [
+                        f"!{php_variable(left_pigeon, hole)}",
+                        f"!{php_variable(right_pigeon, hole)}",
+                    ]
+                )
+
+    return clauses
+
+
+def validate_php_assignment(
+    context: str,
+    pigeons: int,
+    holes: int,
+    assignment: dict[str, bool],
+) -> None:
+    for pigeon in range(pigeons):
+        chosen = [
+            hole
+            for hole in range(holes)
+            if assignment[php_variable(pigeon, hole)]
+        ]
+        if len(chosen) != 1:
+            fail(f"{context}: pigeon {pigeon} must choose exactly one hole")
+
+    for hole in range(holes):
+        occupants = [
+            pigeon
+            for pigeon in range(pigeons)
+            if assignment[php_variable(pigeon, hole)]
+        ]
+        if len(occupants) > 1:
+            fail(f"{context}: hole {hole} receives multiple pigeons")
+
+
+def validate_proof_methods_refutation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    sat_control = checks["php-2-2-sat"]
+    if sat_control["expected_result"] != "sat":
+        fail("php-2-2-sat must expect sat")
+    if sat_control.get("proof_status") != "checked":
+        fail("php-2-2-sat proof_status must be checked")
+    values = single_witness_values(sat_control, witnesses)
+    pigeons = require_counting_int("php-2-2-sat pigeons", values.get("pigeons"))
+    holes = require_counting_int("php-2-2-sat holes", values.get("holes"))
+    if (pigeons, holes) != (2, 2):
+        fail("php-2-2-sat must use PHP(2,2)")
+    assignment = require_bool_assignment(
+        "php-2-2-sat assignment",
+        values.get("assignment"),
+        php_variables(pigeons, holes),
+    )
+    validate_php_assignment("php-2-2-sat", pigeons, holes, assignment)
+
+    unsat_row = checks["php-3-2-unsat"]
+    if unsat_row["expected_result"] != "unsat":
+        fail("php-3-2-unsat must expect unsat")
+    if unsat_row.get("proof_status") != "checked":
+        fail("php-3-2-unsat proof_status must be checked")
+    data = unsat_row.get("data", {})
+    if not isinstance(data, dict):
+        fail("php-3-2-unsat data must be an object")
+    pigeons = require_counting_int("php-3-2-unsat pigeons", data.get("pigeons"))
+    holes = require_counting_int("php-3-2-unsat holes", data.get("holes"))
+    if (pigeons, holes) != (3, 2):
+        fail("php-3-2-unsat must use PHP(3,2)")
+    if pigeons <= holes:
+        fail("php-3-2-unsat must use more pigeons than holes")
+
+    variables = require_boolean_variables(
+        "php-3-2-unsat",
+        data,
+        php_variables(pigeons, holes),
+    )
+    clauses = require_cnf_clauses("php-3-2-unsat.clauses", data.get("clauses"))
+    if clauses != php_cnf(pigeons, holes):
+        fail("php-3-2-unsat clauses are not the deterministic PHP CNF")
+    if has_injective_placement(pigeons, holes):
+        fail("php-3-2-unsat unexpectedly has an injective placement")
+    for assignment in boolean_assignments(variables):
+        if cnf_satisfied(clauses, assignment):
+            fail("php-3-2-unsat CNF is satisfied by an assignment")
+
+
 def require_predicate_table(context: str, universe: list[str], value: Any) -> dict[str, bool]:
     if not isinstance(value, dict):
         fail(f"{context} must be an object")
@@ -3374,6 +3489,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_linear_optimization(expected)
     if metadata["id"] == "logic-basics-v0":
         validate_logic_basics(expected)
+    if metadata["id"] == "proof-methods-refutation-v0":
+        validate_proof_methods_refutation(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "natural-arithmetic-v0":

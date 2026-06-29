@@ -24,10 +24,11 @@ check no counterexample exists, and enumerate tiny CNF rows. The predicate
 logic pack expands finite-domain quantifiers into explicit predicate-table
 checks, including finite universal/existential replay and relation
 counterexamples. The proof-methods pack records a small pigeonhole SAT witness
-and an UNSAT pigeonhole claim with an explicit proof gap. The induction pack
-checks bounded base, step, and conclusion obligations while keeping the full
-induction schema under Lean horizon. The graph-coloring pack adds a finite
-non-colorability example that can be exhaustively checked.
+and checks the `PHP(3,2)` UNSAT pigeonhole claim by deterministic CNF
+truth-table enumeration. The induction pack checks bounded base, step, and
+conclusion obligations while keeping the full induction schema under Lean
+horizon. The graph-coloring pack adds a finite non-colorability example that
+can be exhaustively checked.
 
 ## Encode / Check Walkthrough
 
@@ -52,9 +53,12 @@ x_p1_h1 = true
 ```
 
 The validator checks that every pigeon chooses one hole and no hole receives
-two pigeons. For the `PHP(3,2)` UNSAT row, the pack deliberately records the
-missing certificate route as a proof gap. That distinction is part of the
-lesson: a replayed model and a checked UNSAT proof are different artifacts.
+two pigeons. For the `PHP(3,2)` UNSAT row, the pack records the deterministic
+pigeonhole CNF and enumerates all assignments to reject every possible
+placement. The LRAT/DRAT certificate route is still a stronger graduation
+target, but the finite UNSAT claim is no longer just a schema-level proof gap.
+That distinction is part of the lesson: a replayed model, a finite exhaustive
+refutation, and a checked proof object are different artifacts.
 For predicate logic, keep the universe finite and make predicate values
 explicit:
 

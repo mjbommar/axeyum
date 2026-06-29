@@ -159,6 +159,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-methods finite CNF route landed.** Updated
+  [`proof-methods-refutation-v0`](artifacts/examples/math/proof-methods-refutation-v0/README.md)
+  from an explicit proof-gap pack to checked finite evidence: the validator now
+  replays the `PHP(2,2)` witness, verifies the deterministic `PHP(3,2)` CNF,
+  and enumerates all 64 assignments to reject every placement. The pack does
+  not claim emitted LRAT/DRAT evidence yet; that remains the proof-object
+  graduation target and cookbook route.
+
 - **Calculus algebraic-shadow foundations pack landed.** Added
   [`calculus-algebraic-shadow-v0`](artifacts/examples/math/calculus-algebraic-shadow-v0/README.md)
   with polynomial derivative coefficient replay, a checked product-rule
@@ -166,9 +174,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   replay, false derivative rejection, and a general calculus Lean-horizon row.
   The foundational example-pack validator now checks polynomial addition,
   derivatives, product-rule identities, tangent values, critical-point
-  arithmetic, and analytic theorem-horizon metadata. The only remaining
-  first-wave curriculum issue is the explicit `proof-methods-refutation-v0`
-  CNF/LRAT proof gap.
+  arithmetic, and analytic theorem-horizon metadata.
 
 - **Sequence/limit shadow foundations pack landed.** Added
   [`sequence-limit-shadow-v0`](artifacts/examples/math/sequence-limit-shadow-v0/README.md)

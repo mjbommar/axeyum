@@ -325,7 +325,8 @@ substantive packs,
 validates propositional SAT witness replay, tautology/contradiction truth-table
 checks, De Morgan equivalence, and a tiny CNF refutation.
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
-now validates with a SAT witness control case and an explicit UNSAT proof gap.
+now validates with a SAT witness control case and a checked deterministic
+CNF truth-table refutation for `PHP(3,2)`.
 [`induction-obligations-v0`](../../artifacts/examples/math/induction-obligations-v0/)
 validates bounded induction base, step, and conclusion obligations with the
 full induction schema kept as a Lean-horizon row.

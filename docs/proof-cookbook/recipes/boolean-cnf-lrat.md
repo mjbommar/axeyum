@@ -20,6 +20,12 @@ Expected result: `unsat`.
 This is the proof route needed by small Boolean refutation resources such as
 pigeonhole and finite graph non-colorability.
 
+For very small teaching packs, deterministic truth-table enumeration can be a
+checked finite route before proof-object emission. The
+`proof-methods-refutation-v0` pigeonhole pack is currently in that state:
+`PHP(3,2)` is checked by enumerating its concrete CNF, while emitted LRAT/DRAT
+evidence remains the graduation target.
+
 ## Solver Route
 
 Axeyum's CNF layer owns:

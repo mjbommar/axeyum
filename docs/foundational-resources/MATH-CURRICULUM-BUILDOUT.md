@@ -377,13 +377,16 @@ bounded Cauchy-tail no-counterexample row, and a general convergence
 Lean-horizon row. `calculus-algebraic-shadow-v0` now validates polynomial
 derivative coefficient replay, a checked product-rule polynomial identity,
 tangent-line replay, convex quadratic critical-point replay, false derivative
-rejection, and a general calculus Lean-horizon row. Continue by closing the
-remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
+rejection, and a general calculus Lean-horizon row. `proof-methods-refutation-v0`
+now validates the `PHP(2,2)` control witness and the `PHP(3,2)` refutation by
+deterministic CNF truth-table enumeration; LRAT/DRAT proof objects remain its
+graduation route, not a pack-level proof gap.
 
 Recommended order:
 
-1. `proof-methods-refutation-v0`: negation-as-query, pigeonhole, CNF/LRAT gap
-   or checked route.
+1. `proof-methods-refutation-v0` (landed): negation-as-query, pigeonhole,
+   checked finite CNF refutation; LRAT/DRAT remains the stronger proof-object
+   graduation route.
 2. `finite-sets-v0` (landed) and `relations-functions-v0` (landed): finite set
    identities, relation properties, function properties.
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
@@ -521,10 +524,12 @@ Exit criteria:
 
 Status: active, with the first two integration increments landed. The Boolean
 CNF DRAT/LRAT recipe now exists in the Proof Certificate Cookbook and is linked
-from the graph coloring and proof-by-refutation example packs. A second pass
-added shared finite-model replay, QF_LIA Diophantine, and Lean-horizon recipes,
-then linked the non-template math example packs to their current evidence route
-or graduation target.
+from the graph coloring and proof-by-refutation example packs. The
+proof-by-refutation pack now uses a checked finite CNF truth-table route for
+its small pigeonhole UNSAT claim, while this recipe remains the route for
+stronger proof-object evidence. A second pass added shared finite-model replay,
+QF_LIA Diophantine, and Lean-horizon recipes, then linked the non-template math
+example packs to their current evidence route or graduation target.
 
 Deliverables:
 
@@ -616,7 +621,8 @@ Exit criteria:
 2. Seed `foundational-concepts.json` with 23 curriculum nodes and 18 field rows.
 3. Add generated coverage dashboard for those rows.
 4. Add `foundational-example-pack.schema.json` and a template pack.
-5. Add `proof-methods-refutation-v0` with pigeonhole metadata and proof gap.
+5. Add `proof-methods-refutation-v0` with pigeonhole metadata, witness replay,
+   and checked finite CNF refutation.
 6. Add `modular-arithmetic-v0` from the curriculum backlog.
 7. Add `rationals-lra-v0` with density/trichotomy checks.
 8. Add `linear-algebra-rational-v0` with LU and inconsistent-system examples.
@@ -637,10 +643,11 @@ encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, rational arithmetic, linear
 algebra/optimization, probability/statistics, finite structures, and
 analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs. Phase M7 now has generated pack-level
-proof-gap rows and a normal foundational-resource check hook. Continue by
-closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by
-adding `finite-predicate-v0`.
+non-template math example packs, and `proof-methods-refutation-v0` has a checked
+finite CNF truth-table route for its pigeonhole refutation. Phase M7 now has
+generated pack-level proof-gap rows and a normal foundational-resource check
+hook. Continue by adding the next curriculum pack or by replacing finite CNF
+enumeration routes with emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 

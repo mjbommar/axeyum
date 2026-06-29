@@ -11,8 +11,8 @@ p0 -> h0
 p1 -> h1
 ```
 
-This control case should replay by evaluating the original finite assignment
-constraints.
+The validator replays the finite assignment constraints: every pigeon chooses
+exactly one hole, and no hole receives two pigeons.
 
 ## `php-3-2-unsat`
 
@@ -25,5 +25,7 @@ assume an injective assignment from 3 pigeons to 2 holes
 derive contradiction
 ```
 
-Current proof status: `proof-gap`. The intended graduation route is deterministic
-CNF emission plus a checked LRAT/DRAT certificate.
+Current proof status: `checked` by deterministic CNF truth-table enumeration.
+The pack records the PHP(3,2) CNF clauses directly and the validator enumerates
+all 64 assignments. The stronger graduation route is still checked LRAT/DRAT
+evidence emitted from the CNF route.

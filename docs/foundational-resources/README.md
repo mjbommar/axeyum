@@ -56,7 +56,9 @@ schemas, examples, and validation workflows.
   general first-order Lean-horizon row.
 - [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
   is the first substantive math pack: proof-by-refutation over finite
-  pigeonhole examples, with the UNSAT proof route still marked as a proof gap.
+  pigeonhole examples, with `PHP(2,2)` witness replay and `PHP(3,2)` checked
+  by deterministic CNF truth-table enumeration. LRAT/DRAT remains the
+  proof-object graduation target.
 - [`artifacts/examples/math/induction-obligations-v0/`](../../artifacts/examples/math/induction-obligations-v0/)
   validates bounded induction base, step, and conclusion obligations while
   keeping the full induction schema under Lean horizon.

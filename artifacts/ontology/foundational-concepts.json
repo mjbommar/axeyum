@@ -173,7 +173,7 @@
       ],
       "proof_routes": [
         {
-          "name": "CNF/LRAT or Alethe evidence, initially tracked as a proof gap.",
+          "name": "Finite CNF enumeration now; LRAT/DRAT proof-object graduation remains.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2057,7 +2057,7 @@
           "id": "proof-methods-refutation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/proof-methods-refutation-v0",
-          "notes": "Negation-as-query, CNF/LRAT, and proof-object lessons."
+          "notes": "Negation-as-query, finite CNF checks, and proof-object lessons."
         }
       ],
       "proof_routes": [

@@ -44,7 +44,7 @@ CURRICULUM_MAP = {
         "field_ids": ["logic_and_proof"],
         "pack": "proof-methods-refutation-v0",
         "slice": "Negate-and-decide examples; proof by contradiction as UNSAT.",
-        "proof": "CNF/LRAT or Alethe evidence, initially tracked as a proof gap.",
+        "proof": "Finite CNF enumeration now; LRAT/DRAT proof-object graduation remains.",
     },
     "induction": {
         "field_ids": ["logic_and_proof", "number_theory"],
@@ -169,7 +169,7 @@ CURRICULUM_MAP = {
 }
 
 FIELD_PACKS = {
-    "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, CNF/LRAT, and proof-object lessons."),
+    "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, and proof-object lessons."),
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, and cardinality checks."),
     "discrete_math": ("counting-v0", "Finite counting and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, matching, cuts, and d-separation."),

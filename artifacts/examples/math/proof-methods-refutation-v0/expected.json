@@ -6,10 +6,14 @@
       "id": "bijection-2-2",
       "description": "Two pigeons occupy two different holes.",
       "values": {
-        "x_p0_h0": true,
-        "x_p0_h1": false,
-        "x_p1_h0": false,
-        "x_p1_h1": true
+        "pigeons": 2,
+        "holes": 2,
+        "assignment": {
+          "x_p0_h0": true,
+          "x_p0_h1": false,
+          "x_p1_h0": false,
+          "x_p1_h1": true
+        }
       }
     }
   ],
@@ -18,18 +22,44 @@
       "id": "php-2-2-sat",
       "claim": "PHP(2,2) has an injective assignment.",
       "expected_result": "sat",
-      "validation": "witness_replay_planned",
-      "proof_status": "replay-only",
+      "validation": "finite_pigeonhole_witness_replay",
+      "proof_status": "checked",
       "witnesses": ["bijection-2-2"],
-      "notes": "The witness is structurally present; a pack-specific replay harness is the graduation step."
+      "notes": "The validator checks each pigeon chooses exactly one hole and no hole receives two pigeons."
     },
     {
       "id": "php-3-2-unsat",
       "claim": "PHP(3,2) has no injective assignment.",
       "expected_result": "unsat",
-      "validation": "cnf_lrat_planned",
-      "proof_status": "proof-gap",
-      "notes": "The intended route is deterministic CNF emission plus checked LRAT/DRAT evidence."
+      "validation": "deterministic_php_cnf_truth_table",
+      "proof_status": "checked",
+      "data": {
+        "pigeons": 3,
+        "holes": 2,
+        "variables": [
+          "x_p0_h0",
+          "x_p0_h1",
+          "x_p1_h0",
+          "x_p1_h1",
+          "x_p2_h0",
+          "x_p2_h1"
+        ],
+        "clauses": [
+          ["x_p0_h0", "x_p0_h1"],
+          ["!x_p0_h0", "!x_p0_h1"],
+          ["x_p1_h0", "x_p1_h1"],
+          ["!x_p1_h0", "!x_p1_h1"],
+          ["x_p2_h0", "x_p2_h1"],
+          ["!x_p2_h0", "!x_p2_h1"],
+          ["!x_p0_h0", "!x_p1_h0"],
+          ["!x_p0_h0", "!x_p2_h0"],
+          ["!x_p1_h0", "!x_p2_h0"],
+          ["!x_p0_h1", "!x_p1_h1"],
+          ["!x_p0_h1", "!x_p2_h1"],
+          ["!x_p1_h1", "!x_p2_h1"]
+        ]
+      },
+      "notes": "The validator checks the deterministic PHP CNF and enumerates all 64 assignments; LRAT/DRAT proof objects remain a graduation criterion."
     }
   ]
 }

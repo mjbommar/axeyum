@@ -18,11 +18,11 @@ can hold at most one pigeon.
 
 ## Trust Story
 
-- SAT witness replay is represented for the smaller `PHP(2,2)` control case.
-- The main `PHP(3,2)` UNSAT result is intentionally marked as a proof gap until
-  the pack has a CNF/LRAT emission and checker route.
-- This is an example-pack scaffold for the trusted-small-checking lesson, not a
-  claim that the proof certificate has landed.
+- SAT witness replay is checked for the smaller `PHP(2,2)` control case.
+- The main `PHP(3,2)` UNSAT result is checked against a deterministic CNF by
+  exhaustive finite truth-table enumeration.
+- LRAT/DRAT remains a stronger graduation route; this pack does not claim a
+  proof object until such an artifact is emitted and checked.
 
 Validation:
 

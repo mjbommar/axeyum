@@ -3,8 +3,8 @@
   "id": "proof-methods-refutation-v0",
   "title": "Proof Methods By Refutation",
   "domain": "mathematics",
-  "claim_status": "proof-gap",
-  "trust_status": "proof-gap",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "curriculum_proof_methods",
     "curriculum_propositional_logic",
@@ -12,7 +12,7 @@
   ],
   "field_ids": ["logic_and_proof", "discrete_math"],
   "curriculum_nodes": ["proof-methods", "propositional-logic", "counting"],
-  "axeyum_fragments": ["Bool / SAT"],
+  "axeyum_fragments": ["Bool / SAT", "CNF", "truth-table enumeration"],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0",
   "source_refs": [
     "docs/curriculum/00-foundations/proof-methods.md",
@@ -25,9 +25,9 @@
   ],
   "expected_results": ["php-2-2-sat", "php-3-2-unsat"],
   "graduation_criteria": [
-    "Emit the PHP(3,2) Boolean formula as deterministic CNF.",
+    "Emit the PHP(3,2) Boolean formula as deterministic CNF from Axeyum lowering rather than pack-local data.",
     "Produce and check an LRAT or DRAT proof for the UNSAT case.",
     "Replay the PHP(2,2) witness against the original finite assignment model.",
-    "Link the checked evidence route from the Proof Certificate Cookbook."
+    "Link any stronger proof-object evidence from the Proof Certificate Cookbook without weakening the finite CNF enumeration check."
   ]
 }
