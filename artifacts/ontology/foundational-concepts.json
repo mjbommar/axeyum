@@ -2133,6 +2133,153 @@
       }
     },
     {
+      "id": "family_finite_algebra_alethe",
+      "kind": "example-family",
+      "title": "Finite Algebra Alethe Congruence Family",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Recurring finite algebra and finite function-table conflicts that reduce to small EUF congruence, functionality, closure, or preservation obligations and recheck as zero-trust Alethe evidence.",
+      "prerequisites": [
+        "bridge_counterexample_proof",
+        "curriculum_relations_and_functions",
+        "curriculum_groups",
+        "curriculum_rings",
+        "curriculum_fields",
+        "curriculum_linear_algebra"
+      ],
+      "unlocks": [
+        "field_abstract_algebra"
+      ],
+      "decidability": "decidable",
+      "axeyum_fragments": [
+        "QF_UF",
+        "EUF congruence",
+        "Alethe proof checking",
+        "finite table replay"
+      ],
+      "example_packs": [
+        {
+          "id": "equivalence-classes-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/equivalence-classes-v0",
+          "notes": "Quotient-map congruence conflict over a finite equivalence relation."
+        },
+        {
+          "id": "relations-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/relations-functions-v0",
+          "notes": "Function single-valuedness conflict over finite relation data."
+        },
+        {
+          "id": "finite-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-groups-v0",
+          "notes": "Binary-operation congruence conflict for a finite operation symbol."
+        },
+        {
+          "id": "function-composition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/function-composition-v0",
+          "notes": "Composition application consistency conflict for finite functions."
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Homomorphism-preservation congruence conflict for finite algebra maps."
+        },
+        {
+          "id": "finite-monoids-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-monoids-v0",
+          "notes": "Associativity failure captured as a fixed EUF equality conflict."
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Antisymmetry failure captured as a fixed equality conflict."
+        },
+        {
+          "id": "finite-permutation-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-permutation-groups-v0",
+          "notes": "Duplicate-image non-bijection captured as an injectivity conflict."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Subspace addition-closure failure captured as a membership conflict."
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Covector additivity failure captured as a finite function conflict."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Submodule scalar-closure failure captured as a membership conflict."
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Ideal additive-closure failure captured as a membership conflict."
+        },
+        {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Bilinear left-additivity failure captured as a finite map conflict."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "QF_UF/Alethe congruence family",
+          "status": "checked",
+          "checker": "cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "Each referenced pack keeps finite table replay separate from the EUF proof artifact; the regression parses the SMT-LIB row, emits an UnsatAletheProof, and rechecks it through Evidence::check."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "The family certifies small EUF conflicts, not full finite algebra structure theorems.",
+        "New finite algebra packs should join this family only after they have a source-linked SMT-LIB artifact and a checked math_resource_uf_routes regression.",
+        "Lean reconstruction remains partial at the family level until every recurring EUF shape has a kernel-checked route."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Every family pack row links a concrete SMT-LIB artifact and proof regression.",
+          "cargo test -p axeyum-solver --test math_resource_uf_routes passes.",
+          "Learner pages keep finite table replay separate from the checked Alethe certificate."
+        ]
+      }
+    },
+    {
       "id": "field_abstract_algebra",
       "kind": "field",
       "title": "Abstract algebra",

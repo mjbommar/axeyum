@@ -192,8 +192,9 @@ Build sequence:
 4. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
-5. Turn recurring finite algebra equality conflicts into a small Alethe example
-   family with shared test helpers.
+5. Recurring finite algebra equality conflicts now have the
+   `family_finite_algebra_alethe` example-family row, backed by the shared
+   `math_resource_uf_routes` regression.
 6. Turn recurring rational infeasibility rows into a small Farkas example family
    with shared test helpers.
 7. Add generated dashboard columns for gate level R0-R6 and "next gate".

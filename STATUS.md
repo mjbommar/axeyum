@@ -642,6 +642,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Alethe patterns into reusable example families, or promote selected
   resource-backed rows into solver regression corpora.
 
+- **Finite-algebra Alethe example-family row landed.**
+  [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
+  now includes `family_finite_algebra_alethe`, the first generated
+  `example-family` row. It groups the recurring finite algebra/function-table
+  QF_UF conflicts across equivalence classes, relations/functions, finite
+  groups, function composition, homomorphisms, monoids, order lattices,
+  permutation groups, vector/dual/module/ideal/tensor packs, and ties the
+  family to the checked
+  [`math_resource_uf_routes`](crates/axeyum-solver/tests/math_resource_uf_routes.rs)
+  regression. The row is scoped to `abstract_algebra` to avoid broad
+  cross-field dashboard pollution; field dashboards now show the family as a
+  validated decidable algebra row. Next analogous resource-family work is the
+  recurring QF_LRA/Farkas rational infeasibility family.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

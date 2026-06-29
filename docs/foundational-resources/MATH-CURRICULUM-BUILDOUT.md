@@ -1037,9 +1037,10 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 45 atlas rows validate, including generated bridge-concept rows for
+  Status: 46 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows, and Lean
-  horizons.
+  horizons, plus the first example-family row for recurring finite-algebra
+  QF_UF/Alethe conflicts.
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.

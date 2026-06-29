@@ -717,6 +717,128 @@ BRIDGE_CONCEPTS = [
     },
 ]
 
+EXAMPLE_FAMILIES = [
+    {
+        "id": "family_finite_algebra_alethe",
+        "title": "Finite Algebra Alethe Congruence Family",
+        "field_ids": ["abstract_algebra"],
+        "resource_status": "validated",
+        "summary": (
+            "Recurring finite algebra and finite function-table conflicts that "
+            "reduce to small EUF congruence, functionality, closure, or "
+            "preservation obligations and recheck as zero-trust Alethe evidence."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "curriculum_relations_and_functions",
+            "curriculum_groups",
+            "curriculum_rings",
+            "curriculum_fields",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": ["field_abstract_algebra"],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_UF",
+            "EUF congruence",
+            "Alethe proof checking",
+            "finite table replay",
+        ],
+        "example_packs": [
+            (
+                "equivalence-classes-v0",
+                "Quotient-map congruence conflict over a finite equivalence relation.",
+            ),
+            (
+                "relations-functions-v0",
+                "Function single-valuedness conflict over finite relation data.",
+            ),
+            (
+                "finite-groups-v0",
+                "Binary-operation congruence conflict for a finite operation symbol.",
+            ),
+            (
+                "function-composition-v0",
+                "Composition application consistency conflict for finite functions.",
+            ),
+            (
+                "finite-algebra-homomorphisms-v0",
+                "Homomorphism-preservation congruence conflict for finite algebra maps.",
+            ),
+            (
+                "finite-monoids-v0",
+                "Associativity failure captured as a fixed EUF equality conflict.",
+            ),
+            (
+                "finite-order-lattices-v0",
+                "Antisymmetry failure captured as a fixed equality conflict.",
+            ),
+            (
+                "finite-permutation-groups-v0",
+                "Duplicate-image non-bijection captured as an injectivity conflict.",
+            ),
+            (
+                "finite-vector-spaces-v0",
+                "Subspace addition-closure failure captured as a membership conflict.",
+            ),
+            (
+                "finite-dual-spaces-v0",
+                "Covector additivity failure captured as a finite function conflict.",
+            ),
+            (
+                "finite-modules-v0",
+                "Submodule scalar-closure failure captured as a membership conflict.",
+            ),
+            (
+                "finite-ideals-v0",
+                "Ideal additive-closure failure captured as a membership conflict.",
+            ),
+            (
+                "finite-tensor-products-v0",
+                "Bilinear left-additivity failure captured as a finite map conflict.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_UF/Alethe congruence family",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "Each referenced pack keeps finite table replay separate "
+                    "from the EUF proof artifact; the regression parses the "
+                    "SMT-LIB row, emits an UnsatAletheProof, and rechecks it "
+                    "through Evidence::check."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "The family certifies small EUF conflicts, not full finite algebra structure theorems.",
+            "New finite algebra packs should join this family only after they have a source-linked SMT-LIB artifact and a checked math_resource_uf_routes regression.",
+            "Lean reconstruction remains partial at the family level until every recurring EUF shape has a kernel-checked route.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every family pack row links a concrete SMT-LIB artifact and proof regression.",
+                "cargo test -p axeyum-solver --test math_resource_uf_routes passes.",
+                "Learner pages keep finite table replay separate from the checked Alethe certificate.",
+            ],
+        },
+    },
+]
+
 
 def snake(value: str) -> str:
     return value.replace("-", "_")
@@ -1026,6 +1148,32 @@ def make_bridge_row(spec: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def make_example_family_row(spec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": spec["id"],
+        "kind": "example-family",
+        "title": spec["title"],
+        "domain": "mathematics",
+        "field_ids": spec["field_ids"],
+        "curriculum_node": None,
+        "curriculum_layer": None,
+        "curriculum_area": None,
+        "curriculum_status": "extension",
+        "curriculum_family": "",
+        "resource_status": spec["resource_status"],
+        "summary": spec["summary"],
+        "prerequisites": spec["prerequisites"],
+        "unlocks": spec["unlocks"],
+        "decidability": spec["decidability"],
+        "axeyum_fragments": spec["axeyum_fragments"],
+        "example_packs": [pack(pack_id, pack_notes) for pack_id, pack_notes in spec["example_packs"]],
+        "proof_routes": spec["proof_routes"],
+        "source_refs": spec["source_refs"],
+        "open_gaps": spec["open_gaps"],
+        "graduation": spec["graduation"],
+    }
+
+
 def main() -> int:
     nodes = load_curriculum()
     node_by_id = {node["id"]: node for node in nodes}
@@ -1033,6 +1181,7 @@ def main() -> int:
     pack_metadata = load_example_pack_metadata()
     curriculum_rows = [make_curriculum_row(node, node_by_id) for node in nodes]
     bridge_rows = [make_bridge_row(spec) for spec in BRIDGE_CONCEPTS]
+    example_family_rows = [make_example_family_row(spec) for spec in EXAMPLE_FAMILIES]
     field_rows = [
         make_field_row(field_id, fields[field_id], curriculum_rows, pack_metadata)
         for field_id in sorted(fields)
@@ -1045,7 +1194,7 @@ def main() -> int:
             "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
             "artifacts/examples/math",
         ],
-        "rows": curriculum_rows + bridge_rows + field_rows,
+        "rows": curriculum_rows + bridge_rows + example_family_rows + field_rows,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with OUT.open("w", encoding="utf-8") as handle:

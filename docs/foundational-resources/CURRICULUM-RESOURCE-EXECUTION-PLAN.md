@@ -27,9 +27,10 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 45 atlas rows generated from curriculum, field data, and the first R1 bridge
-  concepts for finite replay, counterexample proof, bounded theorem shadows,
-  and Lean horizons.
+- 46 atlas rows generated from curriculum, field data, the first R1 bridge
+  concepts for finite replay/counterexample/bounded-shadow/Lean-horizon
+  status, and the first example-family row for recurring finite-algebra
+  QF_UF/Alethe conflicts.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, field, and proof-gap dashboards under
   [generated/](generated/).
@@ -336,7 +337,8 @@ Next buildout:
 8. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
    Status: the first high-use learner-page route-note pass now names these
-   routes and their trust boundaries.
+   routes and their trust boundaries; `family_finite_algebra_alethe` now groups
+   the recurring checked finite-algebra EUF/Alethe conflicts.
 9. Promote selected packs into solver regression/fuzz corpora with back-links to
    the resource pack.
 10. Add a rules/law reasoning resource plan that explicitly reuses finite
