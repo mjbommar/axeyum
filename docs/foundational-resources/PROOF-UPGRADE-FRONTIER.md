@@ -148,10 +148,12 @@ First targets:
   row)
 - [inner-product-spaces-rational-v0](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
   (resource-backed Farkas regression landed for the bad negative-norm row)
+- [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
+  (resource-backed Farkas regression landed for the bad eigenpair row)
 
 Secondary targets:
 
-- spectral and matrix-invariant packs.
+- matrix-invariant packs.
 
 Expected artifact:
 

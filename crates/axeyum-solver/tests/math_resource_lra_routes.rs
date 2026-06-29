@@ -434,3 +434,17 @@ fn inner_product_bad_norm_square_emits_checked_farkas() {
         &[norm_is_negative_one, positivity_for_nonzero_vector],
     );
 }
+
+#[test]
+fn spectral_bad_eigenpair_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let eigen_image_0 = real(&mut arena, "eigen_image_0");
+    let actual_component = eq_ratio(&mut arena, eigen_image_0, 3, 1);
+    let false_claimed_component = eq_ratio(&mut arena, eigen_image_0, 2, 1);
+
+    assert_farkas_checked(
+        "spectral-linear-algebra-v0 bad-eigenpair-rejected",
+        &arena,
+        &[actual_component, false_claimed_component],
+    );
+}

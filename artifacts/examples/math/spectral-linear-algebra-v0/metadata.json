@@ -29,6 +29,7 @@
     "finite-dimensional linear algebra",
     "finite matrices",
     "LRA (exact rationals)",
+    "QF_LRA",
     "NRA shadow"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0",
@@ -39,7 +40,8 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "symmetric-eigenpair-witness",
@@ -51,6 +53,7 @@
   "graduation_criteria": [
     "Encode fixed eigenpair, Rayleigh quotient, and spectral-decomposition claims as deterministic exact-rational obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over finite matrices.",
+    "Route false finite eigenpair rows through checked QF_LRA/Farkas evidence once exact replay computes the conflicting component.",
     "Add characteristic-polynomial and interval-eigenvalue checks before claiming broader spectral coverage.",
     "Keep general spectral theorems, compact-operator theory, and numerical eigenvalue algorithms marked Lean/numerical horizon."
   ]

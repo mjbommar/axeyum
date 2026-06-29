@@ -131,6 +131,16 @@ A*v = [3,3]
 2*v = [2,2]
 ```
 
+The spectral pack exposes the first component as a `QF_LRA` contradiction:
+
+```text
+eigen_image_0 = 3
+eigen_image_0 = 2
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 The two vectors differ, so the false eigenpair claim is checked `unsat`.
 
 ## Name The Horizon
@@ -170,6 +180,7 @@ This lesson shows Axeyum's current spectral-linear-algebra resource pattern:
 ```text
 untrusted fast search -> eigenpair, basis, quotient, or decomposition candidate
 trusted small checking -> exact rational matrix-vector and matrix-matrix replay
+proof upgrade -> QF_LRA/Farkas certificate for the false eigenpair component
 remaining horizon -> general spectral, compact-operator, and numerical proofs
 ```
 

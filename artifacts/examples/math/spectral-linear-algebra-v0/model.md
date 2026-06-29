@@ -53,4 +53,23 @@ P^-1 = [[1/2,  1/2],
 
 The validator checks `P*D*P^-1 = A` and `P*P^-1 = I` exactly.
 
+## Bad Eigenpair Certificate
+
+For the rejected eigenpair claim, exact replay computes:
+
+```text
+A * [1,1] = [3,3]
+2 * [1,1] = [2,2]
+```
+
+The linked proof artifact uses the first component:
+
+```text
+eigen_image_0 = 3
+eigen_image_0 = 2
+```
+
+The pack ties that `QF_LRA` contradiction to a resource-backed
+`UnsatFarkas` regression.
+
 These are finite exact checks, not a proof of the general spectral theorem.

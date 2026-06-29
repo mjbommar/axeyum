@@ -9249,6 +9249,8 @@ def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
     bad = checks["bad-eigenpair-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-eigenpair-rejected must expect unsat")
+    if bad.get("proof_status") != "checked":
+        fail("bad-eigenpair-rejected must be checked")
     data = bad.get("data", {})
     matrix = require_fraction_matrix("bad eigenpair matrix", data.get("matrix"))
     eigenvalue = require_fraction("bad eigenpair claimed_eigenvalue", data.get("claimed_eigenvalue"))
@@ -9262,6 +9264,17 @@ def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-eigenpair-rejected claimed_scaled is incorrect")
     if image == claimed_scaled:
         fail("bad-eigenpair-rejected claimed eigenpair unexpectedly holds")
+    farkas_claim = data.get("farkas_component_claim")
+    require_string("bad eigenpair farkas_component_claim", farkas_claim)
+    if farkas_claim != "eigen_image_0 = 2":
+        fail("bad-eigenpair-rejected must document the Farkas component claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad eigenpair smt2_artifact", smt2_artifact)
+    check_source("bad eigenpair smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad eigenpair farkas_regression", regression)
+    if "spectral_bad_eigenpair_emits_checked_farkas" not in regression:
+        fail("bad-eigenpair-rejected must link the Farkas regression")
 
 
 def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:

@@ -145,7 +145,8 @@ validated pack data and the repo-root command that replays it.
   and bad-characteristic-polynomial checks for a fixed rational matrix.
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md): follows
   exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
-  checking, spectral decomposition reconstruction, and bad-eigenpair rejection.
+  checking, spectral decomposition reconstruction, and a QF_LRA/Farkas
+  bad-eigenpair certificate.
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md): follows exact
   matrix-valued probability tables, trace/determinant moments, expected Gram
   matrices, rank probabilities, and a QF_LRA/Farkas bad trace-square

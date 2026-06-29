@@ -437,6 +437,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   claim `norm_square > 0`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Spectral-linear-algebra QF_LRA/Farkas regression landed.**
+  [`spectral-linear-algebra-v0`](artifacts/examples/math/spectral-linear-algebra-v0/)
+  now binds its bad eigenpair row to Axeyum's evidence path. The new SMT-LIB
+  artifact encodes the first component as `eigen_image_0 = 3` and the false
+  claimed scaled component `eigen_image_0 = 2`; the shared LRA resource
+  regression requires `Evidence::UnsatFarkas` and rechecks the rational
+  certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

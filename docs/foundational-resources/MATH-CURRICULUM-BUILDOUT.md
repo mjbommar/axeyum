@@ -744,7 +744,8 @@ residual bounds, rational solution boxes, Jacobi one-step contraction replay,
 and checked QF_LRA/Farkas rejection of a false residual bound.
 `artifacts/examples/math/spectral-linear-algebra-v0/` now validates exact
 finite eigenpair replay, orthogonal eigenbasis checks, Rayleigh quotients,
-spectral decomposition replay, and checked rejection of a false eigenpair.
+spectral decomposition replay, and checked QF_LRA/Farkas rejection of a false
+eigenpair.
 `artifacts/examples/math/matrix-invariants-v0/` now validates exact
 trace/determinant characteristic-polynomial replay, characteristic roots,
 Cayley-Hamilton replay, finite Gershgorin intervals, and checked rejection of a
@@ -808,7 +809,8 @@ Recommended order:
 16. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
     for finite statistical tests, plus a checked QF_LIA bad-count certificate.
 17. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
-    Rayleigh quotients, and finite spectral decomposition.
+    Rayleigh quotients, finite spectral decomposition, and QF_LRA/Farkas
+    bad-eigenpair rejection.
 18. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
     roots, Cayley-Hamilton replay, and finite eigenvalue intervals.
 19. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
@@ -1135,7 +1137,8 @@ optimization learners: midpoint Jensen replay, finite second differences,
 affine threshold monotonicity, and bad midpoint-convexity rejection.
 `spectral-linear-algebra-v0` now adds the first exact finite
 spectral-linear-algebra slice for eigenpair, Rayleigh quotient, and
-decomposition replay. `matrix-invariants-v0` now adds the characteristic
+decomposition replay, with checked QF_LRA/Farkas false-eigenpair rejection.
+`matrix-invariants-v0` now adds the characteristic
 polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
 broader spectral claims. `metric-continuity-v0` now adds the finite
 epsilon-delta and open-ball preimage bridge for analysis/topology learners.
@@ -1261,7 +1264,8 @@ horizon.
 `spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
 checking, spectral decomposition reconstruction, checked bad-eigenpair
-rejection, and the general spectral/numerical horizon.
+rejection with QF_LRA/Farkas evidence, and the general spectral/numerical
+horizon.
 `random-matrix-finite-v0` now has a learner-facing end-to-end lesson for exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank probabilities, checked QF_LRA/Farkas bad trace-square
@@ -1453,6 +1457,8 @@ checked Farkas evidence path after exact finite moment replay.
 same checked Farkas evidence path after exact squared-distance replay.
 `inner-product-spaces-rational-v0` now routes its bad inner-product row
 through the same checked Farkas evidence path after exact negative-norm replay.
+`spectral-linear-algebra-v0` now routes its bad eigenpair row through the same
+checked Farkas evidence path after exact matrix-vector replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

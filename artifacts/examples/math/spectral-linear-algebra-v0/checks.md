@@ -31,5 +31,5 @@ The validator checks `P*D*P^-1 = A` and `P*P^-1 = I` exactly.
 Expected result: `unsat`.
 
 The vector `[1,1]` maps to `[3,3]`, not `[2,2]`, so eigenvalue `2` is rejected
-for that vector. This is a checked finite arithmetic rejection, not an emitted
-proof object yet.
+for that vector. The first-component equality conflict is also checked by a
+linked `QF_LRA` artifact and a resource-backed `UnsatFarkas` regression.

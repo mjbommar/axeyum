@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const eigen_image_0 Real)
+(assert (= eigen_image_0 3))
+(assert (= eigen_image_0 2))
+(check-sat)
