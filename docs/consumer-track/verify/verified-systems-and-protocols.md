@@ -155,9 +155,19 @@ verdict. Then **Block B**. Measure on a small systems scoreboard slice
 (decided / DISAGREE = 0 / Lean-cert coverage), mirroring the existing
 [`SCOREBOARD.md`](SCOREBOARD.md) discipline. Keep all guarantees labeled *bounded*.
 
-**Landed (2026-06-29):** Blocks A+B are committed as
-`tests/network_examples.rs` and `tests/systems_examples.rs`; the fuzz↔proof
-gradient as `tests/spec_oracle_gradient.rs`. Measured results, the gradient
-timings, and a reproducible equivalence-miter perf-wall finding are in
-[`verified-systems-and-protocols-scoreboard.md`](verified-systems-and-protocols-scoreboard.md)
-(9 `#[verify]` cases, 5 verified / 4 bug-found, DISAGREE = 0).
+**Landed (2026-06-29):** Blocks A+B committed as `tests/network_examples.rs` and
+`tests/systems_examples.rs`; the fuzz↔proof gradient as
+`tests/spec_oracle_gradient.rs`; **Block C** (bounded protocol state machines,
+designed in [`protocol-state-machines.md`](protocol-state-machines.md)) as
+`tests/protocol_fsm_examples.rs`. Measured results, gradient timings, the
+equivalence-miter perf-wall finding, and **Lean-cert coverage (the moat
+metric)** are in
+[`verified-systems-and-protocols-scoreboard.md`](verified-systems-and-protocols-scoreboard.md):
+**13 `#[verify]` cases, 7 verified / 6 bug-found, DISAGREE = 0**; coverage
+**1/7 (14%) kernel-Lean, 7/7 in-tree-certified** — quantifying the cert-lane
+gap (BV-equivalence, array/loop, and FSM refutations route through DRAT today).
+The first FSM safety properties verified include *"ESTABLISHED requires a
+handshake"* (a blind-injection class caught as a one-event bad trace). The
+remaining rungs are **unbounded** protocol safety (rung 4, CHC/PDR,
+[ADR-0048](../../research/09-decisions/adr-0048-chc-pdr-verify-guarded-invariant-discovery.md))
+and **widening the Lean reconstructor** to lift coverage off 1/7.
