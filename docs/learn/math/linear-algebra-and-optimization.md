@@ -57,7 +57,8 @@ adds exact residual bounds, rational interval boxes for solutions, and a
 one-step Jacobi contraction check, with a checked QF_LRA/Farkas bad-bound
 certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
-matrices, and rank distributions. The spectral slice checks exact finite
+matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
+certificate. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix. The matrix-invariants
 slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,

@@ -415,6 +415,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `residual_inf_norm <= 1/2`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Random-matrix-finite QF_LRA/Farkas regression landed.**
+  [`random-matrix-finite-v0`](artifacts/examples/math/random-matrix-finite-v0/)
+  now binds its bad trace-square moment row to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `expected_trace_square = 2` and the false claim
+  `expected_trace_square = 1`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

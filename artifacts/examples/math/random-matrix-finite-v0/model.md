@@ -59,3 +59,17 @@ E[rank] = 1
 
 These are finite exact replay targets, not claims about asymptotic spectra or
 floating-point simulation quality.
+
+## Bad Moment Certificate
+
+The rejected trace-square row is a one-variable exact-rational contradiction:
+
+```text
+expected_trace_square = 2
+expected_trace_square = 1
+```
+
+The pack links this to a `QF_LRA` SMT-LIB artifact and a resource-backed
+`UnsatFarkas` regression. The trusted path is still small: finite replay
+computes the moment, and the Farkas checker rejects the incompatible claimed
+moment.

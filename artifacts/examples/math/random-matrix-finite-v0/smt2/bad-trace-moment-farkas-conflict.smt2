@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const expected_trace_square Real)
+(assert (= expected_trace_square 2))
+(assert (= expected_trace_square 1))
+(check-sat)

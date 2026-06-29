@@ -148,7 +148,8 @@ validated pack data and the repo-root command that replays it.
   checking, spectral decomposition reconstruction, and bad-eigenpair rejection.
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md): follows exact
   matrix-valued probability tables, trace/determinant moments, expected Gram
-  matrices, rank probabilities, and checked bad trace-square rejection.
+  matrices, rank probabilities, and a QF_LRA/Farkas bad trace-square
+  certificate.
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md): follows
   exact residual infinity norms, rational solution boxes, one-step Jacobi
   contraction replay, QF_LRA/Farkas bad residual-bound rejection, and the

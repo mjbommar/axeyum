@@ -751,7 +751,7 @@ Cayley-Hamilton replay, finite Gershgorin intervals, and checked rejection of a
 false characteristic polynomial.
 `artifacts/examples/math/random-matrix-finite-v0/` now validates exact finite
 random-matrix moment replay, expected Gram matrices, rank probabilities, and
-checked rejection of a false trace-square moment.
+checked QF_LRA/Farkas rejection of a false trace-square moment.
 `artifacts/examples/math/finite-markov-chain-v0/` now validates exact
 row-stochastic matrix replay, finite-horizon distribution evolution,
 stationary-distribution replay, and checked QF_LRA/Farkas rejection of a
@@ -800,7 +800,8 @@ Recommended order:
 13. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
     and exact iterative-method error replay.
 14. `random-matrix-finite-v0`: finite matrix-valued probability tables,
-    exact moments, Gram expectations, and rank distributions.
+    exact moments, Gram expectations, rank distributions, and a checked
+    QF_LRA/Farkas bad trace-square certificate.
 15. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
     distribution replay, stationary distributions, and bad transition rows.
 16. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
@@ -1098,7 +1099,8 @@ hook. `numerical-linear-algebra-v0` now adds the first exact residual/error-boun
 numerical-analysis slice with a checked QF_LRA/Farkas bad-bound certificate,
 and `random-matrix-finite-v0` adds the first exact finite random-matrix bridge
 across linear algebra, probability, statistics, and
-numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
+numerical analysis, now with a checked QF_LRA/Farkas bad trace-square
+regression. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics, with a checked QF_LRA/Farkas bad stochastic-row regression.
 `exact-statistical-tests-v0` now adds the first exact finite
@@ -1261,8 +1263,8 @@ checking, spectral decomposition reconstruction, checked bad-eigenpair
 rejection, and the general spectral/numerical horizon.
 `random-matrix-finite-v0` now has a learner-facing end-to-end lesson for exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
-matrices, rank probabilities, checked bad trace-square rejection, and the
-asymptotic random-matrix/numerical horizon.
+matrices, rank probabilities, checked QF_LRA/Farkas bad trace-square
+rejection, and the asymptotic random-matrix/numerical horizon.
 `numerical-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact residual infinity-norm replay, rational solution-box checking, one-step
 Jacobi contraction replay, checked QF_LRA/Farkas bad residual-bound rejection,
@@ -1444,6 +1446,8 @@ same checked Farkas evidence path after exact derivative replay.
 the same checked Farkas evidence path after exact signed-area replay.
 `numerical-linear-algebra-v0` now routes its bad residual-bound row through the
 same checked Farkas evidence path after exact residual-norm replay.
+`random-matrix-finite-v0` now routes its bad trace-square row through the same
+checked Farkas evidence path after exact finite moment replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

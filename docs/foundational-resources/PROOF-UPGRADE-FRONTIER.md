@@ -140,11 +140,14 @@ First targets:
   (resource-backed Farkas regression landed for the bad fixed-orientation row)
 - [numerical-linear-algebra-v0](../../artifacts/examples/math/numerical-linear-algebra-v0/)
   (resource-backed Farkas regression landed for the bad residual-bound row)
+- [random-matrix-finite-v0](../../artifacts/examples/math/random-matrix-finite-v0/)
+  (resource-backed Farkas regression landed for the bad trace-square moment
+  row)
 
 Secondary targets:
 
 - affine geometry;
-- inner-product, spectral, matrix-invariant, and random-matrix packs.
+- inner-product, spectral, and matrix-invariant packs.
 
 Expected artifact:
 

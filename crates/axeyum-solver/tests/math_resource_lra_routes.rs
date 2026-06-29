@@ -387,3 +387,17 @@ fn numerical_linear_algebra_bad_residual_bound_emits_checked_farkas() {
         &[norm_is_one, false_bound],
     );
 }
+
+#[test]
+fn random_matrix_bad_trace_moment_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let expected_trace_square = real(&mut arena, "expected_trace_square");
+    let actual_moment = eq_ratio(&mut arena, expected_trace_square, 2, 1);
+    let false_moment = eq_ratio(&mut arena, expected_trace_square, 1, 1);
+
+    assert_farkas_checked(
+        "random-matrix-finite-v0 bad-trace-moment-rejected",
+        &arena,
+        &[actual_moment, false_moment],
+    );
+}

@@ -112,8 +112,17 @@ The trusted checker recomputes the exact value:
 E[trace(A)^2] = 2
 ```
 
-The claimed value is inconsistent with the finite atom table, so the false
-moment claim is checked `unsat`.
+The pack exposes that mismatch as the small `QF_LRA` contradiction:
+
+```text
+expected_trace_square = 2
+expected_trace_square = 1
+```
+
+The resource regression sends those constraints through Axeyum's LRA evidence
+path and requires independently rechecked `UnsatFarkas` evidence. The claimed
+value is inconsistent with the finite atom table, so the false moment claim is
+checked `unsat` without trusting the search procedure.
 
 ## Name The Horizon
 
@@ -152,6 +161,7 @@ This lesson shows Axeyum's current random-matrix resource pattern:
 ```text
 untrusted fast search -> atom table, moment, Gram, rank, or counterexample row
 trusted small checking -> exact probability sums and finite matrix replay
+proof upgrade -> QF_LRA/Farkas certificate for the false trace-square moment
 remaining horizon -> asymptotic random matrix theory and numerical experiments
 ```
 

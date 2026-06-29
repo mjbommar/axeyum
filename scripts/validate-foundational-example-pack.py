@@ -13159,6 +13159,8 @@ def validate_random_matrix_finite(expected: dict[str, Any]) -> None:
     bad_moment = checks["bad-trace-moment-rejected"]
     if bad_moment["expected_result"] != "unsat":
         fail("bad-trace-moment-rejected must expect unsat")
+    if bad_moment["proof_status"] != "checked":
+        fail("bad-trace-moment-rejected must be checked")
     data = bad_moment.get("data", {})
     atoms = require_matrix_distribution("bad trace atoms", data.get("atoms"))
     claimed = require_fraction("bad trace claimed_expected_trace_square", data.get("claimed_expected_trace_square"))
@@ -13168,6 +13170,17 @@ def validate_random_matrix_finite(expected: dict[str, Any]) -> None:
         fail("bad-trace-moment-rejected actual moment is incorrect")
     if claimed == actual:
         fail("bad-trace-moment-rejected claimed moment unexpectedly matches")
+    farkas_claim = data.get("farkas_trace_square_claim")
+    require_string("bad trace farkas_trace_square_claim", farkas_claim)
+    if farkas_claim != "expected_trace_square = 1":
+        fail("bad-trace-moment-rejected must document the Farkas trace-square claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad trace smt2_artifact", smt2_artifact)
+    check_source("bad trace smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad trace farkas_regression", regression)
+    if "random_matrix_bad_trace_moment_emits_checked_farkas" not in regression:
+        fail("bad-trace-moment-rejected must link the Farkas regression")
 
 
 def require_probability_vector(context: str, value: Any) -> list[Fraction]:

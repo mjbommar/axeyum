@@ -39,7 +39,8 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "sign-diagonal-moments",
@@ -50,6 +51,7 @@
   "graduation_criteria": [
     "Encode finite matrix-valued probability distributions as deterministic QF_LRA table checks.",
     "Replay moment, Gram, determinant, and rank claims through exact rational matrix evaluation.",
+    "Route false finite moment constraints through checked QF_LRA/Farkas certificates once exact replay has computed the finite expectation.",
     "Add covariance and concentration-style finite counterexample packs before claiming random-matrix-theory coverage.",
     "Keep asymptotic spectral laws, floating-point simulations, and high-dimensional limit claims under proof/numerical horizon metadata."
   ]

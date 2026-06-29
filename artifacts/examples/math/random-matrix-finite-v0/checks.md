@@ -27,5 +27,5 @@ rank.
 Expected result: `unsat`.
 
 The diagonal-sign distribution has exact `E[tr(A)^2] = 2`, so the claimed value
-`1` is false. This is a checked finite arithmetic rejection, not an emitted
-proof object yet.
+`1` is false. The row also links an SMT-LIB `QF_LRA` contradiction and a solver
+regression that emits independently rechecked `UnsatFarkas` evidence.
