@@ -182,6 +182,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite tensor-products end-to-end lesson landed.** Added
+  [`finite-tensor-products-end-to-end.md`](docs/learn/math/finite-tensor-products-end-to-end.md)
+  as the learner-facing trace for the finite tensor-products pack: finite
+  tensor-basis/dimension replay, bilinear-map checking, finite factorization
+  through a tensor map, Kronecker-product replay, checked bad-bilinear
+  rejection, and the Lean horizon for general tensor and multilinear algebra.
+  The lesson is linked from the math learning index plus the algebra and
+  linear-algebra paths.
+
 - **Finite modules end-to-end lesson landed.** Added
   [`finite-modules-end-to-end.md`](docs/learn/math/finite-modules-end-to-end.md)
   as the learner-facing trace for the finite modules pack: `Z/4Z`

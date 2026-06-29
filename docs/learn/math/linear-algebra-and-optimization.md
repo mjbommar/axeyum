@@ -249,7 +249,9 @@ replay, read
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
-[End To End: Finite Modules](finite-modules-end-to-end.md).
+[End To End: Finite Modules](finite-modules-end-to-end.md). For finite
+multilinear replay, read
+[End To End: Finite Tensor Products](finite-tensor-products-end-to-end.md).
 
 ## Horizon
 

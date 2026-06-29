@@ -338,7 +338,8 @@ replay, read
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
-[End To End: Finite Modules](finite-modules-end-to-end.md).
+[End To End: Finite Modules](finite-modules-end-to-end.md). For multilinear
+data, read [End To End: Finite Tensor Products](finite-tensor-products-end-to-end.md).
 
 ## Horizon
 
