@@ -46,7 +46,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "conditional-expectation-partition-witness",
@@ -58,7 +60,7 @@
   "graduation_criteria": [
     "Encode finite conditioning sigma-algebras as partitions of probability atoms.",
     "Replay finite conditional expectations, total expectation, and tower-property witnesses by exact rational model evaluation.",
-    "Emit checked finite counterexample evidence for rejected conditional-expectation tables.",
+    "Route false finite conditional-expectation tables through checked QF_LRA/Farkas certificates when the block-average contradiction is linear.",
     "Keep general conditional expectation, Radon-Nikodym construction, martingales, stopping times, and regular conditional probabilities marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

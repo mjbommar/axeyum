@@ -165,8 +165,20 @@ and rejects the claim because:
 6 != 5
 ```
 
+The resource regression checks the denominator-cleared contradiction as
+`QF_LRA`:
+
+```text
+(1/2)*high_block_expectation = 3
+high_block_expectation = 5
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 The candidate conditional-expectation table is untrusted; the small checker
-rebuilds it from the atom probabilities, random-variable values, and partition.
+rebuilds it from the atom probabilities, random-variable values, and partition,
+then checks the small Farkas certificate for the final linear refutation.
 
 ## Name The Lean Horizon
 
@@ -215,12 +227,12 @@ pattern:
 
 ```text
 untrusted fast search -> partition, conditional-expectation, tower, or counterexample row
-trusted small checking -> exact finite partitions and rational block averages
+trusted small checking -> exact finite partitions, rational block averages, and Farkas certificates for linear refutations
 remaining horizon -> general conditional-expectation theory
 ```
 
 The graduation target is to encode finite conditioning sigma-algebras as
 partitions of probability atoms, replay finite conditional expectations, total
 expectation, and tower-property witnesses by exact rational model evaluation,
-and emit checked counterexample evidence for rejected conditional-expectation
-tables.
+emit checked QF_LRA/Farkas evidence for rejected conditional-expectation tables
+when the block-average contradiction is linear.

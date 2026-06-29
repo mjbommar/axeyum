@@ -138,9 +138,14 @@
           "b": "1",
           "c": "6",
           "d": "6"
-        }
+        },
+        "high_block_probability": "1/2",
+        "high_block_weighted_sum": "3",
+        "farkas_claim": "high_block_expectation = 5",
+        "smt2_artifact": "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas"
       },
-      "notes": "The validator rejects the claim because the high block average is 6, not 5."
+      "notes": "The validator rejects the claim because the high block average is 6, not 5; the Axeyum regression refutes (1/2)*high_block_expectation = 3 together with high_block_expectation = 5 using rechecked Farkas evidence."
     },
     {
       "id": "general-conditional-expectation-lean-horizon",

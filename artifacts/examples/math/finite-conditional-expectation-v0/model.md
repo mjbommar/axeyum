@@ -59,3 +59,12 @@ E[E[X | low/high] | all] = 7/2 = E[X | all]
 
 The false claim says the high block conditional expectation is `5`. The checker
 rejects it because the exact high-block weighted average is `6`.
+
+The final linear contradiction is:
+
+```text
+(1/2)*high_block_expectation = 3
+high_block_expectation = 5
+```
+
+The pack keeps this contradiction on the checked `UnsatFarkas` route.

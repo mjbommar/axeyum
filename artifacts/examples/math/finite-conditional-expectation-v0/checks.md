@@ -28,6 +28,11 @@ Expected result: `unsat`.
 The validator rejects the claimed conditional-expectation table because the
 high block average is `6`, not `5`.
 
+The resource-backed Axeyum regression checks the denominator-cleared
+conditional-expectation contradiction as `QF_LRA`:
+`(1/2)*high_block_expectation = 3` and
+`high_block_expectation = 5`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-conditional-expectation-lean-horizon`
 
 Expected result: `not-run`.

@@ -379,6 +379,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `output_distance < 1`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Finite-conditional-expectation QF_LRA/Farkas regression landed.**
+  [`finite-conditional-expectation-v0`](artifacts/examples/math/finite-conditional-expectation-v0/)
+  now binds its bad high-block table to Axeyum's evidence path. The new SMT-LIB
+  artifact encodes `(1/2)*high_block_expectation = 3` and the false claim
+  `high_block_expectation = 5`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

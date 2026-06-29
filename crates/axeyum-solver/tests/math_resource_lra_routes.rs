@@ -291,3 +291,19 @@ fn real_analysis_bad_linear_delta_emits_checked_farkas() {
         &[output_distance_is_four_thirds, false_output_bound],
     );
 }
+
+#[test]
+fn finite_conditional_expectation_bad_table_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let high_block_expectation = real(&mut arena, "high_block_expectation");
+    let half = arena.real_ratio(1, 2);
+    let weighted_expectation = arena.real_mul(half, high_block_expectation).unwrap();
+    let block_average_equation = eq_ratio(&mut arena, weighted_expectation, 3, 1);
+    let false_claim = eq_ratio(&mut arena, high_block_expectation, 5, 1);
+
+    assert_farkas_checked(
+        "finite-conditional-expectation-v0 bad-conditional-expectation-rejected",
+        &arena,
+        &[block_average_equation, false_claim],
+    );
+}

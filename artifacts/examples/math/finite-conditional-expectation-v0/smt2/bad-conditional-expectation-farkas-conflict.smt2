@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const high_block_expectation Real)
+(assert (= (* (/ 1 2) high_block_expectation) 3))
+(assert (= high_block_expectation 5))
+(check-sat)

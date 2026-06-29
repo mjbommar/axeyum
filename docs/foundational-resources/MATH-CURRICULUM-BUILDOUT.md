@@ -692,9 +692,9 @@ pushforward distribution, and a general random-variable/conditional-expectation
 Lean-horizon row.
 `artifacts/examples/math/finite-conditional-expectation-v0/` now validates
 exact finite partition conditional expectations, the law of total expectation,
-the finite tower property over nested partitions, checked rejection of a false
-conditional-expectation table, and a general conditional-expectation/martingale
-Lean-horizon row.
+the finite tower property over nested partitions, checked QF_LRA/Farkas
+rejection of a false conditional-expectation table, and a general
+conditional-expectation/martingale Lean-horizon row.
 `artifacts/examples/math/finite-martingales-v0/` now validates exact finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 finite square-submartingale inequalities, bounded stopping-time replay, checked
@@ -825,8 +825,8 @@ Recommended order:
     expectation through pushforward distributions, independence checks, and
     bad pushforward rejection.
 27. `finite-conditional-expectation-v0`: finite partition conditional
-    expectations, law of total expectation, tower property replay, and bad
-    conditional-expectation rejection.
+    expectations, law of total expectation, tower property replay, and
+    QF_LRA/Farkas bad conditional-expectation rejection.
 28. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
     equalities, square submartingale inequalities, bounded stopping replay, and
     bad martingale rejection.
@@ -1321,8 +1321,8 @@ through pushforwards, finite independence, checked bad pushforward rejection,
 and the general random-variable Lean horizon.
 `finite-conditional-expectation-v0` now has a learner-facing end-to-end lesson
 for finite conditioning partitions, blockwise conditional expectations, total
-expectation replay, tower-property replay, checked bad table rejection, and the
-general conditional-expectation Lean horizon.
+expectation replay, tower-property replay, checked QF_LRA/Farkas bad table
+rejection, and the general conditional-expectation Lean horizon.
 `finite-martingales-v0` now has a learner-facing end-to-end lesson for finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 square-submartingale inequalities, bounded stopping replay, checked bad
@@ -1426,6 +1426,9 @@ equation.
 same checked Farkas evidence path using the first failed normal equation.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the
 same checked Farkas evidence path using the final output-bound contradiction.
+`finite-conditional-expectation-v0` now routes its bad high-block table through
+the same checked Farkas evidence path using the denominator-cleared block
+average contradiction.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

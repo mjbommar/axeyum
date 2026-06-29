@@ -11981,6 +11981,50 @@ def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
         fail("bad-conditional-expectation-rejected actual table is incorrect")
     if claimed == actual:
         fail("bad-conditional-expectation-rejected must document a false conditional expectation")
+    high_block = next((block_atoms for block_id, block_atoms in partition if block_id == "high"), None)
+    if high_block is None:
+        fail("bad-conditional-expectation-rejected must include a high block")
+    high_probability = sum(probability for atom_id, probability, _ in atoms if atom_id in high_block)
+    high_weighted_sum = sum(
+        probability * variable_values[atom_id]
+        for atom_id, probability, _ in atoms
+        if atom_id in high_block
+    )
+    documented_high_probability = require_fraction(
+        "bad conditional expectation high_block_probability",
+        data.get("high_block_probability"),
+    )
+    documented_high_weighted_sum = require_fraction(
+        "bad conditional expectation high_block_weighted_sum",
+        data.get("high_block_weighted_sum"),
+    )
+    if documented_high_probability != high_probability:
+        fail("bad-conditional-expectation-rejected high_block_probability is incorrect")
+    if documented_high_weighted_sum != high_weighted_sum:
+        fail("bad-conditional-expectation-rejected high_block_weighted_sum is incorrect")
+    high_actual_values = {actual[atom_id] for atom_id in high_block}
+    high_claimed_values = {claimed[atom_id] for atom_id in high_block}
+    if len(high_actual_values) != 1:
+        fail("bad-conditional-expectation-rejected actual high-block values must be constant")
+    if len(high_claimed_values) != 1:
+        fail("bad-conditional-expectation-rejected claimed high-block values must be constant")
+    actual_high_value = next(iter(high_actual_values))
+    claimed_high_value = next(iter(high_claimed_values))
+    if high_probability * actual_high_value != high_weighted_sum:
+        fail("bad-conditional-expectation-rejected actual high-block value is not justified")
+    if high_probability * claimed_high_value == high_weighted_sum:
+        fail("bad-conditional-expectation-rejected claimed high-block value is not false")
+    farkas_claim = data.get("farkas_claim")
+    require_string("bad conditional expectation farkas_claim", farkas_claim)
+    if farkas_claim != "high_block_expectation = 5":
+        fail("bad-conditional-expectation-rejected must document the Farkas claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad conditional expectation smt2_artifact", smt2_artifact)
+    check_source("bad conditional expectation smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad conditional expectation farkas_regression", regression)
+    if "finite_conditional_expectation_bad_table_emits_checked_farkas" not in regression:
+        fail("bad-conditional-expectation-rejected must link the Farkas regression")
 
     horizon = checks["general-conditional-expectation-lean-horizon"]
     if horizon["expected_result"] != "not-run":

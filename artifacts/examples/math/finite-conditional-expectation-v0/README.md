@@ -9,7 +9,7 @@ The examples are:
 - a conditional-expectation-by-partition witness;
 - a law-of-total-expectation witness;
 - a finite tower-property witness over nested partitions;
-- checked rejection of a false conditional expectation table;
+- checked QF_LRA/Farkas rejection of a false conditional expectation table;
 - a general conditional-expectation and martingale Lean-horizon row.
 
 ## Concepts
@@ -32,9 +32,10 @@ conditional average with exact rational arithmetic, checks the law of total
 expectation, and checks the finite tower property for nested partitions.
 
 This pack is checked finite evidence for the bad conditional-expectation row.
-It is not a proof of general conditional expectation, Radon-Nikodym
-construction, martingales, stopping times, or regular conditional
-probabilities.
+The false high-block table is also routed through Axeyum's checked
+`UnsatFarkas` evidence path. It is not a proof of general conditional
+expectation, Radon-Nikodym construction, martingales, stopping times, or
+regular conditional probabilities.
 
 Validation:
 

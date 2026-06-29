@@ -100,7 +100,8 @@ E[X | {c,d}] = 6
 ```
 
 The `finite-conditional-expectation-v0` validator recomputes block averages,
-`E[E[X|G]] = E[X]`, and a finite tower-property row for nested partitions.
+`E[E[X|G]] = E[X]`, a finite tower-property row for nested partitions, and a
+checked Farkas certificate for the bad high-block table.
 Finite kernels check conditional distributions as source-to-target tables:
 
 ```text
