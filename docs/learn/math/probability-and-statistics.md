@@ -205,6 +205,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 
 For a fuller trace through atom-table replay, read
 [End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
+For a focused finite random-variable trace, read
+[End To End: Finite Random Variables](finite-random-variables-end-to-end.md).
 For exact simple-function integration over finite atom tables, read
 [End To End: Finite Integration](finite-integration-end-to-end.md).
 For exact finite product-measure and Fubini replay, read

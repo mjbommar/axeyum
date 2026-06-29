@@ -175,6 +175,9 @@ E[X] = 10*(1/2) + 20*(1/4) + 40*(1/4) = 20
 It also checks a four-atom independence witness by recomputing the joint table
 and comparing each joint mass to the product of its marginals.
 
+For a fuller focused trace, read
+[End To End: Finite Random Variables](finite-random-variables-end-to-end.md).
+
 For the conditional-expectation row, the checker recomputes:
 
 ```text

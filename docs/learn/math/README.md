@@ -201,6 +201,10 @@ validated pack data and the repo-root command that replays it.
   Cartesian-product probability tables, rectangle probabilities, marginals,
   finite Fubini replay, checked bad product-probability rejection, and the
   Fubini/Tonelli Lean horizon.
+- [Finite Random Variables](finite-random-variables-end-to-end.md): follows
+  finite random-variable functions, pushforward distributions, expectation
+  through pushforwards, finite independence, checked bad pushforward rejection,
+  and the general random-variable Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-random-variables end-to-end lesson landed.** Added
+  [`finite-random-variables-end-to-end.md`](docs/learn/math/finite-random-variables-end-to-end.md)
+  as the learner-facing trace for the finite-random-variables pack:
+  finite random-variable functions, pushforward distributions, expectation
+  through pushforwards, finite independence, checked bad pushforward
+  rejection, and the general random-variable Lean horizon. The lesson is
+  linked from the math learning index plus the probability/statistics path.
+
 - **Finite-product-measure end-to-end lesson landed.** Added
   [`finite-product-measure-end-to-end.md`](docs/learn/math/finite-product-measure-end-to-end.md)
   as the learner-facing trace for the finite-product-measure pack:
