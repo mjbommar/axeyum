@@ -705,8 +705,9 @@ factorization/disintegration replay, kernel composition, checked rejection of a
 malformed kernel row, and a regular-conditional-probability Lean-horizon row.
 `artifacts/examples/math/finite-hitting-times-v0/` now validates exact finite
 first-hit distributions, survival probabilities, absorption-probability
-fixed-point equations, expected hitting-time equations, checked rejection of a
-false expected-time table, and a recurrence/transience Lean-horizon row.
+fixed-point equations, expected hitting-time equations, checked QF_LRA/Farkas
+rejection of a false expected-time table, and a recurrence/transience
+Lean-horizon row.
 `artifacts/examples/math/finite-concentration-v0/` now validates exact finite
 Markov, Chebyshev, and union-bound replays over rational atom tables, checked
 rejection of a false tail bound, and a concentration/limit-theorem
@@ -1330,8 +1331,8 @@ factorization/disintegration, kernel composition, checked bad kernel-row
 rejection, and the regular-conditional-probability Lean horizon.
 `finite-hitting-times-v0` now has a learner-facing end-to-end lesson for finite
 absorbing-chain first-hit distributions, survival mass, absorption equations,
-expected hitting-time equations, checked bad expected-time rejection, and the
-general hitting-theory Lean horizon.
+expected hitting-time equations, checked QF_LRA/Farkas bad expected-time
+rejection, and the general hitting-theory Lean horizon.
 `finite-concentration-v0` now has a learner-facing end-to-end lesson for exact
 finite Markov, Chebyshev, and union-bound replay over rational atom tables,
 checked bad concentration-bound rejection, and the general concentration Lean
@@ -1416,6 +1417,9 @@ probability.
 checked Farkas evidence path after exact replay computes the atom total.
 `finite-markov-chain-v0` now routes its bad stochastic-row rejection through
 the same checked Farkas evidence path after exact replay computes the row sum.
+`finite-hitting-times-v0` now routes its bad expected-time row through the same
+checked Farkas evidence path after clearing denominators in the finite linear
+equation.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

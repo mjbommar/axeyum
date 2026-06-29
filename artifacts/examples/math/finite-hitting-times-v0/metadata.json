@@ -52,7 +52,8 @@
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "first-hit-distribution-witness",
@@ -64,7 +65,7 @@
   "graduation_criteria": [
     "Encode finite hitting events and absorbing targets over explicit finite transition matrices.",
     "Replay first-hit distributions, survival probabilities, absorption probabilities, and expected hitting-time equations by exact rational arithmetic.",
-    "Emit checked finite counterexample evidence for malformed potential/hitting-time tables.",
+    "Keep malformed potential/hitting-time table rejections on Axeyum's checked Farkas evidence path when they reduce to linear equations.",
     "Keep recurrence, transience, stopping theorems, and infinite-horizon convergence marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

@@ -82,3 +82,12 @@ right side of the start equation is:
 ```
 
 which does not equal `3`.
+
+Clearing denominators gives the linear equation:
+
+```text
+2*h(start) = 2 + h(start) + h(middle)
+```
+
+With `h(start) = 3` and `h(middle) = 2`, that equation reduces to `6 = 7`.
+The pack keeps this final contradiction on the checked `UnsatFarkas` route.

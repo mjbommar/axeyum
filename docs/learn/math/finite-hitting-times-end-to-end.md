@@ -194,6 +194,18 @@ and rejects the table because:
 The candidate expected-time table is untrusted; the small checker rebuilds the
 finite linear equation from the transition row and target set.
 
+The resource regression clears denominators and checks the final contradiction
+as `QF_LRA`:
+
+```text
+h_start = 3
+h_middle = 2
+2*h_start = 2 + h_start + h_middle
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Name The Lean Horizon
 
 The finite pack checks:

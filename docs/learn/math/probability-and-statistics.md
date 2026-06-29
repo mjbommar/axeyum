@@ -132,7 +132,8 @@ h(hit) = 0
 
 The `finite-hitting-times-v0` validator carries only not-yet-hit mass forward,
 checks the survival mass, and verifies the absorption-probability and expected
-hitting-time linear equations.
+hitting-time linear equations, with checked `UnsatFarkas` evidence for the bad
+expected-time table.
 
 For a focused finite hitting-time trace, read
 [End To End: Finite Hitting Times](finite-hitting-times-end-to-end.md).

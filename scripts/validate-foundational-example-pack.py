@@ -13383,6 +13383,18 @@ def validate_finite_hitting_times(expected: dict[str, Any]) -> None:
         fail("bad-expected-time-rejected actual_rhs is incorrect")
     if claimed_times[failing_state] == actual_rhs:
         fail("bad-expected-time-rejected malformed table unexpectedly satisfies the failing equation")
+    equation = data.get("cleared_denominator_equation")
+    require_string("bad expected time cleared_denominator_equation", equation)
+    if equation != "2*h_start = 2 + h_start + h_middle":
+        fail("bad-expected-time-rejected must document the cleared linear equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad expected time smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-expected-time-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad expected time farkas_regression", regression)
+    if "finite_hitting_times_bad_expected_time_emits_checked_farkas" not in regression:
+        fail("bad-expected-time-rejected must link the Farkas regression")
 
     horizon = checks["general-hitting-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

@@ -357,6 +357,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resource regression requires `Evidence::UnsatFarkas` and rechecks the
   rational certificate independently.
 
+- **Finite-hitting-times QF_LRA/Farkas regression landed.**
+  [`finite-hitting-times-v0`](artifacts/examples/math/finite-hitting-times-v0/)
+  now binds its bad expected-time table to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `h_start = 3`, `h_middle = 2`, and the
+  denominator-cleared equation `2*h_start = 2 + h_start + h_middle`; the shared
+  LRA resource regression requires `Evidence::UnsatFarkas` and rechecks the
+  rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

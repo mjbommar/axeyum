@@ -30,6 +30,11 @@ Expected result: `unsat`.
 The validator rejects the malformed expected-time table because the equation at
 `start` evaluates to `7/2`, not the claimed `3`.
 
+The resource-backed Axeyum regression checks the denominator-cleared linear
+obligation as `QF_LRA`: `h_start = 3`, `h_middle = 2`, and
+`2*h_start = 2 + h_start + h_middle`, requiring rechecked `UnsatFarkas`
+evidence.
+
 ## `general-hitting-theory-lean-horizon`
 
 Expected result: `not-run`.

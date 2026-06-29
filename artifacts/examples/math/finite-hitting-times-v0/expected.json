@@ -99,9 +99,12 @@
         "target_states": ["hit"],
         "claimed_hitting_times": {"start": "3", "middle": "2", "hit": "0"},
         "failing_state": "start",
-        "actual_rhs": "7/2"
+        "actual_rhs": "7/2",
+        "cleared_denominator_equation": "2*h_start = 2 + h_start + h_middle",
+        "smt2_artifact": "artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_expected_time_emits_checked_farkas"
       },
-      "notes": "The validator recomputes the start equation as 7/2, not 3."
+      "notes": "The validator recomputes the start equation as 7/2, not 3; the Axeyum regression refutes h_start = 3, h_middle = 2, and the cleared equation 2*h_start = 2 + h_start + h_middle with rechecked Farkas evidence."
     },
     {
       "id": "general-hitting-theory-lean-horizon",

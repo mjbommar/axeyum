@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const h_start Real)
+(declare-const h_middle Real)
+(assert (= h_start 3))
+(assert (= h_middle 2))
+(assert (= (* 2 h_start) (+ 2 h_start h_middle)))
+(check-sat)
