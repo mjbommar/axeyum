@@ -95,6 +95,7 @@ artifacts/examples/math/
   finite-fields-v0/
   polynomial-identities-v0/
   counting-v0/
+  generating-functions-v0/
   graph-coloring-v0/
   graph-reachability-v0/
   graph-search-runtime-v0/
@@ -446,6 +447,10 @@ rejection of a false tail bound.
 [`exact-statistical-tests-v0`](../../artifacts/examples/math/exact-statistical-tests-v0/)
 validates exact binomial tails, hypergeometric point probabilities, one-sided
 Fisher p-values, and checked rejection of a false p-value.
+[`generating-functions-v0`](../../artifacts/examples/math/generating-functions-v0/)
+validates finite coefficient extraction, Cauchy product convolution,
+Fibonacci generating-function prefix replay, checked rejection of a bad
+convolution coefficient, and a generating-functions Lean-horizon row.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.

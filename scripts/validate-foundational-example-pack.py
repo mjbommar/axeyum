@@ -3772,6 +3772,98 @@ def validate_polynomial_identities(expected: dict[str, Any]) -> None:
         fail("false-rational-root-rejected candidate unexpectedly is a root")
 
 
+def polynomial_prefix(polynomial: list[Fraction], length: int) -> list[Fraction]:
+    return [
+        polynomial[index] if index < len(polynomial) else Fraction(0)
+        for index in range(length)
+    ]
+
+
+def validate_generating_functions(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    coefficients = checks["coefficient-extraction-witness"]
+    if coefficients["expected_result"] != "sat":
+        fail("coefficient-extraction-witness must expect sat")
+    values = single_witness_values(coefficients, witnesses)
+    sequence = require_fraction_vector("generating coefficients sequence", values.get("sequence"))
+    polynomial = require_fraction_vector("generating coefficients polynomial", values.get("polynomial"))
+    indices = require_nonnegative_int_list("generating coefficients indices", values.get("indices"))
+    extracted = require_fraction_vector("generating coefficients extracted", values.get("extracted"))
+    if sequence != polynomial:
+        fail("coefficient-extraction-witness polynomial must equal the sequence prefix")
+    if len(indices) != len(extracted):
+        fail("coefficient-extraction-witness indices and extracted values must have the same length")
+    for index, extracted_value in zip(indices, extracted):
+        if index >= len(polynomial):
+            fail("coefficient-extraction-witness index is outside the polynomial prefix")
+        if polynomial[index] != extracted_value:
+            fail("coefficient-extraction-witness extracted value is incorrect")
+
+    cauchy = checks["cauchy-product-convolution"]
+    if cauchy["expected_result"] != "sat":
+        fail("cauchy-product-convolution must expect sat")
+    values = single_witness_values(cauchy, witnesses)
+    left = require_polynomial("Cauchy product left", values.get("left"))
+    right = require_polynomial("Cauchy product right", values.get("right"))
+    product_value = require_polynomial("Cauchy product product", values.get("product"))
+    if polynomial_mul(left, right) != product_value:
+        fail("cauchy-product-convolution product does not equal the exact Cauchy product")
+
+    fibonacci = checks["fibonacci-generating-prefix"]
+    if fibonacci["expected_result"] != "sat":
+        fail("fibonacci-generating-prefix must expect sat")
+    values = single_witness_values(fibonacci, witnesses)
+    fib_coefficients = require_fraction_vector("Fibonacci coefficients", values.get("coefficients"))
+    multiplier = require_polynomial("Fibonacci multiplier", values.get("multiplier"))
+    truncation_degree = require_nonnegative_int("Fibonacci truncation_degree", values.get("truncation_degree"))
+    identity_prefix = require_fraction_vector("Fibonacci identity_prefix", values.get("identity_prefix"))
+    if truncation_degree + 1 != len(identity_prefix):
+        fail("fibonacci-generating-prefix identity_prefix must have truncation_degree + 1 entries")
+    if truncation_degree >= len(fib_coefficients):
+        fail("fibonacci-generating-prefix truncation_degree must fit inside the coefficient prefix")
+    if len(fib_coefficients) < 3:
+        fail("fibonacci-generating-prefix requires at least three coefficients")
+    if fib_coefficients[0] != 0 or fib_coefficients[1] != 1:
+        fail("fibonacci-generating-prefix must use F_0 = 0 and F_1 = 1")
+    for index in range(2, truncation_degree + 1):
+        if fib_coefficients[index] != fib_coefficients[index - 1] + fib_coefficients[index - 2]:
+            fail(f"fibonacci-generating-prefix coefficient {index} violates the recurrence")
+    computed_prefix = polynomial_prefix(polynomial_mul(fib_coefficients, multiplier), truncation_degree + 1)
+    if computed_prefix != identity_prefix:
+        fail("fibonacci-generating-prefix truncated identity prefix is incorrect")
+
+    bad_product = checks["bad-cauchy-product-rejected"]
+    if bad_product["expected_result"] != "unsat" or bad_product.get("proof_status") != "checked":
+        fail("bad-cauchy-product-rejected must be a checked unsat row")
+    data = bad_product.get("data", {})
+    left = require_polynomial("bad Cauchy left", data.get("left"))
+    right = require_polynomial("bad Cauchy right", data.get("right"))
+    claimed_product = require_polynomial("bad Cauchy claimed_product", data.get("claimed_product"))
+    actual_product = require_polynomial("bad Cauchy actual_product", data.get("actual_product"))
+    first_bad_index = require_nonnegative_int("bad Cauchy first_bad_index", data.get("first_bad_index"))
+    if polynomial_mul(left, right) != actual_product:
+        fail("bad-cauchy-product-rejected actual_product is incorrect")
+    if claimed_product == actual_product:
+        fail("bad-cauchy-product-rejected claimed product unexpectedly matches")
+    if first_bad_index >= max(len(claimed_product), len(actual_product)):
+        fail("bad-cauchy-product-rejected first_bad_index is outside the product range")
+    claimed_at_index = claimed_product[first_bad_index] if first_bad_index < len(claimed_product) else Fraction(0)
+    actual_at_index = actual_product[first_bad_index] if first_bad_index < len(actual_product) else Fraction(0)
+    if claimed_at_index == actual_at_index:
+        fail("bad-cauchy-product-rejected first_bad_index does not identify a mismatch")
+
+    horizon = checks["general-generating-functions-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-generating-functions-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-generating-functions-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general generating functions target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general generating functions future_checker", data.get("future_checker"))
+
+
 def require_fraction_matrix(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty matrix")
@@ -9842,6 +9934,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_continuous_maps(expected)
     if metadata["id"] == "function-composition-v0":
         validate_function_composition(expected)
+    if metadata["id"] == "generating-functions-v0":
+        validate_generating_functions(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":

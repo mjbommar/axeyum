@@ -169,6 +169,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Generating functions foundations pack landed.** Added
+  [`generating-functions-v0`](artifacts/examples/math/generating-functions-v0/README.md)
+  as the next exact finite bridge across counting, polynomials, and sequence
+  prefixes. The pack validates coefficient extraction, Cauchy product
+  convolution, Fibonacci generating-function prefix replay, checked rejection
+  of a bad convolution coefficient, and a general generating-functions
+  Lean-horizon row. The foundational example-pack validator now checks these
+  rows by exact rational polynomial replay.
+
 - **Least-squares regression foundations pack landed.** Added
   [`least-squares-regression-v0`](artifacts/examples/math/least-squares-regression-v0/README.md)
   as the next exact finite statistics bridge across rational arithmetic,

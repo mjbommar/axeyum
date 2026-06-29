@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "generating-functions-v0",
+  "title": "Exact Generating Function Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_counting",
+    "curriculum_polynomials",
+    "curriculum_sequences_and_limits",
+    "field_discrete_math",
+    "field_abstract_algebra",
+    "field_probability_theory",
+    "field_real_analysis"
+  ],
+  "field_ids": [
+    "discrete_math",
+    "abstract_algebra",
+    "probability_theory",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "polynomials",
+    "sequences-and-limits"
+  ],
+  "axeyum_fragments": [
+    "fixed-degree polynomials",
+    "LRA (exact rationals)",
+    "finite convolution replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "coefficient-extraction-witness",
+    "cauchy-product-convolution",
+    "fibonacci-generating-prefix",
+    "bad-cauchy-product-rejected",
+    "general-generating-functions-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed coefficient-extraction and Cauchy-product checks as deterministic polynomial obligations.",
+    "Replay generating-function witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted certificates for bad convolution rows once fixed-degree polynomial proof routes are promoted.",
+    "Keep closed-form extraction, convergence, asymptotics, and broad recurrence-solving theorems under Lean horizon until formal proof routes exist."
+  ]
+}

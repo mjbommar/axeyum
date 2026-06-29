@@ -1628,6 +1628,12 @@
           "notes": "Finite Ring Table Checks"
         },
         {
+          "id": "generating-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/generating-functions-v0",
+          "notes": "Exact Generating Function Checks"
+        },
+        {
           "id": "matrix-invariants-v0",
           "status": "validated",
           "path": "artifacts/examples/math/matrix-invariants-v0",
@@ -1904,6 +1910,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/function-composition-v0",
           "notes": "Finite Function Composition Checks"
+        },
+        {
+          "id": "generating-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/generating-functions-v0",
+          "notes": "Exact Generating Function Checks"
         },
         {
           "id": "graph-coloring-v0",
@@ -3069,6 +3081,12 @@
           "notes": "Finite Stochastic Kernel Checks"
         },
         {
+          "id": "generating-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/generating-functions-v0",
+          "notes": "Exact Generating Function Checks"
+        },
+        {
           "id": "graph-d-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-d-separation-v0",
@@ -3258,6 +3276,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
           "notes": "Finite Topology And Metric-Ball Checks"
+        },
+        {
+          "id": "generating-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/generating-functions-v0",
+          "notes": "Exact Generating Function Checks"
         },
         {
           "id": "linear-optimization-v0",

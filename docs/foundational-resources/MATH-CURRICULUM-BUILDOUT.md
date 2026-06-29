@@ -192,9 +192,9 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `groups` | `abstract_algebra` | `finite-groups-v0` | Cayley-table closure, identity, inverse, associativity checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0` | Two-operation table checks and distributivity. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0` | Field axioms over small prime fields; composite modulus counterexamples. |
-| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0` | Fixed-degree identities, factor theorem, root witness replay. |
-| `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0` | Bounded epsilon/N and epsilon-delta templates plus algebraic sequence checks; general limits marked Lean-horizon. |
-| `counting` | `discrete_math`, `probability_theory` | `counting-v0` | Permutations, combinations, pigeonhole finite instances. |
+| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, coefficient extraction, and finite convolution. |
+| `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
+| `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
 | `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0` | Fixed rational matrices, LU replay, inverse checks, inconsistent systems. |
 | `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, and algebraic inequalities; general integration marked Lean-horizon. |
@@ -357,7 +357,11 @@ prime field, and a checked composite-modulus non-field contrast.
 now validates exact coefficient identity replay, a factor-theorem root witness,
 and a checked false rational-root rejection. `counting-v0` now validates fixed
 permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
-refutation. The recommended Phase M3 pack list has landed. `finite-groups-v0`
+refutation. `generating-functions-v0` now validates finite coefficient
+extraction, Cauchy product convolution, Fibonacci generating-function prefix
+replay, checked rejection of a bad convolution coefficient, and a
+generating-functions Lean-horizon row. The recommended Phase M3 pack list has
+landed. `finite-groups-v0`
 now validates finite Cayley-table group axioms, inverse-table replay, and a
 checked non-group operation. `finite-rings-v0` now validates finite ring tables,
 zero-divisor replay, and a checked non-distributive table. `gcd-bezout-v0` now
@@ -435,8 +439,9 @@ Recommended order:
 6. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
 7. `linear-algebra-rational-v0`: fixed matrices, LU replay, inconsistent
    system with Farkas evidence where available.
-8. `polynomial-identities-v0` (landed): factor theorem and fixed-degree
-   identities.
+8. `polynomial-identities-v0` and `generating-functions-v0` (landed): factor
+   theorem, fixed-degree identities, finite coefficient extraction, Cauchy
+   products, and bounded recurrence/generating-function prefixes.
 9. `counting-v0` (landed): combinations, pigeonhole, finite counting witnesses.
 10. `number-theory-v0` (landed): CRT compatibility, quadratic residues,
     sum-of-two-squares, and bounded Diophantine checks.
@@ -834,9 +839,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 68 non-template math example packs validate.
+  Status: 69 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 56 non-template packs have at least one `checked` expected-result row.
+  Status: 57 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -959,6 +964,10 @@ claim, and a complex-analysis Lean-horizon row.
 least-squares normal equations, residual orthogonality, mean-baseline RSS
 comparison, checked rejection of bad coefficients, and a regression-statistics
 Lean-horizon row.
+`generating-functions-v0` now adds the next exact finite discrete/polynomial
+bridge: coefficient extraction, Cauchy product convolution, Fibonacci
+generating-function prefix replay, checked rejection of a bad convolution
+coefficient, and a generating-functions Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
