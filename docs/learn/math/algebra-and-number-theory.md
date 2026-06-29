@@ -332,7 +332,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 ```
 
 For fuller traces from gcd/Bezout, modular congruence, bounded number theory,
-complex real-pair arithmetic, polynomial coefficient replay,
+complex real-pair arithmetic, polynomial coefficient and factorization replay,
 transformation-monoid, permutation, action-table, finite-group, finite-ring,
 homomorphism, quotient-ring, finite-vector-space, finite-dual-space, and module
 data through replay, read
@@ -341,6 +341,7 @@ data through replay, read
 [End To End: Bounded Number Theory](number-theory-end-to-end.md),
 [End To End: Complex Algebraic Replay](complex-algebraic-end-to-end.md),
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md),
+[End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md),
 [End To End: Finite Groups](finite-groups-end-to-end.md),
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),

@@ -95,6 +95,9 @@ validated pack data and the repo-root command that replays it.
 - [Polynomial Identities](polynomial-identities-end-to-end.md): follows exact
   coefficient multiplication, factor-theorem root replay, quotient checking,
   and checked false-root rejection.
+- [Rational Polynomial Factorization](polynomial-factorization-end-to-end.md):
+  follows factor-list replay, long division, Euclidean GCD, square-free
+  decomposition, fixed irreducibility rejection, and the algebra Lean horizon.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):

@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rational polynomial-factorization end-to-end lesson landed.** Added
+  [`polynomial-factorization-end-to-end.md`](docs/learn/math/polynomial-factorization-end-to-end.md)
+  as the learner-facing trace for the polynomial-factorization pack:
+  factor-list replay for `x^4 - 1`, checked long division, Euclidean GCD and
+  square-free replay, negative-discriminant irreducibility rejection for
+  `x^2 + 1`, and the Lean horizon for broad algebraic factorization theory.
+  The lesson is linked from the math learning index plus the rational/real and
+  algebra/number-theory paths.
+
 - **Polynomial-identities end-to-end lesson landed.** Added
   [`polynomial-identities-end-to-end.md`](docs/learn/math/polynomial-identities-end-to-end.md)
   as the learner-facing trace for the polynomial-identities pack: coefficient

@@ -163,7 +163,9 @@ polynomial replay, read
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md), and
-[End To End: Polynomial Identities](polynomial-identities-end-to-end.md).
+[End To End: Polynomial Identities](polynomial-identities-end-to-end.md). For
+factorization, division, and GCD replay, read
+[End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
 
 ## Horizon
 
