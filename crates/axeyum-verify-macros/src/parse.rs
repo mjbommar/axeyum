@@ -755,6 +755,11 @@ impl Lowerer {
     /// must be integer literals or `_`; a `_` arm is required (exhaustiveness).
     /// Guards, bindings, and or-patterns are rejected (out of fragment).
     fn lower_match(&mut self, em: &syn::ExprMatch) -> syn::Result<TokenStream> {
+        // `match a.checked_*(b) { Some(v) => .., None => .. }` is Option-flow, not
+        // an integer match — desugar it separately.
+        if let Some(ts) = self.try_lower_checked_option_match(em)? {
+            return Ok(ts);
+        }
         let (scrut, scrut_ty) = self.lower_expr(&em.expr)?;
         let mut lit_arms: Vec<(TokenStream, Vec<TokenStream>)> = Vec::new();
         let mut wildcard: Option<Vec<TokenStream>> = None;
@@ -848,6 +853,148 @@ impl Lowerer {
                 }
             })
         }
+    }
+
+    /// `match a.checked_{add,sub,mul}(b) { Some(v) => .., None => .. }` →
+    /// `if !Overflows(op, a, b) { let v = wrapping_op(a, b); <some> } else
+    /// { <none> }`. Returns `Ok(None)` when the scrutinee is not a `checked_*`
+    /// call (so the caller falls back to the integer-`match` path).
+    #[allow(clippy::too_many_lines)]
+    fn try_lower_checked_option_match(
+        &mut self,
+        em: &syn::ExprMatch,
+    ) -> syn::Result<Option<TokenStream>> {
+        let Expr::MethodCall(call) = &*em.expr else {
+            return Ok(None);
+        };
+        let Some((ovf_op, wrap_op)) = (match call.method.to_string().as_str() {
+            "checked_add" => Some(("Add", "WrappingAdd")),
+            "checked_sub" => Some(("Sub", "WrappingSub")),
+            "checked_mul" => Some(("Mul", "WrappingMul")),
+            _ => None,
+        }) else {
+            return Ok(None);
+        };
+        if call.args.len() != 1 {
+            return Err(syn::Error::new(
+                call.span(),
+                "axeyum::verify: `checked_*` takes exactly one argument",
+            ));
+        }
+        let (lhs, lty) = self.lower_expr(&call.receiver)?;
+        let arg_expr = call.args.first().unwrap();
+        let rhs = if is_untyped_int_lit(arg_expr) && lty.width.is_some() {
+            if let Expr::Lit(el) = arg_expr {
+                lower_lit_as(&el.lit, lty, el.span())?.0
+            } else {
+                self.lower_expr(arg_expr)?.0
+            }
+        } else {
+            self.lower_expr(arg_expr)?.0
+        };
+
+        if em.arms.len() != 2 {
+            return Err(syn::Error::new(
+                em.span(),
+                "axeyum::verify: `match` on `checked_*` must have exactly `Some(x)` and `None` arms",
+            ));
+        }
+        let path_is = |p: &syn::Path, name: &str| {
+            p.segments.last().is_some_and(|s| s.ident == name)
+        };
+        let mut some_arm: Option<(String, &syn::Arm)> = None;
+        let mut none_arm: Option<&syn::Arm> = None;
+        for arm in &em.arms {
+            if arm.guard.is_some() {
+                return Err(syn::Error::new(
+                    arm.pat.span(),
+                    "axeyum::verify: `match` guards are not supported",
+                ));
+            }
+            match &arm.pat {
+                syn::Pat::TupleStruct(ts) if path_is(&ts.path, "Some") => {
+                    if ts.elems.len() != 1 {
+                        return Err(syn::Error::new(
+                            ts.span(),
+                            "axeyum::verify: `Some(..)` arm must bind exactly one value",
+                        ));
+                    }
+                    let syn::Pat::Ident(pi) = ts.elems.first().unwrap() else {
+                        return Err(syn::Error::new(
+                            ts.elems.span(),
+                            "axeyum::verify: `Some(x)` binding must be a simple name",
+                        ));
+                    };
+                    some_arm = Some((pi.ident.to_string(), arm));
+                }
+                syn::Pat::Ident(pi) if pi.ident == "None" => none_arm = Some(arm),
+                syn::Pat::Path(p) if path_is(&p.path, "None") => none_arm = Some(arm),
+                syn::Pat::Wild(_) => none_arm = Some(arm),
+                other => {
+                    return Err(syn::Error::new(
+                        other.span(),
+                        "axeyum::verify: arms must be `Some(x)` and `None`",
+                    ));
+                }
+            }
+        }
+        let (bind, some_a) = some_arm.ok_or_else(|| {
+            syn::Error::new(em.span(), "axeyum::verify: missing `Some(x)` arm")
+        })?;
+        let none_a = none_arm
+            .ok_or_else(|| syn::Error::new(em.span(), "axeyum::verify: missing `None` arm"))?;
+
+        // Some-arm body, with `bind` in scope holding the (wrapping == real) value.
+        self.push_scope();
+        self.declare(&bind, lty);
+        let mut some_body = Vec::new();
+        match &*some_a.body {
+            Expr::Block(b) => some_body = self.lower_block(&b.block)?,
+            other => {
+                self.lower_stmt(&Stmt::Expr(other.clone(), None), false, &mut some_body)?;
+            }
+        }
+        self.pop_scope();
+
+        self.push_scope();
+        let mut none_body = Vec::new();
+        match &*none_a.body {
+            Expr::Block(b) => none_body = self.lower_block(&b.block)?,
+            other => {
+                self.lower_stmt(&Stmt::Expr(other.clone(), None), false, &mut none_body)?;
+            }
+        }
+        self.pop_scope();
+
+        let ty_tok = lty.to_tokens();
+        let ovf_ident = format_ident!("{}", ovf_op);
+        let wrap_ident = format_ident!("{}", wrap_op);
+        Ok(Some(quote! {
+            axeyum_verify::ast::Stmt::If {
+                cond: axeyum_verify::ast::Expr::Unary {
+                    op: axeyum_verify::ast::UnOp::Not,
+                    operand: Box::new(axeyum_verify::ast::Expr::Overflows {
+                        op: axeyum_verify::ast::BinOp::#ovf_ident,
+                        lhs: Box::new(#lhs),
+                        rhs: Box::new(#rhs),
+                    }),
+                },
+                then: {
+                    let mut stmts = vec![ axeyum_verify::ast::Stmt::Let {
+                        name: #bind.into(),
+                        ty: #ty_tok,
+                        value: axeyum_verify::ast::Expr::Binary {
+                            op: axeyum_verify::ast::BinOp::#wrap_ident,
+                            lhs: Box::new(#lhs),
+                            rhs: Box::new(#rhs),
+                        },
+                    } ];
+                    stmts.extend(vec![ #(#some_body),* ]);
+                    stmts
+                },
+                els: vec![ #(#none_body),* ],
+            }
+        }))
     }
 
     /// `#[axeyum::unwind(K)] for var in 0..N { body }` — fully unrolled to
