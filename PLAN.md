@@ -2445,7 +2445,14 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    - **EXP** (0x0a) — concrete base+exp → constant-fold via `Word::pow`
      (`74c6b6a`); symbolic exponent still havocs (a faithful symbolic 256-bit
      modular pow is heavy).
-   - *Next candidates:* CALL return-data modeling; symbolic-exponent EXP (heavy).
+   - **CALL return data** — `CALL`/`STATICCALL`/`DELEGATECALL` with a concrete,
+     32-aligned, bounded (≤4 words) return region now writes *witnessed* fresh
+     bytes to memory (over-approximating any callee return) instead of `Unknown`;
+     witness replays in the concrete oracle (`58b4fa7`). Symbolic-length/unaligned
+     regions stay sound `Unknown`.
+   - *Next candidates:* symbolic-exponent EXP (heavy); RETURNDATACOPY/
+     RETURNDATASIZE tied to the modeled return buffer; `LOG*` (currently
+     `Unsupported`).
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
