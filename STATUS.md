@@ -179,6 +179,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite vector-spaces end-to-end lesson landed.** Added
+  [`finite-vector-spaces-end-to-end.md`](docs/learn/math/finite-vector-spaces-end-to-end.md)
+  as the learner-facing trace for the finite vector-spaces pack: `F2^2`
+  table-law replay, subspace/span recomputation, first-coordinate projection
+  kernel/image replay, rank-nullity by finite cardinality, checked bad-subspace
+  rejection, and the Lean horizon for general vector-space theory. The lesson
+  is linked from the math learning index plus the algebra and linear-algebra
+  paths.
+
 - **Finite ideals and quotient-rings end-to-end lesson landed.** Added
   [`finite-ideals-quotient-rings-end-to-end.md`](docs/learn/math/finite-ideals-quotient-rings-end-to-end.md)
   as the learner-facing trace for the finite ideals pack: `Z/6Z` ideal

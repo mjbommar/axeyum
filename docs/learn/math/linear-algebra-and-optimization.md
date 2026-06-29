@@ -243,8 +243,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 ```
 
-For a fuller trace through exact matrix replay and a checked LP certificate,
-read [End To End: Linear System And LP Replay](linear-system-end-to-end.md).
+For fuller traces through exact matrix replay, a checked LP certificate, and
+finite-field vector-space replay, read
+[End To End: Linear System And LP Replay](linear-system-end-to-end.md) and
+[End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md).
 
 ## Horizon
 

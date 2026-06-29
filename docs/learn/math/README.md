@@ -38,6 +38,9 @@ validated pack data and the repo-root command that replays it.
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
+- [Finite Vector Spaces](finite-vector-spaces-end-to-end.md): follows `F2^2`
+  table replay, subspace/span recomputation, linear-map kernel/image replay,
+  rank-nullity by finite cardinality, and checked bad-subspace rejection.
 - [Finite Monoids](finite-monoids-end-to-end.md): follows a two-point
   transformation monoid through function-composition replay, identity and
   associativity checks, unit/idempotent recomputation, and checked

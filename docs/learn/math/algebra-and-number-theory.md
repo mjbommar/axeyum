@@ -329,12 +329,13 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
-For fuller traces from transformation-monoid, permutation, action-table, and
-quotient-ring data through replay, read
+For fuller traces from transformation-monoid, permutation, action-table,
+quotient-ring, and finite-vector-space data through replay, read
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
-and [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md).
+[End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md),
+and [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md).
 
 ## Horizon
 
