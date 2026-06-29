@@ -44,7 +44,8 @@ finite-monoids pack checks when a closed set of finite
 functions forms a monoid under composition, including units and idempotents.
 The finite-permutation-groups pack narrows finite endofunctions to bijections,
 checks `S3` under composition, recomputes cycle/sign data, and replays the
-natural action on the underlying set.
+natural action on the underlying set, with checked QF_UF/Alethe evidence for
+the bad nonbijection row.
 The finite-group-actions pack treats each group element as a
 total function on a finite set, then checks action laws, orbit/stabilizer
 replay, and Burnside fixed-point counting. The finite-order-lattices pack
@@ -145,7 +146,8 @@ sign(s23) = odd
 The `finite-permutation-groups-v0` validator checks each map is bijective,
 recomputes the `S3` composition table, recomputes cycle lengths and parity
 signs, checks the sign homomorphism, and replays the natural action's orbit and
-stabilizer for point `1`.
+stabilizer for point `1`. The bad nonbijection row links the duplicate-image
+conflict to checked QF_UF/Alethe evidence.
 
 For a finite group action, the same total-function representation is indexed
 by group elements:

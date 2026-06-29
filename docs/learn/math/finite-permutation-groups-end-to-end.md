@@ -22,7 +22,7 @@ Concept rows:
 | `permutation-composition-table-replay` | `sat` | checked |
 | `cycle-type-and-sign-replay` | `sat` | checked |
 | `natural-action-orbit-stabilizer` | `sat` | checked |
-| `bad-nonbijection-rejected` | `unsat` | checked |
+| `bad-nonbijection-rejected` | `unsat` | checked QF_UF/Alethe |
 | `general-permutation-group-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite function-table replay. The pack does not claim
@@ -165,7 +165,10 @@ f(3)=3
 ```
 
 The image `1` appears twice and the image `2` is missing. The checker rejects
-the fixed claim that this map is a bijection.
+the fixed claim that this map is a bijection. The linked `QF_UF` artifact
+records `bad(1)=1`, `bad(2)=1`, and the fixed distinct-image claim
+`bad(1) != bad(2)`; Axeyum emits and independently rechecks an
+`UnsatAletheProof` for that equality conflict.
 
 ## Run It
 
@@ -188,6 +191,7 @@ This lesson shows Axeyum's resource pattern for finite symmetry:
 ```text
 untrusted fast search -> candidate permutation maps, table, cycles, signs
 trusted small checking -> bijection, composition, group laws, sign, action replay
+checked proof object -> QF_UF/Alethe certificate for the bad nonbijection row
 ```
 
 General permutation-group theory, Cayley's theorem, conjugacy classes, normal

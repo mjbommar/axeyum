@@ -319,6 +319,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   requires a pure EUF `Evidence::UnsatAletheProof` and rechecks it
   independently.
 
+- **Finite-permutation-groups QF_UF/Alethe regression landed.**
+  [`finite-permutation-groups-v0`](artifacts/examples/math/finite-permutation-groups-v0/)
+  now has a checked proof-object row for the bad nonbijection conflict. The
+  new SMT-LIB artifact records the duplicate-image table equations and refutes
+  the fixed distinct-image claim `bad(1) != bad(2)`; the shared UF resource
+  regression requires a pure EUF `Evidence::UnsatAletheProof` and rechecks it
+  independently.
+
 - **Modular-arithmetic QF_LIA/Diophantine regression landed.**
   [`modular-arithmetic-v0`](artifacts/examples/math/modular-arithmetic-v0/)
   now has a checked proof-object row for the composite nonunit inverse

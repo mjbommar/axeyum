@@ -400,8 +400,8 @@ now validates finite Cayley-table group axioms, inverse-table replay, and a
 checked non-group operation plus a QF_UF/Alethe binary-operation congruence row.
 `finite-permutation-groups-v0` now validates
 `S3` as bijective function tables under composition, cycle/sign replay, natural
-action orbit/stabilizer replay, checked bad-nonbijection rejection, and a
-general permutation-group Lean-horizon row. `finite-group-actions-v0` now
+action orbit/stabilizer replay, checked QF_UF/Alethe bad-nonbijection
+rejection, and a general permutation-group Lean-horizon row. `finite-group-actions-v0` now
 validates finite action laws, orbit/stabilizer replay, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked bad-action rejection, and a
 general group-action Lean-horizon row. `finite-monoids-v0` now validates finite monoid
@@ -1226,8 +1226,8 @@ rejection, and a monoid/semigroup Lean-horizon row.
 `finite-permutation-groups-v0` now adds the exact finite permutation bridge:
 `S3` group-law replay, composition-table replay from bijective function maps,
 cycle-length and sign homomorphism replay, natural action orbit/stabilizer
-replay, checked bad-nonbijection rejection, and a permutation-group
-Lean-horizon row.
+replay, checked QF_UF/Alethe bad-nonbijection rejection, and a
+permutation-group Lean-horizon row.
 `inner-product-spaces-rational-v0` now adds the exact rational
 inner-product-space bridge: Gram matrices, positive-definite minors,
 Cauchy-Schwarz replay, orthogonal projections, Gram-Schmidt residuals,

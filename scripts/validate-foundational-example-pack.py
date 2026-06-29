@@ -5057,6 +5057,33 @@ def validate_finite_permutation_groups(expected: dict[str, Any]) -> None:
         fail("bad-nonbijection-rejected missing_image is not actually missing")
     if set(mapping.values()) == set(points):
         fail("bad-nonbijection-rejected map unexpectedly is bijective")
+    duplicate_preimages = data.get("duplicate_preimages")
+    if not isinstance(duplicate_preimages, list) or len(duplicate_preimages) != 2:
+        fail("bad-nonbijection-rejected duplicate_preimages must be a two-element list")
+    left, right = duplicate_preimages
+    require_string("bad nonbijection duplicate_preimages[0]", left)
+    require_string("bad nonbijection duplicate_preimages[1]", right)
+    if left == right:
+        fail("bad-nonbijection-rejected duplicate_preimages must be distinct")
+    if left not in points or right not in points:
+        fail("bad-nonbijection-rejected duplicate_preimages must be points")
+    if mapping[left] != duplicate_image or mapping[right] != duplicate_image:
+        fail("bad-nonbijection-rejected duplicate_preimages must map to duplicate_image")
+    alethe_claim = data.get("alethe_injectivity_claim")
+    require_string("bad nonbijection alethe_injectivity_claim", alethe_claim)
+    if alethe_claim != f"bad({left}) != bad({right})":
+        fail("bad-nonbijection-rejected must document the Alethe distinct-image claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad nonbijection smt2_artifact", smt2_artifact)
+    check_source("bad nonbijection smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad nonbijection proof_regression", proof_regression)
+    if "finite_permutation_groups_bad_nonbijection_emits_checked_alethe" not in proof_regression:
+        fail("bad-nonbijection-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad nonbijection certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-nonbijection-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-permutation-group-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

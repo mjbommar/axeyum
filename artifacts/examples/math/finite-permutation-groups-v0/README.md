@@ -11,7 +11,8 @@ The examples are fixed finite artifacts:
 - recompute cycle lengths and the parity/sign homomorphism;
 - replay the natural action of `S3` on the three points, including
   orbit-stabilizer counts;
-- reject a total self-map that is not bijective.
+- reject a total self-map that is not bijective with checked QF_UF/Alethe
+  evidence.
 
 These checks do not claim general permutation-group theory, Cayley's theorem,
 Sylow theory, representation theory, or classification results.
@@ -32,11 +33,13 @@ a bijection, recomputes composition from the underlying maps, recomputes cycle
 lengths and signs, checks sign preservation under multiplication, and replays
 the natural action table. The rejected row is checked by confirming the claimed
 self-map has a duplicated image and a missing image, so it cannot be a
-permutation.
+permutation. The linked `QF_UF` artifact turns the duplicate-image conflict
+into an independently checked `UnsatAletheProof`.
 
-The current route is deterministic finite-model replay. Graduation means
-lowering the same table/function constraints into Axeyum finite-domain or EUF
-terms and attaching checked proof objects for universal/refutation rows.
+The current route is deterministic finite-model replay plus a small EUF
+certificate for the bad nonbijection row. Graduation means lowering more
+table/function constraints into Axeyum finite-domain or EUF terms and attaching
+checked proof objects for universal/refutation rows.
 
 Validation:
 

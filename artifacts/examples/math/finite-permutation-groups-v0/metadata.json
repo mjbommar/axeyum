@@ -28,7 +28,7 @@
     "finite functions",
     "finite group actions",
     "finite table replay",
-    "QF_UF horizon",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0",
@@ -40,7 +40,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "s3-permutation-group-laws",
@@ -53,7 +54,7 @@
   "graduation_criteria": [
     "Lower finite permutation maps and composition constraints into Axeyum finite-domain or EUF formulas.",
     "Replay SAT witnesses against the original finite-function data, not only table labels.",
-    "Attach checked proof objects for universal closure/refutation rows when the QF_UF/Alethe route is available.",
+    "Route bad finite bijection conflicts through checked QF_UF/Alethe evidence once exact function replay identifies the duplicate preimages.",
     "Keep Cayley's theorem, Sylow theory, representation theory, and classification results marked Lean-horizon."
   ]
 }

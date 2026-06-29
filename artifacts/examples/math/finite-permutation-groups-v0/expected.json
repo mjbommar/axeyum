@@ -164,10 +164,15 @@
           "2": "1",
           "3": "3"
         },
+        "duplicate_preimages": ["1", "2"],
         "duplicate_image": "1",
-        "missing_image": "2"
+        "missing_image": "2",
+        "alethe_injectivity_claim": "bad(1) != bad(2)",
+        "smt2_artifact": "artifacts/examples/math/finite-permutation-groups-v0/smt2/bad-nonbijection-injectivity-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_permutation_groups_bad_nonbijection_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks the duplicated and missing images, proving the fixed map is not bijective."
+      "notes": "The validator checks the duplicated and missing images, proving the fixed map is not bijective; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed distinct-image claim on the duplicate preimages."
     },
     {
       "id": "general-permutation-group-theory-lean-horizon",

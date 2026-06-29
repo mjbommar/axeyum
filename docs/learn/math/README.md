@@ -206,7 +206,7 @@ validated pack data and the repo-root command that replays it.
 - [Finite Permutation Groups](finite-permutation-groups-end-to-end.md):
   follows `S3` point maps through bijection checks, composition-table replay,
   cycle/sign replay, natural action orbit-stabilizer counting, and checked
-  bad-nonbijection rejection.
+  QF_UF/Alethe bad-nonbijection rejection.
 - [Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md):
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
   counting, and checked bad-action rejection.

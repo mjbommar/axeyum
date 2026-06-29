@@ -37,7 +37,9 @@ stabilizer of point `1`.
 Expected result: `unsat`.
 
 The fixed false claim is that a total map with duplicated image `1` and missing
-image `2` is a permutation. The validator confirms the map is not bijective.
+image `2` is a permutation. The validator confirms the map is not bijective,
+and the linked `QF_UF` artifact turns the duplicate-image conflict into a
+checked Alethe refutation.
 
 ## `general-permutation-group-theory-lean-horizon`
 
