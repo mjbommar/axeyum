@@ -96,6 +96,10 @@ schemas, examples, and validation workflows.
   validates finite open-cover/subcover checks, minimal subcover enumeration,
   finite-intersection families, bad-cover rejection, and a compactness
   Lean-horizon row.
+- [`artifacts/examples/math/finite-connectedness-v0/`](../../artifacts/examples/math/finite-connectedness-v0/)
+  validates finite connectedness via clopen-subset enumeration, open
+  separations, bad-connected-claim rejection, and a connectedness Lean-horizon
+  row.
 - [`artifacts/examples/math/calculus-algebraic-shadow-v0/`](../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
   validates polynomial derivative replay, a product-rule polynomial identity,
   tangent-line replay, a convex quadratic critical point, false-derivative
@@ -193,6 +197,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0

@@ -207,7 +207,7 @@ losing the curriculum anchor.
 | Field | Curriculum Anchor | First New Resource |
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, matching, cuts, and d-separation. |
-| `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls and closure/interior finite checks. |
+| `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, compactness, and connectedness finite checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0` over finite universes; Lebesgue theory remains horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests. |
@@ -471,6 +471,9 @@ metrics, plus checked rejection of an overlarge delta.
 open-cover/subcover checks, minimal subcover enumeration,
 finite-intersection-family replay, bad-cover rejection, and a compactness
 Lean-horizon row.
+`artifacts/examples/math/finite-connectedness-v0/` now validates finite
+connectedness by clopen-subset enumeration, open-separation replay, checked
+rejection of a false connectedness claim, and a connectedness Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, and event/complement measure
 replay.
@@ -537,6 +540,8 @@ Recommended order:
     preimage, and bad-delta checks over exact rational metric spaces.
 18. `finite-compactness-v0`: finite open covers, minimal subcover
     enumeration, finite-intersection families, and bad-cover rejection.
+19. `finite-connectedness-v0`: finite connected spaces, open separations,
+    clopen-subset enumeration, and bad-connected-claim rejection.
 
 Exit criteria:
 
@@ -697,7 +702,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-18, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-19, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -720,8 +725,10 @@ polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
 broader spectral claims. `metric-continuity-v0` now adds the finite
 epsilon-delta and open-ball preimage bridge for analysis/topology learners.
 `finite-compactness-v0` now adds the finite open-cover/subcover and
-finite-intersection bridge to the compactness horizon. Continue by adding the
-next curriculum-adjacent pack or by replacing finite enumeration routes with
+finite-intersection bridge to the compactness horizon.
+`finite-connectedness-v0` now adds the finite clopen-subset/open-separation
+bridge to the connectedness horizon. Continue by adding the next
+curriculum-adjacent pack or by replacing finite enumeration routes with
 emitted, checked proof objects where appropriate.
 
 ## Operating Rules

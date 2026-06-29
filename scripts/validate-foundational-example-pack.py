@@ -4138,6 +4138,45 @@ def topology_closure(
     return frozenset(universe_set - topology_interior(frozenset(complement), open_sets))
 
 
+def all_subsets(universe: list[str]) -> set[frozenset[str]]:
+    subsets: set[frozenset[str]] = set()
+    for size in range(len(universe) + 1):
+        for candidate in combinations(universe, size):
+            subsets.add(frozenset(candidate))
+    return subsets
+
+
+def topology_clopen_subsets(
+    universe: list[str],
+    open_sets: set[frozenset[str]],
+) -> set[frozenset[str]]:
+    universe_set = frozenset(universe)
+    closed_sets = {frozenset(universe_set - open_set) for open_set in open_sets}
+    return {
+        subset
+        for subset in all_subsets(universe)
+        if subset in open_sets and subset in closed_sets
+    }
+
+
+def topology_separations(
+    universe: list[str],
+    open_sets: set[frozenset[str]],
+) -> set[tuple[frozenset[str], frozenset[str]]]:
+    universe_set = frozenset(universe)
+    separations: set[tuple[frozenset[str], frozenset[str]]] = set()
+    for left in open_sets:
+        for right in open_sets:
+            if not left or not right:
+                continue
+            if left & right:
+                continue
+            if frozenset(left | right) != universe_set:
+                continue
+            separations.add((left, right))
+    return separations
+
+
 def set_family_union(family: set[frozenset[str]]) -> frozenset[str]:
     result: set[str] = set()
     for subset in family:
@@ -4373,6 +4412,88 @@ def validate_finite_compactness(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general compactness target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general compactness future_checker", data.get("future_checker"))
+
+
+def validate_finite_connectedness(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    connected = checks["finite-connected-space-witness"]
+    if connected["expected_result"] != "sat":
+        fail("finite-connected-space-witness must expect sat")
+    values = single_witness_values(connected, witnesses)
+    universe, open_sets = require_topology_data("finite connected topology", values)
+    expected_clopen = require_set_family(
+        "finite connected clopen_subsets",
+        values.get("clopen_subsets"),
+        universe,
+    )
+    universe_set = frozenset(universe)
+    if expected_clopen != {frozenset(), universe_set}:
+        fail("finite-connected-space-witness must list only trivial clopen subsets")
+    if topology_clopen_subsets(universe, open_sets) != expected_clopen:
+        fail("finite-connected-space-witness clopen subsets are incorrect")
+    if topology_separations(universe, open_sets):
+        fail("finite-connected-space-witness unexpectedly has a separation")
+
+    disconnected = checks["finite-disconnected-separation-witness"]
+    if disconnected["expected_result"] != "sat":
+        fail("finite-disconnected-separation-witness must expect sat")
+    values = single_witness_values(disconnected, witnesses)
+    universe, open_sets = require_topology_data("finite disconnected topology", values)
+    left = require_subset("finite disconnected separation_left", values.get("separation_left"), universe)
+    right = require_subset("finite disconnected separation_right", values.get("separation_right"), universe)
+    universe_set = frozenset(universe)
+    if not left or not right:
+        fail("finite-disconnected-separation-witness separation parts must be non-empty")
+    if left not in open_sets or right not in open_sets:
+        fail("finite-disconnected-separation-witness separation parts must be open")
+    if left & right:
+        fail("finite-disconnected-separation-witness separation parts must be disjoint")
+    if frozenset(left | right) != universe_set:
+        fail("finite-disconnected-separation-witness separation parts must cover the universe")
+    if (left, right) not in topology_separations(universe, open_sets):
+        fail("finite-disconnected-separation-witness separation was not rediscovered")
+
+    clopen = checks["clopen-subset-disconnection-witness"]
+    if clopen["expected_result"] != "sat":
+        fail("clopen-subset-disconnection-witness must expect sat")
+    values = single_witness_values(clopen, witnesses)
+    universe, open_sets = require_topology_data("clopen disconnection topology", values)
+    clopen_subset = require_subset("clopen disconnection clopen_subset", values.get("clopen_subset"), universe)
+    universe_set = frozenset(universe)
+    if not clopen_subset or clopen_subset == universe_set:
+        fail("clopen-subset-disconnection-witness clopen subset must be non-trivial")
+    if clopen_subset not in topology_clopen_subsets(universe, open_sets):
+        fail("clopen-subset-disconnection-witness subset is not clopen")
+    complement = frozenset(universe_set - clopen_subset)
+    if not complement:
+        fail("clopen-subset-disconnection-witness complement must be non-empty")
+    if (clopen_subset, complement) not in topology_separations(universe, open_sets):
+        fail("clopen-subset-disconnection-witness clopen subset does not produce a separation")
+
+    bad_connected = checks["bad-connected-claim-rejected"]
+    if bad_connected["expected_result"] != "unsat":
+        fail("bad-connected-claim-rejected must expect unsat")
+    data = bad_connected.get("data", {})
+    universe, open_sets = require_topology_data("bad connected topology", data)
+    counterexample = require_subset("bad connected counterexample_clopen", data.get("counterexample_clopen"), universe)
+    universe_set = frozenset(universe)
+    if not counterexample or counterexample == universe_set:
+        fail("bad-connected-claim-rejected counterexample must be non-trivial")
+    if counterexample not in topology_clopen_subsets(universe, open_sets):
+        fail("bad-connected-claim-rejected counterexample is not clopen")
+    if not topology_separations(universe, open_sets):
+        fail("bad-connected-claim-rejected topology unexpectedly has no separation")
+
+    horizon = checks["general-connectedness-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-connectedness-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-connectedness-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general connectedness target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general connectedness future_checker", data.get("future_checker"))
 
 
 def validate_metric_continuity(expected: dict[str, Any]) -> None:
@@ -5380,6 +5501,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_cardinality(expected)
     if metadata["id"] == "finite-compactness-v0":
         validate_finite_compactness(expected)
+    if metadata["id"] == "finite-connectedness-v0":
+        validate_finite_connectedness(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":

@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-connectedness-v0",
+  "witnesses": [
+    {
+      "id": "two-point-sierpinski-connected",
+      "description": "A two-point Sierpinski topology with only trivial clopen subsets.",
+      "values": {
+        "universe": ["0", "1"],
+        "open_sets": [
+          [],
+          ["1"],
+          ["0", "1"]
+        ],
+        "clopen_subsets": [
+          [],
+          ["0", "1"]
+        ]
+      }
+    },
+    {
+      "id": "two-point-discrete-disconnected",
+      "description": "A two-point discrete topology with an explicit open separation.",
+      "values": {
+        "universe": ["a", "b"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["a", "b"]
+        ],
+        "separation_left": ["a"],
+        "separation_right": ["b"],
+        "clopen_subset": ["a"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-connected-space-witness",
+      "claim": "The two-point Sierpinski topology is connected because it has only trivial clopen subsets.",
+      "expected_result": "sat",
+      "validation": "finite_connected_clopen_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-point-sierpinski-connected"],
+      "notes": "The validator enumerates all subsets and checks that only the empty set and universe are clopen."
+    },
+    {
+      "id": "finite-disconnected-separation-witness",
+      "claim": "The two-point discrete topology is disconnected by the open separation {a}, {b}.",
+      "expected_result": "sat",
+      "validation": "finite_open_separation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-point-discrete-disconnected"],
+      "notes": "The validator checks non-empty disjoint open subsets whose union is the universe."
+    },
+    {
+      "id": "clopen-subset-disconnection-witness",
+      "claim": "The subset {a} is a non-trivial clopen subset and therefore witnesses disconnection.",
+      "expected_result": "sat",
+      "validation": "finite_clopen_disconnection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-point-discrete-disconnected"],
+      "notes": "The validator checks that {a} and its complement are open and form a separation."
+    },
+    {
+      "id": "bad-connected-claim-rejected",
+      "claim": "The two-point discrete topology is connected.",
+      "expected_result": "unsat",
+      "validation": "finite_connectedness_refutation",
+      "proof_status": "checked",
+      "data": {
+        "universe": ["a", "b"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["a", "b"]
+        ],
+        "counterexample_clopen": ["a"]
+      },
+      "notes": "The validator rejects the connectedness claim by recomputing the non-trivial clopen subset {a}."
+    },
+    {
+      "id": "general-connectedness-lean-horizon",
+      "claim": "General connectedness theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "continuous images of connected spaces are connected, intervals in R are connected, and path-connected spaces are connected",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; arbitrary connectedness theorems remain proof-assistant horizons."
+    }
+  ]
+}

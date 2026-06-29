@@ -1,11 +1,13 @@
-# End To End: Finite Topology And Measure
+# End To End: Finite Topology, Connectedness, And Measure
 
 This lesson follows finite set-family resources from data row to replayed
 result. It uses
 [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/) and
 [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/), with
 the finite open-cover slice in
-[finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/).
+[finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
+and the finite connectedness slice in
+[finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/).
 
 Concept rows:
 
@@ -21,6 +23,8 @@ Concept rows:
 | `closure-interior-witness` | `sat` | replay-only |
 | `minimal-subcover-size-witness` | `sat` | checked |
 | `bad-open-cover-rejected` | `unsat` | checked |
+| `finite-connected-space-witness` | `sat` | replay-only |
+| `bad-connected-claim-rejected` | `unsat` | checked |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
 
@@ -56,6 +60,14 @@ cover = {a,b}, {b,c}, {a,c}
 subcover = {a,b}, {b,c}
 ```
 
+The connectedness witness lists clopen subsets in a two-point topology:
+
+```text
+universe = {0,1}
+open_sets = {}, {1}, {0,1}
+clopen_subsets = {}, {0,1}
+```
+
 ## Replay
 
 For topology, the checker confirms the empty set and universe are present, then
@@ -81,6 +93,10 @@ For compactness, the checker recomputes the cover union, checks the listed
 subcover, enumerates smaller subfamilies for the minimal-size row, and rejects
 the bad cover `{a}, {b}` because it misses `c`.
 
+For connectedness, the checker enumerates every subset, recomputes the clopen
+subsets, confirms the Sierpinski example has only trivial clopen subsets, and
+rejects the false connectedness claim for the discrete two-point topology.
+
 ## Run It
 
 From the repository root:
@@ -88,6 +104,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -101,4 +118,5 @@ validated 1 foundational example pack(s)
 
 The trusted checker only manipulates finite sets and exact fractions. ZFC,
 infinite cardinality, arbitrary topological spaces, general compactness,
-countable additivity, and Lebesgue integration remain proof-horizon material.
+general connectedness theorems, countable additivity, and Lebesgue integration
+remain proof-horizon material.

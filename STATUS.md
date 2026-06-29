@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite connectedness foundations pack landed.** Added
+  [`finite-connectedness-v0`](artifacts/examples/math/finite-connectedness-v0/README.md)
+  as the finite clopen-subset/open-separation bridge for topology
+  connectedness. The pack validates a connected Sierpinski-space witness, a
+  disconnected discrete-space separation witness, a clopen-subset
+  disconnection witness, checked rejection of a false connectedness claim, and
+  a general connectedness Lean-horizon row. The foundational example-pack
+  validator now enumerates finite subsets, recomputes clopen subsets, finds
+  open separations, and checks connectedness counterexamples.
+
 - **Finite compactness foundations pack landed.** Added
   [`finite-compactness-v0`](artifacts/examples/math/finite-compactness-v0/README.md)
   as the finite open-cover bridge for topology and compactness. The pack

@@ -94,6 +94,7 @@ artifacts/examples/math/
   coordinate-geometry-v0/
   finite-topology-v0/
   finite-compactness-v0/
+  finite-connectedness-v0/
   finite-measure-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
@@ -370,6 +371,9 @@ checked rejection of a false characteristic polynomial.
 validates finite open-cover/subcover checks, minimal subcover enumeration,
 finite-intersection families, bad-cover rejection, and a compactness
 Lean-horizon row.
+[`finite-connectedness-v0`](../../artifacts/examples/math/finite-connectedness-v0/)
+validates finite connectedness via clopen-subset enumeration, open separations,
+bad-connected-claim rejection, and a connectedness Lean-horizon row.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.

@@ -16,6 +16,7 @@ Example packs:
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
+- [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
@@ -29,10 +30,10 @@ Example packs:
 The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, bounded sequence tails and prefixes, finite epsilon-delta continuity
-checks, finite open-cover/subcover checks, polynomial derivative identities,
-bounded recurrence traces, finite invariant witnesses, matrix operator bounds,
-Chebyshev recurrence values at fixed points, and finite stochastic transition
-systems. The
+checks, finite open-cover/subcover checks, finite clopen-subset and open
+separation checks, polynomial derivative identities, bounded recurrence traces,
+finite invariant witnesses, matrix operator bounds, Chebyshev recurrence values
+at fixed points, and finite stochastic transition systems. The
 spectral-linear-algebra pack adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
@@ -95,6 +96,20 @@ The `finite-compactness-v0` validator checks the topology, recomputes cover
 unions, enumerates smaller subfamilies for a minimal-subcover claim, checks a
 finite-intersection family, and rejects a bad cover that misses a point.
 
+For a finite connectedness shadow, encode a tiny topology and enumerate clopen
+subsets:
+
+```text
+U = {0,1}
+open_sets = {}, {1}, {0,1}
+clopen_subsets = {}, {0,1}
+```
+
+The `finite-connectedness-v0` validator enumerates every finite subset,
+recomputes clopen subsets, checks that the Sierpinski example has no open
+separation, and rejects a false connectedness claim for the two-point discrete
+topology.
+
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
 
@@ -131,6 +146,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
