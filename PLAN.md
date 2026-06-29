@@ -2454,8 +2454,14 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      execution state); previously `Unsupported`, which hid every bug *after* a log
      (`810a6fe`). A major false-`Unknown` source closed — real contracts log on
      essentially every state change.
-   - *Next candidates:* symbolic-exponent EXP (heavy); RETURNDATACOPY/
-     RETURNDATASIZE tied to the modeled return buffer.
+   - **BLOCKHASH** (0x40 → `Env(1)`) and **MSIZE** (0x59 → `Env(0)`) — witnessed
+     env values (`b82eba7`).
+   - **CALLDATACOPY** (0x37) — *precise* calldata→memory copy for a concrete,
+     32-aligned, bounded region (the calldata is already symbolic, so the witness
+     replays) (`a5894be`). In essentially every ABI dispatcher.
+   - *Next candidates:* CODECOPY (0x39, copy concrete code bytes — precise);
+     RETURNDATACOPY/RETURNDATASIZE tied to the modeled return buffer;
+     symbolic-exponent EXP (heavy).
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
