@@ -113,6 +113,10 @@ Exit criteria:
 
 Goal: move important packs from replay-only to checked evidence wherever the
 solver stack already has or should soon have the certificate machinery.
+The live route-by-route execution frontier is
+[PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md); the generated queue it
+interprets is
+[generated/learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md).
 
 Priority proof upgrades:
 

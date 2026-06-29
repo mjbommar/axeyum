@@ -21,6 +21,9 @@ schemas, examples, and validation workflows.
   is the forward execution plan for moving those resources from validated packs
   into learner paths, proof upgrades, solver feedback, and eventual consumer
   boundaries.
+- [PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md) turns the generated
+  proof-upgrade queue into a route-by-route execution plan for checked
+  evidence, Lean horizons, and trust-boundary graduation.
 - [LIBRARY-BOUNDARY-DECISION.md](LIBRARY-BOUNDARY-DECISION.md) records the
   current Phase M8 decision: keep the resources in-repo, expose a stable JSON
   data contract, and defer crates or repo splits until real consumers require

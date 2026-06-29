@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-upgrade frontier planned.** The learner path sweep is mechanically
+  complete for the current queue (84 focused math packs, 0 path-only links).
+  The next resource layer is
+  [`PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md):
+  classify the two `needs-proof-route` packs, then upgrade CNF/LRAT,
+  QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, QF_BV bit-blast, and Lean
+  horizons with explicit trust boundaries and route-specific checks.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
