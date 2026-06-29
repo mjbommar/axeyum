@@ -33,6 +33,8 @@ const ADD: u8 = 0x01;
 const EQ: u8 = 0x14;
 const ISZERO: u8 = 0x15;
 const AND: u8 = 0x16;
+const SHR: u8 = 0x1c;
+const DUP1: u8 = 0x80;
 const SHA3: u8 = 0x20;
 const CALLDATALOAD: u8 = 0x35;
 const POP: u8 = 0x50;
@@ -255,6 +257,7 @@ impl Tally {
 }
 
 #[rustfmt::skip]
+#[allow(clippy::too_many_lines)] // a flat data listing of construction-known cases
 fn corpus() -> Vec<Case> {
     use Expect::{Bug, Safe};
     use FindingKind::{AddOverflow, Invalid, Revert};
@@ -265,6 +268,19 @@ fn corpus() -> Vec<Case> {
             bytecode: vec![
                 PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x20, CALLDATALOAD, ADD, PUSH1, 0x00, MSTORE,
                 PUSH1, 0x20, PUSH1, 0x00, RETURN,
+            ],
+        },
+        Case {
+            // Real-contract shape: 4-byte function-selector dispatch
+            // (selector = calldata[0:32] >> 224), then an overflow bug in the
+            // dispatched `add(x, y)` over calldata[4:36] + calldata[36:68].
+            name: "selector-dispatch-add-overflow", shape: Control, expect: Bug(AddOverflow),
+            bytecode: vec![
+                PUSH1, 0x00, CALLDATALOAD, PUSH1, 0xe0, SHR,
+                DUP1, PUSH1, 0x01, EQ, PUSH1, 0x0e, JUMPI,
+                STOP, JUMPDEST,
+                PUSH1, 0x04, CALLDATALOAD, PUSH1, 0x24, CALLDATALOAD, ADD,
+                PUSH1, 0x00, MSTORE, PUSH1, 0x20, PUSH1, 0x00, RETURN,
             ],
         },
         Case {

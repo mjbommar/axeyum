@@ -1,7 +1,8 @@
 {
-  "total": 12, "bug_found": 8, "safe_proved": 4, "unknown": 0, "disagree": 0,
+  "total": 13, "bug_found": 9, "safe_proved": 4, "unknown": 0, "disagree": 0,
   "cases": [
     { "name": "add-overflow-unguarded", "shape": "arith", "outcome": "bug-found" },
+    { "name": "selector-dispatch-add-overflow", "shape": "control-flow", "outcome": "bug-found" },
     { "name": "mask-then-store-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
     { "name": "require-nonzero-revert", "shape": "control-flow", "outcome": "bug-found" },
     { "name": "reachable-invalid-opcode", "shape": "control-flow", "outcome": "bug-found" },
