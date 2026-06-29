@@ -9,9 +9,12 @@ re-checked, bounded-verified certificate (Lean-checkable when in fragment).
 The macro parses a *restricted Rust surface* (`syn`, not MIR): integer/bool
 params and locals, arithmetic/bitwise/comparison, `if`/`match`-on-int, fixed
 arrays + indexing, compound assignment, and `#[unwind(K)]`-bounded `while`/`for`.
-It lowers each panic class to an explicit *bad-state* boolean term and asks the
-solver whether any is reachable — a model is a concrete bug witness; `unsat` is a
-bounded safety proof.
+Common integer methods are modeled exactly: `wrapping_{add,sub,mul}` (modular, no
+overflow class), `saturating_{add,sub,mul}` (clamp to the type bound via `ite`
+over the overflow predicate, signed and unsigned), and `min`/`max` (a
+signedness-correct select). It lowers each panic class to an explicit *bad-state*
+boolean term and asks the solver whether any is reachable — a model is a concrete
+bug witness; `unsat` is a bounded safety proof.
 
 ## Soundness — `DISAGREE = 0`
 
@@ -22,7 +25,11 @@ trivially-correct concrete evaluator as the oracle over the arithmetic fragment
 (unsigned + signed, plus the `iN::MIN / -1` and `÷0` edges) and the array/index
 fragment: a reachable panic must **never** yield `Verified`. The fuzz found and
 we fixed a real wrong-safe (signed `iN::MIN / -1` division overflow was
-undetected).
+undetected). It also value-checks the modeled methods against std oracles
+(`wrapping_*` modular result, `saturating_*` clamp over both signednesses,
+`min`/`max` selection) and the `match`-on-int dispatch desugar (per-branch panic
+folding): an always-false assertion over each computed value must stay reachable,
+so a wrong value would surface as a wrong-safe.
 
 ## Loops — warm BMC
 

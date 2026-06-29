@@ -2481,6 +2481,16 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      results are `certified`/Lean-backed too.
    **C4 phase COMPLETE** (C4.1–C4.5) — verify has an AST-loop→warm-BMC path
    (straight-line + nested `if`) that agrees with the unroll route.
+   - **C5 fragment-widening (DONE, ongoing)** — the `#[verify]` surface now covers
+     real Rust idioms beyond the C4 core, each soundness-fuzzed against a std
+     oracle: `match`-on-int desugared to a right-folded `if`/`else` chain
+     (`4552857`, dispatch fuzz `575ce25`); `wrapping_{add,sub,mul}` (modular, no
+     overflow class — `cb9790e`); `saturating_{add,sub,mul}` (signed+unsigned
+     clamp via `ite` over the overflow predicate — `89ca038`); `min`/`max`
+     (signedness-correct select — `6e01b2e`). Also fixed a latent literal-coercion
+     gap in the bare `name = <lit>` assignment path. *Next C5 candidates:*
+     `checked_*` (needs Option-as-value), `abs`/`pow` (panic classes),
+     `rotate_left/right`, `count_ones`/`leading_zeros`.
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
    demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
 6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).
