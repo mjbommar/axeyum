@@ -673,6 +673,132 @@ fn abs_desugar_min_overflow_and_value() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)] // a flat fuzz body over both signednesses
+fn overflows_node_and_unwrap_or_value() {
+    // The `checked_*.unwrap_or(d)` desugar `ite(!Overflows(op,a,b), wrapping_op, d)`
+    // must compute: the real result when no overflow, else the default. Checked
+    // against a concrete oracle over both signednesses by asserting the always-
+    // false `c != expected` (must stay reachable → never Verified). This also
+    // pins the `Overflows` predicate's direction.
+    use axeyum_verify::ast::UnOp;
+    let cfg = SolverConfig::default();
+    let ops = [
+        (BinOp::Add, BinOp::WrappingAdd),
+        (BinOp::Sub, BinOp::WrappingSub),
+        (BinOp::Mul, BinOp::WrappingMul),
+    ];
+    let default_pat: u128 = 7;
+    let mut rng = Rng(0x_0f10_0000_0000_000du64);
+    let mut checked_u = 0u32;
+    let mut checked_s = 0u32;
+    let mut hit_overflow = 0u32;
+    for _ in 0..800 {
+        let (ovf_op, wrap_op) = ops[(rng.next() as usize) % ops.len()];
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let signed = rng.next() % 2 == 0;
+        let (a_pat, b_pat, expect, ty) = if signed {
+            let min = -(1i128 << (w - 1));
+            let max = (1i128 << (w - 1)) - 1;
+            let span = (max - min + 1) as u128;
+            let a = min + ((u128::from(rng.next()) % span) as i128);
+            let b = min + ((u128::from(rng.next()) % span) as i128);
+            let ovf = panics_signed(ovf_op, w, a, b);
+            if ovf {
+                hit_overflow += 1;
+            }
+            let real = match ovf_op {
+                BinOp::Add => a.wrapping_add(b),
+                BinOp::Sub => a.wrapping_sub(b),
+                BinOp::Mul => a.wrapping_mul(b),
+                _ => unreachable!(),
+            };
+            let e = if ovf { default_pat } else { bits(real, w) };
+            checked_s += 1;
+            (
+                bits(a, w),
+                bits(b, w),
+                e,
+                Ty::Int {
+                    width: w,
+                    signed: true,
+                },
+            )
+        } else {
+            let mask: u128 = (1u128 << w) - 1;
+            let a = u128::from(rng.next()) & mask;
+            let b = u128::from(rng.next()) & mask;
+            let ovf = panics(ovf_op, w, a, b);
+            if ovf {
+                hit_overflow += 1;
+            }
+            let e = if ovf {
+                default_pat
+            } else {
+                wrapped(wrap_op, w, a, b)
+            };
+            checked_u += 1;
+            (
+                a,
+                b,
+                e,
+                Ty::Int {
+                    width: w,
+                    signed: false,
+                },
+            )
+        };
+        let a_e = Expr::IntLit { value: a_pat, ty };
+        let b_e = Expr::IntLit { value: b_pat, ty };
+        let desugar = Expr::Ite {
+            cond: Box::new(Expr::Unary {
+                op: UnOp::Not,
+                operand: Box::new(Expr::Overflows {
+                    op: ovf_op,
+                    lhs: Box::new(a_e.clone()),
+                    rhs: Box::new(b_e.clone()),
+                }),
+            }),
+            then: Box::new(Expr::Binary {
+                op: wrap_op,
+                lhs: Box::new(a_e.clone()),
+                rhs: Box::new(b_e.clone()),
+            }),
+            els: Box::new(Expr::IntLit {
+                value: default_pat,
+                ty,
+            }),
+        };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: desugar,
+                },
+                Stmt::Assert(Expr::Binary {
+                    op: BinOp::Ne,
+                    lhs: Box::new(Expr::Var("c".to_string())),
+                    rhs: Box::new(Expr::IntLit { value: expect, ty }),
+                }),
+            ],
+        };
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "unwrap_or desugar wrong-safe: {ovf_op:?} signed={signed} (w{w}) expected {expect}, \
+             got {verdict:?}"
+        );
+    }
+    assert!(
+        checked_u >= 10 && checked_s >= 10 && hit_overflow >= 10,
+        "unwrap_or fuzz under-exercised (u={checked_u}, s={checked_s}, ovf={hit_overflow})"
+    );
+}
+
+#[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index
     // panics (OOB); verify must then never return Verified.

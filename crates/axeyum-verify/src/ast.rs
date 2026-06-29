@@ -136,6 +136,18 @@ pub enum Expr {
         /// The operand.
         operand: Box<Expr>,
     },
+    /// Whether `lhs <op> rhs` would overflow the operand type (a *boolean*).
+    /// `op` must be `Add`/`Sub`/`Mul`; lowers to the same `bv_*addo`/`subo`/`mulo`
+    /// predicate the checked ops use. Used to model `checked_*` Option-flow
+    /// (`unwrap_or` / `match`) without a panic class.
+    Overflows {
+        /// The arithmetic operator (`Add`, `Sub`, or `Mul`).
+        op: BinOp,
+        /// Left operand.
+        lhs: Box<Expr>,
+        /// Right operand.
+        rhs: Box<Expr>,
+    },
     /// `cond.then_else(a, b)` — the lowered form of an `if`/`else` *expression*
     /// (both arms scalar, same type).
     Ite {

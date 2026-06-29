@@ -154,6 +154,35 @@ impl Lowerer<'_> {
                 let term = self.arena.ite(c.term, t.term, f.term).map_err(|e| ir(&e))?;
                 Ok(SymVal { term, ty: t.ty })
             }
+            Expr::Overflows { op, lhs, rhs } => {
+                let a = self.lower_expr(lhs)?;
+                let b = self.lower_expr(rhs)?;
+                if a.ty != b.ty {
+                    return Err(LowerError::TypeError(
+                        "overflow check on differing operand types".into(),
+                    ));
+                }
+                let signed = a.ty.is_signed();
+                let term = match (op, signed) {
+                    (BinOp::Add, true) => self.arena.bv_saddo(a.term, b.term),
+                    (BinOp::Add, false) => self.arena.bv_uaddo(a.term, b.term),
+                    (BinOp::Sub, true) => self.arena.bv_ssubo(a.term, b.term),
+                    (BinOp::Sub, false) => self.arena.bv_usubo(a.term, b.term),
+                    (BinOp::Mul, true) => self.arena.bv_smulo(a.term, b.term),
+                    (BinOp::Mul, false) => self.arena.bv_umulo(a.term, b.term),
+                    _ => {
+                        return Err(LowerError::TypeError(
+                            "overflow check only defined for +/-/*".into(),
+                        ));
+                    }
+                }
+                .map_err(|e| ir(&e))?;
+                // The result is a bool (whether the op overflows).
+                Ok(SymVal {
+                    term,
+                    ty: Ty::Bool,
+                })
+            }
             Expr::Index { array, index, ty } => self.lower_index(array, index, *ty),
             Expr::UnwrapOption { is_some, value } => {
                 // Reaching the unwrap with `is_some == false` is the bug (the

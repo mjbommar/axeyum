@@ -1233,6 +1233,76 @@ impl Lowerer {
                 lty,
             ));
         }
+        // `recv.checked_{add,sub,mul}(arg).unwrap_or(default)` — Option-flow with a
+        // fallback. Desugar to `ite(!overflows, wrapping_op(a, arg), default)`: on
+        // no overflow the value is the (wrapping == real) result, else the default.
+        // Uses the never-panicking `WrappingOp` + the boolean `Overflows` node, so
+        // no spurious overflow panic is recorded.
+        if method == "unwrap_or" {
+            if mc.args.len() != 1 {
+                return Err(syn::Error::new(
+                    mc.span(),
+                    "axeyum::verify: `.unwrap_or()` takes exactly one argument",
+                ));
+            }
+            if let Expr::MethodCall(inner) = &*mc.receiver {
+                if let Some((ovf_op, wrap_op)) = match inner.method.to_string().as_str() {
+                    "checked_add" => Some(("Add", "WrappingAdd")),
+                    "checked_sub" => Some(("Sub", "WrappingSub")),
+                    "checked_mul" => Some(("Mul", "WrappingMul")),
+                    _ => None,
+                } {
+                    if inner.args.len() != 1 {
+                        return Err(syn::Error::new(
+                            inner.span(),
+                            "axeyum::verify: `checked_*` takes exactly one argument",
+                        ));
+                    }
+                    let (lhs, lty) = self.lower_expr(&inner.receiver)?;
+                    let coerce = |s: &mut Self, e: &Expr| -> syn::Result<TokenStream> {
+                        Ok(if is_untyped_int_lit(e) && lty.width.is_some() {
+                            if let Expr::Lit(el) = e {
+                                lower_lit_as(&el.lit, lty, el.span())?.0
+                            } else {
+                                s.lower_expr(e)?.0
+                            }
+                        } else {
+                            s.lower_expr(e)?.0
+                        })
+                    };
+                    let arg = coerce(self, inner.args.first().unwrap())?;
+                    let default = coerce(self, mc.args.first().unwrap())?;
+                    let ovf_ident = format_ident!("{}", ovf_op);
+                    let wrap_ident = format_ident!("{}", wrap_op);
+                    return Ok((
+                        quote! {
+                            axeyum_verify::ast::Expr::Ite {
+                                cond: Box::new(axeyum_verify::ast::Expr::Unary {
+                                    op: axeyum_verify::ast::UnOp::Not,
+                                    operand: Box::new(axeyum_verify::ast::Expr::Overflows {
+                                        op: axeyum_verify::ast::BinOp::#ovf_ident,
+                                        lhs: Box::new(#lhs),
+                                        rhs: Box::new(#arg),
+                                    }),
+                                }),
+                                then: Box::new(axeyum_verify::ast::Expr::Binary {
+                                    op: axeyum_verify::ast::BinOp::#wrap_ident,
+                                    lhs: Box::new(#lhs),
+                                    rhs: Box::new(#arg),
+                                }),
+                                els: Box::new(#default),
+                            }
+                        },
+                        lty,
+                    ));
+                }
+            }
+            return Err(syn::Error::new(
+                mc.span(),
+                "axeyum::verify: `.unwrap_or()` is supported only on a \
+                 `checked_{add,sub,mul}(..)` chain in Phase 1",
+            ));
+        }
         // `recv.abs()` (signed) — desugar to `ite(a < 0, -a, a)`. The `-a` arm
         // records the `iN::MIN` negation-overflow panic, which is *exactly* the
         // condition under which `abs` panics, so this is sound and precise.

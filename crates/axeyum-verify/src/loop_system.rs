@@ -195,6 +195,11 @@ fn substitute(e: &Expr, env: &HashMap<String, Expr>) -> Expr {
             is_some: Box::new(substitute(is_some, env)),
             value: Box::new(substitute(value, env)),
         },
+        Expr::Overflows { op, lhs, rhs } => Expr::Overflows {
+            op: *op,
+            lhs: Box::new(substitute(lhs, env)),
+            rhs: Box::new(substitute(rhs, env)),
+        },
         Expr::IntLit { .. } | Expr::BoolLit(_) => e.clone(),
     }
 }
