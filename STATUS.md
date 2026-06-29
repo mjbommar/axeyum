@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Induction-patterns end-to-end lesson landed.** Added
+  [`induction-patterns-end-to-end.md`](docs/learn/math/induction-patterns-end-to-end.md)
+  as the learner-facing trace for the induction-patterns pack: finite weak
+  induction replay, strong-induction Fibonacci-bound replay, loop-invariant
+  trace replay, invalid-step counterexample checking, and the Lean horizon for
+  the general induction schema. The lesson is linked from the math learning
+  index plus the logic/proof path.
+
 - **Induction-obligations end-to-end lesson landed.** Added
   [`induction-obligations-end-to-end.md`](docs/learn/math/induction-obligations-end-to-end.md)
   as the learner-facing trace for the induction-obligations pack: prefix-sum

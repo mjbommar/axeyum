@@ -135,6 +135,7 @@ For fuller traces, read:
 - [End To End: Proof By Refutation](proof-methods-refutation-end-to-end.md)
 - [End To End: Proof Method Patterns](proof-methods-patterns-end-to-end.md)
 - [End To End: Induction Obligations](induction-obligations-end-to-end.md)
+- [End To End: Induction Patterns](induction-patterns-end-to-end.md)
 - [End To End: Triangle Coloring](graph-coloring-end-to-end.md)
 
 ## Horizon
