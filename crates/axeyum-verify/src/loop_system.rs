@@ -22,6 +22,7 @@ use axeyum_solver::{SolverConfig, SolverError};
 use crate::ast::{Expr, Program, Stmt, Ty};
 use crate::bmc::{LoopSafety, ScalarLoopSystem, run_loop};
 use crate::lower::lower_pure_expr;
+use crate::verify::{Verdict, verify_program};
 
 /// An AST description of a scalar loop over uniform-width integer variables.
 pub struct AstLoop {
@@ -342,4 +343,36 @@ pub fn check_program_loop(
     let spec = loop_from_program(program)?;
     let system = loop_system(spec)?;
     Some(run_loop(&system, bound, config))
+}
+
+/// A `#[verify]` entry that routes a loop program's *decision* through the warm
+/// BMC route when possible (measured ~40× faster than unrolling for safe scalar
+/// loops; see `docs/consumer-track/verify/SCOREBOARD.md`), falling back to the
+/// unroll route ([`verify_program`]) for the concrete witness on a bug, for the
+/// certificate, and for anything outside the warm loop fragment (C4.6).
+///
+/// Semantics match [`verify_program`] (a hybrid, not a new contract):
+/// - warm `SafeWithinBound` → [`Verdict::Verified`] (bounded; no cert yet — the
+///   warm route does not package an `EvidenceReport`, so `certified = false`);
+/// - warm `BugReachable` → defer to [`verify_program`] to materialize the
+///   concrete counterexample inputs and class;
+/// - warm `Unknown`, a solver error, or out-of-fragment → [`verify_program`].
+///
+/// # Errors
+///
+/// Propagates a hard solver failure from either route.
+pub fn verify_program_warm(
+    program: &Program,
+    bound: usize,
+    config: &SolverConfig,
+) -> Result<Verdict, SolverError> {
+    match check_program_loop(program, bound, config) {
+        Some(Ok(LoopSafety::SafeWithinBound { .. })) => Ok(Verdict::Verified {
+            certified: false,
+            lean_module: None,
+        }),
+        // A bug (need the concrete witness + class), an undecided warm result, a
+        // warm error, or out-of-fragment: defer to the established unroll route.
+        _ => verify_program(program, config),
+    }
 }

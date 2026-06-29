@@ -2420,9 +2420,14 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      folds into guarded `ite` updates (`fold_body`): each arm-assigned variable
      becomes `ite(cond, then-value, else-value)`, and arm asserts are guarded by
      the (negated) branch condition. Cross-checked vs unroll on a branching loop.
-   - **C4.6** (follow-up) wire auto-routing into the `#[verify]` entry itself
-     (warm for deep loops, unroll fallback out of fragment) + a deep-loop demo
-     impractical to unroll but fast under warm BMC.
+   - **C4.6** — ✅ DONE (`pending-commit`) — `verify_program_warm` routes a loop
+     program's *decision* through the warm BMC route (warm `SafeWithinBound` →
+     `Verified`), deferring to the unroll `verify_program` for the bug witness,
+     the cert, and out-of-fragment programs. Justified by a measured **~40× warm
+     speedup** on safe deep loops (scoreboard scaling sweep, the *opposite* of the
+     EVM I4b result); agrees with direct `verify_program` on buggy and safe loops.
+     *Follow-up (C4.7):* a cert on the warm route so `verify_program_warm` Verified
+     results are `certified`/Lean-backed too.
    **C4 phase COMPLETE** (C4.1–C4.5) — verify has an AST-loop→warm-BMC path
    (straight-line + nested `if`) that agrees with the unroll route.
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;

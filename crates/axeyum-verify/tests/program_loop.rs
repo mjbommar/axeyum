@@ -175,3 +175,24 @@ fn nested_if_loop_warm_matches_unroll() {
         "warm and unroll routes must agree on the nested-if loop"
     );
 }
+
+#[test]
+fn warm_entry_matches_direct_verify() {
+    use axeyum_verify::loop_system::verify_program_warm;
+    let cfg = SolverConfig::default();
+    for bad in [5u128, 200] {
+        let p = program(bad);
+        let warm = verify_program_warm(&p, 10, &cfg).expect("warm entry");
+        let direct = verify_program(&p, &cfg).expect("direct verify");
+        assert_eq!(
+            matches!(warm, Verdict::Counterexample { .. }),
+            matches!(direct, Verdict::Counterexample { .. }),
+            "warm entry and direct verify must agree (counterexample) for bad={bad}"
+        );
+        assert_eq!(
+            matches!(warm, Verdict::Verified { .. }),
+            matches!(direct, Verdict::Verified { .. }),
+            "warm entry and direct verify must agree (verified) for bad={bad}"
+        );
+    }
+}
