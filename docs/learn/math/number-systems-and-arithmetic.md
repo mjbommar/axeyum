@@ -29,10 +29,10 @@ bounded Peano-style no-counterexample rows, signed integer order facts, linear
 integer equations, interval infeasibility, gcd and Bezout witnesses,
 divisibility quotient witnesses, congruences, CRT witnesses, modular inverses,
 bounded quadratic-residue and sum-of-two-squares checks, rational density
-witnesses, trichotomy and order transitivity fixed cases, and algebraic
-complex arithmetic as real-pair data. The complex-plane pack adds unit-root
-cycles, conjugation/product replay, exact rational Mobius transforms, and a
-checked counterexample to a false unit-complex-square claim.
+witnesses, Farkas-checked fixed trichotomy and order-transitivity refutations,
+and algebraic complex arithmetic as real-pair data. The complex-plane pack adds
+unit-root cycles, conjugation/product replay, exact rational Mobius transforms,
+and a checked counterexample to a false unit-complex-square claim.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.

@@ -44,26 +44,34 @@
       "id": "trichotomy-fixed-unsat",
       "claim": "There is a trichotomy violation for the fixed pair 1/4 and 3/4.",
       "expected_result": "unsat",
-      "validation": "exact_rational_replay",
-      "proof_status": "replay-only",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
       "data": {
         "left": "1/4",
-        "right": "3/4"
+        "right": "3/4",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes rationals_trichotomy_fixed_unsat_branches_emit_checked_farkas",
+        "checked_branches": [
+          "left >= right",
+          "left = right",
+          "left > right"
+        ]
       },
-      "notes": "The validator checks exactly one of <, =, > holds for the fixed pair."
+      "notes": "The validator checks exactly one of <, =, > holds for the fixed pair; the Axeyum regression closes each impossible non-less/equality/greater branch with rechecked Farkas evidence."
     },
     {
       "id": "order-transitivity-fixed-unsat",
       "claim": "There is an order-transitivity violation for 1/5 < 2/5 < 3/5.",
       "expected_result": "unsat",
-      "validation": "exact_rational_replay",
-      "proof_status": "replay-only",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
       "data": {
         "a": "1/5",
         "b": "2/5",
-        "c": "3/5"
+        "c": "3/5",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes rationals_order_transitivity_fixed_unsat_emits_checked_farkas",
+        "violating_branch": "a >= c"
       },
-      "notes": "The validator checks the fixed chain and confirms 1/5 < 3/5."
+      "notes": "The validator checks the fixed chain and confirms 1/5 < 3/5; the Axeyum regression refutes the violating branch a >= c with rechecked Farkas evidence."
     }
   ]
 }

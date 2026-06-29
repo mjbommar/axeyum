@@ -20,9 +20,16 @@ Expected result: `unsat`.
 The checked query is the absence of a trichotomy violation for the fixed pair
 `1/4` and `3/4`.
 
+The resource-backed Axeyum regression checks the impossible non-less,
+equality, and greater-than branches as `QF_LRA` systems and requires each one to
+return rechecked `UnsatFarkas` evidence.
+
 ## `order-transitivity-fixed-unsat`
 
 Expected result: `unsat`.
 
 The checked query is the absence of a transitivity violation for the fixed chain
 `1/5 < 2/5 < 3/5`.
+
+The resource-backed Axeyum regression adds the violating branch `1/5 >= 3/5`
+to the fixed chain and requires rechecked `UnsatFarkas` evidence.

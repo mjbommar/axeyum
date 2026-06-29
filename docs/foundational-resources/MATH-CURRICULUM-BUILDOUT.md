@@ -1373,6 +1373,10 @@ pattern for the contradiction row `p`, `p -> q`, `not q`.
 `finite-sets-v0` now carries the same CNF/DRAT/LRAT regression pattern for the
 malformed distributive-law counterexample at element `c`, completing the first
 Boolean CNF/LRAT proof-upgrade target set.
+The QF_LRA/Farkas lane now has its first resource-backed proof regression:
+`rationals-lra-v0` closes the fixed trichotomy impossible branches and the
+fixed order-transitivity violating branch with Axeyum `UnsatFarkas` evidence
+that is independently rechecked.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

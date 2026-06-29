@@ -107,6 +107,8 @@ Graduation:
 First targets:
 
 - [rationals-lra-v0](../../artifacts/examples/math/rationals-lra-v0/)
+  (first resource-backed Farkas regression landed for fixed trichotomy and
+  order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../artifacts/examples/math/convexity-rational-v0/)

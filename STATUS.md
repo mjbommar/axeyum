@@ -231,6 +231,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   emits DRAT, elaborates LRAT, and checks both proof objects; the first-wave
   Boolean CNF/LRAT target set is now covered by concrete resource artifacts.
 
+- **Rationals QF_LRA/Farkas regression landed.**
+  [`rationals-lra-v0`](artifacts/examples/math/rationals-lra-v0/) now promotes
+  its fixed trichotomy and order-transitivity `unsat` rows to checked evidence.
+  The new `axeyum-solver` resource regression builds the exact rational
+  branches, requires `UnsatFarkas` evidence, rechecks the evidence
+  independently, and records the certified Farkas trust step.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

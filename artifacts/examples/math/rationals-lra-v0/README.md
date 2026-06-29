@@ -8,8 +8,8 @@ route and Farkas evidence:
 
 - density between two rationals;
 - additive inverse;
-- trichotomy for a fixed pair;
-- order transitivity for a fixed chain.
+- trichotomy for a fixed pair, with Farkas-checked impossible branches;
+- order transitivity for a fixed chain, with a Farkas-checked violating branch.
 
 ## Concepts
 
@@ -20,12 +20,16 @@ route and Farkas evidence:
 
 ## Trust Story
 
-The current validator parses fraction strings exactly with Python rational
-arithmetic and checks the listed equalities/inequalities. It does not yet emit
-SMT-LIB, call Axeyum's LRA engine, or check Farkas certificates.
+The validator parses fraction strings exactly with Python rational arithmetic
+and checks the listed equalities/inequalities. The two fixed `unsat` order rows
+also have an Axeyum regression that builds the corresponding `QF_LRA` formulas,
+emits `UnsatFarkas` evidence, and rechecks that evidence independently. This is
+not a general theorem of rational order theory; it is checked evidence for the
+fixed rows.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes
 ```

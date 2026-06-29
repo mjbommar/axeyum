@@ -4,7 +4,7 @@
   "title": "Exact Rational LRA Witnesses",
   "domain": "mathematics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "curriculum_rationals",
     "curriculum_reals",
@@ -21,7 +21,8 @@
     "docs/curriculum/BACKLOG.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "density-between-witness",
@@ -32,7 +33,7 @@
   "graduation_criteria": [
     "Encode each fixed rational check as QF_LRA.",
     "Replay SAT witnesses through Axeyum model evaluation.",
-    "Add Farkas certificates for UNSAT LRA forms where applicable.",
+    "Keep fixed rational order refutations on Axeyum's checked Farkas evidence path.",
     "Extend from fixed examples to a small generated rational corpus."
   ]
 }
