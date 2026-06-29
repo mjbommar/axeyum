@@ -119,6 +119,8 @@ For continuous maps, the checker recomputes preimages of all codomain open
 sets, checks that each preimage is domain-open, checks a finite homeomorphism
 by also checking the inverse, and rejects a false continuity claim where
 `preimage({u}) = {0}` is not open.
+For a fuller focused trace, read
+[End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md).
 
 ## Run It
 

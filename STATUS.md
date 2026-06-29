@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite continuous-map end-to-end lesson landed.** Added
+  [`finite-continuous-maps-end-to-end.md`](docs/learn/math/finite-continuous-maps-end-to-end.md)
+  as the learner-facing trace for the finite-continuous-maps pack: finite
+  open-preimage replay, continuity checking, homeomorphism replay, checked
+  bad-continuity rejection, checked bad-homeomorphism rejection, and the
+  continuous-map Lean horizon. The lesson is linked from the math learning
+  index plus the finite-structures and analysis/topology paths.
+
 - **Finite-connectedness end-to-end lesson landed.** Added
   [`finite-connectedness-end-to-end.md`](docs/learn/math/finite-connectedness-end-to-end.md)
   as the learner-facing trace for the finite-connectedness pack: finite

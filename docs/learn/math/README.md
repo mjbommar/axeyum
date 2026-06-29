@@ -207,6 +207,10 @@ validated pack data and the repo-root command that replays it.
 - [Finite Connectedness](finite-connectedness-end-to-end.md): follows finite
   connected-space replay, open-separation replay, clopen-subset disconnection,
   checked bad-connectedness rejection, and the connectedness Lean horizon.
+- [Finite Continuous Maps](finite-continuous-maps-end-to-end.md): follows
+  finite open-preimage replay, finite continuity checking, homeomorphism
+  replay, checked bad-continuity rejection, checked bad-homeomorphism
+  rejection, and the continuous-map Lean horizon.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked bad

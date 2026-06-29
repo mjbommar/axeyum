@@ -859,8 +859,8 @@ order/lattice replay, finite cardinality replay, cardinality-principle replay,
 finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
 finite topology/measure, bounded dynamics/operators, finite
-Euler-step/error replay, finite compactness/connectedness replay, and finite
-Chebyshev-system
+Euler-step/error replay, finite compactness/connectedness/continuous-map
+replay, and finite Chebyshev-system
 interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
@@ -1265,6 +1265,10 @@ compactness Lean horizon.
 `finite-connectedness-v0` now has a learner-facing end-to-end lesson for finite
 connected-space replay, open-separation replay, clopen-subset disconnection,
 checked bad-connectedness rejection, and the connectedness Lean horizon.
+`finite-continuous-maps-v0` now has a learner-facing end-to-end lesson for
+finite open-preimage replay, continuity checking, homeomorphism replay, checked
+bad-continuity rejection, checked bad-homeomorphism rejection, and the
+continuous-map Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.
