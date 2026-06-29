@@ -34,6 +34,8 @@ schemas, examples, and validation workflows.
   generated field coverage from the current concept atlas.
 - [generated/proof-gap-dashboard.md](generated/proof-gap-dashboard.md) is the
   generated proof/evidence gap view.
+- [generated/learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md)
+  is the generated learner-coverage and proof-upgrade queue.
 
 ## Current Machine-Readable Artifacts
 

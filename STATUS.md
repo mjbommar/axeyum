@@ -191,6 +191,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Learner/proof-upgrade dashboard landed.** Extended
+  [`gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py) to
+  generate
+  [`learner-proof-upgrade-dashboard.md`](docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md)
+  from math pack metadata, `expected.json` proof statuses, cookbook recipe
+  links, and explicit `docs/learn/math` pack references. The normal
+  foundational-resource gate now fails if this dashboard is stale. Current
+  generated queue: 84 non-template packs, 74 focused learner links, 9 path-only
+  links, 1 missing learner link, and 73 packs with non-checked proof rows.
+
 - **Curriculum resource execution plan landed.** Added
   [`CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
   as the forward plan for building the math-curriculum resources past broad

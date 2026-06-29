@@ -951,20 +951,24 @@ Exit criteria:
 
 ### Phase M7: Generated Dashboards And CI Hook
 
-Status: first dashboard and check-hook increments landed. The proof-gap
-dashboard is still generated from the concept atlas, and now also reads math
-example-pack metadata and `expected.json` rows to report pack-level route
-coverage, validation commands, checked/replay/proof-gap counts, and the concrete
-checks that still need stronger evidence. `just foundational-resources` and the
-plain-shell fallback now regenerate the concept atlas, validate it, validate all
-math example packs, regenerate dashboards, and fail if generated atlas or
-dashboard files are stale; CI runs the same gate before docs link checking.
+Status: dashboard and check-hook increments landed. The proof-gap dashboard is
+still generated from the concept atlas, and now also reads math example-pack
+metadata and `expected.json` rows to report pack-level route coverage,
+validation commands, checked/replay/proof-gap counts, and the concrete checks
+that still need stronger evidence. The learner/proof-upgrade dashboard scans
+math learner pages for explicit pack references, reports focused/path-only/
+missing learner coverage, and groups non-checked proof rows by candidate
+cookbook route. `just foundational-resources` and the plain-shell fallback now
+regenerate the concept atlas, validate it, validate all math example packs,
+regenerate dashboards, and fail if generated atlas or dashboard files are stale;
+CI runs the same gate before docs link checking.
 
 Deliverables:
 
 - `docs/foundational-resources/generated/math-coverage.md`.
 - `docs/foundational-resources/generated/math-field-dashboard.md`.
 - `docs/foundational-resources/generated/proof-gap-dashboard.md`.
+- `docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md`.
 - Optional `just check-foundational-resources` target once scripts stabilize.
 
 Exit criteria:

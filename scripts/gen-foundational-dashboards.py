@@ -12,6 +12,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 ATLAS = ROOT / "artifacts" / "ontology" / "foundational-concepts.json"
 EXAMPLE_ROOT = ROOT / "artifacts" / "examples" / "math"
+LEARN_ROOT = ROOT / "docs" / "learn" / "math"
 OUT_DIR = ROOT / "docs" / "foundational-resources" / "generated"
 
 
@@ -41,8 +42,36 @@ def load_example_packs() -> list[dict[str, Any]]:
     return packs
 
 
+def load_learner_refs() -> dict[str, list[str]]:
+    refs: dict[str, list[str]] = defaultdict(list)
+    for lesson_path in sorted(LEARN_ROOT.glob("*.md")):
+        text = lesson_path.read_text(encoding="utf-8")
+        lesson_rel = lesson_path.relative_to(ROOT).as_posix()
+        for metadata_path in sorted(EXAMPLE_ROOT.glob("*/metadata.json")):
+            pack_id = metadata_path.parent.name
+            pack_path = metadata_path.parent.relative_to(ROOT).as_posix()
+            if pack_id in text or pack_path in text:
+                refs[pack_id].append(lesson_rel)
+    return refs
+
+
 def md_list(values: list[str]) -> str:
     return ", ".join(f"`{value}`" for value in values) if values else "-"
+
+
+def md_links(paths: list[str]) -> str:
+    if not paths:
+        return "-"
+    links = []
+    for path in paths:
+        target = Path(path)
+        label = target.name
+        if path.startswith("docs/learn/math/"):
+            target_text = "../../learn/math/" + label
+        else:
+            target_text = path
+        links.append(f"[{label}]({target_text})")
+    return ", ".join(links)
 
 
 def table_cell(value: str) -> str:
@@ -60,6 +89,57 @@ def recipe_links(metadata: dict[str, Any]) -> list[str]:
 def recipe_list(metadata: dict[str, Any]) -> str:
     recipes = [Path(source).name for source in recipe_links(metadata)]
     return md_list(recipes)
+
+
+def upgrade_recipes(metadata: dict[str, Any]) -> list[str]:
+    return sorted(
+        Path(source).name
+        for source in recipe_links(metadata)
+        if Path(source).name != "finite-model-replay.md"
+    )
+
+
+def upgrade_recipe_list(metadata: dict[str, Any]) -> str:
+    recipes = upgrade_recipes(metadata)
+    return md_list(recipes) if recipes else "`needs-proof-route`"
+
+
+def learner_status(lesson_refs: list[str]) -> str:
+    focused = [
+        ref
+        for ref in lesson_refs
+        if ref.startswith("docs/learn/math/")
+        and ref.endswith("-end-to-end.md")
+        and Path(ref).name != "README.md"
+    ]
+    path_only = [
+        ref
+        for ref in lesson_refs
+        if ref.startswith("docs/learn/math/")
+        and not ref.endswith("-end-to-end.md")
+        and Path(ref).name != "README.md"
+    ]
+    index = [ref for ref in lesson_refs if Path(ref).name == "README.md"]
+    if focused:
+        return "focused"
+    if path_only:
+        return "path-only"
+    if index:
+        return "index-only"
+    return "missing"
+
+
+def proof_counts(checks: list[dict[str, Any]], *, include_checked: bool) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for check in checks:
+        status = check["proof_status"]
+        if include_checked or status not in {"checked", "not-required"}:
+            counts[status] += 1
+    return counts
+
+
+def count_text(counts: Counter[str]) -> str:
+    return ", ".join(f"`{key}`: {counts[key]}" for key in sorted(counts)) or "-"
 
 
 def pack_list(row: dict[str, Any]) -> str:
@@ -146,13 +226,12 @@ def pack_route_coverage(packs: list[dict[str, Any]]) -> list[str]:
     ]
     for pack in packs:
         metadata = pack["metadata"]
-        counts = Counter(check["proof_status"] for check in pack["expected"]["checks"])
-        count_text = ", ".join(f"`{key}`: {counts[key]}" for key in sorted(counts)) or "-"
+        counts = proof_counts(pack["expected"]["checks"], include_checked=True)
         lines.append(
             "| "
             f"`{metadata['id']}` | "
             f"`{metadata['trust_status']}` | "
-            f"{count_text} | "
+            f"{count_text(counts)} | "
             f"{recipe_list(metadata)} | "
             f"`{metadata['validator_command']}` |"
         )
@@ -265,12 +344,149 @@ def proof_gap_dashboard(rows: list[dict[str, Any]], packs: list[dict[str, Any]])
     return "\n".join(lines)
 
 
+def learner_proof_upgrade_dashboard(
+    packs: list[dict[str, Any]], learner_refs: dict[str, list[str]]
+) -> str:
+    learner_rows = []
+    proof_rows = []
+    learner_totals: Counter[str] = Counter()
+    route_totals: Counter[str] = Counter()
+    nonchecked_check_total = 0
+
+    for pack in packs:
+        metadata = pack["metadata"]
+        expected = pack["expected"]
+        refs = sorted(learner_refs.get(metadata["id"], []))
+        status = learner_status(refs)
+        learner_totals[status] += 1
+        all_counts = proof_counts(expected["checks"], include_checked=True)
+        learner_rows.append(
+            (
+                status,
+                metadata["id"],
+                ",".join(metadata["field_ids"]),
+                metadata["trust_status"],
+                count_text(all_counts),
+                refs,
+            )
+        )
+
+        nonchecked_counts = proof_counts(expected["checks"], include_checked=False)
+        if nonchecked_counts:
+            nonchecked_check_total += sum(nonchecked_counts.values())
+            route_names = upgrade_recipes(metadata) or ["needs-proof-route"]
+            routes = md_list(route_names)
+            for route in route_names:
+                route_totals[route] += 1
+            proof_rows.append(
+                (
+                    routes,
+                    metadata["id"],
+                    status,
+                    metadata["trust_status"],
+                    count_text(nonchecked_counts),
+                    ",".join(metadata["axeyum_fragments"]),
+                    refs,
+                )
+            )
+
+    learner_rows.sort()
+    proof_rows.sort()
+
+    lines = [
+        "# Learner And Proof Upgrade Dashboard",
+        "",
+        "Generated by `python3 scripts/gen-foundational-dashboards.py`.",
+        "",
+        "This dashboard is intentionally mechanical: a pack counts as learner-linked",
+        "only when a `docs/learn/math` page explicitly mentions the pack id or path.",
+        "",
+        "## Summary",
+        "",
+        f"- math example packs: {len(packs)}",
+        f"- packs with non-checked proof rows: {len(proof_rows)}",
+        f"- non-checked proof rows: {nonchecked_check_total}",
+        "",
+        "### Learner Status Totals",
+        "",
+    ]
+    for status, count in sorted(learner_totals.items()):
+        lines.append(f"- `{status}`: {count}")
+    lines.extend(["", "### Candidate Proof Route Totals", ""])
+    for route, count in sorted(route_totals.items()):
+        lines.append(f"- `{route}`: {count}")
+    lines.extend(
+        [
+            "",
+            "## Learner Coverage",
+            "",
+            "| Learner Status | Pack | Fields | Trust Status | Proof Status Counts | Learner Pages |",
+            "|---|---|---|---|---|---|",
+        ]
+    )
+    for status, pack_id, fields, trust_status, counts, refs in learner_rows:
+        lines.append(
+            "| "
+            f"`{status}` | "
+            f"`{pack_id}` | "
+            f"`{table_cell(fields)}` | "
+            f"`{trust_status}` | "
+            f"{counts} | "
+            f"{md_links(refs)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Focused Lesson Queue",
+            "",
+            "| Learner Status | Pack | Current Learner Pages |",
+            "|---|---|---|",
+        ]
+    )
+    for status, pack_id, _fields, _trust_status, _counts, refs in learner_rows:
+        if status == "focused":
+            continue
+        lines.append(
+            "| "
+            f"`{status}` | "
+            f"`{pack_id}` | "
+            f"{md_links(refs)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Proof Upgrade Queue",
+            "",
+            "| Candidate Route | Pack | Learner Status | Trust Status | Non-Checked Rows | Fragments | Learner Pages |",
+            "|---|---|---|---|---|---|---|",
+        ]
+    )
+    for routes, pack_id, status, trust_status, counts, fragments, refs in proof_rows:
+        lines.append(
+            "| "
+            f"{routes} | "
+            f"`{pack_id}` | "
+            f"`{status}` | "
+            f"`{trust_status}` | "
+            f"{counts} | "
+            f"`{table_cell(fragments)}` | "
+            f"{md_links(refs)} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main() -> int:
     rows = load_rows()
     packs = load_example_packs()
+    learner_refs = load_learner_refs()
     write(OUT_DIR / "math-coverage.md", math_coverage(rows))
     write(OUT_DIR / "math-field-dashboard.md", field_dashboard(rows))
     write(OUT_DIR / "proof-gap-dashboard.md", proof_gap_dashboard(rows, packs))
+    write(
+        OUT_DIR / "learner-proof-upgrade-dashboard.md",
+        learner_proof_upgrade_dashboard(packs, learner_refs),
+    )
     print("generated foundational resource dashboards")
     return 0
 
