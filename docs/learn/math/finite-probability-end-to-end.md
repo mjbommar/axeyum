@@ -219,6 +219,9 @@ E[X] / 2 = 1/2
 It also checks a finite Chebyshev row, a finite union-bound row, and rejects the
 false claim `P(X >= 2) <= 1/8`.
 
+For a fuller focused trace, read
+[End To End: Finite Concentration](finite-concentration-end-to-end.md).
+
 For the finite martingale row, the checker recomputes:
 
 ```text

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-concentration end-to-end lesson landed.** Added
+  [`finite-concentration-end-to-end.md`](docs/learn/math/finite-concentration-end-to-end.md)
+  as the learner-facing trace for the finite-concentration pack: exact finite
+  Markov, Chebyshev, and union-bound replay over rational atom tables, checked
+  bad concentration-bound rejection, and the general concentration Lean
+  horizon. The lesson is linked from the math learning index plus the
+  probability/statistics path.
+
 - **Finite-hitting-times end-to-end lesson landed.** Added
   [`finite-hitting-times-end-to-end.md`](docs/learn/math/finite-hitting-times-end-to-end.md)
   as the learner-facing trace for the finite-hitting-times pack: finite

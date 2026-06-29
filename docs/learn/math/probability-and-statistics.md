@@ -144,6 +144,9 @@ The `finite-concentration-v0` validator checks Markov's inequality,
 Chebyshev's inequality, the union bound, and rejects a false claim such as
 `P(X >= 2) <= 1/8` for this table.
 
+For a focused finite concentration trace, read
+[End To End: Finite Concentration](finite-concentration-end-to-end.md).
+
 For finite martingales, it checks a two-step fair walk against its natural
 filtration:
 

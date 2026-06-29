@@ -863,8 +863,8 @@ Euler-step/error replay, finite compactness/connectedness/continuous-map
 replay, finite simplicial-homology replay, finite integration replay, finite
 product-measure/Fubini replay, finite random-variable replay, and finite
 conditional-expectation replay, finite martingale replay, and finite
-stochastic-kernel replay, finite hitting-time replay, and finite
-Chebyshev-system
+stochastic-kernel replay, finite hitting-time replay, finite concentration
+replay, and finite Chebyshev-system
 interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
 plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
@@ -1304,6 +1304,10 @@ rejection, and the regular-conditional-probability Lean horizon.
 absorbing-chain first-hit distributions, survival mass, absorption equations,
 expected hitting-time equations, checked bad expected-time rejection, and the
 general hitting-theory Lean horizon.
+`finite-concentration-v0` now has a learner-facing end-to-end lesson for exact
+finite Markov, Chebyshev, and union-bound replay over rational atom tables,
+checked bad concentration-bound rejection, and the general concentration Lean
+horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

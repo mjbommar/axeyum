@@ -221,6 +221,10 @@ validated pack data and the repo-root command that replays it.
   absorbing-chain first-hit distributions, survival mass, absorption
   equations, expected hitting-time equations, checked bad expected-time
   rejection, and the general hitting-theory Lean horizon.
+- [Finite Concentration](finite-concentration-end-to-end.md): follows exact
+  finite Markov, Chebyshev, and union-bound replay over rational atom tables,
+  checked bad concentration-bound rejection, and the general concentration
+  Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
