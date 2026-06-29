@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "exact-statistical-tests-v0",
+  "title": "Exact Finite Statistical Test Checks",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_discrete_math",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "curriculum_naturals"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals",
+    "naturals"
+  ],
+  "axeyum_fragments": [
+    "finite enumeration",
+    "LIA finite counts",
+    "LRA (exact rationals)",
+    "QF_LRA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/naturals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+  ],
+  "expected_results": [
+    "binomial-tail-pvalue",
+    "hypergeometric-point-probability",
+    "fisher-left-tail-pvalue",
+    "bad-binomial-pvalue-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode exact finite p-value claims as deterministic finite-count and rational-arithmetic obligations.",
+    "Replay binomial and hypergeometric witnesses through exact combinatorics.",
+    "Add two-sided Fisher and exact multinomial tests before claiming broader exact-test coverage.",
+    "Keep asymptotic tests, normal approximations, floating-point libraries, and model-selection claims under numerical-honesty metadata."
+  ]
+}

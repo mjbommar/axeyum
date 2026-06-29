@@ -4627,6 +4627,134 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
         fail("simpson witness must have B beating A in aggregate")
 
 
+def require_tail_kind(context: str, value: Any) -> str:
+    require_string(context, value)
+    if value not in {"equal", "less_equal", "greater_equal"}:
+        fail(f"{context} must be one of equal, less_equal, greater_equal")
+    return value
+
+
+def binomial_point_probability(trials: int, successes: int, probability: Fraction) -> Fraction:
+    if successes < 0 or successes > trials:
+        return Fraction(0)
+    return (
+        Fraction(combination_count(trials, successes))
+        * (probability ** successes)
+        * ((1 - probability) ** (trials - successes))
+    )
+
+
+def binomial_tail_probability(
+    trials: int,
+    successes: int,
+    probability: Fraction,
+    tail: str,
+) -> Fraction:
+    if tail == "equal":
+        return binomial_point_probability(trials, successes, probability)
+    if tail == "less_equal":
+        return sum(
+            (binomial_point_probability(trials, value, probability) for value in range(successes + 1)),
+            Fraction(0),
+        )
+    return sum(
+        (binomial_point_probability(trials, value, probability) for value in range(successes, trials + 1)),
+        Fraction(0),
+    )
+
+
+def require_2x2_count_table(context: str, value: Any) -> list[list[int]]:
+    table = require_count_matrix(context, value)
+    if len(table) != 2 or len(table[0]) != 2:
+        fail(f"{context} must be a 2x2 count table")
+    return table
+
+
+def hypergeometric_probability(row1: int, row2: int, col1: int, top_left: int) -> Fraction:
+    total = row1 + row2
+    if top_left < max(0, col1 - row2) or top_left > min(row1, col1):
+        return Fraction(0)
+    numerator = combination_count(row1, top_left) * combination_count(row2, col1 - top_left)
+    denominator = combination_count(total, col1)
+    return Fraction(numerator, denominator)
+
+
+def fisher_left_tail_probability(row1: int, row2: int, col1: int, observed_top_left: int) -> Fraction:
+    lower = max(0, col1 - row2)
+    return sum(
+        (hypergeometric_probability(row1, row2, col1, value) for value in range(lower, observed_top_left + 1)),
+        Fraction(0),
+    )
+
+
+def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    binomial = checks["binomial-tail-pvalue"]
+    if binomial["expected_result"] != "sat":
+        fail("binomial-tail-pvalue must expect sat")
+    values = single_witness_values(binomial, witnesses)
+    trials = require_positive_int("binomial trials", values.get("trials"))
+    successes = require_nonnegative_int("binomial observed_successes", values.get("observed_successes"))
+    probability = require_probability("binomial null_probability", values.get("null_probability"))
+    tail = require_tail_kind("binomial tail", values.get("tail"))
+    p_value = require_probability("binomial p_value", values.get("p_value"))
+    if successes > trials:
+        fail("binomial observed_successes must not exceed trials")
+    if binomial_tail_probability(trials, successes, probability, tail) != p_value:
+        fail("binomial-tail-pvalue p_value is incorrect")
+
+    point = checks["hypergeometric-point-probability"]
+    if point["expected_result"] != "sat":
+        fail("hypergeometric-point-probability must expect sat")
+    values = single_witness_values(point, witnesses)
+    table = require_2x2_count_table("hypergeometric table", values.get("table"))
+    observed_top_left = require_nonnegative_int("hypergeometric observed_top_left", values.get("observed_top_left"))
+    probability = require_probability("hypergeometric point_probability", values.get("point_probability"))
+    row1 = table[0][0] + table[0][1]
+    row2 = table[1][0] + table[1][1]
+    col1 = table[0][0] + table[1][0]
+    if hypergeometric_probability(row1, row2, col1, observed_top_left) != probability:
+        fail("hypergeometric-point-probability probability is incorrect")
+
+    fisher = checks["fisher-left-tail-pvalue"]
+    if fisher["expected_result"] != "sat":
+        fail("fisher-left-tail-pvalue must expect sat")
+    values = single_witness_values(fisher, witnesses)
+    table = require_2x2_count_table("fisher table", values.get("table"))
+    observed_top_left = require_nonnegative_int("fisher observed_top_left", values.get("observed_top_left"))
+    p_value = require_probability("fisher left_tail_p_value", values.get("left_tail_p_value"))
+    row_sums = require_nonnegative_int_list("fisher row_sums", values.get("row_sums"))
+    column_sums_value = require_nonnegative_int_list("fisher column_sums", values.get("column_sums"))
+    if row_sums != [sum(row) for row in table]:
+        fail("fisher-left-tail-pvalue row_sums do not match table")
+    if column_sums_value != column_sums(table):
+        fail("fisher-left-tail-pvalue column_sums do not match table")
+    row1 = row_sums[0]
+    row2 = row_sums[1]
+    col1 = column_sums_value[0]
+    if fisher_left_tail_probability(row1, row2, col1, observed_top_left) != p_value:
+        fail("fisher-left-tail-pvalue p_value is incorrect")
+
+    bad = checks["bad-binomial-pvalue-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-binomial-pvalue-rejected must expect unsat")
+    data = bad.get("data", {})
+    trials = require_positive_int("bad binomial trials", data.get("trials"))
+    successes = require_nonnegative_int("bad binomial observed_successes", data.get("observed_successes"))
+    probability = require_probability("bad binomial null_probability", data.get("null_probability"))
+    tail = require_tail_kind("bad binomial tail", data.get("tail"))
+    claimed = require_probability("bad binomial claimed_p_value", data.get("claimed_p_value"))
+    actual = require_probability("bad binomial actual_p_value", data.get("actual_p_value"))
+    if successes > trials:
+        fail("bad binomial observed_successes must not exceed trials")
+    if binomial_tail_probability(trials, successes, probability, tail) != actual:
+        fail("bad-binomial-pvalue-rejected actual_p_value is incorrect")
+    if claimed == actual:
+        fail("bad-binomial-pvalue-rejected claimed p-value unexpectedly matches")
+
+
 def require_recurrence_trace(context: str, values: dict[str, Any]) -> list[Fraction]:
     initial = require_fraction(f"{context}.initial", values.get("initial"))
     delta = require_fraction(f"{context}.delta", values.get("delta"))
@@ -4697,6 +4825,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":
         validate_descriptive_statistics(expected)
+    if metadata["id"] == "exact-statistical-tests-v0":
+        validate_exact_statistical_tests(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "finite-topology-v0":

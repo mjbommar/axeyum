@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Exact statistical tests foundations pack landed.** Added
+  [`exact-statistical-tests-v0`](artifacts/examples/math/exact-statistical-tests-v0/README.md)
+  as the first exact finite statistical-test resource. The pack validates a
+  binomial right-tail p-value, a hypergeometric point probability, a one-sided
+  Fisher exact-test p-value, and checked rejection of a false p-value. The
+  foundational example-pack validator now checks binomial and hypergeometric
+  p-values as rational finite sums over integer counts, without asymptotic or
+  floating-point approximations.
+
 - **Finite Markov-chain foundations pack landed.** Added
   [`finite-markov-chain-v0`](artifacts/examples/math/finite-markov-chain-v0/README.md)
   as the first exact stochastic-process bridge across probability, linear

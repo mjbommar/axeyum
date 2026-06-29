@@ -485,6 +485,9 @@ checked rejection of a false trace-square moment.
 row-stochastic matrix replay, finite-horizon distribution evolution,
 stationary-distribution replay, and checked rejection of a malformed transition
 row.
+`artifacts/examples/math/exact-statistical-tests-v0/` now validates exact
+binomial tails, hypergeometric point probabilities, one-sided Fisher p-values,
+and checked rejection of a false p-value.
 
 Recommended order:
 
@@ -510,6 +513,8 @@ Recommended order:
     exact moments, Gram expectations, and rank distributions.
 13. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
     distribution replay, stationary distributions, and bad transition rows.
+14. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
+    for finite statistical tests.
 
 Exit criteria:
 
@@ -670,7 +675,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-13, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-14, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -685,7 +690,10 @@ finite random-matrix bridge across linear algebra, probability, statistics, and
 numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics. Continue by adding the next curriculum-adjacent pack or by replacing
-finite enumeration routes with emitted, checked proof objects where appropriate.
+dynamics. `exact-statistical-tests-v0` now adds the first exact finite
+statistical-test slice for p-values as rational finite sums. Continue by adding
+the next curriculum-adjacent pack or by replacing finite enumeration routes with
+emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 

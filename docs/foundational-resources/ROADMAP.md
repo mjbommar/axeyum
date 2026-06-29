@@ -78,6 +78,7 @@ artifacts/examples/math/
   numerical-linear-algebra-v0/
   random-matrix-finite-v0/
   finite-markov-chain-v0/
+  exact-statistical-tests-v0/
   finite-groups-v0/
   finite-rings-v0/
   finite-fields-v0/
@@ -356,6 +357,9 @@ probabilities, and checked rejection of a false trace-square moment.
 [`finite-markov-chain-v0`](../../artifacts/examples/math/finite-markov-chain-v0/)
 validates exact stochastic matrices, finite-horizon distribution evolution,
 stationary distributions, and checked rejection of a malformed transition row.
+[`exact-statistical-tests-v0`](../../artifacts/examples/math/exact-statistical-tests-v0/)
+validates exact binomial tails, hypergeometric point probabilities, one-sided
+Fisher p-values, and checked rejection of a false p-value.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.
@@ -429,6 +433,7 @@ Exit criteria:
 - Finite Markov-chain stochastic-matrix and finite-horizon evolution checks
   validate exactly.
 - Descriptive-statistics invariants validate exactly.
+- Exact finite statistical-test p-values validate as rational finite sums.
 - The first finite random-matrix bridge validates exact matrix-valued
   probability tables without asymptotic or floating-point claims.
 - Numerical/probabilistic-programming material has an explicit "not proof"
