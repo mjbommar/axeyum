@@ -1,11 +1,14 @@
 {
-  "total": 13, "bug_found": 9, "safe_proved": 4, "unknown": 0, "disagree": 0,
+  "total": 16, "bug_found": 11, "safe_proved": 5, "unknown": 0, "disagree": 0,
   "cases": [
     { "name": "add-overflow-unguarded", "shape": "arith", "outcome": "bug-found" },
     { "name": "selector-dispatch-add-overflow", "shape": "control-flow", "outcome": "bug-found" },
     { "name": "mask-then-store-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
     { "name": "require-nonzero-revert", "shape": "control-flow", "outcome": "bug-found" },
     { "name": "reachable-invalid-opcode", "shape": "control-flow", "outcome": "bug-found" },
+    { "name": "exp-constant-fold-safe", "shape": "arith", "outcome": "safe-proved" },
+    { "name": "byte-extract-revert", "shape": "control-flow", "outcome": "bug-found" },
+    { "name": "signextend-sign-revert", "shape": "arith", "outcome": "bug-found" },
     { "name": "mem-roundtrip-safe", "shape": "concrete-mem", "outcome": "safe-proved" },
     { "name": "symbolic-storage-roundtrip-revert", "shape": "symbolic-storage", "outcome": "bug-found" },
     { "name": "cold-slot-load-safe", "shape": "symbolic-storage", "outcome": "safe-proved" },

@@ -30,7 +30,11 @@ use axeyum_evm::{AnalyzeConfig, FindingKind, MemoryEncoding, Verdict, analyze};
 // ----- opcode byte helpers -------------------------------------------------
 const STOP: u8 = 0x00;
 const ADD: u8 = 0x01;
+const EXP: u8 = 0x0a;
+const SIGNEXTEND: u8 = 0x0b;
+const SLT: u8 = 0x12;
 const EQ: u8 = 0x14;
+const BYTE: u8 = 0x1a;
 const ISZERO: u8 = 0x15;
 const AND: u8 = 0x16;
 const SHR: u8 = 0x1c;
@@ -302,6 +306,33 @@ fn corpus() -> Vec<Case> {
             bytecode: vec![
                 PUSH1, 0x00, CALLDATALOAD, ISZERO, PUSH1, 0x0a, JUMPI, STOP, STOP, STOP, JUMPDEST,
                 INVALID,
+            ],
+        },
+        Case {
+            // EXP constant-fold: 2**8 == 257 is false, so the revert is
+            // unreachable — provably safe only if EXP folds to exactly 256.
+            name: "exp-constant-fold-safe", shape: Arith, expect: Safe,
+            bytecode: vec![
+                PUSH1, 0x08, PUSH1, 0x02, EXP, PUSH2, 0x01, 0x01, EQ, PUSH1, 0x0d, JUMPI, STOP,
+                JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
+            // BYTE: revert when the most-significant byte of calldata[0] is zero
+            // (reachable) — modeled precisely for the concrete index 0.
+            name: "byte-extract-revert", shape: Control, expect: Bug(Revert),
+            bytecode: vec![
+                PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x00, BYTE, ISZERO, PUSH1, 0x0b, JUMPI, STOP,
+                JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
+            ],
+        },
+        Case {
+            // SIGNEXTEND: revert when signextend(0, calldata[0]) is negative
+            // (the low byte's high bit set) — reachable.
+            name: "signextend-sign-revert", shape: Arith, expect: Bug(Revert),
+            bytecode: vec![
+                PUSH1, 0x00, PUSH1, 0x00, CALLDATALOAD, PUSH1, 0x00, SIGNEXTEND, SLT, PUSH1, 0x0d,
+                JUMPI, STOP, JUMPDEST, PUSH1, 0x00, PUSH1, 0x00, REVERT,
             ],
         },
         Case {
