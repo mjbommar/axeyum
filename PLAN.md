@@ -2525,11 +2525,12 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      (signedness-correct select — `6e01b2e`); `abs` (with its `iN::MIN` overflow);
      `checked_{add,sub,mul}` Option flow — `.unwrap()`/`.expect()`, `.unwrap_or(d)`,
      and `match … { Some(v) => .., None => .. }` via a new boolean `Expr::Overflows`;
-     and `pow(N)` for a constant exponent (folded to checked `Mul`s). Also fixed a
-     latent literal-coercion gap in the bare `name = <lit>` assignment path.
-     *Next C5 candidates:* first-class `Option` value flow (let-bound / returned);
-     `rotate_left/right` by constant; `count_ones`/`leading_zeros` need core IR
-     (filed as **U9**).
+     `pow(N)` for a constant exponent (folded to checked `Mul`s); and
+     `rotate_left/right` by a constant (`Expr::Rotate` → the IR's constant rotate).
+     Also fixed a latent literal-coercion gap in the bare `name = <lit>` assignment
+     path. *Next C5 candidates:* first-class `Option` value flow (let-bound /
+     returned — a scoped macro change); `count_ones`/`leading_zeros`/symbolic-amount
+     rotate need core IR (filed as **U9**).
 5. **MIR consumer** — a `stable-mir-json` front-end behind the same lowering core;
    demo verifying one real `axeyum-bv` leaf fn (the self-hosting PoC).
 6. **vs-Kani scoreboard** once Kani is installable (DISAGREE=0 + cert-coverage).
