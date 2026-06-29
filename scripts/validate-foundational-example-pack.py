@@ -5349,6 +5349,203 @@ def finite_joint_random_variable_distribution(
     return distribution
 
 
+def require_atom_partition(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> list[tuple[str, set[str]]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty partition list")
+    atom_set = set(atom_ids)
+    covered: set[str] = set()
+    seen_block_ids: set[str] = set()
+    partition: list[tuple[str, set[str]]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        block_id = item.get("id")
+        require_string(f"{context}[{index}].id", block_id)
+        if block_id in seen_block_ids:
+            fail(f"{context} repeats block id {block_id!r}")
+        seen_block_ids.add(block_id)
+        block_atoms = set(require_string_list(f"{context}[{index}].atoms", item.get("atoms")))
+        missing = sorted(block_atoms - atom_set)
+        if missing:
+            fail(f"{context}[{index}].atoms contains atoms outside the distribution: {missing}")
+        overlap = sorted(covered & block_atoms)
+        if overlap:
+            fail(f"{context}[{index}].atoms overlaps earlier blocks: {overlap}")
+        covered |= block_atoms
+        partition.append((block_id, block_atoms))
+    if covered != atom_set:
+        missing = sorted(atom_set - covered)
+        extra = sorted(covered - atom_set)
+        fail(f"{context} must cover atoms exactly; missing={missing} extra={extra}")
+    return partition
+
+
+def partition_refines(
+    fine: list[tuple[str, set[str]]],
+    coarse: list[tuple[str, set[str]]],
+) -> bool:
+    coarse_blocks = [block for _, block in coarse]
+    return all(
+        any(fine_block <= coarse_block for coarse_block in coarse_blocks)
+        for _, fine_block in fine
+    )
+
+
+def finite_conditional_expectation(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    values: dict[str, Fraction],
+    partition: list[tuple[str, set[str]]],
+) -> dict[str, Fraction]:
+    probabilities = atom_probability_map(atoms)
+    table: dict[str, Fraction] = {}
+    for block_id, block_atoms in partition:
+        block_probability = sum((probabilities[atom_id] for atom_id in block_atoms), Fraction(0))
+        if block_probability == 0:
+            fail(f"conditional expectation block {block_id!r} has zero probability")
+        block_integral = sum(
+            (probabilities[atom_id] * values[atom_id] for atom_id in block_atoms),
+            Fraction(0),
+        )
+        block_average = block_integral / block_probability
+        for atom_id in block_atoms:
+            table[atom_id] = block_average
+    return table
+
+
+def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    conditional = checks["conditional-expectation-partition-witness"]
+    if conditional["expected_result"] != "sat":
+        fail("conditional-expectation-partition-witness must expect sat")
+    values = single_witness_values(conditional, witnesses)
+    atoms = require_probability_atoms("conditional expectation atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("conditional-expectation-partition-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "conditional expectation random_variable_values",
+        values.get("random_variable_values"),
+        atom_ids,
+    )
+    partition = require_atom_partition("conditional expectation partition", values.get("partition"), atom_ids)
+    expected_table = require_atom_value_table(
+        "conditional expectation conditional_expectation",
+        values.get("conditional_expectation"),
+        atom_ids,
+    )
+    computed_table = finite_conditional_expectation(atoms, variable_values, partition)
+    if computed_table != expected_table:
+        fail("conditional-expectation-partition-witness table is incorrect")
+
+    total = checks["law-total-expectation-witness"]
+    if total["expected_result"] != "sat":
+        fail("law-total-expectation-witness must expect sat")
+    values = single_witness_values(total, witnesses)
+    atoms = require_probability_atoms("law total atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("law-total-expectation-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table("law total random_variable_values", values.get("random_variable_values"), atom_ids)
+    partition = require_atom_partition("law total partition", values.get("partition"), atom_ids)
+    conditional_table = require_atom_value_table(
+        "law total conditional_expectation",
+        values.get("conditional_expectation"),
+        atom_ids,
+    )
+    computed_table = finite_conditional_expectation(atoms, variable_values, partition)
+    if computed_table != conditional_table:
+        fail("law-total-expectation-witness conditional expectation table is incorrect")
+    source_expectation = require_fraction("law total source_expectation", values.get("source_expectation"))
+    conditional_expectation_expectation = require_fraction(
+        "law total conditional_expectation_expectation",
+        values.get("conditional_expectation_expectation"),
+    )
+    if finite_expected_value(atoms, variable_values) != source_expectation:
+        fail("law-total-expectation-witness source expectation is incorrect")
+    if finite_expected_value(atoms, conditional_table) != conditional_expectation_expectation:
+        fail("law-total-expectation-witness conditional expectation expectation is incorrect")
+    if source_expectation != conditional_expectation_expectation:
+        fail("law-total-expectation-witness expectations do not match")
+
+    tower = checks["tower-property-witness"]
+    if tower["expected_result"] != "sat":
+        fail("tower-property-witness must expect sat")
+    values = single_witness_values(tower, witnesses)
+    atoms = require_probability_atoms("tower atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("tower-property-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table("tower random_variable_values", values.get("random_variable_values"), atom_ids)
+    fine_partition = require_atom_partition("tower fine_partition", values.get("fine_partition"), atom_ids)
+    coarse_partition = require_atom_partition("tower coarse_partition", values.get("coarse_partition"), atom_ids)
+    if not partition_refines(fine_partition, coarse_partition):
+        fail("tower-property-witness fine_partition must refine coarse_partition")
+    fine_table = require_atom_value_table(
+        "tower fine_conditional_expectation",
+        values.get("fine_conditional_expectation"),
+        atom_ids,
+    )
+    coarse_table = require_atom_value_table(
+        "tower coarse_conditional_expectation",
+        values.get("coarse_conditional_expectation"),
+        atom_ids,
+    )
+    tower_table = require_atom_value_table(
+        "tower tower_conditional_expectation",
+        values.get("tower_conditional_expectation"),
+        atom_ids,
+    )
+    if finite_conditional_expectation(atoms, variable_values, fine_partition) != fine_table:
+        fail("tower-property-witness fine conditional expectation is incorrect")
+    if finite_conditional_expectation(atoms, variable_values, coarse_partition) != coarse_table:
+        fail("tower-property-witness coarse conditional expectation is incorrect")
+    if finite_conditional_expectation(atoms, fine_table, coarse_partition) != tower_table:
+        fail("tower-property-witness tower conditional expectation is incorrect")
+    if tower_table != coarse_table:
+        fail("tower-property-witness tower table does not match coarse conditional expectation")
+
+    bad = checks["bad-conditional-expectation-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-conditional-expectation-rejected must expect unsat")
+    data = bad.get("data", {})
+    atoms = require_probability_atoms("bad conditional expectation atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-conditional-expectation-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "bad conditional expectation random_variable_values",
+        data.get("random_variable_values"),
+        atom_ids,
+    )
+    partition = require_atom_partition("bad conditional expectation partition", data.get("partition"), atom_ids)
+    claimed = require_atom_value_table(
+        "bad conditional expectation claimed_conditional_expectation",
+        data.get("claimed_conditional_expectation"),
+        atom_ids,
+    )
+    actual = require_atom_value_table(
+        "bad conditional expectation actual_conditional_expectation",
+        data.get("actual_conditional_expectation"),
+        atom_ids,
+    )
+    computed = finite_conditional_expectation(atoms, variable_values, partition)
+    if computed != actual:
+        fail("bad-conditional-expectation-rejected actual table is incorrect")
+    if claimed == actual:
+        fail("bad-conditional-expectation-rejected must document a false conditional expectation")
+
+    horizon = checks["general-conditional-expectation-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-conditional-expectation-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-conditional-expectation-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general conditional expectation target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general conditional expectation future_checker", data.get("future_checker"))
+
+
 def validate_finite_random_variables(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -6397,6 +6594,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_probability(expected)
     if metadata["id"] == "finite-product-measure-v0":
         validate_finite_product_measure(expected)
+    if metadata["id"] == "finite-conditional-expectation-v0":
+        validate_finite_conditional_expectation(expected)
     if metadata["id"] == "finite-random-variables-v0":
         validate_finite_random_variables(expected)
     if metadata["id"] == "finite-markov-chain-v0":

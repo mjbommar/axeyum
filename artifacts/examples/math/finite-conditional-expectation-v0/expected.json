@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-conditional-expectation-v0",
+  "witnesses": [
+    {
+      "id": "four-atom-partition-conditional-expectation",
+      "description": "A four-atom probability space with a two-block conditioning partition.",
+      "values": {
+        "atoms": [
+          {"id": "a", "probability": "1/4"},
+          {"id": "b", "probability": "1/4"},
+          {"id": "c", "probability": "1/4"},
+          {"id": "d", "probability": "1/4"}
+        ],
+        "random_variable_values": {
+          "a": "0",
+          "b": "2",
+          "c": "4",
+          "d": "8"
+        },
+        "partition": [
+          {"id": "low", "atoms": ["a", "b"]},
+          {"id": "high", "atoms": ["c", "d"]}
+        ],
+        "conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "6",
+          "d": "6"
+        },
+        "source_expectation": "7/2",
+        "conditional_expectation_expectation": "7/2"
+      }
+    },
+    {
+      "id": "nested-partition-tower",
+      "description": "A fine two-block partition refining the one-block partition.",
+      "values": {
+        "atoms": [
+          {"id": "a", "probability": "1/4"},
+          {"id": "b", "probability": "1/4"},
+          {"id": "c", "probability": "1/4"},
+          {"id": "d", "probability": "1/4"}
+        ],
+        "random_variable_values": {
+          "a": "0",
+          "b": "2",
+          "c": "4",
+          "d": "8"
+        },
+        "fine_partition": [
+          {"id": "low", "atoms": ["a", "b"]},
+          {"id": "high", "atoms": ["c", "d"]}
+        ],
+        "coarse_partition": [
+          {"id": "all", "atoms": ["a", "b", "c", "d"]}
+        ],
+        "fine_conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "6",
+          "d": "6"
+        },
+        "coarse_conditional_expectation": {
+          "a": "7/2",
+          "b": "7/2",
+          "c": "7/2",
+          "d": "7/2"
+        },
+        "tower_conditional_expectation": {
+          "a": "7/2",
+          "b": "7/2",
+          "c": "7/2",
+          "d": "7/2"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "conditional-expectation-partition-witness",
+      "claim": "The listed partition conditional expectation is low:1 and high:6.",
+      "expected_result": "sat",
+      "validation": "finite_conditional_expectation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-atom-partition-conditional-expectation"],
+      "notes": "The validator checks the partition and recomputes every blockwise weighted average exactly."
+    },
+    {
+      "id": "law-total-expectation-witness",
+      "claim": "The expectation of the conditional expectation equals the original expectation 7/2.",
+      "expected_result": "sat",
+      "validation": "finite_total_expectation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-atom-partition-conditional-expectation"],
+      "notes": "The validator recomputes E[X] and E[E[X|G]] exactly from the atom table."
+    },
+    {
+      "id": "tower-property-witness",
+      "claim": "For the fine partition refining the coarse partition, E[E[X|G]|H] = E[X|H].",
+      "expected_result": "sat",
+      "validation": "finite_tower_property_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["nested-partition-tower"],
+      "notes": "The validator checks partition refinement and recomputes both sides of the finite tower identity."
+    },
+    {
+      "id": "bad-conditional-expectation-rejected",
+      "claim": "The high block conditional expectation is 5.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_conditional_expectation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "a", "probability": "1/4"},
+          {"id": "b", "probability": "1/4"},
+          {"id": "c", "probability": "1/4"},
+          {"id": "d", "probability": "1/4"}
+        ],
+        "random_variable_values": {
+          "a": "0",
+          "b": "2",
+          "c": "4",
+          "d": "8"
+        },
+        "partition": [
+          {"id": "low", "atoms": ["a", "b"]},
+          {"id": "high", "atoms": ["c", "d"]}
+        ],
+        "claimed_conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "5",
+          "d": "5"
+        },
+        "actual_conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "6",
+          "d": "6"
+        }
+      },
+      "notes": "The validator rejects the claim because the high block average is 6, not 5."
+    },
+    {
+      "id": "general-conditional-expectation-lean-horizon",
+      "claim": "General conditional expectation and martingale theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Radon-Nikodym construction, conditional expectation, martingales, stopping times, and regular conditional probabilities",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general conditional expectation remains a proof-assistant horizon."
+    }
+  ]
+}

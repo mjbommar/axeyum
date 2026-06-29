@@ -159,6 +159,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite conditional-expectation foundations pack landed.** Added
+  [`finite-conditional-expectation-v0`](artifacts/examples/math/finite-conditional-expectation-v0/README.md)
+  as the exact finite partition-conditioning bridge between finite random
+  variables, probability, measure, and statistics. The pack validates
+  conditional expectations as blockwise weighted averages, the law of total
+  expectation, a finite tower-property replay over nested partitions, checked
+  rejection of a false conditional-expectation table, and a general
+  conditional-expectation/martingale Lean-horizon row. The foundational
+  example-pack validator now checks finite partitions, exact block averages,
+  total-expectation replay, refinement of nested partitions, and finite tower
+  identities.
+
 - **Finite random-variable foundations pack landed.** Added
   [`finite-random-variables-v0`](artifacts/examples/math/finite-random-variables-v0/README.md)
   as the exact finite random-variable bridge between finite probability,

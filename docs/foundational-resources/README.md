@@ -185,6 +185,11 @@ schemas, examples, and validation workflows.
   pushforward distributions, finite independence checks, checked rejection of a
   false pushforward distribution, and a general random-variable Lean-horizon
   row.
+- [`artifacts/examples/math/finite-conditional-expectation-v0/`](../../artifacts/examples/math/finite-conditional-expectation-v0/)
+  validates exact finite partition conditional expectations, law of total
+  expectation, tower property replay, checked rejection of a false
+  conditional-expectation table, and a general conditional-expectation
+  Lean-horizon row.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
@@ -238,6 +243,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

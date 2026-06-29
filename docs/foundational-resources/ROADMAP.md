@@ -100,6 +100,7 @@ artifacts/examples/math/
   finite-integration-v0/
   finite-product-measure-v0/
   finite-random-variables-v0/
+  finite-conditional-expectation-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -435,6 +436,11 @@ product probability, and a Fubini/Tonelli Lean-horizon row.
 validates exact finite random-variable pushforwards, expectation through
 pushforward distributions, finite independence checks, checked rejection of a
 false pushforward distribution, and a general random-variable Lean-horizon row.
+[`finite-conditional-expectation-v0`](../../artifacts/examples/math/finite-conditional-expectation-v0/)
+validates exact finite partition conditional expectations, law of total
+expectation, tower property replay, checked rejection of a false
+conditional-expectation table, and a general conditional-expectation
+Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.

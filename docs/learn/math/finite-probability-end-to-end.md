@@ -1,9 +1,11 @@
-# End To End: Conditional Probability, Random Variables, Product Measures, And Finite Expectation
+# End To End: Conditional Probability, Random Variables, Conditional Expectation, And Product Measures
 
 This lesson follows finite probability resources from atom tables to replayed
-conditional probability, exact product measures, and finite expectations. It
-uses the [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
+conditional probability, finite random variables, conditional expectation,
+exact product measures, and finite expectations. It uses the
+[finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
 [finite-random-variables-v0](../../../artifacts/examples/math/finite-random-variables-v0/),
+[finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/),
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 packs.
@@ -26,6 +28,10 @@ Concept rows:
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
 | `bad-pushforward-rejected` | `unsat` | checked |
+| `conditional-expectation-partition-witness` | `sat` | replay-only |
+| `law-total-expectation-witness` | `sat` | replay-only |
+| `tower-property-witness` | `sat` | replay-only |
+| `bad-conditional-expectation-rejected` | `unsat` | checked |
 | `product-measure-table-witness` | `sat` | replay-only |
 | `marginalization-witness` | `sat` | replay-only |
 | `finite-fubini-witness` | `sat` | replay-only |
@@ -77,6 +83,14 @@ P(rain) = P(storm) = 1/4
 X(clear), X(rain), X(storm) = short, medium, long
 ```
 
+The conditional-expectation witness uses a finite partition:
+
+```text
+P(a) = P(b) = P(c) = P(d) = 1/4
+X(a), X(b), X(c), X(d) = 0, 2, 4, 8
+G = {a,b}, {c,d}
+```
+
 ## Replay
 
 The checker recomputes:
@@ -111,6 +125,17 @@ E[X] = 10*(1/2) + 20*(1/4) + 40*(1/4) = 20
 It also checks a four-atom independence witness by recomputing the joint table
 and comparing each joint mass to the product of its marginals.
 
+For the conditional-expectation row, the checker recomputes:
+
+```text
+E[X | {a,b}] = (0*(1/4) + 2*(1/4)) / (1/2) = 1
+E[X | {c,d}] = (4*(1/4) + 8*(1/4)) / (1/2) = 6
+E[E[X | G]] = E[X] = 7/2
+```
+
+It also checks a finite tower-property row for a two-block partition refining
+the one-block partition.
+
 For the product-measure row, the checker recomputes:
 
 ```text
@@ -136,6 +161,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 ```
