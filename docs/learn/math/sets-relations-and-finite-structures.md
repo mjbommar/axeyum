@@ -15,6 +15,7 @@ Example packs:
 - [equivalence-classes-v0](../../../artifacts/examples/math/equivalence-classes-v0/)
 - [function-composition-v0](../../../artifacts/examples/math/function-composition-v0/)
 - [finite-monoids-v0](../../../artifacts/examples/math/finite-monoids-v0/)
+- [finite-permutation-groups-v0](../../../artifacts/examples/math/finite-permutation-groups-v0/)
 - [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [finite-order-lattices-v0](../../../artifacts/examples/math/finite-order-lattices-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
@@ -39,6 +40,9 @@ proof gap. The function-composition pack checks finite composition,
 image/preimage replay, inverse tables, associativity, and non-injective inverse
 counterexamples. The finite-monoids pack checks when a closed set of finite
 functions forms a monoid under composition, including units and idempotents.
+The finite-permutation-groups pack narrows finite endofunctions to bijections,
+checks `S3` under composition, recomputes cycle/sign data, and replays the
+natural action on the underlying set.
 The finite-group-actions pack treats each group element as a
 total function on a finite set, then checks action laws, orbit/stabilizer
 replay, and Burnside fixed-point counting. The finite-order-lattices pack
@@ -124,6 +128,22 @@ one  : 0 -> 1, 1 -> 1
 The `finite-monoids-v0` validator recomputes the operation table as
 composition, checks identity and associativity, finds the invertible elements
 `id` and `flip`, and recomputes the idempotents `id`, `zero`, and `one`.
+
+For finite permutation groups, restrict the function tables to bijections:
+
+```text
+points = 1, 2, 3
+r(1)=2, r(2)=3, r(3)=1
+s23(1)=1, s23(2)=3, s23(3)=2
+r after s23 = s12
+cycle_lengths(r) = [3]
+sign(s23) = odd
+```
+
+The `finite-permutation-groups-v0` validator checks each map is bijective,
+recomputes the `S3` composition table, recomputes cycle lengths and parity
+signs, checks the sign homomorphism, and replays the natural action's orbit and
+stabilizer for point `1`.
 
 For a finite group action, the same total-function representation is indexed
 by group elements:
@@ -242,6 +262,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
@@ -262,12 +283,12 @@ and [End To End: Finite Topology, Connectedness, And Measure](finite-structures-
 ## Horizon
 
 The finite set, relation/function, equivalence-class, function-composition,
-finite monoid, finite group-action, finite-order/lattice, cardinality,
+finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
 cardinality-principles, topology, compactness-shadow, connectedness-shadow, continuous-map,
 finite-simplicial-homology, and measure packs are now checked finite artifacts.
 The next finite-structure gaps are stronger EUF/Alethe evidence for congruence
 examples and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
-infinite cardinality, general monoid and group-action theorems,
+infinite cardinality, general monoid, permutation-group, and group-action theorems,
 complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,
 continuous-image/homeomorphism theorems, homology invariance, exact sequences,

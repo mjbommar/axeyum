@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [counting-v0](../../../artifacts/examples/math/counting-v0/)
+- [finite-permutation-groups-v0](../../../artifacts/examples/math/finite-permutation-groups-v0/)
 - [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
 - [graph-reachability-v0](../../../artifacts/examples/math/graph-reachability-v0/)
@@ -24,9 +25,12 @@ Example packs:
 
 The discrete path starts with finite counting and graph coloring. The counting
 pack checks fixed permutation and binomial counts, then exhaustively rejects an
-injection from three pigeons into two holes. The finite-group-actions pack adds
-finite orbit counting: it checks action laws, recomputes orbits and
-stabilizers, and verifies Burnside's fixed-point average for one small action.
+injection from three pigeons into two holes. The finite-permutation-groups pack
+adds symmetry data: it checks `S3` as bijective function tables, recomputes
+cycle lengths and parity signs, and replays the natural action's orbit and
+stabilizer. The finite-group-actions pack adds finite orbit counting: it checks
+action laws, recomputes orbits and stabilizers, and verifies Burnside's
+fixed-point average for one small action.
 The graph coloring pack replays a
 coloring witness against every edge, rejects an invalid coloring, and checks a
 tiny `K3` two-colorability refutation by exhaustive finite search. The graph
@@ -68,7 +72,22 @@ C(6,3) = C(5,2) + C(5,3)
 
 For pigeonhole, the validator enumerates every placement of three pigeons into
 two holes and confirms every placement has a collision. For orbit counting,
-encode a finite group action and fixed-point counts:
+first encode finite permutations as bijections:
+
+```text
+S3 acts on {1,2,3}
+r = (1 2 3)
+s23 = (2 3)
+r after s23 = s12
+cycle_lengths(r) = [3]
+sign(s23) = odd
+stabilizer(1) = {e, s23}
+```
+
+The `finite-permutation-groups-v0` pack recomputes the composition table from
+the permutation maps, checks cycle/sign data, and verifies the natural action's
+orbit-stabilizer count. Then encode a finite group action and fixed-point
+counts:
 
 ```text
 C2 = {e,s}
@@ -179,6 +198,7 @@ Run the check from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
@@ -195,10 +215,11 @@ For a fuller trace from data row to replay result and evidence status, read
 ## Horizon
 
 The current pigeonhole refutation is checked by finite enumeration; deterministic
-CNF plus LRAT/DRAT remains the stronger certificate route. Finite group-action
-orbit counts, reachability, traversal traces, finite traversal-cost counters,
-matching, d-separation, and cut certificates now have dedicated finite packs.
-General Burnside/orbit-stabilizer theory, weighted max-flow/min-cut, extremal
-graph theory, graph minors, asymptotic graph families, causal identification,
+CNF plus LRAT/DRAT remains the stronger certificate route. Finite permutation
+cycle/sign data, finite group-action orbit counts, reachability, traversal
+traces, finite traversal-cost counters, matching, d-separation, and cut
+certificates now have dedicated finite packs. General permutation-group theory,
+Burnside/orbit-stabilizer theory, weighted max-flow/min-cut, extremal graph
+theory, graph minors, asymptotic graph families, causal identification,
 average-case search, parallel search, and runtime-pathology proofs need
 theorem-proving support beyond the current finite examples.

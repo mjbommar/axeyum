@@ -179,6 +179,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite permutation-group foundations pack landed.** Added
+  [`finite-permutation-groups-v0`](artifacts/examples/math/finite-permutation-groups-v0/README.md)
+  as the exact bridge from finite functions to group theory and finite
+  symmetry counting. The pack validates `S3` as bijective function tables under
+  composition, recomputes cycle lengths and parity/signs, checks the sign
+  homomorphism, replays the natural action's orbit/stabilizer count, rejects a
+  non-bijection, and records the general permutation-group theory
+  Lean-horizon row. The foundational example-pack validator, concept atlas,
+  resource docs, and learner-facing algebra/discrete/finite-structure pages now
+  include the new pack.
+
 - **Finite monoid foundations pack landed.** Added
   [`finite-monoids-v0`](artifacts/examples/math/finite-monoids-v0/README.md)
   as the exact finite bridge between functions and algebraic structures. The

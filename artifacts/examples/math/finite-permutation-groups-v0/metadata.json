@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "finite-permutation-groups-v0",
+  "title": "Finite Permutation Group Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_groups",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "field_abstract_algebra",
+    "field_discrete_math",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "discrete_math",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "groups",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite groups",
+    "finite functions",
+    "finite group actions",
+    "finite table replay",
+    "QF_UF horizon",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/groups.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "s3-permutation-group-laws",
+    "permutation-composition-table-replay",
+    "cycle-type-and-sign-replay",
+    "natural-action-orbit-stabilizer",
+    "bad-nonbijection-rejected",
+    "general-permutation-group-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Lower finite permutation maps and composition constraints into Axeyum finite-domain or EUF formulas.",
+    "Replay SAT witnesses against the original finite-function data, not only table labels.",
+    "Attach checked proof objects for universal closure/refutation rows when the QF_UF/Alethe route is available.",
+    "Keep Cayley's theorem, Sylow theory, representation theory, and classification results marked Lean-horizon."
+  ]
+}

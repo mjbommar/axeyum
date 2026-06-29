@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-permutation-groups-v0",
+  "witnesses": [
+    {
+      "id": "s3-on-three-points",
+      "description": "The symmetric group S3 represented as bijections on {1,2,3}.",
+      "values": {
+        "points": ["1", "2", "3"],
+        "carrier": ["e", "r", "r2", "s12", "s13", "s23"],
+        "identity": "e",
+        "permutations": {
+          "e": {
+            "1": "1",
+            "2": "2",
+            "3": "3"
+          },
+          "r": {
+            "1": "2",
+            "2": "3",
+            "3": "1"
+          },
+          "r2": {
+            "1": "3",
+            "2": "1",
+            "3": "2"
+          },
+          "s12": {
+            "1": "2",
+            "2": "1",
+            "3": "3"
+          },
+          "s13": {
+            "1": "3",
+            "2": "2",
+            "3": "1"
+          },
+          "s23": {
+            "1": "1",
+            "2": "3",
+            "3": "2"
+          }
+        },
+        "table": [
+          ["e", "r", "r2", "s12", "s13", "s23"],
+          ["r", "r2", "e", "s13", "s23", "s12"],
+          ["r2", "e", "r", "s23", "s12", "s13"],
+          ["s12", "s23", "s13", "e", "r2", "r"],
+          ["s13", "s12", "s23", "r", "e", "r2"],
+          ["s23", "s13", "s12", "r2", "r", "e"]
+        ],
+        "cycle_lengths": {
+          "e": [1, 1, 1],
+          "r": [3],
+          "r2": [3],
+          "s12": [2, 1],
+          "s13": [2, 1],
+          "s23": [2, 1]
+        },
+        "signs": {
+          "e": "even",
+          "r": "even",
+          "r2": "even",
+          "s12": "odd",
+          "s13": "odd",
+          "s23": "odd"
+        },
+        "sign_group": {
+          "carrier": ["even", "odd"],
+          "identity": "even",
+          "table": [
+            ["even", "odd"],
+            ["odd", "even"]
+          ]
+        },
+        "action": {
+          "e": {
+            "1": "1",
+            "2": "2",
+            "3": "3"
+          },
+          "r": {
+            "1": "2",
+            "2": "3",
+            "3": "1"
+          },
+          "r2": {
+            "1": "3",
+            "2": "1",
+            "3": "2"
+          },
+          "s12": {
+            "1": "2",
+            "2": "1",
+            "3": "3"
+          },
+          "s13": {
+            "1": "3",
+            "2": "2",
+            "3": "1"
+          },
+          "s23": {
+            "1": "1",
+            "2": "3",
+            "3": "2"
+          }
+        },
+        "sample_point": "1",
+        "orbit": ["1", "2", "3"],
+        "stabilizer": ["e", "s23"],
+        "orbit_size": 3,
+        "stabilizer_size": 2,
+        "group_size": 6
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "s3-permutation-group-laws",
+      "claim": "The listed bijections and table form S3 under composition.",
+      "expected_result": "sat",
+      "validation": "finite_permutation_group_table_replay",
+      "proof_status": "checked",
+      "witnesses": ["s3-on-three-points"],
+      "notes": "The validator checks bijectivity, closure, identity, inverses, and associativity over the full table."
+    },
+    {
+      "id": "permutation-composition-table-replay",
+      "claim": "The listed S3 Cayley table equals composition of the underlying permutations.",
+      "expected_result": "sat",
+      "validation": "finite_permutation_composition_replay",
+      "proof_status": "checked",
+      "witnesses": ["s3-on-three-points"],
+      "notes": "The validator recomputes left-after-right composition for every table cell from the point maps."
+    },
+    {
+      "id": "cycle-type-and-sign-replay",
+      "claim": "The listed cycle lengths and parity signs are correct, and sign is a homomorphism.",
+      "expected_result": "sat",
+      "validation": "finite_permutation_cycle_sign_replay",
+      "proof_status": "checked",
+      "witnesses": ["s3-on-three-points"],
+      "notes": "The validator recomputes cycle lengths, inversion parity, and sign multiplication."
+    },
+    {
+      "id": "natural-action-orbit-stabilizer",
+      "claim": "The natural S3 action on {1,2,3} has orbit {1,2,3} and stabilizer {e,s23} at point 1.",
+      "expected_result": "sat",
+      "validation": "finite_permutation_action_replay",
+      "proof_status": "checked",
+      "witnesses": ["s3-on-three-points"],
+      "notes": "The validator checks the action table against the permutations and recomputes orbit and stabilizer sizes."
+    },
+    {
+      "id": "bad-nonbijection-rejected",
+      "claim": "The listed total self-map is a permutation of {1,2,3}.",
+      "expected_result": "unsat",
+      "validation": "finite_permutation_bijection_refutation",
+      "proof_status": "checked",
+      "data": {
+        "points": ["1", "2", "3"],
+        "map": {
+          "1": "1",
+          "2": "1",
+          "3": "3"
+        },
+        "duplicate_image": "1",
+        "missing_image": "2"
+      },
+      "notes": "The validator checks the duplicated and missing images, proving the fixed map is not bijective."
+    },
+    {
+      "id": "general-permutation-group-theory-lean-horizon",
+      "claim": "General permutation-group theory requires a proof-assistant route.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Cayley's theorem, conjugacy classes, sign and alternating groups over arbitrary finite types, permutation representations, Sylow theory, and representation-theoretic constructions.",
+        "future_checker": "Lean/mathlib finite group and permutation libraries plus Axeyum evidence import for fixed finite table subgoals."
+      },
+      "notes": "The finite rows are exact replay checks; the general theory remains proof-assistant territory."
+    }
+  ]
+}

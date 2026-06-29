@@ -199,6 +199,7 @@ schemas, examples, and validation workflows.
   one-sided Fisher p-values, and checked rejection of a false p-value.
 - [`artifacts/examples/math/finite-groups-v0/`](../../artifacts/examples/math/finite-groups-v0/),
   [`artifacts/examples/math/finite-monoids-v0/`](../../artifacts/examples/math/finite-monoids-v0/),
+  [`artifacts/examples/math/finite-permutation-groups-v0/`](../../artifacts/examples/math/finite-permutation-groups-v0/),
   [`artifacts/examples/math/finite-group-actions-v0/`](../../artifacts/examples/math/finite-group-actions-v0/),
   [`artifacts/examples/math/finite-rings-v0/`](../../artifacts/examples/math/finite-rings-v0/),
   [`artifacts/examples/math/finite-fields-v0/`](../../artifacts/examples/math/finite-fields-v0/),
@@ -214,9 +215,10 @@ schemas, examples, and validation workflows.
   and [`artifacts/examples/math/generating-functions-v0/`](../../artifacts/examples/math/generating-functions-v0/)
   validate the finite algebra and discrete core: finite group/monoid/ring/field
   table checks, finite transformation-composition monoids, unit/idempotent
-  replay, finite group-action law replay, orbit/stabilizer and Burnside
-  counting, finite homomorphism/kernel/quotient replay, finite ideal and
-  quotient-ring replay, finite vector-space, dual-space, inner-product, and
+  replay, finite permutation group composition/cycle/sign replay, finite
+  group-action law replay, orbit/stabilizer and Burnside counting, finite
+  homomorphism/kernel/quotient replay, finite ideal and quotient-ring replay,
+  finite vector-space, dual-space, inner-product, and
   module replay, fixed polynomial identities, exact rational polynomial
   factorization/division/GCD rows, finite counting/pigeonhole rows, and finite
   generating-function coefficient/convolution replay.
@@ -380,6 +382,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0

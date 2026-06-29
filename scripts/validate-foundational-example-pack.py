@@ -4745,6 +4745,223 @@ def validate_finite_monoids(expected: dict[str, Any]) -> None:
     require_string("general monoid future_checker", data.get("future_checker"))
 
 
+def require_permutation_group_values(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[
+    list[str],
+    list[str],
+    str,
+    dict[tuple[str, str], str],
+    dict[str, dict[str, str]],
+]:
+    points = require_string_list(f"{context}.points", values.get("points"))
+    carrier, identity, operation = require_group_structure(context, values)
+    raw_permutations = values.get("permutations")
+    if not isinstance(raw_permutations, dict) or set(raw_permutations) != set(carrier):
+        fail(f"{context}.permutations must contain exactly one map per carrier element")
+    point_set = set(points)
+    permutations = {
+        element: require_mapping_object(
+            f"{context}.permutations.{element}",
+            raw_permutations[element],
+            points,
+            points,
+        )
+        for element in carrier
+    }
+    for element, mapping in permutations.items():
+        if set(mapping.values()) != point_set:
+            fail(f"{context}.permutations.{element} must be bijective")
+    identity_map = {point: point for point in points}
+    if permutations[identity] != identity_map:
+        fail(f"{context}.permutations identity element must be the identity map")
+    return points, carrier, identity, operation, permutations
+
+
+def permutation_cycle_lengths(points: list[str], mapping: dict[str, str]) -> list[int]:
+    seen: set[str] = set()
+    lengths: list[int] = []
+    for point in points:
+        if point in seen:
+            continue
+        cursor = point
+        length = 0
+        while cursor not in seen:
+            seen.add(cursor)
+            length += 1
+            cursor = mapping[cursor]
+        lengths.append(length)
+    return sorted(lengths, reverse=True)
+
+
+def permutation_sign(points: list[str], mapping: dict[str, str]) -> str:
+    point_index = {point: index for index, point in enumerate(points)}
+    image_indices = [point_index[mapping[point]] for point in points]
+    inversions = 0
+    for left in range(len(image_indices)):
+        for right in range(left + 1, len(image_indices)):
+            if image_indices[left] > image_indices[right]:
+                inversions += 1
+    return "even" if inversions % 2 == 0 else "odd"
+
+
+def require_cycle_lengths(
+    context: str,
+    value: Any,
+    carrier: list[str],
+) -> dict[str, list[int]]:
+    if not isinstance(value, dict) or set(value) != set(carrier):
+        fail(f"{context} must contain exactly one row per carrier element")
+    result: dict[str, list[int]] = {}
+    for element in carrier:
+        raw_lengths = value[element]
+        if not isinstance(raw_lengths, list) or not raw_lengths:
+            fail(f"{context}.{element} must be a non-empty list")
+        lengths = [
+            require_int(f"{context}.{element}[{index}]", item)
+            for index, item in enumerate(raw_lengths)
+        ]
+        if any(length <= 0 for length in lengths):
+            fail(f"{context}.{element} lengths must be positive")
+        result[element] = lengths
+    return result
+
+
+def validate_finite_permutation_groups(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    laws = checks["s3-permutation-group-laws"]
+    if laws["expected_result"] != "sat" or laws.get("proof_status") != "checked":
+        fail("s3-permutation-group-laws must be a checked sat row")
+    values = single_witness_values(laws, witnesses)
+    points, carrier, identity, operation, permutations = require_permutation_group_values(
+        "S3 permutation group",
+        values,
+    )
+    if len(points) != 3 or len(carrier) != 6:
+        fail("s3-permutation-group-laws must use a three-point S3 carrier with six elements")
+
+    composition = checks["permutation-composition-table-replay"]
+    if composition["expected_result"] != "sat" or composition.get("proof_status") != "checked":
+        fail("permutation-composition-table-replay must be a checked sat row")
+    values = single_witness_values(composition, witnesses)
+    points, carrier, identity, operation, permutations = require_permutation_group_values(
+        "S3 composition replay",
+        values,
+    )
+    for left in carrier:
+        for right in carrier:
+            computed = compose_endomorphism(points, permutations[left], permutations[right])
+            computed_label = matching_transformation_label(
+                f"permutation-composition-table-replay {left} after {right}",
+                permutations,
+                computed,
+            )
+            if table_op(operation, left, right) != computed_label:
+                fail("permutation-composition-table-replay table entry does not match composition")
+
+    cycle_sign = checks["cycle-type-and-sign-replay"]
+    if cycle_sign["expected_result"] != "sat" or cycle_sign.get("proof_status") != "checked":
+        fail("cycle-type-and-sign-replay must be a checked sat row")
+    values = single_witness_values(cycle_sign, witnesses)
+    points, carrier, identity, operation, permutations = require_permutation_group_values(
+        "S3 cycle/sign replay",
+        values,
+    )
+    cycle_lengths = require_cycle_lengths("cycle lengths", values.get("cycle_lengths"), carrier)
+    signs = require_mapping_object("signs", values.get("signs"), carrier, ["even", "odd"])
+    sign_group_data = values.get("sign_group")
+    if not isinstance(sign_group_data, dict):
+        fail("cycle-type-and-sign-replay sign_group must be an object")
+    sign_carrier, sign_identity, sign_op = require_group_structure("sign group", sign_group_data)
+    if sign_carrier != ["even", "odd"] or sign_identity != "even":
+        fail("cycle-type-and-sign-replay sign_group must be C2 under parity multiplication")
+    for element in carrier:
+        computed_lengths = permutation_cycle_lengths(points, permutations[element])
+        if cycle_lengths[element] != computed_lengths:
+            fail(f"cycle-type-and-sign-replay cycle lengths are incorrect for {element}")
+        computed_sign = permutation_sign(points, permutations[element])
+        if signs[element] != computed_sign:
+            fail(f"cycle-type-and-sign-replay sign is incorrect for {element}")
+    for left in carrier:
+        for right in carrier:
+            product_element = table_op(operation, left, right)
+            product_sign = table_op(sign_op, signs[left], signs[right])
+            if signs[product_element] != product_sign:
+                fail("cycle-type-and-sign-replay sign map is not a homomorphism")
+
+    action_check = checks["natural-action-orbit-stabilizer"]
+    if action_check["expected_result"] != "sat" or action_check.get("proof_status") != "checked":
+        fail("natural-action-orbit-stabilizer must be a checked sat row")
+    values = single_witness_values(action_check, witnesses)
+    points, carrier, identity, operation, permutations = require_permutation_group_values(
+        "S3 natural action",
+        values,
+    )
+    action = require_action_table("S3 natural action table", carrier, points, values.get("action"))
+    for element in carrier:
+        for point in points:
+            if action[(element, point)] != permutations[element][point]:
+                fail("natural-action-orbit-stabilizer action row must match the permutation map")
+    failures = action_law_failures(carrier, identity, operation, points, action)
+    if failures:
+        fail(f"natural-action-orbit-stabilizer failed: {failures[0]}")
+    sample_point = values.get("sample_point")
+    require_string("S3 natural action sample_point", sample_point)
+    if sample_point not in set(points):
+        fail("natural-action-orbit-stabilizer sample_point is outside the acted-on set")
+    listed_orbit = set(require_string_list("S3 natural action orbit", values.get("orbit")))
+    listed_stabilizer = set(require_string_list("S3 natural action stabilizer", values.get("stabilizer")))
+    orbit_size = require_int("S3 natural action orbit_size", values.get("orbit_size"))
+    stabilizer_size = require_int("S3 natural action stabilizer_size", values.get("stabilizer_size"))
+    group_size = require_int("S3 natural action group_size", values.get("group_size"))
+    actual_orbit = orbit_of(carrier, action, sample_point)
+    actual_stabilizer = stabilizer_of(carrier, action, sample_point)
+    if listed_orbit != actual_orbit:
+        fail("natural-action-orbit-stabilizer listed orbit is incorrect")
+    if listed_stabilizer != actual_stabilizer:
+        fail("natural-action-orbit-stabilizer listed stabilizer is incorrect")
+    if orbit_size != len(actual_orbit):
+        fail("natural-action-orbit-stabilizer orbit_size is incorrect")
+    if stabilizer_size != len(actual_stabilizer):
+        fail("natural-action-orbit-stabilizer stabilizer_size is incorrect")
+    if group_size != len(carrier) or orbit_size * stabilizer_size != group_size:
+        fail("natural-action-orbit-stabilizer orbit-stabilizer product is incorrect")
+
+    bad = checks["bad-nonbijection-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-nonbijection-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if not isinstance(data, dict):
+        fail("bad-nonbijection-rejected data must be an object")
+    points = require_string_list("bad nonbijection points", data.get("points"))
+    mapping = require_mapping_object("bad nonbijection map", data.get("map"), points, points)
+    duplicate_image = data.get("duplicate_image")
+    missing_image = data.get("missing_image")
+    require_string("bad nonbijection duplicate_image", duplicate_image)
+    require_string("bad nonbijection missing_image", missing_image)
+    if duplicate_image not in set(points) or missing_image not in set(points):
+        fail("bad-nonbijection-rejected duplicate/missing images must be points")
+    image_counts = {point: list(mapping.values()).count(point) for point in points}
+    if image_counts[duplicate_image] < 2:
+        fail("bad-nonbijection-rejected duplicate_image is not actually duplicated")
+    if image_counts[missing_image] != 0:
+        fail("bad-nonbijection-rejected missing_image is not actually missing")
+    if set(mapping.values()) == set(points):
+        fail("bad-nonbijection-rejected map unexpectedly is bijective")
+
+    horizon = checks["general-permutation-group-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-permutation-group-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-permutation-group-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general permutation group target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general permutation group future_checker", data.get("future_checker"))
+
+
 def require_action_table(
     context: str,
     group: list[str],
@@ -13931,6 +14148,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_group_actions(expected)
     if metadata["id"] == "finite-monoids-v0":
         validate_finite_monoids(expected)
+    if metadata["id"] == "finite-permutation-groups-v0":
+        validate_finite_permutation_groups(expected)
     if metadata["id"] == "finite-integration-v0":
         validate_finite_integration(expected)
     if metadata["id"] == "finite-measure-v0":
