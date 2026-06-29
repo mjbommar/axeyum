@@ -28,6 +28,7 @@
     "finite functions",
     "finite lattices",
     "Bool / enumeration",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0",
@@ -39,7 +40,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "boolean-lattice-poset",
@@ -52,7 +54,7 @@
   "graduation_criteria": [
     "Encode fixed finite order and lattice tables as deterministic finite-relation and finite-function obligations.",
     "Replay poset, meet, join, distributivity, monotone-map, and fixed-point witnesses through Axeyum model evaluation.",
-    "Add emitted EUF/Alethe or finite-table certificates for bad-order and bad-lattice rows once proof routes are promoted.",
+    "Route bad finite antisymmetry conflicts through checked QF_UF/Alethe evidence once exact relation replay identifies the failing pair.",
     "Keep general lattice theory, complete lattices, fixed-point theorems, domain theory, and order-enriched algebra under Lean horizon until formal routes exist."
   ]
 }

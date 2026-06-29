@@ -49,7 +49,7 @@ The finite-group-actions pack treats each group element as a
 total function on a finite set, then checks action laws, orbit/stabilizer
 replay, and Burnside fixed-point counting. The finite-order-lattices pack
 checks finite partial orders, Boolean-lattice meet/join tables, distributivity,
-monotone maps, fixed points, and bad-order counterexamples. The
+monotone maps, fixed points, and a QF_UF/Alethe bad-order counterexample. The
 finite-cardinality pack checks explicit bijections, proper-subset injections,
 finite injection and surjection refutations, and an infinite-cardinality
 Lean-horizon row. The cardinality-principles pack checks inclusion-exclusion,
@@ -175,8 +175,9 @@ fixed_points(f) = A, AB
 
 The `finite-order-lattices-v0` validator checks the partial-order laws,
 recomputes meet and join as greatest lower and least upper bounds, checks both
-distributive laws over all triples, checks monotonicity of `f`, and recomputes
-the fixed points.
+distributive laws over all triples, checks monotonicity of `f`, recomputes the
+fixed points, and links the bad antisymmetry row to checked QF_UF/Alethe
+evidence.
 For finite cardinality, encode the same function graph as a cardinality witness:
 
 ```text

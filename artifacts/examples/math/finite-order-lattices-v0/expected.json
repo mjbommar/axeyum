@@ -112,9 +112,13 @@
           ["x", "y"],
           ["y", "x"]
         ],
-        "failing_pair": ["x", "y"]
+        "failing_pair": ["x", "y"],
+        "alethe_antisymmetry_claim": "x = y",
+        "smt2_artifact": "artifacts/examples/math/finite-order-lattices-v0/smt2/bad-partial-order-antisymmetry-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_order_lattices_bad_partial_order_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks the relation is reflexive and transitive but violates antisymmetry because x <= y and y <= x while x != y."
+      "notes": "The validator checks the relation is reflexive and transitive but violates antisymmetry because x <= y and y <= x while x != y; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed antisymmetry equality claim."
     },
     {
       "id": "general-order-lattice-theory-lean-horizon",

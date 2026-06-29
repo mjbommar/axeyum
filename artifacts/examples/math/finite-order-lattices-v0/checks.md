@@ -32,7 +32,8 @@ least fixed point.
 Expected result: `unsat`.
 
 The validator rejects the relation with `x <= y` and `y <= x` for distinct
-`x` and `y`, because antisymmetry fails.
+`x` and `y`, because antisymmetry fails. The linked `QF_UF` artifact turns the
+fixed antisymmetry equality claim into a checked Alethe refutation.
 
 ## `general-order-lattice-theory-lean-horizon`
 

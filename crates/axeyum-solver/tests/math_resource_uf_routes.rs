@@ -26,6 +26,9 @@ const FINITE_ALGEBRA_HOMOMORPHISM_PRESERVATION: &str = include_str!(
 const FINITE_MONOIDS_ASSOCIATIVITY_FAILURE: &str = include_str!(
     "../../../artifacts/examples/math/finite-monoids-v0/smt2/nonassociative-table-alethe-conflict.smt2"
 );
+const FINITE_ORDER_LATTICES_BAD_PARTIAL_ORDER: &str = include_str!(
+    "../../../artifacts/examples/math/finite-order-lattices-v0/smt2/bad-partial-order-antisymmetry-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -72,6 +75,14 @@ fn finite_monoids_associativity_failure_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-monoids-v0 associativity failure",
         FINITE_MONOIDS_ASSOCIATIVITY_FAILURE,
+    );
+}
+
+#[test]
+fn finite_order_lattices_bad_partial_order_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-order-lattices-v0 bad partial order",
+        FINITE_ORDER_LATTICES_BAD_PARTIAL_ORDER,
     );
 }
 

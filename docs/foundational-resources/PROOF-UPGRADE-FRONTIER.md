@@ -197,10 +197,12 @@ First targets:
   (resource-backed QF_UF/Alethe regression landed for homomorphism preservation)
 - [finite-monoids-v0](../../artifacts/examples/math/finite-monoids-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad associativity conflict)
+- [finite-order-lattices-v0](../../artifacts/examples/math/finite-order-lattices-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad antisymmetry conflict)
 
 Secondary targets:
 
-- lattices, permutation groups, vector spaces, dual spaces, modules,
+- permutation groups, vector spaces, dual spaces, modules,
   ideals, and tensor products where the finite table problem is equality-heavy.
 
 Expected artifact:

@@ -379,7 +379,7 @@ composition-application proof row, and a general function-law Lean-horizon row.
 `finite-order-lattices-v0` now deepens the
 finite relation path with Boolean-lattice partial-order replay, meet/join
 table replay, distributivity checks, monotone-map fixed-point replay, checked
-bad-order rejection, and a general order/lattice Lean-horizon row.
+QF_UF/Alethe bad-order rejection, and a general order/lattice Lean-horizon row.
 `finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
 prime field, and a checked composite-modulus non-field contrast.
@@ -1248,8 +1248,8 @@ kernel/image replay, quotient-ring tables, checked non-ideal rejection, and an
 ideal-theory Lean-horizon row.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
-monotone-map fixed-point replay, checked bad-order rejection, and an
-order/lattice Lean-horizon row.
+monotone-map fixed-point replay, checked QF_UF/Alethe bad-order rejection, and
+an order/lattice Lean-horizon row.
 `multivariable-calculus-rational-v0` now adds the exact finite multivariable
 calculus bridge: bivariate-polynomial gradient/value replay, directional
 derivatives as gradient dot products, Jacobian chain-rule replay, Hessian

@@ -65,3 +65,23 @@ A, AB
 
 The validator checks monotonicity and confirms that `A` is the least fixed
 point in the finite order.
+
+## Bad Antisymmetry Certificate
+
+For the rejected two-element relation, exact replay computes:
+
+```text
+x <= y
+y <= x
+x != y
+```
+
+Antisymmetry on the failing pair would require:
+
+```text
+x = y
+```
+
+The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
+The resource regression checks that Axeyum emits independently rechecked
+`UnsatAletheProof` evidence with no trusted reduction step.

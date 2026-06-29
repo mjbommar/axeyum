@@ -311,6 +311,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   requires a pure EUF `Evidence::UnsatAletheProof` and rechecks it
   independently.
 
+- **Finite-order-lattices QF_UF/Alethe regression landed.**
+  [`finite-order-lattices-v0`](artifacts/examples/math/finite-order-lattices-v0/)
+  now has a checked proof-object row for the bad antisymmetry conflict. The
+  new SMT-LIB artifact records the failing relation facts, the antisymmetry
+  equality claim `x = y`, and `x != y`; the shared UF resource regression
+  requires a pure EUF `Evidence::UnsatAletheProof` and rechecks it
+  independently.
+
 - **Modular-arithmetic QF_LIA/Diophantine regression landed.**
   [`modular-arithmetic-v0`](artifacts/examples/math/modular-arithmetic-v0/)
   now has a checked proof-object row for the composite nonunit inverse

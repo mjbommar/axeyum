@@ -12,7 +12,7 @@ The pack covers:
 - meet and join table replay as greatest lower and least upper bounds;
 - distributive lattice identity replay;
 - monotone finite map and fixed-point replay;
-- checked rejection of a non-partial-order relation;
+- checked QF_UF/Alethe rejection of a non-partial-order relation;
 - a Lean-horizon row for general order and lattice theory.
 
 ## Concepts
@@ -31,6 +31,11 @@ and finite maps. It checks partial-order laws by enumeration, recomputes
 greatest lower bounds and least upper bounds, checks distributivity over all
 triples, checks monotonicity over all comparable pairs, and recomputes fixed
 points.
+
+For the bad partial-order row, exact relation replay identifies `x <= y` and
+`y <= x` for distinct elements. The linked `QF_UF` artifact fixes the
+antisymmetry consequence `x = y`, refutes it against `x != y`, and checks the
+resulting `UnsatAletheProof` independently.
 
 This is a finite replay pack. It does not prove complete-lattice fixed-point
 theorems, domain theory, Galois connections, Boolean representation theorems,

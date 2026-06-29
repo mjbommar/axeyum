@@ -22,7 +22,7 @@ Concept rows:
 | `meet-join-table-replay` | `sat` | replay-only |
 | `distributive-lattice-replay` | `sat` | replay-only |
 | `monotone-map-fixed-points` | `sat` | replay-only |
-| `bad-partial-order-rejected` | `unsat` | checked |
+| `bad-partial-order-rejected` | `unsat` | checked QF_UF/Alethe |
 | `general-order-lattice-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite relation and table replay rows. The pack does not
@@ -177,6 +177,9 @@ x <= y and y <= x, but x != y
 ```
 
 So the fixed claim that this relation is a partial order is checked `unsat`.
+The linked `QF_UF` artifact records the two relation-table facts, fixes the
+antisymmetry consequence `x = y`, and refutes it against `x != y`; Axeyum emits
+and independently rechecks an `UnsatAletheProof` for that equality conflict.
 
 ## Run It
 
@@ -199,6 +202,7 @@ This lesson shows Axeyum's resource pattern for finite order theory:
 ```text
 untrusted fast search -> candidate relation, meet/join tables, monotone map
 trusted small checking -> order laws, bounds, distributivity, fixed points, counterexample row
+checked proof object -> QF_UF/Alethe certificate for the bad antisymmetry row
 ```
 
 Complete lattice theory, Knaster-Tarski fixed-point theorems, Galois

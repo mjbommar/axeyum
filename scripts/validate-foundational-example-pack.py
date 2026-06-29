@@ -609,6 +609,21 @@ def validate_finite_order_lattices(expected: dict[str, Any]) -> None:
         fail("bad-partial-order-rejected failing_pair must contain distinct elements")
     if (left, right) not in pairs or (right, left) not in pairs:
         fail("bad-partial-order-rejected failing_pair must witness antisymmetry failure")
+    alethe_claim = data.get("alethe_antisymmetry_claim")
+    require_string("bad partial order alethe_antisymmetry_claim", alethe_claim)
+    if alethe_claim != f"{left} = {right}":
+        fail("bad-partial-order-rejected must document the Alethe antisymmetry equality claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad partial order smt2_artifact", smt2_artifact)
+    check_source("bad partial order smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad partial order proof_regression", proof_regression)
+    if "finite_order_lattices_bad_partial_order_emits_checked_alethe" not in proof_regression:
+        fail("bad-partial-order-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad partial order certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-partial-order-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-order-lattice-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

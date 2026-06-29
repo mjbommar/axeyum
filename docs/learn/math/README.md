@@ -212,7 +212,7 @@ validated pack data and the repo-root command that replays it.
   counting, and checked bad-action rejection.
 - [Finite Order Lattices](finite-order-lattices-end-to-end.md): follows finite
   partial-order replay, meet/join recomputation, distributivity checks,
-  monotone fixed-point replay, and checked bad-order rejection.
+  monotone fixed-point replay, and checked QF_UF/Alethe bad-order rejection.
 - [Finite Cardinality](finite-cardinality-end-to-end.md): follows finite
   bijection and proper-subset injection witnesses, finite no-injection and
   no-surjection enumeration refutations, and the Cantor Lean horizon.
