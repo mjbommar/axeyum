@@ -1332,6 +1332,10 @@ disconnected no-path refutation, and edge-cut separation.
 finite BFS/DFS visited-node counter replay, shortcut-tail family checks,
 checked bad DFS-bound rejection, and the asymptotic graph-search runtime
 Lean horizon.
+`graph-matching-v0` now has a learner-facing end-to-end lesson for finite
+matching witness replay, overlapping-edge rejection, augmenting-path flip
+replay, checked `K3` perfect-matching refutation, and the general matching
+theory horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

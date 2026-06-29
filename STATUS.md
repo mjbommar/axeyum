@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-matching end-to-end lesson landed.** Added
+  [`graph-matching-end-to-end.md`](docs/learn/math/graph-matching-end-to-end.md)
+  as the learner-facing trace for the graph-matching pack: finite matching
+  witness replay, overlapping-edge rejection, augmenting-path flip replay,
+  checked `K3` perfect-matching refutation, and the general matching-theory
+  horizon. The lesson is linked from the math learning index plus the
+  graph/discrete path.
+
 - **Graph-search-runtime end-to-end lesson landed.** Added
   [`graph-search-runtime-end-to-end.md`](docs/learn/math/graph-search-runtime-end-to-end.md)
   as the learner-facing trace for the graph-search-runtime pack: finite BFS
@@ -222,7 +230,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 77 focused learner links, 7 path-only
+  generated queue: 84 non-template packs, 78 focused learner links, 6 path-only
   links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added
