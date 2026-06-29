@@ -166,6 +166,8 @@ polynomial replay, read
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md). For
 factorization, division, and GCD replay, read
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
+For matrix characteristic-polynomial replay, read
+[End To End: Matrix Invariants](matrix-invariants-end-to-end.md).
 
 ## Horizon
 

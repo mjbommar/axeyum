@@ -849,15 +849,16 @@ signed integer-LIA replay, gcd/Bezout replay, modular-arithmetic replay,
 bounded number-theory replay, complex real-pair replay, rational midpoint
 replay, bounded rational real-analysis replay, real-algebra RCF-shadow replay,
 polynomial-identity replay, rational polynomial-factorization replay,
-linear-system/LP replay, finite conditional probability, rational inner-product
-replay, finite set and relation/function replay, equivalence-class replay,
-function-composition replay, finite group table replay, finite monoid replay,
-finite permutation-group replay, finite group-action/Burnside replay, finite
-order/lattice replay, finite cardinality replay, cardinality-principle replay,
-finite ring/field replay, finite ideal and quotient-ring replay, finite
-algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
-finite topology/measure, and bounded dynamics/operators from data row through
-replay result and proof/evidence status.
+matrix-invariant replay, linear-system/LP replay, finite conditional
+probability, rational inner-product replay, finite set and relation/function
+replay, equivalence-class replay, function-composition replay, finite group
+table replay, finite monoid replay, finite permutation-group replay, finite
+group-action/Burnside replay, finite order/lattice replay, finite cardinality
+replay, cardinality-principle replay, finite ring/field replay, finite ideal
+and quotient-ring replay, finite algebra-homomorphism replay, finite
+vector-space/dual/module/tensor replay, finite topology/measure, and bounded
+dynamics/operators from data row through replay result and proof/evidence
+status.
 
 Deliverables:
 
@@ -1036,14 +1037,14 @@ finite cut certificates, bounded natural arithmetic, rational arithmetic,
 integer linear arithmetic, gcd/Bezout arithmetic, modular arithmetic, bounded
 number theory, complex algebraic replay, bounded rational real analysis,
 real-algebra RCF shadows, polynomial identities, rational polynomial
-factorization, linear algebra/optimization, probability/statistics, rational
-inner products, finite sets, finite groups, relations/functions, equivalence
-classes, finite monoids, finite permutation groups, function composition,
-finite group actions, finite order lattices, finite cardinality, cardinality
-principles, finite rings, finite fields, finite algebra homomorphisms, finite
-ideals and quotient rings, finite vector spaces, finite dual spaces, finite
-modules, finite tensor products, finite structures, and analysis/topology
-horizons.
+factorization, matrix invariants, linear algebra/optimization,
+probability/statistics, rational inner products, finite sets, finite groups,
+relations/functions, equivalence classes, finite monoids, finite permutation
+groups, function composition, finite group actions, finite order lattices,
+finite cardinality, cardinality principles, finite rings, finite fields, finite
+algebra homomorphisms, finite ideals and quotient rings, finite vector spaces,
+finite dual spaces, finite modules, finite tensor products, finite structures,
+and analysis/topology horizons.
 Phase M6 now has cookbook links from all current non-template math example
 packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
 route for its pigeonhole refutation. Phase M7 now has

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix-invariants end-to-end lesson landed.** Added
+  [`matrix-invariants-end-to-end.md`](docs/learn/math/matrix-invariants-end-to-end.md)
+  as the learner-facing trace for the matrix-invariants pack: exact trace,
+  determinant and characteristic-polynomial replay, characteristic-root
+  evaluation, Cayley-Hamilton replay, Gershgorin interval checking, and checked
+  bad characteristic-polynomial rejection. The lesson is linked from the math
+  learning index plus the rational/real and linear-algebra paths.
+
 - **Rational polynomial-factorization end-to-end lesson landed.** Added
   [`polynomial-factorization-end-to-end.md`](docs/learn/math/polynomial-factorization-end-to-end.md)
   as the learner-facing trace for the polynomial-factorization pack:

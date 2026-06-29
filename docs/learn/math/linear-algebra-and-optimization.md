@@ -244,9 +244,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 ```
 
 For fuller traces through exact matrix replay, a checked LP certificate,
-exact rational inner-product replay, finite-field vector-space replay, finite
-dual-space replay, and finite module replay, read
+matrix-invariant replay, exact rational inner-product replay, finite-field
+vector-space replay, finite dual-space replay, and finite module replay, read
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
+[End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and

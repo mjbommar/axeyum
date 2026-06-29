@@ -98,6 +98,9 @@ validated pack data and the repo-root command that replays it.
 - [Rational Polynomial Factorization](polynomial-factorization-end-to-end.md):
   follows factor-list replay, long division, Euclidean GCD, square-free
   decomposition, fixed irreducibility rejection, and the algebra Lean horizon.
+- [Matrix Invariants](matrix-invariants-end-to-end.md): follows exact trace,
+  determinant, characteristic-polynomial, root, Cayley-Hamilton, Gershgorin,
+  and bad-characteristic-polynomial checks for a fixed rational matrix.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
