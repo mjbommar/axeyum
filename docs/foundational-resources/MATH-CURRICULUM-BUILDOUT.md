@@ -846,8 +846,8 @@ coloring, rational midpoint replay, linear-system/LP replay, finite conditional
 probability, rational inner-product replay, finite group Cayley-table replay,
 finite monoid replay, finite permutation-group replay, finite
 group-action/Burnside replay, finite order/lattice replay, finite cardinality
-replay, finite ring replay, finite field replay, finite ideal and quotient-ring
-replay, finite
+replay, finite cardinality-principle replay, finite ring replay, finite field
+replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space replay, finite dual-space
 replay, finite module replay, finite tensor-product replay, finite
 topology/measure, and bounded dynamics/operators from data row through replay
@@ -1027,10 +1027,10 @@ graph reachability/traversal/search runtime/matching, finite DAG d-separation,
 finite cut certificates, rational arithmetic, linear algebra/optimization,
 probability/statistics, rational inner products, finite groups, finite monoids,
 finite permutation groups, finite group actions, finite order lattices, finite
-cardinality, finite rings, finite fields, finite algebra homomorphisms, finite
-ideals and quotient rings, finite vector spaces, finite dual spaces, finite
-modules, finite tensor products, finite structures, and analysis/topology
-horizons.
+cardinality, cardinality principles, finite rings, finite fields, finite
+algebra homomorphisms, finite ideals and quotient rings, finite vector spaces,
+finite dual spaces, finite modules, finite tensor products, finite structures,
+and analysis/topology horizons.
 Phase M6 now has cookbook links from all current non-template math example
 packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
 route for its pigeonhole refutation. Phase M7 now has

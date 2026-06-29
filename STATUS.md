@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Cardinality-principles end-to-end lesson landed.** Added
+  [`cardinality-principles-end-to-end.md`](docs/learn/math/cardinality-principles-end-to-end.md)
+  as the learner-facing trace for the cardinality-principles pack:
+  inclusion-exclusion replay, disjoint-union additivity with its side
+  condition, bipartite-edge double counting, powerset enumeration, a checked
+  overlapping-set counterexample to false additivity, and the Lean horizon for
+  arbitrary cardinality theorems. The lesson is linked from the math learning
+  index plus the sets/relations path.
+
 - **Finite cardinality end-to-end lesson landed.** Added
   [`finite-cardinality-end-to-end.md`](docs/learn/math/finite-cardinality-end-to-end.md)
   as the learner-facing trace for the finite cardinality pack: finite
