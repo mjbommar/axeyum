@@ -616,6 +616,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   execution plan. Next resource work should pick one row from that matrix and
   carry it through validation, status update, commit, and push.
 
+- **R1 bridge-concept atlas rows landed.**
+  [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
+  is now generated with four proof-methodology bridge rows:
+  `bridge_finite_model_replay`, `bridge_counterexample_proof`,
+  `bridge_bounded_theorem_shadow`, and `bridge_lean_horizon`. The rows are
+  generated from [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py),
+  stay scoped to `logic_and_proof` to avoid polluting domain field dashboards,
+  and point at existing validated packs plus proof-cookbook recipes. The
+  foundational resource consumer now reports 45 concept rows while preserving
+  23 curriculum rows and 18 field rows. Next resource work should move to
+  route-specific learner/proof notes or reusable example families rather than
+  duplicating the bridge taxonomy.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

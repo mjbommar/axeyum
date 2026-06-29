@@ -93,6 +93,10 @@ The commit-sized curriculum/resource work matrix is
 Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, and finite monoids.
+The foundational concept atlas now also includes four generated R1 bridge rows
+for finite model replay, counterexample proof, bounded theorem shadows, and
+Lean horizons, so resource packs can point at shared evidence taxonomy instead
+of repeating that vocabulary locally.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

@@ -27,7 +27,9 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 41 atlas rows generated from curriculum and field data.
+- 45 atlas rows generated from curriculum, field data, and the first R1 bridge
+  concepts for finite replay, counterexample proof, bounded theorem shadows,
+  and Lean horizons.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, field, and proof-gap dashboards under
   [generated/](generated/).
@@ -233,8 +235,9 @@ Next buildout:
 
 - Upgrade the core refutation lessons with LRAT/DRAT-oriented proof-object
   examples.
-- Add bridge rows for "finite model replay", "proof by counterexample", and
-  "bounded theorem vs general theorem".
+- Use the generated bridge rows for "finite model replay", "proof by
+  counterexample", "bounded theorem vs general theorem", and "Lean horizon" as
+  shared status vocabulary.
 - Keep induction and infinite cardinality clearly Lean-horizon.
 
 ### Layer 1: Number Systems
@@ -326,8 +329,8 @@ Next buildout:
    and d-separation.
 4. Add standalone finite probability and finite measure lessons.
 5. Add standalone linear optimization and finite topology lessons.
-6. Add bridge-concept rows for finite model replay, proof by counterexample,
-   bounded theorem shadows, and Lean horizons.
+6. Landed: add bridge-concept rows for finite model replay, proof by
+   counterexample, bounded theorem shadows, and Lean horizons.
 7. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    and linear-system examples.
 8. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra

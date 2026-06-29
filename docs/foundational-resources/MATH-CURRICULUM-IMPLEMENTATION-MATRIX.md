@@ -181,8 +181,9 @@ Build sequence:
 
 ## Commit-Sized Execution Queue
 
-1. Add R1 bridge-concept rows for finite replay, bounded theorem shadows,
-   counterexample proof, and Lean horizon.
+1. R1 bridge-concept rows landed for finite replay, bounded theorem shadows,
+   counterexample proof, and Lean horizon; keep future bridge rows narrow and
+   generated from `scripts/gen-foundational-concepts.py`.
 2. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
 3. Continue QF_BV promotions only for fixed-width educational claims that are

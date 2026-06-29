@@ -398,6 +398,325 @@ FIELD_DECIDABILITY = {
     "numerical_analysis": "numerical",
 }
 
+BRIDGE_CONCEPTS = [
+    {
+        "id": "bridge_finite_model_replay",
+        "title": "Finite Model Replay",
+        "field_ids": ["logic_and_proof"],
+        "resource_status": "validated",
+        "summary": (
+            "A concrete finite witness or finite table is accepted only after "
+            "the original mathematical claim is recomputed from the committed "
+            "data, independent of solver search."
+        ),
+        "prerequisites": [
+            "curriculum_propositional_logic",
+            "curriculum_sets",
+            "curriculum_naturals",
+        ],
+        "unlocks": [
+            "bridge_counterexample_proof",
+            "bridge_bounded_theorem_shadow",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite enumeration",
+            "model replay",
+            "Bool / SAT",
+            "exact rational arithmetic",
+        ],
+        "example_packs": [
+            (
+                "logic-basics-v0",
+                "Truth-table and Boolean assignment replay for tiny SAT/UNSAT claims.",
+            ),
+            (
+                "finite-sets-v0",
+                "Finite membership, subset, union, intersection, and identity replay.",
+            ),
+            (
+                "finite-probability-v0",
+                "Finite probability-table normalization, conditioning, and Bayes-rule replay.",
+            ),
+            (
+                "linear-algebra-rational-v0",
+                "Exact rational matrix witnesses replayed against the source linear-algebra claim.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite-model replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "not-required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+                ],
+                "notes": (
+                    "The validator recomputes the finite claim directly from "
+                    "the committed model or table; no solver verdict is trusted "
+                    "as evidence by itself."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+        ],
+        "open_gaps": [
+            "Finite replay proves only the stated finite instance, not the corresponding infinite or schematic theorem.",
+            "Rows that involve solver lowering still need route-specific certificates when the replay target is unsat.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every replay row names the exact finite universe, table, witness, or assignment it checks.",
+                "The pack validator rejects corrupted witness data.",
+                "Learner pages state the boundary between finite replay and any broader theorem.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_counterexample_proof",
+        "title": "Counterexample Proof",
+        "field_ids": ["logic_and_proof"],
+        "resource_status": "validated",
+        "summary": (
+            "A false universal or malformed object is refuted by a concrete "
+            "counterexample, checked finite replay, or a small independently "
+            "checked UNSAT certificate for the negated finite obligation."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_proof_methods",
+        ],
+        "unlocks": [
+            "bridge_bounded_theorem_shadow",
+            "curriculum_predicate_logic",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "Bool / SAT",
+            "CNF / DRAT / LRAT",
+            "QF_LRA / Farkas",
+            "finite countermodel replay",
+        ],
+        "example_packs": [
+            (
+                "proof-methods-patterns-v0",
+                "Direct proof, contrapositive, cases, contradiction, invalid-converse, and counterexample rows.",
+            ),
+            (
+                "graph-coloring-v0",
+                "Triangle non-2-colorability as exhaustive replay, CNF/LRAT, and QF_BV/DRAT evidence.",
+            ),
+            (
+                "rationals-lra-v0",
+                "Exact rational order counterexamples and Farkas-backed infeasible order claims.",
+            ),
+            (
+                "finite-sets-v0",
+                "Malformed finite set identities rejected by replay and CNF proof routes.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite counterexample plus certificate when unsat",
+                "status": "checked",
+                "checker": "example-pack validator plus route-specific DRAT/LRAT or Farkas regression",
+                "lean_status": "planned",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                ],
+                "notes": (
+                    "A counterexample row is checked at the finite source claim; "
+                    "certificate-backed rows additionally check the generated "
+                    "CNF or rational infeasibility proof object."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "For certificate-backed counterexamples, the encoder from mathematical object to solver artifact remains a named trust step unless separately reconstructed.",
+            "General proof-method soundness remains a Lean horizon rather than a consequence of finite examples.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "The row identifies whether evidence is a model witness, finite countermodel, DRAT/LRAT proof, Farkas proof, or another checked route.",
+                "Tampering with the finite witness or proof artifact is rejected by the associated validator or regression.",
+                "The learner page explains why a single counterexample refutes the stated universal claim.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_bounded_theorem_shadow",
+        "title": "Bounded Theorem Shadow",
+        "field_ids": ["logic_and_proof"],
+        "resource_status": "validated",
+        "summary": (
+            "A broad theorem is represented by one or more finite, bounded, "
+            "or exact-rational instances that are useful for learning and "
+            "solver regression but do not prove the general theorem."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_reals",
+            "curriculum_sequences_and_limits",
+        ],
+        "unlocks": [
+            "bridge_lean_horizon",
+            "curriculum_calculus",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "QF_NRA shadow",
+            "finite probability",
+            "finite transition systems",
+            "bounded epsilon-delta templates",
+        ],
+        "example_packs": [
+            (
+                "sequence-limit-shadow-v0",
+                "Finite prefix and bounded epsilon-N checks for convergence-shaped claims.",
+            ),
+            (
+                "real-analysis-rational-v0",
+                "Exact rational ball, delta, and neighborhood checks for analysis shadows.",
+            ),
+            (
+                "metric-continuity-v0",
+                "Finite metric continuity examples with an explicit general-continuity horizon.",
+            ),
+            (
+                "finite-concentration-v0",
+                "Finite probability-tail inequalities checked over exact atom tables.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "bounded finite shadow with explicit theorem gap",
+                "status": "replay-only",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                ],
+                "notes": (
+                    "Exact finite shadows are checked as examples or regressions; "
+                    "the unbounded theorem remains open until a Lean route lands."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "Finite bounded checks must not be advertised as completeness, compactness, convergence, or asymptotic proofs.",
+            "Each shadow needs an explicit path to Lean or an explicit statement that it remains only a finite educational artifact.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "The resource states the finite bounds or exact rational instance being checked.",
+                "The expected result distinguishes checked finite rows from the general theorem horizon.",
+                "The learner page links the bounded row to the missing theorem-level proof route.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_lean_horizon",
+        "title": "Lean Horizon",
+        "field_ids": ["logic_and_proof"],
+        "resource_status": "proof-horizon",
+        "summary": (
+            "An unbounded, schematic, analytic, or structure-theoretic theorem "
+            "is tracked as a proof-assistant target until a kernel-checked Lean "
+            "module replaces the finite shadow."
+        ),
+        "prerequisites": [
+            "bridge_bounded_theorem_shadow",
+            "curriculum_proof_methods",
+            "curriculum_induction",
+        ],
+        "unlocks": [],
+        "decidability": "proof-horizon",
+        "axeyum_fragments": [
+            "Lean reconstruction",
+            "proof object checking",
+            "general theorem statements",
+            "axiom audit",
+        ],
+        "example_packs": [
+            (
+                "induction-patterns-v0",
+                "Bounded induction patterns with the full induction schema kept as Lean horizon.",
+            ),
+            (
+                "real-analysis-rational-v0",
+                "Finite rational real-analysis checks with general real-analysis theorem horizons.",
+            ),
+            (
+                "finite-topology-v0",
+                "Finite topology examples with compactness, connectedness, and continuity horizons.",
+            ),
+            (
+                "finite-chebyshev-systems-v0",
+                "Finite Chebyshev-system grids with general functional-analysis theory left to Lean.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "Lean kernel reconstruction",
+                "status": "lean-horizon",
+                "checker": "planned Lean command with no sorry and axiom audit",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md",
+                ],
+                "notes": (
+                    "Finite shadows remain useful examples, but this bridge "
+                    "graduates only when a checked Lean artifact covers the "
+                    "general statement without sorry."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "The Lean tactic backend is not built for most horizon families.",
+            "No finite example pack can graduate this bridge without a kernel-checked theorem artifact.",
+        ],
+        "graduation": {
+            "status": "proof-horizon",
+            "criteria": [
+                "A Lean module checks with no sorry or sorryAx dependency.",
+                "The resource records the theorem statement, imports, and axiom audit.",
+                "The corresponding finite shadow remains linked as an example rather than the proof.",
+            ],
+        },
+    },
+]
+
 
 def snake(value: str) -> str:
     return value.replace("-", "_")
@@ -502,13 +821,22 @@ def curriculum_pack_specs(mapping: dict[str, Any]) -> list[tuple[str, str]]:
     return [(mapping["pack"], mapping["slice"])] + mapping.get("extra_packs", [])
 
 
-def proof_route(name: str, status: str, checker: str, lean_status: str, notes: str) -> dict[str, Any]:
+def proof_route(
+    name: str,
+    status: str,
+    checker: str,
+    lean_status: str,
+    notes: str,
+    *,
+    sources: list[str] | None = None,
+) -> dict[str, Any]:
     return {
         "name": name,
         "status": status,
         "checker": checker,
         "lean_status": lean_status,
-        "sources": [
+        "sources": sources
+        or [
             "docs/proof-cookbook/README.md",
             "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
         ],
@@ -672,12 +1000,39 @@ def make_field_row(
     }
 
 
+def make_bridge_row(spec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": spec["id"],
+        "kind": "bridge-concept",
+        "title": spec["title"],
+        "domain": "mathematics",
+        "field_ids": spec["field_ids"],
+        "curriculum_node": None,
+        "curriculum_layer": None,
+        "curriculum_area": None,
+        "curriculum_status": "extension",
+        "curriculum_family": "",
+        "resource_status": spec["resource_status"],
+        "summary": spec["summary"],
+        "prerequisites": spec["prerequisites"],
+        "unlocks": spec["unlocks"],
+        "decidability": spec["decidability"],
+        "axeyum_fragments": spec["axeyum_fragments"],
+        "example_packs": [pack(pack_id, pack_notes) for pack_id, pack_notes in spec["example_packs"]],
+        "proof_routes": spec["proof_routes"],
+        "source_refs": spec["source_refs"],
+        "open_gaps": spec["open_gaps"],
+        "graduation": spec["graduation"],
+    }
+
+
 def main() -> int:
     nodes = load_curriculum()
     node_by_id = {node["id"]: node for node in nodes}
     fields = load_math_fields()
     pack_metadata = load_example_pack_metadata()
     curriculum_rows = [make_curriculum_row(node, node_by_id) for node in nodes]
+    bridge_rows = [make_bridge_row(spec) for spec in BRIDGE_CONCEPTS]
     field_rows = [
         make_field_row(field_id, fields[field_id], curriculum_rows, pack_metadata)
         for field_id in sorted(fields)
@@ -690,7 +1045,7 @@ def main() -> int:
             "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
             "artifacts/examples/math",
         ],
-        "rows": curriculum_rows + field_rows,
+        "rows": curriculum_rows + bridge_rows + field_rows,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with OUT.open("w", encoding="utf-8") as handle:

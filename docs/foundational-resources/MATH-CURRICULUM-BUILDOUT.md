@@ -1037,11 +1037,13 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 41 atlas rows validate.
+  Status: 45 atlas rows validate, including generated bridge-concept rows for
+  finite model replay, counterexample proof, bounded theorem shadows, and Lean
+  horizons.
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 72 non-template packs have at least one `checked` expected-result row.
+  Status: 78 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
