@@ -103,6 +103,10 @@ schemas, examples, and validation workflows.
   validates exact finite eigenpair replay, orthogonal eigenbasis checks,
   Rayleigh quotients, spectral decomposition replay, and checked rejection of a
   false eigenpair.
+- [`artifacts/examples/math/matrix-invariants-v0/`](../../artifacts/examples/math/matrix-invariants-v0/)
+  validates exact trace/determinant characteristic-polynomial replay,
+  characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals,
+  and checked rejection of a false characteristic polynomial.
 - [`artifacts/examples/math/random-matrix-finite-v0/`](../../artifacts/examples/math/random-matrix-finite-v0/)
   validates exact finite random-matrix moments, expected Gram matrices, rank
   probabilities, and checked rejection of a false trace-square moment.
@@ -184,6 +188,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0

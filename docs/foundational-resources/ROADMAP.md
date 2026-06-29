@@ -77,6 +77,7 @@ artifacts/examples/math/
   linear-algebra-rational-v0/
   numerical-linear-algebra-v0/
   spectral-linear-algebra-v0/
+  matrix-invariants-v0/
   random-matrix-finite-v0/
   finite-markov-chain-v0/
   exact-statistical-tests-v0/
@@ -356,6 +357,10 @@ contraction replay, and checked rejection of a false residual bound.
 validates exact finite eigenpair replay, orthogonal eigenbasis checks,
 Rayleigh quotients, spectral decomposition replay, and checked rejection of a
 false eigenpair.
+[`matrix-invariants-v0`](../../artifacts/examples/math/matrix-invariants-v0/)
+validates exact trace/determinant characteristic-polynomial replay,
+characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals, and
+checked rejection of a false characteristic polynomial.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.

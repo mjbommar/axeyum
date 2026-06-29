@@ -13,6 +13,7 @@ Example packs:
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
 - [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
+- [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
 
@@ -23,7 +24,8 @@ shadows of real reasoning. It checks density witnesses, additive inverses,
 fixed order facts, ordered-field real witnesses, small nonlinear polynomial
 constraints, fixed-degree polynomial identities and roots, LP feasibility and
 infeasibility certificates, midpoints, collinearity determinants, and squared
-distances.
+distances. The matrix-invariants pack adds a fixed characteristic polynomial,
+root evaluation, Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
@@ -63,8 +65,18 @@ quotient = [-3, 1]
 ```
 
 The checker evaluates `p(2)` exactly and verifies
-`p = (x - 2)(x - 3)`. For a coordinate-geometry check, encode two endpoints and
-the proposed midpoint:
+`p = (x - 2)(x - 3)`. For a matrix-invariant check, encode a fixed matrix and
+its characteristic polynomial:
+
+```text
+A = [[2, 1],
+     [1, 2]]
+chi_A(lambda) = 3 - 4*lambda + lambda^2
+```
+
+The checker recomputes trace, determinant, root values, and the fixed
+Cayley-Hamilton matrix polynomial exactly. For a coordinate-geometry check,
+encode two endpoints and the proposed midpoint:
 
 ```text
 A = (0, 0)
@@ -82,6 +94,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 ```

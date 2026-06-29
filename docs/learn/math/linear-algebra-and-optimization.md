@@ -13,6 +13,7 @@ Example packs:
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
+- [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
@@ -28,7 +29,9 @@ one-step Jacobi contraction check. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, and rank distributions. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
-`P*D*P^-1` reconstruction for a fixed rational matrix.
+`P*D*P^-1` reconstruction for a fixed rational matrix. The matrix-invariants
+slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,
+and finite Gershgorin intervals for a fixed rational matrix.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -52,7 +55,9 @@ the pack claims infeasibility. For the numerical pack, it recomputes
 using exact rational arithmetic. For random matrices, it checks finite atom
 probabilities and recomputes weighted matrix statistics exactly. For spectral
 linear algebra, it recomputes `A*v`, `lambda*v`, dot products, `v^T*A*v /
-v^T*v`, and `P*D*P^-1` exactly.
+v^T*v`, and `P*D*P^-1` exactly. For matrix invariants, it recomputes the
+characteristic polynomial, evaluates listed roots, checks `A^2 - trace(A)*A +
+det(A)*I = 0`, and validates finite eigenvalue intervals.
 
 For an operator example, the finite-operator pack checks:
 
@@ -68,6 +73,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0

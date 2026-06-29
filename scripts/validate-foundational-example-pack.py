@@ -3519,6 +3519,165 @@ def scalar_vec(scalar: Fraction, vector: list[Fraction]) -> list[Fraction]:
     return [scalar * item for item in vector]
 
 
+def require_same_matrix_shape(
+    context: str,
+    left: list[list[Fraction]],
+    right: list[list[Fraction]],
+) -> None:
+    if len(left) != len(right) or len(left[0]) != len(right[0]):
+        fail(f"{context} matrices must have the same shape")
+
+
+def matrix_scale(scalar: Fraction, matrix: list[list[Fraction]]) -> list[list[Fraction]]:
+    return [[scalar * item for item in row] for row in matrix]
+
+
+def matrix_add(left: list[list[Fraction]], right: list[list[Fraction]]) -> list[list[Fraction]]:
+    require_same_matrix_shape("matrix addition", left, right)
+    return [
+        [left_item + right_item for left_item, right_item in zip(left_row, right_row)]
+        for left_row, right_row in zip(left, right)
+    ]
+
+
+def matrix_sub(left: list[list[Fraction]], right: list[list[Fraction]]) -> list[list[Fraction]]:
+    return matrix_add(left, matrix_scale(Fraction(-1), right))
+
+
+def identity_matrix(size: int) -> list[list[Fraction]]:
+    return [
+        [Fraction(1) if row_index == col_index else Fraction(0) for col_index in range(size)]
+        for row_index in range(size)
+    ]
+
+
+def zero_matrix(height: int, width: int) -> list[list[Fraction]]:
+    return [[Fraction(0) for _ in range(width)] for _ in range(height)]
+
+
+def characteristic_polynomial_2x2(matrix: list[list[Fraction]]) -> list[Fraction]:
+    require_square_matrix("characteristic polynomial matrix", matrix)
+    if len(matrix) != 2:
+        fail("characteristic polynomial validator currently expects 2x2 matrices")
+    return normalize_polynomial([matrix_det_2x2(matrix), -matrix_trace(matrix), Fraction(1)])
+
+
+def validate_matrix_invariants(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    invariants = checks["trace-determinant-characteristic-polynomial"]
+    if invariants["expected_result"] != "sat":
+        fail("trace-determinant-characteristic-polynomial must expect sat")
+    values = single_witness_values(invariants, witnesses)
+    matrix = require_fraction_matrix("matrix invariants matrix", values.get("matrix"))
+    trace = require_fraction("matrix invariants trace", values.get("trace"))
+    determinant = require_fraction("matrix invariants determinant", values.get("determinant"))
+    characteristic = require_polynomial(
+        "matrix invariants characteristic_polynomial",
+        values.get("characteristic_polynomial"),
+    )
+    if matrix_trace(matrix) != trace:
+        fail("trace-determinant-characteristic-polynomial trace is incorrect")
+    if matrix_det_2x2(matrix) != determinant:
+        fail("trace-determinant-characteristic-polynomial determinant is incorrect")
+    if characteristic_polynomial_2x2(matrix) != characteristic:
+        fail("trace-determinant-characteristic-polynomial characteristic polynomial is incorrect")
+
+    roots = checks["characteristic-roots-witness"]
+    if roots["expected_result"] != "sat":
+        fail("characteristic-roots-witness must expect sat")
+    values = single_witness_values(roots, witnesses)
+    matrix = require_fraction_matrix("characteristic roots matrix", values.get("matrix"))
+    characteristic = require_polynomial(
+        "characteristic roots characteristic_polynomial",
+        values.get("characteristic_polynomial"),
+    )
+    eigenvalues = require_fraction_vector("characteristic roots eigenvalues", values.get("eigenvalues"))
+    if characteristic_polynomial_2x2(matrix) != characteristic:
+        fail("characteristic-roots-witness characteristic polynomial is incorrect")
+    for eigenvalue in eigenvalues:
+        if polynomial_eval(characteristic, eigenvalue) != 0:
+            fail("characteristic-roots-witness listed eigenvalue is not a polynomial root")
+
+    cayley = checks["cayley-hamilton-replay"]
+    if cayley["expected_result"] != "sat":
+        fail("cayley-hamilton-replay must expect sat")
+    values = single_witness_values(cayley, witnesses)
+    matrix = require_fraction_matrix("Cayley-Hamilton matrix", values.get("matrix"))
+    matrix_square = require_fraction_matrix("Cayley-Hamilton matrix_square", values.get("matrix_square"))
+    identity = require_fraction_matrix("Cayley-Hamilton identity", values.get("identity"))
+    cayley_value = require_fraction_matrix("Cayley-Hamilton value", values.get("cayley_hamilton_value"))
+    trace = require_fraction("Cayley-Hamilton trace", values.get("trace"))
+    determinant = require_fraction("Cayley-Hamilton determinant", values.get("determinant"))
+    require_square_matrix("Cayley-Hamilton matrix", matrix)
+    if identity != identity_matrix(len(matrix)):
+        fail("cayley-hamilton-replay identity matrix is incorrect")
+    if mat_mul(matrix, matrix) != matrix_square:
+        fail("cayley-hamilton-replay matrix_square is incorrect")
+    computed = matrix_add(
+        matrix_sub(matrix_square, matrix_scale(trace, matrix)),
+        matrix_scale(determinant, identity),
+    )
+    if computed != cayley_value:
+        fail("cayley-hamilton-replay value is incorrect")
+    if cayley_value != zero_matrix(len(matrix), len(matrix[0])):
+        fail("cayley-hamilton-replay must evaluate to the zero matrix")
+
+    gershgorin = checks["gershgorin-interval-witness"]
+    if gershgorin["expected_result"] != "sat":
+        fail("gershgorin-interval-witness must expect sat")
+    values = single_witness_values(gershgorin, witnesses)
+    matrix = require_fraction_matrix("Gershgorin matrix", values.get("matrix"))
+    centers = require_fraction_vector("Gershgorin centers", values.get("gershgorin_centers"))
+    radii = require_fraction_vector("Gershgorin radii", values.get("gershgorin_radii"))
+    intervals = require_fraction_vector_list("Gershgorin intervals", values.get("gershgorin_intervals"))
+    eigenvalues = require_fraction_vector("Gershgorin eigenvalues", values.get("eigenvalues"))
+    require_square_matrix("Gershgorin matrix", matrix)
+    actual_centers = [matrix[index][index] for index in range(len(matrix))]
+    actual_radii = [
+        sum(
+            (abs(entry) for col_index, entry in enumerate(row) if col_index != row_index),
+            Fraction(0),
+        )
+        for row_index, row in enumerate(matrix)
+    ]
+    if centers != actual_centers:
+        fail("gershgorin-interval-witness centers are incorrect")
+    if radii != actual_radii:
+        fail("gershgorin-interval-witness radii are incorrect")
+    actual_intervals = [
+        [center - radius, center + radius]
+        for center, radius in zip(actual_centers, actual_radii)
+    ]
+    if intervals != actual_intervals:
+        fail("gershgorin-interval-witness intervals are incorrect")
+    for eigenvalue in eigenvalues:
+        if not any(lower <= eigenvalue <= upper for lower, upper in intervals):
+            fail("gershgorin-interval-witness eigenvalue lies outside all intervals")
+
+    bad = checks["bad-characteristic-polynomial-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-characteristic-polynomial-rejected must expect unsat")
+    data = bad.get("data", {})
+    matrix = require_fraction_matrix("bad characteristic matrix", data.get("matrix"))
+    claimed = require_polynomial("bad characteristic claimed", data.get("claimed_characteristic_polynomial"))
+    actual = require_polynomial("bad characteristic actual", data.get("actual_characteristic_polynomial"))
+    witness_root = require_fraction("bad characteristic witness_root", data.get("witness_root"))
+    claimed_value = require_fraction("bad characteristic claimed_value_at_witness", data.get("claimed_value_at_witness"))
+    computed = characteristic_polynomial_2x2(matrix)
+    if computed != actual:
+        fail("bad-characteristic-polynomial-rejected actual polynomial is incorrect")
+    if claimed == actual:
+        fail("bad-characteristic-polynomial-rejected claimed polynomial unexpectedly matches actual")
+    if polynomial_eval(actual, witness_root) != 0:
+        fail("bad-characteristic-polynomial-rejected witness_root must be an actual root")
+    if polynomial_eval(claimed, witness_root) != claimed_value:
+        fail("bad-characteristic-polynomial-rejected claimed value is incorrect")
+    if claimed_value == 0:
+        fail("bad-characteristic-polynomial-rejected claimed polynomial unexpectedly vanishes at witness")
+
+
 def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -4995,6 +5154,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_linear_optimization(expected)
     if metadata["id"] == "logic-basics-v0":
         validate_logic_basics(expected)
+    if metadata["id"] == "matrix-invariants-v0":
+        validate_matrix_invariants(expected)
     if metadata["id"] == "proof-methods-refutation-v0":
         validate_proof_methods_refutation(expected)
     if metadata["id"] == "random-matrix-finite-v0":

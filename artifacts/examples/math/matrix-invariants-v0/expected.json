@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "pack_id": "matrix-invariants-v0",
+  "witnesses": [
+    {
+      "id": "symmetric-two-by-two-invariants",
+      "description": "Exact invariant witnesses for A = [[2,1],[1,2]].",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "trace": "4",
+        "determinant": "3",
+        "characteristic_polynomial": ["3", "-4", "1"],
+        "eigenvalues": ["1", "3"],
+        "matrix_square": [
+          ["5", "4"],
+          ["4", "5"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "cayley_hamilton_value": [
+          ["0", "0"],
+          ["0", "0"]
+        ],
+        "gershgorin_centers": ["2", "2"],
+        "gershgorin_radii": ["1", "1"],
+        "gershgorin_intervals": [
+          ["1", "3"],
+          ["1", "3"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "trace-determinant-characteristic-polynomial",
+      "claim": "The fixed matrix has trace 4, determinant 3, and characteristic polynomial lambda^2 - 4*lambda + 3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_matrix_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-invariants"],
+      "notes": "The validator recomputes trace, determinant, and the 2x2 characteristic polynomial exactly."
+    },
+    {
+      "id": "characteristic-roots-witness",
+      "claim": "The listed eigenvalues are roots of the fixed characteristic polynomial.",
+      "expected_result": "sat",
+      "validation": "exact_rational_characteristic_root_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-invariants"],
+      "notes": "The validator evaluates the characteristic polynomial at each listed eigenvalue."
+    },
+    {
+      "id": "cayley-hamilton-replay",
+      "claim": "The fixed matrix satisfies its characteristic polynomial A^2 - 4A + 3I = 0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_cayley_hamilton_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-invariants"],
+      "notes": "The validator recomputes A^2 and the matrix polynomial value exactly."
+    },
+    {
+      "id": "gershgorin-interval-witness",
+      "claim": "The listed eigenvalues lie in the exact row Gershgorin intervals for the fixed matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gershgorin_interval_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["symmetric-two-by-two-invariants"],
+      "notes": "The validator recomputes centers, radii, intervals, and eigenvalue containment exactly."
+    },
+    {
+      "id": "bad-characteristic-polynomial-rejected",
+      "claim": "The polynomial lambda^2 - 5*lambda + 6 is not the characteristic polynomial of the fixed matrix.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_characteristic_polynomial_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "claimed_characteristic_polynomial": ["6", "-5", "1"],
+        "actual_characteristic_polynomial": ["3", "-4", "1"],
+        "witness_root": "1",
+        "claimed_value_at_witness": "2"
+      },
+      "notes": "The validator recomputes the actual characteristic polynomial and rejects the claimed one."
+    }
+  ]
+}

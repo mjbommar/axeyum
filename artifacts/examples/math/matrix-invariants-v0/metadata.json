@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "matrix-invariants-v0",
+  "title": "Exact Matrix Invariant And Characteristic Polynomial Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "field_real_analysis",
+    "field_numerical_analysis",
+    "curriculum_linear_algebra",
+    "curriculum_polynomials",
+    "curriculum_rationals",
+    "curriculum_reals"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "abstract_algebra",
+    "real_analysis",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "polynomials",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "fixed-degree polynomials",
+    "LRA (exact rationals)",
+    "NRA shadow"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+  ],
+  "expected_results": [
+    "trace-determinant-characteristic-polynomial",
+    "characteristic-roots-witness",
+    "cayley-hamilton-replay",
+    "gershgorin-interval-witness",
+    "bad-characteristic-polynomial-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode fixed 2x2 trace, determinant, characteristic-polynomial, and Cayley-Hamilton claims as deterministic exact-rational obligations.",
+    "Replay roots and interval eigenvalue bounds through Axeyum model evaluation over finite matrices and fixed-degree polynomials.",
+    "Generalize to higher-dimensional determinant/characteristic-polynomial computation only after a reusable matrix-invariant utility is warranted.",
+    "Keep general spectral theorems, algebraic multiplicity theorems, and numerical eigenvalue algorithms marked Lean/numerical horizon."
+  ]
+}

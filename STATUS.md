@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix invariant foundations pack landed.** Added
+  [`matrix-invariants-v0`](artifacts/examples/math/matrix-invariants-v0/README.md)
+  as the characteristic-polynomial follow-up to the finite spectral slice. The
+  pack validates exact trace/determinant characteristic-polynomial replay,
+  characteristic root checks, a fixed Cayley-Hamilton replay, finite
+  Gershgorin interval containment, and checked rejection of a false
+  characteristic polynomial. The foundational example-pack validator now checks
+  the required exact matrix arithmetic, fixed-degree polynomial evaluation, and
+  finite interval containment over rationals.
+
 - **Spectral linear algebra foundations pack landed.** Added
   [`spectral-linear-algebra-v0`](artifacts/examples/math/spectral-linear-algebra-v0/README.md)
   as the first exact finite spectral-linear-algebra resource. The pack

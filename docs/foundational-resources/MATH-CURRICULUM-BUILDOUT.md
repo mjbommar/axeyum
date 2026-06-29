@@ -481,6 +481,10 @@ and checked rejection of a false residual bound.
 `artifacts/examples/math/spectral-linear-algebra-v0/` now validates exact
 finite eigenpair replay, orthogonal eigenbasis checks, Rayleigh quotients,
 spectral decomposition replay, and checked rejection of a false eigenpair.
+`artifacts/examples/math/matrix-invariants-v0/` now validates exact
+trace/determinant characteristic-polynomial replay, characteristic roots,
+Cayley-Hamilton replay, finite Gershgorin intervals, and checked rejection of a
+false characteristic polynomial.
 `artifacts/examples/math/random-matrix-finite-v0/` now validates exact finite
 random-matrix moment replay, expected Gram matrices, rank probabilities, and
 checked rejection of a false trace-square moment.
@@ -520,6 +524,8 @@ Recommended order:
     for finite statistical tests.
 15. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
     Rayleigh quotients, and finite spectral decomposition.
+16. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
+    roots, Cayley-Hamilton replay, and finite eigenvalue intervals.
 
 Exit criteria:
 
@@ -680,7 +686,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-15, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-16, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -698,8 +704,10 @@ dynamics. `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums.
 `spectral-linear-algebra-v0` now adds the first exact finite
 spectral-linear-algebra slice for eigenpair, Rayleigh quotient, and
-decomposition replay. Continue by adding the next curriculum-adjacent pack or
-by replacing finite enumeration routes with emitted, checked proof objects
+decomposition replay. `matrix-invariants-v0` now adds the characteristic
+polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
+broader spectral claims. Continue by adding the next curriculum-adjacent pack
+or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
 
 ## Operating Rules
