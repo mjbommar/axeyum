@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Logic basics end-to-end lesson landed.** Added
+  [`logic-basics-end-to-end.md`](docs/learn/math/logic-basics-end-to-end.md)
+  as the learner-facing trace for the logic-basics pack: Boolean SAT witness
+  replay, excluded-middle and contradiction truth-table checks, De Morgan
+  equivalence checking, tiny CNF refutation by enumeration, and the DRAT/LRAT
+  graduation route for stronger UNSAT evidence. The lesson is linked from the
+  math learning index plus the logic/proof path.
+
 - **Function-composition end-to-end lesson landed.** Added
   [`function-composition-end-to-end.md`](docs/learn/math/function-composition-end-to-end.md)
   as the learner-facing trace for the function-composition pack: finite
