@@ -38,6 +38,7 @@
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/00-foundations/propositional-logic.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
     "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
   ],

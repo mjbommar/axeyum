@@ -34,6 +34,7 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/BACKLOG.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md"
   ],
   "expected_results": [

@@ -401,9 +401,12 @@ Exit criteria:
 
 ### Phase M6: Proof Cookbook Integration
 
-Status: first integration increment landed. The Boolean CNF DRAT/LRAT recipe
-now exists in the Proof Certificate Cookbook and is linked from the graph
-coloring and proof-by-refutation example packs.
+Status: active, with the first two integration increments landed. The Boolean
+CNF DRAT/LRAT recipe now exists in the Proof Certificate Cookbook and is linked
+from the graph coloring and proof-by-refutation example packs. A second pass
+added shared finite-model replay, QF_LIA Diophantine, and Lean-horizon recipes,
+then linked the non-template math example packs to their current evidence route
+or graduation target.
 
 Deliverables:
 
@@ -412,11 +415,27 @@ Deliverables:
 
 Priority recipes:
 
-1. CNF/LRAT for pigeonhole and graph coloring.
-2. LRA/Farkas for rational inequalities and inconsistent systems.
-3. Finite-function/EUF congruence for relation/function packs.
-4. Bounded arithmetic/Diophantine route for number-theory packs.
+1. CNF/LRAT for pigeonhole and graph coloring. Status: landed as
+   [Boolean CNF DRAT/LRAT Evidence](../proof-cookbook/recipes/boolean-cnf-lrat.md).
+2. LRA/Farkas for rational inequalities and inconsistent systems. Status:
+   landed as [QF_LRA Farkas Evidence](../proof-cookbook/recipes/qf-lra-farkas.md)
+   and linked from rational/linear packs.
+3. Finite-function/EUF congruence for relation/function packs. Status: base
+   recipe landed as
+   [QF_UF Congruence And Alethe Evidence](../proof-cookbook/recipes/qf-uf-congruence-alethe.md);
+   apply it when `relations-functions-v0` or finite-function packs land.
+4. Bounded arithmetic/Diophantine route for number-theory packs. Status:
+   landed as [QF_LIA Diophantine Evidence](../proof-cookbook/recipes/qf-lia-diophantine.md)
+   and linked from `modular-arithmetic-v0` as the graduation route beyond finite
+   replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
+   Status: landed as
+   [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)
+   and linked from field-extension packs with infinite-theorem horizons.
+6. Finite model replay route for SAT witnesses and bounded finite examples.
+   Status: landed as
+   [Finite Model Replay Evidence](../proof-cookbook/recipes/finite-model-replay.md)
+   and linked from all current non-template math example packs.
 
 Exit criteria:
 
@@ -481,9 +500,11 @@ Progress: items 1-10, Phase M4 items 4-10, and the Phase M5 learner-path
 scaffold plus first encode/check walkthrough layer have landed for the math
 seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
 linear algebra/optimization, probability/statistics, finite structures, and
-analysis/topology horizons. Continue Phase M6 by linking proof-cookbook recipes
-from the remaining example packs and adding missing recipes where repeated
-proof gaps appear.
+analysis/topology horizons. Phase M6 now has cookbook links from all current
+non-template math example packs. Continue by turning pack-level proof gaps into
+generated dashboard rows and adding focused recipes when new packs expose a
+repeated evidence route not covered by finite replay, CNF/LRAT, Farkas,
+Diophantine, EUF/Alethe, arrays, or Lean horizon.
 
 ## Operating Rules
 

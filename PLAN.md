@@ -2461,6 +2461,9 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
      replays) (`a5894be`). In essentially every ABI dispatcher.
    - **CODECOPY** (0x39) — *precise* code→memory copy (code is concrete →
      constant words; raw bytecode now retained on `Program.code`) (`9a68459`).
+   - **CREATE/CREATE2** (0xf0/0xf5) — re-entrant deploy: witnessed new-contract
+     address + adversarial post-state storage (constructor may re-enter)
+     (`fbb2c6e`). Closes the factory-pattern gap.
    - *Next candidates:* RETURNDATACOPY tied to a modeled return buffer;
      EXTCODECOPY (external code genuinely unknown → fresh-witnessed both sides);
      symbolic-exponent EXP (heavy). **Common runtime opcodes are now covered** —

@@ -32,6 +32,7 @@
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/01-number-systems/rationals.md",

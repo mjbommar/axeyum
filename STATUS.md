@@ -155,6 +155,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Phase M6 proof-route links widened.** Added
+  [Finite Model Replay Evidence](docs/proof-cookbook/recipes/finite-model-replay.md),
+  [QF_LIA Diophantine Evidence](docs/proof-cookbook/recipes/qf-lia-diophantine.md),
+  and [Lean Horizon Template](docs/proof-cookbook/recipes/lean-horizon-template.md)
+  to the Proof Certificate Cookbook, then linked every current non-template
+  math example pack to its replay/checking route or graduation target. Continue
+  by making the proof-gap dashboard derive pack-level gaps instead of only
+  concept-atlas gaps.
+
 - **Proof cookbook Boolean CNF recipe landed.** Added
   [`docs/proof-cookbook/recipes/boolean-cnf-lrat.md`](docs/proof-cookbook/recipes/boolean-cnf-lrat.md)
   and linked it from `graph-coloring-v0` and

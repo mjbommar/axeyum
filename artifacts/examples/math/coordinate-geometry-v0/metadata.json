@@ -34,7 +34,9 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/03-destinations/linear-algebra.md",
-    "docs/curriculum/02-structures/polynomials.md"
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
     "midpoint-witness",

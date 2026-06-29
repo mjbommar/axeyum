@@ -35,7 +35,8 @@
     "docs/foundational-resources/SOURCES.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/01-number-systems/rationals.md",
-    "docs/curriculum/00-foundations/sets.md"
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md"
   ],
   "expected_results": [
     "pmf-total-mass",

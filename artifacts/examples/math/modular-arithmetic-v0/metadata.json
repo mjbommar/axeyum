@@ -21,7 +21,9 @@
     "docs/curriculum/02-structures/divisibility-and-euclid.md",
     "docs/curriculum/02-structures/fields.md",
     "docs/curriculum/BACKLOG.md",
-    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
   ],
   "expected_results": [
     "crt-coprime-witness",

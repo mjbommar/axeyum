@@ -29,9 +29,12 @@ First recipe files have landed:
 
 - [QF_BV Bit-Blast Evidence](recipes/qf-bv-bitblast.md)
 - [Boolean CNF DRAT/LRAT Evidence](recipes/boolean-cnf-lrat.md)
+- [Finite Model Replay Evidence](recipes/finite-model-replay.md)
 - [QF_UF Congruence And Alethe Evidence](recipes/qf-uf-congruence-alethe.md)
 - [QF_LRA Farkas Evidence](recipes/qf-lra-farkas.md)
+- [QF_LIA Diophantine Evidence](recipes/qf-lia-diophantine.md)
 - [Array Read-Over-Write Axiom Evidence](recipes/array-row-axiom.md)
+- [Lean Horizon Template](recipes/lean-horizon-template.md)
 
 Each names a tiny formula, the current evidence artifact, the checker, focused
 test commands, trust boundary, Lean status, and links to the atlas/support/trust
@@ -154,6 +157,9 @@ Exit criteria:
 
 ### R4: QF_LIA Diophantine
 
+Status: first recipe landed as
+[QF_LIA Diophantine Evidence](recipes/qf-lia-diophantine.md).
+
 Purpose: distinguish rational infeasibility from integer infeasibility.
 
 Example shape:
@@ -197,6 +203,34 @@ Exit criteria:
 - Recipe includes a tiny constructor contradiction.
 - Checker is named.
 - Lean route is linked.
+
+### R7: Finite Model Replay
+
+Status: first recipe landed as
+[Finite Model Replay Evidence](recipes/finite-model-replay.md).
+
+Purpose: name the common SAT-witness and bounded finite-check route used by
+foundational resource packs.
+
+Exit criteria:
+
+- Recipe distinguishes witness replay from general theorem proof.
+- Recipe names the resource validator as the current checker.
+- Example packs link to it when they use `replay-only` evidence.
+
+### R8: Lean-Horizon Template
+
+Status: first recipe landed as
+[Lean Horizon Template](recipes/lean-horizon-template.md).
+
+Purpose: keep infinite mathematics and theorem-proving targets explicit without
+overclaiming from finite shadows.
+
+Exit criteria:
+
+- Recipe names examples that must stay horizon-only.
+- Graduation requires a concrete Lean module and no `sorryAx`.
+- Field-extension packs with infinite theorem horizons link to it.
 
 ## Validation Checks
 
