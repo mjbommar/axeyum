@@ -12,9 +12,9 @@ generated corpus test).
 | App | Crate | Cases | Bugs found | Proved safe | Unknown | DISAGREE | Lean-cert | Scoreboard |
 |---|---|---:|---:|---:|---:|---:|---|---|
 | Bounded-property SDK | `axeyum-property` | 16 | 11 | 5 | 0 | **0** | 1/1 required | [property/](property/SCOREBOARD.md) |
-| EVM bug-hunter | `axeyum-evm` | 13 | 9 | 4 | 0 | **0** | (needs core accessor) | [evm/](evm/SCOREBOARD.md) |
+| EVM bug-hunter | `axeyum-evm` | 16 | 11 | 5 | 0 | **0** | (needs core accessor) | [evm/](evm/SCOREBOARD.md) |
 | Rust verifier | `axeyum-verify` | 14 | 7 | 7 | 0 | **0** | 4/7 verified | [verify/](verify/SCOREBOARD.md) |
-| **Total** | — | **43** | **27** | **16** | **0** | **0** | — | — |
+| **Total** | — | **46** | **29** | **17** | **0** | **0** | — | — |
 
 ## Soundness hardening (beyond the construction-known corpora)
 
@@ -24,8 +24,9 @@ a real wrong-safe that was fixed:
 
 - **EVM** (`axeyum-evm/tests/differential_fuzz.rs`): random bytecode + calldata; a
   concretely-reachable `REVERT`/`INVALID` is never reported `SafeUpToBound`
-  (single-tx + multi-tx + totality, over arith/mem/storage/env/call). *Found &
-  fixed:* a bad jump destination treated as a safe path end.
+  (single-tx + multi-tx + totality, over arith/mem/storage/env/call, with
+  `BYTE`/`SIGNEXTEND`/`EXP` in the opcode pool). *Found & fixed:* a bad jump
+  destination treated as a safe path end.
 - **verify** (`axeyum-verify/tests/differential_fuzz.rs`): random `a op b` (unsigned
   + signed + array index) with a trivially-correct evaluator; a reachable panic is
   never `Verified`. *Found & fixed:* the `iN::MIN / -1` signed division overflow.
