@@ -259,6 +259,7 @@ replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
+[End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),

@@ -332,6 +332,7 @@ replay, read
 [End To End: Finite Compactness](finite-compactness-end-to-end.md),
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
+[End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
 ## Horizon

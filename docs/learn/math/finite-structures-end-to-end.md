@@ -122,6 +122,12 @@ by also checking the inverse, and rejects a false continuity claim where
 For a fuller focused trace, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md).
 
+For finite simplicial complexes, the checker applies the same subset discipline
+to faces, recomputes oriented boundaries, checks `boundary^2 = 0`, replays exact
+boundary-matrix ranks, and rejects a bad boundary sign. For a fuller focused
+trace, read
+[End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md).
+
 ## Run It
 
 From the repository root:

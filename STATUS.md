@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite simplicial-homology end-to-end lesson landed.** Added
+  [`finite-simplicial-homology-end-to-end.md`](docs/learn/math/finite-simplicial-homology-end-to-end.md)
+  as the learner-facing trace for the finite-simplicial-homology pack:
+  finite simplicial-complex closure, oriented-boundary replay,
+  `boundary^2 = 0`, Betti-rank replay over `Q`, checked bad-boundary
+  rejection, and the homology Lean horizon. The lesson is linked from the math
+  learning index plus the finite-structures, analysis/topology, and
+  linear-algebra paths.
+
 - **Finite continuous-map end-to-end lesson landed.** Added
   [`finite-continuous-maps-end-to-end.md`](docs/learn/math/finite-continuous-maps-end-to-end.md)
   as the learner-facing trace for the finite-continuous-maps pack: finite
