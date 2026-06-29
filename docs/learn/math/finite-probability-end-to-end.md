@@ -228,6 +228,9 @@ It also checks that `M_t` is adapted to `F_t`, that `M_t^2` is a finite
 submartingale, and that the bounded stopping time `tau = first hit +1 capped at
 2` satisfies `E[M_tau] = E[M0] = 0` by exact rational summation.
 
+For a fuller focused trace, read
+[End To End: Finite Martingales](finite-martingales-end-to-end.md).
+
 For the product-measure row, the checker recomputes:
 
 ```text

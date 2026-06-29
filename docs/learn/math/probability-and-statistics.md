@@ -151,6 +151,10 @@ E(M2 | F1, down) = -1
 The `finite-martingales-v0` validator checks adaptedness, recomputes each
 martingale equality, checks the square submartingale inequalities, and replays
 a bounded stopping time by exact expectation.
+
+For a focused finite martingale trace, read
+[End To End: Finite Martingales](finite-martingales-end-to-end.md).
+
 For finite integration, it checks exact weighted sums such as:
 
 ```text

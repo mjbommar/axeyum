@@ -209,6 +209,10 @@ validated pack data and the repo-root command that replays it.
   follows finite conditioning partitions, blockwise conditional expectations,
   total-expectation replay, tower-property replay, checked bad table
   rejection, and the general conditional-expectation Lean horizon.
+- [Finite Martingales](finite-martingales-end-to-end.md): follows finite
+  filtrations, adaptedness, martingale conditional-expectation equalities,
+  square-submartingale inequalities, bounded stopping replay, checked bad
+  martingale rejection, and the general martingale Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.

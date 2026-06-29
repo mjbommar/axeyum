@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-martingales end-to-end lesson landed.** Added
+  [`finite-martingales-end-to-end.md`](docs/learn/math/finite-martingales-end-to-end.md)
+  as the learner-facing trace for the finite-martingales pack: finite
+  filtrations, adaptedness, martingale conditional-expectation equalities,
+  square-submartingale inequalities, bounded stopping replay, checked bad
+  martingale rejection, and the general martingale Lean horizon. The lesson is
+  linked from the math learning index plus the probability/statistics path.
+
 - **Finite-conditional-expectation end-to-end lesson landed.** Added
   [`finite-conditional-expectation-end-to-end.md`](docs/learn/math/finite-conditional-expectation-end-to-end.md)
   as the learner-facing trace for the finite-conditional-expectation pack:
