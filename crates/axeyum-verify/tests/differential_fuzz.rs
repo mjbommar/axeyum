@@ -333,6 +333,76 @@ fn reachable_panic_in_dispatch_arm_is_never_verified() {
     );
 }
 
+/// Concrete modular result of a wrapping op at unsigned width `w`.
+fn wrapped(op: BinOp, w: u32, a: u128, b: u128) -> u128 {
+    let mask: u128 = (1u128 << w) - 1;
+    let r = match op {
+        BinOp::WrappingAdd => a.wrapping_add(b),
+        BinOp::WrappingSub => a.wrapping_sub(b),
+        BinOp::WrappingMul => a.wrapping_mul(b),
+        _ => unreachable!("wrapped() only handles wrapping ops"),
+    };
+    r & mask
+}
+
+#[test]
+fn wrapping_value_matches_concrete_modular_result() {
+    // Soundness floor for `wrapping_*`: the lowered value must equal the concrete
+    // modular result. We assert the always-false `c != <concrete wrapped>`; since
+    // `c` *is* that value, the assertion is reachably violated on every input, so
+    // verify must never return Verified. (A wrong wrapped value would make the
+    // assert pass and verify would wrongly prove safety.)
+    let cfg = SolverConfig::default();
+    let wops = [BinOp::WrappingAdd, BinOp::WrappingSub, BinOp::WrappingMul];
+    let mut rng = Rng(0x_a7a7_d00d_0000_0005);
+    let mut checked = 0u32;
+    for _ in 0..400 {
+        let op = wops[(rng.next() as usize) % wops.len()];
+        let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
+        let mask: u128 = (1u128 << w) - 1;
+        let a = u128::from(rng.next()) & mask;
+        let b = u128::from(rng.next()) & mask;
+        let expect = wrapped(op, w, a, b);
+        let ty = Ty::Int {
+            width: w,
+            signed: false,
+        };
+        let prog = Program {
+            name: "f".to_string(),
+            params: vec![],
+            arrays: vec![],
+            body: vec![
+                Stmt::Let {
+                    name: "c".to_string(),
+                    ty,
+                    value: Expr::Binary {
+                        op,
+                        lhs: Box::new(Expr::IntLit { value: a, ty }),
+                        rhs: Box::new(Expr::IntLit { value: b, ty }),
+                    },
+                },
+                // Always-false: `c != expect` (c is exactly `expect`).
+                Stmt::Assert(Expr::Binary {
+                    op: BinOp::Ne,
+                    lhs: Box::new(Expr::Var("c".to_string())),
+                    rhs: Box::new(Expr::IntLit {
+                        value: expect,
+                        ty,
+                    }),
+                }),
+            ],
+        };
+        checked += 1;
+        let verdict = verify_program(&prog, &cfg).expect("verify");
+        assert!(
+            !matches!(verdict, Verdict::Verified { .. }),
+            "wrong-safe (wrapping): {a} {op:?} {b} (u{w}) = {expect}; the always-false \
+             assert `c != {expect}` must be reachable, but verify returned {verdict:?}"
+        );
+    }
+    assert!(checked >= 10, "wrapping fuzz exercised too few cases");
+}
+
 #[test]
 fn reachable_index_out_of_bounds_is_never_verified() {
     // `let i = <const>; let x = arr[i];` over arr: [u8; N]. If i >= N the index

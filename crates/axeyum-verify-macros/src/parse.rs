@@ -1148,6 +1148,44 @@ impl Lowerer {
                  `opt(is_some, value)` Option in Phase 1 (see STATUS.md)",
             ));
         }
+        // Wrapping arithmetic `recv.wrapping_{add,sub,mul}(arg)` → a modular
+        // (never-panicking) binary op. Both operands must share an integer type.
+        if let Some(variant) = match method.as_str() {
+            "wrapping_add" => Some("WrappingAdd"),
+            "wrapping_sub" => Some("WrappingSub"),
+            "wrapping_mul" => Some("WrappingMul"),
+            _ => None,
+        } {
+            if mc.args.len() != 1 {
+                return Err(syn::Error::new(
+                    mc.span(),
+                    format!("axeyum::verify: `.{method}()` takes exactly one argument"),
+                ));
+            }
+            let (lhs, lty) = self.lower_expr(&mc.receiver)?;
+            let arg = mc.args.first().unwrap();
+            // Coerce an untyped int literal argument to the receiver's type.
+            let (rhs, _rty) = if is_untyped_int_lit(arg) && lty.width.is_some() {
+                if let Expr::Lit(el) = arg {
+                    lower_lit_as(&el.lit, lty, el.span())?
+                } else {
+                    self.lower_expr(arg)?
+                }
+            } else {
+                self.lower_expr(arg)?
+            };
+            let op_ident = format_ident!("{}", variant);
+            return Ok((
+                quote! {
+                    axeyum_verify::ast::Expr::Binary {
+                        op: axeyum_verify::ast::BinOp::#op_ident,
+                        lhs: Box::new(#lhs),
+                        rhs: Box::new(#rhs),
+                    }
+                },
+                lty,
+            ));
+        }
         Err(syn::Error::new(
             mc.span(),
             format!("axeyum::verify: unsupported method `.{method}()`"),

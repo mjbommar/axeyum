@@ -279,6 +279,11 @@ impl Lowerer<'_> {
                 }
                 .map_err(|e| ir(&e))?
             }
+            // Wrapping arithmetic: the same total BV op, but with no overflow
+            // panic class recorded (this is exactly Rust's modular semantics).
+            BinOp::WrappingAdd => self.arena.bv_add(a.term, b.term).map_err(|e| ir(&e))?,
+            BinOp::WrappingSub => self.arena.bv_sub(a.term, b.term).map_err(|e| ir(&e))?,
+            BinOp::WrappingMul => self.arena.bv_mul(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitAnd => self.arena.bv_and(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitOr => self.arena.bv_or(a.term, b.term).map_err(|e| ir(&e))?,
             BinOp::BitXor => self.arena.bv_xor(a.term, b.term).map_err(|e| ir(&e))?,

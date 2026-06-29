@@ -49,6 +49,12 @@ pub enum BinOp {
     Sub,
     /// `*` (checked for overflow).
     Mul,
+    /// `wrapping_add` — modular addition; never panics (no overflow class).
+    WrappingAdd,
+    /// `wrapping_sub` — modular subtraction; never panics.
+    WrappingSub,
+    /// `wrapping_mul` — modular multiplication; never panics.
+    WrappingMul,
     /// `/` (checked for divide-by-zero; signedness from operand type).
     Div,
     /// `%` (checked for modulo-by-zero).
