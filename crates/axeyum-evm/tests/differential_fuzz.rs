@@ -174,3 +174,52 @@ fn analyze_is_total_on_random_bytecode() {
         }
     }
 }
+
+#[test]
+fn ite_fold_and_warm_array_never_contradict() {
+    // The two storage encodings are denotation-equivalent: over random programs
+    // they must never give *contradictory decided* verdicts (one SafeUpToBound,
+    // the other a reported bug). Differing unknown/decided is fine (encodings have
+    // different costs); a flat contradiction would be a soundness bug in one.
+    use axeyum_evm::MemoryEncoding;
+    let mut rng = Rng(0xc0de_a11a_0000_0001);
+    let mut checked = 0u32;
+    for _ in 0..300 {
+        let len = rng.range(4, 16);
+        let bytecode: Vec<u8> = (0..len).map(|_| rng.byte_from(POOL)).collect();
+        let run = |m: MemoryEncoding| {
+            analyze(
+                &bytecode,
+                &AnalyzeConfig {
+                    max_steps: STEPS,
+                    memory: m,
+                    ..AnalyzeConfig::default()
+                },
+            )
+        };
+        let ite = run(MemoryEncoding::IteFold);
+        let warm = run(MemoryEncoding::WarmArray);
+        let ite_safe = matches!(ite.verdict, Some(axeyum_evm::Verdict::SafeUpToBound { .. }))
+            && !ite.has_findings();
+        let warm_safe = matches!(
+            warm.verdict,
+            Some(axeyum_evm::Verdict::SafeUpToBound { .. })
+        ) && !warm.has_findings();
+        // Contradiction = one proved safe while the other found a bug.
+        let contradiction = (ite_safe && warm.has_findings()) || (warm_safe && ite.has_findings());
+        assert!(
+            !contradiction,
+            "encoding contradiction on {bytecode:02x?}: ite_safe={ite_safe} warm_safe={warm_safe} \
+             ite_bug={} warm_bug={}",
+            ite.has_findings(),
+            warm.has_findings()
+        );
+        if ite_safe || warm_safe || ite.has_findings() || warm.has_findings() {
+            checked += 1;
+        }
+    }
+    assert!(
+        checked >= 5,
+        "encoding-agreement fuzz exercised too few decided programs ({checked})"
+    );
+}
