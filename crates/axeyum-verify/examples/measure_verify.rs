@@ -80,7 +80,11 @@ struct Case {
 
 enum Outcome {
     BugFound,
-    Verified,
+    /// Proved safe; `lean` is true iff the proof carries a kernel-checkable Lean
+    /// module (the "trusted small checking" moat metric).
+    Verified {
+        lean: bool,
+    },
     Unknown,
     Disagree(String),
 }
@@ -89,7 +93,7 @@ impl Outcome {
     fn tag(&self) -> &'static str {
         match self {
             Outcome::BugFound => "bug-found",
-            Outcome::Verified => "verified",
+            Outcome::Verified { .. } => "verified",
             Outcome::Unknown => "unknown",
             Outcome::Disagree(_) => "DISAGREE",
         }
@@ -248,13 +252,17 @@ fn evaluate(case: &Case, cfg: &SolverConfig) -> Outcome {
         }
     }
 
-    match case.expect {
-        Expect::Bug if unroll_bug => Outcome::BugFound,
-        Expect::Bug if unroll_safe => {
+    match (case.expect, &verdict) {
+        (Expect::Bug, Verdict::Counterexample { .. }) => Outcome::BugFound,
+        (Expect::Bug, Verdict::Verified { .. }) => {
             Outcome::Disagree("proved safe but a bug was constructed".into())
         }
-        Expect::Safe if unroll_safe => Outcome::Verified,
-        Expect::Safe if unroll_bug => Outcome::Disagree("counterexample on a safe program".into()),
+        (Expect::Safe, Verdict::Verified { lean_module, .. }) => Outcome::Verified {
+            lean: lean_module.is_some(),
+        },
+        (Expect::Safe, Verdict::Counterexample { .. }) => {
+            Outcome::Disagree("counterexample on a safe program".into())
+        }
         _ => Outcome::Unknown,
     }
 }
@@ -275,7 +283,11 @@ fn render(rows: &[(&Case, Outcome)], disagree: usize) -> String {
         .count();
     let verified = rows
         .iter()
-        .filter(|(_, o)| matches!(o, Outcome::Verified))
+        .filter(|(_, o)| matches!(o, Outcome::Verified { .. }))
+        .count();
+    let lean = rows
+        .iter()
+        .filter(|(_, o)| matches!(o, Outcome::Verified { lean: true }))
         .count();
     let unknown = rows
         .iter()
@@ -284,10 +296,15 @@ fn render(rows: &[(&Case, Outcome)], disagree: usize) -> String {
     let _ = writeln!(
         out,
         "## Headline\n\n- **{} cases**: {found} bugs found, {verified} verified, \
-         {unknown} unknown.\n- **DISAGREE = {disagree}**.\n",
+         {unknown} unknown.\n- **DISAGREE = {disagree}** (soundness floor).\n- \
+         **Lean-certified: {lean}/{verified}** verified results carry a \
+         kernel-checkable Lean module (the trusted-checking moat; the rest are \
+         re-checked in-process but outside the Lean reconstructor's fragment).\n",
         rows.len(),
     );
-    out.push_str("## Per case\n\n| Case | Class | Expected | Outcome |\n|---|---|---|---|\n");
+    out.push_str(
+        "## Per case\n\n| Case | Class | Expected | Outcome | Lean |\n|---|---|---|---|---|\n",
+    );
     for (case, outcome) in rows {
         let expected = match case.expect {
             Expect::Bug => "bug",
@@ -297,9 +314,14 @@ fn render(rows: &[(&Case, Outcome)], disagree: usize) -> String {
             Outcome::Disagree(why) => format!("{} ({why})", outcome.tag()),
             _ => outcome.tag().to_string(),
         };
+        let lean_mark = match outcome {
+            Outcome::Verified { lean: true } => "yes",
+            Outcome::Verified { lean: false } => "no",
+            _ => "—",
+        };
         let _ = writeln!(
             out,
-            "| {} | {} | {expected} | {note} |",
+            "| {} | {} | {expected} | {note} | {lean_mark} |",
             case.name, case.class
         );
     }
