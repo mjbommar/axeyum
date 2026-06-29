@@ -1325,6 +1325,9 @@ Markov-chain convergence Lean horizon.
 coefficient extraction, Cauchy product convolution, bounded Fibonacci
 generating-function prefix replay, checked bad Cauchy-product rejection, and
 the general generating-function Lean horizon.
+`graph-reachability-v0` now has a learner-facing end-to-end lesson for finite
+BFS shortest-distance replay, deterministic DFS traversal replay, checked
+disconnected no-path refutation, and edge-cut separation.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

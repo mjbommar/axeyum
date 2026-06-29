@@ -191,6 +191,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-reachability end-to-end lesson landed.** Added
+  [`graph-reachability-end-to-end.md`](docs/learn/math/graph-reachability-end-to-end.md)
+  as the learner-facing trace for the graph-reachability pack: finite BFS
+  shortest-distance replay, deterministic DFS traversal replay, checked
+  disconnected no-path refutation, and edge-cut separation. The lesson is
+  linked from the math learning index plus the graph/discrete path.
+
 - **Generating-functions end-to-end lesson landed.** Added
   [`generating-functions-end-to-end.md`](docs/learn/math/generating-functions-end-to-end.md)
   as the learner-facing trace for the generating-functions pack: finite
@@ -207,7 +214,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 75 focused learner links, 9 path-only
+  generated queue: 84 non-template packs, 76 focused learner links, 8 path-only
   links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added

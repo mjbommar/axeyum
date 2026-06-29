@@ -66,6 +66,9 @@ validated pack data and the repo-root command that replays it.
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.
+- [Graph Reachability And Traversal](graph-reachability-end-to-end.md):
+  follows BFS shortest-distance replay, deterministic DFS traversal replay,
+  disconnected no-path refutation, and edge-cut separation over finite graphs.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
   no-counterexample enumeration, and the universal Nat theorem horizon.

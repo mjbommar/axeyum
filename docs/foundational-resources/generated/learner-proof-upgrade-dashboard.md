@@ -13,8 +13,8 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 
 ### Learner Status Totals
 
-- `focused`: 75
-- `path-only`: 9
+- `focused`: 76
+- `path-only`: 8
 
 ### Candidate Proof Route Totals
 
@@ -79,6 +79,7 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `focused` | `gcd-bezout-v0` | `number_theory` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [algebra-and-number-theory.md](../../learn/math/algebra-and-number-theory.md), [gcd-bezout-end-to-end.md](../../learn/math/gcd-bezout-end-to-end.md), [number-systems-and-arithmetic.md](../../learn/math/number-systems-and-arithmetic.md) |
 | `focused` | `generating-functions-v0` | `discrete_math,abstract_algebra,probability_theory,real_analysis` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [algebra-and-number-theory.md](../../learn/math/algebra-and-number-theory.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md), [generating-functions-end-to-end.md](../../learn/math/generating-functions-end-to-end.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [rational-real-algebra.md](../../learn/math/rational-real-algebra.md) |
 | `focused` | `graph-coloring-v0` | `graph_theory,discrete_math,logic_and_proof` | `checked-evidence` | `checked`: 2, `replay-only`: 1 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-coloring-end-to-end.md](../../learn/math/graph-coloring-end-to-end.md), [logic-and-proof.md](../../learn/math/logic-and-proof.md) |
+| `focused` | `graph-reachability-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-reachability-end-to-end.md](../../learn/math/graph-reachability-end-to-end.md) |
 | `focused` | `induction-obligations-v0` | `logic_and_proof,number_theory` | `checked-evidence` | `checked`: 4, `lean-horizon`: 1 | [README.md](../../learn/math/README.md), [induction-obligations-end-to-end.md](../../learn/math/induction-obligations-end-to-end.md), [logic-and-proof.md](../../learn/math/logic-and-proof.md) |
 | `focused` | `induction-patterns-v0` | `logic_and_proof,number_theory` | `checked-evidence` | `checked`: 4, `lean-horizon`: 1 | [README.md](../../learn/math/README.md), [induction-patterns-end-to-end.md](../../learn/math/induction-patterns-end-to-end.md), [logic-and-proof.md](../../learn/math/logic-and-proof.md) |
 | `focused` | `inner-product-spaces-rational-v0` | `linear_algebra,functional_analysis_and_operator_theory,numerical_analysis,optimization_and_convexity,real_analysis` | `checked-evidence` | `checked`: 5, `lean-horizon`: 1, `replay-only`: 1 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md), [inner-product-spaces-end-to-end.md](../../learn/math/inner-product-spaces-end-to-end.md), [linear-algebra-and-optimization.md](../../learn/math/linear-algebra-and-optimization.md) |
@@ -111,7 +112,6 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `path-only` | `graph-cut-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `graph-d-separation-v0` | `graph_theory,probability_theory,discrete_math` | `checked-evidence` | `checked`: 5 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [probability-and-statistics.md](../../learn/math/probability-and-statistics.md) |
 | `path-only` | `graph-matching-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
-| `path-only` | `graph-reachability-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `graph-search-runtime-v0` | `graph_theory,discrete_math,logic_and_proof` | `checked-evidence` | `checked`: 4, `lean-horizon`: 1 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `sequence-limit-shadow-v0` | `real_analysis,topology` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 4 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 
@@ -125,7 +125,6 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `path-only` | `graph-cut-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `graph-d-separation-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [probability-and-statistics.md](../../learn/math/probability-and-statistics.md) |
 | `path-only` | `graph-matching-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
-| `path-only` | `graph-reachability-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `graph-search-runtime-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `sequence-limit-shadow-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 
