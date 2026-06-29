@@ -163,6 +163,7 @@ First targets:
 - [finite-groups-v0](../../artifacts/examples/math/finite-groups-v0/)
   (resource-backed QF_UF/Alethe regression landed for binary-operation congruence)
 - [function-composition-v0](../../artifacts/examples/math/function-composition-v0/)
+  (resource-backed QF_UF/Alethe regression landed for composition application)
 - [finite-algebra-homomorphisms-v0](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
 
 Secondary targets:

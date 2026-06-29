@@ -801,6 +801,23 @@ def validate_function_composition(expected: dict[str, Any]) -> None:
     if len(set(mapping.values())) == len(mapping):
         fail("non-injective-inverse-rejected function unexpectedly is injective")
 
+    qf_uf = checks["qf-uf-composition-application-alethe"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-composition-application-alethe must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-composition-application-alethe must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-composition-application-alethe must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf composition application smt2_artifact", smt2_artifact)
+    check_source("qf-uf composition application smt2_artifact", smt2_artifact)
+    require_string("qf-uf composition application proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-uf composition application certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf composition application certificate must document zero-trust Alethe evidence")
+
     horizon = checks["general-function-laws-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-function-laws-lean-horizon must be not-run")

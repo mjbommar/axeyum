@@ -44,12 +44,13 @@
     "bijection-inverse-table",
     "composition-associativity-table",
     "non-injective-inverse-rejected",
+    "qf-uf-composition-application-alethe",
     "general-function-laws-lean-horizon"
   ],
   "graduation_criteria": [
     "Replay finite composition, image, preimage, inverse, and associativity tables from explicit function graphs.",
     "Represent invalid inverse claims with concrete finite collision evidence.",
-    "Add QF_UF/Alethe proof-object examples for reusable congruence and extensional-equality obligations.",
+    "Keep the QF_UF composition-application artifact tied to checked Alethe evidence.",
     "Keep arbitrary-type function laws under Lean horizon until no-sorry kernel-checked artifacts exist."
   ]
 }

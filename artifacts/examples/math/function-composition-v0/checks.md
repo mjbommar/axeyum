@@ -37,6 +37,14 @@ The validator accepts this counterexample only because two distinct domain
 values map to the same codomain value, so no inverse function can be defined on
 the image that sends that codomain value back to both inputs.
 
+## `qf-uf-composition-application-alethe`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact asserts `comp(a) = g(f(a))`, `f(a) = b`, and `g(b) = c`,
+while also asserting `comp(a) != c`. The solver regression requires a pure EUF
+`Evidence::UnsatAletheProof` and rechecks it independently.
+
 ## `general-function-laws-lean-horizon`
 
 Expected result: `not-run`.

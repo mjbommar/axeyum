@@ -374,8 +374,9 @@ partition-to-relation round trips, checked rejection of a non-transitive
 relation, and a resource-backed QF_UF/Alethe quotient-map congruence proof row.
 `function-composition-v0` now validates finite composition tables,
 image/preimage replay, inverse tables for bijections, composition
-associativity, non-injective inverse counterexamples, and a general
-function-law Lean-horizon row. `finite-order-lattices-v0` now deepens the
+associativity, non-injective inverse counterexamples, a QF_UF/Alethe
+composition-application proof row, and a general function-law Lean-horizon row.
+`finite-order-lattices-v0` now deepens the
 finite relation path with Boolean-lattice partial-order replay, meet/join
 table replay, distributivity checks, monotone-map fixed-point replay, checked
 bad-order rejection, and a general order/lattice Lean-horizon row.
@@ -1103,8 +1104,8 @@ round-trips, a checked non-transitive counterexample, and a QF_UF/Alethe
 proof-object row for quotient-map congruence.
 `function-composition-v0` now deepens the relations/functions curriculum row
 with finite composition, image/preimage, inverse-table, associativity,
-non-injective inverse counterexample, and general function-law Lean-horizon
-examples.
+non-injective inverse counterexample, a QF_UF/Alethe composition-application
+proof row, and general function-law Lean-horizon examples.
 `convexity-rational-v0` now adds the first exact finite convexity bridge for
 optimization learners: midpoint Jensen replay, finite second differences,
 affine threshold monotonicity, and bad midpoint-convexity rejection.

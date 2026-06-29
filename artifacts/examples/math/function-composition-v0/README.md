@@ -11,6 +11,7 @@ The examples are:
 - inverse table replay for a finite bijection;
 - associativity of composition for three concrete finite functions;
 - checked counterexample evidence for a non-injective function with no inverse;
+- a QF_UF/Alethe composition-application consistency conflict;
 - a Lean-horizon row for general function extensionality and categorical laws.
 
 ## Concepts
@@ -27,9 +28,11 @@ The validator checks every row by replaying explicit finite function graphs.
 It accepts function rows only after totality and single-valuedness checks, then
 recomputes composition, image, preimage, inverse, and associativity tables.
 
-This is finite checked evidence. It does not prove function extensionality,
-category-theoretic associativity, or inverse laws over arbitrary types. Those
-remain Lean-horizon targets until kernel-checked artifacts exist.
+This is finite checked evidence plus one proof-object row. The SMT-LIB artifact
+in `smt2/composition-application-conflict.smt2` certifies a concrete composition
+application conflict with pure EUF Alethe evidence. It does not prove function
+extensionality, category-theoretic associativity, or inverse laws over arbitrary
+types. Those remain Lean-horizon targets until kernel-checked artifacts exist.
 
 Validation:
 

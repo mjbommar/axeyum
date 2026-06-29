@@ -286,6 +286,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
   rechecks it independently.
 
+- **Function-composition QF_UF/Alethe regression landed.**
+  [`function-composition-v0`](artifacts/examples/math/function-composition-v0/)
+  now has a checked proof-object row for composition application consistency.
+  The new SMT-LIB artifact asserts `comp(a) = g(f(a))`, `f(a) = b`,
+  `g(b) = c`, and `comp(a) != c`; the shared UF resource regression requires a
+  pure EUF `Evidence::UnsatAletheProof` and rechecks it independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -737,8 +744,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the learner-facing trace for the function-composition pack: finite
   composition-table replay, image/preimage recomputation, inverse-table
   replay, associativity-table replay, checked non-injective inverse
-  counterexample, and the Lean horizon for arbitrary function laws. The lesson
-  is linked from the math learning index plus the sets/relations path.
+  counterexample, the QF_UF/Alethe composition-application proof row, and the
+  Lean horizon for arbitrary function laws. The lesson is linked from the math
+  learning index plus the sets/relations path.
 
 - **Equivalence-classes end-to-end lesson landed.** Added
   [`equivalence-classes-end-to-end.md`](docs/learn/math/equivalence-classes-end-to-end.md)

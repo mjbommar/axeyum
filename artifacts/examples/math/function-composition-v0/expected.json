@@ -115,6 +115,19 @@
       "notes": "The validator checks the function is total but not injective, with the listed collision."
     },
     {
+      "id": "qf-uf-composition-application-alethe",
+      "claim": "If comp(a) = g(f(a)), f(a) = b, and g(b) = c, then comp(a) must equal c.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "smt2_artifact": "artifacts/examples/math/function-composition-v0/smt2/composition-application-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes function_composition_application_conflict_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
+      },
+      "notes": "The SMT-LIB artifact asserts the composition application equalities and demands comp(a) != c. Axeyum emits a pure EUF Alethe refutation for the congruence/transitivity conflict."
+    },
+    {
       "id": "general-function-laws-lean-horizon",
       "claim": "Function extensionality, inverse laws, and categorical composition laws over arbitrary types require future Lean resources.",
       "expected_result": "not-run",

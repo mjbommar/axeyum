@@ -17,6 +17,9 @@ const RELATIONS_FUNCTIONS_SINGLE_VALUED_CONFLICT: &str = include_str!(
 const FINITE_GROUPS_OPERATION_CONGRUENCE: &str = include_str!(
     "../../../artifacts/examples/math/finite-groups-v0/smt2/group-operation-congruence-conflict.smt2"
 );
+const FUNCTION_COMPOSITION_APPLICATION_CONFLICT: &str = include_str!(
+    "../../../artifacts/examples/math/function-composition-v0/smt2/composition-application-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -39,6 +42,14 @@ fn finite_groups_operation_congruence_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-groups-v0 group operation congruence",
         FINITE_GROUPS_OPERATION_CONGRUENCE,
+    );
+}
+
+#[test]
+fn function_composition_application_conflict_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "function-composition-v0 composition application conflict",
+        FUNCTION_COMPOSITION_APPLICATION_CONFLICT,
     );
 }
 

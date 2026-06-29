@@ -22,11 +22,12 @@ Concept rows:
 | `bijection-inverse-table` | `sat` | checked |
 | `composition-associativity-table` | `sat` | checked |
 | `non-injective-inverse-rejected` | `sat` | checked |
+| `qf-uf-composition-application-alethe` | `unsat` | checked |
 | `general-function-laws-lean-horizon` | `not-run` | lean-horizon |
 
-The checked rows are finite function-table rows. The pack does not claim
-function extensionality, inverse laws, image/preimage laws, or categorical
-composition laws over arbitrary types.
+The checked rows are finite function-table rows plus one concrete QF_UF
+proof-object row. The pack does not claim function extensionality, inverse laws,
+image/preimage laws, or categorical composition laws over arbitrary types.
 
 ## Encode
 
@@ -48,9 +49,8 @@ preimage(T)= { x | f(x) in T }
 f^{-1}(y)  = the unique x with f(x) = y
 ```
 
-The intended Axeyum graduation route is QF_UF/Alethe evidence for reusable
-congruence and extensional-equality obligations. This pack checks finite
-tables directly.
+The proof-object row uses QF_UF/Alethe evidence for a reusable composition
+application obligation. The finite table rows still replay directly.
 
 ## Replay Composition
 
@@ -166,6 +166,22 @@ f(u0) = f(u1) = v0
 No inverse function can send `v0` back to both `u0` and `u1`, so the row is a
 checked counterexample to the false inverse claim.
 
+## Check The Composition Certificate
+
+The proof-object row encodes one concrete composition application:
+
+```text
+comp(a) = g(f(a))
+f(a) = b
+g(b) = c
+comp(a) != c
+```
+
+The artifact lives at
+`artifacts/examples/math/function-composition-v0/smt2/composition-application-conflict.smt2`.
+The resource regression checks that Axeyum emits `Evidence::UnsatAletheProof`
+with the pure EUF Alethe emitter and then rechecks the proof independently.
+
 ## Name The Lean Horizon
 
 The final row records the boundary for general function theory:
@@ -200,7 +216,7 @@ This lesson shows Axeyum's resource pattern for finite function operations:
 
 ```text
 untrusted fast search -> candidate function, composition, inverse, image tables
-trusted small checking -> totality, single-valuedness, recomputed tables, collision row
+trusted small checking -> totality, single-valuedness, recomputed tables, collision row, Alethe composition proof
 ```
 
 General function laws, arbitrary-type extensional equality, categorical

@@ -58,11 +58,12 @@ validated pack data and the repo-root command that replays it.
   of a multi-valued graph.
 - [Equivalence Classes](equivalence-classes-end-to-end.md): follows finite
   equivalence-relation class replay, quotient-map fiber replay, partition
-  round-trip checking, checked non-transitivity rejection, and the QF_UF proof
-  gap.
+  round-trip checking, checked non-transitivity rejection, and the QF_UF/Alethe
+  quotient congruence proof row.
 - [Function Composition](function-composition-end-to-end.md): follows finite
   composition, image/preimage, inverse-table, associativity, and
-  non-injective inverse-counterexample checks.
+  non-injective inverse-counterexample checks, plus a QF_UF/Alethe composition
+  application proof row.
 - [Counting And Pigeonhole](counting-pigeonhole-end-to-end.md): follows a fixed
   permutation count, one Pascal-identity instance, finite pigeonhole
   enumeration, and the CNF/LRAT proof-upgrade route.
