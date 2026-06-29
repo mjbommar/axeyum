@@ -294,12 +294,12 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
     if is_pack_validated:
         gaps = [
             "Validated example pack exists; solver/proof integration still needs promotion where noted.",
-            "Generated dashboards currently track planned packs, not replayed pack results.",
+            "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
         ]
     else:
         gaps = [
             "Dedicated foundational example pack is not yet validated.",
-            "Generated dashboards currently track planned packs, not replayed pack results.",
+            "Generated dashboards keep this pack planned until a validating example pack lands.",
         ]
     if node["status"] == "covered" and node["family"]:
         gaps.append(
@@ -362,12 +362,12 @@ def make_field_row(field_id: str, field: dict[str, str], curriculum_rows: list[d
     if is_pack_validated:
         gaps = [
             "Field-level example pack exists; broader field concept coverage remains incomplete.",
-            "Concept rows still need generated dashboard coverage before field status can graduate.",
+            "Field status still needs repeated slices and proof/evidence coverage before graduation.",
         ]
     else:
         gaps = [
             "Field row is seeded, but field-level example-pack coverage is not validated yet.",
-            "Concept rows still need generated dashboard coverage before field status can graduate.",
+            "Generated dashboards keep this field at seeded/planned coverage until its first pack lands.",
         ]
     if decidability == "proof-horizon":
         gaps.append("Most general field theorems require Lean/mathlib-scale proof reconstruction.")

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "finite-sets-v0",
+  "title": "Finite Set Identity Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "curriculum_sets",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "sets"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "Bool",
+    "BV / enumeration"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0",
+  "source_refs": [
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md"
+  ],
+  "expected_results": [
+    "union-intersection-identity",
+    "subset-transitivity-witness",
+    "distributive-law-counterexample-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode finite set membership as deterministic Bool/BV formulas.",
+    "Replay set witnesses through Axeyum model evaluation.",
+    "Add checked SAT/CNF evidence for finite refutations once set encodings emit proof artifacts.",
+    "Promote reusable finite-set helpers only after relations/functions or cardinality packs duplicate the same logic."
+  ]
+}

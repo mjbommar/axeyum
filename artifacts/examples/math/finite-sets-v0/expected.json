@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-sets-v0",
+  "witnesses": [
+    {
+      "id": "three-set-model",
+      "description": "Three subsets of a four-element universe for a finite distributive identity.",
+      "values": {
+        "universe": ["a", "b", "c", "d"],
+        "A": ["a", "b"],
+        "B": ["b", "c"],
+        "C": ["c", "d"]
+      }
+    },
+    {
+      "id": "nested-subsets",
+      "description": "Nested subsets witnessing finite subset transitivity.",
+      "values": {
+        "universe": ["0", "1", "2", "3"],
+        "A": ["0"],
+        "B": ["0", "1"],
+        "C": ["0", "1", "2"]
+      }
+    },
+    {
+      "id": "bad-distribution-claim",
+      "description": "A fixed finite assignment rejecting a malformed distributive law.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "A": ["a"],
+        "B": ["b"],
+        "C": ["a", "c"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "union-intersection-identity",
+      "claim": "For the fixed finite sets, A union (B intersect C) equals (A union B) intersect (A union C).",
+      "expected_result": "sat",
+      "validation": "finite_set_identity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-set-model"],
+      "notes": "The validator recomputes both sides over the explicit universe."
+    },
+    {
+      "id": "subset-transitivity-witness",
+      "claim": "For the fixed finite sets, A subset B and B subset C imply A subset C.",
+      "expected_result": "sat",
+      "validation": "finite_subset_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["nested-subsets"],
+      "notes": "The validator checks both subset premises and the transitive conclusion."
+    },
+    {
+      "id": "distributive-law-counterexample-rejected",
+      "claim": "For the fixed finite sets, A intersect (B union C) equals (A intersect B) union C.",
+      "expected_result": "unsat",
+      "validation": "finite_set_identity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["bad-distribution-claim"],
+      "notes": "The validator recomputes both sides and confirms this malformed fixed identity fails."
+    }
+  ]
+}

@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite sets core curriculum pack landed.** Added
+  [`finite-sets-v0`](artifacts/examples/math/finite-sets-v0/README.md) with
+  exact finite-universe replay for union/intersection distributivity, subset
+  transitivity, and a bounded rejection of a malformed fixed set identity.
+  [`scripts/validate-foundational-example-pack.py`](scripts/validate-foundational-example-pack.py)
+  now validates the finite-set semantics, and generated foundational dashboards
+  mark `finite-sets-v0` as validated. Continue Phase M3 with
+  `relations-functions-v0`, or close the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap.
+
 - **Foundational resource check hook landed.** Added
   [`scripts/check-foundational-resources.sh`](scripts/check-foundational-resources.sh)
   and wired it into `just foundational-resources`, `just check`,

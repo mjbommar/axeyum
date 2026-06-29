@@ -265,6 +265,8 @@ validator, a validating template pack under `artifacts/examples/math/template-v0
 and the first substantive pack under
 `artifacts/examples/math/proof-methods-refutation-v0/`; the first replay-checked
 number-theory pack lives under `artifacts/examples/math/modular-arithmetic-v0/`;
+the first finite-set core curriculum pack lives under
+`artifacts/examples/math/finite-sets-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
@@ -292,12 +294,19 @@ Exit criteria:
 
 Build the existing DAG before adding too many adjacent fields.
 
+Status: core pack expansion is ongoing. `finite-sets-v0` now validates the
+`sets` curriculum node with finite universe membership, subset transitivity,
+union/intersection identity replay, and a bounded rejection of a malformed fixed
+set identity. Continue with `relations-functions-v0` for the next set-theory
+dependency, or close the remaining `proof-methods-refutation-v0` CNF/LRAT proof
+gap.
+
 Recommended order:
 
 1. `proof-methods-refutation-v0`: negation-as-query, pigeonhole, CNF/LRAT gap
    or checked route.
-2. `finite-sets-v0` and `relations-functions-v0`: finite set identities,
-   relation properties, function properties.
+2. `finite-sets-v0` (landed) and `relations-functions-v0`: finite set
+   identities, relation properties, function properties.
 3. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
 4. `finite-fields-v0`: prime-field axioms and composite-modulus counterexample.
 5. `rationals-lra-v0`: density/trichotomy and exact rational LRA certificates.
@@ -508,15 +517,16 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10, Phase M4 items 4-10, and the Phase M5 learner-path
+Progress: items 1-10, Phase M3 `finite-sets-v0`, Phase M4 items 4-10, and the
+Phase M5 learner-path
 scaffold plus first encode/check walkthrough layer have landed for the math
 seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
 linear algebra/optimization, probability/statistics, finite structures, and
 analysis/topology horizons. Phase M6 now has cookbook links from all current
 non-template math example packs. Phase M7 now has generated pack-level proof-gap
-rows and a normal foundational-resource check hook. Continue by either closing
-the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or adding the
-next core curriculum pack from Phase M3.
+rows and a normal foundational-resource check hook. Continue by adding
+`relations-functions-v0` as the next core curriculum pack or by closing the
+remaining `proof-methods-refutation-v0` CNF/LRAT proof gap.
 
 ## Operating Rules
 

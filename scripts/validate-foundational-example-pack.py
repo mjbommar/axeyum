@@ -235,6 +235,53 @@ def single_witness_values(check: dict[str, Any], witnesses: dict[str, dict[str, 
     return values
 
 
+def require_set_values(context: str, values: dict[str, Any]) -> tuple[set[str], set[str], set[str], set[str]]:
+    universe = require_string_list(f"{context}.universe", values.get("universe"))
+    universe_set = set(universe)
+
+    def read_subset(name: str) -> set[str]:
+        items = require_string_list(f"{context}.{name}", values.get(name), nonempty=False)
+        extra = sorted(set(items) - universe_set)
+        if extra:
+            fail(f"{context}.{name} contains elements outside universe: {extra}")
+        return set(items)
+
+    return universe_set, read_subset("A"), read_subset("B"), read_subset("C")
+
+
+def validate_finite_sets(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    identity = checks["union-intersection-identity"]
+    if identity["expected_result"] != "sat":
+        fail("union-intersection-identity must expect sat")
+    values = single_witness_values(identity, witnesses)
+    _, a_set, b_set, c_set = require_set_values("union-intersection identity", values)
+    left = a_set | (b_set & c_set)
+    right = (a_set | b_set) & (a_set | c_set)
+    if left != right:
+        fail("union-intersection identity witness does not satisfy distributivity")
+
+    transitivity = checks["subset-transitivity-witness"]
+    if transitivity["expected_result"] != "sat":
+        fail("subset-transitivity-witness must expect sat")
+    values = single_witness_values(transitivity, witnesses)
+    _, a_set, b_set, c_set = require_set_values("subset transitivity", values)
+    if not (a_set <= b_set and b_set <= c_set and a_set <= c_set):
+        fail("subset transitivity witness does not satisfy A <= B <= C")
+
+    bad_identity = checks["distributive-law-counterexample-rejected"]
+    if bad_identity["expected_result"] != "unsat":
+        fail("distributive-law-counterexample-rejected must expect unsat")
+    values = single_witness_values(bad_identity, witnesses)
+    _, a_set, b_set, c_set = require_set_values("bad distributive identity", values)
+    left = a_set & (b_set | c_set)
+    right = (a_set & b_set) | c_set
+    if left == right:
+        fail("bad distributive identity unexpectedly holds for the fixed witness")
+
+
 def require_graph_data(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]], list[str]]:
     vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
     colors = require_string_list(f"{context}.colors", values.get("colors"))
@@ -1552,6 +1599,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_descriptive_statistics(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
+    if metadata["id"] == "finite-sets-v0":
+        validate_finite_sets(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
     if metadata["id"] == "graph-coloring-v0":
