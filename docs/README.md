@@ -45,7 +45,9 @@ Potential educational, ontology, law/rules, and downstream sibling projects are
 tracked in [Sibling Project Notes](sibling-projects.md). The first detailed
 incubator plans are the [SMT Fragment Atlas](atlas/README.md),
 [Proof Certificate Cookbook](proof-cookbook/README.md), and
-[Rules-as-Code Verification Lab](rules-as-code/README.md).
+[Rules-as-Code Verification Lab](rules-as-code/README.md). A broader researched
+plan for mathematics, computer science, logic, and statistics resources lives in
+[Foundational Resource Expansion](foundational-resources/README.md).
 
 ## The honest current state
 

@@ -3,6 +3,9 @@
 [Documentation Hub](README.md)
 
 [Sibling Project Notes](sibling-projects.md)
+- [Foundational Resource Expansion](foundational-resources/README.md)
+  - [Source Research Ledger](foundational-resources/SOURCES.md)
+  - [Expansion Roadmap](foundational-resources/ROADMAP.md)
 - [SMT Fragment Atlas](atlas/README.md)
   - [Atlas Roadmap](atlas/ROADMAP.md)
 - [Proof Certificate Cookbook](proof-cookbook/README.md)

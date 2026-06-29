@@ -60,6 +60,22 @@ and graduation criteria.
 | Proof Certificate Cookbook | [docs/proof-cookbook/](proof-cookbook/README.md) | [Cookbook roadmap](proof-cookbook/ROADMAP.md) | Route-by-route recipes for tiny proof/evidence examples. |
 | Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) | [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md) with citations, checks, replayed witnesses, schema, validator, and proof gaps. |
 
+## Broader Foundational Resource Expansion
+
+The next planning layer is
+[Foundational Resource Expansion](foundational-resources/README.md): a
+source-grounded roadmap for foundational mathematics, computer science, logic,
+and statistics resources. It was researched with web search, GitHub metadata,
+and shallow reference clones, then organized into source notes and a concrete
+roadmap:
+
+- [source research ledger](foundational-resources/SOURCES.md);
+- [expansion roadmap](foundational-resources/ROADMAP.md).
+
+This plan subsumes the earlier "Math Theory Library For Automation" idea into a
+larger resource ecosystem with schemas, example packs, validators, proof/replay
+status, and graduation criteria.
+
 ## Families
 
 ### Core Knowledge
@@ -169,7 +185,7 @@ Candidate projects:
 | 24 | Formal Semantics Cards | Education / reference | `docs/reference/semantics/` | Short precise references for BV division, FP NaNs, arrays, quantifiers, strings, datatypes, legal exceptions, and temporal rules. |
 | 25 | Reasoning Pattern Library | Examples | `artifacts/examples/` | Reusable patterns for overflow, aliasing, monotonicity, extensionality, eligibility, policy conflict, and access-control escalation. |
 | 26 | Proof Debugger | Developer tool | design note first | Explains failed reconstruction: unsupported rule, bad replay, missing lemma, Lean kernel rejection, or trust gap. |
-| 27 | Math Theory Library For Automation | Library / ontology | `docs/atlas/math/`, crate later | Groups, rings, orders, lattices, finite sets, graphs, automata, real algebra, and probability basics tied to solver/proof routes. |
+| 27 | Foundational Resource Expansion | Library / ontology / education | `docs/foundational-resources/`, `artifacts/ontology/`, `artifacts/examples/` | Groups, rings, orders, automata, PL semantics, logic benchmarks, finite probability, statistics, and proof horizons tied to solver/proof routes. |
 | 28 | Solver-Aided DSL Framework | Library framework | separate only after prototype | Rosette-like framework for small DSLs with symbolic values, verification, synthesis, and counterexample lifting. |
 | 29 | Executable Standards Verifier | Compliance app | `docs/usecases/standards/` | Encodes RFCs, protocol rules, file formats, and API contracts, then checks implementations or examples. |
 | 30 | Law/Policy Corpus Observatory | Data platform | separate once large | Tracks formalization coverage, examples, conflicts, temporal versions, and provenance for legal/policy corpora. |
