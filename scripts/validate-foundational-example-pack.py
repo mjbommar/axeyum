@@ -9142,23 +9142,39 @@ def validate_matrix_invariants(expected: dict[str, Any]) -> None:
     bad = checks["bad-characteristic-polynomial-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-characteristic-polynomial-rejected must expect unsat")
+    if bad.get("proof_status") != "checked":
+        fail("bad-characteristic-polynomial-rejected must be checked")
     data = bad.get("data", {})
     matrix = require_fraction_matrix("bad characteristic matrix", data.get("matrix"))
     claimed = require_polynomial("bad characteristic claimed", data.get("claimed_characteristic_polynomial"))
     actual = require_polynomial("bad characteristic actual", data.get("actual_characteristic_polynomial"))
     witness_root = require_fraction("bad characteristic witness_root", data.get("witness_root"))
     claimed_value = require_fraction("bad characteristic claimed_value_at_witness", data.get("claimed_value_at_witness"))
+    actual_value = require_fraction("bad characteristic actual_value_at_witness", data.get("actual_value_at_witness"))
     computed = characteristic_polynomial_2x2(matrix)
     if computed != actual:
         fail("bad-characteristic-polynomial-rejected actual polynomial is incorrect")
     if claimed == actual:
         fail("bad-characteristic-polynomial-rejected claimed polynomial unexpectedly matches actual")
-    if polynomial_eval(actual, witness_root) != 0:
+    if polynomial_eval(actual, witness_root) != actual_value:
+        fail("bad-characteristic-polynomial-rejected actual value is incorrect")
+    if actual_value != 0:
         fail("bad-characteristic-polynomial-rejected witness_root must be an actual root")
     if polynomial_eval(claimed, witness_root) != claimed_value:
         fail("bad-characteristic-polynomial-rejected claimed value is incorrect")
     if claimed_value == 0:
         fail("bad-characteristic-polynomial-rejected claimed polynomial unexpectedly vanishes at witness")
+    farkas_claim = data.get("farkas_value_claim")
+    require_string("bad characteristic farkas_value_claim", farkas_claim)
+    if farkas_claim != "characteristic_value_at_witness = 2":
+        fail("bad-characteristic-polynomial-rejected must document the Farkas value claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad characteristic smt2_artifact", smt2_artifact)
+    check_source("bad characteristic smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad characteristic farkas_regression", regression)
+    if "matrix_invariants_bad_characteristic_polynomial_emits_checked_farkas" not in regression:
+        fail("bad-characteristic-polynomial-rejected must link the Farkas regression")
 
 
 def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:

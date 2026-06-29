@@ -31,6 +31,7 @@
     "finite matrices",
     "fixed-degree polynomials",
     "LRA (exact rationals)",
+    "QF_LRA",
     "NRA shadow"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0",
@@ -42,7 +43,8 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "trace-determinant-characteristic-polynomial",
@@ -54,6 +56,7 @@
   "graduation_criteria": [
     "Encode fixed 2x2 trace, determinant, characteristic-polynomial, and Cayley-Hamilton claims as deterministic exact-rational obligations.",
     "Replay roots and interval eigenvalue bounds through Axeyum model evaluation over finite matrices and fixed-degree polynomials.",
+    "Route false fixed characteristic-polynomial claims through checked QF_LRA/Farkas evidence once exact replay computes the conflicting witness-root value.",
     "Generalize to higher-dimensional determinant/characteristic-polynomial computation only after a reusable matrix-invariant utility is warranted.",
     "Keep general spectral theorems, algebraic multiplicity theorems, and numerical eigenvalue algorithms marked Lean/numerical horizon."
   ]

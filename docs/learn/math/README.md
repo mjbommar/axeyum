@@ -142,7 +142,8 @@ validated pack data and the repo-root command that replays it.
   recurrence/asymptotic Lean horizon.
 - [Matrix Invariants](matrix-invariants-end-to-end.md): follows exact trace,
   determinant, characteristic-polynomial, root, Cayley-Hamilton, Gershgorin,
-  and bad-characteristic-polynomial checks for a fixed rational matrix.
+  and a QF_LRA/Farkas bad-characteristic-polynomial certificate for a fixed
+  rational matrix.
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md): follows
   exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
   checking, spectral decomposition reconstruction, and a QF_LRA/Farkas

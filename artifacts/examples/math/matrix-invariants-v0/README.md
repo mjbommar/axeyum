@@ -10,7 +10,7 @@ The examples are:
 - characteristic-root replay;
 - Cayley-Hamilton replay for one fixed matrix;
 - a finite Gershgorin interval containment check;
-- checked rejection of a false characteristic polynomial.
+- checked QF_LRA/Farkas rejection of a false characteristic polynomial.
 
 ## Concepts
 
@@ -30,10 +30,13 @@ determinant, the `2x2` characteristic polynomial, root evaluations, `A^2`,
 the Cayley-Hamilton matrix polynomial value, and row Gershgorin intervals.
 
 This pack is checked finite evidence for the false characteristic-polynomial
-row and replay-only evidence for the positive witnesses. General spectral
-theorems, algebraic multiplicity theory, higher-dimensional determinant
-algorithms, and numerical eigensolvers remain proof or numerical-horizon
-material.
+row and replay-only evidence for the positive witnesses. The bad row also
+links a `QF_LRA` SMT-LIB artifact and a solver regression that emits
+independently rechecked `UnsatFarkas` evidence for the witness-root conflict
+`characteristic_value_at_witness = 0` versus
+`characteristic_value_at_witness = 2`. General spectral theorems, algebraic
+multiplicity theory, higher-dimensional determinant algorithms, and numerical
+eigensolvers remain proof or numerical-horizon material.
 
 Validation:
 

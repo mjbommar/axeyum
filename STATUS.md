@@ -445,6 +445,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression requires `Evidence::UnsatFarkas` and rechecks the rational
   certificate independently.
 
+- **Matrix-invariants QF_LRA/Farkas regression landed.**
+  [`matrix-invariants-v0`](artifacts/examples/math/matrix-invariants-v0/)
+  now binds its bad characteristic-polynomial row to Axeyum's evidence path.
+  The new SMT-LIB artifact encodes `characteristic_value_at_witness = 0` and
+  the false value `characteristic_value_at_witness = 2`; the shared LRA
+  resource regression requires `Evidence::UnsatFarkas` and rechecks the
+  rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

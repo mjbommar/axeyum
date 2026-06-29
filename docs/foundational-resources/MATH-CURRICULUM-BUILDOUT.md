@@ -748,8 +748,8 @@ spectral decomposition replay, and checked QF_LRA/Farkas rejection of a false
 eigenpair.
 `artifacts/examples/math/matrix-invariants-v0/` now validates exact
 trace/determinant characteristic-polynomial replay, characteristic roots,
-Cayley-Hamilton replay, finite Gershgorin intervals, and checked rejection of a
-false characteristic polynomial.
+Cayley-Hamilton replay, finite Gershgorin intervals, and checked QF_LRA/Farkas
+rejection of a false characteristic polynomial.
 `artifacts/examples/math/random-matrix-finite-v0/` now validates exact finite
 random-matrix moment replay, expected Gram matrices, rank probabilities, and
 checked QF_LRA/Farkas rejection of a false trace-square moment.
@@ -812,7 +812,8 @@ Recommended order:
     Rayleigh quotients, finite spectral decomposition, and QF_LRA/Farkas
     bad-eigenpair rejection.
 18. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
-    roots, Cayley-Hamilton replay, and finite eigenvalue intervals.
+    roots, Cayley-Hamilton replay, finite eigenvalue intervals, and
+    QF_LRA/Farkas bad-characteristic-polynomial rejection.
 19. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
     preimage, and bad-delta checks over exact rational metric spaces.
 20. `finite-compactness-v0`: finite open covers, minimal subcover
@@ -1140,7 +1141,8 @@ spectral-linear-algebra slice for eigenpair, Rayleigh quotient, and
 decomposition replay, with checked QF_LRA/Farkas false-eigenpair rejection.
 `matrix-invariants-v0` now adds the characteristic
 polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
-broader spectral claims. `metric-continuity-v0` now adds the finite
+broader spectral claims, with checked QF_LRA/Farkas false-characteristic
+polynomial rejection. `metric-continuity-v0` now adds the finite
 epsilon-delta and open-ball preimage bridge for analysis/topology learners.
 `finite-compactness-v0` now adds the finite open-cover/subcover and
 finite-intersection bridge to the compactness horizon.
@@ -1459,6 +1461,8 @@ same checked Farkas evidence path after exact squared-distance replay.
 through the same checked Farkas evidence path after exact negative-norm replay.
 `spectral-linear-algebra-v0` now routes its bad eigenpair row through the same
 checked Farkas evidence path after exact matrix-vector replay.
+`matrix-invariants-v0` now routes its bad characteristic-polynomial row through
+the same checked Farkas evidence path after exact witness-root replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

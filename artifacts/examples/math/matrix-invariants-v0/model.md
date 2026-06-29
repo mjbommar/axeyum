@@ -64,3 +64,23 @@ row 1: center 2, radius 1, interval [1,3]
 
 The listed eigenvalues `1` and `3` are checked to lie in the union of these
 intervals.
+
+## Bad Characteristic Polynomial Certificate
+
+For the rejected characteristic-polynomial claim, exact replay checks the
+witness root `lambda = 1`:
+
+```text
+actual characteristic value at 1 = 0
+claimed polynomial value at 1 = 2
+```
+
+The linked proof artifact records the resulting exact-rational contradiction:
+
+```text
+characteristic_value_at_witness = 0
+characteristic_value_at_witness = 2
+```
+
+The pack ties that `QF_LRA` contradiction to a resource-backed
+`UnsatFarkas` regression.

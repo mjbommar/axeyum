@@ -115,6 +115,17 @@ lambda^2 - 4*lambda + 3
 and rejects the claimed polynomial. The row also records that the bad claim
 evaluates to `2` at `lambda = 1`.
 
+The matrix-invariants pack exposes the witness-root value as a `QF_LRA`
+contradiction:
+
+```text
+characteristic_value_at_witness = 0
+characteristic_value_at_witness = 2
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Name The Horizon
 
 The pack does not claim broad spectral theory:
@@ -149,6 +160,7 @@ This lesson shows Axeyum's current matrix-invariant resource pattern:
 ```text
 untrusted fast search -> matrix invariant, root, or interval candidate
 trusted small checking -> exact rational matrix and polynomial replay
+proof upgrade -> QF_LRA/Farkas certificate for the false polynomial value
 remaining horizon -> general spectral proof and numerical algorithm routes
 ```
 

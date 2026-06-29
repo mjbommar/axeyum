@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const characteristic_value_at_witness Real)
+(assert (= characteristic_value_at_witness 0))
+(assert (= characteristic_value_at_witness 2))
+(check-sat)

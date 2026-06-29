@@ -113,7 +113,9 @@ residual-bound row, and random matrix finite now promoted for its bad
 trace-square moment row, with affine geometry now promoted for its bad
 distance-preservation row and inner-product spaces now promoted for its bad
 negative-norm row, and spectral linear algebra now promoted for its bad
-eigenpair row. Prefer the next secondary equality-heavy pack that can carry a
+eigenpair row, with matrix invariants now promoted for its bad characteristic
+polynomial row. The first secondary QF_LRA/Farkas target set is now covered;
+prefer the next proof-frontier lane or equality-heavy pack that can carry a
 small checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed

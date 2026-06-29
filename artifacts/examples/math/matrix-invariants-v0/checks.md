@@ -35,4 +35,6 @@ Expected result: `unsat`.
 The claimed polynomial `lambda^2 - 5*lambda + 6` differs from the recomputed
 characteristic polynomial `lambda^2 - 4*lambda + 3`. The validator also checks
 that the claimed polynomial evaluates to `2` at the actual root `1`, so the
-claim is rejected by exact arithmetic.
+claim is rejected by exact arithmetic. The witness-root value conflict is also
+checked by a linked `QF_LRA` artifact and a resource-backed `UnsatFarkas`
+regression.

@@ -150,10 +150,13 @@ First targets:
   (resource-backed Farkas regression landed for the bad negative-norm row)
 - [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
   (resource-backed Farkas regression landed for the bad eigenpair row)
+- [matrix-invariants-v0](../../artifacts/examples/math/matrix-invariants-v0/)
+  (resource-backed Farkas regression landed for the bad characteristic
+  polynomial row)
 
 Secondary targets:
 
-- matrix-invariant packs.
+- first secondary QF_LRA/Farkas target set covered.
 
 Expected artifact:
 

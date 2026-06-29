@@ -448,3 +448,17 @@ fn spectral_bad_eigenpair_emits_checked_farkas() {
         &[actual_component, false_claimed_component],
     );
 }
+
+#[test]
+fn matrix_invariants_bad_characteristic_polynomial_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let characteristic_value_at_witness = real(&mut arena, "characteristic_value_at_witness");
+    let actual_value = eq_ratio(&mut arena, characteristic_value_at_witness, 0, 1);
+    let false_claimed_value = eq_ratio(&mut arena, characteristic_value_at_witness, 2, 1);
+
+    assert_farkas_checked(
+        "matrix-invariants-v0 bad-characteristic-polynomial-rejected",
+        &arena,
+        &[actual_value, false_claimed_value],
+    );
+}
