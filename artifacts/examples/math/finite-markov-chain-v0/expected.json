@@ -73,9 +73,12 @@
           ["1/3", "1/3"]
         ],
         "row_sums": ["1", "2/3"],
-        "bad_row_index": 1
+        "bad_row_index": 1,
+        "claimed_row_sum": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas"
       },
-      "notes": "The validator recomputes the second row sum as 2/3, so the fixed matrix is rejected as a Markov transition matrix."
+      "notes": "The validator recomputes the second row sum as 2/3, so the fixed matrix is rejected as a Markov transition matrix; the Axeyum regression refutes row_sum = p10 + p11, p10 = 1/3, p11 = 1/3, row_sum = 1 with rechecked Farkas evidence."
     }
   ]
 }

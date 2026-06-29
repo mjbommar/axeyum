@@ -205,3 +205,27 @@ fn finite_probability_bad_normalization_emits_checked_farkas() {
         ],
     );
 }
+
+#[test]
+fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let p10 = real(&mut arena, "p10");
+    let p11 = real(&mut arena, "p11");
+    let row_sum = real(&mut arena, "row_sum");
+    let p10_is_third = eq_ratio(&mut arena, p10, 1, 3);
+    let p11_is_third = eq_ratio(&mut arena, p11, 1, 3);
+    let row_entries_sum = arena.real_add(p10, p11).unwrap();
+    let row_sum_matches_entries = arena.eq(row_sum, row_entries_sum).unwrap();
+    let row_sum_is_one = eq_ratio(&mut arena, row_sum, 1, 1);
+
+    assert_farkas_checked(
+        "finite-markov-chain-v0 bad-stochastic-row-rejected",
+        &arena,
+        &[
+            p10_is_third,
+            p11_is_third,
+            row_sum_matches_entries,
+            row_sum_is_one,
+        ],
+    );
+}

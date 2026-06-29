@@ -29,8 +29,10 @@ row-vector matrix multiplication, absorption probability at a fixed horizon, and
 stationarity.
 
 This is checked finite evidence for the bad transition-row claim and replay-only
-evidence for the positive witnesses. Countably infinite Markov chains, mixing
-times, convergence theorems, and stochastic-process limit theorems remain
+evidence for the positive witnesses. The bad row is also tied to Axeyum's
+`QF_LRA` route: the final row-sum contradiction must produce rechecked
+`UnsatFarkas` evidence. Countably infinite Markov chains, mixing times,
+convergence theorems, and stochastic-process limit theorems remain
 Lean/proof-horizon material.
 
 Validation:

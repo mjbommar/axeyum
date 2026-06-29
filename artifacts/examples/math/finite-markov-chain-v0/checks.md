@@ -27,5 +27,8 @@ The validator checks that `[1/3, 2/3]` is normalized and satisfies
 Expected result: `unsat`.
 
 The second row of the malformed transition matrix sums to `2/3`, so the matrix
-cannot be row-stochastic. This is a checked finite arithmetic rejection, not an
-emitted proof object yet.
+cannot be row-stochastic.
+
+The resource-backed Axeyum regression checks the final linear obligation as
+`QF_LRA`: `p10 = 1/3`, `p11 = 1/3`, `row_sum = p10 + p11`, and
+`row_sum = 1`, requiring rechecked `UnsatFarkas` evidence.

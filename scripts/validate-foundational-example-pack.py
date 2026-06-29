@@ -13143,6 +13143,20 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
         fail("bad-stochastic-row-rejected row_sums do not match matrix")
     if row_sums[bad_row_index] == 1:
         fail("bad-stochastic-row-rejected bad row unexpectedly sums to 1")
+    claimed_row_sum = require_fraction(
+        "bad stochastic claimed_row_sum",
+        data.get("claimed_row_sum"),
+    )
+    if claimed_row_sum != 1:
+        fail("bad-stochastic-row-rejected claimed_row_sum must be 1")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad stochastic smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-stochastic-row-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad stochastic farkas_regression", regression)
+    if "finite_markov_chain_bad_stochastic_row_emits_checked_farkas" not in regression:
+        fail("bad-stochastic-row-rejected must link the Farkas regression")
 
 
 def require_state_transition_matrix(

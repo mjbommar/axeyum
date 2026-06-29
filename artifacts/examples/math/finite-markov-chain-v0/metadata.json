@@ -39,7 +39,8 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "stochastic-matrix-witness",
@@ -50,6 +51,7 @@
   "graduation_criteria": [
     "Encode stochastic-matrix and finite-horizon distribution checks as deterministic QF_LRA obligations.",
     "Replay transition matrices, distributions, and stationary witnesses through exact rational matrix evaluation.",
+    "Keep the malformed stochastic-row rejection on Axeyum's checked Farkas evidence path.",
     "Add finite hitting-time and absorbing-probability certificates before claiming broader stochastic-process coverage.",
     "Keep countably infinite chains, convergence theorems, and mixing-time bounds under Lean/proof-horizon metadata."
   ]

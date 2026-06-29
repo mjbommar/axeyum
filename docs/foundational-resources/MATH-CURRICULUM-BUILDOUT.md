@@ -750,8 +750,8 @@ random-matrix moment replay, expected Gram matrices, rank probabilities, and
 checked rejection of a false trace-square moment.
 `artifacts/examples/math/finite-markov-chain-v0/` now validates exact
 row-stochastic matrix replay, finite-horizon distribution evolution,
-stationary-distribution replay, and checked rejection of a malformed transition
-row.
+stationary-distribution replay, and checked QF_LRA/Farkas rejection of a
+malformed transition row.
 `artifacts/examples/math/exact-statistical-tests-v0/` now validates exact
 binomial tails, hypergeometric point probabilities, one-sided Fisher p-values,
 checked rejection of a false p-value, and a checked QF_LIA bad tail-count
@@ -1093,7 +1093,8 @@ numerical-analysis slice, and `random-matrix-finite-v0` adds the first exact
 finite random-matrix bridge across linear algebra, probability, statistics, and
 numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
-dynamics. `exact-statistical-tests-v0` now adds the first exact finite
+dynamics, with a checked QF_LRA/Farkas bad stochastic-row regression.
+`exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums, with a checked
 QF_LIA/Diophantine bad tail-count row.
 `proof-methods-patterns-v0` now deepens the proof-methods curriculum row with
@@ -1337,8 +1338,8 @@ checked bad concentration-bound rejection, and the general concentration Lean
 horizon.
 `finite-markov-chain-v0` now has a learner-facing end-to-end lesson for exact
 row-stochastic transition matrices, finite-horizon distribution replay,
-stationary distributions, checked bad transition-row rejection, and the
-Markov-chain convergence Lean horizon.
+stationary distributions, checked QF_LRA/Farkas bad transition-row rejection,
+and the Markov-chain convergence Lean horizon.
 `generating-functions-v0` now has a learner-facing end-to-end lesson for finite
 coefficient extraction, Cauchy product convolution, bounded Fibonacci
 generating-function prefix replay, checked bad Cauchy-product rejection, and
@@ -1413,6 +1414,8 @@ same checked Farkas evidence path after finite replay computes the tail
 probability.
 `finite-probability-v0` now routes its bad normalization row through the same
 checked Farkas evidence path after exact replay computes the atom total.
+`finite-markov-chain-v0` now routes its bad stochastic-row rejection through
+the same checked Farkas evidence path after exact replay computes the row sum.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

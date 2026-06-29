@@ -349,6 +349,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the false claim `total = 3/2`; the shared LRA resource regression requires
   `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
 
+- **Finite-Markov-chain QF_LRA/Farkas regression landed.**
+  [`finite-markov-chain-v0`](artifacts/examples/math/finite-markov-chain-v0/)
+  now binds its bad stochastic-row rejection to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `p10 = 1/3`, `p11 = 1/3`,
+  `row_sum = p10 + p11`, and the false claim `row_sum = 1`; the shared LRA
+  resource regression requires `Evidence::UnsatFarkas` and rechecks the
+  rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

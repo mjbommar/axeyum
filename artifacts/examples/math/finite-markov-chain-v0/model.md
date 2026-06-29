@@ -47,3 +47,17 @@ the validator checks:
 
 These are finite exact replay targets. They do not prove general convergence,
 mixing time, or infinite-state stochastic-process theorems.
+
+## Bad Stochastic Row
+
+The negative row fixes a two-state matrix whose second row is malformed:
+
+```text
+P(1,0) = 1/3
+P(1,1) = 1/3
+row_sum = P(1,0) + P(1,1)
+row_sum = 1
+```
+
+Exact replay computes `row_sum = 2/3`; the final contradiction is linear over
+exact rationals and is checked by an `UnsatFarkas` regression.

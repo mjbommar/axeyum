@@ -164,7 +164,18 @@ and rejects the matrix because:
 ```
 
 The candidate transition matrix is untrusted; the small checker rebuilds row
-sums and finite matrix products directly from the rational entries.
+sums and finite matrix products directly from the rational entries. The
+resource regression also checks the final row-sum contradiction as `QF_LRA`:
+
+```text
+p10 = 1/3
+p11 = 1/3
+row_sum = p10 + p11
+row_sum = 1
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
 
 ## Name The Lean Horizon
 
@@ -212,7 +223,7 @@ This lesson shows Axeyum's current finite Markov-chain resource pattern:
 
 ```text
 untrusted fast search -> transition matrix, distribution, stationary claim, or counterexample row
-trusted small checking -> exact rational row sums and finite matrix products
+trusted small checking -> exact rational row sums, finite matrix products, and Farkas certificates for linear refutations
 remaining horizon -> general Markov-chain convergence and mixing theory
 ```
 

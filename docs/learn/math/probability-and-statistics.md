@@ -49,8 +49,8 @@ it checks whether conditioning blocks or opens paths in small
 causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
 and rank probabilities. The Markov-chain pack checks exact stochastic matrices,
-finite-horizon distribution evolution, stationary distributions, and malformed
-transition rows.
+finite-horizon distribution evolution, stationary distributions, and a checked
+`UnsatFarkas` certificate for a malformed transition row.
 
 For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
@@ -202,7 +202,8 @@ For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
 matrix-valued atoms. For Markov chains, it applies exact row-vector transition
-multiplication and checks stationarity by `pi * P = pi`.
+multiplication, checks stationarity by `pi * P = pi`, and emits checked
+`UnsatFarkas` evidence for the bad row-sum contradiction.
 For exact tests, it recomputes binomial coefficients and fixed-margin
 hypergeometric sums directly; the bad tail-count row also emits a checked
 `UnsatDiophantine` certificate for the inconsistent integer equalities.
