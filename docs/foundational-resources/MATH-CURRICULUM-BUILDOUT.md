@@ -860,7 +860,8 @@ algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
 finite topology/measure, bounded dynamics/operators, and finite
 Chebyshev-system interpolation/alternation, plus spectral-linear-algebra
 eigenpair/decomposition replay and finite random-matrix moment/rank replay
-from data row through replay result and proof/evidence status.
+plus numerical-linear-algebra residual/solution-box/Jacobi replay from data
+row through replay result and proof/evidence status.
 
 Deliverables:
 
@@ -1215,6 +1216,10 @@ rejection, and the general spectral/numerical horizon.
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank probabilities, checked bad trace-square rejection, and the
 asymptotic random-matrix/numerical horizon.
+`numerical-linear-algebra-v0` now has a learner-facing end-to-end lesson for
+exact residual infinity-norm replay, rational solution-box checking, one-step
+Jacobi contraction replay, checked bad residual-bound rejection, and the
+floating-point/stability/convergence horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

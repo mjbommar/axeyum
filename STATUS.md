@@ -191,6 +191,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Numerical-linear-algebra end-to-end lesson landed.** Added
+  [`numerical-linear-algebra-end-to-end.md`](docs/learn/math/numerical-linear-algebra-end-to-end.md)
+  as the learner-facing trace for the numerical-linear-algebra pack: exact
+  residual infinity-norm replay, rational solution-box checking, one-step
+  Jacobi contraction replay, checked bad residual-bound rejection, and the
+  horizon for floating-point stability, conditioning, and broad convergence
+  theorems. The lesson is linked from the math learning index plus the
+  linear-algebra/optimization and analysis/topology paths.
+
 - **Finite random-matrix end-to-end lesson landed.** Added
   [`random-matrix-finite-end-to-end.md`](docs/learn/math/random-matrix-finite-end-to-end.md)
   as the learner-facing trace for the random-matrix pack: exact

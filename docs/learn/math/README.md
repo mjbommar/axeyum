@@ -107,6 +107,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md): follows exact
   matrix-valued probability tables, trace/determinant moments, expected Gram
   matrices, rank probabilities, and checked bad trace-square rejection.
+- [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md): follows
+  exact residual infinity norms, rational solution boxes, one-step Jacobi
+  contraction replay, bad residual-bound rejection, and the numerical horizon.
 - [Rational Multivariable Calculus](multivariable-calculus-end-to-end.md):
   follows exact polynomial gradient replay, directional derivatives, Jacobian
   chain-rule matrix multiplication, Hessian minor checks, bad-gradient
