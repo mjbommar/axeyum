@@ -18,6 +18,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 CURRICULUM = ROOT / "docs" / "curriculum" / "curriculum.toml"
 MATH_FIELDS = ROOT / "docs" / "foundational-resources" / "MATH-FIELDS.md"
+EXAMPLE_ROOT = ROOT / "artifacts" / "examples" / "math"
 OUT = ROOT / "artifacts" / "ontology" / "foundational-concepts.json"
 
 AREA_DIR = {
@@ -278,6 +279,17 @@ def load_math_fields() -> dict[str, dict[str, str]]:
     return fields
 
 
+def load_example_pack_metadata() -> dict[str, dict[str, Any]]:
+    packs: dict[str, dict[str, Any]] = {}
+    for metadata_path in sorted(EXAMPLE_ROOT.glob("*/metadata.json")):
+        with metadata_path.open("r", encoding="utf-8") as handle:
+            metadata = json.load(handle)
+        if metadata.get("claim_status") == "template":
+            continue
+        packs[metadata["id"]] = metadata
+    return packs
+
+
 def curriculum_doc_path(node: dict[str, Any]) -> str:
     key = (node["layer"], node["area"])
     folder = AREA_DIR[key]
@@ -304,11 +316,24 @@ def pack(pack_id: str, notes: str) -> dict[str, str]:
     }
 
 
-def field_pack_specs(field_id: str) -> list[tuple[str, str]]:
+def field_pack_specs(field_id: str, pack_metadata: dict[str, dict[str, Any]]) -> list[tuple[str, str]]:
     value = FIELD_PACKS[field_id]
     if isinstance(value, tuple):
-        return [value]
-    return value
+        specs = [value]
+    else:
+        specs = list(value)
+    seen = {pack_id for pack_id, _ in specs}
+    discovered = [
+        (pack_id, metadata)
+        for pack_id, metadata in pack_metadata.items()
+        if field_id in metadata.get("field_ids", [])
+    ]
+    for pack_id, metadata in sorted(discovered):
+        if pack_id in seen:
+            continue
+        specs.append((pack_id, metadata["title"]))
+        seen.add(pack_id)
+    return specs
 
 
 def curriculum_pack_specs(mapping: dict[str, Any]) -> list[tuple[str, str]]:
@@ -406,8 +431,13 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
     }
 
 
-def make_field_row(field_id: str, field: dict[str, str], curriculum_rows: list[dict[str, Any]]) -> dict[str, Any]:
-    pack_specs = field_pack_specs(field_id)
+def make_field_row(
+    field_id: str,
+    field: dict[str, str],
+    curriculum_rows: list[dict[str, Any]],
+    pack_metadata: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    pack_specs = field_pack_specs(field_id, pack_metadata)
     primary_pack_id = pack_specs[0][0]
     has_multiple_packs = len(pack_specs) > 1
     unlocks = sorted(row["id"] for row in curriculum_rows if field_id in row["field_ids"])
@@ -484,14 +514,19 @@ def main() -> int:
     nodes = load_curriculum()
     node_by_id = {node["id"]: node for node in nodes}
     fields = load_math_fields()
+    pack_metadata = load_example_pack_metadata()
     curriculum_rows = [make_curriculum_row(node, node_by_id) for node in nodes]
-    field_rows = [make_field_row(field_id, fields[field_id], curriculum_rows) for field_id in sorted(fields)]
+    field_rows = [
+        make_field_row(field_id, fields[field_id], curriculum_rows, pack_metadata)
+        for field_id in sorted(fields)
+    ]
     atlas = {
         "schema_version": 1,
         "generated_from": [
             "docs/curriculum/curriculum.toml",
             "docs/foundational-resources/MATH-FIELDS.md",
             "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "artifacts/examples/math",
         ],
         "rows": curriculum_rows + field_rows,
     }

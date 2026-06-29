@@ -3,7 +3,8 @@
   "generated_from": [
     "docs/curriculum/curriculum.toml",
     "docs/foundational-resources/MATH-FIELDS.md",
-    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "artifacts/examples/math"
   ],
   "rows": [
     {
@@ -1601,6 +1602,42 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
           "notes": "Finite groups, rings, fields, homomorphism tables, and Cayley-table validation."
+        },
+        {
+          "id": "complex-algebraic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-algebraic-v0",
+          "notes": "Complex Arithmetic As Real-Pair Algebra"
+        },
+        {
+          "id": "finite-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-groups-v0",
+          "notes": "Finite Group Cayley Table Checks"
+        },
+        {
+          "id": "finite-rings-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rings-v0",
+          "notes": "Finite Ring Table Checks"
+        },
+        {
+          "id": "matrix-invariants-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/matrix-invariants-v0",
+          "notes": "Exact Matrix Invariant And Characteristic Polynomial Checks"
+        },
+        {
+          "id": "modular-arithmetic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/modular-arithmetic-v0",
+          "notes": "Modular Arithmetic Witnesses"
+        },
+        {
+          "id": "polynomial-identities-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-identities-v0",
+          "notes": "Fixed-Degree Polynomial Identity Witnesses"
         }
       ],
       "proof_routes": [
@@ -1621,13 +1658,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-fields-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/finite-fields-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -1663,6 +1700,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
           "notes": "Complex arithmetic as real-pair algebra before analytic proof horizons."
+        },
+        {
+          "id": "polynomial-identities-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-identities-v0",
+          "notes": "Fixed-Degree Polynomial Identity Witnesses"
         }
       ],
       "proof_routes": [
@@ -1683,14 +1726,14 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation.",
         "Most general field theorems require Lean/mathlib-scale proof reconstruction."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/complex-algebraic-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/complex-algebraic-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -1725,6 +1768,36 @@
           "status": "validated",
           "path": "artifacts/examples/math/bounded-dynamics-v0",
           "notes": "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."
+        },
+        {
+          "id": "calculus-algebraic-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
+          "notes": "Calculus Algebraic Shadow"
+        },
+        {
+          "id": "calculus-riemann-sum-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-riemann-sum-v0",
+          "notes": "Finite Riemann Sum Calculus Checks"
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-markov-chain-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-markov-chain-v0",
+          "notes": "Exact Finite Markov Chain Checks"
+        },
+        {
+          "id": "finite-stochastic-kernels-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
+          "notes": "Finite Stochastic Kernel Checks"
         }
       ],
       "proof_routes": [
@@ -1745,13 +1818,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/bounded-dynamics-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/bounded-dynamics-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -1789,6 +1862,90 @@
           "status": "validated",
           "path": "artifacts/examples/math/counting-v0",
           "notes": "Finite counting and combinatorial witness checks."
+        },
+        {
+          "id": "cardinality-principles-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/cardinality-principles-v0",
+          "notes": "Finite Cardinality Principle Checks"
+        },
+        {
+          "id": "equivalence-classes-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/equivalence-classes-v0",
+          "notes": "Finite Equivalence Classes And Quotients"
+        },
+        {
+          "id": "exact-statistical-tests-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/exact-statistical-tests-v0",
+          "notes": "Exact Finite Statistical Test Checks"
+        },
+        {
+          "id": "finite-cardinality-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-cardinality-v0",
+          "notes": "Finite Cardinality And Bijection Checks"
+        },
+        {
+          "id": "function-composition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/function-composition-v0",
+          "notes": "Finite Function Composition Checks"
+        },
+        {
+          "id": "graph-coloring-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-coloring-v0",
+          "notes": "Finite Graph Coloring Witnesses"
+        },
+        {
+          "id": "graph-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-cut-v0",
+          "notes": "Finite Graph Cut Certificates"
+        },
+        {
+          "id": "graph-d-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-d-separation-v0",
+          "notes": "Finite DAG D-Separation Checks"
+        },
+        {
+          "id": "graph-matching-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-matching-v0",
+          "notes": "Finite Graph Matching And Augmenting Paths"
+        },
+        {
+          "id": "graph-reachability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-reachability-v0",
+          "notes": "Finite Graph Reachability And Traversal"
+        },
+        {
+          "id": "graph-search-runtime-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-search-runtime-v0",
+          "notes": "Finite Graph Search Runtime Checks"
+        },
+        {
+          "id": "natural-arithmetic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/natural-arithmetic-v0",
+          "notes": "Bounded Natural Arithmetic Checks"
+        },
+        {
+          "id": "proof-methods-refutation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/proof-methods-refutation-v0",
+          "notes": "Proof Methods By Refutation"
+        },
+        {
+          "id": "relations-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/relations-functions-v0",
+          "notes": "Finite Relations And Function Tables"
         }
       ],
       "proof_routes": [
@@ -1809,13 +1966,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/counting-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/counting-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -1848,6 +2005,18 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-dimensional norms, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
+        },
+        {
+          "id": "finite-chebyshev-systems-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
+          "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "spectral-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/spectral-linear-algebra-v0",
+          "notes": "Exact Finite Spectral Linear Algebra Checks"
         }
       ],
       "proof_routes": [
@@ -1868,14 +2037,14 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation.",
         "Most general field theorems require Lean/mathlib-scale proof reconstruction."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-operator-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/finite-operator-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -1967,6 +2136,36 @@
           "status": "validated",
           "path": "artifacts/examples/math/graph-coloring-v0",
           "notes": "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."
+        },
+        {
+          "id": "graph-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-cut-v0",
+          "notes": "Finite Graph Cut Certificates"
+        },
+        {
+          "id": "graph-d-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-d-separation-v0",
+          "notes": "Finite DAG D-Separation Checks"
+        },
+        {
+          "id": "graph-matching-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-matching-v0",
+          "notes": "Finite Graph Matching And Augmenting Paths"
+        },
+        {
+          "id": "graph-reachability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-reachability-v0",
+          "notes": "Finite Graph Reachability And Traversal"
+        },
+        {
+          "id": "graph-search-runtime-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-search-runtime-v0",
+          "notes": "Finite Graph Search Runtime Checks"
         }
       ],
       "proof_routes": [
@@ -1987,13 +2186,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/graph-coloring-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/graph-coloring-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2030,6 +2229,102 @@
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
           "notes": "Fixed exact matrices, LU replay, rank, inverse, and infeasibility."
+        },
+        {
+          "id": "bounded-dynamics-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-dynamics-v0",
+          "notes": "Bounded Recurrence And Invariant Checks"
+        },
+        {
+          "id": "complex-algebraic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-algebraic-v0",
+          "notes": "Complex Arithmetic As Real-Pair Algebra"
+        },
+        {
+          "id": "convexity-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/convexity-rational-v0",
+          "notes": "Exact Rational Convexity Checks"
+        },
+        {
+          "id": "coordinate-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/coordinate-geometry-v0",
+          "notes": "Exact Coordinate Geometry Witnesses"
+        },
+        {
+          "id": "descriptive-statistics-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/descriptive-statistics-v0",
+          "notes": "Exact Descriptive Statistics Witnesses"
+        },
+        {
+          "id": "finite-chebyshev-systems-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
+          "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-markov-chain-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-markov-chain-v0",
+          "notes": "Exact Finite Markov Chain Checks"
+        },
+        {
+          "id": "finite-operator-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-operator-v0",
+          "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-stochastic-kernels-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
+          "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "linear-optimization-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/linear-optimization-v0",
+          "notes": "Exact Linear Optimization Witnesses"
+        },
+        {
+          "id": "matrix-invariants-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/matrix-invariants-v0",
+          "notes": "Exact Matrix Invariant And Characteristic Polynomial Checks"
+        },
+        {
+          "id": "numerical-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/numerical-linear-algebra-v0",
+          "notes": "Exact Numerical Linear Algebra Error Bounds"
+        },
+        {
+          "id": "random-matrix-finite-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/random-matrix-finite-v0",
+          "notes": "Finite Random Matrix Moment Checks"
+        },
+        {
+          "id": "rationals-lra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rationals-lra-v0",
+          "notes": "Exact Rational LRA Witnesses"
+        },
+        {
+          "id": "spectral-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/spectral-linear-algebra-v0",
+          "notes": "Exact Finite Spectral Linear Algebra Checks"
         }
       ],
       "proof_routes": [
@@ -2050,13 +2345,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/linear-algebra-rational-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/linear-algebra-rational-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2094,6 +2389,60 @@
           "status": "validated",
           "path": "artifacts/examples/math/proof-methods-refutation-v0",
           "notes": "Negation-as-query, finite CNF checks, and proof-object lessons."
+        },
+        {
+          "id": "finite-predicate-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-predicate-v0",
+          "notes": "Finite Predicate Logic"
+        },
+        {
+          "id": "graph-coloring-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-coloring-v0",
+          "notes": "Finite Graph Coloring Witnesses"
+        },
+        {
+          "id": "graph-search-runtime-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-search-runtime-v0",
+          "notes": "Finite Graph Search Runtime Checks"
+        },
+        {
+          "id": "induction-obligations-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/induction-obligations-v0",
+          "notes": "Bounded Induction Obligation Checks"
+        },
+        {
+          "id": "induction-patterns-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/induction-patterns-v0",
+          "notes": "Finite Induction Pattern Checks"
+        },
+        {
+          "id": "logic-basics-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/logic-basics-v0",
+          "notes": "Propositional Logic Basics"
+        },
+        {
+          "id": "metric-continuity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/metric-continuity-v0",
+          "notes": "Finite Metric Continuity Checks"
+        },
+        {
+          "id": "proof-methods-patterns-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/proof-methods-patterns-v0",
+          "notes": "Finite Proof Method Patterns"
+        },
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Bounded Rational Real-Analysis Checks"
         }
       ],
       "proof_routes": [
@@ -2114,13 +2463,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/proof-methods-refutation-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/proof-methods-refutation-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2153,6 +2502,60 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
           "notes": "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Finite Concentration Checks"
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-integration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-integration-v0",
+          "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-martingales-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-martingales-v0",
+          "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-probability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-probability-v0",
+          "notes": "Exact Finite Probability Tables"
+        },
+        {
+          "id": "finite-product-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-product-measure-v0",
+          "notes": "Finite Product Measure And Fubini Checks"
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-stochastic-kernels-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
+          "notes": "Finite Stochastic Kernel Checks"
         }
       ],
       "proof_routes": [
@@ -2173,14 +2576,14 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation.",
         "Most general field theorems require Lean/mathlib-scale proof reconstruction."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-measure-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/finite-measure-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2221,6 +2624,48 @@
           "status": "validated",
           "path": "artifacts/examples/math/modular-arithmetic-v0",
           "notes": "Congruences, CRT, residues, finite fields, and bounded Diophantine examples."
+        },
+        {
+          "id": "finite-fields-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-fields-v0",
+          "notes": "Prime Field And Composite Modulus Checks"
+        },
+        {
+          "id": "gcd-bezout-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/gcd-bezout-v0",
+          "notes": "GCD And Bezout Witness Checks"
+        },
+        {
+          "id": "induction-obligations-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/induction-obligations-v0",
+          "notes": "Bounded Induction Obligation Checks"
+        },
+        {
+          "id": "induction-patterns-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/induction-patterns-v0",
+          "notes": "Finite Induction Pattern Checks"
+        },
+        {
+          "id": "integer-lia-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/integer-lia-v0",
+          "notes": "Integer Linear Arithmetic Checks"
+        },
+        {
+          "id": "natural-arithmetic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/natural-arithmetic-v0",
+          "notes": "Bounded Natural Arithmetic Checks"
+        },
+        {
+          "id": "number-theory-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/number-theory-v0",
+          "notes": "Bounded Number Theory Checks"
         }
       ],
       "proof_routes": [
@@ -2241,13 +2686,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/modular-arithmetic-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/modular-arithmetic-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2283,6 +2728,60 @@
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
           "notes": "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."
+        },
+        {
+          "id": "bounded-dynamics-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-dynamics-v0",
+          "notes": "Bounded Recurrence And Invariant Checks"
+        },
+        {
+          "id": "calculus-algebraic-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
+          "notes": "Calculus Algebraic Shadow"
+        },
+        {
+          "id": "calculus-riemann-sum-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-riemann-sum-v0",
+          "notes": "Finite Riemann Sum Calculus Checks"
+        },
+        {
+          "id": "finite-chebyshev-systems-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
+          "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "finite-operator-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-operator-v0",
+          "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "linear-algebra-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/linear-algebra-rational-v0",
+          "notes": "Exact Rational Linear Algebra Witnesses"
+        },
+        {
+          "id": "matrix-invariants-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/matrix-invariants-v0",
+          "notes": "Exact Matrix Invariant And Characteristic Polynomial Checks"
+        },
+        {
+          "id": "random-matrix-finite-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/random-matrix-finite-v0",
+          "notes": "Finite Random Matrix Moment Checks"
+        },
+        {
+          "id": "spectral-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/spectral-linear-algebra-v0",
+          "notes": "Exact Finite Spectral Linear Algebra Checks"
         }
       ],
       "proof_routes": [
@@ -2303,13 +2802,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/numerical-linear-algebra-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/numerical-linear-algebra-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2351,6 +2850,30 @@
           "status": "validated",
           "path": "artifacts/examples/math/convexity-rational-v0",
           "notes": "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."
+        },
+        {
+          "id": "linear-algebra-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/linear-algebra-rational-v0",
+          "notes": "Exact Rational Linear Algebra Witnesses"
+        },
+        {
+          "id": "numerical-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/numerical-linear-algebra-v0",
+          "notes": "Exact Numerical Linear Algebra Error Bounds"
+        },
+        {
+          "id": "reals-rcf-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/reals-rcf-shadow-v0",
+          "notes": "Real Algebra RCF Shadow"
+        },
+        {
+          "id": "spectral-linear-algebra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/spectral-linear-algebra-v0",
+          "notes": "Exact Finite Spectral Linear Algebra Checks"
         }
       ],
       "proof_routes": [
@@ -2412,6 +2935,96 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
           "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."
+        },
+        {
+          "id": "counting-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/counting-v0",
+          "notes": "Finite Counting And Pigeonhole Checks"
+        },
+        {
+          "id": "descriptive-statistics-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/descriptive-statistics-v0",
+          "notes": "Exact Descriptive Statistics Witnesses"
+        },
+        {
+          "id": "exact-statistical-tests-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/exact-statistical-tests-v0",
+          "notes": "Exact Finite Statistical Test Checks"
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Finite Concentration Checks"
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-integration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-integration-v0",
+          "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-markov-chain-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-markov-chain-v0",
+          "notes": "Exact Finite Markov Chain Checks"
+        },
+        {
+          "id": "finite-martingales-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-martingales-v0",
+          "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-v0",
+          "notes": "Finite Sigma-Algebra And Measure Checks"
+        },
+        {
+          "id": "finite-product-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-product-measure-v0",
+          "notes": "Finite Product Measure And Fubini Checks"
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-stochastic-kernels-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
+          "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "graph-d-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/graph-d-separation-v0",
+          "notes": "Finite DAG D-Separation Checks"
+        },
+        {
+          "id": "random-matrix-finite-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/random-matrix-finite-v0",
+          "notes": "Finite Random Matrix Moment Checks"
         }
       ],
       "proof_routes": [
@@ -2432,13 +3045,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-probability-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/finite-probability-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2477,6 +3090,150 @@
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
           "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic shadows, and proof horizons."
+        },
+        {
+          "id": "calculus-algebraic-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
+          "notes": "Calculus Algebraic Shadow"
+        },
+        {
+          "id": "calculus-riemann-sum-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-riemann-sum-v0",
+          "notes": "Finite Riemann Sum Calculus Checks"
+        },
+        {
+          "id": "complex-algebraic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-algebraic-v0",
+          "notes": "Complex Arithmetic As Real-Pair Algebra"
+        },
+        {
+          "id": "convexity-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/convexity-rational-v0",
+          "notes": "Exact Rational Convexity Checks"
+        },
+        {
+          "id": "coordinate-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/coordinate-geometry-v0",
+          "notes": "Exact Coordinate Geometry Witnesses"
+        },
+        {
+          "id": "finite-chebyshev-systems-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
+          "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "finite-compactness-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-compactness-v0",
+          "notes": "Finite Compactness And Open-Cover Checks"
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Finite Concentration Checks"
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-connectedness-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-connectedness-v0",
+          "notes": "Finite Connectedness And Separation Checks"
+        },
+        {
+          "id": "finite-continuous-maps-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-continuous-maps-v0",
+          "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "finite-integration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-integration-v0",
+          "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-martingales-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-martingales-v0",
+          "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-operator-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-operator-v0",
+          "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-product-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-product-measure-v0",
+          "notes": "Finite Product Measure And Fubini Checks"
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-topology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-topology-v0",
+          "notes": "Finite Topology And Metric-Ball Checks"
+        },
+        {
+          "id": "linear-optimization-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/linear-optimization-v0",
+          "notes": "Exact Linear Optimization Witnesses"
+        },
+        {
+          "id": "matrix-invariants-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/matrix-invariants-v0",
+          "notes": "Exact Matrix Invariant And Characteristic Polynomial Checks"
+        },
+        {
+          "id": "metric-continuity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/metric-continuity-v0",
+          "notes": "Finite Metric Continuity Checks"
+        },
+        {
+          "id": "polynomial-identities-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/polynomial-identities-v0",
+          "notes": "Fixed-Degree Polynomial Identity Witnesses"
+        },
+        {
+          "id": "rationals-lra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rationals-lra-v0",
+          "notes": "Exact Rational LRA Witnesses"
+        },
+        {
+          "id": "reals-rcf-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/reals-rcf-shadow-v0",
+          "notes": "Real Algebra RCF Shadow"
+        },
+        {
+          "id": "sequence-limit-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/sequence-limit-shadow-v0",
+          "notes": "Sequence And Limit Shadow"
         }
       ],
       "proof_routes": [
@@ -2497,13 +3254,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/real-analysis-rational-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/real-analysis-rational-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2541,6 +3298,108 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-sets-v0",
           "notes": "Finite set, relation, function, and cardinality checks."
+        },
+        {
+          "id": "cardinality-principles-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/cardinality-principles-v0",
+          "notes": "Finite Cardinality Principle Checks"
+        },
+        {
+          "id": "equivalence-classes-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/equivalence-classes-v0",
+          "notes": "Finite Equivalence Classes And Quotients"
+        },
+        {
+          "id": "finite-cardinality-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-cardinality-v0",
+          "notes": "Finite Cardinality And Bijection Checks"
+        },
+        {
+          "id": "finite-compactness-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-compactness-v0",
+          "notes": "Finite Compactness And Open-Cover Checks"
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Finite Concentration Checks"
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-connectedness-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-connectedness-v0",
+          "notes": "Finite Connectedness And Separation Checks"
+        },
+        {
+          "id": "finite-continuous-maps-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-continuous-maps-v0",
+          "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-martingales-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-martingales-v0",
+          "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-v0",
+          "notes": "Finite Sigma-Algebra And Measure Checks"
+        },
+        {
+          "id": "finite-predicate-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-predicate-v0",
+          "notes": "Finite Predicate Logic"
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-stochastic-kernels-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
+          "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "finite-topology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-topology-v0",
+          "notes": "Finite Topology And Metric-Ball Checks"
+        },
+        {
+          "id": "function-composition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/function-composition-v0",
+          "notes": "Finite Function Composition Checks"
+        },
+        {
+          "id": "relations-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/relations-functions-v0",
+          "notes": "Finite Relations And Function Tables"
         }
       ],
       "proof_routes": [
@@ -2561,13 +3420,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-sets-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/finite-sets-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2600,6 +3459,78 @@
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
           "notes": "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."
+        },
+        {
+          "id": "exact-statistical-tests-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/exact-statistical-tests-v0",
+          "notes": "Exact Finite Statistical Test Checks"
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Finite Concentration Checks"
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-hitting-times-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-hitting-times-v0",
+          "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-integration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-integration-v0",
+          "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-markov-chain-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-markov-chain-v0",
+          "notes": "Exact Finite Markov Chain Checks"
+        },
+        {
+          "id": "finite-martingales-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-martingales-v0",
+          "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-probability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-probability-v0",
+          "notes": "Exact Finite Probability Tables"
+        },
+        {
+          "id": "finite-product-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-product-measure-v0",
+          "notes": "Finite Product Measure And Fubini Checks"
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-stochastic-kernels-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
+          "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "random-matrix-finite-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/random-matrix-finite-v0",
+          "notes": "Finite Random Matrix Moment Checks"
         }
       ],
       "proof_routes": [
@@ -2620,13 +3551,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/descriptive-statistics-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/descriptive-statistics-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]
@@ -2661,6 +3592,42 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
           "notes": "Finite topologies, metric balls, closure, and interior checks."
+        },
+        {
+          "id": "finite-compactness-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-compactness-v0",
+          "notes": "Finite Compactness And Open-Cover Checks"
+        },
+        {
+          "id": "finite-connectedness-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-connectedness-v0",
+          "notes": "Finite Connectedness And Separation Checks"
+        },
+        {
+          "id": "finite-continuous-maps-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-continuous-maps-v0",
+          "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "metric-continuity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/metric-continuity-v0",
+          "notes": "Finite Metric Continuity Checks"
+        },
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Bounded Rational Real-Analysis Checks"
+        },
+        {
+          "id": "sequence-limit-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/sequence-limit-shadow-v0",
+          "notes": "Sequence And Limit Shadow"
         }
       ],
       "proof_routes": [
@@ -2681,14 +3648,14 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation.",
         "Most general field theorems require Lean/mathlib-scale proof reconstruction."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/finite-topology-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/finite-topology-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]

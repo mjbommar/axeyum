@@ -233,8 +233,10 @@ Exit criteria:
 
 Status: first seed landed for the mathematics lane. The repository now has a
 schema, deterministic generator, validator, committed JSON atlas, and generated
-dashboards covering all 23 curriculum nodes and all 18 math fields. Validated
-example packs remain future phases.
+dashboards covering all 23 curriculum nodes and all 18 math fields. The
+generator now reads committed non-template math example-pack metadata and
+attaches validated packs to the corresponding field rows, so field dashboards
+track current resource coverage instead of only the original starter packs.
 
 Deliverables:
 
@@ -246,6 +248,8 @@ Implementation notes:
 
 - Seed all 23 curriculum nodes from `curriculum.toml`.
 - Add 18 field rows from [MATH-FIELDS.md](MATH-FIELDS.md).
+- Merge non-template `artifacts/examples/math/*/metadata.json` field coverage
+  into the field rows when regenerating the atlas.
 - Add a `field_ids` validation table in the validator.
 - Validate prerequisite IDs, local links, enum values, and duplicate IDs.
 - Report coverage by `status`, `decidability`, `field_id`, and `axeyum_fragment`.
@@ -761,9 +765,9 @@ dashboard is still generated from the concept atlas, and now also reads math
 example-pack metadata and `expected.json` rows to report pack-level route
 coverage, validation commands, checked/replay/proof-gap counts, and the concrete
 checks that still need stronger evidence. `just foundational-resources` and the
-plain-shell fallback now validate the concept atlas, validate all math example
-packs, regenerate dashboards, and fail if generated dashboard files are stale;
-CI runs the same gate before docs link checking.
+plain-shell fallback now regenerate the concept atlas, validate it, validate all
+math example packs, regenerate dashboards, and fail if generated atlas or
+dashboard files are stale; CI runs the same gate before docs link checking.
 
 Deliverables:
 
