@@ -244,10 +244,12 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 ```
 
 For fuller traces through exact matrix replay, a checked LP certificate,
-finite-field vector-space replay, and finite dual-space replay, read
+finite-field vector-space replay, finite dual-space replay, and finite module
+replay, read
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
-[End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md), and
-[End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md).
+[End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
+[End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
+[End To End: Finite Modules](finite-modules-end-to-end.md).
 
 ## Horizon
 

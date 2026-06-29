@@ -182,6 +182,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite modules end-to-end lesson landed.** Added
+  [`finite-modules-end-to-end.md`](docs/learn/math/finite-modules-end-to-end.md)
+  as the learner-facing trace for the finite modules pack: `Z/4Z`
+  module-action replay, generated submodule replay, multiplication-by-`2`
+  homomorphism kernel/image replay, quotient-module table replay, checked
+  bad-submodule rejection, and the Lean horizon for general module theory and
+  homological algebra. The lesson is linked from the math learning index plus
+  the algebra and linear-algebra paths.
+
 - **Finite dual-spaces end-to-end lesson landed.** Added
   [`finite-dual-spaces-end-to-end.md`](docs/learn/math/finite-dual-spaces-end-to-end.md)
   as the learner-facing trace for the finite dual-spaces pack: covector
