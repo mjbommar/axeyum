@@ -33,7 +33,8 @@ then verifies quotient addition and scalar multiplication from representatives.
 Expected result: `unsat`.
 
 The validator rejects `{0, 1}` because scalar closure fails: `2*1 = 2`, and
-`2` is not in the subset.
+`2` is not in the subset. The row links that scalar-closure conflict to checked
+QF_UF/Alethe evidence.
 
 ## `general-module-theory-lean-horizon`
 

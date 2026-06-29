@@ -13,7 +13,7 @@ The pack covers:
 - module-homomorphism replay for multiplication by `2`;
 - kernel/image replay for the endomorphism;
 - quotient-module addition and scalar-action table replay;
-- checked rejection of a non-submodule;
+- checked rejection of a non-submodule with QF_UF/Alethe evidence;
 - a Lean-horizon row for general module theory and homological algebra.
 
 ## Concepts
@@ -32,6 +32,11 @@ multiplication tables, finite subsets, finite maps, and coset tables. It checks
 the module laws by finite enumeration, recomputes the generated submodule,
 checks additive and scalar preservation for the homomorphism, recomputes kernel
 and image, and verifies quotient tables from representatives.
+
+For the bad submodule row, exact replay computes `2 * 1 = 2` in the regular
+`Z/4Z` module while the claimed subset marks `1` present and `2` absent. The
+linked `QF_UF` artifact refutes the fixed scalar-closure membership claim and
+checks the resulting `UnsatAletheProof` independently.
 
 This is a finite replay pack. It does not prove general module theorems,
 Noetherian structure, tensor products, exactness, projective or injective

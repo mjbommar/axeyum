@@ -83,3 +83,23 @@ O = {1, 3}
 
 The validator checks the listed quotient addition and scalar-action tables by
 applying operations to representatives and then locating the resulting coset.
+
+## Bad Submodule Certificate
+
+For the rejected subset, exact replay computes:
+
+```text
+1 in B
+2 not in B
+2 * 1 = 2
+```
+
+Scalar closure of a submodule would require:
+
+```text
+in_subset(2 * 1) = present
+```
+
+The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
+The resource regression checks that Axeyum emits independently rechecked
+`UnsatAletheProof` evidence with no trusted reduction step.

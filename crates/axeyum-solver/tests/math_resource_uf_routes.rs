@@ -38,6 +38,9 @@ const FINITE_VECTOR_SPACES_BAD_SUBSPACE: &str = include_str!(
 const FINITE_DUAL_SPACES_BAD_COVECTOR: &str = include_str!(
     "../../../artifacts/examples/math/finite-dual-spaces-v0/smt2/bad-covector-additivity-conflict.smt2"
 );
+const FINITE_MODULES_BAD_SUBMODULE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-modules-v0/smt2/bad-submodule-scalar-closure-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -116,6 +119,14 @@ fn finite_dual_spaces_bad_covector_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-dual-spaces-v0 bad covector",
         FINITE_DUAL_SPACES_BAD_COVECTOR,
+    );
+}
+
+#[test]
+fn finite_modules_bad_submodule_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-modules-v0 bad submodule",
+        FINITE_MODULES_BAD_SUBMODULE,
     );
 }
 

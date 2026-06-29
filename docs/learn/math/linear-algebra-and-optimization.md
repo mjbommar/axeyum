@@ -50,7 +50,7 @@ orthogonal projection replay, Gram-Schmidt orthogonalization replay, and
 QF_LRA/Farkas rejection of an indefinite bilinear form. The finite-module
 slice adds ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
-tables, and checked non-submodule rejection. The finite-tensor-product slice
+tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product slice
 adds bilinear maps, finite universal-factorization shadows, Kronecker products,
 and bad-bilinear-map rejection over `F2`. The numerical-linear-algebra slice
 adds exact residual bounds, rational interval boxes for solutions, and a
@@ -165,7 +165,8 @@ quotient cosets = E={0, 2}, O={1, 3}
 The `finite-modules-v0` validator checks the finite module laws, recomputes
 the generated submodule, checks the multiplication-by-`2` homomorphism,
 recomputes kernel and image, and verifies quotient-module addition and scalar
-action from representatives.
+action from representatives. Its bad submodule row links the failed
+scalar-closure equation to checked QF_UF/Alethe evidence.
 
 For tensor-product flavored linear algebra, encode the finite bilinear table:
 

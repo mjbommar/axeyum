@@ -4384,6 +4384,21 @@ def validate_finite_modules(expected: dict[str, Any]) -> None:
         fail("bad-submodule-rejected actual_scalar_product is incorrect")
     if actual_scalar_product in subset:
         fail("bad-submodule-rejected actual_scalar_product unexpectedly belongs to the subset")
+    alethe_claim = data.get("alethe_scalar_closure_claim")
+    require_string("bad submodule alethe_scalar_closure_claim", alethe_claim)
+    if alethe_claim != f"in_subset(smul({failing_scalar},{failing_vector})) = present":
+        fail("bad-submodule-rejected must document the Alethe scalar-closure claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad submodule smt2_artifact", smt2_artifact)
+    check_source("bad submodule smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad submodule proof_regression", proof_regression)
+    if "finite_modules_bad_submodule_emits_checked_alethe" not in proof_regression:
+        fail("bad-submodule-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad submodule certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("bad-submodule-rejected certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-module-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

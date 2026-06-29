@@ -414,9 +414,13 @@
         "subset": ["0", "1"],
         "failing_scalar": "2",
         "failing_vector": "1",
-        "actual_scalar_product": "2"
+        "actual_scalar_product": "2",
+        "alethe_scalar_closure_claim": "in_subset(smul(2,1)) = present",
+        "smt2_artifact": "artifacts/examples/math/finite-modules-v0/smt2/bad-submodule-scalar-closure-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_modules_bad_submodule_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator recomputes 2*1 = 2 and checks that 2 is missing from the claimed subset."
+      "notes": "The validator recomputes 2*1 = 2 and checks that 2 is missing from the claimed subset; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed scalar-closure membership claim."
     },
     {
       "id": "general-module-theory-lean-horizon",
