@@ -23,6 +23,29 @@ Last reconciled with `main`: 2026-06-27.
 
 ## Open / Partial
 
+### U8 - medium - build/wasm - `axeyum-solver` does not build for `wasm32`
+- **What:** `cargo build -p axeyum-solver --lib --target wasm32-unknown-unknown`
+  fails with ~7 `E0308` mismatches: `web_time::Instant` (the wasm clock shim)
+  vs `std::time::Instant`. Root cause: `crates/axeyum-solver/src/abv.rs:12` does
+  `use std::time::{Duration, Instant};` **directly**, while ~8 other solver files
+  (`auto.rs:44-48`, `combined.rs`, `nra.rs`, `optimize.rs`, `lra.rs`, `dpll_t.rs`,
+  `qinst_egraph.rs`, `sat_bv_backend.rs`) use the `#[cfg]`'d shim (std on native,
+  `web_time` on `wasm32`, per ADR-0017). On `wasm32` `abv.rs`'s `Instant` is `std`
+  but its callers in `auto.rs` pass `web_time::Instant` → mismatch. Native builds
+  fine (both alias `std`), so this is wasm-only and easy to miss.
+- **Why it matters:** it blocks the consumer **WASM-delivery moat** (A3): the
+  EVM/verify apps' differentiator is running *client-side in the browser*, which
+  the Python/Haskell + external-solver incumbents structurally cannot. The
+  consumer crates are wasm-clean themselves; they cannot reach `wasm32` while the
+  core dependency does not.
+- **Ask:** replace `abv.rs`'s direct `use std::time::{Duration, Instant};` with
+  the same `#[cfg(target_arch = "wasm32")]` shim the other modules use (a
+  one-file change). A `cargo build --target wasm32-unknown-unknown -p
+  axeyum-solver` CI smoke would catch regressions (CLAUDE.md already lists wasm as
+  a supported target).
+- **Source:** `crates/axeyum-solver/src/abv.rs:12` vs `auto.rs:44-48`; observed
+  building the consumer apps for `wasm32`.
+
 ### U4 - high strategic - proofs/Lean - widen the reconstructable fragment
 
 - **Status:** open.

@@ -2380,6 +2380,10 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    vs-hevm, install-gated) — deferred; pivot to App C (C4) which is fully buildable.
 3. **WASM in-browser surface** (the delivery differentiator) + the vs-hevm/halmos
    scoreboard once those tools are installable (the `ExternalOracle` seam exists).
+   *Status:* the consumer crates are wasm-clean, but the `wasm32` build is
+   **blocked on `UPSTREAM-FEEDBACK` U8** — `axeyum-solver` does not compile for
+   `wasm32` (`abv.rs` uses `std::time::Instant` directly instead of the cfg'd
+   `web_time` shim). Resume once U8 lands; the vs-hevm part stays install-gated.
 
 *App C — `axeyum-verify` (Phase 3 / hardening):*
 4. **General CFG→`TransitionSystem` lowering** — replace the hand-written
