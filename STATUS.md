@@ -191,6 +191,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite rings end-to-end lesson landed.** Added
+  [`finite-rings-end-to-end.md`](docs/learn/math/finite-rings-end-to-end.md)
+  as the learner-facing trace for the finite rings pack: `Z/4Z` ring-table
+  replay, zero-divisor witness replay, checked non-distributive-table
+  rejection, and the proof horizon for ideal/domain/Noetherian ring theory.
+  The lesson is linked from the math learning index plus the algebra path.
+
 - **Finite algebra-homomorphisms end-to-end lesson landed.** Added
   [`finite-algebra-homomorphisms-end-to-end.md`](docs/learn/math/finite-algebra-homomorphisms-end-to-end.md)
   as the learner-facing trace for the finite algebra homomorphisms pack:
