@@ -38,6 +38,10 @@ validated pack data and the repo-root command that replays it.
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
+- [Finite Monoids](finite-monoids-end-to-end.md): follows a two-point
+  transformation monoid through function-composition replay, identity and
+  associativity checks, unit/idempotent recomputation, and checked
+  non-associativity rejection.
 - [Finite Permutation Groups](finite-permutation-groups-end-to-end.md):
   follows `S3` point maps through bijection checks, composition-table replay,
   cycle/sign replay, natural action orbit-stabilizer counting, and checked

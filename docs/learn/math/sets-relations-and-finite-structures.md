@@ -277,6 +277,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 
 For fuller traces through finite function-table actions, topology,
 connectedness, and measure replay, read
+[End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
 and [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md).

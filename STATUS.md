@@ -179,6 +179,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite monoid end-to-end lesson landed.** Added
+  [`finite-monoids-end-to-end.md`](docs/learn/math/finite-monoids-end-to-end.md)
+  as the learner-facing trace for the finite monoid pack: two-point
+  endofunction encoding, monoid identity/associativity replay,
+  composition-table replay from function maps, unit and idempotent
+  recomputation, bad non-associative table rejection, and the Lean horizon for
+  general semigroup/monoid theory. The lesson is linked from the math learning
+  index plus the algebra and finite-structures paths.
+
 - **Finite permutation-group end-to-end lesson landed.** Added
   [`finite-permutation-groups-end-to-end.md`](docs/learn/math/finite-permutation-groups-end-to-end.md)
   as the learner-facing trace for the finite permutation-group pack:
