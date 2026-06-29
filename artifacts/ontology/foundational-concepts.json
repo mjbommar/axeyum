@@ -368,6 +368,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/relations-functions-v0",
           "notes": "Finite relation properties, injective/surjective checks, and EUF slices."
+        },
+        {
+          "id": "equivalence-classes-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/equivalence-classes-v0",
+          "notes": "Finite equivalence classes, quotient-map fibers, partition round trips, and explicit QF_UF/Alethe proof gaps."
         }
       ],
       "proof_routes": [
@@ -395,7 +401,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/relations-functions-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/relations-functions-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -2487,7 +2493,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, partitions, small cardinality constraints",
+      "summary": "Foundation / early proof course / graduate logic. First Axeyum slice: Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints",
       "prerequisites": [],
       "unlocks": [
         "curriculum_cardinality",
@@ -2497,7 +2503,7 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite sets, relations, functions, partitions, small cardinality constraints"
+        "Finite sets, relations, functions, equivalence classes, partitions, small cardinality constraints"
       ],
       "example_packs": [
         {

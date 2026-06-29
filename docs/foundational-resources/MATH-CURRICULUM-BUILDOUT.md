@@ -180,7 +180,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `proof-methods` | `logic_and_proof` | `proof-methods-refutation-v0` | Negate-and-decide examples; proof by contradiction as UNSAT. |
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0` | Bounded base/step obligations; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0` | Membership, subset, union/intersection, finite identities. |
-| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0` | Finite relation properties, injective/surjective checks, EUF slices. |
+| `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0` | Finite relation properties, injective/surjective checks, equivalence classes, quotient maps, and EUF slices. |
 | `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0` | Finite bijections/counting; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
@@ -337,9 +337,13 @@ curriculum node with finite universe membership, subset transitivity,
 union/intersection identity replay, and a bounded rejection of a malformed fixed
 set identity. `relations-functions-v0` now validates the next set-theory
 dependency with finite relation properties, bijective function-table replay, and
-a checked rejection of a multi-valued graph. `finite-fields-v0` now validates
-prime-field inverse replay, exhaustive distributivity over a fixed prime field,
-and a checked composite-modulus non-field contrast. `polynomial-identities-v0`
+a checked rejection of a multi-valued graph. `equivalence-classes-v0` now
+deepens that node with finite equivalence classes, quotient-map fibers,
+partition-to-relation round trips, checked rejection of a non-transitive
+relation, and an explicit QF_UF/Alethe proof-gap row. `finite-fields-v0` now
+validates prime-field inverse replay, exhaustive distributivity over a fixed
+prime field, and a checked composite-modulus non-field contrast.
+`polynomial-identities-v0`
 now validates exact coefficient identity replay, a factor-theorem root witness,
 and a checked false rational-root rejection. `counting-v0` now validates fixed
 permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
@@ -392,8 +396,10 @@ Recommended order:
 1. `proof-methods-refutation-v0` (landed): negation-as-query, pigeonhole,
    checked finite CNF refutation; LRAT/DRAT remains the stronger proof-object
    graduation route.
-2. `finite-sets-v0` (landed) and `relations-functions-v0` (landed): finite set
-   identities, relation properties, function properties.
+2. `finite-sets-v0` (landed), `relations-functions-v0` (landed), and
+   `equivalence-classes-v0` (landed): finite set identities, relation
+   properties, function properties, equivalence classes, partitions, and
+   quotient maps.
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0`: CRT, modular inverse, residue witness checks.
@@ -787,7 +793,7 @@ Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
 Progress: items 1-10, Phase M3 `finite-sets-v0`,
-`relations-functions-v0`, `finite-fields-v0`,
+`relations-functions-v0`, `equivalence-classes-v0`, `finite-fields-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, `logic-basics-v0`, and
@@ -808,6 +814,10 @@ numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics. `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums.
+`equivalence-classes-v0` now deepens the relations/functions curriculum row
+with exact finite equivalence classes, quotient-map fibers, partition
+round-trips, a checked non-transitive counterexample, and an explicit
+QF_UF/Alethe proof-object gap.
 `convexity-rational-v0` now adds the first exact finite convexity bridge for
 optimization learners: midpoint Jensen replay, finite second differences,
 affine threshold monotonicity, and bad midpoint-convexity rejection.

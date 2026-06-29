@@ -12,6 +12,7 @@ Example packs:
 
 - [finite-sets-v0](../../../artifacts/examples/math/finite-sets-v0/)
 - [relations-functions-v0](../../../artifacts/examples/math/relations-functions-v0/)
+- [equivalence-classes-v0](../../../artifacts/examples/math/equivalence-classes-v0/)
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
@@ -25,9 +26,12 @@ The current finite-structure path starts with plain finite sets, then moves to
 relations, functions, cardinality, and set families. The finite-set pack replays
 union/intersection identities, subset transitivity, and a fixed false set claim.
 The relations/functions pack checks partial-order properties, bijective function
-tables, and rejection of a multi-valued graph. The finite-cardinality pack
-checks explicit bijections, proper-subset injections, finite injection and
-surjection refutations, and an infinite-cardinality Lean-horizon row. The
+tables, and rejection of a multi-valued graph. The equivalence-classes pack
+checks finite equivalence classes, quotient-map fibers, partition-to-relation
+round trips, rejection of a non-transitive relation, and an explicit QF_UF/Alethe
+proof gap. The finite-cardinality pack checks explicit bijections,
+proper-subset injections, finite injection and surjection refutations, and an
+infinite-cardinality Lean-horizon row. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
 compactness pack checks finite open covers, subcovers, minimal-subcover
@@ -61,8 +65,24 @@ graph = {(x0,y1), (x1,y2), (x2,y0)}
 ```
 
 The validator checks totality, single-valuedness, injectivity, and
-surjectivity. For finite cardinality, encode the same function graph as a
-cardinality witness:
+surjectivity. For equivalence classes, encode relation pairs and the quotient
+map:
+
+```text
+elements = {0,1,2,3}
+classes = even:{0,2}, odd:{1,3}
+q(0)=even, q(1)=odd, q(2)=even, q(3)=odd
+```
+
+The checker recomputes reflexivity, symmetry, transitivity, class fibers, and
+the equivalence:
+
+```text
+x ~ y iff q(x) = q(y)
+```
+
+It rejects a relation with `a ~ b` and `b ~ c` but missing `a ~ c`.
+For finite cardinality, encode the same function graph as a cardinality witness:
 
 ```text
 domain = {a,b,c}
@@ -125,6 +145,7 @@ Run the checks from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
@@ -138,10 +159,11 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 
 ## Horizon
 
-The finite set, relation/function, cardinality, topology, compactness-shadow,
-connectedness-shadow, continuous-map, and measure packs are now checked finite
-artifacts. The next finite-structure gaps are stronger EUF/Alethe evidence for
-congruence examples and Lean artifacts for infinite theorems. ZFC, ordinals,
-choice, infinite cardinality, arbitrary topological spaces, general compactness,
-general connectedness, continuous-image/homeomorphism theorems, and countable
-additivity remain proof-horizon material.
+The finite set, relation/function, equivalence-class, cardinality, topology,
+compactness-shadow, connectedness-shadow, continuous-map, and measure packs are
+now checked finite artifacts. The next finite-structure gaps are stronger
+EUF/Alethe evidence for congruence examples and Lean artifacts for infinite
+theorems. ZFC, ordinals, choice, infinite cardinality, arbitrary topological
+spaces, general compactness, general connectedness,
+continuous-image/homeomorphism theorems, and countable additivity remain
+proof-horizon material.

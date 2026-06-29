@@ -324,6 +324,10 @@ def is_antisymmetric(pairs: set[tuple[str, str]]) -> bool:
     return all(left == right or (right, left) not in pairs for left, right in pairs)
 
 
+def is_symmetric(pairs: set[tuple[str, str]]) -> bool:
+    return all((right, left) in pairs for left, right in pairs)
+
+
 def is_transitive(pairs: set[tuple[str, str]]) -> bool:
     return all(
         (left, right_2) in pairs
@@ -408,6 +412,213 @@ def validate_relations_functions(expected: dict[str, Any]) -> None:
         fail("non-function-rejected graph unexpectedly is single-valued")
     if is_total_function(domain, pairs) and is_single_valued(domain, pairs):
         fail("non-function-rejected graph unexpectedly is a function")
+
+
+def require_named_blocks(
+    context: str,
+    value: Any,
+    elements: list[str],
+    *,
+    require_partition: bool,
+) -> list[tuple[str, set[str]]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty block list")
+    element_set = set(elements)
+    blocks: list[tuple[str, set[str]]] = []
+    seen_ids: set[str] = set()
+    seen_members: set[str] = set()
+    for index, block in enumerate(value):
+        if not isinstance(block, dict):
+            fail(f"{context}[{index}] must be an object")
+        block_id = block.get("id")
+        require_string(f"{context}[{index}].id", block_id)
+        if block_id in seen_ids:
+            fail(f"{context} repeats block id {block_id!r}")
+        seen_ids.add(block_id)
+        members = set(require_string_list(f"{context}[{index}].members", block.get("members")))
+        if not members:
+            fail(f"{context}[{index}].members must be non-empty")
+        if not members <= element_set:
+            fail(f"{context}[{index}].members contains values outside the carrier")
+        overlap = seen_members & members
+        if overlap:
+            fail(f"{context} blocks overlap on {sorted(overlap)}")
+        seen_members |= members
+        blocks.append((block_id, members))
+    if require_partition and seen_members != element_set:
+        fail(f"{context} blocks must cover every carrier element")
+    return blocks
+
+
+def equivalence_classes(elements: list[str], pairs: set[tuple[str, str]]) -> set[frozenset[str]]:
+    return {
+        frozenset(right for left, right in pairs if left == element)
+        for element in elements
+    }
+
+
+def induced_relation_from_blocks(blocks: list[tuple[str, set[str]]]) -> set[tuple[str, str]]:
+    return {
+        (left, right)
+        for _, members in blocks
+        for left in members
+        for right in members
+    }
+
+
+def block_set(blocks: list[tuple[str, set[str]]]) -> set[frozenset[str]]:
+    return {frozenset(members) for _, members in blocks}
+
+
+def validate_equivalence_classes(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    classes_check = checks["equivalence-relation-classes-witness"]
+    if classes_check["expected_result"] != "sat":
+        fail("equivalence-relation-classes-witness must expect sat")
+    values = single_witness_values(classes_check, witnesses)
+    elements, pairs = require_relation_data("equivalence relation", values)
+    if not is_reflexive(elements, pairs):
+        fail("equivalence-relation-classes-witness relation is not reflexive")
+    if not is_symmetric(pairs):
+        fail("equivalence-relation-classes-witness relation is not symmetric")
+    if not is_transitive(pairs):
+        fail("equivalence-relation-classes-witness relation is not transitive")
+    listed_classes = require_named_blocks(
+        "equivalence relation classes",
+        values.get("classes"),
+        elements,
+        require_partition=True,
+    )
+    if equivalence_classes(elements, pairs) != block_set(listed_classes):
+        fail("equivalence-relation-classes-witness classes do not match the relation")
+
+    quotient_check = checks["quotient-map-fiber-witness"]
+    if quotient_check["expected_result"] != "sat":
+        fail("quotient-map-fiber-witness must expect sat")
+    values = single_witness_values(quotient_check, witnesses)
+    domain, codomain, graph = require_function_graph_data("quotient map", values)
+    if not is_total_function(domain, graph):
+        fail("quotient-map-fiber-witness graph is not total")
+    if not is_single_valued(domain, graph):
+        fail("quotient-map-fiber-witness graph is not single-valued")
+    mapping = function_mapping(domain, graph)
+    relation_pairs = require_pair_set(
+        "quotient map relation_pairs",
+        values.get("relation_pairs"),
+        set(domain),
+        set(domain),
+    )
+    listed_fibers = require_named_blocks(
+        "quotient map fibers",
+        values.get("fibers"),
+        domain,
+        require_partition=True,
+    )
+    if {fiber_id for fiber_id, _ in listed_fibers} != set(codomain):
+        fail("quotient-map-fiber-witness fiber ids must match the codomain")
+    actual_fibers = {
+        label: {item for item, image in mapping.items() if image == label}
+        for label in codomain
+    }
+    if any(not members for members in actual_fibers.values()):
+        fail("quotient-map-fiber-witness quotient map must hit every class label")
+    if dict(listed_fibers) != actual_fibers:
+        fail("quotient-map-fiber-witness listed fibers are incorrect")
+    induced_relation = {
+        (left, right)
+        for left in domain
+        for right in domain
+        if mapping[left] == mapping[right]
+    }
+    if induced_relation != relation_pairs:
+        fail("quotient-map-fiber-witness relation does not match quotient equality")
+    if not is_reflexive(domain, relation_pairs) or not is_symmetric(relation_pairs) or not is_transitive(relation_pairs):
+        fail("quotient-map-fiber-witness relation_pairs must form an equivalence relation")
+
+    partition_check = checks["partition-relation-roundtrip"]
+    if partition_check["expected_result"] != "sat":
+        fail("partition-relation-roundtrip must expect sat")
+    values = single_witness_values(partition_check, witnesses)
+    elements = require_string_list("partition roundtrip elements", values.get("elements"))
+    blocks = require_named_blocks(
+        "partition roundtrip blocks",
+        values.get("blocks"),
+        elements,
+        require_partition=True,
+    )
+    pairs = require_pair_set(
+        "partition roundtrip pairs",
+        values.get("pairs"),
+        set(elements),
+        set(elements),
+    )
+    if induced_relation_from_blocks(blocks) != pairs:
+        fail("partition-relation-roundtrip pairs do not match the induced relation")
+    if not is_reflexive(elements, pairs) or not is_symmetric(pairs) or not is_transitive(pairs):
+        fail("partition-relation-roundtrip induced relation is not an equivalence relation")
+    representative_rows = values.get("representatives")
+    if not isinstance(representative_rows, list):
+        fail("partition roundtrip representatives must be a list")
+    block_by_id = dict(blocks)
+    seen_representatives: set[str] = set()
+    for index, row in enumerate(representative_rows):
+        if not isinstance(row, list) or len(row) != 2:
+            fail(f"partition roundtrip representatives[{index}] must be a two-element list")
+        block_id = row[0]
+        representative = row[1]
+        require_string(f"partition roundtrip representatives[{index}][0]", block_id)
+        require_string(f"partition roundtrip representatives[{index}][1]", representative)
+        if block_id in seen_representatives:
+            fail(f"partition roundtrip representatives repeats block {block_id!r}")
+        seen_representatives.add(block_id)
+        if block_id not in block_by_id:
+            fail(f"partition roundtrip representatives references missing block {block_id!r}")
+        if representative not in block_by_id[block_id]:
+            fail("partition-relation-roundtrip representative is outside its block")
+    if seen_representatives != set(block_by_id):
+        fail("partition-relation-roundtrip must list one representative per block")
+
+    bad_check = checks["bad-equivalence-rejected"]
+    if bad_check["expected_result"] != "unsat" or bad_check.get("proof_status") != "checked":
+        fail("bad-equivalence-rejected must be a checked unsat row")
+    data = bad_check.get("data", {})
+    elements, pairs = require_relation_data("bad equivalence relation", data)
+    if not is_reflexive(elements, pairs):
+        fail("bad-equivalence-rejected should document a reflexive relation")
+    if not is_symmetric(pairs):
+        fail("bad-equivalence-rejected should document a symmetric relation")
+    if is_transitive(pairs):
+        fail("bad-equivalence-rejected relation unexpectedly is transitive")
+    counterexample = require_string_list(
+        "bad equivalence transitivity_counterexample",
+        data.get("transitivity_counterexample"),
+    )
+    if len(counterexample) != 3:
+        fail("bad-equivalence-rejected transitivity_counterexample must have three elements")
+    left, middle, right = counterexample
+    missing_pair_value = data.get("missing_pair")
+    if not isinstance(missing_pair_value, list) or len(missing_pair_value) != 2:
+        fail("bad-equivalence-rejected missing_pair must be a two-element list")
+    require_string("bad equivalence missing_pair[0]", missing_pair_value[0])
+    require_string("bad equivalence missing_pair[1]", missing_pair_value[1])
+    missing_pair = (missing_pair_value[0], missing_pair_value[1])
+    if (left, middle) not in pairs or (middle, right) not in pairs:
+        fail("bad-equivalence-rejected transitivity premise is not present")
+    if missing_pair != (left, right):
+        fail("bad-equivalence-rejected missing_pair does not match the transitivity conclusion")
+    if missing_pair in pairs:
+        fail("bad-equivalence-rejected missing transitivity pair is present")
+
+    proof_gap = checks["qf-uf-congruence-proof-gap"]
+    if proof_gap["expected_result"] != "not-run":
+        fail("qf-uf-congruence-proof-gap must be not-run")
+    if proof_gap["proof_status"] != "proof-gap":
+        fail("qf-uf-congruence-proof-gap must remain proof-gap")
+    data = proof_gap.get("data", {})
+    require_string("qf-uf congruence target_artifact", data.get("target_artifact"))
+    require_string("qf-uf congruence future_checker", data.get("future_checker"))
 
 
 def require_graph_data(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]], list[str]]:
@@ -8271,6 +8482,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":
         validate_descriptive_statistics(expected)
+    if metadata["id"] == "equivalence-classes-v0":
+        validate_equivalence_classes(expected)
     if metadata["id"] == "exact-statistical-tests-v0":
         validate_exact_statistical_tests(expected)
     if metadata["id"] == "finite-cardinality-v0":

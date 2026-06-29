@@ -63,6 +63,12 @@ CURRICULUM_MAP = {
         "pack": "relations-functions-v0",
         "slice": "Finite relation properties, injective/surjective checks, and EUF slices.",
         "proof": "Finite replay plus EUF/Alethe route for equality-heavy examples.",
+        "extra_packs": [
+            (
+                "equivalence-classes-v0",
+                "Finite equivalence classes, quotient-map fibers, partition round trips, and explicit QF_UF/Alethe proof gaps.",
+            ),
+        ],
     },
     "cardinality": {
         "field_ids": ["set_theory_and_foundations", "discrete_math"],
@@ -277,6 +283,10 @@ def field_pack_specs(field_id: str) -> list[tuple[str, str]]:
     return value
 
 
+def curriculum_pack_specs(mapping: dict[str, Any]) -> list[tuple[str, str]]:
+    return [(mapping["pack"], mapping["slice"])] + mapping.get("extra_packs", [])
+
+
 def proof_route(name: str, status: str, checker: str, lean_status: str, notes: str) -> dict[str, Any]:
     return {
         "name": name,
@@ -293,6 +303,7 @@ def proof_route(name: str, status: str, checker: str, lean_status: str, notes: s
 
 def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
     mapping = CURRICULUM_MAP[node["id"]]
+    pack_specs = curriculum_pack_specs(mapping)
     row_id = curriculum_row_id(node["id"])
     decidability = concept_decidability(node["decidability"])
     lean_required = node["status"] == "lean-horizon" or decidability == "proof-horizon"
@@ -300,7 +311,7 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
     route_status = "lean-horizon" if lean_required else "planned"
     lean_status = "required" if lean_required else "planned"
     doc_path = curriculum_doc_path(node)
-    is_pack_validated = pack_status(mapping["pack"]) == "validated"
+    is_pack_validated = any(pack_status(pack_id) == "validated" for pack_id, _ in pack_specs)
     if is_pack_validated:
         gaps = [
             "Validated example pack exists; solver/proof integration still needs promotion where noted.",
@@ -335,7 +346,7 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
         "unlocks": [curriculum_row_id(item) for item in node["unlocks"] if item in node_by_id],
         "decidability": decidability,
         "axeyum_fragments": [node["axeyum_theory"]],
-        "example_packs": [pack(mapping["pack"], mapping["slice"])],
+        "example_packs": [pack(pack_id, pack_notes) for pack_id, pack_notes in pack_specs],
         "proof_routes": [
             proof_route(
                 mapping["proof"],
@@ -354,7 +365,12 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
         "graduation": {
             "status": "planned",
             "criteria": [
-                f"Create and validate artifacts/examples/math/{mapping['pack']}.",
+                (
+                    "Create and validate planned curriculum example packs, starting with "
+                    f"artifacts/examples/math/{mapping['pack']}."
+                    if len(pack_specs) > 1
+                    else f"Create and validate artifacts/examples/math/{mapping['pack']}."
+                ),
                 "Replay SAT witnesses against the original mathematical claim.",
                 "Name checked evidence for each UNSAT claim or keep the proof gap explicit.",
             ],

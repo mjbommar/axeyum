@@ -64,11 +64,12 @@ schemas, examples, and validation workflows.
   keeping the full induction schema under Lean horizon.
 - [`artifacts/examples/math/finite-sets-v0/`](../../artifacts/examples/math/finite-sets-v0/),
   [`artifacts/examples/math/relations-functions-v0/`](../../artifacts/examples/math/relations-functions-v0/),
+  [`artifacts/examples/math/equivalence-classes-v0/`](../../artifacts/examples/math/equivalence-classes-v0/),
   and [`artifacts/examples/math/finite-cardinality-v0/`](../../artifacts/examples/math/finite-cardinality-v0/)
   validate the finite foundations path: finite set identities, relation and
-  function tables, finite bijections, finite cardinal inequalities, bounded
-  injection/surjection refutations, and an explicit infinite-cardinality
-  Lean-horizon row.
+  function tables, equivalence classes, quotient-map fibers, finite bijections,
+  finite cardinal inequalities, bounded injection/surjection refutations, and
+  an explicit infinite-cardinality Lean-horizon row.
 - [`artifacts/examples/math/natural-arithmetic-v0/`](../../artifacts/examples/math/natural-arithmetic-v0/),
   [`artifacts/examples/math/integer-lia-v0/`](../../artifacts/examples/math/integer-lia-v0/),
   [`artifacts/examples/math/gcd-bezout-v0/`](../../artifacts/examples/math/gcd-bezout-v0/),
@@ -247,6 +248,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/lo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0

@@ -64,6 +64,7 @@ artifacts/examples/math/
   induction-obligations-v0/
   finite-sets-v0/
   relations-functions-v0/
+  equivalence-classes-v0/
   finite-cardinality-v0/
   natural-arithmetic-v0/
   integer-lia-v0/
@@ -359,6 +360,10 @@ CNF truth-table refutation for `PHP(3,2)`.
 [`induction-obligations-v0`](../../artifacts/examples/math/induction-obligations-v0/)
 validates bounded induction base, step, and conclusion obligations with the
 full induction schema kept as a Lean-horizon row.
+[`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/)
+validates finite equivalence relations, quotient-map fibers,
+partition-to-relation round trips, checked rejection of a non-transitive
+relation, and an explicit QF_UF/Alethe proof-object gap.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

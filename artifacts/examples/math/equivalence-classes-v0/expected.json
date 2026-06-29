@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "pack_id": "equivalence-classes-v0",
+  "witnesses": [
+    {
+      "id": "parity-equivalence",
+      "description": "The same-parity equivalence relation on the finite set {0, 1, 2, 3}.",
+      "values": {
+        "elements": ["0", "1", "2", "3"],
+        "pairs": [
+          ["0", "0"],
+          ["0", "2"],
+          ["1", "1"],
+          ["1", "3"],
+          ["2", "0"],
+          ["2", "2"],
+          ["3", "1"],
+          ["3", "3"]
+        ],
+        "classes": [
+          {"id": "even", "members": ["0", "2"]},
+          {"id": "odd", "members": ["1", "3"]}
+        ]
+      }
+    },
+    {
+      "id": "parity-quotient-map",
+      "description": "The quotient map from elements to their parity classes.",
+      "values": {
+        "domain": ["0", "1", "2", "3"],
+        "codomain": ["even", "odd"],
+        "pairs": [
+          ["0", "even"],
+          ["1", "odd"],
+          ["2", "even"],
+          ["3", "odd"]
+        ],
+        "relation_pairs": [
+          ["0", "0"],
+          ["0", "2"],
+          ["1", "1"],
+          ["1", "3"],
+          ["2", "0"],
+          ["2", "2"],
+          ["3", "1"],
+          ["3", "3"]
+        ],
+        "fibers": [
+          {"id": "even", "members": ["0", "2"]},
+          {"id": "odd", "members": ["1", "3"]}
+        ]
+      }
+    },
+    {
+      "id": "partition-blocks",
+      "description": "A finite partition and the equivalence relation induced by sharing a block.",
+      "values": {
+        "elements": ["a", "b", "c", "d", "e"],
+        "blocks": [
+          {"id": "left", "members": ["a", "b"]},
+          {"id": "middle", "members": ["c"]},
+          {"id": "right", "members": ["d", "e"]}
+        ],
+        "pairs": [
+          ["a", "a"],
+          ["a", "b"],
+          ["b", "a"],
+          ["b", "b"],
+          ["c", "c"],
+          ["d", "d"],
+          ["d", "e"],
+          ["e", "d"],
+          ["e", "e"]
+        ],
+        "representatives": [
+          ["left", "a"],
+          ["middle", "c"],
+          ["right", "d"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "equivalence-relation-classes-witness",
+      "claim": "The listed same-parity relation is an equivalence relation with the listed equivalence classes.",
+      "expected_result": "sat",
+      "validation": "finite_equivalence_relation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["parity-equivalence"],
+      "notes": "The validator checks reflexivity, symmetry, transitivity, and recomputes equivalence classes exactly."
+    },
+    {
+      "id": "quotient-map-fiber-witness",
+      "claim": "The listed quotient map sends each element to its equivalence class and has fibers equal to the listed classes.",
+      "expected_result": "sat",
+      "validation": "finite_quotient_map_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["parity-quotient-map"],
+      "notes": "The validator checks total single-valued function data, recomputes fibers, and checks x ~ y iff q(x) = q(y)."
+    },
+    {
+      "id": "partition-relation-roundtrip",
+      "claim": "The listed partition induces exactly the listed equivalence relation.",
+      "expected_result": "sat",
+      "validation": "finite_partition_relation_roundtrip",
+      "proof_status": "replay-only",
+      "witnesses": ["partition-blocks"],
+      "notes": "The validator checks the blocks form a partition, recomputes the induced relation, and validates the representatives."
+    },
+    {
+      "id": "bad-equivalence-rejected",
+      "claim": "The listed three-point relation is an equivalence relation.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_equivalence_refutation",
+      "proof_status": "checked",
+      "data": {
+        "elements": ["a", "b", "c"],
+        "pairs": [
+          ["a", "a"],
+          ["a", "b"],
+          ["b", "a"],
+          ["b", "b"],
+          ["b", "c"],
+          ["c", "b"],
+          ["c", "c"]
+        ],
+        "transitivity_counterexample": ["a", "b", "c"],
+        "missing_pair": ["a", "c"]
+      },
+      "notes": "The validator confirms reflexivity and symmetry hold, then rejects the relation because transitivity would require (a, c)."
+    },
+    {
+      "id": "qf-uf-congruence-proof-gap",
+      "claim": "A future QF_UF/Alethe artifact should certify quotient congruence conflicts instead of only replaying finite tables.",
+      "expected_result": "not-run",
+      "validation": "proof_gap_metadata",
+      "proof_status": "proof-gap",
+      "data": {
+        "target_artifact": "Alethe proof for a QF_UF congruence conflict induced by quotient-map equality",
+        "future_checker": "Carcara/Alethe route linked to Axeyum proof certificates"
+      },
+      "notes": "The finite rows are replayed today; proof-object coverage for equality-heavy quotient reasoning is intentionally explicit as a gap."
+    }
+  ]
+}
