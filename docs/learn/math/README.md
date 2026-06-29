@@ -200,6 +200,10 @@ validated pack data and the repo-root command that replays it.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology axioms, closure/interior, metric balls,
   sigma-algebra closure, finite additivity, and event-complement replay.
+- [Finite Compactness](finite-compactness-end-to-end.md): follows finite
+  open-cover replay, subcover replay, minimal-subcover enumeration,
+  finite-intersection-family replay, bad-cover rejection, and the compactness
+  Lean horizon.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked bad

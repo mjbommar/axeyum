@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-compactness end-to-end lesson landed.** Added
+  [`finite-compactness-end-to-end.md`](docs/learn/math/finite-compactness-end-to-end.md)
+  as the learner-facing trace for the finite-compactness pack: finite
+  open-cover replay, subcover replay, minimal-subcover enumeration,
+  finite-intersection-family replay, checked bad-cover rejection, and the
+  compactness Lean horizon. The lesson is linked from the math learning index
+  plus the finite-structures and analysis/topology paths.
+
 - **Metric-continuity end-to-end lesson landed.** Added
   [`metric-continuity-end-to-end.md`](docs/learn/math/metric-continuity-end-to-end.md)
   as the learner-facing trace for the metric-continuity pack: finite

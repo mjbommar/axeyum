@@ -106,6 +106,8 @@ additivity over disjoint measurable sets.
 For compactness, the checker recomputes the cover union, checks the listed
 subcover, enumerates smaller subfamilies for the minimal-size row, and rejects
 the bad cover `{a}, {b}` because it misses `c`.
+For a fuller focused trace, read
+[End To End: Finite Compactness](finite-compactness-end-to-end.md).
 
 For connectedness, the checker enumerates every subset, recomputes the clopen
 subsets, confirms the Sierpinski example has only trivial clopen subsets, and

@@ -329,6 +329,7 @@ replay, read
 [End To End: Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
+[End To End: Finite Compactness](finite-compactness-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
 ## Horizon
