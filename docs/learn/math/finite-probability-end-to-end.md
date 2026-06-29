@@ -1,8 +1,9 @@
-# End To End: Conditional Probability And Finite Expectation
+# End To End: Conditional Probability, Product Measures, And Finite Expectation
 
 This lesson follows finite probability resources from atom tables to replayed
-conditional probability and exact finite expectations. It uses the
-[finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/)
+conditional probability, exact product measures, and finite expectations. It
+uses the [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/),
+[finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 packs.
 
@@ -20,6 +21,10 @@ Concept rows:
 | `pmf-total-mass` | `sat` | replay-only |
 | `conditional-probability-witness` | `sat` | replay-only |
 | `bayes-posterior-witness` | `sat` | replay-only |
+| `product-measure-table-witness` | `sat` | replay-only |
+| `marginalization-witness` | `sat` | replay-only |
+| `finite-fubini-witness` | `sat` | replay-only |
+| `bad-product-measure-rejected` | `unsat` | checked |
 | `simple-function-integral-witness` | `sat` | replay-only |
 | `bad-expectation-rejected` | `unsat` | checked |
 
@@ -51,6 +56,14 @@ P(high) = 1/2
 f(low), f(mid), f(high) = 0, 2, 4
 ```
 
+The product-measure witness crosses a fair coin with a fair three-sided die:
+
+```text
+P(heads) = P(tails) = 1/2
+Q(one) = Q(two) = Q(three) = 1/3
+R(x,y) = P(x) * Q(y)
+```
+
 ## Replay
 
 The checker recomputes:
@@ -73,12 +86,31 @@ integral f dP = 0*(1/4) + 2*(1/4) + 4*(1/2) = 5/2
 It also checks an indicator integral, finite linearity, and rejects the false
 claim `integral f dP = 3`.
 
+For the product-measure row, the checker recomputes:
+
+```text
+R(heads, one) = (1/2) * (1/3) = 1/6
+R({heads} x {two, three}) = 1/3
+sum_y R(heads, y) = 1/2
+sum_x R(x, two) = 1/3
+```
+
+For the finite Fubini row, it checks the direct finite sum and both iterated
+sums over the same product table:
+
+```text
+sum_(x,y) f(x,y) R(x,y) = 3
+sum_x P(x) * sum_y f(x,y) Q(y) = 3
+sum_y Q(y) * sum_x f(x,y) P(x) = 3
+```
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 ```
 
@@ -92,5 +124,5 @@ validated 1 foundational example pack(s)
 
 The search side may propose a probability table or posterior. The trusted side
 only recomputes finite sums and exact rational divisions. Continuous
-probability, Lebesgue integration, convergence theorems, and statistical
-inference are outside this proof claim.
+probability, general product measures, Fubini/Tonelli, Lebesgue integration,
+convergence theorems, and statistical inference are outside this proof claim.

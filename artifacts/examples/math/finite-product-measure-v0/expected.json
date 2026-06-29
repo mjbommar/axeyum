@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-product-measure-v0",
+  "witnesses": [
+    {
+      "id": "coin-die-product-space",
+      "description": "A fair coin crossed with a fair three-sided die.",
+      "values": {
+        "left_atoms": [
+          {"id": "heads", "probability": "1/2"},
+          {"id": "tails", "probability": "1/2"}
+        ],
+        "right_atoms": [
+          {"id": "one", "probability": "1/3"},
+          {"id": "two", "probability": "1/3"},
+          {"id": "three", "probability": "1/3"}
+        ],
+        "product_atoms": [
+          {"left": "heads", "right": "one", "probability": "1/6"},
+          {"left": "heads", "right": "two", "probability": "1/6"},
+          {"left": "heads", "right": "three", "probability": "1/6"},
+          {"left": "tails", "right": "one", "probability": "1/6"},
+          {"left": "tails", "right": "two", "probability": "1/6"},
+          {"left": "tails", "right": "three", "probability": "1/6"}
+        ],
+        "left_event": ["heads"],
+        "right_event": ["two", "three"],
+        "rectangle_measure": "1/3",
+        "left_marginals": {
+          "heads": "1/2",
+          "tails": "1/2"
+        },
+        "right_marginals": {
+          "one": "1/3",
+          "two": "1/3",
+          "three": "1/3"
+        },
+        "function_values": [
+          {"left": "heads", "right": "one", "value": "1"},
+          {"left": "heads", "right": "two", "value": "2"},
+          {"left": "heads", "right": "three", "value": "3"},
+          {"left": "tails", "right": "one", "value": "2"},
+          {"left": "tails", "right": "two", "value": "4"},
+          {"left": "tails", "right": "three", "value": "6"}
+        ],
+        "direct_integral": "3",
+        "left_then_right_integral": "3",
+        "right_then_left_integral": "3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "product-measure-table-witness",
+      "claim": "The listed product table is the exact product measure of a fair coin and a fair three-sided die.",
+      "expected_result": "sat",
+      "validation": "finite_product_measure_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["coin-die-product-space"],
+      "notes": "The validator checks normalized factor distributions, every Cartesian-product probability, and the rectangle probability."
+    },
+    {
+      "id": "marginalization-witness",
+      "claim": "The product table marginals recover the original coin and die distributions.",
+      "expected_result": "sat",
+      "validation": "finite_product_marginal_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["coin-die-product-space"],
+      "notes": "The validator sums product probabilities along each axis and compares the exact marginals to the factor distributions."
+    },
+    {
+      "id": "finite-fubini-witness",
+      "claim": "The direct integral of the listed simple function over the product space equals both iterated finite sums.",
+      "expected_result": "sat",
+      "validation": "finite_fubini_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["coin-die-product-space"],
+      "notes": "The validator recomputes sum_(x,y), sum_x sum_y, and sum_y sum_x exactly over the finite product table."
+    },
+    {
+      "id": "bad-product-measure-rejected",
+      "claim": "The product probability of (heads, one) is 1/5.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_product_measure_refutation",
+      "proof_status": "checked",
+      "data": {
+        "left_atoms": [
+          {"id": "heads", "probability": "1/2"},
+          {"id": "tails", "probability": "1/2"}
+        ],
+        "right_atoms": [
+          {"id": "one", "probability": "1/3"},
+          {"id": "two", "probability": "1/3"},
+          {"id": "three", "probability": "1/3"}
+        ],
+        "failing_pair": {
+          "left": "heads",
+          "right": "one"
+        },
+        "claimed_probability": "1/5",
+        "actual_probability": "1/6"
+      },
+      "notes": "The validator rejects the claim because multiplying the factor probabilities gives 1/6, not 1/5."
+    },
+    {
+      "id": "fubini-tonelli-lean-horizon",
+      "claim": "General product-measure construction and Fubini/Tonelli require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "product measure construction, Fubini/Tonelli, kernels, and almost-everywhere equivalence for product integrals",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; general product-measure and Fubini/Tonelli theory remains a proof-assistant horizon."
+    }
+  ]
+}

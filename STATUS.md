@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite product-measure foundations pack landed.** Added
+  [`finite-product-measure-v0`](artifacts/examples/math/finite-product-measure-v0/README.md)
+  as the exact finite product-measure bridge between finite probability,
+  measure, integration, and statistics. The pack validates Cartesian-product
+  probability tables, rectangle probabilities, left/right marginals, finite
+  Fubini replay, checked rejection of a false product probability, and a
+  Fubini/Tonelli Lean-horizon row. The foundational example-pack validator now
+  checks finite product distributions, exact marginals, rectangle measures,
+  direct finite integrals, and both iterated finite sums.
+
 - **Finite integration foundations pack landed.** Added
   [`finite-integration-v0`](artifacts/examples/math/finite-integration-v0/README.md)
   as the exact finite simple-function bridge between finite measure,

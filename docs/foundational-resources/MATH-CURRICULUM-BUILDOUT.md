@@ -208,8 +208,8 @@ losing the curriculum anchor.
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, continuous maps, compactness, and connectedness finite checks. |
-| `measure_theory` | sets, rationals, probability | `finite-measure-v0` and `finite-integration-v0` over finite universes; Lebesgue theory remains horizon. |
-| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, exact discrete distributions. |
+| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, and `finite-product-measure-v0` over finite universes; Lebesgue theory remains horizon. |
+| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, LP feasibility, dual/Farkas certificates, threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
@@ -484,6 +484,10 @@ replay.
 `artifacts/examples/math/finite-integration-v0/` now validates exact finite
 simple-function integrals, indicator integrals, integral linearity, checked
 rejection of a false expectation, and a Lebesgue-integration Lean-horizon row.
+`artifacts/examples/math/finite-product-measure-v0/` now validates exact
+finite product-measure tables, rectangle probabilities, left and right
+marginals, finite Fubini replay, checked rejection of a false product
+probability, and a Fubini/Tonelli Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
@@ -553,6 +557,9 @@ Recommended order:
     preimages, homeomorphism replay, and bad-map rejection.
 21. `finite-integration-v0`: finite simple-function integrals, indicator
     integrals, exact linearity, and bad-expectation rejection.
+22. `finite-product-measure-v0`: finite product probability tables,
+    rectangle probabilities, marginals, finite Fubini replay, and bad
+    product-probability rejection.
 
 Exit criteria:
 
@@ -713,7 +720,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-21, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-22, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -742,7 +749,9 @@ bridge to the connectedness horizon. `finite-continuous-maps-v0` now adds the
 finite preimage/homeomorphism bridge connecting continuity to compactness and
 connectedness horizons. `finite-integration-v0` now adds the exact finite
 simple-function integral bridge between finite measure, probability, and
-statistics. Continue by adding the next
+statistics. `finite-product-measure-v0` now adds the exact finite product
+measure, marginalization, and Fubini bridge toward general measure/probability
+theory. Continue by adding the next
 curriculum-adjacent pack or by replacing finite enumeration routes with
 emitted, checked proof objects where appropriate.
 

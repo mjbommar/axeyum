@@ -5088,6 +5088,336 @@ def finite_event_measure(
     )
 
 
+def atom_probability_map(
+    atoms: list[tuple[str, Fraction, set[str]]],
+) -> dict[str, Fraction]:
+    return {
+        atom_id: probability
+        for atom_id, probability, _ in atoms
+    }
+
+
+def require_probability_value_map(
+    context: str,
+    value: Any,
+    atom_ids: list[str],
+) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    atom_set = set(atom_ids)
+    if set(value) != atom_set:
+        missing = sorted(atom_set - set(value))
+        extra = sorted(set(value) - atom_set)
+        fail(f"{context} must cover exactly atoms; missing={missing} extra={extra}")
+    return {
+        atom_id: require_probability(f"{context}.{atom_id}", value[atom_id])
+        for atom_id in atom_ids
+    }
+
+
+def require_product_distribution(
+    context: str,
+    value: Any,
+    left_ids: list[str],
+    right_ids: list[str],
+) -> dict[tuple[str, str], Fraction]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty product atom list")
+    left_set = set(left_ids)
+    right_set = set(right_ids)
+    distribution: dict[tuple[str, str], Fraction] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        left = item.get("left")
+        right = item.get("right")
+        require_string(f"{context}[{index}].left", left)
+        require_string(f"{context}[{index}].right", right)
+        if left not in left_set:
+            fail(f"{context}[{index}].left is not a left atom: {left!r}")
+        if right not in right_set:
+            fail(f"{context}[{index}].right is not a right atom: {right!r}")
+        pair = (left, right)
+        if pair in distribution:
+            fail(f"{context} repeats product atom {pair!r}")
+        distribution[pair] = require_probability(f"{context}[{index}].probability", item.get("probability"))
+    expected_pairs = {
+        (left, right)
+        for left in left_ids
+        for right in right_ids
+    }
+    if set(distribution) != expected_pairs:
+        missing = sorted(expected_pairs - set(distribution))
+        extra = sorted(set(distribution) - expected_pairs)
+        fail(f"{context} must cover the Cartesian product exactly; missing={missing} extra={extra}")
+    return distribution
+
+
+def require_product_value_table(
+    context: str,
+    value: Any,
+    left_ids: list[str],
+    right_ids: list[str],
+) -> dict[tuple[str, str], Fraction]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty product value list")
+    left_set = set(left_ids)
+    right_set = set(right_ids)
+    values: dict[tuple[str, str], Fraction] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        left = item.get("left")
+        right = item.get("right")
+        require_string(f"{context}[{index}].left", left)
+        require_string(f"{context}[{index}].right", right)
+        if left not in left_set:
+            fail(f"{context}[{index}].left is not a left atom: {left!r}")
+        if right not in right_set:
+            fail(f"{context}[{index}].right is not a right atom: {right!r}")
+        pair = (left, right)
+        if pair in values:
+            fail(f"{context} repeats product value {pair!r}")
+        values[pair] = require_fraction(f"{context}[{index}].value", item.get("value"))
+    expected_pairs = {
+        (left, right)
+        for left in left_ids
+        for right in right_ids
+    }
+    if set(values) != expected_pairs:
+        missing = sorted(expected_pairs - set(values))
+        extra = sorted(set(values) - expected_pairs)
+        fail(f"{context} must cover the Cartesian product exactly; missing={missing} extra={extra}")
+    return values
+
+
+def validate_product_probabilities(
+    context: str,
+    left_probabilities: dict[str, Fraction],
+    right_probabilities: dict[str, Fraction],
+    distribution: dict[tuple[str, str], Fraction],
+) -> None:
+    for (left, right), probability in distribution.items():
+        expected = left_probabilities[left] * right_probabilities[right]
+        if probability != expected:
+            fail(f"{context} product probability for {(left, right)!r} must be {expected}, got {probability}")
+    total = sum(distribution.values(), Fraction(0))
+    if total != 1:
+        fail(f"{context} product probabilities must sum to exactly 1")
+
+
+def finite_product_rectangle_measure(
+    distribution: dict[tuple[str, str], Fraction],
+    left_event: set[str],
+    right_event: set[str],
+) -> Fraction:
+    return sum(
+        (
+            probability
+            for (left, right), probability in distribution.items()
+            if left in left_event and right in right_event
+        ),
+        Fraction(0),
+    )
+
+
+def finite_product_left_marginals(
+    distribution: dict[tuple[str, str], Fraction],
+    left_ids: list[str],
+) -> dict[str, Fraction]:
+    return {
+        left: sum(
+            (
+                probability
+                for (candidate_left, _), probability in distribution.items()
+                if candidate_left == left
+            ),
+            Fraction(0),
+        )
+        for left in left_ids
+    }
+
+
+def finite_product_right_marginals(
+    distribution: dict[tuple[str, str], Fraction],
+    right_ids: list[str],
+) -> dict[str, Fraction]:
+    return {
+        right: sum(
+            (
+                probability
+                for (_, candidate_right), probability in distribution.items()
+                if candidate_right == right
+            ),
+            Fraction(0),
+        )
+        for right in right_ids
+    }
+
+
+def finite_product_integral(
+    distribution: dict[tuple[str, str], Fraction],
+    values: dict[tuple[str, str], Fraction],
+) -> Fraction:
+    return sum(
+        (probability * values[pair] for pair, probability in distribution.items()),
+        Fraction(0),
+    )
+
+
+def validate_finite_product_measure(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    product = checks["product-measure-table-witness"]
+    if product["expected_result"] != "sat":
+        fail("product-measure-table-witness must expect sat")
+    values = single_witness_values(product, witnesses)
+    left_atoms = require_probability_atoms("product measure left_atoms", values.get("left_atoms"), require_events=False)
+    right_atoms = require_probability_atoms("product measure right_atoms", values.get("right_atoms"), require_events=False)
+    require_normalized_atoms("product-measure-table-witness left_atoms", left_atoms)
+    require_normalized_atoms("product-measure-table-witness right_atoms", right_atoms)
+    left_ids = [atom_id for atom_id, _, _ in left_atoms]
+    right_ids = [atom_id for atom_id, _, _ in right_atoms]
+    left_probabilities = atom_probability_map(left_atoms)
+    right_probabilities = atom_probability_map(right_atoms)
+    distribution = require_product_distribution("product measure product_atoms", values.get("product_atoms"), left_ids, right_ids)
+    validate_product_probabilities(
+        "product-measure-table-witness",
+        left_probabilities,
+        right_probabilities,
+        distribution,
+    )
+    left_event = require_atom_subset("product measure left_event", values.get("left_event"), left_ids)
+    right_event = require_atom_subset("product measure right_event", values.get("right_event"), right_ids)
+    rectangle_measure = require_probability("product measure rectangle_measure", values.get("rectangle_measure"))
+    if finite_product_rectangle_measure(distribution, left_event, right_event) != rectangle_measure:
+        fail("product-measure-table-witness rectangle measure is incorrect")
+
+    marginal = checks["marginalization-witness"]
+    if marginal["expected_result"] != "sat":
+        fail("marginalization-witness must expect sat")
+    values = single_witness_values(marginal, witnesses)
+    left_atoms = require_probability_atoms("marginal left_atoms", values.get("left_atoms"), require_events=False)
+    right_atoms = require_probability_atoms("marginal right_atoms", values.get("right_atoms"), require_events=False)
+    require_normalized_atoms("marginalization-witness left_atoms", left_atoms)
+    require_normalized_atoms("marginalization-witness right_atoms", right_atoms)
+    left_ids = [atom_id for atom_id, _, _ in left_atoms]
+    right_ids = [atom_id for atom_id, _, _ in right_atoms]
+    left_probabilities = atom_probability_map(left_atoms)
+    right_probabilities = atom_probability_map(right_atoms)
+    distribution = require_product_distribution("marginal product_atoms", values.get("product_atoms"), left_ids, right_ids)
+    validate_product_probabilities("marginalization-witness", left_probabilities, right_probabilities, distribution)
+    expected_left_marginals = require_probability_value_map("marginal left_marginals", values.get("left_marginals"), left_ids)
+    expected_right_marginals = require_probability_value_map("marginal right_marginals", values.get("right_marginals"), right_ids)
+    if finite_product_left_marginals(distribution, left_ids) != expected_left_marginals:
+        fail("marginalization-witness left marginals are incorrect")
+    if finite_product_right_marginals(distribution, right_ids) != expected_right_marginals:
+        fail("marginalization-witness right marginals are incorrect")
+    if expected_left_marginals != left_probabilities:
+        fail("marginalization-witness left marginals do not recover the left distribution")
+    if expected_right_marginals != right_probabilities:
+        fail("marginalization-witness right marginals do not recover the right distribution")
+
+    fubini = checks["finite-fubini-witness"]
+    if fubini["expected_result"] != "sat":
+        fail("finite-fubini-witness must expect sat")
+    values = single_witness_values(fubini, witnesses)
+    left_atoms = require_probability_atoms("finite Fubini left_atoms", values.get("left_atoms"), require_events=False)
+    right_atoms = require_probability_atoms("finite Fubini right_atoms", values.get("right_atoms"), require_events=False)
+    require_normalized_atoms("finite-fubini-witness left_atoms", left_atoms)
+    require_normalized_atoms("finite-fubini-witness right_atoms", right_atoms)
+    left_ids = [atom_id for atom_id, _, _ in left_atoms]
+    right_ids = [atom_id for atom_id, _, _ in right_atoms]
+    left_probabilities = atom_probability_map(left_atoms)
+    right_probabilities = atom_probability_map(right_atoms)
+    distribution = require_product_distribution("finite Fubini product_atoms", values.get("product_atoms"), left_ids, right_ids)
+    validate_product_probabilities("finite-fubini-witness", left_probabilities, right_probabilities, distribution)
+    function_values = require_product_value_table("finite Fubini function_values", values.get("function_values"), left_ids, right_ids)
+    expected_direct_integral = require_fraction("finite Fubini direct_integral", values.get("direct_integral"))
+    expected_left_then_right = require_fraction(
+        "finite Fubini left_then_right_integral",
+        values.get("left_then_right_integral"),
+    )
+    expected_right_then_left = require_fraction(
+        "finite Fubini right_then_left_integral",
+        values.get("right_then_left_integral"),
+    )
+    direct_integral = finite_product_integral(distribution, function_values)
+    left_then_right = sum(
+        (
+            left_probabilities[left] * sum(
+                (
+                    right_probabilities[right] * function_values[(left, right)]
+                    for right in right_ids
+                ),
+                Fraction(0),
+            )
+            for left in left_ids
+        ),
+        Fraction(0),
+    )
+    right_then_left = sum(
+        (
+            right_probabilities[right] * sum(
+                (
+                    left_probabilities[left] * function_values[(left, right)]
+                    for left in left_ids
+                ),
+                Fraction(0),
+            )
+            for right in right_ids
+        ),
+        Fraction(0),
+    )
+    if direct_integral != expected_direct_integral:
+        fail("finite-fubini-witness direct integral is incorrect")
+    if left_then_right != expected_left_then_right:
+        fail("finite-fubini-witness left-then-right integral is incorrect")
+    if right_then_left != expected_right_then_left:
+        fail("finite-fubini-witness right-then-left integral is incorrect")
+    if direct_integral != left_then_right or direct_integral != right_then_left:
+        fail("finite-fubini-witness iterated sums do not match the direct integral")
+
+    bad = checks["bad-product-measure-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-product-measure-rejected must expect unsat")
+    data = bad.get("data", {})
+    left_atoms = require_probability_atoms("bad product left_atoms", data.get("left_atoms"), require_events=False)
+    right_atoms = require_probability_atoms("bad product right_atoms", data.get("right_atoms"), require_events=False)
+    require_normalized_atoms("bad-product-measure-rejected left_atoms", left_atoms)
+    require_normalized_atoms("bad-product-measure-rejected right_atoms", right_atoms)
+    left_probabilities = atom_probability_map(left_atoms)
+    right_probabilities = atom_probability_map(right_atoms)
+    failing_pair = data.get("failing_pair")
+    if not isinstance(failing_pair, dict):
+        fail("bad-product-measure-rejected failing_pair must be an object")
+    left = failing_pair.get("left")
+    right = failing_pair.get("right")
+    require_string("bad product failing_pair.left", left)
+    require_string("bad product failing_pair.right", right)
+    if left not in left_probabilities:
+        fail("bad-product-measure-rejected failing_pair.left is not a left atom")
+    if right not in right_probabilities:
+        fail("bad-product-measure-rejected failing_pair.right is not a right atom")
+    claimed = require_probability("bad product claimed_probability", data.get("claimed_probability"))
+    actual = require_probability("bad product actual_probability", data.get("actual_probability"))
+    computed = left_probabilities[left] * right_probabilities[right]
+    if computed != actual:
+        fail("bad-product-measure-rejected actual_probability is incorrect")
+    if claimed == actual:
+        fail("bad-product-measure-rejected must document a false product probability")
+
+    horizon = checks["fubini-tonelli-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("fubini-tonelli-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("fubini-tonelli-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("fubini Tonelli target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("fubini Tonelli future_checker", data.get("future_checker"))
+
+
 def validate_finite_integration(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -5852,6 +6182,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_integer_lia(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
+    if metadata["id"] == "finite-product-measure-v0":
+        validate_finite_product_measure(expected)
     if metadata["id"] == "finite-markov-chain-v0":
         validate_finite_markov_chain(expected)
     if metadata["id"] == "finite-operator-v0":

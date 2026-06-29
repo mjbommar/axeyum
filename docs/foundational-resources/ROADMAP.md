@@ -98,6 +98,7 @@ artifacts/examples/math/
   finite-continuous-maps-v0/
   finite-measure-v0/
   finite-integration-v0/
+  finite-product-measure-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
   complex-algebraic-v0/
@@ -425,6 +426,10 @@ event/complement measure replay.
 validates exact finite simple-function integrals, indicator integrals,
 integral linearity, checked rejection of a false expectation, and a
 Lebesgue-integration Lean-horizon row.
+[`finite-product-measure-v0`](../../artifacts/examples/math/finite-product-measure-v0/)
+validates exact finite product-measure tables, rectangle probabilities,
+left and right marginals, finite Fubini replay, checked rejection of a false
+product probability, and a Fubini/Tonelli Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.

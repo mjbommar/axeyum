@@ -176,6 +176,10 @@ schemas, examples, and validation workflows.
   validates exact finite simple-function integrals, indicator integrals,
   integral linearity, checked rejection of a false expectation, and a
   Lebesgue-integration Lean-horizon row.
+- [`artifacts/examples/math/finite-product-measure-v0/`](../../artifacts/examples/math/finite-product-measure-v0/)
+  validates exact finite product-measure tables, rectangle probabilities,
+  left and right marginals, finite Fubini replay, checked rejection of a false
+  product probability, and a Fubini/Tonelli Lean-horizon row.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
@@ -227,6 +231,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

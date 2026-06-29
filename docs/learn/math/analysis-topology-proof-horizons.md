@@ -22,6 +22,7 @@ Example packs:
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
+- [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
@@ -32,6 +33,7 @@ Example packs:
 The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, finite simple-function integrals, bounded sequence tails and prefixes,
+finite product-measure tables, rectangle probabilities, finite Fubini sums,
 finite epsilon-delta continuity checks, finite open-cover/subcover checks,
 finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
@@ -164,6 +166,19 @@ function. The `finite-integration-v0` validator recomputes weighted sums,
 indicator integrals, linearity, and a false expectation counterexample using
 exact rational arithmetic.
 
+For a finite product-measure shadow, encode two finite probability spaces and a
+Cartesian-product table:
+
+```text
+P(heads) = 1/2
+Q(one) = 1/3
+R(heads, one) = 1/6
+```
+
+The `finite-product-measure-v0` validator checks every product probability,
+rectangle measures, marginals, and equality of the direct finite integral with
+both iterated finite sums.
+
 Run the checks from the repository root:
 
 ```sh
@@ -176,6 +191,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
@@ -190,7 +206,8 @@ replay, read [End To End: Bounded Dynamics And Operators](analysis-dynamics-end-
 General epsilon-delta limits, differentiability from limits, mean value
 theorem, fundamental theorem of calculus, Cauchy completeness, monotone
 convergence, compactness, connectedness, Lebesgue measure, integration,
-convergence theorems, ODE existence and uniqueness, Banach/Hilbert space
+convergence theorems, product-measure construction, Fubini/Tonelli, ODE
+existence and uniqueness, Banach/Hilbert space
 theorems, compact operators, countably infinite Markov chains, mixing-time
 bounds, general Chebyshev spaces, and infinite-dimensional spectral theory
 remain Lean-horizon material.
