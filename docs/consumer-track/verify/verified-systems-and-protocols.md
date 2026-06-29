@@ -191,6 +191,18 @@ all traces in **8.3 ms** (and its use-after-revoke bug refuted in 9.3 ms), the
 whole protocol a ~12-line table. The toolkit re-derives the same verdicts as the
 hand-written `TransitionSystem` — ergonomics, not unsoundness.
 
+**Fuzzing + multi-peer also landed** (design:
+[`fuzzing-and-multi-peer.md`](fuzzing-and-multi-peer.md), in
+`tests/protocol_toolkit.rs`): a concrete-execution **fuzzing oracle**
+(`Fsm::reaches_bad`, independent of the symbolic encoding) cross-checks every
+verdict — 50k random traces never reach a bad state on a proven-safe machine
+(DISAGREE = 0, also validating the toolkit's bit-blasted encoding), and
+independently find every known bug — the *"verification **and** fuzzing"* pairing.
+And a **two-peer handshake** (client × server) encoded as a product FSM in one
+`BV8` state proves a joint-state property — *no half-open desync* — for all
+message interleavings, with no toolkit changes (Safe 29 ms; the desync bug
+Reachable 52 ms, caught by PDR + BMC + fuzz).
+
 The remaining rungs are **lifting the rung-4 certificate from DRAT to Lean**,
 **widening the Lean reconstructor** to lift coverage off 1/7, and an
 **array-aware** unbounded route for buffer/window protocols.
