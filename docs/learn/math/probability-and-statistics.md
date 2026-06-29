@@ -10,6 +10,7 @@ Concept rows:
 Example packs:
 
 - [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/)
+- [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
@@ -24,7 +25,9 @@ table margins, and a Simpson's paradox count-table witness. The d-separation
 pack adds a finite DAG bridge: it checks whether conditioning blocks or opens
 paths in small causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
-and rank probabilities.
+and rank probabilities. The Markov-chain pack checks exact stochastic matrices,
+finite-horizon distribution evolution, stationary distributions, and malformed
+transition rows.
 
 The trusted checker works over rational arithmetic and finite tables.
 
@@ -45,12 +48,14 @@ descriptive statistics, it recomputes the mean and population variance of
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
-matrix-valued atoms.
+matrix-valued atoms. For Markov chains, it applies exact row-vector transition
+multiplication and checks stationarity by `pi * P = pi`.
 
 Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0

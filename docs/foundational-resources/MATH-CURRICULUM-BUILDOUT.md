@@ -481,6 +481,10 @@ and checked rejection of a false residual bound.
 `artifacts/examples/math/random-matrix-finite-v0/` now validates exact finite
 random-matrix moment replay, expected Gram matrices, rank probabilities, and
 checked rejection of a false trace-square moment.
+`artifacts/examples/math/finite-markov-chain-v0/` now validates exact
+row-stochastic matrix replay, finite-horizon distribution evolution,
+stationary-distribution replay, and checked rejection of a malformed transition
+row.
 
 Recommended order:
 
@@ -504,6 +508,8 @@ Recommended order:
     and exact iterative-method error replay.
 12. `random-matrix-finite-v0`: finite matrix-valued probability tables,
     exact moments, Gram expectations, and rank distributions.
+13. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
+    distribution replay, stationary distributions, and bad transition rows.
 
 Exit criteria:
 
@@ -664,7 +670,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, and `logic-basics-v0`,
-Phase M4 items 4-12, and the Phase M5 learner-path scaffold plus first
+Phase M4 items 4-13, and the Phase M5 learner-path scaffold plus first
 encode/check walkthrough layer have landed for the math seed. End-to-end
 lessons now exist for graph coloring, graph reachability/traversal/matching,
 finite DAG d-separation, finite cut certificates, rational arithmetic, linear
@@ -676,9 +682,10 @@ generated pack-level proof-gap rows and a normal foundational-resource check
 hook. `numerical-linear-algebra-v0` now adds the first exact residual/error-bound
 numerical-analysis slice, and `random-matrix-finite-v0` adds the first exact
 finite random-matrix bridge across linear algebra, probability, statistics, and
-numerical analysis. Continue by adding the next curriculum-adjacent pack or by
-replacing finite enumeration routes with emitted, checked proof objects where
-appropriate.
+numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
+stochastic-process bridge across probability, linear algebra, statistics, and
+dynamics. Continue by adding the next curriculum-adjacent pack or by replacing
+finite enumeration routes with emitted, checked proof objects where appropriate.
 
 ## Operating Rules
 

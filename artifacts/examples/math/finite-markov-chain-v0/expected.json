@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-markov-chain-v0",
+  "witnesses": [
+    {
+      "id": "three-state-absorbing-chain",
+      "description": "A three-state Markov chain with an absorbing final state.",
+      "values": {
+        "states": ["start", "middle", "absorbed"],
+        "transition_matrix": [
+          ["1/2", "1/2", "0"],
+          ["0", "1/2", "1/2"],
+          ["0", "0", "1"]
+        ],
+        "row_sums": ["1", "1", "1"],
+        "initial": ["1", "0", "0"],
+        "one_step": ["1/2", "1/2", "0"],
+        "two_step": ["1/4", "1/2", "1/4"],
+        "absorbing_state_index": 2,
+        "absorption_probability_after_two": "1/4"
+      }
+    },
+    {
+      "id": "two-state-stationary-chain",
+      "description": "A two-state Markov chain with exact stationary distribution [1/3, 2/3].",
+      "values": {
+        "states": ["a", "b"],
+        "transition_matrix": [
+          ["1/2", "1/2"],
+          ["1/4", "3/4"]
+        ],
+        "stationary_distribution": ["1/3", "2/3"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "stochastic-matrix-witness",
+      "claim": "The listed three-state transition matrix is row-stochastic.",
+      "expected_result": "sat",
+      "validation": "exact_rational_stochastic_matrix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-state-absorbing-chain"],
+      "notes": "The validator checks nonnegative transition probabilities and exact row sums."
+    },
+    {
+      "id": "finite-horizon-distribution-replay",
+      "claim": "Starting from the first state, the listed one-step and two-step distributions are correct, with absorption probability 1/4 after two steps.",
+      "expected_result": "sat",
+      "validation": "exact_rational_markov_evolution_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-state-absorbing-chain"],
+      "notes": "The validator recomputes row-vector transition multiplication for two finite steps."
+    },
+    {
+      "id": "stationary-distribution-witness",
+      "claim": "The listed two-state distribution is stationary for the transition matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_stationary_distribution_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-state-stationary-chain"],
+      "notes": "The validator checks that the distribution is normalized and that pi * P = pi exactly."
+    },
+    {
+      "id": "bad-stochastic-row-rejected",
+      "claim": "A transition matrix with a row sum 2/3 is not row-stochastic.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_stochastic_matrix_refutation",
+      "proof_status": "checked",
+      "data": {
+        "transition_matrix": [
+          ["1/2", "1/2"],
+          ["1/3", "1/3"]
+        ],
+        "row_sums": ["1", "2/3"],
+        "bad_row_index": 1
+      },
+      "notes": "The validator recomputes the second row sum as 2/3, so the fixed matrix is rejected as a Markov transition matrix."
+    }
+  ]
+}

@@ -77,6 +77,7 @@ artifacts/examples/math/
   linear-algebra-rational-v0/
   numerical-linear-algebra-v0/
   random-matrix-finite-v0/
+  finite-markov-chain-v0/
   finite-groups-v0/
   finite-rings-v0/
   finite-fields-v0/
@@ -352,6 +353,9 @@ contraction replay, and checked rejection of a false residual bound.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.
+[`finite-markov-chain-v0`](../../artifacts/examples/math/finite-markov-chain-v0/)
+validates exact stochastic matrices, finite-horizon distribution evolution,
+stationary distributions, and checked rejection of a malformed transition row.
 [`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
 validates finite graph coloring witnesses, invalid-coloring replay, and an
 exhaustive two-colorability refutation for `K3`.
@@ -422,6 +426,8 @@ Exit criteria:
 Exit criteria:
 
 - Finite probability and Bayes-table packs validate.
+- Finite Markov-chain stochastic-matrix and finite-horizon evolution checks
+  validate exactly.
 - Descriptive-statistics invariants validate exactly.
 - The first finite random-matrix bridge validates exact matrix-valued
   probability tables without asymptotic or floating-point claims.

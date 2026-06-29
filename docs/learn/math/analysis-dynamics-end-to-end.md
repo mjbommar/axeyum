@@ -3,7 +3,9 @@
 This lesson follows bounded analysis-adjacent resources from data row to
 replayed result. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
-[finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/).
+[finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/),
+with the finite stochastic transition slice in
+[finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/).
 
 Concept rows:
 
@@ -18,6 +20,8 @@ Concept rows:
 |---|---|---|
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
+| `finite-horizon-distribution-replay` | `sat` | replay-only |
+| `stationary-distribution-witness` | `sat` | replay-only |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
 
@@ -73,12 +77,20 @@ T2 = -1/2
 T3 = -1
 ```
 
+For the Markov-chain row, it checks exact stochastic evolution:
+
+```text
+[1,0,0] * P = [1/2,1/2,0]
+[1/2,1/2,0] * P = [1/4,1/2,1/4]
+```
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 ```
 
@@ -93,4 +105,5 @@ validated 1 foundational example pack(s)
 The trusted checker handles finite traces, exact rational matrices, and finite
 recurrence lists. General limits, ODE existence and uniqueness, stability,
 compact operators, Banach/Hilbert-space theorems, and general Chebyshev spaces
-remain Lean-horizon material.
+remain Lean-horizon material. Infinite-state Markov chains and mixing-time
+theorems also remain proof-horizon material.

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "finite-markov-chain-v0",
+  "title": "Exact Finite Markov Chain Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_probability_theory",
+    "field_linear_algebra",
+    "field_differential_equations_and_dynamical_systems",
+    "field_statistics",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "probability_theory",
+    "linear_algebra",
+    "differential_equations_and_dynamical_systems",
+    "statistics"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "finite matrices",
+    "LRA (exact rationals)",
+    "QF_LRA"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
+  ],
+  "expected_results": [
+    "stochastic-matrix-witness",
+    "finite-horizon-distribution-replay",
+    "stationary-distribution-witness",
+    "bad-stochastic-row-rejected"
+  ],
+  "graduation_criteria": [
+    "Encode stochastic-matrix and finite-horizon distribution checks as deterministic QF_LRA obligations.",
+    "Replay transition matrices, distributions, and stationary witnesses through exact rational matrix evaluation.",
+    "Add finite hitting-time and absorbing-probability certificates before claiming broader stochastic-process coverage.",
+    "Keep countably infinite chains, convergence theorems, and mixing-time bounds under Lean/proof-horizon metadata."
+  ]
+}

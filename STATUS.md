@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Markov-chain foundations pack landed.** Added
+  [`finite-markov-chain-v0`](artifacts/examples/math/finite-markov-chain-v0/README.md)
+  as the first exact stochastic-process bridge across probability, linear
+  algebra, statistics, and dynamics. The pack validates row-stochastic
+  transition matrices, finite-horizon distribution replay, stationary
+  distribution replay, and checked rejection of a malformed transition row. The
+  foundational example-pack validator now checks exact rational stochastic
+  matrices, normalized distributions, row-vector transition multiplication,
+  fixed-horizon absorption probability, and stationarity.
+
 - **Finite random-matrix foundations pack landed.** Added
   [`random-matrix-finite-v0`](artifacts/examples/math/random-matrix-finite-v0/README.md)
   as the first exact random-matrix bridge across linear algebra, probability,

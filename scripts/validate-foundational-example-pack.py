@@ -4408,6 +4408,108 @@ def validate_random_matrix_finite(expected: dict[str, Any]) -> None:
         fail("bad-trace-moment-rejected claimed moment unexpectedly matches")
 
 
+def require_probability_vector(context: str, value: Any) -> list[Fraction]:
+    vector = require_fraction_vector(context, value)
+    for index, probability in enumerate(vector):
+        if probability < 0 or probability > 1:
+            fail(f"{context}[{index}] must be in [0, 1]")
+    return vector
+
+
+def require_normalized_probability_vector(context: str, value: Any) -> list[Fraction]:
+    vector = require_probability_vector(context, value)
+    total = sum(vector, Fraction(0))
+    if total != 1:
+        fail(f"{context} probabilities must sum to exactly 1")
+    return vector
+
+
+def require_stochastic_matrix(context: str, value: Any) -> list[list[Fraction]]:
+    matrix = require_fraction_matrix(context, value)
+    require_square_matrix(context, matrix)
+    for row_index, row in enumerate(matrix):
+        for col_index, probability in enumerate(row):
+            if probability < 0 or probability > 1:
+                fail(f"{context}[{row_index}][{col_index}] must be in [0, 1]")
+        if sum(row, Fraction(0)) != 1:
+            fail(f"{context}[{row_index}] probabilities must sum to exactly 1")
+    return matrix
+
+
+def row_vec_mat(vector: list[Fraction], matrix: list[list[Fraction]]) -> list[Fraction]:
+    if len(vector) != len(matrix):
+        fail("row-vector/matrix multiplication dimension mismatch")
+    width = len(matrix[0])
+    return [
+        sum((vector[row_index] * matrix[row_index][col_index] for row_index in range(len(vector))), Fraction(0))
+        for col_index in range(width)
+    ]
+
+
+def stochastic_row_sums(matrix: list[list[Fraction]]) -> list[Fraction]:
+    return [sum(row, Fraction(0)) for row in matrix]
+
+
+def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    stochastic = checks["stochastic-matrix-witness"]
+    if stochastic["expected_result"] != "sat":
+        fail("stochastic-matrix-witness must expect sat")
+    values = single_witness_values(stochastic, witnesses)
+    matrix = require_stochastic_matrix("stochastic transition matrix", values.get("transition_matrix"))
+    row_sums = require_fraction_vector("stochastic row_sums", values.get("row_sums"))
+    if stochastic_row_sums(matrix) != row_sums:
+        fail("stochastic-matrix-witness row_sums do not match transition matrix")
+
+    evolution = checks["finite-horizon-distribution-replay"]
+    if evolution["expected_result"] != "sat":
+        fail("finite-horizon-distribution-replay must expect sat")
+    values = single_witness_values(evolution, witnesses)
+    matrix = require_stochastic_matrix("finite horizon transition matrix", values.get("transition_matrix"))
+    initial = require_normalized_probability_vector("finite horizon initial", values.get("initial"))
+    one_step = require_normalized_probability_vector("finite horizon one_step", values.get("one_step"))
+    two_step = require_normalized_probability_vector("finite horizon two_step", values.get("two_step"))
+    absorbing_index = require_nonnegative_int("finite horizon absorbing_state_index", values.get("absorbing_state_index"))
+    absorption_probability = require_probability(
+        "finite horizon absorption_probability_after_two",
+        values.get("absorption_probability_after_two"),
+    )
+    if absorbing_index >= len(two_step):
+        fail("finite horizon absorbing_state_index is outside the state vector")
+    if row_vec_mat(initial, matrix) != one_step:
+        fail("finite-horizon-distribution-replay one_step is incorrect")
+    if row_vec_mat(one_step, matrix) != two_step:
+        fail("finite-horizon-distribution-replay two_step is incorrect")
+    if two_step[absorbing_index] != absorption_probability:
+        fail("finite-horizon-distribution-replay absorption probability is incorrect")
+
+    stationary = checks["stationary-distribution-witness"]
+    if stationary["expected_result"] != "sat":
+        fail("stationary-distribution-witness must expect sat")
+    values = single_witness_values(stationary, witnesses)
+    matrix = require_stochastic_matrix("stationary transition matrix", values.get("transition_matrix"))
+    distribution = require_normalized_probability_vector("stationary distribution", values.get("stationary_distribution"))
+    if row_vec_mat(distribution, matrix) != distribution:
+        fail("stationary-distribution-witness distribution is not stationary")
+
+    bad_row = checks["bad-stochastic-row-rejected"]
+    if bad_row["expected_result"] != "unsat":
+        fail("bad-stochastic-row-rejected must expect unsat")
+    data = bad_row.get("data", {})
+    matrix = require_fraction_matrix("bad stochastic transition matrix", data.get("transition_matrix"))
+    require_square_matrix("bad stochastic transition matrix", matrix)
+    row_sums = require_fraction_vector("bad stochastic row_sums", data.get("row_sums"))
+    bad_row_index = require_nonnegative_int("bad stochastic bad_row_index", data.get("bad_row_index"))
+    if bad_row_index >= len(matrix):
+        fail("bad-stochastic-row-rejected bad_row_index is outside the matrix")
+    if stochastic_row_sums(matrix) != row_sums:
+        fail("bad-stochastic-row-rejected row_sums do not match matrix")
+    if row_sums[bad_row_index] == 1:
+        fail("bad-stochastic-row-rejected bad row unexpectedly sums to 1")
+
+
 def require_nonnegative_int(context: str, value: Any) -> int:
     integer = require_int(context, value)
     if integer < 0:
@@ -4625,6 +4727,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_integer_lia(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
+    if metadata["id"] == "finite-markov-chain-v0":
+        validate_finite_markov_chain(expected)
     if metadata["id"] == "finite-operator-v0":
         validate_finite_operator(expected)
     if metadata["id"] == "finite-rings-v0":
