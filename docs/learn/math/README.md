@@ -21,7 +21,7 @@ Source maps:
 | [Number Systems And Arithmetic](number-systems-and-arithmetic.md) | `curriculum_modular_arithmetic`, `curriculum_rationals`, `curriculum_complex` | `modular-arithmetic-v0`, `rationals-lra-v0`, `complex-algebraic-v0` |
 | [Algebra And Number Theory](algebra-and-number-theory.md) | `field_abstract_algebra`, `field_number_theory` | `modular-arithmetic-v0`, `finite-fields-v0`, `polynomial-identities-v0` |
 | [Rational And Real Algebra](rational-real-algebra.md) | `field_real_analysis`, `curriculum_reals` | `rationals-lra-v0`, `polynomial-identities-v0`, `linear-optimization-v0` |
-| [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) | `field_graph_theory`, `field_discrete_math` | `graph-coloring-v0`, `proof-methods-refutation-v0` |
+| [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) | `field_graph_theory`, `field_discrete_math` | `counting-v0`, `graph-coloring-v0`, `proof-methods-refutation-v0` |
 | [Linear Algebra And Optimization](linear-algebra-and-optimization.md) | `curriculum_linear_algebra`, `field_optimization_and_convexity` | `linear-algebra-rational-v0`, `linear-optimization-v0`, `finite-operator-v0` |
 | [Probability And Statistics](probability-and-statistics.md) | `field_probability_theory`, `field_statistics` | `finite-probability-v0`, `descriptive-statistics-v0`, `finite-measure-v0` |
 | [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `finite-topology-v0`, `bounded-dynamics-v0`, `finite-operator-v0` |

@@ -10,14 +10,17 @@ Concept rows:
 
 Example packs:
 
+- [counting-v0](../../../artifacts/examples/math/counting-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
 ## What Axeyum Checks
 
-The graph path starts with finite coloring. A coloring witness is replayed
-against every edge, an invalid coloring is rejected, and a tiny `K3`
-two-colorability refutation is checked by exhaustive finite search.
+The discrete path starts with finite counting and graph coloring. The counting
+pack checks fixed permutation and binomial counts, then exhaustively rejects an
+injection from three pigeons into two holes. The graph coloring pack replays a
+coloring witness against every edge, rejects an invalid coloring, and checks a
+tiny `K3` two-colorability refutation by exhaustive finite search.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
@@ -25,7 +28,18 @@ candidate assignment.
 
 ## Encode / Check Walkthrough
 
-Encode a finite graph by listing vertices, undirected edges, allowed colors, and
+For counting, encode fixed integers:
+
+```text
+n = 6
+k = 3
+C(6,3) = C(5,2) + C(5,3)
+20 = 10 + 10
+```
+
+For pigeonhole, the validator enumerates every placement of three pigeons into
+two holes and confirms every placement has a collision. For graph coloring,
+encode a finite graph by listing vertices, undirected edges, allowed colors, and
 one assignment:
 
 ```text
@@ -43,6 +57,7 @@ finite assignment space.
 Run the check from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```
 
@@ -51,7 +66,9 @@ For a fuller trace from data row to replay result and evidence status, read
 
 ## Horizon
 
-Reachability, matching, cuts, traversal traces, and d-separation need dedicated
-pack schemas. Extremal graph theory, graph minors, asymptotic graph families,
-and runtime-pathology proofs need theorem-proving support beyond the current
-finite examples.
+The current pigeonhole refutation is checked by finite enumeration; deterministic
+CNF plus LRAT/DRAT remains the stronger certificate route. Reachability,
+matching, cuts, traversal traces, and d-separation need dedicated pack schemas.
+Extremal graph theory, graph minors, asymptotic graph families, and
+runtime-pathology proofs need theorem-proving support beyond the current finite
+examples.

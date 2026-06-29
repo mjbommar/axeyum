@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "counting-v0",
+  "title": "Finite Counting And Pigeonhole Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_counting",
+    "field_discrete_math",
+    "field_probability_theory"
+  ],
+  "field_ids": [
+    "discrete_math",
+    "probability_theory"
+  ],
+  "curriculum_nodes": [
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite counting",
+    "LIA / enumeration",
+    "Bool / SAT",
+    "CNF"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/counting.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md"
+  ],
+  "expected_results": [
+    "permutation-count-fixed",
+    "pascal-identity-fixed",
+    "pigeonhole-3-2-unsat"
+  ],
+  "graduation_criteria": [
+    "Encode fixed counting identities as deterministic LIA/enumeration checks.",
+    "Replay finite combinatorial witnesses through Axeyum model evaluation.",
+    "Emit deterministic CNF and checked LRAT/DRAT evidence for pigeonhole refutations.",
+    "Keep general combinatorial identities, generating functions, and asymptotics marked Lean-horizon."
+  ]
+}

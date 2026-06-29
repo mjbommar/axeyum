@@ -581,6 +581,85 @@ def validate_finite_fields(expected: dict[str, Any]) -> None:
         fail(f"element {element} unexpectedly has an inverse modulo {modulus}")
 
 
+def require_counting_int(context: str, value: Any) -> int:
+    item = require_int(context, value)
+    if item < 0:
+        fail(f"{context} must be nonnegative")
+    return item
+
+
+def factorial(value: int) -> int:
+    result = 1
+    for item in range(2, value + 1):
+        result *= item
+    return result
+
+
+def permutation_count(n_value: int, k_value: int) -> int:
+    if k_value > n_value:
+        return 0
+    return factorial(n_value) // factorial(n_value - k_value)
+
+
+def combination_count(n_value: int, k_value: int) -> int:
+    if k_value > n_value:
+        return 0
+    return factorial(n_value) // (factorial(k_value) * factorial(n_value - k_value))
+
+
+def has_injective_placement(pigeons: int, holes: int) -> bool:
+    for placement in product(range(holes), repeat=pigeons):
+        if len(set(placement)) == pigeons:
+            return True
+    return False
+
+
+def validate_counting(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    permutation = checks["permutation-count-fixed"]
+    if permutation["expected_result"] != "sat":
+        fail("permutation-count-fixed must expect sat")
+    values = single_witness_values(permutation, witnesses)
+    n_value = require_counting_int("permutation n", values.get("n"))
+    k_value = require_counting_int("permutation k", values.get("k"))
+    expected_count = require_counting_int("permutation expected", values.get("expected"))
+    if permutation_count(n_value, k_value) != expected_count:
+        fail("permutation-count-fixed expected count does not match P(n,k)")
+
+    pascal = checks["pascal-identity-fixed"]
+    if pascal["expected_result"] != "sat":
+        fail("pascal-identity-fixed must expect sat")
+    values = single_witness_values(pascal, witnesses)
+    n_value = require_counting_int("pascal n", values.get("n"))
+    k_value = require_counting_int("pascal k", values.get("k"))
+    left = require_counting_int("pascal left", values.get("left"))
+    lower_left = require_counting_int("pascal lower_left", values.get("lower_left"))
+    lower_right = require_counting_int("pascal lower_right", values.get("lower_right"))
+    if n_value <= 0 or k_value <= 0 or k_value > n_value:
+        fail("pascal identity requires 0 < k <= n")
+    if combination_count(n_value, k_value) != left:
+        fail("pascal left does not match C(n,k)")
+    if combination_count(n_value - 1, k_value - 1) != lower_left:
+        fail("pascal lower_left does not match C(n-1,k-1)")
+    if combination_count(n_value - 1, k_value) != lower_right:
+        fail("pascal lower_right does not match C(n-1,k)")
+    if left != lower_left + lower_right:
+        fail("pascal identity row does not satisfy left = lower_left + lower_right")
+
+    pigeonhole = checks["pigeonhole-3-2-unsat"]
+    if pigeonhole["expected_result"] != "unsat":
+        fail("pigeonhole-3-2-unsat must expect unsat")
+    data = pigeonhole.get("data", {})
+    pigeons = require_counting_int("pigeonhole pigeons", data.get("pigeons"))
+    holes = require_counting_int("pigeonhole holes", data.get("holes"))
+    if pigeons <= holes:
+        fail("pigeonhole unsat row must use more pigeons than holes")
+    if has_injective_placement(pigeons, holes):
+        fail("pigeonhole check unexpectedly found an injective placement")
+
+
 def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -1856,6 +1935,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_bounded_dynamics(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
+    if metadata["id"] == "counting-v0":
+        validate_counting(expected)
     if metadata["id"] == "coordinate-geometry-v0":
         validate_coordinate_geometry(expected)
     if metadata["id"] == "descriptive-statistics-v0":

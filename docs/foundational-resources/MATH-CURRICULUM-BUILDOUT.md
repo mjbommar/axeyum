@@ -273,6 +273,8 @@ the first finite-field core curriculum pack lives under
 `artifacts/examples/math/finite-fields-v0/`;
 the first fixed-degree polynomial core curriculum pack lives under
 `artifacts/examples/math/polynomial-identities-v0/`;
+the first finite-counting core curriculum pack lives under
+`artifacts/examples/math/counting-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
@@ -309,9 +311,11 @@ a checked rejection of a multi-valued graph. `finite-fields-v0` now validates
 prime-field inverse replay, exhaustive distributivity over a fixed prime field,
 and a checked composite-modulus non-field contrast. `polynomial-identities-v0`
 now validates exact coefficient identity replay, a factor-theorem root witness,
-and a checked false rational-root rejection. Continue with `counting-v0` as the
-next new core pack, or close the remaining `proof-methods-refutation-v0`
-CNF/LRAT proof gap.
+and a checked false rational-root rejection. `counting-v0` now validates fixed
+permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
+refutation. The recommended Phase M3 pack list has landed; continue by closing
+the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding the
+next core-structure packs (`finite-groups-v0` / `finite-rings-v0`).
 
 Recommended order:
 
@@ -327,7 +331,7 @@ Recommended order:
    system with Farkas evidence where available.
 7. `polynomial-identities-v0` (landed): factor theorem and fixed-degree
    identities.
-8. `counting-v0`: combinations, pigeonhole, finite counting witnesses.
+8. `counting-v0` (landed): combinations, pigeonhole, finite counting witnesses.
 
 Exit criteria:
 
@@ -533,16 +537,17 @@ Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
 Progress: items 1-10, Phase M3 `finite-sets-v0`,
-`relations-functions-v0`, `finite-fields-v0`, and
-`polynomial-identities-v0`, Phase M4 items 4-10, and the Phase M5 learner-path
-scaffold plus first encode/check walkthrough layer have landed for the math
-seed. End-to-end lessons now exist for graph coloring, rational arithmetic,
-linear algebra/optimization, probability/statistics, finite structures, and
-analysis/topology horizons. Phase M6 now has cookbook links from all current
-non-template math example packs. Phase M7 now has generated pack-level proof-gap
-rows and a normal foundational-resource check hook. Continue by adding
-`counting-v0` as the next core curriculum pack, or by closing the remaining
-`proof-methods-refutation-v0` CNF/LRAT proof gap.
+`relations-functions-v0`, `finite-fields-v0`,
+`polynomial-identities-v0`, and `counting-v0`, Phase M4 items 4-10, and the
+Phase M5 learner-path scaffold plus first encode/check walkthrough layer have
+landed for the math seed. End-to-end lessons now exist for graph coloring,
+rational arithmetic, linear algebra/optimization, probability/statistics, finite
+structures, and analysis/topology horizons. Phase M6 now has cookbook links from
+all current non-template math example packs. Phase M7 now has generated
+pack-level proof-gap rows and a normal foundational-resource check hook.
+Continue by closing the remaining `proof-methods-refutation-v0` CNF/LRAT proof
+gap or by adding the next algebraic core-structure packs
+(`finite-groups-v0` / `finite-rings-v0`).
 
 ## Operating Rules
 

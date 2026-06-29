@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "pack_id": "counting-v0",
+  "witnesses": [
+    {
+      "id": "permutation-5-3",
+      "description": "A fixed permutation count for arranging three choices from five items.",
+      "values": {
+        "n": 5,
+        "k": 3,
+        "expected": 60
+      }
+    },
+    {
+      "id": "pascal-6-3",
+      "description": "Pascal's identity checked at n = 6, k = 3.",
+      "values": {
+        "n": 6,
+        "k": 3,
+        "left": 20,
+        "lower_left": 10,
+        "lower_right": 10
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "permutation-count-fixed",
+      "claim": "The number of length-3 arrangements from 5 distinct items is 60.",
+      "expected_result": "sat",
+      "validation": "finite_counting_replay",
+      "proof_status": "checked",
+      "witnesses": ["permutation-5-3"],
+      "notes": "The validator recomputes P(5, 3) = 5! / 2! exactly."
+    },
+    {
+      "id": "pascal-identity-fixed",
+      "claim": "Pascal's identity holds at n = 6 and k = 3.",
+      "expected_result": "sat",
+      "validation": "finite_counting_replay",
+      "proof_status": "checked",
+      "witnesses": ["pascal-6-3"],
+      "notes": "The validator recomputes C(6,3), C(5,2), and C(5,3) exactly."
+    },
+    {
+      "id": "pigeonhole-3-2-unsat",
+      "claim": "There exists an injective placement of 3 pigeons into 2 holes.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_finite_pigeonhole",
+      "proof_status": "checked",
+      "data": {
+        "pigeons": 3,
+        "holes": 2
+      },
+      "notes": "The validator enumerates all eight placements and confirms none is injective."
+    }
+  ]
+}

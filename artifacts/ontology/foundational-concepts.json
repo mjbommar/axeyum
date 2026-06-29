@@ -1295,7 +1295,7 @@
       "example_packs": [
         {
           "id": "counting-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/counting-v0",
           "notes": "Permutations, combinations, and pigeonhole finite instances."
         }
@@ -1319,8 +1319,8 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Dedicated foundational example pack is not yet validated.",
-        "Generated dashboards keep this pack planned until a validating example pack lands.",
+        "Validated example pack exists; solver/proof integration still needs promotion where noted.",
+        "Generated dashboards now report pack status and replay/proof rows; keep lessons linked to the validated pack.",
         "Existing curriculum family Counting still needs migration into example-pack metadata."
       ],
       "graduation": {
@@ -1750,7 +1750,7 @@
       "example_packs": [
         {
           "id": "counting-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/counting-v0",
           "notes": "Finite counting and combinatorial witness checks."
         }
@@ -1773,8 +1773,8 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
-        "Generated dashboards keep this field at seeded/planned coverage until its first pack lands."
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",

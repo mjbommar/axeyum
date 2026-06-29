@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Counting core curriculum pack landed.** Added
+  [`counting-v0`](artifacts/examples/math/counting-v0/README.md) with fixed
+  permutation count replay, Pascal/binomial identity replay, and an exhaustive
+  checked `3 -> 2` pigeonhole refutation. The foundational example-pack
+  validator now computes factorial/permutation/combination counts and enumerates
+  finite pigeonhole placements; generated dashboards mark `counting-v0` as
+  validated. The recommended Phase M3 pack list has landed; continue by closing
+  the remaining `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `finite-groups-v0` / `finite-rings-v0`.
+
 - **Polynomial identities core curriculum pack landed.** Added
   [`polynomial-identities-v0`](artifacts/examples/math/polynomial-identities-v0/README.md)
   with exact coefficient replay for `(x + 1)^2`, a factor-theorem witness for
