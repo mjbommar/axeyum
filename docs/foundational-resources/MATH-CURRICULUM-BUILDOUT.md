@@ -411,8 +411,9 @@ general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tab
 zero-divisor replay, and a checked non-distributive table.
 `finite-algebra-homomorphisms-v0` now extends the algebra core with finite
 group-homomorphism replay, kernel/image recomputation, quotient and induced-map
-checks, ring-homomorphism replay, checked bad-homomorphism rejection, and a
-general isomorphism-theorem Lean-horizon row. `finite-vector-spaces-v0` now
+checks, ring-homomorphism replay, a QF_UF/Alethe homomorphism-preservation row,
+checked bad-homomorphism rejection, and a general isomorphism-theorem
+Lean-horizon row. `finite-vector-spaces-v0` now
 bridges finite fields into linear algebra with `F2^2` vector-space table
 replay, subspace/span checks, linear-map kernel/image replay, rank-nullity
 replay, checked non-subspace rejection, and a general vector-space/module
@@ -522,8 +523,9 @@ Recommended order:
    (landed), and
    `finite-tensor-products-v0` (landed): prime-field axioms,
    composite-modulus counterexample, finite homomorphism tables, kernel/image
-   replay, quotient maps, quotient rings, induced-map checks, finite monoids,
-   unit/idempotent replay, finite permutation groups, cycle/sign replay,
+   replay, quotient maps, quotient rings, induced-map checks, QF_UF/Alethe
+   homomorphism-preservation proof rows, finite monoids, unit/idempotent replay,
+   finite permutation groups, cycle/sign replay,
    finite group actions, orbit/stabilizer replay, Burnside counting, finite
    vector spaces over `F2`, finite dual spaces and
    covectors, finite modules over `Z/4Z`, bilinear maps, and tensor product
@@ -1174,8 +1176,9 @@ bridge: explicit Euler replay, polynomial-solution error replay, finite
 invariant checks, checked rejection of a bad Euler step, and an ODE-theory
 Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the next exact
 finite algebra bridge after group/ring tables: homomorphism preservation,
-kernel/image replay, quotient/induced-map replay, checked bad-homomorphism
-rejection, and an isomorphism-theorem Lean-horizon row.
+kernel/image replay, quotient/induced-map replay, QF_UF/Alethe preservation
+congruence, checked bad-homomorphism rejection, and an isomorphism-theorem
+Lean-horizon row.
 `finite-vector-spaces-v0` now adds the exact finite linear-algebra bridge over
 `F2`: vector-space laws, subspace/span replay, linear-map kernel/image replay,
 rank-nullity by finite cardinality, checked non-subspace rejection, and a

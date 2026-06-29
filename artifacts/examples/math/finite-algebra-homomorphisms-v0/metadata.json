@@ -44,13 +44,14 @@
     "kernel-image-replay",
     "quotient-first-isomorphism-replay",
     "z4-to-z2-ring-homomorphism",
+    "qf-uf-homomorphism-preservation-alethe",
     "bad-group-homomorphism-rejected",
     "general-isomorphism-theorems-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite homomorphism tables as deterministic finite-function and equality obligations.",
     "Replay kernel, image, quotient, and induced-map witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted EUF/Alethe or finite-table certificates for bad-homomorphism and quotient rows once proof routes are promoted.",
+    "Keep adding emitted EUF/Alethe or finite-table certificates for quotient and bad-homomorphism rows once those concrete encodings are promoted.",
     "Keep general isomorphism theorems, module homomorphisms, categorical universal properties, and infinite algebra under Lean horizon until formal routes exist."
   ]
 }

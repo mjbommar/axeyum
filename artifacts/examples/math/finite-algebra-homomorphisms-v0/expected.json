@@ -160,6 +160,19 @@
       "notes": "The validator checks every pair for both addition and multiplication, plus zero and one preservation."
     },
     {
+      "id": "qf-uf-homomorphism-preservation-alethe",
+      "claim": "A homomorphism-preservation equality is stable under congruent source elements.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "smt2_artifact": "artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/homomorphism-preservation-congruence-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_algebra_homomorphism_preservation_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
+      },
+      "notes": "The SMT-LIB artifact asserts a homomorphism-preservation equality at one source pair, equates a congruent second pair, and refutes preservation for that second pair. Axeyum emits a pure EUF Alethe refutation for the congruence/transitivity conflict."
+    },
+    {
       "id": "bad-group-homomorphism-rejected",
       "claim": "The listed map from Z/4Z to Z/2Z is a group homomorphism.",
       "expected_result": "unsat",

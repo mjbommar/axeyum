@@ -88,6 +88,13 @@ and the curriculum-to-resource buildout plan in
 the forward execution plan for turning validated packs into learner paths,
 proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
+Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
+upgrade wave now includes equivalence classes, relations/functions, finite
+groups, function composition, and finite algebra homomorphisms. Continue the
+math-resource proof upgrades from
+[`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
+preferably the next QF_LIA/Diophantine or secondary equality-heavy pack that can
+carry a small checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

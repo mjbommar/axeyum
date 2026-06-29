@@ -20,6 +20,9 @@ const FINITE_GROUPS_OPERATION_CONGRUENCE: &str = include_str!(
 const FUNCTION_COMPOSITION_APPLICATION_CONFLICT: &str = include_str!(
     "../../../artifacts/examples/math/function-composition-v0/smt2/composition-application-conflict.smt2"
 );
+const FINITE_ALGEBRA_HOMOMORPHISM_PRESERVATION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/homomorphism-preservation-congruence-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -50,6 +53,14 @@ fn function_composition_application_conflict_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "function-composition-v0 composition application conflict",
         FUNCTION_COMPOSITION_APPLICATION_CONFLICT,
+    );
+}
+
+#[test]
+fn finite_algebra_homomorphism_preservation_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-algebra-homomorphisms-v0 homomorphism preservation conflict",
+        FINITE_ALGEBRA_HOMOMORPHISM_PRESERVATION,
     );
 }
 

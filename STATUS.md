@@ -293,6 +293,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `g(b) = c`, and `comp(a) != c`; the shared UF resource regression requires a
   pure EUF `Evidence::UnsatAletheProof` and rechecks it independently.
 
+- **Finite-algebra-homomorphisms QF_UF/Alethe regression landed.**
+  [`finite-algebra-homomorphisms-v0`](artifacts/examples/math/finite-algebra-homomorphisms-v0/)
+  now has a checked proof-object row for homomorphism-preservation congruence.
+  The new SMT-LIB artifact asserts source congruence plus a preservation
+  equality and refutes the induced preservation equality for the congruent
+  source pair; the shared UF resource regression requires a pure EUF
+  `Evidence::UnsatAletheProof` and rechecks it independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -1037,10 +1045,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite bridge from group/ring tables to structure-preserving
   maps. The pack validates `Z/4Z -> Z/2Z` group-homomorphism replay,
   kernel/image recomputation, quotient and induced-map replay, unital
-  ring-homomorphism replay, checked rejection of a bad group-homomorphism map,
-  and a general isomorphism-theorem Lean-horizon row. The foundational
-  example-pack validator now checks these rows by exact finite table
-  enumeration.
+  ring-homomorphism replay, a checked QF_UF/Alethe
+  homomorphism-preservation congruence row, checked rejection of a bad
+  group-homomorphism map, and a general isomorphism-theorem Lean-horizon row.
+  The foundational example-pack validator now checks the finite rows by exact
+  table enumeration and enforces the linked proof artifact/regression for the
+  QF_UF row.
 
 - **Finite simplicial homology foundations pack landed.** Added
   [`finite-simplicial-homology-v0`](artifacts/examples/math/finite-simplicial-homology-v0/README.md)

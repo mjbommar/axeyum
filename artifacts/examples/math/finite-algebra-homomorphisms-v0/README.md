@@ -11,6 +11,7 @@ The pack covers:
 - kernel and image recomputation;
 - a finite quotient and induced-isomorphism replay;
 - unital ring homomorphism replay for addition and multiplication tables;
+- a QF_UF/Alethe homomorphism-preservation congruence proof row;
 - checked rejection of a bad group-homomorphism table;
 - a Lean-horizon row for general isomorphism theorems.
 
@@ -29,9 +30,13 @@ It checks every source pair against the codomain operation, recomputes kernels
 and images, verifies quotient cosets and quotient operations, and checks the
 induced map by exact finite enumeration.
 
-This is a finite replay pack. It does not prove the group or ring isomorphism
-theorems in general, module theory, category-theoretic universal properties, or
-infinite algebra.
+Most rows are finite replay. The `qf-uf-homomorphism-preservation-alethe` row
+also ties the pack to Axeyum's zero-trust EUF path: the SMT-LIB artifact emits
+an `UnsatAletheProof` for the congruence step, and `Evidence::check` rechecks
+that proof without trusting the search or lowering.
+
+This pack does not prove the group or ring isomorphism theorems in general,
+module theory, category-theoretic universal properties, or infinite algebra.
 
 Validation:
 

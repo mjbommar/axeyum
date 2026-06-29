@@ -28,6 +28,16 @@ Expected result: `sat`.
 The validator checks zero preservation, one preservation, addition
 preservation, and multiplication preservation for every pair.
 
+## `qf-uf-homomorphism-preservation-alethe`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact asserts a homomorphism-preservation equality for one
+source pair, equates a second source pair componentwise, and rejects the
+corresponding preservation equality for that second pair. Axeyum emits and
+checks an `UnsatAletheProof` for the pure EUF congruence/transitivity
+conflict.
+
 ## `bad-group-homomorphism-rejected`
 
 Expected result: `unsat`.

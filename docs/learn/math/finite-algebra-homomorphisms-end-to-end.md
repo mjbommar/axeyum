@@ -22,6 +22,7 @@ Concept rows:
 | `kernel-image-replay` | `sat` | replay-only |
 | `quotient-first-isomorphism-replay` | `sat` | replay-only |
 | `z4-to-z2-ring-homomorphism` | `sat` | replay-only |
+| `qf-uf-homomorphism-preservation-alethe` | `unsat` | checked |
 | `bad-group-homomorphism-rejected` | `unsat` | checked |
 | `general-isomorphism-theorems-lean-horizon` | `not-run` | lean-horizon |
 
@@ -149,6 +150,29 @@ f(3) * f(3) = 1 * 1 = 1 mod 2
 The ring row ties the same finite function table to both addition and
 multiplication preservation.
 
+## Check Homomorphism Preservation Congruence
+
+The QF_UF/Alethe row abstracts away from the concrete `Z/4Z` and `Z/2Z`
+tables. It keeps only the shape of a structure-preserving map:
+
+```text
+phi(opG(a, b)) = opH(phi(a), phi(b))
+a = a2
+b = b2
+```
+
+Those equalities force the same preservation equation for the congruent source
+pair:
+
+```text
+phi(opG(a2, b2)) = opH(phi(a2), phi(b2))
+```
+
+The SMT-LIB artifact asserts the first three equalities and then asserts the
+negation of the forced equality. Axeyum emits an `UnsatAletheProof`, and
+`Evidence::check` rechecks the congruence/transitivity refutation without
+trusting the search step.
+
 ## Check The Refutation
 
 The bad row proposes this map:
@@ -190,7 +214,8 @@ This lesson shows Axeyum's resource pattern for structure-preserving maps:
 
 ```text
 untrusted fast search -> candidate map, kernel, image, quotient, induced map
-trusted small checking -> table preservation, kernel/image, quotient replay
+trusted small checking -> table preservation, kernel/image, quotient replay,
+                          QF_UF/Alethe congruence proof checking
 ```
 
 General isomorphism theorems, normal-subgroup and ideal quotient theory,

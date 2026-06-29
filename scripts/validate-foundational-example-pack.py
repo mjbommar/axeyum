@@ -2522,6 +2522,23 @@ def validate_finite_algebra_homomorphisms(expected: dict[str, Any]) -> None:
             if mapping[table_op(domain_mul, left, right)] != table_op(codomain_mul, mapping[left], mapping[right]):
                 fail("z4-to-z2-ring-homomorphism does not preserve multiplication")
 
+    qf_uf = checks["qf-uf-homomorphism-preservation-alethe"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-homomorphism-preservation-alethe must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-homomorphism-preservation-alethe must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-homomorphism-preservation-alethe must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf homomorphism preservation smt2_artifact", smt2_artifact)
+    check_source("qf-uf homomorphism preservation smt2_artifact", smt2_artifact)
+    require_string("qf-uf homomorphism preservation proof_regression", data.get("proof_regression"))
+    certificate = data.get("certificate")
+    require_string("qf-uf homomorphism preservation certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf homomorphism preservation certificate must document zero-trust Alethe evidence")
+
     bad = checks["bad-group-homomorphism-rejected"]
     if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
         fail("bad-group-homomorphism-rejected must be a checked unsat row")

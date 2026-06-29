@@ -48,8 +48,9 @@ acting on a finite set, recomputes orbits and stabilizers, replays the
 orbit-stabilizer cardinality equation, and checks Burnside fixed-point
 averaging for the same action. The finite-algebra-homomorphisms pack adds exact
 structure-preserving map checks: group homomorphism replay, kernel/image
-recomputation, quotient and induced-map replay, ring homomorphism replay, and
-bad-homomorphism rejection. The finite-ideals pack checks finite ideals,
+recomputation, quotient and induced-map replay, ring homomorphism replay,
+QF_UF/Alethe homomorphism-preservation congruence, and bad-homomorphism
+rejection. The finite-ideals pack checks finite ideals,
 principal ideal generation, ring-homomorphism kernels, and quotient-ring
 tables over modular rings. The finite-vector-spaces pack checks finite fields
 acting on finite additive groups, subspaces, spans, linear maps, kernels,
@@ -177,7 +178,8 @@ ker(f) = {0, 2}
 
 The `finite-algebra-homomorphisms-v0` pack checks `f(a + b) = f(a) + f(b)` for
 every pair, recomputes kernel and image, verifies the quotient by the kernel,
-and checks the same map as a unital ring homomorphism.
+checks the same map as a unital ring homomorphism, and carries a checked
+QF_UF/Alethe proof row for homomorphism-preservation congruence.
 
 For a finite ideal and quotient-ring example, use even residues in `Z/6Z`:
 
