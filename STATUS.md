@@ -191,6 +191,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Integer-LIA end-to-end lesson landed.** Added
+  [`integer-lia-end-to-end.md`](docs/learn/math/integer-lia-end-to-end.md)
+  as the learner-facing trace for the integer-LIA pack: signed trichotomy and
+  order-transitivity replay, integer ring and linear-equation witnesses,
+  interval infeasibility, and the gcd-divisibility Diophantine refutation. The
+  lesson is linked from the math learning index plus the number-systems path.
+
 - **Natural-arithmetic end-to-end lesson landed.** Added
   [`natural-arithmetic-end-to-end.md`](docs/learn/math/natural-arithmetic-end-to-end.md)
   as the learner-facing trace for the natural-arithmetic pack: successor

@@ -69,6 +69,9 @@ validated pack data and the repo-root command that replays it.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
   no-counterexample enumeration, and the universal Nat theorem horizon.
+- [Integer Linear Arithmetic](integer-lia-end-to-end.md): follows signed order
+  replay, integer ring and linear-equation witnesses, interval infeasibility,
+  and a gcd-based Diophantine refutation.
 - [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
