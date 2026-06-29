@@ -154,3 +154,10 @@ rung-2 postconditions in the systems/network domain, each carrying its `#[verify
 verdict. Then **Block B**. Measure on a small systems scoreboard slice
 (decided / DISAGREE = 0 / Lean-cert coverage), mirroring the existing
 [`SCOREBOARD.md`](SCOREBOARD.md) discipline. Keep all guarantees labeled *bounded*.
+
+**Landed (2026-06-29):** Blocks A+B are committed as
+`tests/network_examples.rs` and `tests/systems_examples.rs`; the fuzz↔proof
+gradient as `tests/spec_oracle_gradient.rs`. Measured results, the gradient
+timings, and a reproducible equivalence-miter perf-wall finding are in
+[`verified-systems-and-protocols-scoreboard.md`](verified-systems-and-protocols-scoreboard.md)
+(9 `#[verify]` cases, 5 verified / 4 bug-found, DISAGREE = 0).
