@@ -39,7 +39,8 @@
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "quadratic-midpoint-jensen-witness",
@@ -51,7 +52,7 @@
   "graduation_criteria": [
     "Encode finite convexity, monotonicity, and threshold checks as exact rational obligations.",
     "Replay midpoint and grid convexity witnesses without floating-point tolerances.",
-    "Emit checked counterexample evidence for false finite convexity claims.",
+    "Keep the bad midpoint-convexity row on Axeyum's checked Farkas evidence path.",
     "Keep general convex analysis, separation theorems, SDP, and convergence proofs marked Lean-horizon until proof artifacts exist."
   ]
 }

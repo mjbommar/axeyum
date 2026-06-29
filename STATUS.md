@@ -251,6 +251,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `x + y >= 5`, requires `UnsatFarkas` evidence, and rechecks the certificate
   independently.
 
+- **Convexity QF_LRA/Farkas regression landed.**
+  [`convexity-rational-v0`](artifacts/examples/math/convexity-rational-v0/)
+  now binds its bad midpoint-convexity row to Axeyum's evidence path. The
+  shared LRA resource regression builds the division-free inequality
+  `2*f(midpoint) <= f(left)+f(right)` over the fixed values, requires
+  `UnsatFarkas` evidence, and rechecks the certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

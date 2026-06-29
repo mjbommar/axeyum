@@ -116,6 +116,8 @@ First targets:
   (resource-backed Farkas regression landed for the objective-threshold
   conflict)
 - [convexity-rational-v0](../../artifacts/examples/math/convexity-rational-v0/)
+  (resource-backed Farkas regression landed for the bad midpoint-convexity
+  row)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
 
 Secondary targets:

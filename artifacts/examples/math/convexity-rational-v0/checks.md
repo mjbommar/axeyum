@@ -18,6 +18,9 @@ listed rational samples.
 ## `bad-midpoint-convexity-rejected`
 
 Rejects a false midpoint-convexity claim with a checked finite counterexample.
+The resource-backed Axeyum regression reduces the same fixed row to the linear
+inequality `2*f(midpoint) <= f(left)+f(right)` and requires rechecked
+`UnsatFarkas` evidence.
 
 ## `general-convex-analysis-lean-horizon`
 

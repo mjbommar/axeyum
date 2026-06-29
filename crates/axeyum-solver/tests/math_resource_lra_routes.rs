@@ -138,3 +138,31 @@ fn linear_optimization_objective_threshold_emits_checked_farkas() {
         &[budget, threshold],
     );
 }
+
+#[test]
+fn convexity_bad_midpoint_claim_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let left_value = real(&mut arena, "left_value");
+    let midpoint_value = real(&mut arena, "midpoint_value");
+    let right_value = real(&mut arena, "right_value");
+    let left_is_zero = eq_ratio(&mut arena, left_value, 0, 1);
+    let midpoint_is_one = eq_ratio(&mut arena, midpoint_value, 1, 1);
+    let right_is_zero = eq_ratio(&mut arena, right_value, 0, 1);
+
+    // Midpoint convexity at weight 1/2 is checked in division-free form:
+    // 2*f(midpoint) <= f(left) + f(right). For the bad row this says 2 <= 0.
+    let twice_midpoint = arena.real_add(midpoint_value, midpoint_value).unwrap();
+    let endpoint_sum = arena.real_add(left_value, right_value).unwrap();
+    let midpoint_convexity_claim = arena.real_le(twice_midpoint, endpoint_sum).unwrap();
+
+    assert_farkas_checked(
+        "convexity-rational-v0 bad-midpoint-convexity-rejected",
+        &arena,
+        &[
+            left_is_zero,
+            midpoint_is_one,
+            right_is_zero,
+            midpoint_convexity_claim,
+        ],
+    );
+}

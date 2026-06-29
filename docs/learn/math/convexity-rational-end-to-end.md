@@ -120,7 +120,18 @@ The validator rejects the claim because:
 f(0) = 1 > 0
 ```
 
-That gives a small checked `unsat` row for false finite convexity claims.
+That gives a small checked `unsat` row for false finite convexity claims. The
+solver regression checks the same row in division-free linear form:
+
+```text
+left_value = 0
+midpoint_value = 1
+right_value = 0
+2*midpoint_value <= left_value + right_value
+```
+
+The search result is not trusted by itself. The trusted part is the independent
+Farkas certificate check over exact rational multipliers.
 
 ## Name The Lean Horizon
 
@@ -145,6 +156,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_midpoint_claim_emits_checked_farkas
 ```
 
 Expected output:
@@ -159,7 +171,7 @@ This lesson shows Axeyum's current convexity resource pattern:
 
 ```text
 untrusted fast search -> midpoint, grid, threshold, or counterexample candidate
-trusted small checking -> exact Fraction arithmetic and finite inequality replay
+trusted small checking -> exact Fraction arithmetic, finite inequality replay, Farkas certificate checks
 remaining horizon -> general convex analysis, duality, and convergence proofs
 ```
 

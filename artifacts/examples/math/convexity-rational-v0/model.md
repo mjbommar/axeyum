@@ -67,3 +67,15 @@ It fails midpoint convexity because:
 ```text
 f(0) = 1 > (f(-1) + f(1)) / 2 = 0
 ```
+
+The Axeyum regression checks the same failure in division-free linear form:
+
+```text
+left_value = 0
+midpoint_value = 1
+right_value = 0
+2*midpoint_value <= left_value + right_value
+```
+
+The final inequality would force `2 <= 0`, so the `QF_LRA` route emits
+`UnsatFarkas` evidence and rechecks the certificate independently.
