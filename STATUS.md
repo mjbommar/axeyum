@@ -169,6 +169,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Foundational field dashboard now reflects actual pack coverage.** Updated
+  the foundational concept generator to read non-template
+  `artifacts/examples/math/*/metadata.json` and merge validated pack coverage
+  into field-level atlas rows. Regenerated
+  [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
+  and the field dashboard so fields like graph theory, probability,
+  topology, measure, statistics, and functional analysis now show all landed
+  packs rather than only their starter pack. The foundational resource check
+  hook now regenerates and freshness-checks the concept atlas as well as the
+  dashboards.
+
 - **Function composition foundations pack landed.** Added
   [`function-composition-v0`](artifacts/examples/math/function-composition-v0/README.md)
   as the finite function-operation bridge for the relations-and-functions
