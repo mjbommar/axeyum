@@ -1928,7 +1928,7 @@
       "example_packs": [
         {
           "id": "graph-coloring-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/graph-coloring-v0",
           "notes": "SAT colorings, non-colorability, reachability, matching, cuts, and d-separation."
         }
@@ -1951,7 +1951,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
         "Concept rows still need generated dashboard coverage before field status can graduate."
       ],
       "graduation": {

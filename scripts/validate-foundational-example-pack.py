@@ -12,6 +12,7 @@ import json
 import re
 import sys
 from fractions import Fraction
+from itertools import product
 from math import gcd
 from pathlib import Path
 from typing import Any
@@ -232,6 +233,103 @@ def single_witness_values(check: dict[str, Any], witnesses: dict[str, dict[str, 
     if not isinstance(values, dict):
         fail(f"{check['id']} witness values must be an object")
     return values
+
+
+def require_graph_data(context: str, values: dict[str, Any]) -> tuple[list[str], list[tuple[str, str]], list[str]]:
+    vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
+    colors = require_string_list(f"{context}.colors", values.get("colors"))
+    edge_values = values.get("edges")
+    if not isinstance(edge_values, list):
+        fail(f"{context}.edges must be a list")
+    vertex_set = set(vertices)
+    edges: list[tuple[str, str]] = []
+    seen_edges: set[tuple[str, str]] = set()
+    for index, edge in enumerate(edge_values):
+        if not isinstance(edge, list) or len(edge) != 2:
+            fail(f"{context}.edges[{index}] must be a two-element list")
+        left, right = edge
+        require_string(f"{context}.edges[{index}][0]", left)
+        require_string(f"{context}.edges[{index}][1]", right)
+        if left == right:
+            fail(f"{context}.edges[{index}] must not be a self-loop")
+        if left not in vertex_set or right not in vertex_set:
+            fail(f"{context}.edges[{index}] references a missing vertex")
+        normalized = tuple(sorted((left, right)))
+        if normalized in seen_edges:
+            fail(f"{context}.edges repeats undirected edge {normalized}")
+        seen_edges.add(normalized)
+        edges.append((left, right))
+    return vertices, edges, colors
+
+
+def require_coloring_assignment(
+    context: str,
+    values: dict[str, Any],
+    vertices: list[str],
+    colors: list[str],
+) -> dict[str, str]:
+    assignment = values.get("assignment")
+    if not isinstance(assignment, dict):
+        fail(f"{context}.assignment must be an object")
+    vertex_set = set(vertices)
+    color_set = set(colors)
+    if set(assignment) != vertex_set:
+        missing = sorted(vertex_set - set(assignment))
+        extra = sorted(set(assignment) - vertex_set)
+        fail(f"{context}.assignment must cover exactly the graph vertices; missing={missing} extra={extra}")
+    for vertex, color in assignment.items():
+        require_string(f"{context}.assignment key", vertex)
+        require_string(f"{context}.assignment[{vertex}]", color)
+        if color not in color_set:
+            fail(f"{context}.assignment[{vertex}] uses unknown color {color!r}")
+    return assignment
+
+
+def is_proper_coloring(edges: list[tuple[str, str]], assignment: dict[str, str]) -> bool:
+    return all(assignment[left] != assignment[right] for left, right in edges)
+
+
+def has_proper_coloring(vertices: list[str], edges: list[tuple[str, str]], colors: list[str]) -> bool:
+    for color_tuple in product(colors, repeat=len(vertices)):
+        assignment = dict(zip(vertices, color_tuple))
+        if is_proper_coloring(edges, assignment):
+            return True
+    return False
+
+
+def validate_graph_coloring(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    triangle = checks["triangle-3-coloring-witness"]
+    if triangle["expected_result"] != "sat":
+        fail("triangle-3-coloring-witness must expect sat")
+    values = single_witness_values(triangle, witnesses)
+    vertices, edges, colors = require_graph_data("triangle coloring", values)
+    if len(colors) != 3:
+        fail("triangle-3-coloring-witness must use three colors")
+    assignment = require_coloring_assignment("triangle coloring", values, vertices, colors)
+    if not is_proper_coloring(edges, assignment):
+        fail("triangle-3-coloring witness is not a proper coloring")
+
+    bad_edge = checks["bad-edge-coloring-rejected"]
+    if bad_edge["expected_result"] != "unsat":
+        fail("bad-edge-coloring-rejected must expect unsat")
+    values = single_witness_values(bad_edge, witnesses)
+    vertices, edges, colors = require_graph_data("bad edge coloring", values)
+    assignment = require_coloring_assignment("bad edge coloring", values, vertices, colors)
+    if is_proper_coloring(edges, assignment):
+        fail("bad-edge-coloring-rejected witness unexpectedly is a proper coloring")
+
+    noncolorable = checks["triangle-not-2-colorable"]
+    if noncolorable["expected_result"] != "unsat":
+        fail("triangle-not-2-colorable must expect unsat")
+    data = noncolorable.get("data", {})
+    vertices, edges, colors = require_graph_data("triangle-not-2-colorable data", data)
+    if len(vertices) != 3 or len(edges) != 3 or len(colors) != 2:
+        fail("triangle-not-2-colorable must use K3 with exactly two colors")
+    if has_proper_coloring(vertices, edges, colors):
+        fail("triangle-not-2-colorable found a proper 2-coloring unexpectedly")
 
 
 def has_mod_inverse(a: int, modulus: int) -> bool:
@@ -483,6 +581,8 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
 
 
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
+    if metadata["id"] == "graph-coloring-v0":
+        validate_graph_coloring(expected)
     if metadata["id"] == "modular-arithmetic-v0":
         validate_modular_arithmetic(expected)
     if metadata["id"] == "rationals-lra-v0":

@@ -62,6 +62,7 @@ artifacts/examples/math/
   modular-arithmetic-v0/
   rationals-lra-v0/
   linear-algebra-rational-v0/
+  graph-coloring-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -304,6 +305,9 @@ checks without floating-point arithmetic.
 [`linear-algebra-rational-v0`](../../artifacts/examples/math/linear-algebra-rational-v0/)
 validates exact rational matrix-vector replay, LU factorization replay, and a
 row-scaling inconsistency certificate for a singular system.
+[`graph-coloring-v0`](../../artifacts/examples/math/graph-coloring-v0/)
+validates finite graph coloring witnesses, invalid-coloring replay, and an
+exhaustive two-colorability refutation for `K3`.
 
 Exit criteria:
 

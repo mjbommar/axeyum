@@ -317,6 +317,10 @@ Exit criteria:
 
 Add the fields users naturally expect from an undergraduate/graduate math map.
 
+Status: first field-extension pack landed.
+`artifacts/examples/math/graph-coloring-v0/` now validates coloring witnesses
+and a tiny exhaustive non-colorability check.
+
 Recommended order:
 
 1. `graph-coloring-v0`: SAT colorings, non-colorability, certificate status.
@@ -437,8 +441,9 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-8 have landed for the math seed. Continue with item 9:
-`graph-coloring-v0` as the first pure field-extension pack.
+Progress: items 1-9 have landed for the math seed. Continue with item 10:
+`finite-probability-v0` and `descriptive-statistics-v0` as the
+probability/statistics bridge.
 
 ## Operating Rules
 

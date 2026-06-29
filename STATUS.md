@@ -134,6 +134,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph coloring pack landed.** Added
+  [`artifacts/examples/math/graph-coloring-v0/`](artifacts/examples/math/graph-coloring-v0/)
+  as the first pure field-extension pack for graph theory. The pack validates a
+  proper `K3` three-coloring witness, rejects an invalid same-edge coloring, and
+  exhaustively checks that `K3` has no two-coloring. The next planned
+  math-resource increment is the probability/statistics bridge:
+  `finite-probability-v0` and `descriptive-statistics-v0`.
+
 - **Linear algebra rational pack landed.** Added
   [`artifacts/examples/math/linear-algebra-rational-v0/`](artifacts/examples/math/linear-algebra-rational-v0/)
   for exact rational matrix-vector solution replay, LU factorization replay,

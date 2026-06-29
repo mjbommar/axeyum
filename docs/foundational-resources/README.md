@@ -56,6 +56,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/linear-algebra-rational-v0/`](../../artifacts/examples/math/linear-algebra-rational-v0/)
   validates exact rational matrix-vector solution replay, LU factorization
   replay, and a row-scaling inconsistency certificate for a singular system.
+- [`artifacts/examples/math/graph-coloring-v0/`](../../artifacts/examples/math/graph-coloring-v0/)
+  validates finite graph coloring witnesses, invalid-coloring replay, and an
+  exhaustive two-colorability refutation for `K3`.
 
 Validation commands:
 
@@ -68,6 +71,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/pr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```
 
 ## Principle

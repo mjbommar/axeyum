@@ -132,7 +132,7 @@ one of:
    - Fields: `graph_theory`, `discrete_math`, `logic_and_proof`.
    - Checks: satisfiable coloring witness, unsatisfiable small coloring claim,
      model replay, proof-route status.
-2. `artifacts/examples/math/linear-algebra-v0/`
+2. `artifacts/examples/math/linear-algebra-rational-v0/`
    - Fields: `linear_algebra`, `numerical_analysis`.
    - Checks: matrix multiplication identity, LU factorization replay,
      inconsistent system certificate.

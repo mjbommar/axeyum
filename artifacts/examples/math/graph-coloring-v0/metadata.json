@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "graph-coloring-v0",
+  "title": "Finite Graph Coloring Witnesses",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_graph_theory",
+    "field_discrete_math",
+    "field_logic_and_proof",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "curriculum_propositional_logic"
+  ],
+  "field_ids": [
+    "graph_theory",
+    "discrete_math",
+    "logic_and_proof"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting",
+    "propositional-logic"
+  ],
+  "axeyum_fragments": [
+    "Bool",
+    "CNF",
+    "QF_BV"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/00-foundations/propositional-logic.md",
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+  ],
+  "expected_results": [
+    "triangle-3-coloring-witness",
+    "bad-edge-coloring-rejected",
+    "triangle-not-2-colorable"
+  ],
+  "graduation_criteria": [
+    "Encode finite graph coloring constraints as deterministic Bool/CNF formulas.",
+    "Replay SAT color assignments through Axeyum model evaluation.",
+    "Produce and check LRAT/DRAT evidence for non-colorability examples.",
+    "Promote graph helpers into a reusable example-pack utility only after reachability or matching packs need them."
+  ]
+}

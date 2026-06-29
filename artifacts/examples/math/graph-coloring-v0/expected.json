@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "pack_id": "graph-coloring-v0",
+  "witnesses": [
+    {
+      "id": "triangle-3-coloring",
+      "description": "A proper 3-coloring of the triangle K3.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["a", "c"]
+        ],
+        "colors": ["red", "green", "blue"],
+        "assignment": {
+          "a": "red",
+          "b": "green",
+          "c": "blue"
+        }
+      }
+    },
+    {
+      "id": "bad-edge-coloring",
+      "description": "An invalid coloring that assigns the same color to both endpoints of one edge.",
+      "values": {
+        "vertices": ["u", "v"],
+        "edges": [
+          ["u", "v"]
+        ],
+        "colors": ["red", "blue"],
+        "assignment": {
+          "u": "red",
+          "v": "red"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "triangle-3-coloring-witness",
+      "claim": "There exists a proper 3-coloring of the triangle K3.",
+      "expected_result": "sat",
+      "validation": "exact_graph_coloring_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["triangle-3-coloring"],
+      "notes": "The validator checks that every edge has endpoints with different listed colors."
+    },
+    {
+      "id": "bad-edge-coloring-rejected",
+      "claim": "The listed same-color assignment is a proper coloring of a one-edge graph.",
+      "expected_result": "unsat",
+      "validation": "exact_graph_coloring_replay",
+      "proof_status": "checked",
+      "witnesses": ["bad-edge-coloring"],
+      "notes": "The validator confirms the assignment violates the only edge constraint."
+    },
+    {
+      "id": "triangle-not-2-colorable",
+      "claim": "There exists a proper 2-coloring of the triangle K3.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_finite_graph_coloring",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["a", "c"]
+        ],
+        "colors": ["red", "blue"]
+      },
+      "notes": "The validator enumerates all eight assignments and confirms each has a monochromatic edge."
+    }
+  ]
+}
