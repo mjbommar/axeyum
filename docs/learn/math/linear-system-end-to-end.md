@@ -43,6 +43,9 @@ threshold-negated: -x - y <= -5
 ```
 
 with multipliers `1` and `1`.
+The solver regression builds those same inequalities and requires rechecked
+`UnsatFarkas` evidence, so the pack-local arithmetic check is not the only
+trusted artifact.
 
 The singular linear-system row is:
 
@@ -81,6 +84,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas
 ```
 
 Expected output for each command:

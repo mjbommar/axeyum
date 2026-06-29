@@ -20,3 +20,6 @@ Expected result: `unsat`.
 The validator checks a Farkas-style certificate for the infeasible threshold
 `x + y >= 5`. The nonnegative multipliers combine two inequalities into
 `0 <= -1`, so no assignment can satisfy the threshold and the base region.
+
+The resource-backed Axeyum regression builds the same threshold conflict as a
+conjunctive `QF_LRA` system and requires rechecked `UnsatFarkas` evidence.

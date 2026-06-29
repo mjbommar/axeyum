@@ -26,11 +26,14 @@ The current validator parses all coefficients, bounds, and witnesses exactly as
 rational strings. It checks feasibility by replaying linear inequalities and
 checks the infeasible threshold by verifying that nonnegative Farkas
 multipliers cancel all variables and derive an impossible constant inequality.
-It does not yet emit SMT-LIB or call Axeyum's LRA/Farkas backend for these pack
-instances.
+The infeasible-threshold row also has an Axeyum regression that builds the
+corresponding `QF_LRA` inequalities, emits `UnsatFarkas` evidence, and rechecks
+that evidence independently. The feasible witness rows remain exact replay-only
+until they route through model evidence.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas
 ```

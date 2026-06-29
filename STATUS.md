@@ -244,6 +244,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   shared LRA resource regression builds `x + y = 1` and `2x + 2y = 3`, requires
   `UnsatFarkas` evidence, and rechecks the certificate independently.
 
+- **Linear-optimization QF_LRA/Farkas regression landed.**
+  [`linear-optimization-v0`](artifacts/examples/math/linear-optimization-v0/)
+  now binds its already-checked objective-threshold row to Axeyum's evidence
+  path. The shared LRA resource regression builds `x + y <= 4` and
+  `x + y >= 5`, requires `UnsatFarkas` evidence, and rechecks the certificate
+  independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

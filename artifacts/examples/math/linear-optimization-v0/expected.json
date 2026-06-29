@@ -73,9 +73,10 @@
         "expected_combination": {
           "coefficients": {"x": "0", "y": "0"},
           "bound": "-1"
-        }
+        },
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas"
       },
-      "notes": "The validator checks nonnegative multipliers, variable cancellation, and the contradictory bound 0 <= -1."
+      "notes": "The validator checks nonnegative multipliers, variable cancellation, and the contradictory bound 0 <= -1; the Axeyum regression refutes the same threshold conflict with rechecked Farkas evidence."
     }
   ]
 }

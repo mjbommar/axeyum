@@ -113,6 +113,8 @@ First targets:
   (resource-backed Farkas regression landed for the singular inconsistent
   system)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
+  (resource-backed Farkas regression landed for the objective-threshold
+  conflict)
 - [convexity-rational-v0](../../artifacts/examples/math/convexity-rational-v0/)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
 

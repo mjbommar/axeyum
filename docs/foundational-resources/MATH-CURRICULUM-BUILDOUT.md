@@ -1379,6 +1379,9 @@ fixed order-transitivity violating branch with Axeyum `UnsatFarkas` evidence
 that is independently rechecked.
 `linear-algebra-rational-v0` now also routes its singular inconsistent system
 through the same checked Farkas evidence path.
+`linear-optimization-v0` now routes its infeasible objective-threshold conflict
+through Axeyum `UnsatFarkas` evidence rather than only pack-local multiplier
+replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

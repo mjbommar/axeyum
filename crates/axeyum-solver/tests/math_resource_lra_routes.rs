@@ -120,3 +120,21 @@ fn linear_algebra_singular_system_inconsistent_emits_checked_farkas() {
         &[first_row, second_row],
     );
 }
+
+#[test]
+fn linear_optimization_objective_threshold_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let x_plus_y = arena.real_add(x, y).unwrap();
+    let four = arena.real_ratio(4, 1);
+    let five = arena.real_ratio(5, 1);
+    let budget = arena.real_le(x_plus_y, four).unwrap();
+    let threshold = arena.real_ge(x_plus_y, five).unwrap();
+
+    assert_farkas_checked(
+        "linear-optimization-v0 objective-threshold-farkas-infeasible",
+        &arena,
+        &[budget, threshold],
+    );
+}

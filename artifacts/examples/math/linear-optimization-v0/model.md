@@ -51,4 +51,13 @@ multiplier `1` for `x + y <= 4` and multiplier `1` for `-x - y <= -5`, giving:
 ```
 
 which is impossible. This is a tiny checked certificate, not a general LP
-duality theorem.
+duality theorem. The Axeyum regression also checks the same fixed conflict as
+a conjunctive `QF_LRA` query:
+
+```text
+x + y <= 4
+x + y >= 5
+```
+
+That query emits `UnsatFarkas` evidence, and the certificate arithmetic is
+rechecked independently.
