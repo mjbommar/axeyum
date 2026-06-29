@@ -1126,6 +1126,39 @@ fn run_from(
                     _ => *saw_unknown = true,
                 }
             }
+            Op::CodeCopy => {
+                // Copy code[offset..offset+length] into memory[dest..]. Code is
+                // concrete, so each word is a constant; modeled for a concrete,
+                // 32-aligned, bounded region (else a sound Unknown).
+                let dest = pop_or_unknown!();
+                let off = pop_or_unknown!();
+                let len = pop_or_unknown!();
+                let d = concrete_usize(arena, dest);
+                let o = concrete_usize(arena, off);
+                let l = concrete_usize(arena, len);
+                match (d, o, l) {
+                    (_, _, Some(0)) => {}
+                    (Some(d), Some(o), Some(l))
+                        if l % 32 == 0 && l / 32 <= MAX_COPY_WORDS =>
+                    {
+                        for k in 0..(l / 32) {
+                            let mut bytes = [0u8; 32];
+                            for (i, b) in bytes.iter_mut().enumerate() {
+                                *b = program.code.get(o + 32 * k + i).copied().unwrap_or(0);
+                            }
+                            let word = push_word(arena, &bytes);
+                            let at = d + 32 * k;
+                            mem_store(arena, state, at, word)?;
+                            let off_word = arena.bv_const(W, at as u128)?;
+                            state.sym_memory.push(Write {
+                                key: off_word,
+                                value: word,
+                            });
+                        }
+                    }
+                    _ => *saw_unknown = true,
+                }
+            }
             Op::Log(topics) => {
                 // LOG0..LOG4: pop offset, length, and `topics` topic words; push
                 // nothing. Logs are pure side effects with no effect on execution

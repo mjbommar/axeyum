@@ -147,6 +147,10 @@ pub enum Op {
     /// memory at `destOffset` (pops destOffset, offset, length). Modeled precisely
     /// (the calldata is already symbolic) for a concrete, 32-aligned, bounded copy.
     CallDataCopy,
+    /// `CODECOPY` (0x39): copy `length` bytes of the contract's own code at
+    /// `offset` into memory at `destOffset` (pops destOffset, offset, length).
+    /// Code is concrete, so this is modeled precisely as constant bytes.
+    CodeCopy,
     /// `LOG0`–`LOG4` (0xa0–0xa4): pops `2 + n` args (offset, length, `n` topics)
     /// and pushes nothing. Logs are observable side effects only — they do not
     /// affect execution state — so for reachability analysis they are a no-op pop.
@@ -232,6 +236,7 @@ impl Op {
             0xfd => Op::Revert,
             0xfe => Op::Invalid,
             0x37 => Op::CallDataCopy,
+            0x39 => Op::CodeCopy,
             0xa0..=0xa4 => Op::Log(byte - 0xa0),
             other => Op::Unsupported(other),
         }
@@ -274,6 +279,7 @@ pub fn decode(bytecode: &[u8]) -> Program {
         instructions,
         pc_to_index,
         jumpdests,
+        code: bytecode.to_vec(),
     }
 }
 
@@ -288,6 +294,8 @@ pub struct Program {
     pub pc_to_index: Vec<usize>,
     /// Byte offsets that hold a `JUMPDEST` — the only legal jump targets.
     pub jumpdests: std::collections::BTreeSet<usize>,
+    /// The raw bytecode, retained so `CODECOPY`/`CODESIZE` can read code bytes.
+    pub code: Vec<u8>,
 }
 
 impl Program {

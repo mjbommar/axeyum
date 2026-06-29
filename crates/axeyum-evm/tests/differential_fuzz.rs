@@ -46,6 +46,7 @@ const POOL: &[u8] = &[
     0x0a, // EXP — exercise the concrete constant-fold / symbolic-havoc paths
     0xa0, 0xa3, // LOG0 / LOG3 — exercise the no-op-pop log paths
     0x37, // CALLDATACOPY — exercise the precise calldata→memory copy
+    0x39, // CODECOPY — exercise the precise code→memory copy
     0x54, 0x55, // SLOAD SSTORE — exercise the storage paths
     0x31, 0x5a, // BALANCE GAS — exercise the environment paths
     0x40, 0x59, // BLOCKHASH MSIZE — more witnessed-env opcodes

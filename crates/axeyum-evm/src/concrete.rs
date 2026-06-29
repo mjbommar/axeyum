@@ -599,6 +599,17 @@ fn run_core(
                     }
                 }
             }
+            Op::CodeCopy => {
+                // Copy code[offset..offset+length] (zero-padded) into memory.
+                let (dest, off, len) = (pop!(), pop!(), pop!());
+                if let (Some(d), Some(o), Some(l)) = (dest.to_usize(), off.to_usize(), len.to_usize())
+                {
+                    for i in 0..l.min(COPY_CAP_BYTES) {
+                        let b = program.code.get(o + i).copied().unwrap_or(0);
+                        memory.insert(d + i, b);
+                    }
+                }
+            }
             Op::Log(topics) => {
                 // LOG0..LOG4: pop offset, length, and `topics` topics; no output.
                 for _ in 0..(2 + u32::from(topics)) {
