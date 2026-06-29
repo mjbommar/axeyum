@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-cut end-to-end lesson landed.** Added
+  [`graph-cut-end-to-end.md`](docs/learn/math/graph-cut-end-to-end.md)
+  as the learner-facing trace for the graph-cut pack: finite minimum-edge-cut
+  and minimum-vertex-cut certificates, rejected one-cut claims, checked
+  smaller-cut enumeration, and the general max-flow/min-cut theorem horizon.
+  The lesson is linked from the math learning index plus the graph/discrete
+  path.
+
 - **Graph-matching end-to-end lesson landed.** Added
   [`graph-matching-end-to-end.md`](docs/learn/math/graph-matching-end-to-end.md)
   as the learner-facing trace for the graph-matching pack: finite matching
@@ -230,7 +238,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 78 focused learner links, 6 path-only
+  generated queue: 84 non-template packs, 79 focused learner links, 5 path-only
   links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added

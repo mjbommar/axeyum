@@ -13,8 +13,8 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 
 ### Learner Status Totals
 
-- `focused`: 78
-- `path-only`: 6
+- `focused`: 79
+- `path-only`: 5
 
 ### Candidate Proof Route Totals
 
@@ -79,6 +79,7 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `focused` | `gcd-bezout-v0` | `number_theory` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [algebra-and-number-theory.md](../../learn/math/algebra-and-number-theory.md), [gcd-bezout-end-to-end.md](../../learn/math/gcd-bezout-end-to-end.md), [number-systems-and-arithmetic.md](../../learn/math/number-systems-and-arithmetic.md) |
 | `focused` | `generating-functions-v0` | `discrete_math,abstract_algebra,probability_theory,real_analysis` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [algebra-and-number-theory.md](../../learn/math/algebra-and-number-theory.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md), [generating-functions-end-to-end.md](../../learn/math/generating-functions-end-to-end.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [rational-real-algebra.md](../../learn/math/rational-real-algebra.md) |
 | `focused` | `graph-coloring-v0` | `graph_theory,discrete_math,logic_and_proof` | `checked-evidence` | `checked`: 2, `replay-only`: 1 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-coloring-end-to-end.md](../../learn/math/graph-coloring-end-to-end.md), [logic-and-proof.md](../../learn/math/logic-and-proof.md) |
+| `focused` | `graph-cut-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-cut-end-to-end.md](../../learn/math/graph-cut-end-to-end.md) |
 | `focused` | `graph-matching-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-matching-end-to-end.md](../../learn/math/graph-matching-end-to-end.md) |
 | `focused` | `graph-reachability-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-reachability-end-to-end.md](../../learn/math/graph-reachability-end-to-end.md) |
 | `focused` | `graph-search-runtime-v0` | `graph_theory,discrete_math,logic_and_proof` | `checked-evidence` | `checked`: 4, `lean-horizon`: 1 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [graph-search-runtime-end-to-end.md](../../learn/math/graph-search-runtime-end-to-end.md) |
@@ -111,7 +112,6 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `path-only` | `calculus-algebraic-shadow-v0` | `real_analysis,differential_equations_and_dynamical_systems,numerical_analysis` | `checked-evidence` | `checked`: 2, `lean-horizon`: 1, `replay-only`: 3 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 | `path-only` | `calculus-riemann-sum-v0` | `real_analysis,numerical_analysis,differential_equations_and_dynamical_systems` | `checked-evidence` | `checked`: 5, `lean-horizon`: 1 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 | `path-only` | `counting-v0` | `discrete_math,probability_theory` | `checked-evidence` | `checked`: 3 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
-| `path-only` | `graph-cut-v0` | `graph_theory,discrete_math` | `checked-evidence` | `checked`: 4 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `graph-d-separation-v0` | `graph_theory,probability_theory,discrete_math` | `checked-evidence` | `checked`: 5 | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [probability-and-statistics.md](../../learn/math/probability-and-statistics.md) |
 | `path-only` | `sequence-limit-shadow-v0` | `real_analysis,topology` | `checked-evidence` | `checked`: 1, `lean-horizon`: 1, `replay-only`: 4 | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 
@@ -122,7 +122,6 @@ only when a `docs/learn/math` page explicitly mentions the pack id or path.
 | `path-only` | `calculus-algebraic-shadow-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 | `path-only` | `calculus-riemann-sum-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 | `path-only` | `counting-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
-| `path-only` | `graph-cut-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md) |
 | `path-only` | `graph-d-separation-v0` | [README.md](../../learn/math/README.md), [graph-and-discrete-reasoning.md](../../learn/math/graph-and-discrete-reasoning.md), [probability-and-statistics.md](../../learn/math/probability-and-statistics.md) |
 | `path-only` | `sequence-limit-shadow-v0` | [README.md](../../learn/math/README.md), [analysis-topology-proof-horizons.md](../../learn/math/analysis-topology-proof-horizons.md) |
 

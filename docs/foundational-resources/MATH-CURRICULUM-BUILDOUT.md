@@ -1336,6 +1336,10 @@ Lean horizon.
 matching witness replay, overlapping-edge rejection, augmenting-path flip
 replay, checked `K3` perfect-matching refutation, and the general matching
 theory horizon.
+`graph-cut-v0` now has a learner-facing end-to-end lesson for finite
+minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
+checked smaller-cut enumeration, and the general max-flow/min-cut theorem
+horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

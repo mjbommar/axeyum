@@ -233,6 +233,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
+[End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
 For coefficient-level finite recurrence and convolution replay, read

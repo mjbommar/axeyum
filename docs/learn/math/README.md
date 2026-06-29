@@ -75,6 +75,9 @@ validated pack data and the repo-root command that replays it.
 - [Graph Matching And Augmenting Paths](graph-matching-end-to-end.md): follows
   finite matching witness replay, overlapping-edge rejection, augmenting-path
   flip replay, and a `K3` perfect-matching refutation.
+- [Graph Cut Certificates](graph-cut-end-to-end.md): follows finite
+  minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
+  and checked smaller-cut enumeration.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
   no-counterexample enumeration, and the universal Nat theorem horizon.
