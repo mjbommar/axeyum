@@ -1368,6 +1368,8 @@ The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and
 checks both proof objects.
+`proof-methods-patterns-v0` now carries the same CNF/DRAT/LRAT regression
+pattern for the contradiction row `p`, `p -> q`, `not q`.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

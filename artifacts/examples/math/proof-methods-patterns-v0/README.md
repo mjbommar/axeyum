@@ -11,6 +11,7 @@ The examples are:
 - contrapositive equivalence by exhaustive truth-table checking;
 - proof by cases as a no-counterexample row;
 - contradiction/refutation as an unsatisfiable premise set;
+- DIMACS CNF proof route for the contradiction/refutation row;
 - checked counterexample evidence for the invalid converse inference;
 - a natural-deduction Lean-horizon row.
 
@@ -27,6 +28,12 @@ enumeration. Satisfiable rows must replay the listed assignment. Unsatisfiable
 rows are checked by enumerating every assignment over the listed finite
 variable set.
 
+The CNF artifact
+[`cnf/contradiction-refutation.cnf`](cnf/contradiction-refutation.cnf) encodes
+the premise set `p`, `p -> q`, and `not q`. The focused CNF regression parses
+that artifact, emits a DRAT proof with Axeyum's proof-producing SAT core,
+elaborates it to LRAT, and checks both proof objects independently.
+
 This is finite checked evidence. It is not a proof of soundness for a general
 natural-deduction calculus, sequent calculus, or proof reconstruction engine.
 Those broader proof-system claims stay under Lean horizon until kernel-checked
@@ -36,4 +43,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_contradiction_refutation_emits_checked_drat_and_lrat
 ```

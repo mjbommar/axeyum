@@ -24,6 +24,7 @@ Concept rows:
 | `general-natural-deduction-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite Boolean assignment or truth-table rows. The pack
+also carries a CNF proof regression for the contradiction/refutation row. It
 does not claim soundness for a full natural-deduction calculus, sequent
 calculus, or proof reconstruction engine.
 
@@ -106,6 +107,19 @@ If `p` and `p -> q` are true, then `q` must be true. That conflicts with `!q`.
 The validator confirms this by enumerating every assignment to `p,q`, so the
 premise set is checked `unsat`.
 
+The CNF proof route encodes the same premise set as:
+
+```text
+p
+not p or q
+not q
+```
+
+This DIMACS artifact lives at
+[`contradiction-refutation.cnf`](../../../artifacts/examples/math/proof-methods-patterns-v0/cnf/contradiction-refutation.cnf).
+The proof-producing SAT core is untrusted search; the accepted evidence is the
+independent DRAT check and the elaborated LRAT check.
+
 ## Replay An Invalid Converse Counterexample
 
 The invalid-converse row uses:
@@ -143,6 +157,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_contradiction_refutation_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -157,8 +172,9 @@ This lesson shows Axeyum's resource pattern for proof methods:
 
 ```text
 untrusted fast search -> candidate Boolean proof obligation or counterexample
-trusted small checking -> assignment replay, truth-table enumeration, horizon row
+trusted small checking -> assignment replay, truth-table enumeration, DRAT/LRAT checks, horizon row
 ```
 
-Proof-object evidence for reusable proof patterns requires LRAT, Alethe, or
-Lean artifacts that check the same obligations.
+The contradiction row now has a concrete CNF/DRAT/LRAT proof-object route. The
+general proof-system soundness row still requires Lean artifacts that check the
+broader theorem.

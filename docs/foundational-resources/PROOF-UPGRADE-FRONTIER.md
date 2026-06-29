@@ -72,6 +72,7 @@ First targets:
   DIMACS-backed DRAT/LRAT regression landed for triangle non-2-colorability)
 - [finite-sets-v0](../../artifacts/examples/math/finite-sets-v0/)
 - [proof-methods-patterns-v0](../../artifacts/examples/math/proof-methods-patterns-v0/)
+  (DIMACS-backed DRAT/LRAT regression landed for contradiction/refutation)
 
 Expected artifact:
 

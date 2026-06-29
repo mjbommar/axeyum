@@ -12,31 +12,57 @@ use axeyum_cnf::{
 const TRIANGLE_NOT_2_COLORABLE_CNF: &str = include_str!(
     "../../../artifacts/examples/math/graph-coloring-v0/cnf/triangle-not-2-colorable.cnf"
 );
+const CONTRADICTION_REFUTATION_CNF: &str = include_str!(
+    "../../../artifacts/examples/math/proof-methods-patterns-v0/cnf/contradiction-refutation.cnf"
+);
 
-#[test]
-fn graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat() {
-    let formula = parse_dimacs(TRIANGLE_NOT_2_COLORABLE_CNF)
-        .expect("graph-coloring-v0 triangle CNF artifact parses");
-    assert_eq!(formula.variable_count(), 3);
-    assert_eq!(formula.clauses().len(), 6);
+fn assert_unsat_resource_cnf_checks(
+    label: &str,
+    dimacs: &str,
+    expected_variables: usize,
+    expected_clauses: usize,
+) {
+    let formula = parse_dimacs(dimacs).unwrap_or_else(|error| panic!("{label} parses: {error}"));
+    assert_eq!(formula.variable_count(), expected_variables);
+    assert_eq!(formula.clauses().len(), expected_clauses);
 
     let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&formula) else {
-        panic!("triangle-not-2-colorable CNF must be unsat");
+        panic!("{label} must be unsat");
     };
     assert_eq!(
         check_drat(&formula, &drat),
         Ok(true),
-        "generated DRAT proof must independently check"
+        "{label}: generated DRAT proof must independently check"
     );
 
     let lrat = elaborate_drat_to_lrat(&formula, &drat)
-        .expect("resource DRAT proof elaborates to search-free LRAT");
+        .unwrap_or_else(|error| panic!("{label}: DRAT elaborates to LRAT: {error}"));
     assert_eq!(
         check_lrat(&formula, &lrat),
         Ok(true),
-        "elaborated LRAT proof must independently check"
+        "{label}: elaborated LRAT proof must independently check"
     );
 
     let reparsed = parse_lrat(&write_lrat(&lrat)).expect("LRAT text round-trips");
     assert_eq!(check_lrat(&formula, &reparsed), Ok(true));
+}
+
+#[test]
+fn graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "graph-coloring-v0 triangle-not-2-colorable",
+        TRIANGLE_NOT_2_COLORABLE_CNF,
+        3,
+        6,
+    );
+}
+
+#[test]
+fn proof_methods_contradiction_refutation_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "proof-methods-patterns-v0 contradiction-refutation",
+        CONTRADICTION_REFUTATION_CNF,
+        2,
+        3,
+    );
 }

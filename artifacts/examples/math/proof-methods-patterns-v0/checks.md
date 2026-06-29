@@ -33,6 +33,25 @@ Expected result: `unsat`.
 The validator enumerates all assignments to `p` and `q` and confirms that
 `p`, `p -> q`, and `!q` cannot all hold.
 
+The pack also carries
+[`cnf/contradiction-refutation.cnf`](cnf/contradiction-refutation.cnf), a
+deterministic DIMACS encoding of the same premise set:
+
+```text
+p
+not p or q
+not q
+```
+
+The focused regression
+
+```sh
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_contradiction_refutation_emits_checked_drat_and_lrat
+```
+
+parses that CNF, emits a DRAT proof with untrusted search, checks the DRAT proof
+independently, elaborates it to LRAT, and checks the LRAT proof independently.
+
 ## `invalid-converse-counterexample`
 
 Expected result: `sat`.

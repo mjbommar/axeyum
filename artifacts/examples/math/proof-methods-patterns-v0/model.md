@@ -20,6 +20,19 @@ cases:          (p -> r) and (!p -> r) imply r
 contradiction:  p and (p -> q) and !q is unsatisfiable
 ```
 
+The CNF artifact
+[`cnf/contradiction-refutation.cnf`](cnf/contradiction-refutation.cnf) encodes
+the contradiction row directly:
+
+```text
+p
+not p or q
+not q
+```
+
+The proof-producing SAT core may search for the refutation, but the trusted
+acceptance path is independent DRAT checking plus LRAT elaboration/checking.
+
 For the invalid converse, the checker accepts the row only because it finds a
 counterexample:
 

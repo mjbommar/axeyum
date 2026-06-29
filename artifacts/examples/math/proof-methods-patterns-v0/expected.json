@@ -62,9 +62,11 @@
       "validation": "truth_table_contradiction_refutation",
       "proof_status": "checked",
       "data": {
-        "variables": ["p", "q"]
+        "variables": ["p", "q"],
+        "cnf_artifact": "artifacts/examples/math/proof-methods-patterns-v0/cnf/contradiction-refutation.cnf",
+        "proof_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_contradiction_refutation_emits_checked_drat_and_lrat"
       },
-      "notes": "The validator enumerates all four assignments and rejects the contradictory premise set."
+      "notes": "The validator enumerates all four assignments and rejects the contradictory premise set; the CNF proof regression parses the DIMACS artifact, emits DRAT, elaborates LRAT, and checks both proofs."
     },
     {
       "id": "invalid-converse-counterexample",

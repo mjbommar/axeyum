@@ -1,0 +1,8 @@
+c proof-methods-patterns-v0 contradiction row
+c variable 1: p
+c variable 2: q
+c premise set: p, p -> q, not q
+p cnf 2 3
+1 0
+-1 2 0
+-2 0

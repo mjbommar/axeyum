@@ -31,7 +31,9 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/proof-methods-patterns-v0/cnf/contradiction-refutation.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "direct-proof-modus-ponens-witness",
@@ -45,6 +47,7 @@
     "Replay finite proof-pattern witnesses and counterexamples from raw Boolean assignments.",
     "Enumerate truth tables for no-counterexample proof obligations.",
     "Keep invalid proof moves represented as satisfying counterexamples, not informal warnings.",
+    "Keep the resource-backed contradiction CNF regression checking generated DRAT and elaborated LRAT proofs.",
     "Promote to proof-object evidence only after LRAT/Alethe/Lean artifacts check the same proof patterns."
   ]
 }
