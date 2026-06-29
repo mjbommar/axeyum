@@ -262,6 +262,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
+- [`artifacts/examples/math/finite-euler-method-v0/`](../../artifacts/examples/math/finite-euler-method-v0/)
+  validates exact finite Euler-method traces, polynomial-solution error replay,
+  invariant checks, checked rejection of a bad Euler step, and an ODE-theory
+  Lean-horizon row.
 - [`artifacts/examples/math/finite-operator-v0/`](../../artifacts/examples/math/finite-operator-v0/)
   validates exact finite-dimensional norm, matrix-operator, and Chebyshev
   recurrence checks.
@@ -339,6 +343,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0

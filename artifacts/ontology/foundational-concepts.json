@@ -1800,6 +1800,12 @@
           "notes": "Finite Riemann Sum Calculus Checks"
         },
         {
+          "id": "finite-euler-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-euler-method-v0",
+          "notes": "Exact Finite Euler Method Checks"
+        },
+        {
           "id": "finite-hitting-times-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-hitting-times-v0",
@@ -2814,6 +2820,12 @@
           "notes": "Finite Chebyshev-System Checks"
         },
         {
+          "id": "finite-euler-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-euler-method-v0",
+          "notes": "Exact Finite Euler Method Checks"
+        },
+        {
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
@@ -3240,6 +3252,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-continuous-maps-v0",
           "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "finite-euler-method-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-euler-method-v0",
+          "notes": "Exact Finite Euler Method Checks"
         },
         {
           "id": "finite-integration-v0",

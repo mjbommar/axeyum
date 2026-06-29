@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "finite-euler-method-v0",
+  "title": "Exact Finite Euler Method Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_differential_equations_and_dynamical_systems",
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_calculus",
+    "curriculum_sequences_and_limits",
+    "curriculum_reals"
+  ],
+  "field_ids": [
+    "differential_equations_and_dynamical_systems",
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "calculus",
+    "sequences-and-limits",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite transition systems",
+    "LRA (exact rationals)",
+    "bounded numerical replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "linear-decay-euler-trace",
+    "quadratic-forcing-error-replay",
+    "nonnegative-monotone-invariant",
+    "bad-euler-step-rejected",
+    "general-ode-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed Euler-step and finite-error checks as deterministic QF_LRA transition obligations.",
+    "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted certificates for bad-step rows once bounded transition proof routes are promoted.",
+    "Keep continuous-time existence, uniqueness, stability, stiffness, convergence-rate, and PDE claims under Lean horizon or numerical-honesty metadata until formal routes exist."
+  ]
+}

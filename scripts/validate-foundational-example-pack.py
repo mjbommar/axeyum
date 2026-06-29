@@ -9849,6 +9849,129 @@ def require_recurrence_trace(context: str, values: dict[str, Any]) -> list[Fract
     return trace
 
 
+def require_euler_ode(context: str, value: Any) -> str:
+    require_string(context, value)
+    if value not in {"y_prime_equals_minus_y", "y_prime_equals_2t"}:
+        fail(f"{context} is not a supported finite Euler ODE")
+    return value
+
+
+def euler_derivative(ode: str, time: Fraction, state: Fraction) -> Fraction:
+    if ode == "y_prime_equals_minus_y":
+        return -state
+    return 2 * time
+
+
+def validate_euler_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    ode = require_euler_ode(f"{context}.ode", values.get("ode"))
+    step = require_fraction(f"{context}.step", values.get("step"))
+    times = require_fraction_vector(f"{context}.times", values.get("times"))
+    states = require_fraction_vector(f"{context}.states", values.get("states"))
+    derivatives = require_fraction_vector(f"{context}.derivatives", values.get("derivatives"))
+    if step <= 0:
+        fail(f"{context}.step must be positive")
+    if len(times) != len(states):
+        fail(f"{context}.times and states must have the same length")
+    if len(derivatives) != len(states) - 1:
+        fail(f"{context}.derivatives must have one entry per transition")
+    for index in range(len(states) - 1):
+        if times[index + 1] != times[index] + step:
+            fail(f"{context}.times transition {index}->{index + 1} does not match step")
+        expected_derivative = euler_derivative(ode, times[index], states[index])
+        if derivatives[index] != expected_derivative:
+            fail(f"{context}.derivatives[{index}] is incorrect")
+        expected_next = states[index] + step * derivatives[index]
+        if states[index + 1] != expected_next:
+            fail(f"{context}.states transition {index}->{index + 1} is not an Euler step")
+    return {
+        "ode": ode,
+        "step": step,
+        "times": times,
+        "states": states,
+        "derivatives": derivatives,
+    }
+
+
+def validate_finite_euler_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    linear = checks["linear-decay-euler-trace"]
+    if linear["expected_result"] != "sat":
+        fail("linear-decay-euler-trace must expect sat")
+    validate_euler_trace("linear decay Euler", single_witness_values(linear, witnesses))
+
+    error = checks["quadratic-forcing-error-replay"]
+    if error["expected_result"] != "sat":
+        fail("quadratic-forcing-error-replay must expect sat")
+    values = single_witness_values(error, witnesses)
+    replay = validate_euler_trace("quadratic forcing Euler", values)
+    if replay["ode"] != "y_prime_equals_2t":
+        fail("quadratic-forcing-error-replay must use y' = 2t")
+    exact_solution = require_fraction_vector("quadratic forcing exact_solution", values.get("exact_solution"))
+    absolute_errors = require_fraction_vector("quadratic forcing absolute_errors", values.get("absolute_errors"))
+    max_error = require_fraction("quadratic forcing max_error", values.get("max_error"))
+    if len(exact_solution) != len(replay["states"]) or len(absolute_errors) != len(replay["states"]):
+        fail("quadratic-forcing-error-replay exact_solution and absolute_errors must match state length")
+    for index, time in enumerate(replay["times"]):
+        expected_exact = time * time
+        if exact_solution[index] != expected_exact:
+            fail(f"quadratic-forcing-error-replay exact_solution[{index}] is incorrect")
+        if absolute_errors[index] != abs(exact_solution[index] - replay["states"][index]):
+            fail(f"quadratic-forcing-error-replay absolute_errors[{index}] is incorrect")
+    if max(absolute_errors) != max_error:
+        fail("quadratic-forcing-error-replay max_error is incorrect")
+
+    invariant = checks["nonnegative-monotone-invariant"]
+    if invariant["expected_result"] != "sat":
+        fail("nonnegative-monotone-invariant must expect sat")
+    values = single_witness_values(invariant, witnesses)
+    replay = validate_euler_trace("Euler invariant", values)
+    lower_bound = require_fraction("Euler invariant lower_bound", values.get("lower_bound"))
+    upper_bound = require_fraction("Euler invariant upper_bound", values.get("upper_bound"))
+    monotonicity = values.get("monotonicity")
+    require_string("Euler invariant monotonicity", monotonicity)
+    if lower_bound > upper_bound:
+        fail("nonnegative-monotone-invariant lower_bound must be <= upper_bound")
+    for index, state in enumerate(replay["states"]):
+        if state < lower_bound or state > upper_bound:
+            fail(f"nonnegative-monotone-invariant state {index} is outside the listed bounds")
+    if monotonicity != "nonincreasing":
+        fail("nonnegative-monotone-invariant only supports nonincreasing monotonicity")
+    for previous, current in zip(replay["states"], replay["states"][1:]):
+        if previous < current:
+            fail("nonnegative-monotone-invariant trace is not nonincreasing")
+
+    bad_step = checks["bad-euler-step-rejected"]
+    if bad_step["expected_result"] != "unsat" or bad_step.get("proof_status") != "checked":
+        fail("bad-euler-step-rejected must be a checked unsat row")
+    data = bad_step.get("data", {})
+    ode = require_euler_ode("bad Euler ode", data.get("ode"))
+    step = require_fraction("bad Euler step", data.get("step"))
+    time = require_fraction("bad Euler time", data.get("time"))
+    state = require_fraction("bad Euler state", data.get("state"))
+    derivative = require_fraction("bad Euler derivative", data.get("derivative"))
+    claimed_next = require_fraction("bad Euler claimed_next", data.get("claimed_next"))
+    actual_next = require_fraction("bad Euler actual_next", data.get("actual_next"))
+    if step <= 0:
+        fail("bad-euler-step-rejected step must be positive")
+    if euler_derivative(ode, time, state) != derivative:
+        fail("bad-euler-step-rejected derivative is incorrect")
+    if state + step * derivative != actual_next:
+        fail("bad-euler-step-rejected actual_next is incorrect")
+    if claimed_next == actual_next:
+        fail("bad-euler-step-rejected claimed step unexpectedly matches")
+
+    horizon = checks["general-ode-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-ode-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-ode-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general ODE target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general ODE future_checker", data.get("future_checker"))
+
+
 def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -9932,6 +10055,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":
         validate_finite_continuous_maps(expected)
+    if metadata["id"] == "finite-euler-method-v0":
+        validate_finite_euler_method(expected)
     if metadata["id"] == "function-composition-v0":
         validate_function_composition(expected)
     if metadata["id"] == "generating-functions-v0":

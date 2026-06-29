@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-euler-method-v0",
+  "witnesses": [
+    {
+      "id": "linear-decay-half-step",
+      "description": "A finite explicit-Euler trace for y' = -y with h = 1/2.",
+      "values": {
+        "ode": "y_prime_equals_minus_y",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["1", "1/2", "1/4", "1/8"],
+        "derivatives": ["-1", "-1/2", "-1/4"]
+      }
+    },
+    {
+      "id": "quadratic-forcing-euler-error",
+      "description": "Euler replay and exact polynomial-solution error for y' = 2t, y(0) = 0.",
+      "values": {
+        "ode": "y_prime_equals_2t",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["0", "0", "1/2", "3/2"],
+        "derivatives": ["0", "1", "2"],
+        "exact_solution": ["0", "1/4", "1", "9/4"],
+        "absolute_errors": ["0", "1/4", "1/2", "3/4"],
+        "max_error": "3/4"
+      }
+    },
+    {
+      "id": "linear-decay-invariant",
+      "description": "The linear-decay Euler trace stays nonnegative and monotone over the listed horizon.",
+      "values": {
+        "ode": "y_prime_equals_minus_y",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["1", "1/2", "1/4", "1/8"],
+        "derivatives": ["-1", "-1/2", "-1/4"],
+        "lower_bound": "0",
+        "upper_bound": "1",
+        "monotonicity": "nonincreasing"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "linear-decay-euler-trace",
+      "claim": "The listed finite trace follows explicit Euler for y' = -y exactly.",
+      "expected_result": "sat",
+      "validation": "exact_euler_transition_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-half-step"],
+      "notes": "The validator checks the time grid, derivative values, and every y_{n+1} = y_n + h*f(t_n,y_n) update."
+    },
+    {
+      "id": "quadratic-forcing-error-replay",
+      "claim": "The listed Euler trace and exact polynomial-solution errors are correct for y' = 2t.",
+      "expected_result": "sat",
+      "validation": "exact_euler_error_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-forcing-euler-error"],
+      "notes": "The validator checks Euler updates, exact solution values t^2, absolute errors, and the maximum error."
+    },
+    {
+      "id": "nonnegative-monotone-invariant",
+      "claim": "The listed linear-decay Euler trace stays in [0, 1] and is monotone nonincreasing.",
+      "expected_result": "sat",
+      "validation": "exact_euler_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-invariant"],
+      "notes": "The validator replays the Euler trace and checks bounds and monotonicity at each listed state."
+    },
+    {
+      "id": "bad-euler-step-rejected",
+      "claim": "For y' = -y, h = 1/2, and y = 1, one explicit Euler step gives 3/4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_euler_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "ode": "y_prime_equals_minus_y",
+        "step": "1/2",
+        "time": "0",
+        "state": "1",
+        "derivative": "-1",
+        "claimed_next": "3/4",
+        "actual_next": "1/2"
+      },
+      "notes": "The validator recomputes the Euler update as 1 + (1/2)(-1) = 1/2."
+    },
+    {
+      "id": "general-ode-theory-lean-horizon",
+      "claim": "General continuous-time ODE and numerical-analysis theorems require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "existence, uniqueness, stability, convergence rates, stiffness analysis, and PDE theory",
+        "future_checker": "Lean module plus numerical-honesty metadata for floating-point solvers"
+      },
+      "notes": "The finite rows are checked by exact rational replay; continuous ODE theory remains a proof-assistant or numerical-honesty horizon."
+    }
+  ]
+}

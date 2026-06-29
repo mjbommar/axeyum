@@ -124,6 +124,7 @@ artifacts/examples/math/
   finite-hitting-times-v0/
   finite-concentration-v0/
   bounded-dynamics-v0/
+  finite-euler-method-v0/
   finite-operator-v0/
   finite-chebyshev-systems-v0/
   complex-algebraic-v0/
@@ -523,6 +524,10 @@ Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.
+[`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/)
+validates exact finite Euler-method traces, polynomial-solution error replay,
+invariant checks, checked rejection of a bad Euler step, and an ODE-theory
+Lean-horizon row.
 [`finite-operator-v0`](../../artifacts/examples/math/finite-operator-v0/)
 validates exact finite-dimensional norm, matrix-operator, and Chebyshev
 recurrence checks.

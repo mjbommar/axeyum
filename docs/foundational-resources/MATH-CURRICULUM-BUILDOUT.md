@@ -212,8 +212,8 @@ losing the curriculum anchor.
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, LP feasibility, dual/Farkas certificates, finite convexity, and threshold checks. |
-| `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
-| `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
+| `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, LU replay, interval bounds, error recurrences, and finite ODE step replay. |
+| `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, incidence, distance, midpoint, collinearity, affine maps, signed area, barycentric replay, and finite incidence preservation. |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `finite-chebyshev-systems-v0`, norms, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
 
@@ -590,6 +590,9 @@ Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
+`artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
+Euler-method traces, polynomial-solution error replay, invariant checks,
+checked rejection of a bad Euler step, and an ODE-theory Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
@@ -647,7 +650,8 @@ Recommended order:
    false orientation rejection.
 7. `finite-topology-v0`: finite closure/interior and metric-ball examples.
 8. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
-9. `bounded-dynamics-v0`: recurrence systems and invariant checks.
+9. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
+   Euler step replay, finite error checks, and invariants.
 10. `finite-operator-v0`: finite-dimensional norms/operators and Chebyshev
    polynomial examples.
 11. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
@@ -839,9 +843,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 69 non-template math example packs validate.
+  Status: 70 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 57 non-template packs have at least one `checked` expected-result row.
+  Status: 58 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -968,6 +972,10 @@ Lean-horizon row.
 bridge: coefficient extraction, Cauchy product convolution, Fibonacci
 generating-function prefix replay, checked rejection of a bad convolution
 coefficient, and a generating-functions Lean-horizon row.
+`finite-euler-method-v0` now adds the next exact finite dynamics/numerical
+bridge: explicit Euler replay, polynomial-solution error replay, finite
+invariant checks, checked rejection of a bad Euler step, and an ODE-theory
+Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

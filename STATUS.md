@@ -169,6 +169,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Euler method foundations pack landed.** Added
+  [`finite-euler-method-v0`](artifacts/examples/math/finite-euler-method-v0/README.md)
+  as the next exact finite bridge across differential equations, numerical
+  analysis, and calculus. The pack validates explicit Euler traces,
+  polynomial-solution error replay, finite invariant checks, checked rejection
+  of a bad Euler step, and a general ODE-theory Lean-horizon row. The
+  foundational example-pack validator now checks these rows by exact rational
+  transition replay.
+
 - **Generating functions foundations pack landed.** Added
   [`generating-functions-v0`](artifacts/examples/math/generating-functions-v0/README.md)
   as the next exact finite bridge across counting, polynomials, and sequence
