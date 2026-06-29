@@ -85,6 +85,7 @@ artifacts/examples/math/
   calculus-riemann-sum-v0/
   linear-algebra-rational-v0/
   finite-vector-spaces-v0/
+  finite-modules-v0/
   numerical-linear-algebra-v0/
   spectral-linear-algebra-v0/
   matrix-invariants-v0/
@@ -96,6 +97,7 @@ artifacts/examples/math/
   finite-fields-v0/
   finite-algebra-homomorphisms-v0/
   finite-vector-spaces-v0/
+  finite-modules-v0/
   polynomial-identities-v0/
   counting-v0/
   generating-functions-v0/
@@ -399,6 +401,10 @@ rejection, and an isomorphism-theorem Lean-horizon row.
 validates finite vector-space laws over `F2`, subspace/span replay, linear-map
 kernel/image replay, rank-nullity replay, checked bad-subspace rejection, and a
 vector-space/module Lean-horizon row.
+[`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
+validates finite module laws over `Z/4Z`, submodule/span replay,
+module-homomorphism kernel/image replay, quotient-module table replay, checked
+bad-submodule rejection, and a module-theory Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality
@@ -426,6 +432,10 @@ row-scaling inconsistency certificate for a singular system.
 adds the finite-field linear algebra bridge: vector-space tables over `F2`,
 subspaces, spans, linear maps, kernels, images, rank-nullity, and bad-subspace
 rejection.
+[`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
+adds the finite module bridge from rings into linear algebra: `Z/4Z` action
+tables, generated submodules, module homomorphisms, kernel/image replay,
+quotient-module tables, and bad-submodule rejection.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of a false residual bound.

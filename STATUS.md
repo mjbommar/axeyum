@@ -160,8 +160,17 @@ sort `ite`/theory-combination) and landed two solver changes: `check_auto` no
 longer hard-errors on a valid QF_UF instance, and uninterpreted-sort `ite` is
 eliminated equisatisfiably for the e-graph path (pure-UF-confined). **QF_UF
 37/48 → 39/48** (gap to z3 −4 → −2), DISAGREE=0, lib 613/613 + qf_uf fuzz
-DISAGREE=0. Grounding + remaining keystone (UF+theory combination routing) in
-[decide-rate-measured-2026-06-29](docs/plan/decide-rate-measured-2026-06-29.md).
+DISAGREE=0. Then batch-measured the other slices and closed the next verifiable
+gap: **QF_ABV** robustness (no hard-error on a wide-index array equality) +
+**write-index array extensionality** (decides shared-base `store-chain =
+store-chain` over 32-/64-bit indices without `2^iw` enumeration) → **QF_ABV
+173 → 176/177** (gap to z3 −1), DISAGREE=0, abv fuzz DISAGREE=0, rewrite 88/88.
+Grounding + the remaining leads in
+[decide-rate-measured-2026-06-29](docs/plan/decide-rate-measured-2026-06-29.md):
+the **UF+theory combination keystone** (deep; `issue5836-2`/`issue5396`) and a
+newly-found **deadline-robustness defect** (some `check_auto` paths ignore
+`config.timeout` and hang on a few QF_LIA/QF_AUFLIA instances — a consumer-facing
+budget bug to thread the deadline through).
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
