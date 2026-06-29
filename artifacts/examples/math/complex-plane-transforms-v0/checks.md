@@ -1,0 +1,39 @@
+# Checks
+
+## `unit-root-cycle-replay`
+
+Expected result: `sat`.
+
+The validator recomputes the powers of `i` and checks the cycle
+`1, i, -1, -i, 1`. It also checks that each non-final listed power has
+norm-squared `1`.
+
+## `conjugation-product-replay`
+
+Expected result: `sat`.
+
+The validator recomputes `z*w`, `conjugate(z*w)`, and
+`conjugate(z)*conjugate(w)` for a fixed pair of complex numbers.
+
+## `mobius-transform-witness`
+
+Expected result: `sat`.
+
+The validator checks the rational transform `(z - 1) / (z + 1)` at
+`z = 2 + i`, including the nonzero denominator, exact quotient, and
+image norm-squared.
+
+## `bad-unit-square-real-part-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the false claim that every square of a unit complex
+number has nonnegative real part. The counterexample is `i^2 = -1`.
+
+## `general-complex-analysis-lean-horizon`
+
+Expected result: `not-run`.
+
+Holomorphic functions, contour integrals, residues, analytic continuation, and
+the fundamental theorem of algebra belong in a future Lean-backed resource.
+The finite rows above are exact algebraic replay checks only.

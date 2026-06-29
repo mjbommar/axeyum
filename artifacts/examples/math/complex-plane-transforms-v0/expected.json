@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "pack_id": "complex-plane-transforms-v0",
+  "witnesses": [
+    {
+      "id": "i-unit-root-cycle",
+      "description": "The complex number i cycles through the fourth roots of unity.",
+      "values": {
+        "root": ["0", "1"],
+        "order": 4,
+        "powers": [["1", "0"], ["0", "1"], ["-1", "0"], ["0", "-1"], ["1", "0"]],
+        "norm_squared": ["1", "1", "1", "1"]
+      }
+    },
+    {
+      "id": "conjugation-product",
+      "description": "Conjugation of a fixed product matches the product of conjugates.",
+      "values": {
+        "z": ["1", "2"],
+        "w": ["3", "-1"],
+        "product": ["5", "5"],
+        "conjugate_z": ["1", "-2"],
+        "conjugate_w": ["3", "1"],
+        "conjugate_product": ["5", "-5"],
+        "product_of_conjugates": ["5", "-5"]
+      }
+    },
+    {
+      "id": "mobius-half-plane-point",
+      "description": "A fixed rational Mobius transform sends 2 + i to 2/5 + 1/5 i.",
+      "values": {
+        "z": ["2", "1"],
+        "subtract": ["1", "0"],
+        "add": ["1", "0"],
+        "numerator": ["1", "1"],
+        "denominator": ["3", "1"],
+        "denominator_norm_squared": "10",
+        "image": ["2/5", "1/5"],
+        "image_norm_squared": "1/5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "unit-root-cycle-replay",
+      "claim": "The listed powers of i form an exact order-four unit-root cycle.",
+      "expected_result": "sat",
+      "validation": "exact_complex_power_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["i-unit-root-cycle"],
+      "notes": "The validator recomputes each power with exact real-pair multiplication."
+    },
+    {
+      "id": "conjugation-product-replay",
+      "claim": "For the fixed pair, conjugate(z*w) equals conjugate(z)*conjugate(w).",
+      "expected_result": "sat",
+      "validation": "exact_complex_conjugation_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["conjugation-product"],
+      "notes": "The validator recomputes the product, conjugates, and product of conjugates exactly."
+    },
+    {
+      "id": "mobius-transform-witness",
+      "claim": "The listed rational Mobius-transform image is correct for z = 2 + i.",
+      "expected_result": "sat",
+      "validation": "exact_complex_rational_transform_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["mobius-half-plane-point"],
+      "notes": "The validator recomputes (z - 1)/(z + 1), denominator norm, and image norm exactly."
+    },
+    {
+      "id": "bad-unit-square-real-part-rejected",
+      "claim": "Every square of a unit complex number has nonnegative real part.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_complex_square_refutation",
+      "proof_status": "checked",
+      "data": {
+        "z": ["0", "1"],
+        "z_norm_squared": "1",
+        "z_squared": ["-1", "0"],
+        "claimed_relation": "real_part_nonnegative",
+        "real_part": "-1"
+      },
+      "notes": "The validator rejects the claim because i is unit length but i^2 has real part -1."
+    },
+    {
+      "id": "general-complex-analysis-lean-horizon",
+      "claim": "General complex-analysis theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Cauchy-Riemann equations, Cauchy's theorem, residues, analytic continuation, and the fundamental theorem of algebra",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked by exact real-pair replay; analytic complex analysis remains a proof-assistant horizon."
+    }
+  ]
+}

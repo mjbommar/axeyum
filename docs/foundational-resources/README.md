@@ -266,6 +266,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/complex-algebraic-v0/`](../../artifacts/examples/math/complex-algebraic-v0/)
   validates exact complex arithmetic, conjugate/norm replay, and a fixed
   polynomial-root witness using real-pair algebra.
+- [`artifacts/examples/math/complex-plane-transforms-v0/`](../../artifacts/examples/math/complex-plane-transforms-v0/)
+  validates exact unit-root cycles, conjugation/product replay, rational
+  Mobius-transform replay, checked rejection of a false unit-square real-part
+  claim, and a complex-analysis Lean-horizon row.
 
 Validation commands:
 
@@ -330,6 +334,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
 ```
 
 ## Principle

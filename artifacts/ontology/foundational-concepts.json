@@ -1610,6 +1610,12 @@
           "notes": "Complex Arithmetic As Real-Pair Algebra"
         },
         {
+          "id": "complex-plane-transforms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-plane-transforms-v0",
+          "notes": "Exact Complex Plane Transform Checks"
+        },
+        {
           "id": "finite-groups-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-groups-v0",
@@ -1700,6 +1706,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
           "notes": "Complex arithmetic as real-pair algebra before analytic proof horizons."
+        },
+        {
+          "id": "complex-plane-transforms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-plane-transforms-v0",
+          "notes": "Exact Complex Plane Transform Checks"
         },
         {
           "id": "polynomial-identities-v0",
@@ -2259,6 +2271,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
           "notes": "Complex Arithmetic As Real-Pair Algebra"
+        },
+        {
+          "id": "complex-plane-transforms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-plane-transforms-v0",
+          "notes": "Exact Complex Plane Transform Checks"
         },
         {
           "id": "convexity-rational-v0",
@@ -3138,6 +3156,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
           "notes": "Complex Arithmetic As Real-Pair Algebra"
+        },
+        {
+          "id": "complex-plane-transforms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/complex-plane-transforms-v0",
+          "notes": "Exact Complex Plane Transform Checks"
         },
         {
           "id": "convexity-rational-v0",

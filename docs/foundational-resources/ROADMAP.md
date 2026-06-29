@@ -125,6 +125,7 @@ artifacts/examples/math/
   finite-operator-v0/
   finite-chebyshev-systems-v0/
   complex-algebraic-v0/
+  complex-plane-transforms-v0/
 scripts/
   gen-foundational-concepts.py
   consume-foundational-resources.py
@@ -521,6 +522,10 @@ alternating residual signs, and checked rejection of a duplicate-node grid.
 [`complex-algebraic-v0`](../../artifacts/examples/math/complex-algebraic-v0/)
 validates exact complex arithmetic, conjugate/norm replay, and a fixed
 polynomial-root witness using real-pair algebra.
+[`complex-plane-transforms-v0`](../../artifacts/examples/math/complex-plane-transforms-v0/)
+validates exact unit-root cycles, conjugation/product replay, rational
+Mobius-transform replay, checked rejection of a false unit-square real-part
+claim, and a complex-analysis Lean-horizon row.
 
 Exit criteria:
 

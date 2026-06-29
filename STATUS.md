@@ -169,6 +169,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex plane transform foundations pack landed.** Added
+  [`complex-plane-transforms-v0`](artifacts/examples/math/complex-plane-transforms-v0/README.md)
+  as the next exact finite complex-analysis bridge after the base real-pair
+  complex arithmetic pack. The pack validates unit-root cycles,
+  conjugation/product replay, rational Mobius-transform replay, checked
+  rejection of a false unit-square real-part claim, and a general
+  complex-analysis Lean-horizon row. The foundational example-pack validator
+  now checks these rows by exact rational complex-pair arithmetic.
+
 - **Orientation/area geometry foundations pack landed.** Added
   [`orientation-area-geometry-v0`](artifacts/examples/math/orientation-area-geometry-v0/README.md)
   as the exact finite signed-area bridge after coordinate and affine geometry.

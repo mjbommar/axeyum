@@ -5264,6 +5264,13 @@ def complex_add(
     return left[0] + right[0], left[1] + right[1]
 
 
+def complex_sub(
+    left: tuple[Fraction, Fraction],
+    right: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction]:
+    return left[0] - right[0], left[1] - right[1]
+
+
 def complex_mul(
     left: tuple[Fraction, Fraction],
     right: tuple[Fraction, Fraction],
@@ -5277,6 +5284,20 @@ def complex_conjugate(value: tuple[Fraction, Fraction]) -> tuple[Fraction, Fract
 
 def complex_norm_squared(value: tuple[Fraction, Fraction]) -> Fraction:
     return value[0] * value[0] + value[1] * value[1]
+
+
+def complex_div(
+    context: str,
+    numerator: tuple[Fraction, Fraction],
+    denominator: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction]:
+    denominator_norm = complex_norm_squared(denominator)
+    if denominator_norm == 0:
+        fail(f"{context} denominator must be nonzero")
+    return (
+        (numerator[0] * denominator[0] + numerator[1] * denominator[1]) / denominator_norm,
+        (numerator[1] * denominator[0] - numerator[0] * denominator[1]) / denominator_norm,
+    )
 
 
 def validate_complex_algebraic(expected: dict[str, Any]) -> None:
@@ -5329,6 +5350,135 @@ def validate_complex_algebraic(expected: dict[str, Any]) -> None:
         fail("quadratic root polynomial_value does not match z^2 + 1")
     if polynomial_value != (Fraction(0), Fraction(0)):
         fail("quadratic root polynomial_value must be exactly 0 + 0i")
+
+
+def validate_complex_plane_transforms(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    root_cycle = checks["unit-root-cycle-replay"]
+    if root_cycle["expected_result"] != "sat":
+        fail("unit-root-cycle-replay must expect sat")
+    values = single_witness_values(root_cycle, witnesses)
+    root = require_complex_pair("unit root root", values.get("root"))
+    order = require_int("unit root order", values.get("order"))
+    if order <= 0:
+        fail("unit-root-cycle-replay order must be positive")
+    raw_powers = values.get("powers")
+    if not isinstance(raw_powers, list):
+        fail("unit-root-cycle-replay powers must be a list")
+    powers = [
+        require_complex_pair(f"unit root powers[{index}]", value)
+        for index, value in enumerate(raw_powers)
+    ]
+    if len(powers) != order + 1:
+        fail("unit-root-cycle-replay powers must contain order + 1 values")
+    norm_squared = require_fraction_vector("unit root norm_squared", values.get("norm_squared"))
+    if len(norm_squared) != order:
+        fail("unit-root-cycle-replay norm_squared must contain one value per non-final power")
+    current = (Fraction(1), Fraction(0))
+    for index in range(order):
+        if powers[index] != current:
+            fail(f"unit-root-cycle-replay power {index} is incorrect")
+        if complex_norm_squared(powers[index]) != norm_squared[index]:
+            fail(f"unit-root-cycle-replay norm_squared {index} is incorrect")
+        current = complex_mul(current, root)
+    if powers[order] != current:
+        fail("unit-root-cycle-replay final power is incorrect")
+    if powers[0] != (Fraction(1), Fraction(0)) or powers[order] != powers[0]:
+        fail("unit-root-cycle-replay must start and end at 1")
+    if complex_norm_squared(root) != 1:
+        fail("unit-root-cycle-replay root must have norm squared 1")
+
+    conjugation_product = checks["conjugation-product-replay"]
+    if conjugation_product["expected_result"] != "sat":
+        fail("conjugation-product-replay must expect sat")
+    values = single_witness_values(conjugation_product, witnesses)
+    z_value = require_complex_pair("conjugation product z", values.get("z"))
+    w_value = require_complex_pair("conjugation product w", values.get("w"))
+    product_value = require_complex_pair("conjugation product product", values.get("product"))
+    conjugate_z = require_complex_pair("conjugation product conjugate_z", values.get("conjugate_z"))
+    conjugate_w = require_complex_pair("conjugation product conjugate_w", values.get("conjugate_w"))
+    conjugate_product_value = require_complex_pair(
+        "conjugation product conjugate_product",
+        values.get("conjugate_product"),
+    )
+    product_of_conjugates = require_complex_pair(
+        "conjugation product product_of_conjugates",
+        values.get("product_of_conjugates"),
+    )
+    if complex_mul(z_value, w_value) != product_value:
+        fail("conjugation-product-replay product is incorrect")
+    if complex_conjugate(z_value) != conjugate_z:
+        fail("conjugation-product-replay conjugate_z is incorrect")
+    if complex_conjugate(w_value) != conjugate_w:
+        fail("conjugation-product-replay conjugate_w is incorrect")
+    if complex_conjugate(product_value) != conjugate_product_value:
+        fail("conjugation-product-replay conjugate_product is incorrect")
+    if complex_mul(conjugate_z, conjugate_w) != product_of_conjugates:
+        fail("conjugation-product-replay product_of_conjugates is incorrect")
+    if conjugate_product_value != product_of_conjugates:
+        fail("conjugation-product-replay conjugation/product equality fails")
+
+    mobius = checks["mobius-transform-witness"]
+    if mobius["expected_result"] != "sat":
+        fail("mobius-transform-witness must expect sat")
+    values = single_witness_values(mobius, witnesses)
+    z_value = require_complex_pair("mobius z", values.get("z"))
+    subtract_value = require_complex_pair("mobius subtract", values.get("subtract"))
+    add_value = require_complex_pair("mobius add", values.get("add"))
+    numerator = require_complex_pair("mobius numerator", values.get("numerator"))
+    denominator = require_complex_pair("mobius denominator", values.get("denominator"))
+    denominator_norm_squared = require_fraction(
+        "mobius denominator_norm_squared",
+        values.get("denominator_norm_squared"),
+    )
+    image = require_complex_pair("mobius image", values.get("image"))
+    image_norm_squared = require_fraction("mobius image_norm_squared", values.get("image_norm_squared"))
+    if complex_sub(z_value, subtract_value) != numerator:
+        fail("mobius-transform-witness numerator is incorrect")
+    if complex_add(z_value, add_value) != denominator:
+        fail("mobius-transform-witness denominator is incorrect")
+    if complex_norm_squared(denominator) != denominator_norm_squared:
+        fail("mobius-transform-witness denominator norm is incorrect")
+    if denominator_norm_squared == 0:
+        fail("mobius-transform-witness denominator must be nonzero")
+    if complex_div("mobius-transform-witness", numerator, denominator) != image:
+        fail("mobius-transform-witness image is incorrect")
+    if complex_norm_squared(image) != image_norm_squared:
+        fail("mobius-transform-witness image norm is incorrect")
+
+    bad_square = checks["bad-unit-square-real-part-rejected"]
+    if bad_square["expected_result"] != "unsat" or bad_square.get("proof_status") != "checked":
+        fail("bad-unit-square-real-part-rejected must be a checked unsat row")
+    data = bad_square.get("data", {})
+    z_value = require_complex_pair("bad unit square z", data.get("z"))
+    z_norm_squared = require_fraction("bad unit square z_norm_squared", data.get("z_norm_squared"))
+    z_squared = require_complex_pair("bad unit square z_squared", data.get("z_squared"))
+    claimed_relation = data.get("claimed_relation")
+    require_string("bad unit square claimed_relation", claimed_relation)
+    real_part = require_fraction("bad unit square real_part", data.get("real_part"))
+    if complex_norm_squared(z_value) != z_norm_squared:
+        fail("bad-unit-square-real-part-rejected z_norm_squared is incorrect")
+    if z_norm_squared != 1:
+        fail("bad-unit-square-real-part-rejected counterexample must be unit length")
+    if complex_mul(z_value, z_value) != z_squared:
+        fail("bad-unit-square-real-part-rejected z_squared is incorrect")
+    if z_squared[0] != real_part:
+        fail("bad-unit-square-real-part-rejected real_part is incorrect")
+    if claimed_relation != "real_part_nonnegative":
+        fail("bad-unit-square-real-part-rejected claimed_relation is unexpected")
+    if real_part >= 0:
+        fail("bad-unit-square-real-part-rejected counterexample does not refute nonnegative real part")
+
+    horizon = checks["general-complex-analysis-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-complex-analysis-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-complex-analysis-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general complex analysis target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general complex analysis future_checker", data.get("future_checker"))
 
 
 def require_linear_variables(context: str, value: Any) -> list[str]:
@@ -9520,6 +9670,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_calculus_riemann_sum(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
+    if metadata["id"] == "complex-plane-transforms-v0":
+        validate_complex_plane_transforms(expected)
     if metadata["id"] == "convexity-rational-v0":
         validate_convexity_rational(expected)
     if metadata["id"] == "counting-v0":

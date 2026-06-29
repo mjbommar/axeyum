@@ -186,7 +186,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0` | Exact rational order/field facts, density, trichotomy, Farkas links. |
 | `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0` | Bounded rational neighborhoods and algebraic real constraints through LRA/NRA; completeness marked horizon. |
-| `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0` | Complex arithmetic as real-pair algebraic constraints. |
+| `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0` | Congruences, inverses, CRT, fixed-modulus enumeration. |
 | `groups` | `abstract_algebra` | `finite-groups-v0` | Cayley-table closure, identity, inverse, associativity checks. |
@@ -590,6 +590,10 @@ general Chebyshev-system Lean-horizon row.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
 arithmetic, conjugate/norm replay, and a fixed polynomial-root witness using
 real-pair algebra.
+`artifacts/examples/math/complex-plane-transforms-v0/` now validates exact
+unit-root cycles, conjugation/product replay, rational Mobius-transform
+replay, checked rejection of a false unit-square real-part claim, and a
+complex-analysis Lean-horizon row.
 `artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
 residual bounds, rational solution boxes, Jacobi one-step contraction replay,
 and checked rejection of a false residual bound.
@@ -635,7 +639,9 @@ Recommended order:
 9. `bounded-dynamics-v0`: recurrence systems and invariant checks.
 10. `finite-operator-v0`: finite-dimensional norms/operators and Chebyshev
    polynomial examples.
-11. `complex-algebraic-v0`: complex arithmetic as real-pair algebra.
+11. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
+    arithmetic, unit-root cycles, conjugation/product replay, and rational
+    Mobius transforms as real-pair algebra.
 12. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
     and exact iterative-method error replay.
 13. `random-matrix-finite-v0`: finite matrix-valued probability tables,
@@ -822,9 +828,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 66 non-template math example packs validate.
+  Status: 67 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 54 non-template packs have at least one `checked` expected-result row.
+  Status: 55 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -939,6 +945,10 @@ row.
 bridge for geometry: signed-area replay, affine determinant area scaling,
 barycentric point-inside replay, checked rejection of false orientation, and an
 oriented-geometry Lean-horizon row.
+`complex-plane-transforms-v0` now adds the next exact finite complex-analysis
+bridge: unit-root cycles, conjugation/product replay, rational
+Mobius-transform replay, checked rejection of a false unit-square real-part
+claim, and a complex-analysis Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

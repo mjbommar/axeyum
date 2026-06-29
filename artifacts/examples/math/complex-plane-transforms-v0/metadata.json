@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "complex-plane-transforms-v0",
+  "title": "Exact Complex Plane Transform Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_complex",
+    "curriculum_reals",
+    "curriculum_polynomials",
+    "field_complex_analysis",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "field_abstract_algebra"
+  ],
+  "field_ids": [
+    "complex_analysis",
+    "linear_algebra",
+    "real_analysis",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "complex",
+    "reals",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "real-pair algebra",
+    "NRA over exact rational pairs",
+    "finite rational-function replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/complex.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "unit-root-cycle-replay",
+    "conjugation-product-replay",
+    "mobius-transform-witness",
+    "bad-unit-square-real-part-rejected",
+    "general-complex-analysis-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed complex-plane transform checks as deterministic real-pair NRA obligations.",
+    "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted certificates for the false unit-square row once the relevant algebraic proof routes are promoted.",
+    "Keep holomorphic, contour-integral, residue, analytic-continuation, and fundamental-theorem claims under Lean horizon until formal proof routes exist."
+  ]
+}
