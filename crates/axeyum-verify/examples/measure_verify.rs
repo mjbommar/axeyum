@@ -100,8 +100,9 @@ impl Outcome {
     }
 }
 
-/// `while i < limit { i = i + 1; assert!(i != bad); }` after `let i = 0`.
-fn counter_program(bad: u128) -> Program {
+/// `while i < limit { i = i + 1; assert!(i != bad); }` after `let i = 0`, with an
+/// explicit unwind `bound`.
+fn counter_program_b(bad: u128, bound: u128) -> Program {
     prog(
         "counter",
         vec![param("limit")],
@@ -109,7 +110,7 @@ fn counter_program(bad: u128) -> Program {
             let_("i", lit(0)),
             Stmt::While {
                 cond: bin(BinOp::Lt, var("i"), var("limit")),
-                bound: 10,
+                bound,
                 body: vec![
                     assign("i", bin(BinOp::Add, var("i"), lit(1))),
                     Stmt::Assert(bin(BinOp::Ne, var("i"), lit(bad))),
@@ -117,6 +118,10 @@ fn counter_program(bad: u128) -> Program {
             },
         ],
     )
+}
+
+fn counter_program(bad: u128) -> Program {
+    counter_program_b(bad, 10)
 }
 
 #[allow(clippy::too_many_lines)] // a flat data listing of construction-known cases
@@ -267,6 +272,72 @@ fn evaluate(case: &Case, cfg: &SolverConfig) -> Outcome {
     }
 }
 
+/// One depth point of the warm-BMC-vs-unroll scaling sweep on a safe loop.
+struct ScaleRow {
+    bound: usize,
+    unroll_us: u128,
+    warm_us: u128,
+    agree: bool,
+}
+
+/// Decide a safe counter loop (`assert i != 200`, out of reach) at increasing
+/// unwind bounds via both the unroll route (`verify_program`) and the warm route
+/// (`check_program_loop`), timing each. Honest measurement of whether the warm
+/// (incremental-across-depths) route actually pays off vs. unrolling — and a
+/// soundness check that both stay "safe" at every depth.
+fn scaling_sweep(cfg: &SolverConfig) -> Vec<ScaleRow> {
+    let mut rows = Vec::new();
+    for &bound in &[2_usize, 4, 6, 8] {
+        let prog = counter_program_b(200, bound as u128);
+        let t0 = std::time::Instant::now();
+        let unroll = verify_program(&prog, cfg).expect("verify");
+        let unroll_us = t0.elapsed().as_micros();
+        let t1 = std::time::Instant::now();
+        let warm = check_program_loop(&prog, bound, cfg)
+            .expect("fragment")
+            .expect("run");
+        let warm_us = t1.elapsed().as_micros();
+        let agree = matches!(unroll, Verdict::Verified { .. })
+            && matches!(warm, LoopSafety::SafeWithinBound { .. });
+        rows.push(ScaleRow {
+            bound,
+            unroll_us,
+            warm_us,
+            agree,
+        });
+    }
+    rows
+}
+
+fn render_scaling(rows: &[ScaleRow]) -> String {
+    let mut out = String::new();
+    out.push_str("\n## Warm-BMC vs unroll scaling (safe deep loop)\n\n");
+    out.push_str(
+        "A safe counter loop decided at increasing unwind bounds by both routes \
+         (both must stay `verified`/`safe` — agreement is the soundness check). \
+         Times are a single wall-clock run, indicative not tuned. **Caveat:** not \
+         pure apples-to-apples — the unroll route (`verify_program`) also produces \
+         a re-checked evidence certificate + a Lean-reconstruction attempt, while \
+         the warm route currently returns only the decision (a cert on the warm \
+         route is a follow-up). Even so, the warm `bounded_model_check` is \
+         genuinely incremental across depths and scales far better here — the \
+         *opposite* of the EVM store-chain result (U6/U7), where the one-shot \
+         memory dispatcher made the array path lose to `ite`-fold.\n\n",
+    );
+    out.push_str("| Unwind bound | unroll t µs | warm-BMC t µs | agree |\n|---|---|---|---|\n");
+    for r in rows {
+        let _ = writeln!(
+            out,
+            "| {} | {} | {} | {} |",
+            r.bound,
+            r.unroll_us,
+            r.warm_us,
+            if r.agree { "yes" } else { "**NO**" },
+        );
+    }
+    out
+}
+
 fn render(rows: &[(&Case, Outcome)], disagree: usize) -> String {
     let mut out = String::new();
     out.push_str("# Verify capability scoreboard\n\n");
@@ -363,12 +434,20 @@ fn main() -> ExitCode {
         }
         rows.push((case, outcome));
     }
-    let disagree = rows
+    let mut disagree = rows
         .iter()
         .filter(|(_, o)| matches!(o, Outcome::Disagree(_)))
         .count();
 
-    let md = render(&rows, disagree);
+    let scale = scaling_sweep(&cfg);
+    for r in &scale {
+        if !r.agree {
+            eprintln!("SCALING DISAGREE at bound {}: routes disagree", r.bound);
+            disagree += 1;
+        }
+    }
+
+    let md = format!("{}{}", render(&rows, disagree), render_scaling(&scale));
     let json = render_json(&rows, disagree);
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/consumer-track/verify");
     std::fs::create_dir_all(&dir).expect("create scoreboard dir");
