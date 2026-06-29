@@ -12,6 +12,7 @@ Concept rows:
 
 Example packs:
 
+- [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
@@ -20,9 +21,9 @@ Example packs:
 ## What Axeyum Checks
 
 The checkable slice is finite or bounded: finite topological spaces, exact
-metric balls, finite sigma-algebras, exact finite additivity, bounded recurrence
-traces, finite invariant witnesses, matrix operator bounds, and Chebyshev
-recurrence values at fixed points.
+metric balls, finite sigma-algebras, exact finite additivity, algebraic real
+shadows, bounded recurrence traces, finite invariant witnesses, matrix operator
+bounds, and Chebyshev recurrence values at fixed points.
 
 This is the useful boundary for learners: Axeyum can check a concrete finite
 model and tell you exactly why it passes.
@@ -55,6 +56,7 @@ The validator checks every transition and then checks the invariant
 Run the checks from the repository root:
 
 ```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0

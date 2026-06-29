@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "reals-rcf-shadow-v0",
+  "title": "Real Algebra RCF Shadow",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_rationals",
+    "curriculum_polynomials",
+    "field_real_analysis",
+    "field_optimization_and_convexity"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "rationals",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "NRA / polynomial constraints",
+    "real-closed-field shadow",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0",
+  "source_refs": [
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "ordered-field-midpoint-witness",
+    "nra-product-threshold-witness",
+    "quadratic-root-real-witness",
+    "square-nonnegative-unsat",
+    "negative-discriminant-no-real-root",
+    "real-completeness-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the linear ordered-field row as QF_LRA and replay the model through Axeyum.",
+    "Encode the nonlinear rows as deterministic NRA polynomial constraints.",
+    "Emit and check SOS/RCF-style evidence for the nonlinear UNSAT rows.",
+    "Keep completeness, least-upper-bound, and epsilon-delta theorem claims under Lean horizon until no-sorry Lean artifacts exist."
+  ]
+}

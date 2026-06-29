@@ -1993,6 +1993,107 @@ def validate_rationals_lra(expected: dict[str, Any]) -> None:
         fail("transitivity fixed data unexpectedly violates a < c")
 
 
+def require_quadratic(context: str, value: Any) -> list[Fraction]:
+    polynomial = require_polynomial(context, value)
+    if len(polynomial) != 3:
+        fail(f"{context} must be a quadratic polynomial with three coefficients")
+    if polynomial[2] == 0:
+        fail(f"{context} quadratic coefficient must be nonzero")
+    return polynomial
+
+
+def quadratic_discriminant(polynomial: list[Fraction]) -> Fraction:
+    constant, linear, quadratic = polynomial
+    return linear * linear - 4 * quadratic * constant
+
+
+def validate_reals_rcf_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    midpoint_check = checks["ordered-field-midpoint-witness"]
+    if midpoint_check["expected_result"] != "sat":
+        fail("ordered-field-midpoint-witness must expect sat")
+    values = single_witness_values(midpoint_check, witnesses)
+    left = require_fraction("real midpoint left", values.get("left"))
+    right = require_fraction("real midpoint right", values.get("right"))
+    midpoint = require_fraction("real midpoint midpoint", values.get("midpoint"))
+    if not left < midpoint < right:
+        fail("ordered-field-midpoint-witness must satisfy left < midpoint < right")
+    if midpoint != (left + right) / 2:
+        fail("ordered-field-midpoint-witness midpoint must equal (left + right) / 2")
+
+    product_check = checks["nra-product-threshold-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("nra-product-threshold-witness must expect sat")
+    values = single_witness_values(product_check, witnesses)
+    x_value = require_fraction("product witness x", values.get("x"))
+    y_value = require_fraction("product witness y", values.get("y"))
+    lower_bound = require_fraction("product witness lower_bound", values.get("lower_bound"))
+    product_value = require_fraction("product witness product", values.get("product"))
+    if product_value != x_value * y_value:
+        fail("nra-product-threshold-witness product does not equal x * y")
+    if x_value < lower_bound or y_value < lower_bound:
+        fail("nra-product-threshold-witness violates the lower-bound assumptions")
+    if lower_bound != 1:
+        fail("nra-product-threshold-witness currently documents the fixed lower bound 1")
+    if product_value < lower_bound:
+        fail("nra-product-threshold-witness product violates the threshold")
+
+    root_check = checks["quadratic-root-real-witness"]
+    if root_check["expected_result"] != "sat":
+        fail("quadratic-root-real-witness must expect sat")
+    values = single_witness_values(root_check, witnesses)
+    polynomial = require_quadratic("real quadratic root polynomial", values.get("polynomial"))
+    root = require_fraction("real quadratic root", values.get("root"))
+    if polynomial_eval(polynomial, root) != 0:
+        fail("quadratic-root-real-witness root does not evaluate to zero")
+
+    square_check = checks["square-nonnegative-unsat"]
+    if square_check["expected_result"] != "unsat":
+        fail("square-nonnegative-unsat must expect unsat")
+    data = square_check.get("data", {})
+    polynomial = require_quadratic("square-nonnegative polynomial", data.get("polynomial"))
+    relation = data.get("relation")
+    certificate = data.get("certificate")
+    require_string("square-nonnegative relation", relation)
+    require_string("square-nonnegative certificate", certificate)
+    bound = require_fraction("square-nonnegative bound", data.get("bound"))
+    if polynomial != [Fraction(0), Fraction(0), Fraction(1)]:
+        fail("square-nonnegative-unsat must use the fixed polynomial x^2")
+    if relation != "lt" or bound != 0 or certificate != "square_nonnegative":
+        fail("square-nonnegative-unsat must document the fixed x^2 < 0 certificate")
+
+    discriminant_check = checks["negative-discriminant-no-real-root"]
+    if discriminant_check["expected_result"] != "unsat":
+        fail("negative-discriminant-no-real-root must expect unsat")
+    data = discriminant_check.get("data", {})
+    polynomial = require_quadratic("negative-discriminant polynomial", data.get("polynomial"))
+    relation = data.get("relation")
+    require_string("negative-discriminant relation", relation)
+    bound = require_fraction("negative-discriminant bound", data.get("bound"))
+    expected_discriminant = require_fraction(
+        "negative-discriminant expected_discriminant",
+        data.get("expected_discriminant"),
+    )
+    actual_discriminant = quadratic_discriminant(polynomial)
+    if relation != "eq" or bound != 0:
+        fail("negative-discriminant-no-real-root must document a polynomial = 0 row")
+    if actual_discriminant != expected_discriminant:
+        fail("negative-discriminant-no-real-root discriminant does not match expected value")
+    if actual_discriminant >= 0:
+        fail("negative-discriminant-no-real-root requires a negative discriminant")
+
+    horizon = checks["real-completeness-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("real-completeness-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("real-completeness-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("real completeness target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("real completeness future_checker", data.get("future_checker"))
+
+
 def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -3054,6 +3155,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_polynomial_identities(expected)
     if metadata["id"] == "rationals-lra-v0":
         validate_rationals_lra(expected)
+    if metadata["id"] == "reals-rcf-shadow-v0":
+        validate_reals_rcf_shadow(expected)
     if metadata["id"] == "relations-functions-v0":
         validate_relations_functions(expected)
     if metadata["id"] == "linear-algebra-rational-v0":

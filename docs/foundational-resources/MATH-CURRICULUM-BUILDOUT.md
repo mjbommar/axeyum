@@ -298,6 +298,8 @@ the first finite-group core-structure pack lives under
 the first finite-ring core-structure pack lives under
 `artifacts/examples/math/finite-rings-v0/`;
 the first exact-rational pack lives under `artifacts/examples/math/rationals-lra-v0/`;
+the first algebraic real/RCF-shadow pack lives under
+`artifacts/examples/math/reals-rcf-shadow-v0/`;
 the first exact rational linear-algebra pack lives under
 `artifacts/examples/math/linear-algebra-rational-v0/`.
 
@@ -361,9 +363,12 @@ refutation by enumeration. `finite-predicate-v0` now validates finite-domain
 universal/existential predicate replay, an exhaustive non-empty finite
 `forall -> exists` row, an `exists`-not-`forall` counterexample, binary
 relation asymmetry replay, and a general first-order Lean-horizon row.
-Continue by closing the remaining
+`reals-rcf-shadow-v0` now validates exact ordered-field midpoint replay,
+nonlinear real product replay, a quadratic real-root witness, checked
+`x^2 < 0` infeasibility, checked negative-discriminant no-root infeasibility,
+and a completeness/epsilon-delta Lean-horizon row. Continue by closing the remaining
 `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
-`reals-rcf-shadow-v0`.
+`sequence-limit-shadow-v0`.
 
 Recommended order:
 
@@ -399,6 +404,9 @@ Recommended order:
 16. `finite-predicate-v0` (landed): finite-domain quantifier expansion,
     universal/existential predicate replay, finite relation counterexamples,
     and general first-order Lean-horizon metadata.
+17. `reals-rcf-shadow-v0` (landed): exact ordered-field replay, small
+    nonlinear polynomial constraints, checked quadratic infeasibility rows,
+    and real-completeness Lean-horizon metadata.
 
 Exit criteria:
 

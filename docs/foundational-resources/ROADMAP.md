@@ -71,6 +71,7 @@ artifacts/examples/math/
   modular-arithmetic-v0/
   number-theory-v0/
   rationals-lra-v0/
+  reals-rcf-shadow-v0/
   linear-algebra-rational-v0/
   finite-groups-v0/
   finite-rings-v0/

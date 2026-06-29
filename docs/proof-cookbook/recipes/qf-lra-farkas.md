@@ -90,3 +90,4 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [support matrix](../../research/08-planning/support-matrix.md)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [dominance scoreboard](../../../bench-results/DOMINANCE.md)
+- [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)

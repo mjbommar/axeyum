@@ -159,6 +159,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Real algebra / RCF-shadow foundations pack landed.** Added
+  [`reals-rcf-shadow-v0`](artifacts/examples/math/reals-rcf-shadow-v0/README.md)
+  with exact ordered-field midpoint replay, nonlinear real product replay, a
+  quadratic real-root witness, checked `x^2 < 0` infeasibility, checked
+  negative-discriminant no-root infeasibility, and a real-completeness /
+  epsilon-delta Lean-horizon row. The foundational example-pack validator now
+  checks the real pack with exact rational arithmetic, polynomial evaluation,
+  fixed square-nonnegativity metadata, quadratic discriminants, and theorem
+  horizon metadata. Continue by closing the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap or by adding
+  `sequence-limit-shadow-v0`.
+
 - **Finite predicate-logic foundations pack landed.** Added
   [`finite-predicate-v0`](artifacts/examples/math/finite-predicate-v0/README.md)
   with finite-domain universal and existential predicate replay, exhaustive

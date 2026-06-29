@@ -61,6 +61,7 @@ Status: planned per theorem family.
 Examples that should stay under this template until a real module exists:
 
 - arbitrary-domain first-order validity, completeness, and model theory;
+- real completeness, least-upper-bound theorems, and epsilon-delta analysis;
 - induction schemas beyond bounded base/step obligations;
 - epsilon-delta limits and continuity;
 - compactness, connectedness, and general topology;
@@ -106,6 +107,7 @@ resource.
 - [Math Field Taxonomy](../../foundational-resources/MATH-FIELDS.md)
 - [Proof Gap Dashboard](../../foundational-resources/generated/proof-gap-dashboard.md)
 - [Finite Predicate pack](../../../artifacts/examples/math/finite-predicate-v0/)
+- [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [Induction Obligations pack](../../../artifacts/examples/math/induction-obligations-v0/)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [north star](../../research/00-orientation/north-star.md)

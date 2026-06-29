@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [rationals-lra-v0](../../../artifacts/examples/math/rationals-lra-v0/)
+- [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
@@ -19,9 +20,10 @@ Example packs:
 
 The real-algebra path is currently exact rational arithmetic plus algebraic
 shadows of real reasoning. It checks density witnesses, additive inverses,
-fixed order facts, fixed-degree polynomial identities and roots, LP feasibility
-and infeasibility certificates, midpoints, collinearity determinants, and
-squared distances.
+fixed order facts, ordered-field real witnesses, small nonlinear polynomial
+constraints, fixed-degree polynomial identities and roots, LP feasibility and
+infeasibility certificates, midpoints, collinearity determinants, and squared
+distances.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
@@ -37,7 +39,22 @@ midpoint = 1/2
 ```
 
 The validator checks both the ordering and the exact arithmetic identity. For a
-polynomial check, encode a coefficient list:
+small real-algebra shadow, encode a nonlinear witness or a one-variable
+quadratic obstruction:
+
+```text
+x = 3/2
+y = 4/3
+x * y = 2
+
+p(x) = x^2 + 1
+discriminant = -4
+```
+
+The `reals-rcf-shadow-v0` validator replays the exact product witness, checks
+that `x^2 < 0` is impossible by the fixed square-nonnegative shape, and checks
+that a negative-discriminant quadratic has no real root. For a polynomial check
+outside the real-specific pack, encode a coefficient list:
 
 ```text
 p = [6, -5, 1]  means  6 - 5*x + x^2
@@ -63,6 +80,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
