@@ -2327,6 +2327,12 @@
           "notes": "Finite Stochastic Kernel Checks"
         },
         {
+          "id": "least-squares-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/least-squares-regression-v0",
+          "notes": "Exact Least Squares Regression Checks"
+        },
+        {
           "id": "linear-optimization-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-optimization-v0",
@@ -2892,6 +2898,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/convexity-rational-v0",
           "notes": "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."
+        },
+        {
+          "id": "least-squares-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/least-squares-regression-v0",
+          "notes": "Exact Least Squares Regression Checks"
         },
         {
           "id": "linear-algebra-rational-v0",
@@ -3585,6 +3597,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
           "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "least-squares-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/least-squares-regression-v0",
+          "notes": "Exact Least Squares Regression Checks"
         },
         {
           "id": "random-matrix-finite-v0",

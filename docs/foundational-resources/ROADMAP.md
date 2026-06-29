@@ -103,6 +103,7 @@ artifacts/examples/math/
   graph-cut-v0/
   finite-probability-v0/
   descriptive-statistics-v0/
+  least-squares-regression-v0/
   linear-optimization-v0/
   convexity-rational-v0/
   coordinate-geometry-v0/
@@ -470,6 +471,10 @@ Bayes posterior replay.
 [`descriptive-statistics-v0`](../../artifacts/examples/math/descriptive-statistics-v0/)
 validates exact mean/variance identities, contingency-table margins, and a
 Simpson's paradox count-table witness.
+[`least-squares-regression-v0`](../../artifacts/examples/math/least-squares-regression-v0/)
+validates exact least-squares normal equations, residual orthogonality,
+mean-baseline RSS comparison, checked rejection of bad coefficients, and a
+regression-statistics Lean-horizon row.
 [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/)
 validates exact LP feasibility witnesses, objective-threshold replay, and a
 tiny checked Farkas infeasibility certificate.

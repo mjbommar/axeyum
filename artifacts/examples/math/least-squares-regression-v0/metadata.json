@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "least-squares-regression-v0",
+  "title": "Exact Least Squares Regression Checks",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_linear_algebra",
+    "field_optimization_and_convexity",
+    "curriculum_rationals",
+    "curriculum_linear_algebra",
+    "curriculum_reals"
+  ],
+  "field_ids": [
+    "statistics",
+    "linear_algebra",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "linear-algebra",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite matrix replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "perfect-line-normal-equations",
+    "least-squares-residual-orthogonality",
+    "mean-baseline-rss-comparison",
+    "bad-regression-coefficients-rejected",
+    "general-regression-statistics-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed least-squares normal-equation checks as deterministic QF_LRA formulas.",
+    "Replay regression witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Add emitted certificates for bad coefficient rows once LRA proof routes are promoted.",
+    "Keep inference, asymptotics, model selection, and floating-point regression under Lean horizon or numerical-honesty metadata until formal routes exist."
+  ]
+}

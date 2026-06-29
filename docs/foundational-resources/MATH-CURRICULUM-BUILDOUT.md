@@ -210,7 +210,7 @@ losing the curriculum anchor.
 | `topology` | sets, reals, sequences-and-limits | `finite-topology-v0`, then metric balls, closure/interior, continuous maps, compactness, and connectedness finite checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
-| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
+| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, LP feasibility, dual/Farkas certificates, finite convexity, and threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
@@ -509,6 +509,10 @@ probability mass tables, conditional probability, and Bayes posterior replay.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
 mean/variance identities, contingency-table margins, and a Simpson's paradox
 count-table witness.
+`artifacts/examples/math/least-squares-regression-v0/` now validates exact
+least-squares normal equations, residual orthogonality, mean-baseline RSS
+comparison, checked rejection of bad coefficients, and a regression-statistics
+Lean-horizon row.
 `artifacts/examples/math/linear-optimization-v0/` now validates LP feasibility
 witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 `artifacts/examples/math/convexity-rational-v0/` now validates exact rational
@@ -624,8 +628,10 @@ Recommended order:
    cost counters, cut separation, matching witnesses, augmenting paths, finite
    DAG d-separation, and minimum cut certificates.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule.
-3. `descriptive-statistics-v0`: mean/variance identities, contingency tables,
-   Simpson witness.
+3. `descriptive-statistics-v0` and `least-squares-regression-v0`:
+   mean/variance identities, contingency tables, Simpson witness,
+   least-squares normal equations, residual orthogonality, and bad-coefficient
+   rejection.
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
 5. `convexity-rational-v0`: midpoint convexity, finite second differences,
    monotonicity thresholds, and bad midpoint-convexity rejection.
@@ -828,9 +834,9 @@ Exit criteria:
 - At least 40 validated concept rows.
   Status: 41 atlas rows validate.
 - At least 12 validated example packs.
-  Status: 67 non-template math example packs validate.
+  Status: 68 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 55 non-template packs have at least one `checked` expected-result row.
+  Status: 56 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -949,6 +955,10 @@ oriented-geometry Lean-horizon row.
 bridge: unit-root cycles, conjugation/product replay, rational
 Mobius-transform replay, checked rejection of a false unit-square real-part
 claim, and a complex-analysis Lean-horizon row.
+`least-squares-regression-v0` now adds the next exact finite statistics bridge:
+least-squares normal equations, residual orthogonality, mean-baseline RSS
+comparison, checked rejection of bad coefficients, and a regression-statistics
+Lean-horizon row.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

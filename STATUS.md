@@ -169,6 +169,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Least-squares regression foundations pack landed.** Added
+  [`least-squares-regression-v0`](artifacts/examples/math/least-squares-regression-v0/README.md)
+  as the next exact finite statistics bridge across rational arithmetic,
+  linear algebra, and optimization. The pack validates least-squares normal
+  equations, residual orthogonality, mean-baseline RSS comparison, checked
+  rejection of bad coefficients, and a general regression-statistics
+  Lean-horizon row. The foundational example-pack validator now checks these
+  rows by exact rational matrix replay.
+
 - **Complex plane transform foundations pack landed.** Added
   [`complex-plane-transforms-v0`](artifacts/examples/math/complex-plane-transforms-v0/README.md)
   as the next exact finite complex-analysis bridge after the base real-pair

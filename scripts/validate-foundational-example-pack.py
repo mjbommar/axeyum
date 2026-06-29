@@ -9474,6 +9474,146 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
         fail("simpson witness must have B beating A in aggregate")
 
 
+def residual_sum_squares(residuals: list[Fraction]) -> Fraction:
+    return dot_product(residuals, residuals)
+
+
+def validate_regression_replay(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    design = require_fraction_matrix(f"{context} design_matrix", values.get("design_matrix"))
+    response = require_fraction_vector(f"{context} response", values.get("response"))
+    coefficients = require_fraction_vector(f"{context} coefficients", values.get("coefficients"))
+    xtx = require_fraction_matrix(f"{context} xtx", values.get("xtx"))
+    xty = require_fraction_vector(f"{context} xty", values.get("xty"))
+    fitted = require_fraction_vector(f"{context} fitted", values.get("fitted"))
+    residuals = require_fraction_vector(f"{context} residuals", values.get("residuals"))
+    rss = require_fraction(f"{context} rss", values.get("rss"))
+
+    if len(design) != len(response):
+        fail(f"{context} design height must match response length")
+    require_mat_vec_shape(context, design, coefficients)
+    if mat_vec(design, coefficients) != fitted:
+        fail(f"{context} fitted values do not equal X beta")
+    if len(fitted) != len(response):
+        fail(f"{context} fitted length must match response length")
+    if vector_sub(response, fitted) != residuals:
+        fail(f"{context} residuals must equal y - X beta")
+    x_transpose = matrix_transpose(design)
+    if mat_mul(x_transpose, design) != xtx:
+        fail(f"{context} X^T X is incorrect")
+    if mat_vec(x_transpose, response) != xty:
+        fail(f"{context} X^T y is incorrect")
+    if mat_vec(xtx, coefficients) != xty:
+        fail(f"{context} coefficients do not satisfy the normal equations")
+    if residual_sum_squares(residuals) != rss:
+        fail(f"{context} residual sum of squares is incorrect")
+    return {
+        "design": design,
+        "response": response,
+        "coefficients": coefficients,
+        "xtx": xtx,
+        "xty": xty,
+        "fitted": fitted,
+        "residuals": residuals,
+        "rss": rss,
+        "x_transpose": x_transpose,
+    }
+
+
+def validate_least_squares_regression(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    perfect = checks["perfect-line-normal-equations"]
+    if perfect["expected_result"] != "sat":
+        fail("perfect-line-normal-equations must expect sat")
+    perfect_replay = validate_regression_replay("perfect line", single_witness_values(perfect, witnesses))
+    if perfect_replay["rss"] != 0:
+        fail("perfect-line-normal-equations must have zero residual sum of squares")
+    if any(residual != 0 for residual in perfect_replay["residuals"]):
+        fail("perfect-line-normal-equations must have zero residuals")
+
+    projection = checks["least-squares-residual-orthogonality"]
+    if projection["expected_result"] != "sat":
+        fail("least-squares-residual-orthogonality must expect sat")
+    projection_values = single_witness_values(projection, witnesses)
+    projection_replay = validate_regression_replay("least squares projection", projection_values)
+    xt_residual = require_fraction_vector("least squares projection xt_residual", projection_values.get("xt_residual"))
+    computed_xt_residual = mat_vec(projection_replay["x_transpose"], projection_replay["residuals"])
+    if computed_xt_residual != xt_residual:
+        fail("least-squares-residual-orthogonality X^T residual is incorrect")
+    if any(item != 0 for item in xt_residual):
+        fail("least-squares-residual-orthogonality residual must be orthogonal to design columns")
+
+    baseline = checks["mean-baseline-rss-comparison"]
+    if baseline["expected_result"] != "sat":
+        fail("mean-baseline-rss-comparison must expect sat")
+    values = single_witness_values(baseline, witnesses)
+    response = require_fraction_vector("mean baseline response", values.get("response"))
+    mean = require_fraction("mean baseline mean", values.get("mean"))
+    baseline_fitted = require_fraction_vector("mean baseline baseline_fitted", values.get("baseline_fitted"))
+    baseline_residuals = require_fraction_vector("mean baseline baseline_residuals", values.get("baseline_residuals"))
+    baseline_rss = require_fraction("mean baseline baseline_rss", values.get("baseline_rss"))
+    model_rss = require_fraction("mean baseline model_rss", values.get("model_rss"))
+    rss_improvement = require_fraction("mean baseline rss_improvement", values.get("rss_improvement"))
+    if sum(response, Fraction(0)) / Fraction(len(response)) != mean:
+        fail("mean-baseline-rss-comparison mean is incorrect")
+    if baseline_fitted != [mean for _ in response]:
+        fail("mean-baseline-rss-comparison baseline_fitted must be constant at the mean")
+    if vector_sub(response, baseline_fitted) != baseline_residuals:
+        fail("mean-baseline-rss-comparison baseline residuals are incorrect")
+    if residual_sum_squares(baseline_residuals) != baseline_rss:
+        fail("mean-baseline-rss-comparison baseline_rss is incorrect")
+    if model_rss != projection_replay["rss"]:
+        fail("mean-baseline-rss-comparison model_rss must match the projection witness")
+    if baseline_rss - model_rss != rss_improvement:
+        fail("mean-baseline-rss-comparison rss_improvement is incorrect")
+    if rss_improvement <= 0:
+        fail("mean-baseline-rss-comparison must show a strict RSS improvement")
+
+    bad_coefficients = checks["bad-regression-coefficients-rejected"]
+    if bad_coefficients["expected_result"] != "unsat" or bad_coefficients.get("proof_status") != "checked":
+        fail("bad-regression-coefficients-rejected must be a checked unsat row")
+    data = bad_coefficients.get("data", {})
+    design = require_fraction_matrix("bad regression design_matrix", data.get("design_matrix"))
+    response = require_fraction_vector("bad regression response", data.get("response"))
+    coefficients = require_fraction_vector("bad regression claimed_coefficients", data.get("claimed_coefficients"))
+    xtx = require_fraction_matrix("bad regression xtx", data.get("xtx"))
+    xty = require_fraction_vector("bad regression xty", data.get("xty"))
+    fitted = require_fraction_vector("bad regression claimed_fitted", data.get("claimed_fitted"))
+    residuals = require_fraction_vector("bad regression claimed_residuals", data.get("claimed_residuals"))
+    normal_residual = require_fraction_vector(
+        "bad regression normal_equation_residual",
+        data.get("normal_equation_residual"),
+    )
+    if len(design) != len(response):
+        fail("bad-regression-coefficients-rejected design height must match response length")
+    require_mat_vec_shape("bad regression", design, coefficients)
+    x_transpose = matrix_transpose(design)
+    if mat_mul(x_transpose, design) != xtx:
+        fail("bad-regression-coefficients-rejected X^T X is incorrect")
+    if mat_vec(x_transpose, response) != xty:
+        fail("bad-regression-coefficients-rejected X^T y is incorrect")
+    if mat_vec(design, coefficients) != fitted:
+        fail("bad-regression-coefficients-rejected claimed_fitted is incorrect")
+    if vector_sub(response, fitted) != residuals:
+        fail("bad-regression-coefficients-rejected claimed_residuals are incorrect")
+    if vector_sub(xty, mat_vec(xtx, coefficients)) != normal_residual:
+        fail("bad-regression-coefficients-rejected normal_equation_residual is incorrect")
+    if mat_vec(x_transpose, residuals) != normal_residual:
+        fail("bad-regression-coefficients-rejected X^T residual does not match normal residual")
+    if all(item == 0 for item in normal_residual):
+        fail("bad-regression-coefficients-rejected coefficients unexpectedly satisfy normal equations")
+
+    horizon = checks["general-regression-statistics-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-regression-statistics-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-regression-statistics-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general regression target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general regression future_checker", data.get("future_checker"))
+
+
 def require_tail_kind(context: str, value: Any) -> str:
     require_string(context, value)
     if value not in {"equal", "less_equal", "greater_equal"}:
@@ -9686,6 +9826,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_equivalence_classes(expected)
     if metadata["id"] == "exact-statistical-tests-v0":
         validate_exact_statistical_tests(expected)
+    if metadata["id"] == "least-squares-regression-v0":
+        validate_least_squares_regression(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":
