@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Sequence-limit-shadow end-to-end lesson landed.** Added
+  [`sequence-limit-shadow-end-to-end.md`](docs/learn/math/sequence-limit-shadow-end-to-end.md)
+  as the learner-facing trace for the sequence-limit-shadow pack: finite
+  epsilon-tail replay, proposed-limit counterexample replay, monotone bounded
+  prefix checks, geometric partial sums, finite Cauchy-tail enumeration, and
+  the general limit Lean horizon. The lesson is linked from the math learning
+  index plus the analysis/topology path.
+
 - **Counting and pigeonhole end-to-end lesson landed.** Added
   [`counting-pigeonhole-end-to-end.md`](docs/learn/math/counting-pigeonhole-end-to-end.md)
   as the learner-facing trace for the counting pack: fixed permutation count,
@@ -253,7 +261,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 84 non-template packs, 81 focused learner links, 3 path-only
+  generated queue: 84 non-template packs, 82 focused learner links, 2 path-only
   links, 0 missing learner links, and 73 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added

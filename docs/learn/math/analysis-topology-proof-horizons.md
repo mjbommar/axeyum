@@ -342,6 +342,7 @@ real-algebra shadow checks, exact multivariable derivative replay, exact
 rational inner products, bounded dynamics, and finite-dimensional operator
 replay, read
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
+[End To End: Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md),
 [End To End: Generating Functions](generating-functions-end-to-end.md),
 [End To End: Metric Continuity](metric-continuity-end-to-end.md),
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md),

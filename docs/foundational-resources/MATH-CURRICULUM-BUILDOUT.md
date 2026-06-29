@@ -1347,6 +1347,10 @@ proof horizon.
 `counting-v0` now has a learner-facing end-to-end lesson for a fixed
 permutation count, one Pascal-identity instance, finite pigeonhole
 enumeration, and the Boolean CNF/LRAT proof-upgrade route.
+`sequence-limit-shadow-v0` now has a learner-facing end-to-end lesson for
+finite epsilon-tail replay, proposed-limit counterexample replay, monotone
+bounded prefix checks, geometric partial sums, finite Cauchy-tail
+enumeration, and the general limit Lean horizon.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

@@ -111,6 +111,10 @@ validated pack data and the repo-root command that replays it.
 - [Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md):
   follows rational interval/ball replay, bounded epsilon-delta samples,
   polynomial side conditions, a bad-delta counterexample, and the Lean horizon.
+- [Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md): follows
+  finite epsilon-tail replay, a proposed-limit counterexample, monotone-prefix
+  checks, geometric partial sums, finite Cauchy-tail enumeration, and the
+  general limit Lean horizon.
 - [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
   table replay, finite Lipschitz checks, epsilon-delta containment,
   open-ball preimage replay, bad-delta rejection, and the continuity Lean
