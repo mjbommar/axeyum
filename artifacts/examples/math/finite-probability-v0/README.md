@@ -4,8 +4,9 @@ This pack covers exact finite probability tables for the `probability_theory`
 field-extension row. It uses finite outcome spaces and rational arithmetic, not
 floating point and not sampling.
 
-The examples are the finite probability shadow that will later map to Axeyum's
-LRA/LIA routes:
+The examples are the finite probability shadow that maps satisfiable tables to
+replay today and future invalid probability constraints to Axeyum's LRA
+certificate route:
 
 - probability mass table sums to one;
 - conditional probability replay from an atom table;
@@ -24,8 +25,10 @@ LRA/LIA routes:
 
 The current validator parses probabilities exactly as rational strings, checks
 that mass tables are normalized and nonnegative, and recomputes conditional and
-Bayes probabilities. It does not yet emit SMT-LIB, call Axeyum's LRA engine, or
-produce proof certificates for probability-table identities.
+Bayes probabilities. Current rows are satisfiable finite-table witnesses, so
+finite-model replay is the checked evidence. Future impossible normalization,
+nonnegativity, conditioning, or Bayes-rule constraints should graduate through
+QF_LRA/Farkas certificates.
 
 Validation:
 

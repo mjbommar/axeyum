@@ -36,7 +36,8 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/00-foundations/sets.md",
-    "docs/proof-cookbook/recipes/finite-model-replay.md"
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md"
   ],
   "expected_results": [
     "pmf-total-mass",
@@ -46,6 +47,7 @@
   "graduation_criteria": [
     "Encode finite probability mass constraints as deterministic QF_LRA formulas.",
     "Replay probability-table SAT witnesses through Axeyum model evaluation.",
+    "Route impossible normalization, nonnegativity, conditioning, or Bayes-rule constraints through QF_LRA/Farkas certificates.",
     "Add generated finite probability tables once at least two packs need shared table helpers.",
     "Keep continuous distributions and sampling-based claims out of proof status until a separate numerical-honesty track exists."
   ]

@@ -4,8 +4,8 @@ This pack covers exact finite descriptive statistics for the `statistics`
 field-extension row. It uses rational arithmetic over fixed finite data and
 integer count tables, not floating-point inference or sampling.
 
-The examples are the statistics shadow that will later map to Axeyum's LRA,
-LIA, and finite-enumeration routes:
+The examples are the statistics shadow that maps finite witnesses to replay
+today and future invalid-claim rows to Axeyum's LRA/LIA certificate routes:
 
 - mean and population variance identity for a small data set;
 - contingency-table row, column, and total margins;
@@ -24,9 +24,14 @@ LIA, and finite-enumeration routes:
 
 The current validator parses all scalar statistics exactly as rational strings
 and count tables as integers. It recomputes the mean, second moment, population
-variance, margins, and Simpson rate inequalities. It does not yet emit SMT-LIB,
-call Axeyum's LRA/LIA routes, or treat statistical inference, floating-point
-estimation, MCMC, or model calibration as proof.
+variance, margins, and Simpson rate inequalities.
+
+Current rows are satisfiable witnesses, so finite-model replay is the checked
+evidence. Future impossible exact-rational statistic constraints should
+graduate through QF_LRA/Farkas certificates, and inconsistent integer margin or
+count constraints should graduate through QF_LIA/Diophantine certificates. The
+pack still does not treat statistical inference, floating-point estimation,
+MCMC, or model calibration as proof.
 
 Validation:
 

@@ -54,3 +54,11 @@ success rate.
 
 These fixed checks are exact arithmetic witnesses. They are not claims about
 causal inference, random sampling, or model validity.
+
+Certificate routes:
+
+- exact rational infeasibility, such as contradictory mean or variance bounds,
+  belongs on the QF_LRA/Farkas route;
+- inconsistent integer margins or count equations belong on the
+  QF_LIA/Diophantine route;
+- satisfiable finite tables remain finite-model replay.

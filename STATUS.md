@@ -199,6 +199,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, QF_BV bit-blast, and Lean
   horizons with explicit trust boundaries and route-specific checks.
 
+- **`needs-proof-route` cleanup landed.** Classified
+  [`descriptive-statistics-v0`](artifacts/examples/math/descriptive-statistics-v0/)
+  as finite replay for current SAT witness rows plus QF_LRA/Farkas for future
+  impossible exact-rational statistic constraints and QF_LIA/Diophantine for
+  inconsistent integer margin/count constraints. Classified
+  [`finite-probability-v0`](artifacts/examples/math/finite-probability-v0/) as
+  finite replay for current SAT witness rows plus QF_LRA/Farkas for future
+  impossible probability-table constraints. After dashboard regeneration, the
+  generated proof-upgrade queue has no `needs-proof-route` rows; QF_LRA/Farkas
+  now covers 22 packs and QF_LIA/Diophantine covers 5.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

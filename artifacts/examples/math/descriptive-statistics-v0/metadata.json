@@ -36,7 +36,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/03-destinations/linear-algebra.md",
-    "docs/proof-cookbook/recipes/finite-model-replay.md"
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
   ],
   "expected_results": [
     "mean-variance-identity",
@@ -46,6 +48,8 @@
   "graduation_criteria": [
     "Encode exact finite descriptive-statistics checks as deterministic QF_LRA/LIA formulas.",
     "Replay count-table and finite-data witnesses through Axeyum model evaluation.",
+    "Route impossible exact-rational statistic constraints through QF_LRA/Farkas certificates.",
+    "Route inconsistent integer margin/count constraints through QF_LIA/Diophantine certificates.",
     "Keep statistical inference and numerical estimation under explicit reproducibility metadata, not proof status.",
     "Add exact finite-test examples only after the table helpers are reused by another statistics pack."
   ]

@@ -27,31 +27,32 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 3 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 4 | Integer equalities, counts, modular constraints, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 20 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 22 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 13 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
-| `needs-proof-route` | 2 | Packs whose metadata needs a more precise certificate route before upgrade. |
 
 ## Execution Order
 
-### 0. Classify `needs-proof-route`
+### 0. Classify `needs-proof-route` (Current Queue Done)
 
-First targets:
+Classified targets:
 
 - [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
 - [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
 
-Plan:
+Classification:
 
-- split exact rational identity rows into the QF_LRA/Farkas lane when they are
-  unsat/infeasibility obligations;
-- split integer count-table contradictions into the QF_LIA/Diophantine lane
-  when the obstruction is integral divisibility or inconsistent margins;
+- descriptive-statistics satisfiable witness rows remain finite-model replay;
+  future impossible exact-rational statistic constraints use QF_LRA/Farkas, and
+  future inconsistent integer margin/count constraints use QF_LIA/Diophantine;
+- finite-probability satisfiable witness rows remain finite-model replay;
+  future impossible normalization, nonnegativity, conditioning, or Bayes-rule
+  constraints use QF_LRA/Farkas;
 - keep satisfiable witness rows on finite-model replay, with model replay as
   the checked evidence;
-- update pack metadata so generated dashboards no longer show
-  `needs-proof-route`.
+- keep statistical inference, sampling, and continuous probability outside
+  proof status until a separate numerical-honesty or Lean route exists.
 
 Graduation:
 
@@ -59,6 +60,9 @@ Graduation:
 - each non-checked expected-result row is either still honestly replay-only or
   has a named certificate route;
 - pack validators and foundational dashboard generation pass.
+
+The current generated queue has no `needs-proof-route` rows. Reopen this step
+only when new packs enter the dashboard without an upgrade recipe.
 
 ### 1. Boolean CNF/LRAT
 
