@@ -159,6 +159,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Pack-level proof-gap dashboard generation landed.** Extended
+  [`scripts/gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py)
+  so
+  [`docs/foundational-resources/generated/proof-gap-dashboard.md`](docs/foundational-resources/generated/proof-gap-dashboard.md)
+  now includes math example-pack route coverage, validator commands, per-pack
+  proof-status counts, and concrete replay/proof-gap rows from `expected.json`.
+  Continue Phase M7 by adding a normal check target for these validators once
+  the generated views stabilize.
+
 - **Phase M6 proof-route links widened.** Added
   [Finite Model Replay Evidence](docs/proof-cookbook/recipes/finite-model-replay.md),
   [QF_LIA Diophantine Evidence](docs/proof-cookbook/recipes/qf-lia-diophantine.md),

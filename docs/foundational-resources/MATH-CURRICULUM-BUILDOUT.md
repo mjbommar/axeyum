@@ -445,6 +445,12 @@ Exit criteria:
 
 ### Phase M7: Generated Dashboards And CI Hook
 
+Status: first dashboard increment landed. The proof-gap dashboard is still
+generated from the concept atlas, and now also reads math example-pack metadata
+and `expected.json` rows to report pack-level route coverage, validation
+commands, checked/replay/proof-gap counts, and the concrete checks that still
+need stronger evidence.
+
 Deliverables:
 
 - `docs/foundational-resources/generated/math-coverage.md`.
