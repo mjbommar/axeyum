@@ -845,16 +845,17 @@ walkthrough using validated pack data. The end-to-end lessons now trace
 propositional truth-table replay, finite predicate replay, proof-by-refutation
 replay, proof-pattern replay, bounded induction-obligation replay,
 induction-pattern replay, graph coloring, bounded natural-arithmetic replay,
-signed integer-LIA replay, gcd/Bezout replay, rational midpoint replay,
-linear-system/LP replay, finite conditional probability, rational inner-product
-replay, finite set and relation/function replay, equivalence-class replay,
-function-composition replay, finite group table replay, finite monoid replay,
-finite permutation-group replay, finite group-action/Burnside replay, finite
-order/lattice replay, finite cardinality replay, cardinality-principle replay,
-finite ring/field replay, finite ideal and quotient-ring replay, finite
-algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
-finite topology/measure, and bounded dynamics/operators from data row through
-replay result and proof/evidence status.
+signed integer-LIA replay, gcd/Bezout replay, modular-arithmetic replay,
+rational midpoint replay, linear-system/LP replay, finite conditional
+probability, rational inner-product replay, finite set and relation/function
+replay, equivalence-class replay, function-composition replay, finite group
+table replay, finite monoid replay, finite permutation-group replay, finite
+group-action/Burnside replay, finite order/lattice replay, finite cardinality
+replay, cardinality-principle replay, finite ring/field replay, finite ideal
+and quotient-ring replay, finite algebra-homomorphism replay, finite
+vector-space/dual/module/tensor replay, finite topology/measure, and bounded
+dynamics/operators from data row through replay result and proof/evidence
+status.
 
 Deliverables:
 
@@ -1030,7 +1031,7 @@ logic basics, finite predicate logic, proof by refutation, proof method
 patterns, induction obligations, induction patterns, graph coloring, graph
 reachability, traversal, search runtime, matching, finite DAG d-separation,
 finite cut certificates, bounded natural arithmetic, rational arithmetic,
-integer linear arithmetic, gcd/Bezout arithmetic, linear
+integer linear arithmetic, gcd/Bezout arithmetic, modular arithmetic, linear
 algebra/optimization, probability/statistics, rational inner products, finite
 sets, finite groups, relations/functions, equivalence classes, finite monoids,
 finite permutation groups, function composition, finite group actions, finite

@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Modular-arithmetic end-to-end lesson landed.** Added
+  [`modular-arithmetic-end-to-end.md`](docs/learn/math/modular-arithmetic-end-to-end.md)
+  as the learner-facing trace for the modular-arithmetic pack: CRT witness
+  replay, modular inverse replay, finite composite non-unit search, Fermat-style
+  unit search modulo `5`, and the explicit replay-only proof gap. The lesson is
+  linked from the math learning index plus the number-systems and
+  algebra/number-theory paths.
+
 - **GCD/Bezout end-to-end lesson landed.** Added
   [`gcd-bezout-end-to-end.md`](docs/learn/math/gcd-bezout-end-to-end.md)
   as the learner-facing trace for the gcd/Bezout pack: gcd/common-divisor

@@ -75,6 +75,9 @@ validated pack data and the repo-root command that replays it.
 - [GCD And Bezout](gcd-bezout-end-to-end.md): follows gcd/common-divisor
   replay, Bezout coefficient checking, divisibility quotient replay, and a
   fixed Diophantine gcd obstruction.
+- [Modular Arithmetic](modular-arithmetic-end-to-end.md): follows a CRT
+  witness, modular inverse witness, finite composite non-unit search, and a
+  Fermat-style finite unit search at replay-only evidence status.
 - [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
   density witness through fraction arithmetic and replay-only evidence status.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
