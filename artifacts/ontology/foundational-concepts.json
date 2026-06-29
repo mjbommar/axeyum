@@ -2293,7 +2293,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Undergraduate / graduate applied math. First Axeyum slice: LP feasibility, linear certificates, small quadratic/convexity checks, monotonicity/threshold examples",
+      "summary": "Undergraduate / graduate applied math. First Axeyum slice: LP feasibility, linear certificates, finite rational convexity checks, small quadratic checks, monotonicity/threshold examples",
       "prerequisites": [],
       "unlocks": [
         "curriculum_linear_algebra",
@@ -2301,7 +2301,7 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "LP feasibility, linear certificates, small quadratic/convexity checks, monotonicity/threshold examples"
+        "LP feasibility, linear certificates, finite rational convexity checks, small quadratic checks, monotonicity/threshold examples"
       ],
       "example_packs": [
         {
@@ -2309,6 +2309,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/linear-optimization-v0",
           "notes": "LP feasibility, threshold cliffs, and Farkas-style certificates."
+        },
+        {
+          "id": "convexity-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/convexity-rational-v0",
+          "notes": "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."
         }
       ],
       "proof_routes": [
@@ -2329,13 +2335,13 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field-level example pack coverage has begun; broader field concept coverage remains incomplete.",
         "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/linear-optimization-v0.",
+          "Create and validate planned field example packs, starting with artifacts/examples/math/linear-optimization-v0.",
           "Add at least one concept row or curriculum row that exercises the field.",
           "Generate field-dashboard coverage from committed metadata."
         ]

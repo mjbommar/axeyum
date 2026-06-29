@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "convexity-rational-v0",
+  "title": "Exact Rational Convexity Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_optimization_and_convexity",
+    "field_real_analysis",
+    "field_linear_algebra",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "real_analysis",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "rationals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "NRA / polynomial constraints",
+    "finite grids",
+    "convexity replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "quadratic-midpoint-jensen-witness",
+    "finite-convex-grid-second-differences",
+    "affine-monotone-threshold-witness",
+    "bad-midpoint-convexity-rejected",
+    "general-convex-analysis-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite convexity, monotonicity, and threshold checks as exact rational obligations.",
+    "Replay midpoint and grid convexity witnesses without floating-point tolerances.",
+    "Emit checked counterexample evidence for false finite convexity claims.",
+    "Keep general convex analysis, separation theorems, SDP, and convergence proofs marked Lean-horizon until proof artifacts exist."
+  ]
+}

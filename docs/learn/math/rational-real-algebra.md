@@ -16,6 +16,7 @@ Example packs:
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
+- [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
 
 ## What Axeyum Checks
@@ -25,9 +26,10 @@ shadows of real reasoning. It checks density witnesses, additive inverses,
 fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
 samples, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, LP feasibility and infeasibility
-certificates, midpoints, collinearity determinants, and squared distances. The
-matrix-invariants pack adds a fixed characteristic polynomial, root evaluation,
-Cayley-Hamilton replay, and exact eigenvalue interval checks.
+certificates, finite convexity and monotonicity checks, midpoints, collinearity
+determinants, and squared distances. The matrix-invariants pack adds a fixed
+characteristic polynomial, root evaluation, Cayley-Hamilton replay, and exact
+eigenvalue interval checks.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
@@ -119,6 +121,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```
 
 For a fuller trace through exact fraction replay, read

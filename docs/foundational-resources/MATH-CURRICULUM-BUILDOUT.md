@@ -211,7 +211,7 @@ losing the curriculum anchor.
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, contingency tables, exact small tests, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
-| `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, LP feasibility, dual/Farkas certificates, threshold checks. |
+| `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, LP feasibility, dual/Farkas certificates, finite convexity, and threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, LU replay, interval bounds, error recurrences. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, recurrence and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, incidence, distance, midpoint, collinearity. |
@@ -473,6 +473,10 @@ mean/variance identities, contingency-table margins, and a Simpson's paradox
 count-table witness.
 `artifacts/examples/math/linear-optimization-v0/` now validates LP feasibility
 witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
+`artifacts/examples/math/convexity-rational-v0/` now validates exact rational
+midpoint convexity, finite-grid second differences, affine monotonicity
+threshold replay, checked rejection of a bad midpoint-convexity claim, and a
+general convex-analysis Lean-horizon row.
 `artifacts/examples/math/coordinate-geometry-v0/` now validates exact midpoint,
 collinearity, and squared-distance coordinate checks.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
@@ -573,56 +577,58 @@ Recommended order:
 3. `descriptive-statistics-v0`: mean/variance identities, contingency tables,
    Simpson witness.
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
-5. `coordinate-geometry-v0`: collinearity, midpoint, distance constraints.
-6. `finite-topology-v0`: finite closure/interior and metric-ball examples.
-7. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
-8. `bounded-dynamics-v0`: recurrence systems and invariant checks.
-9. `finite-operator-v0`: finite-dimensional norms/operators and Chebyshev
+5. `convexity-rational-v0`: midpoint convexity, finite second differences,
+   monotonicity thresholds, and bad midpoint-convexity rejection.
+6. `coordinate-geometry-v0`: collinearity, midpoint, distance constraints.
+7. `finite-topology-v0`: finite closure/interior and metric-ball examples.
+8. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
+9. `bounded-dynamics-v0`: recurrence systems and invariant checks.
+10. `finite-operator-v0`: finite-dimensional norms/operators and Chebyshev
    polynomial examples.
-10. `complex-algebraic-v0`: complex arithmetic as real-pair algebra.
-11. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
+11. `complex-algebraic-v0`: complex arithmetic as real-pair algebra.
+12. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
     and exact iterative-method error replay.
-12. `random-matrix-finite-v0`: finite matrix-valued probability tables,
+13. `random-matrix-finite-v0`: finite matrix-valued probability tables,
     exact moments, Gram expectations, and rank distributions.
-13. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
+14. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
     distribution replay, stationary distributions, and bad transition rows.
-14. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
+15. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
     for finite statistical tests.
-15. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
+16. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
     Rayleigh quotients, and finite spectral decomposition.
-16. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
+17. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
     roots, Cayley-Hamilton replay, and finite eigenvalue intervals.
-17. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
+18. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
     preimage, and bad-delta checks over exact rational metric spaces.
-18. `finite-compactness-v0`: finite open covers, minimal subcover
+19. `finite-compactness-v0`: finite open covers, minimal subcover
     enumeration, finite-intersection families, and bad-cover rejection.
-19. `finite-connectedness-v0`: finite connected spaces, open separations,
+20. `finite-connectedness-v0`: finite connected spaces, open separations,
     clopen-subset enumeration, and bad-connected-claim rejection.
-20. `finite-continuous-maps-v0`: finite topological continuity, open-set
+21. `finite-continuous-maps-v0`: finite topological continuity, open-set
     preimages, homeomorphism replay, and bad-map rejection.
-21. `finite-integration-v0`: finite simple-function integrals, indicator
+22. `finite-integration-v0`: finite simple-function integrals, indicator
     integrals, exact linearity, and bad-expectation rejection.
-22. `finite-product-measure-v0`: finite product probability tables,
+23. `finite-product-measure-v0`: finite product probability tables,
     rectangle probabilities, marginals, finite Fubini replay, and bad
     product-probability rejection.
-23. `finite-random-variables-v0`: finite random-variable pushforwards,
+24. `finite-random-variables-v0`: finite random-variable pushforwards,
     expectation through pushforward distributions, independence checks, and
     bad pushforward rejection.
-24. `finite-conditional-expectation-v0`: finite partition conditional
+25. `finite-conditional-expectation-v0`: finite partition conditional
     expectations, law of total expectation, tower property replay, and bad
     conditional-expectation rejection.
-25. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
+26. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
     equalities, square submartingale inequalities, bounded stopping replay, and
     bad martingale rejection.
-26. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
+27. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
     composition, and bad kernel-row rejection.
-27. `finite-hitting-times-v0`: finite first-hit distributions, survival
+28. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
     equations, and bad expected-time rejection.
-28. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
+29. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
-29. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
+30. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
     interpolation replay, alternating residual signs, and duplicate-node
     rejection.
 
@@ -785,7 +791,7 @@ Progress: items 1-10, Phase M3 `finite-sets-v0`,
 `polynomial-identities-v0`, `counting-v0`, `gcd-bezout-v0`,
 `number-theory-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
 `finite-cardinality-v0`, `induction-obligations-v0`, `logic-basics-v0`, and
-`real-analysis-rational-v0`, Phase M4 graph-resource group and items 4-29, and
+`real-analysis-rational-v0`, Phase M4 graph-resource group and items 4-30, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
 have landed for the math seed. End-to-end lessons now exist for graph coloring,
 graph reachability/traversal/search runtime/matching, finite DAG d-separation,
@@ -802,6 +808,9 @@ numerical analysis. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics. `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums.
+`convexity-rational-v0` now adds the first exact finite convexity bridge for
+optimization learners: midpoint Jensen replay, finite second differences,
+affine threshold monotonicity, and bad midpoint-convexity rejection.
 `spectral-linear-algebra-v0` now adds the first exact finite
 spectral-linear-algebra slice for eigenpair, Rayleigh quotient, and
 decomposition replay. `matrix-invariants-v0` now adds the characteristic

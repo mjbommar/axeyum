@@ -182,7 +182,10 @@ FIELD_PACKS = {
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."),
     "statistics": ("descriptive-statistics-v0", "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
-    "optimization_and_convexity": ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
+    "optimization_and_convexity": [
+        ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
+        ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."),
+    ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, distance, midpoint, collinearity, and rigid finite configurations."),
@@ -265,6 +268,13 @@ def pack(pack_id: str, notes: str) -> dict[str, str]:
         "path": f"artifacts/examples/math/{pack_id}",
         "notes": notes,
     }
+
+
+def field_pack_specs(field_id: str) -> list[tuple[str, str]]:
+    value = FIELD_PACKS[field_id]
+    if isinstance(value, tuple):
+        return [value]
+    return value
 
 
 def proof_route(name: str, status: str, checker: str, lean_status: str, notes: str) -> dict[str, Any]:
@@ -353,15 +363,22 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
 
 
 def make_field_row(field_id: str, field: dict[str, str], curriculum_rows: list[dict[str, Any]]) -> dict[str, Any]:
-    pack_id, pack_notes = FIELD_PACKS[field_id]
+    pack_specs = field_pack_specs(field_id)
+    primary_pack_id = pack_specs[0][0]
+    has_multiple_packs = len(pack_specs) > 1
     unlocks = sorted(row["id"] for row in curriculum_rows if field_id in row["field_ids"])
     decidability = FIELD_DECIDABILITY.get(field_id, "bounded")
     route_status = "lean-horizon" if decidability == "proof-horizon" else "planned"
     lean_status = "required" if decidability == "proof-horizon" else "planned"
-    is_pack_validated = pack_status(pack_id) == "validated"
-    if is_pack_validated:
+    validated_count = sum(1 for pack_id, _ in pack_specs if pack_status(pack_id) == "validated")
+    if validated_count:
+        pack_gap = (
+            "Field-level example pack coverage has begun; broader field concept coverage remains incomplete."
+            if has_multiple_packs
+            else "Field-level example pack exists; broader field concept coverage remains incomplete."
+        )
         gaps = [
-            "Field-level example pack exists; broader field concept coverage remains incomplete.",
+            pack_gap,
             "Field status still needs repeated slices and proof/evidence coverage before graduation.",
         ]
     else:
@@ -388,7 +405,7 @@ def make_field_row(field_id: str, field: dict[str, str], curriculum_rows: list[d
         "unlocks": unlocks,
         "decidability": decidability,
         "axeyum_fragments": [field["first_slice"]],
-        "example_packs": [pack(pack_id, pack_notes)],
+        "example_packs": [pack(pack_id, pack_notes) for pack_id, pack_notes in pack_specs],
         "proof_routes": [
             proof_route(
                 field["proof_horizon"],
@@ -406,7 +423,12 @@ def make_field_row(field_id: str, field: dict[str, str], curriculum_rows: list[d
         "graduation": {
             "status": "planned",
             "criteria": [
-                f"Create and validate artifacts/examples/math/{pack_id}.",
+                (
+                    "Create and validate planned field example packs, starting with "
+                    f"artifacts/examples/math/{primary_pack_id}."
+                    if has_multiple_packs
+                    else f"Create and validate artifacts/examples/math/{primary_pack_id}."
+                ),
                 "Add at least one concept row or curriculum row that exercises the field.",
                 "Generate field-dashboard coverage from committed metadata.",
             ],

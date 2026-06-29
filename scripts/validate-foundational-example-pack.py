@@ -4540,6 +4540,137 @@ def validate_linear_optimization(expected: dict[str, Any]) -> None:
         fail("farkas certificate must derive 0 <= negative bound")
 
 
+def require_grid_rows(context: str, value: Any) -> list[tuple[Fraction, Fraction]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty row list")
+    rows: list[tuple[Fraction, Fraction]] = []
+    for index, row in enumerate(value):
+        if not isinstance(row, dict):
+            fail(f"{context}[{index}] must be an object")
+        x_value = require_fraction(f"{context}[{index}].x", row.get("x"))
+        f_value = require_fraction(f"{context}[{index}].value", row.get("value"))
+        rows.append((x_value, f_value))
+    for (left_x, _), (right_x, _) in zip(rows, rows[1:]):
+        if not left_x < right_x:
+            fail(f"{context} x values must be strictly increasing")
+    return rows
+
+
+def validate_convexity_rational(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    midpoint = checks["quadratic-midpoint-jensen-witness"]
+    if midpoint["expected_result"] != "sat":
+        fail("quadratic-midpoint-jensen-witness must expect sat")
+    values = single_witness_values(midpoint, witnesses)
+    polynomial = require_quadratic("convexity midpoint polynomial", values.get("polynomial"))
+    left = require_fraction("convexity midpoint left", values.get("left"))
+    right = require_fraction("convexity midpoint right", values.get("right"))
+    mid = require_fraction("convexity midpoint midpoint", values.get("midpoint"))
+    left_value = require_fraction("convexity midpoint left_value", values.get("left_value"))
+    right_value = require_fraction("convexity midpoint right_value", values.get("right_value"))
+    midpoint_value = require_fraction("convexity midpoint midpoint_value", values.get("midpoint_value"))
+    convex_combination = require_fraction(
+        "convexity midpoint convex_combination",
+        values.get("convex_combination"),
+    )
+    if mid != (left + right) / 2:
+        fail("quadratic-midpoint-jensen-witness midpoint is incorrect")
+    if polynomial_eval(polynomial, left) != left_value:
+        fail("quadratic-midpoint-jensen-witness left_value is incorrect")
+    if polynomial_eval(polynomial, right) != right_value:
+        fail("quadratic-midpoint-jensen-witness right_value is incorrect")
+    if polynomial_eval(polynomial, mid) != midpoint_value:
+        fail("quadratic-midpoint-jensen-witness midpoint_value is incorrect")
+    if convex_combination != (left_value + right_value) / 2:
+        fail("quadratic-midpoint-jensen-witness convex_combination is incorrect")
+    if midpoint_value > convex_combination:
+        fail("quadratic-midpoint-jensen-witness violates midpoint convexity")
+
+    grid = checks["finite-convex-grid-second-differences"]
+    if grid["expected_result"] != "sat":
+        fail("finite-convex-grid-second-differences must expect sat")
+    values = single_witness_values(grid, witnesses)
+    rows = require_grid_rows("convex grid rows", values.get("rows"))
+    expected_differences = require_fraction_vector(
+        "convex grid second_differences",
+        values.get("second_differences"),
+    )
+    if len(rows) < 3:
+        fail("finite-convex-grid-second-differences requires at least three grid rows")
+    if len(expected_differences) != len(rows) - 2:
+        fail("finite-convex-grid-second-differences second_differences length is incorrect")
+    step = rows[1][0] - rows[0][0]
+    if step <= 0:
+        fail("finite-convex-grid-second-differences grid step must be positive")
+    for (left_x, _), (right_x, _) in zip(rows, rows[1:]):
+        if right_x - left_x != step:
+            fail("finite-convex-grid-second-differences grid must have equal spacing")
+    actual_differences = [
+        rows[index - 1][1] - 2 * rows[index][1] + rows[index + 1][1]
+        for index in range(1, len(rows) - 1)
+    ]
+    if actual_differences != expected_differences:
+        fail("finite-convex-grid-second-differences second differences are incorrect")
+    if any(difference < 0 for difference in actual_differences):
+        fail("finite-convex-grid-second-differences found a negative second difference")
+
+    threshold = checks["affine-monotone-threshold-witness"]
+    if threshold["expected_result"] != "sat":
+        fail("affine-monotone-threshold-witness must expect sat")
+    values = single_witness_values(threshold, witnesses)
+    slope = require_fraction("affine threshold slope", values.get("slope"))
+    intercept = require_fraction("affine threshold intercept", values.get("intercept"))
+    threshold_input = require_fraction("affine threshold threshold_input", values.get("threshold_input"))
+    threshold_output = require_fraction("affine threshold threshold_output", values.get("threshold_output"))
+    sample_points = require_fraction_vector("affine threshold sample_points", values.get("sample_points"))
+    sample_values = require_fraction_vector("affine threshold sample_values", values.get("sample_values"))
+    if len(sample_points) != len(sample_values):
+        fail("affine-monotone-threshold-witness sample point/value lengths differ")
+    if slope <= 0:
+        fail("affine-monotone-threshold-witness requires a positive slope")
+    if linear_fraction_value(slope, intercept, threshold_input) != threshold_output:
+        fail("affine-monotone-threshold-witness threshold_output is incorrect")
+    for point, value in zip(sample_points, sample_values):
+        if point < threshold_input:
+            fail("affine-monotone-threshold-witness sample point is below the threshold input")
+        if linear_fraction_value(slope, intercept, point) != value:
+            fail("affine-monotone-threshold-witness sample value is incorrect")
+        if value < threshold_output:
+            fail("affine-monotone-threshold-witness sample value violates threshold monotonicity")
+
+    bad = checks["bad-midpoint-convexity-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-midpoint-convexity-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    left = require_fraction("bad convexity left", data.get("left"))
+    right = require_fraction("bad convexity right", data.get("right"))
+    mid = require_fraction("bad convexity midpoint", data.get("midpoint"))
+    left_value = require_fraction("bad convexity left_value", data.get("left_value"))
+    right_value = require_fraction("bad convexity right_value", data.get("right_value"))
+    midpoint_value = require_fraction("bad convexity midpoint_value", data.get("midpoint_value"))
+    convex_combination = require_fraction(
+        "bad convexity convex_combination",
+        data.get("convex_combination"),
+    )
+    if mid != (left + right) / 2:
+        fail("bad-midpoint-convexity-rejected midpoint is incorrect")
+    if convex_combination != (left_value + right_value) / 2:
+        fail("bad-midpoint-convexity-rejected convex_combination is incorrect")
+    if midpoint_value <= convex_combination:
+        fail("bad-midpoint-convexity-rejected midpoint inequality unexpectedly holds")
+
+    horizon = checks["general-convex-analysis-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-convex-analysis-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-convex-analysis-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general convex analysis target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general convex analysis future_checker", data.get("future_checker"))
+
+
 def require_point2(context: str, value: Any) -> tuple[Fraction, Fraction]:
     vector = require_fraction_vector(context, value)
     if len(vector) != 2:
@@ -8132,6 +8263,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_calculus_algebraic_shadow(expected)
     if metadata["id"] == "complex-algebraic-v0":
         validate_complex_algebraic(expected)
+    if metadata["id"] == "convexity-rational-v0":
+        validate_convexity_rational(expected)
     if metadata["id"] == "counting-v0":
         validate_counting(expected)
     if metadata["id"] == "coordinate-geometry-v0":

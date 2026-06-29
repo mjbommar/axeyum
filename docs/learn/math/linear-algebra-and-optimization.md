@@ -16,6 +16,7 @@ Example packs:
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
+- [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 - [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 
@@ -24,7 +25,8 @@ Example packs:
 The linear path uses exact rational matrices. It replays `A*x = b`, checks
 `L*U = A`, validates a row-scaling inconsistency certificate, checks LP
 feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
-replays finite-dimensional norm/operator examples. The numerical-linear-algebra
+replays finite convexity/threshold and finite-dimensional norm/operator
+examples. The numerical-linear-algebra
 slice adds exact residual bounds, rational interval boxes for solutions, and a
 one-step Jacobi contraction check. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
@@ -33,6 +35,9 @@ eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix. The matrix-invariants
 slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,
 and finite Gershgorin intervals for a fixed rational matrix. The finite
+convexity slice checks midpoint Jensen replay, finite-grid second differences,
+affine threshold monotonicity, and bad midpoint-convexity rejection over exact
+rational data. The finite
 Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
 alternating residual signs, and duplicate-node rejection over exact rational
 sample grids.
@@ -54,7 +59,22 @@ b = [4,-1]
 The validator recomputes `A*x` and checks it equals `b`. For an LU witness, it
 recomputes `L*U = A` and checks triangular shape. For optimization, it evaluates
 each linear inequality at the candidate point and checks Farkas multipliers when
-the pack claims infeasibility. For the numerical pack, it recomputes
+the pack claims infeasibility. For convexity, it checks exact finite
+inequalities:
+
+```text
+f(x) = x^2
+a = -1
+b = 3
+m = 1
+f(m) = 1 <= (f(a) + f(b)) / 2 = 5
+
+grid values for x^2 on -2,-1,0,1,2 = 4,1,0,1,4
+second differences = 2,2,2
+```
+
+The convexity validator also rejects a false midpoint-convexity claim with
+`f(-1)=0`, `f(0)=1`, and `f(1)=0`. For the numerical pack, it recomputes
 `A*x_hat - b`, infinity norms, interval membership, and the first Jacobi update
 using exact rational arithmetic. For random matrices, it checks finite atom
 probabilities and recomputes weighted matrix statistics exactly. For spectral
@@ -92,6 +112,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sp
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 ```

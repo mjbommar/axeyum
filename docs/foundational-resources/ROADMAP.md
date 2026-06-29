@@ -97,6 +97,7 @@ artifacts/examples/math/
   finite-probability-v0/
   descriptive-statistics-v0/
   linear-optimization-v0/
+  convexity-rational-v0/
   coordinate-geometry-v0/
   finite-topology-v0/
   finite-compactness-v0/
@@ -444,6 +445,10 @@ Simpson's paradox count-table witness.
 [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/)
 validates exact LP feasibility witnesses, objective-threshold replay, and a
 tiny checked Farkas infeasibility certificate.
+[`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/)
+validates exact rational midpoint convexity, finite-grid second differences,
+affine threshold monotonicity, checked bad midpoint-convexity rejection, and a
+general convex-analysis Lean-horizon row.
 [`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
 validates exact midpoint, collinearity, and squared-distance coordinate checks.
 [`finite-topology-v0`](../../artifacts/examples/math/finite-topology-v0/)
