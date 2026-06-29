@@ -185,6 +185,10 @@ CURRICULUM_MAP = {
                 "finite-modules-v0",
                 "Finite module tables over rings, submodules, generated submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
+            (
+                "finite-tensor-products-v0",
+                "Finite tensor-product basis replay, bilinear maps, universal-factorization shadows, and Kronecker products.",
+            ),
         ],
     },
     "rings": {
@@ -216,6 +220,10 @@ CURRICULUM_MAP = {
             (
                 "finite-vector-spaces-v0",
                 "Finite vector-space tables over F2, subspaces, spans, and linear maps.",
+            ),
+            (
+                "finite-tensor-products-v0",
+                "Finite vector-space tensor products over F2, bilinear maps, and Kronecker-product replay.",
             ),
         ],
     },
@@ -258,6 +266,10 @@ CURRICULUM_MAP = {
                 "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
             (
+                "finite-tensor-products-v0",
+                "Finite tensor-product basis replay, bilinear maps, universal-factorization shadows, and Kronecker products.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows.",
             ),
@@ -287,8 +299,8 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, homomorphism tables, and Cayley-table validation."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic as real-pair algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),

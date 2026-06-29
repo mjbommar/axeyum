@@ -88,6 +88,7 @@ artifacts/examples/math/
   linear-algebra-rational-v0/
   finite-vector-spaces-v0/
   finite-modules-v0/
+  finite-tensor-products-v0/
   finite-ideals-v0/
   numerical-linear-algebra-v0/
   spectral-linear-algebra-v0/
@@ -453,6 +454,11 @@ rejection.
 adds the finite module bridge from rings into linear algebra: `Z/4Z` action
 tables, generated submodules, module homomorphisms, kernel/image replay,
 quotient-module tables, and bad-submodule rejection.
+[`finite-tensor-products-v0`](../../artifacts/examples/math/finite-tensor-products-v0/)
+adds the finite multilinear-algebra bridge: tensor-product basis/dimension
+replay over `F2`, bilinear-map tables, universal-factorization shadow,
+Kronecker-product replay, bad-bilinear-map rejection, and a tensor-theory
+Lean-horizon row.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of a false residual bound.

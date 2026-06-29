@@ -158,6 +158,11 @@ schemas, examples, and validation workflows.
   validates finite module laws over `Z/4Z`, submodule and span replay,
   module-homomorphism kernel/image replay, quotient-module table replay,
   checked rejection of a non-submodule, and a module-theory Lean-horizon row.
+- [`artifacts/examples/math/finite-tensor-products-v0/`](../../artifacts/examples/math/finite-tensor-products-v0/)
+  validates finite tensor-product basis/dimension replay over `F2`,
+  bilinear-map table replay, universal-factorization shadow through a linear
+  map, Kronecker-product replay, checked bad-bilinear-map rejection, and a
+  tensor-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/)
   validates finite ideal laws over `Z/6Z`, principal ideal generation,
   ring-homomorphism kernel/image replay, quotient-ring table replay, checked
@@ -345,6 +350,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0

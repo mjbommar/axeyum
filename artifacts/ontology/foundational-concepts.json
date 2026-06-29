@@ -1039,6 +1039,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
           "notes": "Finite module tables over rings, submodules, generated submodules, homomorphisms, kernels, images, and quotient modules."
+        },
+        {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Finite tensor-product basis replay, bilinear maps, universal-factorization shadows, and Kronecker products."
         }
       ],
       "proof_routes": [
@@ -1199,6 +1205,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
           "notes": "Finite vector-space tables over F2, subspaces, spans, and linear maps."
+        },
+        {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Finite vector-space tensor products over F2, bilinear maps, and Kronecker-product replay."
         }
       ],
       "proof_routes": [
@@ -1548,6 +1560,12 @@
           "notes": "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules."
         },
         {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Finite tensor-product basis replay, bilinear maps, universal-factorization shadows, and Kronecker products."
+        },
+        {
           "id": "multivariable-calculus-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
@@ -1679,7 +1697,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, homomorphism tables, Cayley-table validators",
+      "summary": "Core undergraduate / graduate algebra. First Axeyum slice: Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, Cayley-table validators",
       "prerequisites": [],
       "unlocks": [
         "curriculum_fields",
@@ -1690,14 +1708,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Finite groups, rings, fields, ideals, modules, homomorphism tables, Cayley-table validators"
+        "Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, Cayley-table validators"
       ],
       "example_packs": [
         {
           "id": "finite-fields-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-fields-v0",
-          "notes": "Finite groups, rings, fields, ideals, modules, homomorphism tables, and Cayley-table validation."
+          "notes": "Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, and Cayley-table validation."
         },
         {
           "id": "complex-algebraic-v0",
@@ -1748,6 +1766,12 @@
           "notes": "Exact Finite Simplicial Homology Checks"
         },
         {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Exact Finite Tensor Product Checks"
+        },
+        {
           "id": "finite-vector-spaces-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
@@ -1780,7 +1804,7 @@
       ],
       "proof_routes": [
         {
-          "name": "General group/ring/ideal/module/category theory belongs in Lean-backed concept rows.",
+          "name": "General group/ring/ideal/module/tensor/category theory belongs in Lean-backed concept rows.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -2386,7 +2410,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, finite-field linear algebra, Jacobians, and Hessians",
+      "summary": "Core undergraduate / graduate prerequisite. First Axeyum slice: Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians",
       "prerequisites": [],
       "unlocks": [
         "curriculum_complex",
@@ -2395,14 +2419,14 @@
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, finite-field linear algebra, Jacobians, and Hessians"
+        "Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians"
       ],
       "example_packs": [
         {
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, tensor products, LU replay, rank, inverse, Jacobians, Hessians, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -2489,6 +2513,12 @@
           "notes": "Finite Stochastic Kernel Checks"
         },
         {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Exact Finite Tensor Product Checks"
+        },
+        {
           "id": "finite-vector-spaces-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
@@ -2551,7 +2581,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Spectral theorems, general vector-space/module theorems, and conditioning/stability need proof or numerical tracks.",
+          "name": "Spectral theorems, general vector-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -3712,6 +3742,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
           "notes": "Finite Stochastic Kernel Checks"
+        },
+        {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Exact Finite Tensor Product Checks"
         },
         {
           "id": "finite-topology-v0",

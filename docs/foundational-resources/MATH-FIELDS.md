@@ -41,8 +41,8 @@ Use these sources as checks against local taste:
 | `discrete_math` | Discrete mathematics and combinatorics | Core undergraduate bridge into CS and proof | Finite counting identities, bounded pigeonhole checks, recurrence examples, finite order/lattice checks, combinatorial search | General asymptotic enumeration and deep extremal/order-theoretic combinatorics usually require theorem proving. |
 | `graph_theory` | Graph theory | Core undergraduate / graduate combinatorics | Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation | Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon. |
 | `number_theory` | Number theory | Core undergraduate / graduate algebra and arithmetic | Modular arithmetic, congruences, finite-field examples, finite ideals in modular rings, bounded Diophantine checks | Analytic and algebraic number theory are not near-term SMT targets. |
-| `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, subspaces, finite-field linear algebra, Jacobians, and Hessians | Spectral theorems, general vector-space/module theorems, and conditioning/stability need proof or numerical tracks. |
-| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, homomorphism tables, Cayley-table validators | General group/ring/ideal/module/category theory belongs in Lean-backed concept rows. |
+| `linear_algebra` | Linear algebra | Core undergraduate / graduate prerequisite | Matrix identities, LU decomposition, rank, inconsistent systems, finite vector spaces, finite modules, tensor products, subspaces, finite-field linear algebra, Jacobians, and Hessians | Spectral theorems, general vector-space/module/tensor theorems, and conditioning/stability need proof or numerical tracks. |
+| `abstract_algebra` | Abstract algebra | Core undergraduate / graduate algebra | Finite groups, rings, fields, ideals, modules, tensor products, homomorphism tables, Cayley-table validators | General group/ring/ideal/module/tensor/category theory belongs in Lean-backed concept rows. |
 | `real_analysis` | Real analysis | Core proof-based undergraduate / graduate analysis | Rational witnesses, inequalities, algebraic real constraints, bounded epsilon-delta templates, and exact multivariable polynomial derivative shadows | General completeness, limits, continuity, compactness, differentiability, and convergence proofs need Lean reconstruction. |
 | `complex_analysis` | Complex analysis | Graduate bridge from real analysis and algebra | Polynomial identities, finite evaluations, algebraic constraints over real/imaginary parts | Holomorphicity, contour integration, residues, and analytic continuation are proof-horizon. |
 | `topology` | Topology | Graduate bridge for analysis and geometry | Finite topologies, metric-ball examples, closure/interior checks, continuous-map preimages, and finite simplicial-homology rank replay | General topological spaces, compactness, connectedness, homotopy, and homology invariance are proof-horizon. |
@@ -280,6 +280,13 @@ one of:
       replay, Hessian positive-definiteness by leading principal minors,
       bad-gradient rejection, and a general multivariable-calculus
       Lean-horizon row.
+30. `artifacts/examples/math/finite-tensor-products-v0/`
+    - Fields: `linear_algebra`, `abstract_algebra`,
+      `set_theory_and_foundations`.
+    - Checks: finite tensor-product basis/dimension replay over `F2`,
+      bilinear-map table replay, universal-factorization shadow through a
+      linear map, Kronecker-product replay, bad-bilinear-map rejection, and a
+      general tensor-theory Lean-horizon row.
 
 ## Graduation Criteria
 

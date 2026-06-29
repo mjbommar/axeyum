@@ -13,6 +13,7 @@ Example packs:
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
+- [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
@@ -35,7 +36,9 @@ linear-map kernel/image replay, rank-nullity by finite cardinality, and
 checked non-subspace rejection. The finite-module slice adds ring actions on
 finite additive groups, generated submodules, module homomorphisms,
 kernel/image replay, quotient-module tables, and checked non-submodule
-rejection. The numerical-linear-algebra slice adds exact residual bounds,
+rejection. The finite-tensor-product slice adds bilinear maps, finite
+universal-factorization shadows, Kronecker products, and bad-bilinear-map
+rejection over `F2`. The numerical-linear-algebra slice adds exact residual bounds,
 rational interval boxes for solutions, and a one-step Jacobi contraction
 check. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
@@ -102,6 +105,19 @@ the generated submodule, checks the multiplication-by-`2` homomorphism,
 recomputes kernel and image, and verifies quotient-module addition and scalar
 action from representatives.
 
+For tensor-product flavored linear algebra, encode the finite bilinear table:
+
+```text
+beta(v,0) = 00
+beta(10,1) = 10
+beta(01,1) = 01
+beta(11,1) = 11
+```
+
+The `finite-tensor-products-v0` validator checks bilinearity in both
+arguments, verifies the listed tensor basis spans `F2^2 tensor F2`, checks a
+linear projection factorization, and recomputes a fixed Kronecker product.
+
 For convexity, the validator checks exact finite inequalities:
 
 ```text
@@ -164,6 +180,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0

@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-tensor-products-v0",
+  "witnesses": [
+    {
+      "id": "f2-plane-tensor-line",
+      "description": "The finite tensor product F2^2 tensor F2, represented as F2^2 with basis tensors e1 tensor 1 and e2 tensor 1.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "left_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "right_space": {
+          "vectors": ["0", "1"],
+          "zero": "0",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "scalar_mul": {
+            "0": {"0": "0", "1": "0"},
+            "1": {"0": "0", "1": "1"}
+          },
+          "dimension": 1
+        },
+        "tensor_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "basis_left": ["10", "01"],
+        "basis_right": ["1"],
+        "basis_tensors": [
+          {"left": "10", "right": "1", "tensor": "10"},
+          {"left": "01", "right": "1", "tensor": "01"}
+        ],
+        "dimension_product": 2
+      }
+    },
+    {
+      "id": "identity-bilinear-map",
+      "description": "The canonical bilinear map beta(v,a) = a*v from F2^2 x F2 to F2^2.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "left_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "right_space": {
+          "vectors": ["0", "1"],
+          "zero": "0",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "scalar_mul": {
+            "0": {"0": "0", "1": "0"},
+            "1": {"0": "0", "1": "1"}
+          },
+          "dimension": 1
+        },
+        "target_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "map": [
+          {"left": "00", "right": "0", "value": "00"},
+          {"left": "00", "right": "1", "value": "00"},
+          {"left": "10", "right": "0", "value": "00"},
+          {"left": "10", "right": "1", "value": "10"},
+          {"left": "01", "right": "0", "value": "00"},
+          {"left": "01", "right": "1", "value": "01"},
+          {"left": "11", "right": "0", "value": "00"},
+          {"left": "11", "right": "1", "value": "11"}
+        ]
+      }
+    },
+    {
+      "id": "projection-factorization",
+      "description": "A bilinear scalar map gamma factors through beta by the first-coordinate projection on the tensor space.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "left_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "right_space": {
+          "vectors": ["0", "1"],
+          "zero": "0",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "scalar_mul": {
+            "0": {"0": "0", "1": "0"},
+            "1": {"0": "0", "1": "1"}
+          },
+          "dimension": 1
+        },
+        "tensor_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "codomain_space": {
+          "vectors": ["0", "1"],
+          "zero": "0",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "scalar_mul": {
+            "0": {"0": "0", "1": "0"},
+            "1": {"0": "0", "1": "1"}
+          },
+          "dimension": 1
+        },
+        "tensor_map": [
+          {"left": "00", "right": "0", "value": "00"},
+          {"left": "00", "right": "1", "value": "00"},
+          {"left": "10", "right": "0", "value": "00"},
+          {"left": "10", "right": "1", "value": "10"},
+          {"left": "01", "right": "0", "value": "00"},
+          {"left": "01", "right": "1", "value": "01"},
+          {"left": "11", "right": "0", "value": "00"},
+          {"left": "11", "right": "1", "value": "11"}
+        ],
+        "factor_map": {
+          "00": "0",
+          "10": "1",
+          "01": "0",
+          "11": "1"
+        },
+        "factored_map": [
+          {"left": "00", "right": "0", "value": "0"},
+          {"left": "00", "right": "1", "value": "0"},
+          {"left": "10", "right": "0", "value": "0"},
+          {"left": "10", "right": "1", "value": "1"},
+          {"left": "01", "right": "0", "value": "0"},
+          {"left": "01", "right": "1", "value": "0"},
+          {"left": "11", "right": "0", "value": "0"},
+          {"left": "11", "right": "1", "value": "1"}
+        ]
+      }
+    },
+    {
+      "id": "f2-kronecker-product",
+      "description": "A fixed Kronecker product of two 2x2 matrices over F2.",
+      "values": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "left_matrix": [
+          ["1", "1"],
+          ["0", "1"]
+        ],
+        "right_matrix": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "kronecker_product": [
+          ["0", "1", "0", "1"],
+          ["1", "0", "1", "0"],
+          ["0", "0", "0", "1"],
+          ["0", "0", "1", "0"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "tensor-product-basis-replay",
+      "claim": "The listed basis tensors span the finite tensor product F2^2 tensor F2 and have dimension 2.",
+      "expected_result": "sat",
+      "validation": "finite_tensor_basis_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["f2-plane-tensor-line"],
+      "notes": "The validator checks the field and vector-space tables, dimension product, tensor-space dimension, and span of the listed basis tensors."
+    },
+    {
+      "id": "bilinear-map-table-replay",
+      "claim": "The listed map beta(v,a) = a*v is bilinear.",
+      "expected_result": "sat",
+      "validation": "finite_bilinear_map_replay",
+      "proof_status": "checked",
+      "witnesses": ["identity-bilinear-map"],
+      "notes": "The validator checks additivity and scalar preservation in each argument by exhaustive finite enumeration."
+    },
+    {
+      "id": "universal-factorization-replay",
+      "claim": "The scalar bilinear map gamma factors through the tensor map by the listed linear projection.",
+      "expected_result": "sat",
+      "validation": "finite_tensor_factorization_replay",
+      "proof_status": "checked",
+      "witnesses": ["projection-factorization"],
+      "notes": "The validator checks the tensor map is bilinear, the factor map is linear, and gamma(v,w) = h(beta(v,w)) for every finite pair."
+    },
+    {
+      "id": "kronecker-product-replay",
+      "claim": "The listed 4x4 matrix is the Kronecker product of the two listed 2x2 matrices over F2.",
+      "expected_result": "sat",
+      "validation": "finite_kronecker_product_replay",
+      "proof_status": "checked",
+      "witnesses": ["f2-kronecker-product"],
+      "notes": "The validator recomputes every block entry using the finite-field multiplication table."
+    },
+    {
+      "id": "bad-bilinear-map-rejected",
+      "claim": "The listed finite map is bilinear.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_bilinear_map_refutation",
+      "proof_status": "checked",
+      "data": {
+        "field": {
+          "carrier": ["0", "1"],
+          "zero": "0",
+          "one": "1",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "mul": [
+            ["0", "0"],
+            ["0", "1"]
+          ]
+        },
+        "left_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "right_space": {
+          "vectors": ["0", "1"],
+          "zero": "0",
+          "add": [
+            ["0", "1"],
+            ["1", "0"]
+          ],
+          "scalar_mul": {
+            "0": {"0": "0", "1": "0"},
+            "1": {"0": "0", "1": "1"}
+          },
+          "dimension": 1
+        },
+        "target_space": {
+          "vectors": ["00", "10", "01", "11"],
+          "zero": "00",
+          "add": [
+            ["00", "10", "01", "11"],
+            ["10", "00", "11", "01"],
+            ["01", "11", "00", "10"],
+            ["11", "01", "10", "00"]
+          ],
+          "scalar_mul": {
+            "0": {"00": "00", "10": "00", "01": "00", "11": "00"},
+            "1": {"00": "00", "10": "10", "01": "01", "11": "11"}
+          },
+          "dimension": 2
+        },
+        "map": [
+          {"left": "00", "right": "0", "value": "00"},
+          {"left": "00", "right": "1", "value": "00"},
+          {"left": "10", "right": "0", "value": "00"},
+          {"left": "10", "right": "1", "value": "10"},
+          {"left": "01", "right": "0", "value": "00"},
+          {"left": "01", "right": "1", "value": "01"},
+          {"left": "11", "right": "0", "value": "00"},
+          {"left": "11", "right": "1", "value": "00"}
+        ],
+        "failing_left_additivity": {
+          "left_a": "10",
+          "left_b": "01",
+          "right": "1",
+          "claimed": "00",
+          "actual_sum": "11"
+        }
+      },
+      "notes": "The validator checks beta(10 + 01, 1) differs from beta(10,1) + beta(01,1)."
+    },
+    {
+      "id": "general-tensor-theory-lean-horizon",
+      "claim": "General tensor products, universal properties, exterior powers, symmetric powers, and multilinear algebra require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "tensor product universal property over arbitrary modules, multilinear maps, exterior and symmetric powers, exactness, and homological algebra",
+        "future_checker": "Lean modules for tensor products, multilinear maps, exterior algebra, symmetric algebra, and proof reconstruction from finite bilinear certificates"
+      },
+      "notes": "The finite rows are checked by exact table replay; general tensor theory remains proof-assistant territory."
+    }
+  ]
+}

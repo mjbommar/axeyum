@@ -179,6 +179,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite tensor-product foundations pack landed.** Added
+  [`finite-tensor-products-v0`](artifacts/examples/math/finite-tensor-products-v0/README.md)
+  as the exact finite bridge from vector spaces/modules into tensor and
+  multilinear algebra. The pack validates `F2^2 tensor F2` basis/dimension
+  replay, finite bilinear-map table replay, universal-factorization shadow
+  through a linear map, Kronecker-product matrix replay over `F2`, checked
+  rejection of a bad bilinear map, and a general tensor-theory Lean-horizon
+  row. The foundational example-pack validator now checks these rows by exact
+  finite vector-space, bilinear-map, and finite-matrix enumeration.
+
 - **Multivariable calculus foundations pack landed.** Added
   [`multivariable-calculus-rational-v0`](artifacts/examples/math/multivariable-calculus-rational-v0/README.md)
   as the exact finite bridge from one-variable calculus into gradients,

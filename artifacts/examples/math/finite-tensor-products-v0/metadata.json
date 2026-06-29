@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "finite-tensor-products-v0",
+  "title": "Exact Finite Tensor Product Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_fields",
+    "curriculum_groups",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "field_set_theory_and_foundations"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "abstract_algebra",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "fields",
+    "groups"
+  ],
+  "axeyum_fragments": [
+    "finite fields",
+    "finite vector spaces",
+    "finite bilinear maps",
+    "finite functions",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0",
+  "source_refs": [
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/02-structures/groups.md",
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "tensor-product-basis-replay",
+    "bilinear-map-table-replay",
+    "universal-factorization-replay",
+    "kronecker-product-replay",
+    "bad-bilinear-map-rejected",
+    "general-tensor-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite tensor-product, bilinear-map, and Kronecker-product rows as deterministic finite-function and finite-matrix obligations.",
+    "Replay bilinear laws, factorization through the tensor table, and finite matrix rows through Axeyum model evaluation.",
+    "Add emitted EUF/Alethe or finite-table certificates for bad-bilinear-map rows once proof routes are promoted.",
+    "Keep general tensor products, universal properties over arbitrary modules, multilinear algebra, exterior/symmetric powers, and homological algebra under Lean horizon until formal routes exist."
+  ]
+}

@@ -1,0 +1,38 @@
+# Model
+
+The model is finite and table based.
+
+## Vector Spaces
+
+The pack uses the same vector-space table shape as `finite-vector-spaces-v0`:
+
+- a finite field table for `F2`;
+- finite carrier lists for vector spaces;
+- an addition table;
+- a scalar-multiplication table;
+- an explicit finite dimension.
+
+## Bilinear Maps
+
+A bilinear map table is a list of triples:
+
+```json
+{"left": "10", "right": "1", "value": "10"}
+```
+
+The validator checks additivity and scalar preservation in both arguments by
+exhaustive enumeration.
+
+## Tensor Factorization
+
+The tensor-map row uses:
+
+```text
+gamma(v,w) = h(beta(v,w))
+```
+
+where `beta` is the finite tensor map and `h` is a listed linear map from the
+tensor space to a codomain vector space.
+
+This is only a finite universal-property shadow. The full universal property
+over arbitrary modules remains Lean-horizon.

@@ -2745,6 +2745,480 @@ def linear_map_failures(
     return []
 
 
+def require_checked_vector_space(
+    context: str,
+    value: Any,
+    field_carrier: list[str],
+    field_zero: str,
+    field_one: str,
+    field_add: dict[tuple[str, str], str],
+    field_mul: dict[tuple[str, str], str],
+) -> tuple[list[str], str, dict[tuple[str, str], str], dict[tuple[str, str], str], int]:
+    vectors, zero, add_op, scalar_mul, dimension = require_vector_space_tables(context, value, field_carrier)
+    failures = vector_space_axiom_failures(
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+        vectors,
+        zero,
+        add_op,
+        scalar_mul,
+    )
+    if failures:
+        fail(f"{context} failed vector-space axioms: {failures[0]}")
+    computed_dimension = finite_dimension_from_size(context, len(field_carrier), len(vectors))
+    if computed_dimension != dimension:
+        fail(f"{context} listed dimension is incorrect")
+    return vectors, zero, add_op, scalar_mul, dimension
+
+
+def require_bilinear_map_table(
+    context: str,
+    value: Any,
+    left_vectors: list[str],
+    right_vectors: list[str],
+    target_vectors: list[str],
+) -> dict[tuple[str, str], str]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    left_set = set(left_vectors)
+    right_set = set(right_vectors)
+    target_set = set(target_vectors)
+    table: dict[tuple[str, str], str] = {}
+    for index, row in enumerate(value):
+        if not isinstance(row, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", row, {"left", "right", "value"})
+        left = row["left"]
+        right = row["right"]
+        output = row["value"]
+        require_string(f"{context}[{index}].left", left)
+        require_string(f"{context}[{index}].right", right)
+        require_string(f"{context}[{index}].value", output)
+        if left not in left_set:
+            fail(f"{context}[{index}].left references a missing left vector")
+        if right not in right_set:
+            fail(f"{context}[{index}].right references a missing right vector")
+        if output not in target_set:
+            fail(f"{context}[{index}].value references a missing target vector")
+        key = (left, right)
+        if key in table:
+            fail(f"{context} repeats pair {key}")
+        table[key] = output
+    expected = {(left, right) for left in left_vectors for right in right_vectors}
+    if set(table) != expected:
+        missing = sorted(expected - set(table))
+        extra = sorted(set(table) - expected)
+        fail(f"{context} must cover every pair; missing={missing} extra={extra}")
+    return table
+
+
+def bilinear_map_failures(
+    field_carrier: list[str],
+    left_vectors: list[str],
+    left_add: dict[tuple[str, str], str],
+    left_scalar_mul: dict[tuple[str, str], str],
+    right_vectors: list[str],
+    right_add: dict[tuple[str, str], str],
+    right_scalar_mul: dict[tuple[str, str], str],
+    target_add: dict[tuple[str, str], str],
+    target_scalar_mul: dict[tuple[str, str], str],
+    mapping: dict[tuple[str, str], str],
+) -> list[str]:
+    for left_a in left_vectors:
+        for left_b in left_vectors:
+            left_sum = table_op(left_add, left_a, left_b)
+            for right in right_vectors:
+                lhs = mapping[(left_sum, right)]
+                rhs = table_op(target_add, mapping[(left_a, right)], mapping[(left_b, right)])
+                if lhs != rhs:
+                    return [f"left additivity fails for {(left_a, left_b, right)}"]
+    for right_a in right_vectors:
+        for right_b in right_vectors:
+            right_sum = table_op(right_add, right_a, right_b)
+            for left in left_vectors:
+                lhs = mapping[(left, right_sum)]
+                rhs = table_op(target_add, mapping[(left, right_a)], mapping[(left, right_b)])
+                if lhs != rhs:
+                    return [f"right additivity fails for {(left, right_a, right_b)}"]
+    for scalar in field_carrier:
+        for left in left_vectors:
+            scaled_left = table_op(left_scalar_mul, scalar, left)
+            for right in right_vectors:
+                lhs = mapping[(scaled_left, right)]
+                rhs = table_op(target_scalar_mul, scalar, mapping[(left, right)])
+                if lhs != rhs:
+                    return [f"left scalar preservation fails for {(scalar, left, right)}"]
+        for right in right_vectors:
+            scaled_right = table_op(right_scalar_mul, scalar, right)
+            for left in left_vectors:
+                lhs = mapping[(left, scaled_right)]
+                rhs = table_op(target_scalar_mul, scalar, mapping[(left, right)])
+                if lhs != rhs:
+                    return [f"right scalar preservation fails for {(scalar, left, right)}"]
+    return []
+
+
+def require_tensor_basis_rows(
+    context: str,
+    value: Any,
+    left_basis: set[str],
+    right_basis: set[str],
+    tensor_vectors: list[str],
+) -> dict[tuple[str, str], str]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    tensor_set = set(tensor_vectors)
+    rows: dict[tuple[str, str], str] = {}
+    for index, row in enumerate(value):
+        if not isinstance(row, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", row, {"left", "right", "tensor"})
+        left = row["left"]
+        right = row["right"]
+        tensor = row["tensor"]
+        require_string(f"{context}[{index}].left", left)
+        require_string(f"{context}[{index}].right", right)
+        require_string(f"{context}[{index}].tensor", tensor)
+        if left not in left_basis:
+            fail(f"{context}[{index}].left is outside the listed left basis")
+        if right not in right_basis:
+            fail(f"{context}[{index}].right is outside the listed right basis")
+        if tensor not in tensor_set:
+            fail(f"{context}[{index}].tensor is outside the tensor carrier")
+        key = (left, right)
+        if key in rows:
+            fail(f"{context} repeats basis pair {key}")
+        rows[key] = tensor
+    expected = {(left, right) for left in left_basis for right in right_basis}
+    if set(rows) != expected:
+        fail(f"{context} must list exactly one tensor for each basis pair")
+    return rows
+
+
+def require_field_matrix(context: str, value: Any, field_carrier: list[str]) -> list[list[str]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty matrix")
+    field_set = set(field_carrier)
+    matrix: list[list[str]] = []
+    width: int | None = None
+    for row_index, row in enumerate(value):
+        if not isinstance(row, list) or not row:
+            fail(f"{context}[{row_index}] must be a non-empty row")
+        entries: list[str] = []
+        for column_index, item in enumerate(row):
+            require_string(f"{context}[{row_index}][{column_index}]", item)
+            entries.append(item)
+        if width is None:
+            width = len(entries)
+        elif len(entries) != width:
+            fail(f"{context}[{row_index}] must have width {width}")
+        extra = sorted(set(entries) - field_set)
+        if extra:
+            fail(f"{context}[{row_index}] contains values outside the field: {extra}")
+        matrix.append(entries)
+    return matrix
+
+
+def kronecker_product(
+    left: list[list[str]],
+    right: list[list[str]],
+    field_mul: dict[tuple[str, str], str],
+) -> list[list[str]]:
+    result: list[list[str]] = []
+    for left_row in left:
+        for right_row in right:
+            result.append([
+                table_op(field_mul, left_entry, right_entry)
+                for left_entry in left_row
+                for right_entry in right_row
+            ])
+    return result
+
+
+def validate_finite_tensor_products(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    basis = checks["tensor-product-basis-replay"]
+    if basis["expected_result"] != "sat":
+        fail("tensor-product-basis-replay must expect sat")
+    values = single_witness_values(basis, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("tensor basis field", values.get("field"))
+    left_vectors, _, _, _, left_dimension = require_checked_vector_space(
+        "tensor basis left_space",
+        values.get("left_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    right_vectors, _, _, _, right_dimension = require_checked_vector_space(
+        "tensor basis right_space",
+        values.get("right_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    tensor_vectors, tensor_zero, tensor_add, tensor_scalar_mul, tensor_dimension = require_checked_vector_space(
+        "tensor basis tensor_space",
+        values.get("tensor_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    basis_left = require_vector_subset("tensor basis basis_left", values.get("basis_left"), left_vectors, nonempty=True)
+    basis_right = require_vector_subset("tensor basis basis_right", values.get("basis_right"), right_vectors, nonempty=True)
+    basis_rows = require_tensor_basis_rows("tensor basis basis_tensors", values.get("basis_tensors"), basis_left, basis_right, tensor_vectors)
+    dimension_product = require_nonnegative_int("tensor basis dimension_product", values.get("dimension_product"))
+    if dimension_product != left_dimension * right_dimension:
+        fail("tensor-product-basis-replay dimension_product is incorrect")
+    if tensor_dimension != dimension_product:
+        fail("tensor-product-basis-replay tensor-space dimension is not the dimension product")
+    tensor_basis_values = set(basis_rows.values())
+    if len(tensor_basis_values) != dimension_product:
+        fail("tensor-product-basis-replay basis tensor values must be distinct")
+    if span_vectors(tensor_basis_values, field_carrier, tensor_zero, tensor_add, tensor_scalar_mul) != set(tensor_vectors):
+        fail("tensor-product-basis-replay listed basis tensors do not span the tensor space")
+
+    bilinear = checks["bilinear-map-table-replay"]
+    if bilinear["expected_result"] != "sat" or bilinear.get("proof_status") != "checked":
+        fail("bilinear-map-table-replay must be a checked sat row")
+    values = single_witness_values(bilinear, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("bilinear field", values.get("field"))
+    left_vectors, _, left_add, left_scalar_mul, _ = require_checked_vector_space(
+        "bilinear left_space",
+        values.get("left_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    right_vectors, _, right_add, right_scalar_mul, _ = require_checked_vector_space(
+        "bilinear right_space",
+        values.get("right_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    target_vectors, _, target_add, target_scalar_mul, _ = require_checked_vector_space(
+        "bilinear target_space",
+        values.get("target_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    mapping = require_bilinear_map_table("bilinear map", values.get("map"), left_vectors, right_vectors, target_vectors)
+    failures = bilinear_map_failures(
+        field_carrier,
+        left_vectors,
+        left_add,
+        left_scalar_mul,
+        right_vectors,
+        right_add,
+        right_scalar_mul,
+        target_add,
+        target_scalar_mul,
+        mapping,
+    )
+    if failures:
+        fail(f"bilinear-map-table-replay map is not bilinear: {failures[0]}")
+
+    factor = checks["universal-factorization-replay"]
+    if factor["expected_result"] != "sat" or factor.get("proof_status") != "checked":
+        fail("universal-factorization-replay must be a checked sat row")
+    values = single_witness_values(factor, witnesses)
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("tensor factor field", values.get("field"))
+    left_vectors, _, left_add, left_scalar_mul, _ = require_checked_vector_space(
+        "tensor factor left_space",
+        values.get("left_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    right_vectors, _, right_add, right_scalar_mul, _ = require_checked_vector_space(
+        "tensor factor right_space",
+        values.get("right_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    tensor_vectors, _, tensor_add, tensor_scalar_mul, _ = require_checked_vector_space(
+        "tensor factor tensor_space",
+        values.get("tensor_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    codomain_vectors, _, codomain_add, codomain_scalar_mul, _ = require_checked_vector_space(
+        "tensor factor codomain_space",
+        values.get("codomain_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    tensor_map = require_bilinear_map_table("tensor factor tensor_map", values.get("tensor_map"), left_vectors, right_vectors, tensor_vectors)
+    failures = bilinear_map_failures(
+        field_carrier,
+        left_vectors,
+        left_add,
+        left_scalar_mul,
+        right_vectors,
+        right_add,
+        right_scalar_mul,
+        tensor_add,
+        tensor_scalar_mul,
+        tensor_map,
+    )
+    if failures:
+        fail(f"universal-factorization-replay tensor_map is not bilinear: {failures[0]}")
+    factor_map = require_mapping_object("tensor factor factor_map", values.get("factor_map"), tensor_vectors, codomain_vectors)
+    failures = linear_map_failures(
+        field_carrier,
+        tensor_vectors,
+        tensor_add,
+        tensor_scalar_mul,
+        codomain_add,
+        codomain_scalar_mul,
+        factor_map,
+    )
+    if failures:
+        fail(f"universal-factorization-replay factor_map is not linear: {failures[0]}")
+    factored_map = require_bilinear_map_table("tensor factor factored_map", values.get("factored_map"), left_vectors, right_vectors, codomain_vectors)
+    failures = bilinear_map_failures(
+        field_carrier,
+        left_vectors,
+        left_add,
+        left_scalar_mul,
+        right_vectors,
+        right_add,
+        right_scalar_mul,
+        codomain_add,
+        codomain_scalar_mul,
+        factored_map,
+    )
+    if failures:
+        fail(f"universal-factorization-replay factored_map is not bilinear: {failures[0]}")
+    for left in left_vectors:
+        for right in right_vectors:
+            if factored_map[(left, right)] != factor_map[tensor_map[(left, right)]]:
+                fail(f"universal-factorization-replay does not factor at {(left, right)}")
+
+    kronecker = checks["kronecker-product-replay"]
+    if kronecker["expected_result"] != "sat" or kronecker.get("proof_status") != "checked":
+        fail("kronecker-product-replay must be a checked sat row")
+    values = single_witness_values(kronecker, witnesses)
+    field_carrier, _, _, _, field_mul = require_finite_field_tables("kronecker field", values.get("field"))
+    left_matrix = require_field_matrix("kronecker left_matrix", values.get("left_matrix"), field_carrier)
+    right_matrix = require_field_matrix("kronecker right_matrix", values.get("right_matrix"), field_carrier)
+    listed_product = require_field_matrix("kronecker kronecker_product", values.get("kronecker_product"), field_carrier)
+    if listed_product != kronecker_product(left_matrix, right_matrix, field_mul):
+        fail("kronecker-product-replay listed product is incorrect")
+
+    bad = checks["bad-bilinear-map-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-bilinear-map-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    field_carrier, field_zero, field_one, field_add, field_mul = require_finite_field_tables("bad bilinear field", data.get("field"))
+    left_vectors, _, left_add, left_scalar_mul, _ = require_checked_vector_space(
+        "bad bilinear left_space",
+        data.get("left_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    right_vectors, _, right_add, right_scalar_mul, _ = require_checked_vector_space(
+        "bad bilinear right_space",
+        data.get("right_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    target_vectors, _, target_add, target_scalar_mul, _ = require_checked_vector_space(
+        "bad bilinear target_space",
+        data.get("target_space"),
+        field_carrier,
+        field_zero,
+        field_one,
+        field_add,
+        field_mul,
+    )
+    mapping = require_bilinear_map_table("bad bilinear map", data.get("map"), left_vectors, right_vectors, target_vectors)
+    failures = bilinear_map_failures(
+        field_carrier,
+        left_vectors,
+        left_add,
+        left_scalar_mul,
+        right_vectors,
+        right_add,
+        right_scalar_mul,
+        target_add,
+        target_scalar_mul,
+        mapping,
+    )
+    if not failures:
+        fail("bad-bilinear-map-rejected map unexpectedly is bilinear")
+    witness = data.get("failing_left_additivity")
+    if not isinstance(witness, dict):
+        fail("bad-bilinear-map-rejected failing_left_additivity must be an object")
+    left_a = witness.get("left_a")
+    left_b = witness.get("left_b")
+    right = witness.get("right")
+    claimed = witness.get("claimed")
+    actual_sum = witness.get("actual_sum")
+    for name, value in [
+        ("left_a", left_a),
+        ("left_b", left_b),
+        ("right", right),
+        ("claimed", claimed),
+        ("actual_sum", actual_sum),
+    ]:
+        require_string(f"bad bilinear failing_left_additivity.{name}", value)
+    if left_a not in set(left_vectors) or left_b not in set(left_vectors) or right not in set(right_vectors):
+        fail("bad-bilinear-map-rejected failing_left_additivity references a missing vector")
+    left_sum = table_op(left_add, left_a, left_b)
+    if mapping[(left_sum, right)] != claimed:
+        fail("bad-bilinear-map-rejected claimed value does not match beta(left_a + left_b, right)")
+    recomputed_sum = table_op(target_add, mapping[(left_a, right)], mapping[(left_b, right)])
+    if recomputed_sum != actual_sum:
+        fail("bad-bilinear-map-rejected actual_sum is incorrect")
+    if claimed == actual_sum:
+        fail("bad-bilinear-map-rejected malformed map unexpectedly satisfies the documented additivity row")
+
+    horizon = checks["general-tensor-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-tensor-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-tensor-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general tensor target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general tensor future_checker", data.get("future_checker"))
+
+
 def validate_finite_vector_spaces(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -12243,6 +12717,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_order_lattices(expected)
     if metadata["id"] == "finite-stochastic-kernels-v0":
         validate_finite_stochastic_kernels(expected)
+    if metadata["id"] == "finite-tensor-products-v0":
+        validate_finite_tensor_products(expected)
     if metadata["id"] == "finite-operator-v0":
         validate_finite_operator(expected)
     if metadata["id"] == "finite-rings-v0":
