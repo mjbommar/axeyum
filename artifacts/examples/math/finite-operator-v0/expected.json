@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-operator-v0",
+  "witnesses": [
+    {
+      "id": "l1-triangle",
+      "description": "A two-dimensional exact-rational l1 triangle inequality witness.",
+      "values": {
+        "u": ["1", "2"],
+        "v": ["3", "-1"],
+        "sum": ["4", "1"],
+        "norm_u": "3",
+        "norm_v": "4",
+        "norm_sum": "5"
+      }
+    },
+    {
+      "id": "matrix-row-sum-bound",
+      "description": "A 2x2 matrix operator bound using the infinity norm and row-sum norm.",
+      "values": {
+        "matrix": [
+          ["1", "-1"],
+          ["2", "1"]
+        ],
+        "vector": ["2", "-1"],
+        "image": ["3", "3"],
+        "vector_norm": "2",
+        "operator_norm": "3",
+        "image_norm": "3",
+        "bound": "6"
+      }
+    },
+    {
+      "id": "chebyshev-half-values",
+      "description": "Exact values of T0 through T3 at x = 1/2.",
+      "values": {
+        "x": "1/2",
+        "chebyshev_values": ["1", "1/2", "-1/2", "-1"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "l1-triangle-witness",
+      "claim": "The listed finite-dimensional vectors satisfy the l1 triangle inequality.",
+      "expected_result": "sat",
+      "validation": "exact_rational_norm_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["l1-triangle"],
+      "notes": "The validator recomputes the vector sum and all l1 norms exactly."
+    },
+    {
+      "id": "matrix-operator-bound",
+      "claim": "The listed matrix-vector image satisfies the row-sum/infinity-norm operator bound.",
+      "expected_result": "sat",
+      "validation": "exact_rational_operator_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["matrix-row-sum-bound"],
+      "notes": "The validator recomputes Ax, the row-sum norm, and the infinity norms exactly."
+    },
+    {
+      "id": "chebyshev-recurrence-witness",
+      "claim": "The listed Chebyshev values at x = 1/2 satisfy the finite recurrence.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polynomial_recurrence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["chebyshev-half-values"],
+      "notes": "The validator checks T0, T1, and every listed recurrence step exactly."
+    }
+  ]
+}

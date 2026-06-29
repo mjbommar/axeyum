@@ -70,6 +70,7 @@ artifacts/examples/math/
   finite-topology-v0/
   finite-measure-v0/
   bounded-dynamics-v0/
+  finite-operator-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
@@ -335,6 +336,9 @@ event/complement measure replay.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.
+[`finite-operator-v0`](../../artifacts/examples/math/finite-operator-v0/)
+validates exact finite-dimensional norm, matrix-operator, and Chebyshev
+recurrence checks.
 
 Exit criteria:
 

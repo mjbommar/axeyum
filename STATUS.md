@@ -134,12 +134,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite operator pack landed.** Added
+  [`artifacts/examples/math/finite-operator-v0/`](artifacts/examples/math/finite-operator-v0/)
+  for exact finite-dimensional norm, matrix-operator, and Chebyshev recurrence
+  checks. The foundational example-pack validator now checks `l1` triangle
+  witnesses, infinity-norm row-sum operator bounds, and finite Chebyshev
+  recurrence values. Continue Phase M4 with `complex-algebraic-v0`.
+
 - **Bounded dynamics pack landed.** Added
   [`artifacts/examples/math/bounded-dynamics-v0/`](artifacts/examples/math/bounded-dynamics-v0/)
   for exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay. The foundational example-pack validator now
   checks finite recurrence traces, invariant bounds over traces, and first
-  threshold-reaching steps. Continue Phase M4 with `finite-operator-v0`.
+  threshold-reaching steps.
 
 - **Finite measure pack landed.** Added
   [`artifacts/examples/math/finite-measure-v0/`](artifacts/examples/math/finite-measure-v0/)

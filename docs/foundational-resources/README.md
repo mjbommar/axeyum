@@ -80,6 +80,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and
   threshold reachability replay.
+- [`artifacts/examples/math/finite-operator-v0/`](../../artifacts/examples/math/finite-operator-v0/)
+  validates exact finite-dimensional norm, matrix-operator, and Chebyshev
+  recurrence checks.
 
 Validation commands:
 
@@ -100,6 +103,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 ```
 
 ## Principle

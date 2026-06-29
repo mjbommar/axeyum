@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "finite-operator-v0",
+  "title": "Finite-Dimensional Operator And Chebyshev Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "replay-only",
+  "concept_ids": [
+    "field_functional_analysis_and_operator_theory",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_linear_algebra",
+    "curriculum_reals",
+    "curriculum_polynomials"
+  ],
+  "field_ids": [
+    "functional_analysis_and_operator_theory",
+    "linear_algebra",
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "reals",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "finite-dimensional linear algebra",
+    "LRA (exact rationals)",
+    "bounded polynomial recurrence"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/02-structures/polynomials.md"
+  ],
+  "expected_results": [
+    "l1-triangle-witness",
+    "matrix-operator-bound",
+    "chebyshev-recurrence-witness"
+  ],
+  "graduation_criteria": [
+    "Encode finite-dimensional norm and operator checks as deterministic exact-rational obligations.",
+    "Replay matrix/operator witnesses through Axeyum model evaluation.",
+    "Add polynomial-basis and interpolation checks before claiming broader approximation coverage.",
+    "Keep Banach-space, Hilbert-space, compact-operator, and general Chebyshev-space theorems marked Lean-horizon."
+  ]
+}

@@ -580,6 +580,98 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
         fail("inconsistent scaled rhs must contradict the scaled original rhs")
 
 
+def l1_norm(vector: list[Fraction]) -> Fraction:
+    return sum((abs(item) for item in vector), Fraction(0))
+
+
+def linf_norm(vector: list[Fraction]) -> Fraction:
+    return max(abs(item) for item in vector)
+
+
+def row_sum_norm(matrix: list[list[Fraction]]) -> Fraction:
+    return max(sum((abs(item) for item in row), Fraction(0)) for row in matrix)
+
+
+def require_same_vector_length(context: str, left: list[Fraction], right: list[Fraction]) -> None:
+    if len(left) != len(right):
+        fail(f"{context} vectors must have the same length")
+
+
+def validate_finite_operator(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    triangle = checks["l1-triangle-witness"]
+    if triangle["expected_result"] != "sat":
+        fail("l1-triangle-witness must expect sat")
+    values = single_witness_values(triangle, witnesses)
+    u_vector = require_fraction_vector("l1 triangle u", values.get("u"))
+    v_vector = require_fraction_vector("l1 triangle v", values.get("v"))
+    sum_vector = require_fraction_vector("l1 triangle sum", values.get("sum"))
+    require_same_vector_length("l1 triangle u/v", u_vector, v_vector)
+    require_same_vector_length("l1 triangle u/sum", u_vector, sum_vector)
+    if [u + v for u, v in zip(u_vector, v_vector)] != sum_vector:
+        fail("l1 triangle sum vector does not equal u + v")
+    norm_u = require_fraction("l1 triangle norm_u", values.get("norm_u"))
+    norm_v = require_fraction("l1 triangle norm_v", values.get("norm_v"))
+    norm_sum = require_fraction("l1 triangle norm_sum", values.get("norm_sum"))
+    if l1_norm(u_vector) != norm_u:
+        fail("l1 triangle norm_u does not match u")
+    if l1_norm(v_vector) != norm_v:
+        fail("l1 triangle norm_v does not match v")
+    if l1_norm(sum_vector) != norm_sum:
+        fail("l1 triangle norm_sum does not match u + v")
+    if norm_sum > norm_u + norm_v:
+        fail("l1 triangle witness violates the triangle inequality")
+
+    operator = checks["matrix-operator-bound"]
+    if operator["expected_result"] != "sat":
+        fail("matrix-operator-bound must expect sat")
+    values = single_witness_values(operator, witnesses)
+    matrix = require_fraction_matrix("operator matrix", values.get("matrix"))
+    vector = require_fraction_vector("operator vector", values.get("vector"))
+    image = require_fraction_vector("operator image", values.get("image"))
+    require_mat_vec_shape("matrix operator", matrix, vector)
+    if len(matrix) != len(image):
+        fail("operator image length must match matrix height")
+    if mat_vec(matrix, vector) != image:
+        fail("operator image does not equal A*x")
+    vector_norm = require_fraction("operator vector_norm", values.get("vector_norm"))
+    operator_norm = require_fraction("operator operator_norm", values.get("operator_norm"))
+    image_norm = require_fraction("operator image_norm", values.get("image_norm"))
+    bound = require_fraction("operator bound", values.get("bound"))
+    if linf_norm(vector) != vector_norm:
+        fail("operator vector_norm does not match infinity norm")
+    if row_sum_norm(matrix) != operator_norm:
+        fail("operator operator_norm does not match row-sum norm")
+    if linf_norm(image) != image_norm:
+        fail("operator image_norm does not match infinity norm")
+    if bound != operator_norm * vector_norm:
+        fail("operator bound must equal operator_norm * vector_norm")
+    if image_norm > bound:
+        fail("matrix operator witness violates the claimed norm bound")
+
+    chebyshev = checks["chebyshev-recurrence-witness"]
+    if chebyshev["expected_result"] != "sat":
+        fail("chebyshev-recurrence-witness must expect sat")
+    values = single_witness_values(chebyshev, witnesses)
+    x_value = require_fraction("chebyshev x", values.get("x"))
+    chebyshev_values = require_fraction_vector(
+        "chebyshev values",
+        values.get("chebyshev_values"),
+    )
+    if len(chebyshev_values) < 2:
+        fail("chebyshev values must contain at least T0 and T1")
+    if chebyshev_values[0] != 1:
+        fail("chebyshev T0 must be 1")
+    if chebyshev_values[1] != x_value:
+        fail("chebyshev T1 must equal x")
+    for index in range(1, len(chebyshev_values) - 1):
+        expected_next = 2 * x_value * chebyshev_values[index] - chebyshev_values[index - 1]
+        if chebyshev_values[index + 1] != expected_next:
+            fail(f"chebyshev T{index + 1} does not match the recurrence")
+
+
 def require_linear_variables(context: str, value: Any) -> list[str]:
     return require_string_list(context, value)
 
@@ -1383,6 +1475,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_graph_coloring(expected)
     if metadata["id"] == "finite-probability-v0":
         validate_finite_probability(expected)
+    if metadata["id"] == "finite-operator-v0":
+        validate_finite_operator(expected)
     if metadata["id"] == "linear-optimization-v0":
         validate_linear_optimization(expected)
     if metadata["id"] == "modular-arithmetic-v0":

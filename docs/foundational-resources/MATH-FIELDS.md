@@ -163,11 +163,16 @@ one of:
      `numerical_analysis`, `linear_algebra`.
    - Checks: recurrence trace replay, bounded invariant witness, threshold
      reachability witness.
-10. `artifacts/examples/math/modular-arithmetic-v0/`
+10. `artifacts/examples/math/finite-operator-v0/`
+   - Fields: `functional_analysis_and_operator_theory`, `linear_algebra`,
+     `numerical_analysis`, `real_analysis`.
+   - Checks: finite-dimensional norm replay, matrix operator bound,
+     Chebyshev recurrence witness.
+11. `artifacts/examples/math/modular-arithmetic-v0/`
    - Fields: `number_theory`, `abstract_algebra`.
    - Checks: modular inverse examples, small finite-field equations,
      bounded Diophantine examples.
-11. `artifacts/examples/math/real-analysis-rational-v0/`
+12. `artifacts/examples/math/real-analysis-rational-v0/`
    - Fields: `real_analysis`, `logic_and_proof`.
    - Checks: rational inequalities, interval inclusions, bounded
      epsilon-delta templates with proof-horizon labels.

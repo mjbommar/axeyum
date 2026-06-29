@@ -337,6 +337,8 @@ replay.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, and threshold reachability
 replay.
+`artifacts/examples/math/finite-operator-v0/` now validates exact
+finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
 
 Recommended order:
 
@@ -458,8 +460,8 @@ Exit criteria:
 Each commit should update `STATUS.md`, run the relevant validator, and keep the
 docs link checker clean.
 
-Progress: items 1-10 and Phase M4 items 4-8 have landed for the math seed.
-Continue Phase M4 with `finite-operator-v0`.
+Progress: items 1-10 and Phase M4 items 4-9 have landed for the math seed.
+Continue Phase M4 with `complex-algebraic-v0`.
 
 ## Operating Rules
 
