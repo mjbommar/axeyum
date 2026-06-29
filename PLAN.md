@@ -37,7 +37,11 @@ moat — and a long road of decide-rate, performance, and proof-coverage work le
 1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread
    fragment by fragment: SAT inprocessing + word-level reduction, SAT-core
    modernization, and *committed head-to-head PAR-2 numbers* (no parity claim
-   without them). This is where Z3/cvc5 parity is actually won.
+   without them). This is where Z3/cvc5 parity is actually won. The grounded,
+   prioritized per-fragment target list is
+   [decide-rate-frontier-2026-06-28](docs/plan/decide-rate-frontier-2026-06-28.md)
+   (headline: **strings coverage is the single largest lever** — ~117 undecided,
+   mostly `Unsupported`; NRA/CAD depth is the genuine catch-up, do it last).
 2. **Reduction certificates → Lean (Track 3)** — drive the trusted-reduction
    ledger to zero (Alethe emitter → Carcara-checked → per-reduction proofs →
    kernel), and build the Lean tactic backend (P3.7, **fail not `sorry`**).
