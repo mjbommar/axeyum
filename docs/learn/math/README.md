@@ -204,6 +204,9 @@ validated pack data and the repo-root command that replays it.
   open-cover replay, subcover replay, minimal-subcover enumeration,
   finite-intersection-family replay, bad-cover rejection, and the compactness
   Lean horizon.
+- [Finite Connectedness](finite-connectedness-end-to-end.md): follows finite
+  connected-space replay, open-separation replay, clopen-subset disconnection,
+  checked bad-connectedness rejection, and the connectedness Lean horizon.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked bad

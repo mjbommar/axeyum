@@ -191,6 +191,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-connectedness end-to-end lesson landed.** Added
+  [`finite-connectedness-end-to-end.md`](docs/learn/math/finite-connectedness-end-to-end.md)
+  as the learner-facing trace for the finite-connectedness pack: finite
+  connected-space replay, open-separation replay, clopen-subset disconnection,
+  checked bad-connectedness rejection, and the connectedness Lean horizon. The
+  lesson is linked from the math learning index plus the finite-structures and
+  analysis/topology paths.
+
 - **Finite-compactness end-to-end lesson landed.** Added
   [`finite-compactness-end-to-end.md`](docs/learn/math/finite-compactness-end-to-end.md)
   as the learner-facing trace for the finite-compactness pack: finite

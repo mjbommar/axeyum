@@ -112,6 +112,8 @@ For a fuller focused trace, read
 For connectedness, the checker enumerates every subset, recomputes the clopen
 subsets, confirms the Sierpinski example has only trivial clopen subsets, and
 rejects the false connectedness claim for the discrete two-point topology.
+For a fuller focused trace, read
+[End To End: Finite Connectedness](finite-connectedness-end-to-end.md).
 
 For continuous maps, the checker recomputes preimages of all codomain open
 sets, checks that each preimage is domain-open, checks a finite homeomorphism

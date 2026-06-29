@@ -330,6 +330,7 @@ replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Compactness](finite-compactness-end-to-end.md),
+[End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
 ## Horizon
