@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "finite-fields-v0",
+  "title": "Prime Field And Composite Modulus Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_fields",
+    "curriculum_modular_arithmetic",
+    "curriculum_rings",
+    "field_abstract_algebra",
+    "field_number_theory"
+  ],
+  "field_ids": [
+    "abstract_algebra",
+    "number_theory"
+  ],
+  "curriculum_nodes": [
+    "fields",
+    "modular-arithmetic",
+    "rings"
+  ],
+  "axeyum_fragments": [
+    "finite fields",
+    "BV / enumeration",
+    "QF_BV",
+    "finite tables"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0",
+  "source_refs": [
+    "docs/curriculum/02-structures/fields.md",
+    "docs/curriculum/02-structures/rings.md",
+    "docs/curriculum/02-structures/modular-arithmetic.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+  ],
+  "expected_results": [
+    "prime-field-inverse-table",
+    "prime-field-distributivity-no-counterexample",
+    "composite-modulus-nonfield"
+  ],
+  "graduation_criteria": [
+    "Encode fixed prime-field operations as deterministic BV formulas or finite tables.",
+    "Replay inverse-table witnesses through Axeyum model evaluation.",
+    "Emit checked BV/CNF evidence for exhaustive no-counterexample and no-inverse rows.",
+    "Keep field extensions, algebraic closure, and quantification over all fields marked Lean-horizon."
+  ]
+}

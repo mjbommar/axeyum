@@ -510,6 +510,77 @@ def has_mod_inverse(a: int, modulus: int) -> bool:
     return any((a * candidate) % modulus == 1 for candidate in range(modulus))
 
 
+def is_prime(value: int) -> bool:
+    if value < 2:
+        return False
+    for candidate in range(2, int(value**0.5) + 1):
+        if value % candidate == 0:
+            return False
+    return True
+
+
+def require_modulus(context: str, value: Any) -> int:
+    modulus = require_int(context, value)
+    if modulus <= 1:
+        fail(f"{context} must be > 1")
+    return modulus
+
+
+def validate_finite_fields(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    inverse_table = checks["prime-field-inverse-table"]
+    if inverse_table["expected_result"] != "sat":
+        fail("prime-field-inverse-table must expect sat")
+    values = single_witness_values(inverse_table, witnesses)
+    modulus = require_modulus("finite field inverse modulus", values.get("modulus"))
+    if not is_prime(modulus):
+        fail("finite field inverse modulus must be prime")
+    inverses = values.get("inverses")
+    if not isinstance(inverses, dict):
+        fail("finite field inverses must be an object")
+    expected_keys = {str(residue) for residue in range(1, modulus)}
+    if set(inverses) != expected_keys:
+        fail(
+            "finite field inverse table must cover exactly nonzero residues: "
+            f"expected={sorted(expected_keys, key=int)} actual={sorted(inverses, key=int)}"
+        )
+    for residue_text in sorted(inverses, key=int):
+        residue = int(residue_text)
+        inverse = require_int(f"inverse table {residue_text}", inverses[residue_text])
+        if inverse <= 0 or inverse >= modulus:
+            fail(f"inverse for {residue} must be a nonzero residue modulo {modulus}")
+        if (residue * inverse) % modulus != 1:
+            fail(f"inverse table entry {residue}->{inverse} does not multiply to 1 modulo {modulus}")
+
+    distributivity = checks["prime-field-distributivity-no-counterexample"]
+    if distributivity["expected_result"] != "unsat":
+        fail("prime-field-distributivity-no-counterexample must expect unsat")
+    data = distributivity.get("data", {})
+    modulus = require_modulus("finite field distributivity modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("finite field distributivity modulus must be prime")
+    for a, b, c in product(range(modulus), repeat=3):
+        left = (a * ((b + c) % modulus)) % modulus
+        right = ((a * b) + (a * c)) % modulus
+        if left != right:
+            fail(f"distributivity counterexample found modulo {modulus}: {(a, b, c)}")
+
+    composite = checks["composite-modulus-nonfield"]
+    if composite["expected_result"] != "unsat":
+        fail("composite-modulus-nonfield must expect unsat")
+    data = composite.get("data", {})
+    modulus = require_modulus("composite modulus", data.get("modulus"))
+    if is_prime(modulus):
+        fail("composite-modulus-nonfield must use a composite modulus")
+    element = require_int("composite modulus element", data.get("element"))
+    if element <= 0 or element >= modulus:
+        fail("composite modulus element must be a nonzero residue")
+    if has_mod_inverse(element, modulus):
+        fail(f"element {element} unexpectedly has an inverse modulo {modulus}")
+
+
 def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -1728,6 +1799,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":
         validate_finite_sets(expected)
+    if metadata["id"] == "finite-fields-v0":
+        validate_finite_fields(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
     if metadata["id"] == "graph-coloring-v0":

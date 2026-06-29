@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite fields core curriculum pack landed.** Added
+  [`finite-fields-v0`](artifacts/examples/math/finite-fields-v0/README.md)
+  with `F_7` inverse-table replay, exhaustive `F_5` distributivity
+  no-counterexample checking, and a checked `Z/6Z` non-field contrast. The
+  foundational example-pack validator now checks prime moduli, inverse-table
+  coverage, finite distributivity enumeration, and composite no-inverse rows;
+  generated dashboards mark `finite-fields-v0` as validated. Continue Phase M3
+  with `polynomial-identities-v0` or `counting-v0`, or close the remaining
+  `proof-methods-refutation-v0` CNF/LRAT proof gap.
+
 - **Relations/functions core curriculum pack landed.** Added
   [`relations-functions-v0`](artifacts/examples/math/relations-functions-v0/README.md)
   with finite relation-property replay, bijective function-table replay, and a

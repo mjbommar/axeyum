@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-fields-v0",
+  "witnesses": [
+    {
+      "id": "f7-inverse-table",
+      "description": "A complete inverse table for the nonzero residues of F_7.",
+      "values": {
+        "modulus": 7,
+        "inverses": {
+          "1": 1,
+          "2": 4,
+          "3": 5,
+          "4": 2,
+          "5": 3,
+          "6": 6
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "prime-field-inverse-table",
+      "claim": "Every nonzero residue modulo 7 has the listed multiplicative inverse.",
+      "expected_result": "sat",
+      "validation": "finite_field_inverse_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["f7-inverse-table"],
+      "notes": "The validator checks every listed inverse multiplies to 1 modulo the prime modulus."
+    },
+    {
+      "id": "prime-field-distributivity-no-counterexample",
+      "claim": "There exists a distributivity counterexample in F_5.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_finite_field_arithmetic",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 5
+      },
+      "notes": "The validator enumerates all triples and confirms multiplication distributes over addition modulo 5."
+    },
+    {
+      "id": "composite-modulus-nonfield",
+      "claim": "The residue 2 has a multiplicative inverse modulo 6.",
+      "expected_result": "unsat",
+      "validation": "exhaustive_composite_modulus_inverse_check",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 6,
+        "element": 2
+      },
+      "notes": "The validator enumerates all residues modulo 6 and confirms none is an inverse for 2."
+    }
+  ]
+}

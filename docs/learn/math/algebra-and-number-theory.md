@@ -11,14 +11,17 @@ Concept rows:
 Example packs:
 
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
+- [finite-fields-v0](../../../artifacts/examples/math/finite-fields-v0/)
 - [complex-algebraic-v0](../../../artifacts/examples/math/complex-algebraic-v0/)
 
 ## What Axeyum Checks
 
 The current algebra path is finite and exact. It checks CRT witnesses, modular
 inverses, composite non-units with no inverse, and a Fermat-style finite unit
-enumeration. The complex pack adds algebraic real-pair arithmetic and a fixed
-polynomial-root witness.
+enumeration. The finite-fields pack adds a complete inverse table for `F_7`,
+exhaustive distributivity checking in `F_5`, and a `Z/6Z` non-field contrast.
+The complex pack adds algebraic real-pair arithmetic and a fixed polynomial-root
+witness.
 
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
@@ -35,6 +38,18 @@ The `modular-arithmetic-v0` pack encodes that as `a = 3`, `modulus = 7`, and
 `inverse = 5`. The validator recomputes the product modulo `7`; no theorem
 about all moduli is needed to trust this witness.
 
+For a field-flavored example, the `finite-fields-v0` pack lists every nonzero
+inverse in `F_7`:
+
+```text
+2 * 4 = 8 == 1 mod 7
+3 * 5 = 15 == 1 mod 7
+6 * 6 = 36 == 1 mod 7
+```
+
+It also checks that no residue `b` satisfies `2*b == 1 mod 6`, showing the
+fixed composite modulus is not a field.
+
 For a polynomial-flavored algebra example, the complex pack encodes `i` as the
 real pair `[0, 1]`. The validator squares the pair and checks:
 
@@ -46,6 +61,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 ```
 
@@ -53,4 +69,5 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 
 General group, ring, field, module, and algebraic-number-theory theorems need
 Lean-backed concept rows. Near-term resource gaps are `finite-groups-v0`,
-`finite-rings-v0`, `finite-fields-v0`, and richer polynomial identity packs.
+`finite-rings-v0`, richer polynomial identity packs, and stronger BV/CNF
+evidence for finite-field universal rows.

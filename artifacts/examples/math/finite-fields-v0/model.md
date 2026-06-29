@@ -1,0 +1,27 @@
+# Model
+
+Each check works in the residue set `{0, ..., n-1}` with operations:
+
+```text
+a + b = (a + b) mod n
+a * b = (a * b) mod n
+```
+
+For a prime modulus `p`, the nonzero residues form the multiplicative group of
+the finite field `F_p`. The inverse-table witness lists one inverse for each
+nonzero residue.
+
+For a composite modulus, the same residue arithmetic is still a finite ring, but
+nonzero elements can fail to have inverses. The `Z/6Z` check focuses on `2`,
+which has no multiplicative inverse because every product `2*b mod 6` is even.
+
+## Axeyum Route
+
+The intended Axeyum route is bounded BV/enumeration:
+
+```text
+forall a != 0 in F_p, exists inv. (a * inv) mod p = 1
+not exists b in Z/6Z. (2 * b) mod 6 = 1
+```
+
+The current pack checks those finite statements directly in the validator.
