@@ -44,9 +44,12 @@ Last reconciled with `main`: 2026-06-27.
     `a.checked_add(b).unwrap()`/`.expect(..)` (desugars to the plain checked op)
     `a.checked_add(b).unwrap_or(d)` (desugars to `ite(!Overflows, wrapping_op,
     d)`), and `match a.checked_add(b) { Some(v) => .., None => .. }` (desugars to
-    an `if !Overflows` with the Some-arm binding `v` = `wrapping_op`). Only
-    remaining: an `Option` flowing through `let`/returns as a first-class value
-    (rarer) — an AST/lowering addition, consumer-ownable, no IR dependency.
+    an `if !Overflows` with the Some-arm binding `v` = `wrapping_op`).
+    **Let-bound Options are now first-class too**: `let x = a.checked_add(b);` then
+    `x.unwrap()/.unwrap_or(d)/.is_some()/.is_none()` or `match x { Some(v) => ..,
+    None => .. }` (a scoped *virtual* binding in the proc-macro; any other use of
+    `x` is a sound fragment error). Only remaining: an `Option` *returned* from a
+    fn or passed across calls — rarer, consumer-ownable, no IR dependency.
 - **Why it matters:** these three families cover a large slice of real systems
   Rust (hashing, bit twiddling, overflow-aware arithmetic). They are *capability*
   gaps, not soundness gaps — today they are honest `Unknown`, never wrong.
