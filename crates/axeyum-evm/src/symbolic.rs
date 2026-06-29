@@ -692,6 +692,30 @@ fn run_from(
                 let value = pop_or_unknown!();
                 state.stack.push(arena.bv_ashr(value, shift)?);
             }
+            Op::SignExtend => {
+                // SIGNEXTEND(b, x): sign-extend x from a (b+1)-byte two's-comp
+                // value to 256 bits; b >= 31 leaves x unchanged. With a concrete
+                // b this is exact via extract+sign_ext (no 256-bit constant);
+                // a symbolic b havocs + saw_unknown (sound).
+                let b = pop_or_unknown!();
+                let x = pop_or_unknown!();
+                if let Some(bb) = concrete_usize(arena, b) {
+                    let result = if bb >= 31 {
+                        x
+                    } else {
+                        // bits to keep (and sign-extend from): (b+1) bytes.
+                        // `bb < 31`, so the cast is exact.
+                        let keep = (u32::try_from(bb).unwrap_or(31) + 1) * 8;
+                        let low = arena.extract(keep - 1, 0, x)?;
+                        arena.sign_ext(W - keep, low)?
+                    };
+                    state.stack.push(result);
+                } else {
+                    let h = env.havoc(arena)?;
+                    state.stack.push(h);
+                    *saw_unknown = true;
+                }
+            }
             Op::Byte => {
                 // BYTE(i, x): the i-th byte of x counting from the most
                 // significant (byte 0 = bits 255..248); 0 for i >= 32. With a

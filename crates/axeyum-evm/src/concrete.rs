@@ -290,6 +290,27 @@ fn run_core(
                 let a = pop!();
                 stack.push(Word(a.0.not()));
             }
+            Op::SignExtend => {
+                let (b, x) = (pop!(), pop!());
+                // Sign-extend x from a (b+1)-byte value to 256 bits. b >= 31 is a
+                // no-op. Implemented over big-endian bytes to match the symbolic
+                // extract+sign_ext model exactly (replay must agree).
+                let out = match b.to_usize() {
+                    Some(bb) if bb < 31 => {
+                        let keep = bb + 1; // bytes to keep, counting from the LSB
+                        let mut bytes = x.to_be_bytes();
+                        // Most-significant *kept* byte sits at index 32 - keep.
+                        let sign_idx = 32 - keep;
+                        let fill = if bytes[sign_idx] & 0x80 != 0 { 0xff } else { 0x00 };
+                        for byte in bytes.iter_mut().take(sign_idx) {
+                            *byte = fill;
+                        }
+                        Word::from_be_bytes(&bytes)
+                    }
+                    _ => x,
+                };
+                stack.push(out);
+            }
             Op::Byte => {
                 let (i, x) = (pop!(), pop!());
                 // byte i (from the most-significant) of x.

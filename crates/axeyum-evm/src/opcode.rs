@@ -42,6 +42,9 @@ pub enum Op {
     Addmod,
     /// `MULMOD` (0x09): `(a * b) % n` at 512-bit precision (`n == 0` ⇒ 0).
     Mulmod,
+    /// `SIGNEXTEND` (0x0b): sign-extend `x` from a `(b+1)`-byte two's-complement
+    /// value to 256 bits; `b >= 31` returns `x` unchanged.
+    SignExtend,
     // --- 0x10 range: comparison & bitwise ---
     /// `LT` (0x10): unsigned less-than.
     Lt,
@@ -159,6 +162,7 @@ impl Op {
             0x07 => Op::Smod,
             0x08 => Op::Addmod,
             0x09 => Op::Mulmod,
+            0x0b => Op::SignExtend,
             0x10 => Op::Lt,
             0x11 => Op::Gt,
             0x12 => Op::Slt,
