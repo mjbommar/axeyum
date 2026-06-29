@@ -2464,6 +2464,8 @@ this list as each lands. Done: scoreboard coverage broadened to 8/8 incl. the
    - **CREATE/CREATE2** (0xf0/0xf5) — re-entrant deploy: witnessed new-contract
      address + adversarial post-state storage (constructor may re-enter)
      (`fbb2c6e`). Closes the factory-pattern gap.
+   - **SELFDESTRUCT** (0xff) — clean halt like STOP (pop beneficiary, end the
+     path safely) (`f4bdba4`).
    - *Next candidates:* RETURNDATACOPY tied to a modeled return buffer;
      EXTCODECOPY (external code genuinely unknown → fresh-witnessed both sides);
      symbolic-exponent EXP (heavy). **Common runtime opcodes are now covered** —

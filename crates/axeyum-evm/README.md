@@ -44,10 +44,15 @@ Bug classes: reachable `REVERT` / `INVALID` / Solidity `Panic(0x11)`, and unsign
 - **Multi-transaction** sequences (`AnalyzeConfig::max_txs`) with persistent
   storage between calls — finds bugs reachable only across calls (e.g.
   init-then-trigger), with a replay-validated multi-tx witness.
-- **Environment opcodes** (`GAS`/`BALANCE`/block context) and **external calls**
-  (`CALL`/`DELEGATECALL`/`STATICCALL`) as *witnessed* symbolic inputs, and
-  **re-entrancy** (storage is adversarial after a non-static call — the DAO
-  threat model).
+- **Environment opcodes** (`GAS`/`BALANCE`/block context/`BLOCKHASH`/`MSIZE`) and
+  **external calls** (`CALL`/`DELEGATECALL`/`STATICCALL`, with witnessed return
+  data written to memory) as *witnessed* symbolic inputs, and **re-entrancy**
+  (storage is adversarial after a non-static call — the DAO threat model).
+- **The common runtime opcode set**, precisely: `BYTE`/`SIGNEXTEND` (concrete and
+  symbolic index), `EXP` (concrete fold), `CALLDATACOPY`/`CODECOPY` (exact
+  calldata/code copies), `LOG0`–`LOG4` (no-op), `CREATE`/`CREATE2` (re-entrant
+  deploy), and `SELFDESTRUCT` (clean halt) — each cross-checked by the concrete
+  oracle and in the differential-fuzz pool.
 
 ## Honest limits
 
