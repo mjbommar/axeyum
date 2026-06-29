@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "finite-continuous-maps-v0",
+  "title": "Finite Continuous Maps And Homeomorphism Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_real_analysis",
+    "curriculum_sets",
+    "curriculum_reals",
+    "curriculum_sequences_and_limits"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "reals",
+    "sequences-and-limits"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "finite topology",
+    "finite functions",
+    "Bool / enumeration",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+  ],
+  "expected_results": [
+    "finite-continuous-map-witness",
+    "open-preimage-witness",
+    "finite-homeomorphism-witness",
+    "bad-continuous-map-rejected",
+    "bad-homeomorphism-claim-rejected",
+    "general-continuous-map-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite topological continuity as deterministic preimage-of-open-set enumeration.",
+    "Replay finite continuous-map and homeomorphism witnesses through Axeyum model evaluation over finite functions.",
+    "Emit checked finite counterexample evidence for rejected continuity and homeomorphism claims.",
+    "Keep continuous-image, homeomorphism-invariance, compactness-preservation, and connectedness-preservation theorems marked Lean-horizon until no-sorry Lean artifacts exist."
+  ]
+}

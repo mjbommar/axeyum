@@ -1,4 +1,4 @@
-# End To End: Finite Topology, Connectedness, And Measure
+# End To End: Finite Topology, Maps, Connectedness, And Measure
 
 This lesson follows finite set-family resources from data row to replayed
 result. It uses
@@ -7,7 +7,9 @@ result. It uses
 the finite open-cover slice in
 [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 and the finite connectedness slice in
-[finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/).
+[finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/),
+plus finite continuous-map checks in
+[finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/).
 
 Concept rows:
 
@@ -25,6 +27,8 @@ Concept rows:
 | `bad-open-cover-rejected` | `unsat` | checked |
 | `finite-connected-space-witness` | `sat` | replay-only |
 | `bad-connected-claim-rejected` | `unsat` | checked |
+| `finite-continuous-map-witness` | `sat` | replay-only |
+| `bad-continuous-map-rejected` | `unsat` | checked |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
 
@@ -68,6 +72,16 @@ open_sets = {}, {1}, {0,1}
 clopen_subsets = {}, {0,1}
 ```
 
+The continuous-map witness lists two finite topologies and one total map:
+
+```text
+open_X = {}, {1}, {0,1}
+open_Y = {}, {v}, {u,v}
+f(0) = u
+f(1) = v
+preimage({v}) = {1}
+```
+
 ## Replay
 
 For topology, the checker confirms the empty set and universe are present, then
@@ -97,6 +111,11 @@ For connectedness, the checker enumerates every subset, recomputes the clopen
 subsets, confirms the Sierpinski example has only trivial clopen subsets, and
 rejects the false connectedness claim for the discrete two-point topology.
 
+For continuous maps, the checker recomputes preimages of all codomain open
+sets, checks that each preimage is domain-open, checks a finite homeomorphism
+by also checking the inverse, and rejects a false continuity claim where
+`preimage({u}) = {0}` is not open.
+
 ## Run It
 
 From the repository root:
@@ -105,6 +124,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -118,5 +138,6 @@ validated 1 foundational example pack(s)
 
 The trusted checker only manipulates finite sets and exact fractions. ZFC,
 infinite cardinality, arbitrary topological spaces, general compactness,
-general connectedness theorems, countable additivity, and Lebesgue integration
-remain proof-horizon material.
+general connectedness theorems, continuous-image and homeomorphism-invariance
+theorems, countable additivity, and Lebesgue integration remain proof-horizon
+material.

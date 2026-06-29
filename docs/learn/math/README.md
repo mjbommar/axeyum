@@ -17,14 +17,14 @@ Source maps:
 | Path | Start With | First Checkable Packs |
 |---|---|---|
 | [Logic And Proof](logic-and-proof.md) | `curriculum_propositional_logic`, `curriculum_predicate_logic`, `curriculum_proof_methods`, `curriculum_induction`, `field_logic_and_proof` | `logic-basics-v0`, `finite-predicate-v0`, `proof-methods-refutation-v0`, `induction-obligations-v0`, `graph-coloring-v0` |
-| [Sets, Relations, And Finite Structures](sets-relations-and-finite-structures.md) | `curriculum_sets`, `curriculum_relations_and_functions`, `curriculum_cardinality`, `field_set_theory_and_foundations` | `finite-sets-v0`, `relations-functions-v0`, `finite-cardinality-v0`, `finite-topology-v0`, `finite-compactness-v0`, `finite-connectedness-v0` |
+| [Sets, Relations, And Finite Structures](sets-relations-and-finite-structures.md) | `curriculum_sets`, `curriculum_relations_and_functions`, `curriculum_cardinality`, `field_set_theory_and_foundations` | `finite-sets-v0`, `relations-functions-v0`, `finite-cardinality-v0`, `finite-topology-v0`, `finite-compactness-v0`, `finite-connectedness-v0`, `finite-continuous-maps-v0` |
 | [Number Systems And Arithmetic](number-systems-and-arithmetic.md) | `curriculum_naturals`, `curriculum_integers`, `curriculum_divisibility_and_euclid`, `curriculum_modular_arithmetic`, `curriculum_number_theory`, `curriculum_rationals`, `curriculum_complex` | `natural-arithmetic-v0`, `integer-lia-v0`, `gcd-bezout-v0`, `modular-arithmetic-v0`, `number-theory-v0`, `rationals-lra-v0`, `complex-algebraic-v0` |
 | [Algebra And Number Theory](algebra-and-number-theory.md) | `field_abstract_algebra`, `field_number_theory` | `gcd-bezout-v0`, `number-theory-v0`, `finite-groups-v0`, `finite-rings-v0`, `finite-fields-v0` |
 | [Rational And Real Algebra](rational-real-algebra.md) | `field_real_analysis`, `curriculum_reals` | `rationals-lra-v0`, `reals-rcf-shadow-v0`, `polynomial-identities-v0`, `matrix-invariants-v0`, `linear-optimization-v0` |
 | [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) | `field_graph_theory`, `field_discrete_math` | `counting-v0`, `graph-coloring-v0`, `graph-reachability-v0`, `graph-matching-v0`, `graph-d-separation-v0`, `graph-cut-v0`, `proof-methods-refutation-v0` |
 | [Linear Algebra And Optimization](linear-algebra-and-optimization.md) | `curriculum_linear_algebra`, `field_optimization_and_convexity` | `linear-algebra-rational-v0`, `numerical-linear-algebra-v0`, `spectral-linear-algebra-v0`, `matrix-invariants-v0`, `random-matrix-finite-v0`, `linear-optimization-v0`, `finite-operator-v0` |
 | [Probability And Statistics](probability-and-statistics.md) | `field_probability_theory`, `field_statistics` | `finite-probability-v0`, `finite-markov-chain-v0`, `descriptive-statistics-v0`, `exact-statistical-tests-v0`, `finite-measure-v0`, `random-matrix-finite-v0` |
-| [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `sequence-limit-shadow-v0`, `metric-continuity-v0`, `finite-compactness-v0`, `finite-connectedness-v0`, `calculus-algebraic-shadow-v0`, `finite-topology-v0`, `bounded-dynamics-v0`, `finite-markov-chain-v0`, `finite-operator-v0` |
+| [Analysis And Topology Proof Horizons](analysis-topology-proof-horizons.md) | `field_topology`, `field_measure_theory`, `field_functional_analysis_and_operator_theory` | `sequence-limit-shadow-v0`, `metric-continuity-v0`, `finite-compactness-v0`, `finite-connectedness-v0`, `finite-continuous-maps-v0`, `calculus-algebraic-shadow-v0`, `finite-topology-v0`, `bounded-dynamics-v0`, `finite-markov-chain-v0`, `finite-operator-v0` |
 
 Each cluster page includes an `Encode / Check Walkthrough` section with
 validated pack data and the repo-root command that replays it.
@@ -40,9 +40,9 @@ validated pack data and the repo-root command that replays it.
   matrix replay and a tiny checked Farkas-style LP certificate.
 - [Conditional Probability](finite-probability-end-to-end.md): follows a finite
   atom table through exact conditional-probability replay.
-- [Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md):
-  follows finite set-family, closure/interior, compactness, connectedness, and
-  measure replay.
+- [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
+  follows finite set-family, closure/interior, continuous-map, compactness,
+  connectedness, and measure replay.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, and Chebyshev replay.
 

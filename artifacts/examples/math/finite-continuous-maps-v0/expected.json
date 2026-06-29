@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-continuous-maps-v0",
+  "witnesses": [
+    {
+      "id": "sierpinski-homeomorphism",
+      "description": "A bijective continuous map between two renamed two-point Sierpinski spaces.",
+      "values": {
+        "domain_universe": ["0", "1"],
+        "domain_open_sets": [
+          [],
+          ["1"],
+          ["0", "1"]
+        ],
+        "codomain_universe": ["u", "v"],
+        "codomain_open_sets": [
+          [],
+          ["v"],
+          ["u", "v"]
+        ],
+        "map": {
+          "0": "u",
+          "1": "v"
+        },
+        "open_set": ["v"],
+        "preimage": ["1"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-continuous-map-witness",
+      "claim": "The renamed Sierpinski map is continuous because every codomain open set has an open preimage.",
+      "expected_result": "sat",
+      "validation": "finite_topological_continuity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-homeomorphism"],
+      "notes": "The validator checks every codomain open set and recomputes its preimage."
+    },
+    {
+      "id": "open-preimage-witness",
+      "claim": "The preimage of the codomain open set {v} is the domain open set {1}.",
+      "expected_result": "sat",
+      "validation": "finite_open_preimage_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-homeomorphism"],
+      "notes": "The validator recomputes the listed preimage and checks it is open in the domain."
+    },
+    {
+      "id": "finite-homeomorphism-witness",
+      "claim": "The renamed Sierpinski map is a homeomorphism.",
+      "expected_result": "sat",
+      "validation": "finite_homeomorphism_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-homeomorphism"],
+      "notes": "The validator checks bijectivity, continuity, and continuity of the inverse map."
+    },
+    {
+      "id": "bad-continuous-map-rejected",
+      "claim": "The identity-shaped map from the Sierpinski topology to the discrete topology is continuous.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_continuity_refutation",
+      "proof_status": "checked",
+      "data": {
+        "domain_universe": ["0", "1"],
+        "domain_open_sets": [
+          [],
+          ["1"],
+          ["0", "1"]
+        ],
+        "codomain_universe": ["u", "v"],
+        "codomain_open_sets": [
+          [],
+          ["u"],
+          ["v"],
+          ["u", "v"]
+        ],
+        "map": {
+          "0": "u",
+          "1": "v"
+        },
+        "failing_open": ["u"],
+        "preimage": ["0"]
+      },
+      "notes": "The validator rejects continuity because the preimage of {u} is {0}, which is not open in the Sierpinski domain."
+    },
+    {
+      "id": "bad-homeomorphism-claim-rejected",
+      "claim": "The identity-shaped bijection from the Sierpinski topology to the discrete topology is a homeomorphism.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_homeomorphism_refutation",
+      "proof_status": "checked",
+      "data": {
+        "domain_universe": ["0", "1"],
+        "domain_open_sets": [
+          [],
+          ["1"],
+          ["0", "1"]
+        ],
+        "codomain_universe": ["u", "v"],
+        "codomain_open_sets": [
+          [],
+          ["u"],
+          ["v"],
+          ["u", "v"]
+        ],
+        "map": {
+          "0": "u",
+          "1": "v"
+        },
+        "failing_open": ["u"],
+        "preimage": ["0"],
+        "reason": "not-continuous"
+      },
+      "notes": "The validator rejects the homeomorphism claim because the forward map is not continuous."
+    },
+    {
+      "id": "general-continuous-map-lean-horizon",
+      "claim": "General continuous-map theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "continuous images of compact spaces are compact, continuous images of connected spaces are connected, and homeomorphisms preserve topological invariants",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked; arbitrary continuous-map theorems remain proof-assistant horizons."
+    }
+  ]
+}

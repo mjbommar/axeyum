@@ -95,6 +95,7 @@ artifacts/examples/math/
   finite-topology-v0/
   finite-compactness-v0/
   finite-connectedness-v0/
+  finite-continuous-maps-v0/
   finite-measure-v0/
   bounded-dynamics-v0/
   finite-operator-v0/
@@ -374,6 +375,10 @@ Lean-horizon row.
 [`finite-connectedness-v0`](../../artifacts/examples/math/finite-connectedness-v0/)
 validates finite connectedness via clopen-subset enumeration, open separations,
 bad-connected-claim rejection, and a connectedness Lean-horizon row.
+[`finite-continuous-maps-v0`](../../artifacts/examples/math/finite-continuous-maps-v0/)
+validates finite continuity by open-set preimage enumeration, finite
+homeomorphism replay, bad-continuity and bad-homeomorphism rejection, and a
+continuous-map Lean-horizon row.
 [`random-matrix-finite-v0`](../../artifacts/examples/math/random-matrix-finite-v0/)
 validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.

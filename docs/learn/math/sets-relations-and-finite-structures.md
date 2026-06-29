@@ -16,6 +16,7 @@ Example packs:
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
+- [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
 ## What Axeyum Checks
@@ -32,7 +33,9 @@ intersections, closure/interior computation, and finite metric balls. The
 compactness pack checks finite open covers, subcovers, minimal-subcover
 enumeration, finite-intersection families, and rejection of a bad cover. The
 connectedness pack checks finite clopen-subset enumeration, open separations,
-and rejection of a false connectedness claim. The measure pack checks finite
+and rejection of a false connectedness claim. The continuous-map pack checks
+finite function preimages of open sets, homeomorphism witnesses, and rejection
+of false continuity/homeomorphism claims. The measure pack checks finite
 sigma-algebra closure, rational measure tables, finite additivity, and
 event/complement identities.
 
@@ -103,7 +106,17 @@ clopen_subsets = {}, {0,1}
 
 The checker confirms the Sierpinski example has no non-trivial clopen subset
 and rejects the false claim that the discrete two-point topology is connected.
-For measure, use the partition
+For continuous maps, add a total map between finite topologies:
+
+```text
+open_X = {}, {1}, {0,1}
+open_Y = {}, {v}, {u,v}
+f(0) = u
+f(1) = v
+```
+
+The checker recomputes every open-set preimage and rejects continuity when a
+codomain-open set has a non-open preimage. For measure, use the partition
 `{a,b}` / `{c,d}` with masses `1/3` and `2/3`; the checker verifies
 normalization, finite additivity, and the event/complement identity.
 
@@ -116,6 +129,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -125,8 +139,9 @@ read [End To End: Finite Topology, Connectedness, And Measure](finite-structures
 ## Horizon
 
 The finite set, relation/function, cardinality, topology, compactness-shadow,
-connectedness-shadow, and measure packs are now checked finite artifacts. The
-next finite-structure gaps are stronger EUF/Alethe evidence for congruence
-examples and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
-infinite cardinality, arbitrary topological spaces, general compactness, general
-connectedness, and countable additivity remain proof-horizon material.
+connectedness-shadow, continuous-map, and measure packs are now checked finite
+artifacts. The next finite-structure gaps are stronger EUF/Alethe evidence for
+congruence examples and Lean artifacts for infinite theorems. ZFC, ordinals,
+choice, infinite cardinality, arbitrary topological spaces, general compactness,
+general connectedness, continuous-image/homeomorphism theorems, and countable
+additivity remain proof-horizon material.

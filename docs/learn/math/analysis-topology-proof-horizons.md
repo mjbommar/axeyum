@@ -17,6 +17,7 @@ Example packs:
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
+- [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
@@ -31,9 +32,10 @@ The checkable slice is finite or bounded: finite topological spaces, exact
 metric balls, finite sigma-algebras, exact finite additivity, algebraic real
 shadows, bounded sequence tails and prefixes, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
-separation checks, polynomial derivative identities, bounded recurrence traces,
-finite invariant witnesses, matrix operator bounds, Chebyshev recurrence values
-at fixed points, and finite stochastic transition systems. The
+separation checks, finite continuous-map preimages and homeomorphism checks,
+polynomial derivative identities, bounded recurrence traces, finite invariant
+witnesses, matrix operator bounds, Chebyshev recurrence values at fixed points,
+and finite stochastic transition systems. The
 spectral-linear-algebra pack adds exact finite eigenpair,
 orthogonal-eigenbasis, Rayleigh-quotient, and spectral-decomposition replay for
 a fixed rational matrix.
@@ -110,6 +112,22 @@ recomputes clopen subsets, checks that the Sierpinski example has no open
 separation, and rejects a false connectedness claim for the two-point discrete
 topology.
 
+For a finite continuous-map shadow, encode domain and codomain topologies plus
+a total map:
+
+```text
+open_X = {}, {1}, {0,1}
+open_Y = {}, {v}, {u,v}
+f(0) = u
+f(1) = v
+preimage({v}) = {1}
+```
+
+The `finite-continuous-maps-v0` validator recomputes preimages of every
+codomain open set, checks continuity, checks a finite homeomorphism by
+bijectivity plus continuity of the inverse, and rejects a false continuity
+claim for the same map into the discrete topology.
+
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
 
@@ -147,6 +165,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/se
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0

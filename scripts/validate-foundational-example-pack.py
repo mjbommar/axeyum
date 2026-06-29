@@ -4177,6 +4177,83 @@ def topology_separations(
     return separations
 
 
+def require_total_function_map(
+    context: str,
+    value: Any,
+    domain: list[str],
+    codomain: list[str],
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    domain_set = set(domain)
+    codomain_set = set(codomain)
+    if set(value) != domain_set:
+        missing = sorted(domain_set - set(value))
+        extra = sorted(set(value) - domain_set)
+        fail(f"{context} must cover exactly the domain; missing={missing} extra={extra}")
+    result: dict[str, str] = {}
+    for source in domain:
+        target = value[source]
+        require_string(f"{context}.{source}", target)
+        if target not in codomain_set:
+            fail(f"{context}.{source} maps outside codomain")
+        result[source] = target
+    return result
+
+
+def require_topological_map_data(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], set[frozenset[str]], list[str], set[frozenset[str]], dict[str, str]]:
+    domain = require_string_list(f"{context}.domain_universe", values.get("domain_universe"))
+    domain_open_sets = require_set_family(
+        f"{context}.domain_open_sets",
+        values.get("domain_open_sets"),
+        domain,
+    )
+    validate_topology_axioms(f"{context}.domain", domain, domain_open_sets)
+    codomain = require_string_list(f"{context}.codomain_universe", values.get("codomain_universe"))
+    codomain_open_sets = require_set_family(
+        f"{context}.codomain_open_sets",
+        values.get("codomain_open_sets"),
+        codomain,
+    )
+    validate_topology_axioms(f"{context}.codomain", codomain, codomain_open_sets)
+    mapping = require_total_function_map(f"{context}.map", values.get("map"), domain, codomain)
+    return domain, domain_open_sets, codomain, codomain_open_sets, mapping
+
+
+def map_preimage(mapping: dict[str, str], subset: frozenset[str]) -> frozenset[str]:
+    return frozenset(source for source, target in mapping.items() if target in subset)
+
+
+def topology_continuity_failures(
+    domain_open_sets: set[frozenset[str]],
+    codomain_open_sets: set[frozenset[str]],
+    mapping: dict[str, str],
+) -> list[tuple[frozenset[str], frozenset[str]]]:
+    failures: list[tuple[frozenset[str], frozenset[str]]] = []
+    for open_set in codomain_open_sets:
+        preimage = map_preimage(mapping, open_set)
+        if preimage not in domain_open_sets:
+            failures.append((open_set, preimage))
+    return failures
+
+
+def inverse_bijection(context: str, mapping: dict[str, str], codomain: list[str]) -> dict[str, str]:
+    inverse: dict[str, str] = {}
+    for source, target in mapping.items():
+        if target in inverse:
+            fail(f"{context} is not injective")
+        inverse[target] = source
+    codomain_set = set(codomain)
+    if set(inverse) != codomain_set:
+        missing = sorted(codomain_set - set(inverse))
+        extra = sorted(set(inverse) - codomain_set)
+        fail(f"{context} is not surjective; missing={missing} extra={extra}")
+    return inverse
+
+
 def set_family_union(family: set[frozenset[str]]) -> frozenset[str]:
     result: set[str] = set()
     for subset in family:
@@ -4494,6 +4571,109 @@ def validate_finite_connectedness(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general connectedness target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general connectedness future_checker", data.get("future_checker"))
+
+
+def validate_finite_continuous_maps(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    continuous = checks["finite-continuous-map-witness"]
+    if continuous["expected_result"] != "sat":
+        fail("finite-continuous-map-witness must expect sat")
+    values = single_witness_values(continuous, witnesses)
+    domain, domain_open_sets, codomain, codomain_open_sets, mapping = require_topological_map_data(
+        "finite continuous map",
+        values,
+    )
+    if topology_continuity_failures(domain_open_sets, codomain_open_sets, mapping):
+        fail("finite-continuous-map-witness is not continuous")
+
+    preimage = checks["open-preimage-witness"]
+    if preimage["expected_result"] != "sat":
+        fail("open-preimage-witness must expect sat")
+    values = single_witness_values(preimage, witnesses)
+    domain, domain_open_sets, codomain, codomain_open_sets, mapping = require_topological_map_data(
+        "open preimage map",
+        values,
+    )
+    open_set = require_subset("open preimage open_set", values.get("open_set"), codomain)
+    expected_preimage = require_subset("open preimage preimage", values.get("preimage"), domain)
+    if open_set not in codomain_open_sets:
+        fail("open-preimage-witness open_set must be open in codomain")
+    actual_preimage = map_preimage(mapping, open_set)
+    if actual_preimage != expected_preimage:
+        fail("open-preimage-witness preimage is incorrect")
+    if actual_preimage not in domain_open_sets:
+        fail("open-preimage-witness preimage is not open in domain")
+
+    homeomorphism = checks["finite-homeomorphism-witness"]
+    if homeomorphism["expected_result"] != "sat":
+        fail("finite-homeomorphism-witness must expect sat")
+    values = single_witness_values(homeomorphism, witnesses)
+    domain, domain_open_sets, codomain, codomain_open_sets, mapping = require_topological_map_data(
+        "finite homeomorphism",
+        values,
+    )
+    inverse = inverse_bijection("finite-homeomorphism-witness map", mapping, codomain)
+    if topology_continuity_failures(domain_open_sets, codomain_open_sets, mapping):
+        fail("finite-homeomorphism-witness map is not continuous")
+    if topology_continuity_failures(codomain_open_sets, domain_open_sets, inverse):
+        fail("finite-homeomorphism-witness inverse is not continuous")
+
+    bad_continuous = checks["bad-continuous-map-rejected"]
+    if bad_continuous["expected_result"] != "unsat":
+        fail("bad-continuous-map-rejected must expect unsat")
+    data = bad_continuous.get("data", {})
+    domain, domain_open_sets, codomain, codomain_open_sets, mapping = require_topological_map_data(
+        "bad continuous map",
+        data,
+    )
+    failing_open = require_subset("bad continuous failing_open", data.get("failing_open"), codomain)
+    expected_preimage = require_subset("bad continuous preimage", data.get("preimage"), domain)
+    if failing_open not in codomain_open_sets:
+        fail("bad-continuous-map-rejected failing_open must be open in codomain")
+    actual_preimage = map_preimage(mapping, failing_open)
+    if actual_preimage != expected_preimage:
+        fail("bad-continuous-map-rejected preimage is incorrect")
+    if actual_preimage in domain_open_sets:
+        fail("bad-continuous-map-rejected preimage is unexpectedly open")
+    if not topology_continuity_failures(domain_open_sets, codomain_open_sets, mapping):
+        fail("bad-continuous-map-rejected map is unexpectedly continuous")
+
+    bad_homeomorphism = checks["bad-homeomorphism-claim-rejected"]
+    if bad_homeomorphism["expected_result"] != "unsat":
+        fail("bad-homeomorphism-claim-rejected must expect unsat")
+    data = bad_homeomorphism.get("data", {})
+    domain, domain_open_sets, codomain, codomain_open_sets, mapping = require_topological_map_data(
+        "bad homeomorphism",
+        data,
+    )
+    failing_open = require_subset("bad homeomorphism failing_open", data.get("failing_open"), codomain)
+    expected_preimage = require_subset("bad homeomorphism preimage", data.get("preimage"), domain)
+    if failing_open not in codomain_open_sets:
+        fail("bad-homeomorphism-claim-rejected failing_open must be open in codomain")
+    if map_preimage(mapping, failing_open) != expected_preimage:
+        fail("bad-homeomorphism-claim-rejected preimage is incorrect")
+    reason = data.get("reason")
+    require_string("bad homeomorphism reason", reason)
+    if reason != "not-continuous":
+        fail("bad-homeomorphism-claim-rejected reason must be not-continuous")
+    inverse = inverse_bijection("bad-homeomorphism-claim-rejected map", mapping, codomain)
+    map_failures = topology_continuity_failures(domain_open_sets, codomain_open_sets, mapping)
+    inverse_failures = topology_continuity_failures(codomain_open_sets, domain_open_sets, inverse)
+    if not map_failures and not inverse_failures:
+        fail("bad-homeomorphism-claim-rejected map unexpectedly is a homeomorphism")
+    if expected_preimage in domain_open_sets:
+        fail("bad-homeomorphism-claim-rejected documented preimage is unexpectedly open")
+
+    horizon = checks["general-continuous-map-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-continuous-map-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-continuous-map-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general continuous map target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general continuous map future_checker", data.get("future_checker"))
 
 
 def validate_metric_continuity(expected: dict[str, Any]) -> None:
@@ -5503,6 +5683,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_compactness(expected)
     if metadata["id"] == "finite-connectedness-v0":
         validate_finite_connectedness(expected)
+    if metadata["id"] == "finite-continuous-maps-v0":
+        validate_finite_continuous_maps(expected)
     if metadata["id"] == "finite-topology-v0":
         validate_finite_topology(expected)
     if metadata["id"] == "finite-sets-v0":

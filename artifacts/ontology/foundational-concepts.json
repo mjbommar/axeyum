@@ -2244,7 +2244,7 @@
       "example_packs": [
         {
           "id": "numerical-linear-algebra-v0",
-          "status": "planned",
+          "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
           "notes": "LU replay, interval bounds, fixed-step error recurrences, and rational shadows."
         }
@@ -2267,8 +2267,8 @@
         "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
       ],
       "open_gaps": [
-        "Field row is seeded, but field-level example-pack coverage is not validated yet.",
-        "Generated dashboards keep this field at seeded/planned coverage until its first pack lands."
+        "Field-level example pack exists; broader field concept coverage remains incomplete.",
+        "Field status still needs repeated slices and proof/evidence coverage before graduation."
       ],
       "graduation": {
         "status": "planned",
@@ -2604,14 +2604,14 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Graduate bridge for analysis and geometry. First Axeyum slice: Finite topologies, metric-ball examples, closure/interior checks in finite spaces",
+      "summary": "Graduate bridge for analysis and geometry. First Axeyum slice: Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces",
       "prerequisites": [],
       "unlocks": [
         "curriculum_sequences_and_limits"
       ],
       "decidability": "proof-horizon",
       "axeyum_fragments": [
-        "Finite topologies, metric-ball examples, closure/interior checks in finite spaces"
+        "Finite topologies, metric-ball examples, closure/interior checks, and continuous-map preimages in finite spaces"
       ],
       "example_packs": [
         {

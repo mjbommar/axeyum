@@ -159,6 +159,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite continuous-map foundations pack landed.** Added
+  [`finite-continuous-maps-v0`](artifacts/examples/math/finite-continuous-maps-v0/README.md)
+  as the finite preimage/homeomorphism bridge for topology. The pack validates
+  finite continuity by enumerating preimages of codomain open sets, replays a
+  finite homeomorphism by checking bijectivity plus inverse continuity, rejects
+  false continuity and homeomorphism claims, and records a general
+  continuous-map Lean-horizon row. The foundational example-pack validator now
+  checks finite topological-map totality, open-set preimages, continuity, and
+  inverse-continuity obligations.
+
 - **Finite connectedness foundations pack landed.** Added
   [`finite-connectedness-v0`](artifacts/examples/math/finite-connectedness-v0/README.md)
   as the finite clopen-subset/open-separation bridge for topology
