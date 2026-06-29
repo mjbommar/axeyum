@@ -9,6 +9,7 @@
 //! concrete calldata), so the symbolic analysis must not claim safety.
 //!
 //! Deterministic (fixed-seed LCG), no external crates.
+#![allow(clippy::cast_possible_truncation)] // intentional in the PRNG / index math
 
 use axeyum_evm::concrete::{self, Env, Halt};
 use axeyum_evm::opcode::decode;
@@ -98,7 +99,7 @@ fn concrete_reachable_bug_is_never_reported_safe() {
 fn analyze_is_total_on_random_bytecode() {
     // analyze must never panic and always return a well-formed report on arbitrary
     // bytecode (sound totality: a finding xor a verdict).
-    let mut rng = Rng(0xa11ce_0000_0042);
+    let mut rng = Rng(0x000a_11ce_0000_0042);
     for _ in 0..400 {
         let len = rng.range(1, 24);
         let bytecode: Vec<u8> = (0..len).map(|_| rng.byte_from(POOL)).collect();
