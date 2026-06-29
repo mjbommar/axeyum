@@ -191,6 +191,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-by-refutation end-to-end lesson landed.** Added
+  [`proof-methods-refutation-end-to-end.md`](docs/learn/math/proof-methods-refutation-end-to-end.md)
+  as the learner-facing trace for the proof-methods refutation pack:
+  `PHP(2,2)` SAT witness replay, deterministic `PHP(3,2)` CNF truth-table
+  refutation, and the DRAT/LRAT proof-object graduation route. The lesson is
+  linked from the math learning index plus the logic/proof path.
+
 - **Finite predicate logic end-to-end lesson landed.** Added
   [`finite-predicate-end-to-end.md`](docs/learn/math/finite-predicate-end-to-end.md)
   as the learner-facing trace for the finite-predicate pack: finite universal

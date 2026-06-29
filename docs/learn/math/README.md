@@ -38,6 +38,9 @@ validated pack data and the repo-root command that replays it.
   universal/existential predicate replay, bounded quantifier implication
   enumeration, relation symmetry counterexamples, and the first-order Lean
   horizon.
+- [Proof By Refutation](proof-methods-refutation-end-to-end.md): follows a
+  pigeonhole SAT control, checked `PHP(3,2)` CNF truth-table refutation, and
+  the LRAT/DRAT proof-object graduation route.
 - [Finite Sets](finite-sets-end-to-end.md): follows finite universe/subset
   replay, union/intersection identity replay, subset transitivity, and a fixed
   malformed-identity rejection.

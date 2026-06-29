@@ -129,9 +129,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 ```
 
 For fuller traces through propositional truth-table replay, finite-domain
-predicate replay, and graph coloring, read
+predicate replay, proof by refutation, and graph coloring, read
 [End To End: Logic Basics](logic-basics-end-to-end.md),
-[End To End: Finite Predicate Logic](finite-predicate-end-to-end.md), and
+[End To End: Finite Predicate Logic](finite-predicate-end-to-end.md),
+[End To End: Proof By Refutation](proof-methods-refutation-end-to-end.md), and
 [End To End: Triangle Coloring](graph-coloring-end-to-end.md).
 
 ## Horizon
