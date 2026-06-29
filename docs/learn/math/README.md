@@ -179,7 +179,8 @@ validated pack data and the repo-root command that replays it.
   Lean horizon.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
   follows exact Gram-matrix replay, fixed Cauchy-Schwarz, orthogonal
-  projection, Gram-Schmidt, and checked bad-inner-product rejection.
+  projection, Gram-Schmidt, and a QF_LRA/Farkas bad-inner-product
+  certificate.
 - [Finite Vector Spaces](finite-vector-spaces-end-to-end.md): follows `F2^2`
   table replay, subspace/span recomputation, linear-map kernel/image replay,
   rank-nullity by finite cardinality, and checked bad-subspace rejection.

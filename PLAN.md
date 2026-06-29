@@ -111,8 +111,9 @@ conflict, with orientation/area geometry now promoted for its bad fixed
 orientation claim and numerical linear algebra now promoted for its bad
 residual-bound row, and random matrix finite now promoted for its bad
 trace-square moment row, with affine geometry now promoted for its bad
-distance-preservation row. Prefer the next secondary equality-heavy pack that
-can carry a small checked certificate and a resource-backed regression.
+distance-preservation row and inner-product spaces now promoted for its bad
+negative-norm row. Prefer the next secondary equality-heavy pack that can carry
+a small checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

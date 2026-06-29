@@ -146,10 +146,12 @@ First targets:
 - [affine-geometry-v0](../../artifacts/examples/math/affine-geometry-v0/)
   (resource-backed Farkas regression landed for the bad distance-preservation
   row)
+- [inner-product-spaces-rational-v0](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
+  (resource-backed Farkas regression landed for the bad negative-norm row)
 
 Secondary targets:
 
-- inner-product, spectral, and matrix-invariant packs.
+- spectral and matrix-invariant packs.
 
 Expected artifact:
 

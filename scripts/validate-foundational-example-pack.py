@@ -8980,6 +8980,17 @@ def validate_inner_product_spaces_rational(expected: dict[str, Any]) -> None:
         fail("bad-inner-product-rejected leading_principal_minors are incorrect")
     if norm_square >= 0 and all(minor > 0 for minor in computed_minors):
         fail("bad-inner-product-rejected data does not refute positive definiteness")
+    farkas_claim = data.get("farkas_positivity_claim")
+    require_string("bad inner-product farkas_positivity_claim", farkas_claim)
+    if farkas_claim != "norm_square > 0":
+        fail("bad-inner-product-rejected must document the Farkas positivity claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad inner-product smt2_artifact", smt2_artifact)
+    check_source("bad inner-product smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad inner-product farkas_regression", regression)
+    if "inner_product_bad_norm_square_emits_checked_farkas" not in regression:
+        fail("bad-inner-product-rejected must link the Farkas regression")
 
     horizon = checks["general-inner-product-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

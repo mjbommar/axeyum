@@ -47,8 +47,8 @@ annihilator recomputation, transpose-map replay, and checked bad-covector
 rejection. The exact rational inner-product slice adds symmetric
 positive-definite Gram matrices, Cauchy-Schwarz replay for fixed vectors,
 orthogonal projection replay, Gram-Schmidt orthogonalization replay, and
-checked rejection of an indefinite bilinear form. The finite-module slice adds
-ring actions on finite additive groups,
+QF_LRA/Farkas rejection of an indefinite bilinear form. The finite-module
+slice adds ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
 tables, and checked non-submodule rejection. The finite-tensor-product slice
 adds bilinear maps, finite universal-factorization shadows, Kronecker products,

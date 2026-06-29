@@ -430,6 +430,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   shared LRA resource regression requires `Evidence::UnsatFarkas` and rechecks
   the rational certificate independently.
 
+- **Inner-product-spaces QF_LRA/Farkas regression landed.**
+  [`inner-product-spaces-rational-v0`](artifacts/examples/math/inner-product-spaces-rational-v0/)
+  now binds its bad negative-norm row to Axeyum's evidence path. The new
+  SMT-LIB artifact encodes `norm_square = -1` and the impossible positivity
+  claim `norm_square > 0`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and

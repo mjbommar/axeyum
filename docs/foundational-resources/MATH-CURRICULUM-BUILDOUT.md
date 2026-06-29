@@ -726,8 +726,8 @@ finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
 `artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
 exact rational Gram matrices, positive-definite principal minors,
 Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
-Gram-Schmidt replay, checked rejection of a bad inner product, and a general
-inner-product/Hilbert-space Lean-horizon row.
+Gram-Schmidt replay, checked QF_LRA/Farkas rejection of a bad inner product,
+and a general inner-product/Hilbert-space Lean-horizon row.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
 finite Vandermonde unisolvence, interpolation matrix replay, alternating
 residual sign patterns, checked rejection of a duplicate-node grid, and a
@@ -793,7 +793,8 @@ Recommended order:
    fixed-step rejection.
 11. `finite-operator-v0` and `inner-product-spaces-rational-v0`:
    finite-dimensional norms/operators, exact rational inner products,
-   projections, Gram-Schmidt replay, and Chebyshev polynomial examples.
+   projections, Gram-Schmidt replay, QF_LRA/Farkas bad-norm rejection, and
+   Chebyshev polynomial examples.
 12. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
     arithmetic, unit-root cycles, conjugation/product replay, and rational
     Mobius transforms as real-pair algebra.
@@ -1225,8 +1226,8 @@ Lean-horizon row.
 `inner-product-spaces-rational-v0` now adds the exact rational
 inner-product-space bridge: Gram matrices, positive-definite minors,
 Cauchy-Schwarz replay, orthogonal projections, Gram-Schmidt residuals,
-checked bad-inner-product rejection, and an inner-product/Hilbert-space
-Lean-horizon row.
+checked QF_LRA/Farkas bad-inner-product rejection, and an
+inner-product/Hilbert-space Lean-horizon row.
 `finite-modules-v0` now adds the exact finite algebra/linear-algebra bridge
 over `Z/4Z`: module laws, submodule/span replay, module-homomorphism
 kernel/image replay, quotient-module tables, checked non-submodule rejection,
@@ -1450,6 +1451,8 @@ same checked Farkas evidence path after exact residual-norm replay.
 checked Farkas evidence path after exact finite moment replay.
 `affine-geometry-v0` now routes its bad distance-preservation row through the
 same checked Farkas evidence path after exact squared-distance replay.
+`inner-product-spaces-rational-v0` now routes its bad inner-product row
+through the same checked Farkas evidence path after exact negative-norm replay.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

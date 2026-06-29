@@ -12,7 +12,8 @@ It checks:
 - Cauchy-Schwarz for fixed rational vectors;
 - orthogonal projection onto a one-dimensional subspace;
 - Gram-Schmidt residual replay for a two-vector basis;
-- rejection of a matrix that gives a negative norm square;
+- checked QF_LRA/Farkas rejection of a matrix that gives a negative norm
+  square;
 - general inner-product and Hilbert-space theory as Lean horizon.
 
 Run from the repository root:

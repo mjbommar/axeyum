@@ -43,7 +43,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "standard-inner-product-replay",
@@ -57,7 +58,7 @@
   "graduation_criteria": [
     "Encode fixed rational inner-product, Gram-matrix, projection, and Gram-Schmidt rows as deterministic exact-rational obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over finite-dimensional matrices and vectors.",
-    "Add emitted QF_LRA/Farkas-style certificates for rejected positivity and projection rows once proof routes are promoted.",
+    "Route rejected finite positivity rows through checked QF_LRA/Farkas evidence once exact replay computes the bad norm square.",
     "Keep general Cauchy-Schwarz, Riesz representation, orthonormal-basis, Hilbert-projection, and complete Hilbert-space theorems under Lean horizon until formal routes exist."
   ]
 }

@@ -25,5 +25,25 @@ residual = x - proj_a(x)
 ```
 
 Gram-Schmidt is checked as projection subtraction, not as a general theorem.
+
+## Bad Norm Certificate
+
+For the rejected Gram matrix `diag(1,-1)` and nonzero vector `[0,1]`, exact
+replay computes:
+
+```text
+norm_square = -1
+```
+
+The rejected inner-product claim requires the nonzero vector to have positive
+norm square:
+
+```text
+norm_square > 0
+```
+
+The pack links that contradiction to a `QF_LRA` SMT-LIB artifact and a
+resource-backed `UnsatFarkas` regression.
+
 The general Cauchy-Schwarz, Riesz representation, projection theorem, adjoint,
 spectral, and Hilbert-space completeness results remain Lean-horizon.

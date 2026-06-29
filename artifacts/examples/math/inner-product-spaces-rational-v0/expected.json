@@ -119,9 +119,12 @@
         ],
         "vector": ["0", "1"],
         "norm_square": "-1",
-        "leading_principal_minors": ["1", "-1"]
+        "leading_principal_minors": ["1", "-1"],
+        "farkas_positivity_claim": "norm_square > 0",
+        "smt2_artifact": "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-inner-product-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes inner_product_bad_norm_square_emits_checked_farkas"
       },
-      "notes": "The validator recomputes the negative quadratic form and the negative determinant."
+      "notes": "The validator recomputes the negative quadratic form and the negative determinant; the nonzero-vector positivity conflict is checked through QF_LRA/Farkas evidence."
     },
     {
       "id": "general-inner-product-theory-lean-horizon",

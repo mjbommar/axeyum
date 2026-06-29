@@ -192,8 +192,16 @@ The checker evaluates the norm square of `[0,1]`:
 <[0,1], [0,1]> = -1
 ```
 
-An inner product must have positive norm square for every nonzero vector, so
-the claim is rejected. The determinant is also negative:
+An inner product must have positive norm square for every nonzero vector. The
+pack exposes the refutation as a `QF_LRA` contradiction:
+
+```text
+norm_square = -1
+norm_square > 0
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check. The determinant is also negative:
 
 ```text
 det(G) = -1
@@ -221,6 +229,7 @@ analysis:
 ```text
 untrusted fast search -> Gram matrix, vectors, projection, orthogonal basis
 trusted small checking -> rational arithmetic, positivity, orthogonality
+proof upgrade -> QF_LRA/Farkas certificate for the negative norm square
 ```
 
 General Cauchy-Schwarz, Gram-Schmidt over arbitrary spaces, Hilbert projection,

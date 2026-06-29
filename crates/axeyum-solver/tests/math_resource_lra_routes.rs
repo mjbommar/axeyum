@@ -419,3 +419,18 @@ fn affine_geometry_bad_distance_preservation_emits_checked_farkas() {
         &[original_is_one, transformed_is_five, false_preservation],
     );
 }
+
+#[test]
+fn inner_product_bad_norm_square_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let norm_square = real(&mut arena, "norm_square");
+    let norm_is_negative_one = eq_ratio(&mut arena, norm_square, -1, 1);
+    let zero = arena.real_ratio(0, 1);
+    let positivity_for_nonzero_vector = arena.real_gt(norm_square, zero).unwrap();
+
+    assert_farkas_checked(
+        "inner-product-spaces-rational-v0 bad-inner-product-rejected",
+        &arena,
+        &[norm_is_negative_one, positivity_for_nonzero_vector],
+    );
+}
