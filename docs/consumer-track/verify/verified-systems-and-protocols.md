@@ -177,6 +177,20 @@ FSM as a `TransitionSystem`, proven for **every trace** — validity and orderin
 property with an unbounded checkable proof), and the blind-injection bug caught as
 an unbounded `Reachable` counterexample. A benchmark shows one unbounded proof
 (5.6 ms) subsumes — and beats — bounded model checking at depth 32 (99.9 ms, still
-not a proof). The remaining rungs are **lifting the rung-4 certificate from DRAT
-to Lean**, **widening the Lean reconstructor** to lift coverage off 1/7, and an
+not a proof).
+
+**Ergonomics — the *"natural, easy to use"* layer also landed** as
+`tests/protocol_toolkit.rs` (design:
+[`protocol-toolkit.md`](protocol-toolkit.md)): a declarative `Fsm` (states,
+init, events, a transition closure, a bad-state set) compiles to a generic
+`TransitionSystem` with `prove_for_all_traces` / `find_bug` entry points, so
+defining + proving a protocol is **~10–12 lines** instead of ~50 of hand-written
+arena boilerplate (temporal properties via state-splitting). An seL4-flavored
+**capability lifecycle** — *"a revoked capability is never used"* — is proven for
+all traces in **8.3 ms** (and its use-after-revoke bug refuted in 9.3 ms), the
+whole protocol a ~12-line table. The toolkit re-derives the same verdicts as the
+hand-written `TransitionSystem` — ergonomics, not unsoundness.
+
+The remaining rungs are **lifting the rung-4 certificate from DRAT to Lean**,
+**widening the Lean reconstructor** to lift coverage off 1/7, and an
 **array-aware** unbounded route for buffer/window protocols.
