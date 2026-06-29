@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.local/schemas/foundational-example-pack.schema.json",
+  "title": "Axeyum Foundational Example Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "expected"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "expected": {
+      "$ref": "#/$defs/expected"
+    }
+  },
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "id",
+        "title",
+        "domain",
+        "claim_status",
+        "trust_status",
+        "concept_ids",
+        "field_ids",
+        "curriculum_nodes",
+        "axeyum_fragments",
+        "validator_command",
+        "source_refs",
+        "expected_results",
+        "graduation_criteria"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "type": "string",
+          "enum": ["mathematics", "computer-science", "logic", "statistics"]
+        },
+        "claim_status": {
+          "type": "string",
+          "enum": ["template", "planned", "witnessed", "checked", "proof-gap"]
+        },
+        "trust_status": {
+          "type": "string",
+          "enum": ["template", "planned", "replay-only", "checked-evidence", "proof-gap", "numerical"]
+        },
+        "concept_ids": {
+          "$ref": "#/$defs/stringList"
+        },
+        "field_ids": {
+          "$ref": "#/$defs/stringList"
+        },
+        "curriculum_nodes": {
+          "$ref": "#/$defs/stringList"
+        },
+        "axeyum_fragments": {
+          "$ref": "#/$defs/stringList"
+        },
+        "validator_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_refs": {
+          "$ref": "#/$defs/stringList"
+        },
+        "expected_results": {
+          "$ref": "#/$defs/stringList"
+        },
+        "graduation_criteria": {
+          "$ref": "#/$defs/stringList"
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "pack_id", "witnesses", "checks"],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pack_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "witnesses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/witness"
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        }
+      }
+    },
+    "witness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "values"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "type": "object"
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "claim", "expected_result", "validation", "proof_status", "notes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_result": {
+          "type": "string",
+          "enum": ["sat", "unsat", "unknown", "not-run"]
+        },
+        "validation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proof_status": {
+          "type": "string",
+          "enum": ["template", "checked", "replay-only", "proof-gap", "lean-horizon", "not-required"]
+        },
+        "witnesses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

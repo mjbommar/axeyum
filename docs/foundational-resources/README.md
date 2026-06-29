@@ -38,6 +38,12 @@ schemas, examples, and validation workflows.
   metadata.
 - [`scripts/gen-foundational-dashboards.py`](../../scripts/gen-foundational-dashboards.py)
   regenerates the Markdown dashboards under `generated/`.
+- [`artifacts/ontology/foundational-example-pack.schema.json`](../../artifacts/ontology/foundational-example-pack.schema.json)
+  defines the example-pack metadata and expected-result shape.
+- [`scripts/validate-foundational-example-pack.py`](../../scripts/validate-foundational-example-pack.py)
+  validates foundational math example-pack folders.
+- [`artifacts/examples/math/template-v0/`](../../artifacts/examples/math/template-v0/)
+  is the validating template for future math packs.
 
 Validation commands:
 
@@ -45,6 +51,7 @@ Validation commands:
 python3 scripts/gen-foundational-concepts.py
 python3 scripts/validate-foundational-concepts.py
 python3 scripts/gen-foundational-dashboards.py
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0
 ```
 
 ## Principle

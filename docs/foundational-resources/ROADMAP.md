@@ -55,10 +55,14 @@ docs/foundational-resources/
 artifacts/ontology/
   foundational-concepts.schema.json
   foundational-concepts.json
+  foundational-example-pack.schema.json
+artifacts/examples/math/
+  template-v0/
 scripts/
   gen-foundational-concepts.py
   validate-foundational-concepts.py
   gen-foundational-dashboards.py
+  validate-foundational-example-pack.py
 ```
 
 Seed from:
@@ -282,6 +286,9 @@ Exit criteria:
   **Done in the JSON and generated dashboards.**
 
 ### Phase F2: Mathematics Deepening
+
+Status: example-pack schema and validating template scaffold landed; substantive
+math packs remain open.
 
 Exit criteria:
 

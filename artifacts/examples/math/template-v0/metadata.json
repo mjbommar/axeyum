@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "template-v0",
+  "title": "Template Math Example Pack",
+  "domain": "mathematics",
+  "claim_status": "template",
+  "trust_status": "template",
+  "concept_ids": ["field_logic_and_proof"],
+  "field_ids": ["logic_and_proof"],
+  "curriculum_nodes": [],
+  "axeyum_fragments": ["Bool / SAT"],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/template-v0",
+  "source_refs": [
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/foundational-resources/README.md"
+  ],
+  "expected_results": [],
+  "graduation_criteria": [
+    "Replace template claim/trust status with planned, witnessed, checked, or proof-gap.",
+    "Link at least one real concept row and field id.",
+    "Add checks to expected.json and replay them with a pack-specific validator."
+  ]
+}
