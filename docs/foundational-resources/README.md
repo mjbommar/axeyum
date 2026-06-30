@@ -21,7 +21,7 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 90 math packs,
+  is the current execution ledger for stabilizing the existing 95 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
@@ -181,6 +181,10 @@ schemas, examples, and validation workflows.
   validates exact quadratic gradient replay, finite descent-step arithmetic,
   objective-decrease checking, checked rejection of a false decrease claim, and
   a gradient-descent convergence Lean-horizon row.
+- [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
+  validates exact Armijo descent-direction replay, trial-step rejection,
+  accepted backtracked-step replay, checked rejection of a false Armijo
+  acceptance claim, and a line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -338,6 +342,10 @@ schemas, examples, and validation workflows.
   validates exact two-variable quadratic gradient replay, descent-step replay,
   objective-decrease checking, checked bad-decrease rejection, and a general
   gradient-descent convergence Lean-horizon row.
+- [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
+  validates exact one-variable Armijo line-search replay, trial rejection,
+  accepted backtracking, checked bad-acceptance rejection, and a general
+  line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks, plus checked rejection of a bad squared-distance claim.
@@ -490,6 +498,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0

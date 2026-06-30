@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "finite-line-search-v0",
+  "title": "Finite Line Search Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_calculus",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "bridge_rational_convexity_shadow"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "calculus"
+  ],
+  "axeyum_fragments": [
+    "finite optimization replay",
+    "finite numerical replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "symbolic derivative replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite line-search bad Armijo QF_LRA/Farkas regression seed",
+    "pressure": "Exact Armijo replay computes violation 1 for trial step alpha=1, so the malformed nonpositive-violation row is inconsistent.",
+    "evidence": [
+      "bad-armijo-acceptance-rejected"
+    ],
+    "next_step": "Promote additional line-search rows only when they add distinct Wolfe, exact line minimization, projected-step, stochastic, or convergence pressure; keep general line-search termination and rates in horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-line-search-end-to-end.md",
+    "artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "descent-direction-replay",
+    "armijo-rejection-replay",
+    "armijo-acceptance-replay",
+    "bad-armijo-acceptance-rejected",
+    "general-line-search-convergence-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite line-search witnesses as deterministic exact-rational replay rows.",
+    "Replay derivatives, descent directions, trial candidates, Armijo right-hand sides, rejected-step violations, accepted-step slack, and backtracking factors over exact rationals.",
+    "Route false Armijo acceptance claims through checked QF_LRA/Farkas evidence after replay computes the offending violation.",
+    "Keep general termination, Wolfe conditions, convergence rates, stochastic variants, and floating-point stability claims marked Lean-horizon until proof artifacts exist."
+  ]
+}

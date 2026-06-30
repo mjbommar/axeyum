@@ -10542,6 +10542,157 @@ def validate_finite_gradient_descent(expected: dict[str, Any]) -> None:
     require_string("gradient descent future_checker", data.get("future_checker"))
 
 
+def validate_finite_line_search(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    direction_check = checks["descent-direction-replay"]
+    if direction_check["expected_result"] != "sat":
+        fail("descent-direction-replay must expect sat")
+    values = single_witness_values(direction_check, witnesses)
+    polynomial = require_quadratic("line search polynomial", values.get("polynomial"))
+    start_x = require_fraction("line search start_x", values.get("start_x"))
+    start_value = require_fraction("line search start_value", values.get("start_value"))
+    gradient = require_fraction("line search gradient", values.get("gradient"))
+    descent_direction = require_fraction(
+        "line search descent_direction",
+        values.get("descent_direction"),
+    )
+    directional_derivative = require_fraction(
+        "line search directional_derivative",
+        values.get("directional_derivative"),
+    )
+    armijo_c = require_fraction("line search armijo_c", values.get("armijo_c"))
+    reduction_factor = require_fraction(
+        "line search reduction_factor",
+        values.get("reduction_factor"),
+    )
+    initial_step = require_fraction("line search initial_step", values.get("initial_step"))
+    initial_candidate_x = require_fraction(
+        "line search initial_candidate_x",
+        values.get("initial_candidate_x"),
+    )
+    initial_value = require_fraction("line search initial_value", values.get("initial_value"))
+    initial_armijo_rhs = require_fraction(
+        "line search initial_armijo_rhs",
+        values.get("initial_armijo_rhs"),
+    )
+    initial_armijo_violation = require_fraction(
+        "line search initial_armijo_violation",
+        values.get("initial_armijo_violation"),
+    )
+    accepted_step = require_fraction("line search accepted_step", values.get("accepted_step"))
+    accepted_candidate_x = require_fraction(
+        "line search accepted_candidate_x",
+        values.get("accepted_candidate_x"),
+    )
+    accepted_value = require_fraction("line search accepted_value", values.get("accepted_value"))
+    accepted_armijo_rhs = require_fraction(
+        "line search accepted_armijo_rhs",
+        values.get("accepted_armijo_rhs"),
+    )
+    accepted_armijo_slack = require_fraction(
+        "line search accepted_armijo_slack",
+        values.get("accepted_armijo_slack"),
+    )
+
+    if not (0 < armijo_c < 1):
+        fail("descent-direction-replay Armijo c must be strictly between 0 and 1")
+    if not (0 < reduction_factor < 1):
+        fail("armijo-acceptance-replay reduction factor must be strictly between 0 and 1")
+    if initial_step <= 0 or accepted_step <= 0:
+        fail("line-search step sizes must be positive")
+    if polynomial_eval(polynomial, start_x) != start_value:
+        fail("descent-direction-replay start_value is incorrect")
+    if quadratic_derivative_value(polynomial, start_x) != gradient:
+        fail("descent-direction-replay gradient is incorrect")
+    if gradient * descent_direction != directional_derivative:
+        fail("descent-direction-replay directional derivative is incorrect")
+    if directional_derivative >= 0:
+        fail("descent-direction-replay direction must be a descent direction")
+
+    rejection = checks["armijo-rejection-replay"]
+    if rejection["expected_result"] != "sat":
+        fail("armijo-rejection-replay must expect sat")
+    rejection_values = single_witness_values(rejection, witnesses)
+    if rejection_values != values:
+        fail("armijo-rejection-replay must cite the line-search witness")
+    computed_initial_candidate = start_x + initial_step * descent_direction
+    if initial_candidate_x != computed_initial_candidate:
+        fail("armijo-rejection-replay initial candidate is incorrect")
+    if polynomial_eval(polynomial, initial_candidate_x) != initial_value:
+        fail("armijo-rejection-replay initial value is incorrect")
+    computed_initial_rhs = start_value + armijo_c * initial_step * directional_derivative
+    if initial_armijo_rhs != computed_initial_rhs:
+        fail("armijo-rejection-replay initial Armijo RHS is incorrect")
+    if initial_value - initial_armijo_rhs != initial_armijo_violation:
+        fail("armijo-rejection-replay violation is incorrect")
+    if initial_armijo_violation <= 0:
+        fail("armijo-rejection-replay must record a positive Armijo violation")
+
+    acceptance = checks["armijo-acceptance-replay"]
+    if acceptance["expected_result"] != "sat":
+        fail("armijo-acceptance-replay must expect sat")
+    acceptance_values = single_witness_values(acceptance, witnesses)
+    if acceptance_values != values:
+        fail("armijo-acceptance-replay must cite the line-search witness")
+    if accepted_step != initial_step * reduction_factor:
+        fail("armijo-acceptance-replay accepted step must equal initial_step * reduction_factor")
+    computed_accepted_candidate = start_x + accepted_step * descent_direction
+    if accepted_candidate_x != computed_accepted_candidate:
+        fail("armijo-acceptance-replay accepted candidate is incorrect")
+    if polynomial_eval(polynomial, accepted_candidate_x) != accepted_value:
+        fail("armijo-acceptance-replay accepted value is incorrect")
+    computed_accepted_rhs = start_value + armijo_c * accepted_step * directional_derivative
+    if accepted_armijo_rhs != computed_accepted_rhs:
+        fail("armijo-acceptance-replay accepted Armijo RHS is incorrect")
+    if accepted_armijo_rhs - accepted_value != accepted_armijo_slack:
+        fail("armijo-acceptance-replay accepted slack is incorrect")
+    if accepted_armijo_slack < 0:
+        fail("armijo-acceptance-replay must record nonnegative Armijo slack")
+
+    bad = checks["bad-armijo-acceptance-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-armijo-acceptance-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-armijo-backtrack":
+        fail("bad-armijo-acceptance-rejected must cite the quadratic-armijo-backtrack witness")
+    computed_violation = require_fraction(
+        "bad Armijo computed_violation",
+        data.get("computed_violation"),
+    )
+    claimed_upper_bound = require_fraction(
+        "bad Armijo claimed_violation_upper_bound",
+        data.get("claimed_violation_upper_bound"),
+    )
+    if computed_violation != initial_armijo_violation:
+        fail("bad-armijo-acceptance-rejected computed_violation does not match replay")
+    if computed_violation <= claimed_upper_bound:
+        fail("bad-armijo-acceptance-rejected malformed bound must contradict replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Armijo smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2":
+        fail("bad-armijo-acceptance-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad Armijo smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Armijo farkas_regression", regression)
+    if "finite_line_search_bad_armijo_artifact_emits_checked_farkas" not in regression:
+        fail("bad-armijo-acceptance-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad Armijo certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-armijo-acceptance-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-line-search-convergence-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-line-search-convergence-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-line-search-convergence-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("line search target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("line search future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -17111,6 +17262,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_euler_method(expected)
     if metadata["id"] == "finite-gradient-descent-v0":
         validate_finite_gradient_descent(expected)
+    if metadata["id"] == "finite-line-search-v0":
+        validate_finite_line_search(expected)
     if metadata["id"] == "finite-recurrence-prefix-v0":
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":

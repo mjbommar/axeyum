@@ -23,6 +23,7 @@ Example packs:
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
+- [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -78,6 +79,8 @@ matrix replay, zero duality-gap checking, and a checked QF_LRA/Farkas
 bad-objective certificate. The finite-gradient-descent slice adds exact
 quadratic gradient replay, step-update replay, objective-decrease checking,
 finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
+certificate. The finite line-search slice adds exact Armijo trial rejection,
+one accepted backtracked step, and a checked QF_LRA/Farkas bad-acceptance
 certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
@@ -326,6 +329,26 @@ decrease error `3/4`; the final contradiction `error = 3/4` versus `error = 0`
 is checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md).
 
+For a finite line-search example, encode a one-dimensional quadratic and one
+Armijo backtracking trace:
+
+```text
+f(x) = x^2
+x0 = 1
+direction = -2
+c = 1/4
+trial alpha = 1
+accepted alpha = 1/2
+```
+
+The `finite-line-search-v0` validator recomputes the derivative, directional
+derivative, rejected candidate, accepted candidate, Armijo right-hand sides,
+positive rejection violation, and accepted-step slack. Its bad row claims the
+rejected trial step satisfies Armijo; exact replay computes violation `1`, and
+the final nonpositive-violation contradiction is checked through
+QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Line Search Checks](finite-line-search-end-to-end.md).
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -377,6 +400,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
@@ -414,6 +439,7 @@ replay, read
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md),
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md),
+[End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),

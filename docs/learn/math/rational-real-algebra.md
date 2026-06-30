@@ -22,6 +22,7 @@ Example packs:
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
+- [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -44,7 +45,7 @@ coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
 complementary-slackness replay, finite SDP primal/dual slack replay, finite
-gradient-descent step replay, LP feasibility and
+gradient-descent step replay, finite line-search replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -232,6 +233,25 @@ resulting exact-linear contradiction through QF_LRA/Farkas evidence. For a
 focused trace, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md).
 
+For a finite line-search check, encode one exact Armijo backtracking trace:
+
+```text
+f(x) = x^2
+x0 = 1
+direction = -2
+c = 1/4
+trial alpha = 1
+accepted alpha = 1/2
+```
+
+The `finite-line-search-v0` validator recomputes the derivative, directional
+derivative, trial candidate, Armijo right-hand side, rejected-step violation,
+accepted-step candidate, and accepted-step slack. Its bad row claims the
+rejected trial step satisfies Armijo even though exact replay computes
+violation `1`; the final contradiction is checked through QF_LRA/Farkas
+evidence. For a focused trace, read
+[End To End: Finite Line Search Checks](finite-line-search-end-to-end.md).
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -311,6 +331,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
@@ -349,7 +371,10 @@ For exact LP feasibility and Farkas threshold evidence, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md).
 For exact finite convexity and KKT replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md) and
-[End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact
+[End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact finite
+gradient descent and line search, read
+[End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md)
+and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md). For exact
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md), and

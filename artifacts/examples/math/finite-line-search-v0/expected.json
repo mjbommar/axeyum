@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-line-search-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-armijo-backtrack",
+      "description": "One exact Armijo backtracking search for f(x)=x^2 from x=1 along direction -2.",
+      "values": {
+        "polynomial": ["0", "0", "1"],
+        "start_x": "1",
+        "start_value": "1",
+        "gradient": "2",
+        "descent_direction": "-2",
+        "directional_derivative": "-4",
+        "armijo_c": "1/4",
+        "reduction_factor": "1/2",
+        "initial_step": "1",
+        "initial_candidate_x": "-1",
+        "initial_value": "1",
+        "initial_armijo_rhs": "0",
+        "initial_armijo_violation": "1",
+        "accepted_step": "1/2",
+        "accepted_candidate_x": "0",
+        "accepted_value": "0",
+        "accepted_armijo_rhs": "1/2",
+        "accepted_armijo_slack": "1/2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "descent-direction-replay",
+      "claim": "At x=1 for f(x)=x^2, direction -2 is a descent direction with directional derivative -4.",
+      "expected_result": "sat",
+      "validation": "finite_line_search_direction_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-armijo-backtrack"],
+      "notes": "The validator differentiates the quadratic and recomputes gradient * direction."
+    },
+    {
+      "id": "armijo-rejection-replay",
+      "claim": "The trial step alpha=1 violates Armijo decrease for c=1/4.",
+      "expected_result": "sat",
+      "validation": "finite_armijo_rejection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-armijo-backtrack"],
+      "notes": "The validator recomputes x+alpha*d, f(candidate), the Armijo right-hand side, and the positive violation."
+    },
+    {
+      "id": "armijo-acceptance-replay",
+      "claim": "After one backtrack to alpha=1/2, Armijo decrease holds with slack 1/2.",
+      "expected_result": "sat",
+      "validation": "finite_armijo_acceptance_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-armijo-backtrack"],
+      "notes": "The validator checks the reduction factor, accepted candidate, objective value, Armijo right-hand side, and nonnegative slack."
+    },
+    {
+      "id": "bad-armijo-acceptance-rejected",
+      "claim": "The rejected trial step alpha=1 also satisfies the Armijo inequality.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_armijo_acceptance_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-armijo-backtrack",
+        "computed_violation": "1",
+        "claimed_violation_upper_bound": "0",
+        "smt2_artifact": "artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes Armijo violation 1 for alpha=1, so the malformed nonpositive-violation claim is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "general-line-search-convergence-lean-horizon",
+      "claim": "General line-search termination, sufficient-decrease lemmas, Wolfe conditions, and convergence rates require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Armijo/backtracking line-search termination and convergence theorems for smooth descent methods, plus Wolfe-condition variants and rate statements",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite line-search witnesses"
+      },
+      "notes": "The finite rows check only one rational quadratic line-search instance; line-search theory remains proof-assistant work."
+    }
+  ]
+}

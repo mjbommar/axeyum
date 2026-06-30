@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 94
-- learner-linked packs: 94 focused links
-- packs with non-checked proof rows: 83
-- non-checked proof rows: 258
+- math example packs: 95
+- learner-linked packs: 95 focused links
+- packs with non-checked proof rows: 84
+- non-checked proof rows: 262
 
 Candidate route totals:
 
@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 49 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 50 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 64 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 65 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -246,6 +246,9 @@ First targets:
 - [finite-gradient-descent-v0](../../artifacts/examples/math/finite-gradient-descent-v0/)
   (source-linked Farkas regression landed for the bad decrease row after exact
   quadratic descent replay computes decrease `11/4` and decrease error `3/4`)
+- [finite-line-search-v0](../../artifacts/examples/math/finite-line-search-v0/)
+  (source-linked Farkas regression landed for the bad Armijo row after exact
+  line-search replay computes rejected-step violation `1`)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regression landed for the bad product-probability
   row after exact finite product replay computes the product mass)
