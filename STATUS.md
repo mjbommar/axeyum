@@ -199,6 +199,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, QF_BV bit-blast, and Lean
   horizons with explicit trust boundaries and route-specific checks.
 
+- **Curriculum pressure by fragment landed.** The generated
+  [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
+  dashboard groups the 84 non-template math packs into overlapping Bool/CNF,
+  QF_BV, QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and Lean-horizon
+  buckets. It is now part of `check-foundational-resources`, so stale fragment
+  planning output fails the same gate as coverage and proof-gap dashboards.
+
 - **`needs-proof-route` cleanup landed.** Classified
   [`descriptive-statistics-v0`](artifacts/examples/math/descriptive-statistics-v0/)
   as finite replay for current SAT witness rows plus QF_LRA/Farkas for future
@@ -11184,6 +11191,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-29** — **Curriculum pressure fragment dashboard landed.**
+  Added the generated
+  [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
+  planning view and wired it into the foundational-resource freshness gate. It
+  groups the 84 non-template math packs into overlapping Bool/CNF, QF_BV,
+  QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and Lean-horizon buckets,
+  making solver/proof demand visible from committed metadata instead of manual
+  scans.
 
 - **2026-06-29** — **Function composition pack landed.**
   Added

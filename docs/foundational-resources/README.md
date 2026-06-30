@@ -49,6 +49,9 @@ schemas, examples, and validation workflows.
   generated proof/evidence gap view.
 - [generated/learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md)
   is the generated learner-coverage and proof-upgrade queue.
+- [generated/curriculum-pressure-by-fragment.md](generated/curriculum-pressure-by-fragment.md)
+  groups packs by overlapping solver/proof pressure buckets such as Bool/CNF,
+  QF_BV, QF_LIA, QF_LRA, QF_UF, finite replay, and Lean horizon.
 
 ## Current Machine-Readable Artifacts
 

@@ -111,9 +111,11 @@ The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
 backed by the 21-test `math_resource_lra_routes` regression and scoped to
 the optimization/Farkas proof-route lane.
-The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
-now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
-solver-reuse candidates visible without hand-maintained scans.
+The generated coverage, field, proof-gap, learner/proof-upgrade, and
+curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
+columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
+candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
+Lean-horizon demand visible without hand-maintained scans.
 The first structured solver-reuse batch is now fully promoted from R4 candidate
 rows into source-linked regression artifacts with pack back-links.
 `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,

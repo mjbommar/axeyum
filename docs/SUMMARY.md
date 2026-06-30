@@ -12,6 +12,8 @@
   - [Math Curriculum Coverage](foundational-resources/generated/math-coverage.md)
   - [Math Field Dashboard](foundational-resources/generated/math-field-dashboard.md)
   - [Proof Gap Dashboard](foundational-resources/generated/proof-gap-dashboard.md)
+  - [Learner And Proof Upgrade Dashboard](foundational-resources/generated/learner-proof-upgrade-dashboard.md)
+  - [Curriculum Pressure By Fragment](foundational-resources/generated/curriculum-pressure-by-fragment.md)
   - [Expansion Roadmap](foundational-resources/ROADMAP.md)
 - [SMT Fragment Atlas](atlas/README.md)
   - [Atlas Roadmap](atlas/ROADMAP.md)

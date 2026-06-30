@@ -34,8 +34,8 @@ As of this plan, the math resource lane has:
   status, the finite-algebra QF_UF/Alethe example family, and the
   exact-rational QF_LRA/Farkas example family.
 - 84 non-template math example packs, plus the validating template pack.
-- generated coverage, field, and proof-gap dashboards under
-  [generated/](generated/).
+- generated coverage, field, proof-gap, learner/proof-upgrade, and
+  curriculum-pressure dashboards under [generated/](generated/).
 - learner paths under [docs/learn/math](../learn/math/README.md).
 - a stable in-repo data boundary through JSON schemas, validators, generated
   dashboards, and `scripts/consume-foundational-resources.py`.
@@ -77,6 +77,9 @@ Concrete work:
   of relying on manual scans.
 - Add generated R0-R6 "gate" and "next gate" columns so solver-reuse and
   consumer-boundary candidates are visible without manual row audits.
+- Add a generated curriculum-pressure-by-fragment view so solver/proof demand
+  is grouped by Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite replay, and
+  Lean horizon without hand-maintained scans.
 - Keep all status changes generated from `curriculum.toml`,
   [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md), and pack metadata.
 
@@ -334,7 +337,8 @@ Next buildout:
 
 ## Forward Increments From Here
 
-1. Add generated learner-coverage and proof-upgrade gap views.
+1. Landed: add generated learner-coverage, proof-upgrade gap, and
+   curriculum-pressure-by-fragment views.
 2. Normalize concept-atlas statuses so `planned` means a real remaining gap.
 3. Add focused graph lessons for reachability, search runtime, matching, cuts,
    and d-separation.
@@ -354,7 +358,10 @@ Next buildout:
    the recurring checked finite-algebra EUF/Alethe conflicts.
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
-   and learner/proof-upgrade dashboards.
+   and learner/proof-upgrade dashboards. The curriculum-pressure view now
+   groups the 84 non-template packs into overlapping Bool/CNF, QF_BV, QF_LIA,
+   QF_LRA, QF_UF, finite-replay, and Lean-horizon buckets for fragment-level
+   planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:
    `logic-basics-v0`,
    `finite-cardinality-v0`, `graph-matching-v0`, `graph-reachability-v0`,

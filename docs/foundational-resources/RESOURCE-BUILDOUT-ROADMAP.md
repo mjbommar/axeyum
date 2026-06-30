@@ -871,8 +871,9 @@ Use the math curriculum as a source of fragment demand:
 Next work:
 
 - Add fragment-demand back-links from field dashboards to atlas rows.
-- Add a generated "curriculum pressure by fragment" view once the pack metadata
-  has stable enough route fields.
+- Keep the generated
+  [curriculum-pressure-by-fragment](generated/curriculum-pressure-by-fragment.md)
+  view fresh as new route metadata and proof statuses land.
 
 ### Proof Certificate Cookbook
 
@@ -936,31 +937,29 @@ call sites or one external consumer.
 
 Pick one item per commit unless the change is purely navigational.
 
-1. Add a generated or hand-authored "curriculum pressure by fragment" view that
-   groups packs by Bool, QF_BV, QF_LIA, QF_LRA, QF_UF, replay-only, and Lean.
-2. Add concept rows for the highest-use analysis/topology boundary terms:
+1. Add concept rows for the highest-use analysis/topology boundary terms:
    metric ball, bounded epsilon-delta shadow, compactness shadow,
    connectedness shadow, and continuity preimage.
-3. Add concept rows for linear algebra computation families: LU, rank/nullity,
+2. Add concept rows for linear algebra computation families: LU, rank/nullity,
    residual bound, eigenpair, characteristic polynomial, random-matrix finite
    moment.
-4. Add concept rows for algebra maps: homomorphism, kernel/image, quotient,
+3. Add concept rows for algebra maps: homomorphism, kernel/image, quotient,
    ideal, module, tensor bilinearity, group action.
-5. Add "math example using this route" sections to the six active proof
+4. Add "math example using this route" sections to the six active proof
    cookbook recipes.
-6. Promote one QF_LRA/Farkas probability/statistics row that has a small exact
+5. Promote one QF_LRA/Farkas probability/statistics row that has a small exact
    rational contradiction and strong learner value.
-7. Promote one QF_UF/Alethe algebra row that exercises homomorphism or quotient
+6. Promote one QF_UF/Alethe algebra row that exercises homomorphism or quotient
    congruence not already covered by the family row.
-8. Add a rules/law crosswalk doc that maps finite predicates, arithmetic
-    thresholds, graph reachability, and proof routes to policy/rule checks.
-9. Add a consumer-query recipe for "find all packs for a field and route".
-10. Add negative validator fixtures for one resource schema once the schema
-    shape stops changing.
-11. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
+7. Add a rules/law crosswalk doc that maps finite predicates, arithmetic
+   thresholds, graph reachability, and proof routes to policy/rule checks.
+8. Add a consumer-query recipe for "find all packs for a field and route".
+9. Add negative validator fixtures for one resource schema once the schema
+   shape stops changing.
+10. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
     dashboards so status means current resource maturity, not historical state.
-12. Add one route-specific tamper/rejection test per proof certificate route.
-13. Revisit the library boundary decision after the next five solver-reuse
+11. Add one route-specific tamper/rejection test per proof certificate route.
+12. Revisit the library boundary decision after the next five solver-reuse
     promotions and at least one downstream consumer use.
 
 ## Validation Checklist

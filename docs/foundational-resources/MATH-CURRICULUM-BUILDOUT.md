@@ -66,6 +66,8 @@ docs/foundational-resources/
     math-coverage.md
     math-field-dashboard.md
     proof-gap-dashboard.md
+    learner-proof-upgrade-dashboard.md
+    curriculum-pressure-by-fragment.md
 
 docs/learn/math/
   README.md
@@ -180,6 +182,7 @@ Required first views:
 - coverage by proof/evidence route;
 - list of example packs with validation commands;
 - proof gaps grouped by solver fragment and field.
+- overlapping curriculum pressure by solver/proof fragment.
 
 Dashboards should be regenerated, not edited by hand.
 
@@ -1006,10 +1009,13 @@ validation commands, checked/replay/proof-gap counts, and the concrete checks
 that still need stronger evidence. The learner/proof-upgrade dashboard scans
 math learner pages for explicit pack references, reports focused/path-only/
 missing learner coverage, and groups non-checked proof rows by candidate
-cookbook route. `just foundational-resources` and the plain-shell fallback now
-regenerate the concept atlas, validate it, validate all math example packs,
-regenerate dashboards, and fail if generated atlas or dashboard files are stale;
-CI runs the same gate before docs link checking.
+cookbook route. The curriculum-pressure dashboard groups packs into overlapping
+Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and Lean-horizon buckets
+so solver/proof demand is visible without hand-maintained scans. `just
+foundational-resources` and the plain-shell fallback now regenerate the concept
+atlas, validate it, validate all math example packs, regenerate dashboards, and
+fail if generated atlas or dashboard files are stale; CI runs the same gate
+before docs link checking.
 
 Deliverables:
 
@@ -1017,6 +1023,7 @@ Deliverables:
 - `docs/foundational-resources/generated/math-field-dashboard.md`.
 - `docs/foundational-resources/generated/proof-gap-dashboard.md`.
 - `docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md`.
+- `docs/foundational-resources/generated/curriculum-pressure-by-fragment.md`.
 - Optional `just check-foundational-resources` target once scripts stabilize.
 
 Exit criteria:
@@ -1071,8 +1078,8 @@ Exit criteria:
   internals. `scripts/query-foundational-resources.py` now adds sample
   consumer-facing queries over that same committed data boundary for summary
   counts, pack discovery, checked-row mining, solver-reuse rows, and atlas
-  concept lookup. Generated dashboards expose gate/next-gate status derived
-  from the same files.
+  concept lookup. Generated dashboards expose gate/next-gate status and
+  fragment-pressure buckets derived from the same files.
 
 ## First Ten Commits To Make
 

@@ -19,4 +19,5 @@ git diff --exit-code -- \
   docs/foundational-resources/generated/math-coverage.md \
   docs/foundational-resources/generated/math-field-dashboard.md \
   docs/foundational-resources/generated/proof-gap-dashboard.md \
-  docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md
+  docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md \
+  docs/foundational-resources/generated/curriculum-pressure-by-fragment.md
