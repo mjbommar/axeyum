@@ -40,14 +40,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 59 bridge-concept rows.
+- 60 bridge-concept rows.
 - 5 example-family rows.
-- 102 non-template math example packs.
-- 516 expected checks.
-- 222 checked proof/evidence rows.
-- 229 replay-only rows.
-- 65 Lean-horizon rows.
-- 102 promoted solver-reuse packs.
+- 103 non-template math example packs.
+- 521 expected checks.
+- 223 checked proof/evidence rows.
+- 232 replay-only rows.
+- 66 Lean-horizon rows.
+- 103 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -708,6 +708,7 @@ Graduation:
 Current packs:
 
 - `finite-topology-v0`
+- `finite-specialization-order-v0`
 - `metric-continuity-v0`
 - `finite-compactness-v0`
 - `finite-connectedness-v0`
@@ -718,10 +719,10 @@ Build next:
 
 - Landed concept rows for metric balls, compactness shadows, connectedness
   shadows, continuity-by-preimage, finite topology-operator/homeomorphism
-  replay, finite boundary-operator replay, and finite chain-complex/homology
-  replay. Add narrower rank/torsion, cohomology, specialization-order, or
-  theorem-invariance rows only when reuse or solver pressure justifies the
-  split.
+  replay, finite specialization-order replay, finite boundary-operator replay,
+  and finite chain-complex/homology replay. Add narrower rank/torsion,
+  cohomology, quotient, or theorem-invariance rows only when reuse or solver
+  pressure justifies the split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
   source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
 - Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
@@ -1643,6 +1644,13 @@ Pick one item per commit unless the change is purely navigational.
     boundary-matrix shape, and checked bad-boundary coefficient evidence
     discoverable without promoting functoriality, exactness, homology
     invariance, cohomology, or general algebraic topology.
+99. Landed: add `finite-specialization-order-v0` and
+    `bridge_finite_specialization_order_replay` plus topology specialization
+    lookup and concept-scoped Alethe route smoke queries, making finite
+    topology-to-preorder replay, singleton-closure characterization, finite
+    `T0` antisymmetry replay, and checked bad `T0` evidence discoverable
+    without promoting T0 quotients, sobriety, Alexandroff-space/domain-theory
+    results, or arbitrary-space specialization-order theorems.
 
 ## Validation Checklist
 

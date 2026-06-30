@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-specialization-order-v0",
+  "witnesses": [
+    {
+      "id": "sierpinski-specialization",
+      "description": "A three-point finite topology whose specialization preorder is a chain c <= b <= a.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "open_sets": [
+          [],
+          ["a"],
+          ["a", "b"],
+          ["a", "b", "c"]
+        ],
+        "specialization_pairs": [
+          ["a", "a"],
+          ["b", "a"],
+          ["b", "b"],
+          ["c", "a"],
+          ["c", "b"],
+          ["c", "c"]
+        ],
+        "singleton_closures": [
+          {"point": "a", "closure": ["a", "b", "c"]},
+          {"point": "b", "closure": ["b", "c"]},
+          {"point": "c", "closure": ["c"]}
+        ],
+        "t0": true
+      }
+    },
+    {
+      "id": "indiscrete-two-point-specialization",
+      "description": "An indiscrete two-point topology whose specialization preorder is not antisymmetric.",
+      "values": {
+        "universe": ["x", "y"],
+        "open_sets": [
+          [],
+          ["x", "y"]
+        ],
+        "specialization_pairs": [
+          ["x", "x"],
+          ["x", "y"],
+          ["y", "x"],
+          ["y", "y"]
+        ],
+        "t0": false
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "specialization-preorder-witness",
+      "claim": "The listed finite topology induces the stated specialization preorder.",
+      "expected_result": "sat",
+      "validation": "finite_specialization_order_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-specialization"],
+      "notes": "The validator recomputes x <= y by checking that every open set containing x also contains y."
+    },
+    {
+      "id": "closure-characterization-witness",
+      "claim": "The specialization relation agrees with singleton closures: x <= y iff x is in closure({y}).",
+      "expected_result": "sat",
+      "validation": "finite_specialization_closure_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-specialization"],
+      "notes": "The validator recomputes each singleton closure from finite open-set complements and compares it against the specialization pairs."
+    },
+    {
+      "id": "t0-poset-witness",
+      "claim": "The finite topology is T0, so its specialization preorder is antisymmetric.",
+      "expected_result": "sat",
+      "validation": "finite_specialization_t0_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["sierpinski-specialization"],
+      "notes": "The validator checks that no two distinct points mutually specialize, so the finite preorder is a partial order."
+    },
+    {
+      "id": "bad-t0-antisymmetry-rejected",
+      "claim": "The indiscrete two-point topology is T0 and has an antisymmetric specialization preorder.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "universe": ["x", "y"],
+        "open_sets": [
+          [],
+          ["x", "y"]
+        ],
+        "specialization_pairs": [
+          ["x", "x"],
+          ["x", "y"],
+          ["y", "x"],
+          ["y", "y"]
+        ],
+        "claimed_t0": true,
+        "failing_pair": ["x", "y"],
+        "alethe_antisymmetry_claim": "x = y",
+        "smt2_artifact": "artifacts/examples/math/finite-specialization-order-v0/smt2/bad-t0-antisymmetry-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof; Evidence::check independently rechecks the proof against the source assertions."
+      },
+      "notes": "Finite replay computes mutual specialization for x and y. The false T0/antisymmetry claim would force x = y, contradicting the distinct-point assertion in the checked QF_UF/Alethe artifact."
+    },
+    {
+      "id": "general-specialization-order-lean-horizon",
+      "claim": "General specialization-order theory requires future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "T0 quotients, Kolmogorov separation, sobriety, Alexandroff spaces, continuity as monotone maps for specialization preorders, and domain-theoretic order for arbitrary spaces",
+        "future_checker": "Lean modules for topology, separation axioms, order theory, quotient spaces, sober spaces, and proof reconstruction from finite specialization certificates"
+      },
+      "notes": "The finite rows replay one explicit space and one false T0 claim; they do not prove arbitrary-space specialization-order theorems."
+    }
+  ]
+}

@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite specialization-order resource and bridge landed.**
+  `finite-specialization-order-v0` and
+  `bridge_finite_specialization_order_replay` now make finite topology to
+  preorder replay, singleton-closure characterization, finite `T0`
+  antisymmetry replay, and checked bad `T0` QF_UF/Alethe evidence queryable
+  through the public JSON boundary. The bridge keeps T0 quotients, sobriety,
+  Alexandroff-space/domain-theory results, and arbitrary-space
+  specialization-order theorems in the Lean-horizon lane. `PLAN.md`, the
+  foundational-resource plans, learner pages, `CONSUMER-QUERIES.md`,
+  `FIELD-READINESS-QUERY-MATRIX.md`, `PROOF-ROUTE-QUERY-MATRIX.md`, and
+  `check-foundational-resources.sh` now reflect the 103-pack / 60-bridge
+  baseline and exercise topology specialization lookup plus concept-scoped
+  Alethe route queries.
+
 - **Finite boundary-operator bridge concept landed.**
   `bridge_finite_boundary_operator_replay` now makes oriented boundary
   coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and

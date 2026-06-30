@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "finite-specialization-order-v0",
+  "title": "Exact Finite Specialization Order Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "bridge_finite_specialization_order_replay",
+    "bridge_finite_topology_operator_homeomorphism",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions"
+  ],
+  "axeyum_fragments": [
+    "finite topology",
+    "finite relations",
+    "finite preorder replay",
+    "QF_UF / Alethe",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-specialization-order-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite specialization preorder T0 antisymmetry QF_UF/Alethe regression seed",
+    "pressure": "Indiscrete two-point topology where mutual specialization forces equality under a false T0/antisymmetry claim while the source row keeps the points distinct.",
+    "evidence": [
+      "bad-t0-antisymmetry-rejected"
+    ],
+    "next_step": "Promote additional specialization-order rows only when they add distinct topology/order, quotient, or proof-reconstruction pressure; keep sobriety, T0 quotients, domain theory, and arbitrary-space theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-specialization-order-v0/smt2/bad-t0-antisymmetry-alethe-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+  ],
+  "expected_results": [
+    "specialization-preorder-witness",
+    "closure-characterization-witness",
+    "t0-poset-witness",
+    "bad-t0-antisymmetry-rejected",
+    "general-specialization-order-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite topological spaces as deterministic finite set-family obligations.",
+    "Replay the specialization preorder from open-set membership, not from a trusted listed relation.",
+    "Replay singleton closures and the equivalence x <= y iff x is in closure({y}).",
+    "Route the bad T0/antisymmetry row through checked QF_UF/Alethe evidence after finite replay identifies mutual specialization.",
+    "Keep sobriety, T0 quotients, domain-theoretic order, and arbitrary topological-space theorems under Lean horizon until formal routes exist."
+  ]
+}

@@ -45,14 +45,14 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 59 bridge-concept rows.
+- 60 bridge-concept rows.
 - 5 example-family rows.
-- 102 non-template math packs.
-- 516 expected checks.
-- 222 checked proof/evidence rows.
-- 229 replay-only rows.
-- 65 Lean-horizon rows.
-- 102 promoted solver-reuse packs.
+- 103 non-template math packs.
+- 521 expected checks.
+- 223 checked proof/evidence rows.
+- 232 replay-only rows.
+- 66 Lean-horizon rows.
+- 103 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This means the seed phase is over. The next work is systematic depth:
@@ -87,7 +87,7 @@ For each `not-run` row, say what proof horizon blocks graduation.
 
 ### Wave A: Preserve The Contract
 
-Goal: make the current 102 packs a stable, queryable data product.
+Goal: make the current 103 packs a stable, queryable data product.
 
 Work:
 
@@ -306,7 +306,7 @@ Next useful increments:
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
 | `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
 | `complex_analysis` | real-pair algebra and transforms | polynomial-root, conjugation/norm, Mobius rows only if distinct; analytic horizon rows | real-pair LRA/NRA, finite replay, Lean horizon | no algebraic row is described as analytic coverage |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | landed finite topology-operator/homeomorphism, finite boundary-operator, and finite chain-complex/homology replay bridges; add only distinct rank/torsion, cohomology, or specialization-order finite pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, finite replay, Lean horizon | dashboards distinguish finite set-family, homeomorphism replay, boundary replay, and chain-complex replay from topology theorems |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, specialization orders, homology | landed finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, and finite chain-complex/homology replay bridges; add only distinct rank/torsion, cohomology, quotient, or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, finite replay, Lean horizon | dashboards distinguish finite set-family, specialization preorder, homeomorphism replay, boundary replay, and chain-complex replay from topology theorems |
 | `measure_theory` | finite measure, monotonicity, product measure, integration, random variables, conditioning, martingales | only distinct table/convergence vocabulary; keep countable/Lebesgue material horizon | QF_LRA/Farkas, finite replay, Lean horizon | finite universe and sigma-algebra are explicit |
 | `probability_theory` | finite PMFs, kernels, Markov chains, martingales, hitting times, concentration | exact discrete distributions, independence/conditioning variants, limit-theorem horizons | QF_LRA/Farkas, QF_LIA, finite replay | probability rows can be audited as exact rational tables |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | exact finite inference examples and numerical-honesty metadata | QF_LIA, QF_LRA/Farkas, replay | inference claims distinguish exact finite tests from statistical modeling |
@@ -458,6 +458,12 @@ Use one row per commit unless the change is purely navigational.
     lower-level topology/linear-algebra bridge without promoting
     functoriality, exactness, homology invariance, cohomology, or general
     algebraic topology.
+30. Landed: add `bridge_finite_specialization_order_replay` and
+    `finite-specialization-order-v0` so finite topology to preorder replay,
+    singleton-closure characterization, finite `T0` antisymmetry, and checked
+    bad `T0` QF_UF/Alethe evidence are discoverable as a topology/order bridge
+    without promoting T0 quotient, sobriety, domain-theory, or arbitrary-space
+    specialization-order theorems.
 
 ## Anti-Patterns
 

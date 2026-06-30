@@ -35,12 +35,12 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 105 atlas rows generated from curriculum, field data, 59 R1 bridge
+- 106 atlas rows generated from curriculum, field data, 60 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
-  finite topology-operator/homeomorphism replay, finite boundary-operator
-  replay, finite chain-complex/homology replay,
+  finite topology-operator/homeomorphism replay, finite specialization-order
+  replay, finite boundary-operator replay, finite chain-complex/homology replay,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
   finite graph replay/obstruction and finite dynamics/Euler vocabulary,
@@ -52,7 +52,7 @@ As of this plan, the math resource lane has:
   finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 102 non-template math example packs, plus the validating template pack.
+- 103 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -434,7 +434,7 @@ Next buildout:
 | `abstract_algebra` | QF_UF/Alethe upgrades for table and homomorphism packs |
 | `real_analysis` | bounded-vs-general concept rows for limits, continuity, compactness, integration |
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
-| `topology` | standalone finite topology lesson landed; maintain granular finite topology-operator/homeomorphism, boundary-operator, and homology rows |
+| `topology` | standalone finite topology and finite specialization-order lessons landed; maintain granular finite topology-operator/homeomorphism, specialization-order, boundary-operator, and homology rows |
 | `measure_theory` | standalone finite measure and monotonicity lessons landed; keep Lebesgue/convergence theorem rows Lean-horizon |
 | `probability_theory` | standalone finite probability mass-table lesson landed; maintain stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
@@ -491,6 +491,11 @@ Next buildout:
    makes oriented boundary coefficients, boundary-of-boundary cancellation,
    boundary-matrix shape, and checked bad-boundary coefficient evidence
    queryable as the reusable lower-level bridge for the chain/homology row.
+   A follow-up topology row, `bridge_finite_specialization_order_replay`, now
+   makes finite topology-to-preorder replay, singleton-closure
+   characterization, finite `T0` antisymmetry replay, and checked bad `T0`
+   QF_UF/Alethe evidence queryable without promoting T0 quotients, sobriety,
+   domain theory, or arbitrary-space specialization-order theorems.
 7. Landed: add bridge-concept rows for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
    characteristic-polynomial replay, and finite random-matrix moments.
@@ -536,7 +541,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 102 non-template packs
+   decision. The curriculum-pressure view now groups the 103 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:

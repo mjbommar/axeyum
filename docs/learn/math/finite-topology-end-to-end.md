@@ -145,5 +145,8 @@ remaining horizon -> general topology theorems and infinite-space proof work
 ```
 
 Use this page for the first-principles finite topology story. For the
-cross-field bridge from topology into finite sigma-algebras and measures, read
+topology-to-order bridge through open neighborhoods and `T0` separation, read
+[End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md).
+For the cross-field bridge from topology into finite sigma-algebras and
+measures, read
 [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).

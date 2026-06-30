@@ -3336,6 +3336,7 @@ BRIDGE_CONCEPTS = [
         "unlocks": [
             "bridge_compactness_shadow",
             "bridge_connectedness_shadow",
+            "bridge_finite_specialization_order_replay",
             "bridge_finite_boundary_operator_replay",
             "bridge_finite_chain_homology_replay",
             "field_topology",
@@ -3414,7 +3415,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite closure/interior replay checks one explicit topology and subset; it does not prove Kuratowski closure axioms or arbitrary closure/interior theorem schemas.",
             "Finite homeomorphism replay checks one finite bijection with continuity in both directions; it does not prove homeomorphism invariance of compactness, connectedness, homology, or other topological invariants.",
-            "Additional homeomorphism, closure-operator, or specialization-order rows should land only when they add distinct Boolean, EUF, or Lean-reconstruction pressure.",
+            "Additional homeomorphism or closure-operator rows should land only when they add distinct Boolean, EUF, or Lean-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3423,6 +3424,92 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes topology axioms, interior, closure, preimages, bijectivity, continuity, and inverse continuity exactly.",
                 "Bad topology or preimage rows link source artifacts and route regressions before claiming checked evidence.",
                 "General topology and homeomorphism-invariance theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_specialization_order_replay",
+        "title": "Finite Specialization Order Replay",
+        "field_ids": ["topology", "set_theory_and_foundations", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite specialization-order rows state an explicit finite "
+            "topology, then replay the preorder x <= y by checking every open "
+            "neighborhood of x contains y. The trusted object is exact finite "
+            "set-family replay plus checked QF_UF/Alethe evidence for a false "
+            "T0/antisymmetry row; arbitrary specialization-order theory "
+            "remains Lean-horizon."
+        ),
+        "prerequisites": [
+            "bridge_finite_topology_operator_homeomorphism",
+            "bridge_partition_relation_roundtrip",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "field_topology",
+            "field_set_theory_and_foundations",
+            "field_discrete_math",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite topology",
+            "finite preorders",
+            "specialization order replay",
+            "QF_UF / Alethe",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-specialization-order-v0",
+                "Finite specialization preorder replay, singleton-closure characterization, T0/antisymmetry replay, and checked bad-T0 Alethe row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite specialization replay plus QF_UF/Alethe bad-T0 certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-specialization-order-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator recomputes the specialization preorder "
+                    "from finite open neighborhoods and singleton closures; the "
+                    "bad T0 row graduates only because the fixed mutual-"
+                    "specialization equality conflict has checked Alethe evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-topology-end-to-end.md",
+            "docs/learn/math/finite-specialization-order-end-to-end.md",
+            "artifacts/examples/math/finite-specialization-order-v0/smt2/bad-t0-antisymmetry-alethe-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite specialization-order replay checks fixed finite topologies; it does not prove T0 quotient, sobriety, Alexandroff-space, or domain-theoretic topology theorems.",
+            "The bad T0 row isolates a fixed antisymmetry equality conflict, not arbitrary separation-axiom reasoning.",
+            "Additional specialization-order rows should land only when they add distinct quotient, continuity-as-monotonicity, or proof-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite universe, open-set family, listed specialization pairs, singleton closures, and the exact T0 or preorder claim.",
+                "The validator recomputes topology axioms, specialization pairs, singleton closures, preorder laws, and antisymmetry exactly.",
+                "Malformed fixed rows link source artifacts and route regressions before claiming checked Alethe evidence.",
+                "T0 quotients, sobriety, Alexandroff-space equivalences, and domain-theoretic topology stay Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },

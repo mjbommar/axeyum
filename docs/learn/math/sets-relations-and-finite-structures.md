@@ -21,6 +21,7 @@ Example packs:
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [cardinality-principles-v0](../../../artifacts/examples/math/cardinality-principles-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
+- [finite-specialization-order-v0](../../../artifacts/examples/math/finite-specialization-order-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
@@ -59,6 +60,9 @@ additivity counterexamples, and a checked QF_LIA/Diophantine overlap-additivity
 count contradiction. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
+finite-specialization-order pack derives a preorder from open neighborhoods,
+checks singleton-closure characterization, confirms one finite `T0` slice, and
+uses checked QF_UF/Alethe evidence for a false `T0`/antisymmetry claim. The
 compactness pack checks finite open covers, subcovers, minimal-subcover
 enumeration, finite-intersection families, and rejection of a bad cover. The
 connectedness pack checks finite clopen-subset enumeration, open separations,
@@ -217,8 +221,20 @@ subset = {b}
 ```
 
 The validator checks the topology axioms and recomputes `interior({b}) = {}`
-and `closure({b}) = {b,c}`. For compactness, the checker reuses finite
-topology data and recomputes open-cover unions:
+and `closure({b}) = {b,c}`. The finite specialization-order pack reuses the
+same topology data and derives the specialization preorder:
+
+```text
+x <= y iff every open containing x also contains y
+c <= b <= a
+```
+
+For the indiscrete two-point topology, the specialization preorder has both
+`x <= y` and `y <= x`; the false `T0` row routes the resulting equality
+conflict through checked QF_UF/Alethe evidence.
+
+For compactness, the checker reuses finite topology data and recomputes
+open-cover unions:
 
 ```text
 universe = a,b,c
@@ -284,6 +300,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-specialization-order-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat
@@ -308,6 +326,7 @@ and measure replay, read
 [End To End: Finite Cardinality](finite-cardinality-end-to-end.md),
 [End To End: Cardinality Principles](cardinality-principles-end-to-end.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
+[End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
 [End To End: Finite Compactness](finite-compactness-end-to-end.md),
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
@@ -319,7 +338,7 @@ and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end
 
 The finite set, relation/function, equivalence-class, function-composition,
 finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
-cardinality-principles, topology, compactness-shadow, connectedness-shadow, continuous-map,
+cardinality-principles, topology, specialization-order, compactness-shadow, connectedness-shadow, continuous-map,
 finite-simplicial-homology, and measure packs are now checked finite artifacts.
 The finite-simplicial-homology pack now also carries a checked
 QF_LIA/Diophantine certificate for its bad boundary coefficient. The Alethe

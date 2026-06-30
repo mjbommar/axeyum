@@ -131,6 +131,12 @@ by also checking the inverse, and rejects a false continuity claim where
 For a fuller focused trace, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md).
 
+The finite specialization-order pack derives a preorder from finite open
+neighborhoods, checks the singleton-closure characterization, and rejects a
+false `T0`/antisymmetry claim through checked QF_UF/Alethe evidence. For a
+fuller focused trace, read
+[End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md).
+
 For finite simplicial complexes, the checker applies the same subset discipline
 to faces, recomputes oriented boundaries, checks `boundary^2 = 0`, replays exact
 boundary-matrix ranks, and rejects a bad boundary sign. For a fuller focused
@@ -144,6 +150,8 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-specialization-order-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
@@ -167,3 +175,6 @@ material. The finite-measure UNSAT row trusts only the explicit finite replay
 and the independent Farkas certificate for the final exact-rational conflict.
 The finite-topology UNSAT row trusts only the explicit open-set table and the
 independent DRAT/LRAT certificate for the final missing-empty-set contradiction.
+The finite-specialization-order UNSAT row trusts only the explicit open-set
+neighborhood preorder and the independent Alethe certificate for the final
+equality conflict.

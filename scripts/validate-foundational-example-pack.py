@@ -13869,6 +13869,71 @@ def topology_closure(
     return frozenset(universe_set - topology_interior(frozenset(complement), open_sets))
 
 
+def topology_specialization_preorder(
+    universe: list[str],
+    open_sets: set[frozenset[str]],
+) -> set[tuple[str, str]]:
+    """Return x <= y iff every open containing x also contains y."""
+    return {
+        (left, right)
+        for left in universe
+        for right in universe
+        if all(left not in open_set or right in open_set for open_set in open_sets)
+    }
+
+
+def require_specialization_data(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], set[frozenset[str]], set[tuple[str, str]]]:
+    universe, open_sets = require_topology_data(context, values)
+    listed_pairs = require_pair_set(
+        f"{context}.specialization_pairs",
+        values.get("specialization_pairs"),
+        set(universe),
+        set(universe),
+    )
+    actual_pairs = topology_specialization_preorder(universe, open_sets)
+    if listed_pairs != actual_pairs:
+        fail(f"{context}.specialization_pairs do not match the topology")
+    if not is_reflexive(universe, actual_pairs):
+        fail(f"{context}.specialization_pairs must be reflexive")
+    if not is_transitive(actual_pairs):
+        fail(f"{context}.specialization_pairs must be transitive")
+    return universe, open_sets, actual_pairs
+
+
+def require_singleton_closures(
+    context: str,
+    value: Any,
+    universe: list[str],
+    open_sets: set[frozenset[str]],
+) -> dict[str, frozenset[str]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list")
+    closures: dict[str, frozenset[str]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", item, {"point", "closure"})
+        point = item.get("point")
+        require_string(f"{context}[{index}].point", point)
+        if point not in set(universe):
+            fail(f"{context}[{index}].point references a missing point")
+        if point in closures:
+            fail(f"{context} repeats point {point!r}")
+        closure = require_subset(f"{context}[{index}].closure", item.get("closure"), universe)
+        actual = topology_closure(frozenset([point]), universe, open_sets)
+        if closure != actual:
+            fail(f"{context}[{index}].closure does not match topology closure")
+        closures[point] = closure
+    if set(closures) != set(universe):
+        missing = sorted(set(universe) - set(closures))
+        extra = sorted(set(closures) - set(universe))
+        fail(f"{context} must list exactly one singleton closure per point; missing={missing} extra={extra}")
+    return closures
+
+
 def all_subsets(universe: list[str]) -> set[frozenset[str]]:
     subsets: set[frozenset[str]] = set()
     for size in range(len(universe) + 1):
@@ -14817,6 +14882,97 @@ def validate_finite_continuous_maps(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general continuous map target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general continuous map future_checker", data.get("future_checker"))
+
+
+def validate_finite_specialization_order(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    preorder = checks["specialization-preorder-witness"]
+    if preorder["expected_result"] != "sat":
+        fail("specialization-preorder-witness must expect sat")
+    values = single_witness_values(preorder, witnesses)
+    universe, open_sets, pairs = require_specialization_data("specialization preorder", values)
+    if not is_reflexive(universe, pairs) or not is_transitive(pairs):
+        fail("specialization-preorder-witness must be a preorder")
+
+    closures = checks["closure-characterization-witness"]
+    if closures["expected_result"] != "sat":
+        fail("closure-characterization-witness must expect sat")
+    values = single_witness_values(closures, witnesses)
+    universe, open_sets, pairs = require_specialization_data("specialization closure", values)
+    singleton_closures = require_singleton_closures(
+        "specialization closure singleton_closures",
+        values.get("singleton_closures"),
+        universe,
+        open_sets,
+    )
+    for left in universe:
+        for right in universe:
+            relation_holds = (left, right) in pairs
+            closure_holds = left in singleton_closures[right]
+            if relation_holds != closure_holds:
+                fail("closure-characterization-witness disagrees with x in closure({y})")
+
+    t0 = checks["t0-poset-witness"]
+    if t0["expected_result"] != "sat":
+        fail("t0-poset-witness must expect sat")
+    values = single_witness_values(t0, witnesses)
+    universe, _, pairs = require_specialization_data("specialization T0", values)
+    claimed_t0 = values.get("t0")
+    if claimed_t0 is not True:
+        fail("t0-poset-witness must claim t0=true")
+    if not is_antisymmetric(pairs):
+        fail("t0-poset-witness specialization preorder is not antisymmetric")
+
+    bad_t0 = checks["bad-t0-antisymmetry-rejected"]
+    if bad_t0["expected_result"] != "unsat" or bad_t0.get("proof_status") != "checked":
+        fail("bad-t0-antisymmetry-rejected must be a checked unsat row")
+    if bad_t0["validation"] != "qf_uf_congruence_alethe":
+        fail("bad-t0-antisymmetry-rejected must use qf_uf_congruence_alethe validation")
+    data = bad_t0.get("data", {})
+    universe, _, pairs = require_specialization_data("bad specialization T0", data)
+    claimed_t0 = data.get("claimed_t0")
+    if claimed_t0 is not True:
+        fail("bad-t0-antisymmetry-rejected must document the false T0 claim")
+    if is_antisymmetric(pairs):
+        fail("bad-t0-antisymmetry-rejected specialization preorder is unexpectedly antisymmetric")
+    failing_pair = data.get("failing_pair")
+    if not isinstance(failing_pair, list) or len(failing_pair) != 2:
+        fail("bad-t0-antisymmetry-rejected failing_pair must be a two-element list")
+    left, right = failing_pair
+    require_string("bad specialization failing_pair[0]", left)
+    require_string("bad specialization failing_pair[1]", right)
+    if left == right:
+        fail("bad-t0-antisymmetry-rejected failing_pair must contain distinct points")
+    if left not in set(universe) or right not in set(universe):
+        fail("bad-t0-antisymmetry-rejected failing_pair references missing points")
+    if (left, right) not in pairs or (right, left) not in pairs:
+        fail("bad-t0-antisymmetry-rejected failing_pair must witness mutual specialization")
+    alethe_claim = data.get("alethe_antisymmetry_claim")
+    require_string("bad specialization alethe_antisymmetry_claim", alethe_claim)
+    if alethe_claim != f"{left} = {right}":
+        fail("bad-t0-antisymmetry-rejected must document the Alethe equality claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad specialization smt2_artifact", smt2_artifact)
+    check_source("bad specialization smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad specialization proof_regression", proof_regression)
+    if "finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe" not in proof_regression:
+        fail("bad-t0-antisymmetry-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad specialization certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-t0-antisymmetry-rejected certificate must document checked Alethe evidence")
+
+    horizon = checks["general-specialization-order-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-specialization-order-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-specialization-order-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general specialization target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general specialization future_checker", data.get("future_checker"))
 
 
 def validate_metric_continuity(expected: dict[str, Any]) -> None:
@@ -18653,6 +18809,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_markov_chain(expected)
     if metadata["id"] == "finite-simplicial-homology-v0":
         validate_finite_simplicial_homology(expected)
+    if metadata["id"] == "finite-specialization-order-v0":
+        validate_finite_specialization_order(expected)
     if metadata["id"] == "finite-hitting-times-v0":
         validate_finite_hitting_times(expected)
     if metadata["id"] == "finite-vector-spaces-v0":

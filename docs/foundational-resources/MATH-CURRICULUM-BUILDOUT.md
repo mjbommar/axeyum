@@ -245,7 +245,7 @@ losing the curriculum anchor.
 | Field | Curriculum Anchor | First New Resource |
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
-| `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, checked finite axiom conflicts, continuous maps, compactness, connectedness, and finite chain-complex checks. |
+| `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-specialization-order-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, specialization preorder replay, checked finite axiom conflicts, continuous maps, compactness, connectedness, and finite chain-complex checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-measure-monotonicity-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue and convergence theory remain horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
@@ -1298,7 +1298,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 105 atlas rows validate, including generated bridge-concept rows for
+  Status: 106 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1313,7 +1313,8 @@ Exit criteria:
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
   continuity-by-preimage, finite topology-operator/homeomorphism replay,
-  finite boundary-operator replay, finite chain-complex/homology replay, LU
+  finite specialization-order replay, finite boundary-operator replay, finite
+  chain-complex/homology replay, LU
   factorization replay, rank-nullity replay,
   residual bounds, eigenpair witnesses, characteristic-polynomial replay,
   finite random-matrix moments, finite measure additivity, finite probability
@@ -1330,9 +1331,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 102 non-template math example packs validate.
+  Status: 103 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 102 non-template packs have at least one `checked` expected-result row.
+  Status: 103 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -2020,16 +2021,18 @@ per-pack query families for coverage, equivalence, thresholds, caps,
 version-deltas, and monotonicity.
 The consumer query layer now also exposes topology readiness:
 `CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,
-compactness/preimage/closure/homeomorphism/boundary/homology bridge lookups,
-concept queries for finite topology-operator/homeomorphism, finite
-boundary-operator, and finite homology rows, and checked
+compactness/preimage/closure/homeomorphism/specialization/boundary/homology
+bridge lookups, concept queries for finite topology-operator/homeomorphism,
+finite specialization-order, finite boundary-operator, and finite homology
+rows, and checked
 Boolean/Alethe/Diophantine topology row drill-downs. The
 foundational-resource smoke check runs those same queries so finite topology
 axioms, finite open-cover and connectedness refutations, closure/interior
-replay, finite homeomorphism replay, continuous-map preimage consistency,
-finite boundary-operator and homology checks, metric-ball examples, and bounded
-epsilon-delta shadows stay visible through the public JSON boundary without
-promoting arbitrary compactness, connectedness, homeomorphism invariance,
+replay, finite homeomorphism replay, finite specialization preorder replay,
+continuous-map preimage consistency, finite boundary-operator and homology
+checks, metric-ball examples, and bounded epsilon-delta shadows stay visible
+through the public JSON boundary without promoting arbitrary compactness,
+connectedness, specialization-order theorems, homeomorphism invariance,
 homology invariance, exact sequences, or cohomology theorems.
 The consumer query layer now also exposes statistics readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, finite-table and
@@ -2182,6 +2185,15 @@ topology closure/homeomorphism lookup plus concept-scoped Alethe route queries
 while keeping closure-operator theorems, homeomorphism invariance,
 compactness/connectedness preservation, homology invariance, and general
 topology in the horizon lane.
+The topology concept layer now also has
+`bridge_finite_specialization_order_replay`. It groups finite topology to
+preorder replay, singleton-closure characterization, finite `T0` antisymmetry
+replay, and checked bad `T0` QF_UF/Alethe evidence across
+`finite-specialization-order-v0`, `finite-topology-v0`, and finite
+relations/functions vocabulary. The foundational-resource smoke check now
+exercises topology specialization lookup plus concept-scoped Alethe route
+queries while keeping T0 quotients, sobriety, Alexandroff-space/domain-theory
+results, and arbitrary-space specialization-order theorems in the horizon lane.
 The topology concept layer now also has
 `bridge_finite_boundary_operator_replay`. It groups oriented boundary
 coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and

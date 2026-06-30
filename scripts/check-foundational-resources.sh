@@ -46,6 +46,7 @@ python3 scripts/query-foundational-resources.py concepts --field topology --text
 python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text closure --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text homeomorphism --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text specialization --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text boundary --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text homology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
@@ -53,6 +54,8 @@ python3 scripts/query-foundational-resources.py checks --field topology --route 
 python3 scripts/query-foundational-resources.py checks --field topology --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_topology_operator_homeomorphism --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_topology_operator_homeomorphism --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_specialization_order_replay --route alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_specialization_order_replay --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_boundary_operator_replay --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boundary_operator_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_chain_homology_replay --route Diophantine --require-any >/dev/null

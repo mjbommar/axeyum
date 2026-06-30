@@ -98,7 +98,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |
 | `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
-| `topology` | sets, reals, linear algebra | landed finite topology/compactness/connectedness/preimage bridge rows plus finite topology-operator/homeomorphism, finite boundary-operator, and finite chain-complex/homology replay bridges; add only distinct rank/torsion, cohomology, or specialization-order pressure | finite replay, QF_UF/Alethe, QF_LIA/LRA, Lean horizon |
+| `topology` | sets, reals, linear algebra | landed finite topology/compactness/connectedness/preimage bridge rows plus finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, and finite chain-complex/homology replay bridges; add only distinct rank/torsion, cohomology, quotient, or theorem-invariance pressure | finite replay, QF_UF/Alethe, QF_LIA/LRA, Lean horizon |
 | `measure_theory` | sets, probability, reals | landed finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows; add narrower countable-measure or convergence rows only when reused | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
@@ -539,7 +539,14 @@ Build sequence:
     boundary lookup and concept-scoped Diophantine route queries while keeping
     functoriality, exactness, homology invariance, cohomology, and general
     algebraic topology in the Lean-horizon lane.
-61. Revisit crate/repo boundaries only after three real consumers or repeated
+61. Landed: add the finite specialization-order replay bridge row.
+    `bridge_finite_specialization_order_replay` makes finite topology to
+    preorder replay, singleton-closure characterization, finite `T0`
+    antisymmetry replay, and checked bad `T0` QF_UF/Alethe evidence queryable
+    through topology specialization lookup and concept-scoped Alethe route
+    queries while keeping T0 quotients, sobriety, domain theory, and
+    arbitrary-space specialization-order theorems in the Lean-horizon lane.
+62. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

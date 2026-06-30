@@ -9,9 +9,10 @@ Concept rows:
 - `curriculum_sequences_and_limits`, `curriculum_calculus`, and
   `curriculum_reals` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
-- `bridge_finite_topology_operator_homeomorphism` and
+- `bridge_finite_topology_operator_homeomorphism`,
+  `bridge_finite_specialization_order_replay`, and
   `bridge_finite_chain_homology_replay` in the atlas bridge vocabulary for the
-  finite topology and algebraic-topology slices.
+  finite topology, topology-to-order, and algebraic-topology slices.
 
 Example packs:
 
@@ -31,6 +32,7 @@ Example packs:
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
+- [finite-specialization-order-v0](../../../artifacts/examples/math/finite-specialization-order-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [finite-measure-monotonicity-v0](../../../artifacts/examples/math/finite-measure-monotonicity-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
@@ -60,6 +62,8 @@ tail-gap checks, finite recurrence-prefix and companion-matrix replay, finite
 root-finding bisection/Newton replay, finite generating-function coefficient identities, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
+finite specialization preorders, singleton-closure characterization, finite
+`T0`/antisymmetry checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
 rank checks, fixed Betti-number replay, and bad boundary-sign rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
@@ -100,6 +104,21 @@ topological-space axiomatization and theorem development remain Lean-horizon
 work.
 For a focused single-pack trace, read
 [End To End: Finite Topology](finite-topology-end-to-end.md).
+
+For the finite specialization-order bridge, reuse the same finite topology
+table but compare open neighborhoods:
+
+```text
+x <= y iff every open containing x also contains y
+c <= b <= a
+```
+
+The `finite-specialization-order-v0` validator recomputes the preorder,
+checks the singleton-closure characterization `x <= y iff x in closure({y})`,
+confirms antisymmetry for a finite `T0` slice, and rejects a false `T0` claim
+for the indiscrete two-point topology through checked QF_UF/Alethe evidence.
+This is finite replay plus equality evidence, not a proof of general
+specialization-order, sobriety, or domain-theory theorems.
 
 For a bounded sequence shadow, encode exact rational values and one fixed
 epsilon:
@@ -422,6 +441,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mu
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-specialization-order-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-monotonicity-v0
@@ -462,6 +483,7 @@ replay, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Topology](finite-topology-end-to-end.md),
+[End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
 [End To End: Finite Measure](finite-measure-end-to-end.md),
 [End To End: Finite Integration](finite-integration-end-to-end.md),
 [End To End: Finite Product Measure](finite-product-measure-end-to-end.md),
@@ -478,6 +500,7 @@ theorems, Hilbert projection/Riesz representation, compact operators,
 closed-form generating-function extraction, asymptotic coefficient estimates,
 countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
-general Chebyshev spaces, homology invariance, exact sequences, homotopy
+general Chebyshev spaces, specialization-order and separation-axiom theorems,
+sobriety/domain-theory results, homology invariance, exact sequences, homotopy
 equivalence, and infinite-dimensional spectral theory remain Lean-horizon
 material.
