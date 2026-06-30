@@ -1503,13 +1503,13 @@ The QF_LRA/Farkas lane now has its first resource-backed proof regression:
 fixed order-transitivity violating branch with Axeyum `UnsatFarkas` evidence
 that is independently rechecked.
 `linear-algebra-rational-v0` now also routes its singular inconsistent system
-through the same checked Farkas evidence path.
+through a source-linked checked Farkas evidence path.
 `linear-optimization-v0` now routes its infeasible objective-threshold conflict
-through Axeyum `UnsatFarkas` evidence rather than only pack-local multiplier
-replay.
+through a source-linked Axeyum `UnsatFarkas` artifact rather than only
+pack-local multiplier replay.
 `convexity-rational-v0` now routes its bad midpoint-convexity row through the
-same checked Farkas evidence path after reducing the midpoint inequality to
-division-free linear form.
+same source-linked checked Farkas evidence path after reducing the midpoint
+inequality to division-free linear form.
 `finite-concentration-v0` now routes its bad finite tail-bound row through a
 source-linked checked Farkas evidence path after finite replay computes the tail
 probability, and its metadata promotes that row for solver reuse.

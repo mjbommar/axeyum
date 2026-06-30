@@ -5,7 +5,20 @@
 //! also produce independently rechecked Farkas evidence.
 
 use axeyum_ir::{Rational, TermArena, TermId};
-use axeyum_solver::{Evidence, TrustId, produce_lra_evidence};
+use axeyum_smtlib::parse_script;
+use axeyum_solver::{
+    CheckResult, Evidence, SolverConfig, TrustId, check_auto, produce_lra_evidence,
+};
+
+const LINEAR_ALGEBRA_SINGULAR_SYSTEM: &str = include_str!(
+    "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/singular-system-inconsistent-farkas-conflict.smt2"
+);
+const LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD: &str = include_str!(
+    "../../../artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2"
+);
+const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
+    "../../../artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2"
+);
 
 fn real(arena: &mut TermArena, name: &str) -> TermId {
     arena.real_var(name).unwrap()
@@ -39,6 +52,19 @@ fn assert_farkas_checked(label: &str, arena: &TermArena, assertions: &[TermId]) 
             .any(|step| step.id == TrustId::Farkas && step.certified),
         "{label}: missing certified Farkas trust step"
     );
+}
+
+fn assert_resource_farkas(label: &str, smt2: &str) {
+    let mut script = parse_script(smt2)
+        .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
+    let assertions = script.assertions.clone();
+
+    assert_eq!(
+        check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat,
+        "{label}: resource obligation must be unsat"
+    );
+    assert_farkas_checked(label, &script.arena, &assertions);
 }
 
 #[test]
@@ -146,6 +172,14 @@ fn linear_algebra_singular_system_inconsistent_emits_checked_farkas() {
 }
 
 #[test]
+fn linear_algebra_singular_system_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "linear-algebra-rational-v0 singular-system-inconsistent SMT-LIB artifact",
+        LINEAR_ALGEBRA_SINGULAR_SYSTEM,
+    );
+}
+
+#[test]
 fn linear_optimization_objective_threshold_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let x = real(&mut arena, "x");
@@ -160,6 +194,14 @@ fn linear_optimization_objective_threshold_emits_checked_farkas() {
         "linear-optimization-v0 objective-threshold-farkas-infeasible",
         &arena,
         &[budget, threshold],
+    );
+}
+
+#[test]
+fn linear_optimization_objective_threshold_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "linear-optimization-v0 objective-threshold SMT-LIB artifact",
+        LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD,
     );
 }
 
@@ -188,6 +230,14 @@ fn convexity_bad_midpoint_claim_emits_checked_farkas() {
             right_is_zero,
             midpoint_convexity_claim,
         ],
+    );
+}
+
+#[test]
+fn convexity_bad_midpoint_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "convexity-rational-v0 bad-midpoint SMT-LIB artifact",
+        CONVEXITY_BAD_MIDPOINT,
     );
 }
 

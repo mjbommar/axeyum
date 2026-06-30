@@ -85,7 +85,8 @@
         "right_value": "0",
         "midpoint_value": "1",
         "convex_combination": "0",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_midpoint_claim_emits_checked_farkas"
+        "smt2_artifact": "artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_midpoint"
       },
       "notes": "The validator rejects the claim because the midpoint value is greater than the endpoint average; the Axeyum regression refutes the division-free inequality 2*f(midpoint) <= f(left)+f(right) with rechecked Farkas evidence."
     },

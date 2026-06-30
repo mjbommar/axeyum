@@ -27,12 +27,14 @@ The validator parses fraction strings exactly with Python rational arithmetic
 and checks matrix products, matrix-vector products, and the row-scaling
 inconsistency certificate. The singular-system row also has an Axeyum
 regression that builds the `QF_LRA` equations, emits `UnsatFarkas` evidence,
-and rechecks that evidence independently. The SAT witness rows remain exact
-replay-only until they route through model evidence.
+and rechecks that evidence independently. The same row now also carries a
+source-level SMT-LIB artifact that the route regression parses before checking
+Farkas evidence. The SAT witness rows remain exact replay-only until they route
+through model evidence.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system
 ```

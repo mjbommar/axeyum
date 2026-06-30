@@ -158,13 +158,13 @@ First targets:
   (first resource-backed Farkas regression landed for fixed trichotomy and
   order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
-  (resource-backed Farkas regression landed for the singular inconsistent
+  (source-linked solver-reuse promotion landed for the singular inconsistent
   system)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
-  (resource-backed Farkas regression landed for the objective-threshold
+  (source-linked solver-reuse promotion landed for the objective-threshold
   conflict)
 - [convexity-rational-v0](../../artifacts/examples/math/convexity-rational-v0/)
-  (resource-backed Farkas regression landed for the bad midpoint-convexity
+  (source-linked solver-reuse promotion landed for the bad midpoint-convexity
   row)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
   (source-linked solver-reuse promotion landed for the bad finite tail-bound

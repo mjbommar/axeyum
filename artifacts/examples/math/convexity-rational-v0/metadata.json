@@ -31,6 +31,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "bad midpoint-convexity QF_LRA/Farkas regression seed",
+    "pressure": "Division-free midpoint-convexity conflict where f(-1)=0, f(0)=1, and f(1)=0 force the false inequality 2*f(0) <= f(-1)+f(1).",
+    "evidence": [
+      "bad-midpoint-convexity-rejected"
+    ],
+    "next_step": "Promote additional convexity rows only when they add distinct exact-rational midpoint, separation, or threshold pressure; keep general Jensen, separation, SDP, and convergence theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -40,6 +49,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

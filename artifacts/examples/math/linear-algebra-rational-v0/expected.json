@@ -64,7 +64,8 @@
         "multiple": "2",
         "scaled_row": ["2", "2"],
         "scaled_rhs": "3",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas"
+        "smt2_artifact": "artifacts/examples/math/linear-algebra-rational-v0/smt2/singular-system-inconsistent-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system"
       },
       "notes": "The validator checks that the left-hand side scales by 2 while the right-hand side does not; the Axeyum regression refutes the same fixed system with rechecked Farkas evidence."
     }

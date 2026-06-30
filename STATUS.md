@@ -345,9 +345,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   both rows with independently rechecked Farkas evidence; generated dashboards
   move promoted solver-reuse packs to 57 and leave 27 unclassified packs.
 
+- **Linear algebra/optimization QF_LRA/Farkas source promotion landed.**
+  `linear-algebra-rational-v0`, `linear-optimization-v0`, and
+  `convexity-rational-v0` now carry source-level SMT-LIB artifacts and promoted
+  `solver_reuse` metadata for their singular-system, objective-threshold, and
+  bad-midpoint rows. The `math_resource_lra_routes` regression now parses those
+  artifacts before checking independent Farkas evidence; generated dashboards
+  move promoted solver-reuse packs to 60 and leave 24 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 57-promoted-pack review count. The
+  now records the refreshed 60-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

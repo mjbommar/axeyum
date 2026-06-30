@@ -74,7 +74,8 @@
           "coefficients": {"x": "0", "y": "0"},
           "bound": "-1"
         },
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas"
+        "smt2_artifact": "artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold"
       },
       "notes": "The validator checks nonnegative multipliers, variable cancellation, and the contradictory bound 0 <= -1; the Axeyum regression refutes the same threshold conflict with rechecked Farkas evidence."
     }

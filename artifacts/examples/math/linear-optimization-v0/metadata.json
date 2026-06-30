@@ -29,11 +29,21 @@
     "Farkas"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "linear optimization objective-threshold QF_LRA/Farkas regression seed",
+    "pressure": "Exact LP threshold conflict where the base budget requires x + y <= 4 but the queried objective threshold requires x + y >= 5.",
+    "evidence": [
+      "objective-threshold-farkas-infeasible"
+    ],
+    "next_step": "Promote additional optimization rows only when they add distinct exact-rational feasibility, duality, or threshold pressure; keep general convex duality and convergence theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/01-number-systems/rationals.md",

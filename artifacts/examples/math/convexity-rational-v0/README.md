@@ -30,8 +30,9 @@ values, and the bad midpoint counterexample from the raw pack data. The bad
 midpoint-convexity row also has an Axeyum regression that builds the
 division-free `QF_LRA` contradiction `2*f(midpoint) <= f(left)+f(right)`,
 emits `UnsatFarkas` evidence, and rechecks that evidence independently. The
-positive finite rows remain exact replay-only until they route through model
-evidence.
+same row now also carries a source-level SMT-LIB artifact that the route
+regression parses before checking Farkas evidence. The positive finite rows
+remain exact replay-only until they route through model evidence.
 
 This is finite checked evidence. It is not a proof of Jensen's inequality in
 general, separation theorems, SDP duality, or convergence of convex
@@ -41,5 +42,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_midpoint_claim_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_midpoint
 ```
