@@ -19,6 +19,7 @@ Example packs:
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
+- [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -39,7 +40,8 @@ fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
-convex-hull/separating-hyperplane replay, LP feasibility and
+convex-hull/separating-hyperplane replay, finite KKT stationarity and
+complementary-slackness replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -176,6 +178,22 @@ rejects the false claim `normal . outside <= 1` after exact replay computes
 through checked QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md).
 
+For a finite KKT check, encode one constrained quadratic:
+
+```text
+minimize (x - 2)^2
+subject to x <= 1
+x = 1
+lambda = 2
+```
+
+The `finite-kkt-v0` validator recomputes the feasible finite-grid objective
+values, derivative, stationarity residual, and complementary-slackness product.
+Its bad row changes the multiplier to `1`, computes stationarity residual
+`-1`, and checks the resulting stationarity-error contradiction through
+QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite KKT Checks](finite-kkt-end-to-end.md).
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -249,6 +267,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
@@ -285,8 +305,9 @@ For exact multivariable derivative replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md).
 For exact LP feasibility and Farkas threshold evidence, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md).
-For exact finite convexity replay, read
-[End To End: Rational Convexity](convexity-rational-end-to-end.md). For exact
+For exact finite convexity and KKT replay, read
+[End To End: Rational Convexity](convexity-rational-end-to-end.md) and
+[End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md), and
@@ -294,7 +315,8 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 
 ## Horizon
 
-Completeness, arbitrary limits, continuity, compactness, integration, and
-general real-analysis theorems remain Lean-horizon. Nonlinear real arithmetic
-closed-form generating-function extraction, asymptotics, and SOS/RCF
-certificates are future proof-route work, not assumed coverage.
+Completeness, arbitrary limits, continuity, compactness, integration, general
+KKT sufficiency, constraint qualifications, and general real-analysis theorems
+remain Lean-horizon. Nonlinear real arithmetic closed-form
+generating-function extraction, asymptotics, and SOS/RCF certificates are
+future proof-route work, not assumed coverage.

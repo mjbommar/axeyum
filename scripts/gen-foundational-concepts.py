@@ -164,6 +164,10 @@ CURRICULUM_MAP = {
                 "Finite convex-hull and separating-hyperplane replay with checked bad-separator rejection.",
             ),
             (
+                "finite-kkt-v0",
+                "Finite constrained-quadratic KKT replay with checked bad-stationarity rejection.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
             ),
@@ -381,6 +385,10 @@ CURRICULUM_MAP = {
                 "finite-separation-v0",
                 "Exact convex-hull, dot-product, and separating-hyperplane replay.",
             ),
+            (
+                "finite-kkt-v0",
+                "Exact constrained-quadratic stationarity and complementary-slackness replay.",
+            ),
         ],
     },
     "calculus": {
@@ -400,6 +408,10 @@ CURRICULUM_MAP = {
             (
                 "finite-root-finding-v0",
                 "Finite bisection/Newton root-finding replay and convergence-theorem horizon rows.",
+            ),
+            (
+                "finite-kkt-v0",
+                "Finite KKT stationarity and complementary-slackness replay for a constrained quadratic.",
             ),
         ],
     },
@@ -425,6 +437,7 @@ FIELD_PACKS = {
         ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
+        ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
@@ -1250,8 +1263,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
-            "gradient replay, and Hessian-minor witnesses over rational data "
-            "while keeping general convex-analysis theorems separate."
+            "gradient replay, Hessian-minor witnesses, and finite KKT "
+            "stationarity/complementarity over rational data while keeping "
+            "general convex-analysis theorems separate."
         ),
         "prerequisites": [
             "bridge_lp_objective_farkas",
@@ -1271,6 +1285,7 @@ BRIDGE_CONCEPTS = [
             "NRA / polynomial constraints",
             "exact rational derivatives",
             "finite grid replay",
+            "finite KKT replay",
             "Farkas certificate",
             "Lean horizon",
         ],
@@ -1290,6 +1305,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-separation-v0",
                 "Finite convex-hull, supporting-face, and hyperplane-separation rows over exact rationals.",
+            ),
+            (
+                "finite-kkt-v0",
+                "Finite constrained-quadratic stationarity and complementary-slackness rows over exact rationals.",
             ),
             (
                 "reals-rcf-shadow-v0",

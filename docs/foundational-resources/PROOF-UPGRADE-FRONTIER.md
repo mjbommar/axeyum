@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 91
-- learner-linked packs: 91 focused links
-- packs with non-checked proof rows: 80
-- non-checked proof rows: 246
+- math example packs: 92
+- learner-linked packs: 92 focused links
+- packs with non-checked proof rows: 81
+- non-checked proof rows: 250
 
 Candidate route totals:
 
@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 46 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 47 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 61 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 62 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -236,6 +236,10 @@ First targets:
 - [finite-separation-v0](../../artifacts/examples/math/finite-separation-v0/)
   (source-linked Farkas regression landed for the bad separator row after
   exact convex-hull/separator replay computes the outside score `4`)
+- [finite-kkt-v0](../../artifacts/examples/math/finite-kkt-v0/)
+  (source-linked Farkas regression landed for the bad stationarity row after
+  exact constrained-quadratic KKT replay computes stationarity residual `-1`
+  and stationarity error `1`)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regression landed for the bad product-probability
   row after exact finite product replay computes the product mass)
@@ -338,6 +342,10 @@ Secondary targets:
   Finite separation now contributes the convex-optimization version of that
   boundary: exact replay computes convex weights, separator scores, and the
   tight face, then Farkas checks the final bad-separator inequality conflict.
+  Finite KKT now contributes the active-set/stationarity version of that
+  boundary: exact replay computes the derivative, multiplier equation, and
+  complementary-slackness product, then Farkas checks the final bad-stationarity
+  error conflict.
 
 Expected artifact:
 
@@ -355,6 +363,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
 ./scripts/check-foundational-resources.sh

@@ -786,6 +786,12 @@
           "notes": "Finite convex-hull and separating-hyperplane replay with checked bad-separator rejection."
         },
         {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Finite constrained-quadratic KKT replay with checked bad-stationarity rejection."
+        },
+        {
           "id": "multivariable-calculus-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
@@ -1720,6 +1726,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
           "notes": "Exact convex-hull, dot-product, and separating-hyperplane replay."
+        },
+        {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Exact constrained-quadratic stationarity and complementary-slackness replay."
         }
       ],
       "proof_routes": [
@@ -1805,6 +1817,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite bisection/Newton root-finding replay and convergence-theorem horizon rows."
+        },
+        {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Finite KKT stationarity and complementary-slackness replay for a constrained quadratic."
         }
       ],
       "proof_routes": [
@@ -2734,7 +2752,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, and Hessian-minor witnesses over rational data while keeping general convex-analysis theorems separate.",
+      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, and finite KKT stationarity/complementarity over rational data while keeping general convex-analysis theorems separate.",
       "prerequisites": [
         "bridge_lp_objective_farkas",
         "bridge_bounded_epsilon_delta_shadow",
@@ -2753,6 +2771,7 @@
         "NRA / polynomial constraints",
         "exact rational derivatives",
         "finite grid replay",
+        "finite KKT replay",
         "Farkas certificate",
         "Lean horizon"
       ],
@@ -2780,6 +2799,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
           "notes": "Finite convex-hull, supporting-face, and hyperplane-separation rows over exact rationals."
+        },
+        {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Finite constrained-quadratic stationarity and complementary-slackness rows over exact rationals."
         },
         {
           "id": "reals-rcf-shadow-v0",
@@ -8239,6 +8264,12 @@
           "notes": "Finite Hitting-Time Checks"
         },
         {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Finite KKT Checks"
+        },
+        {
           "id": "finite-markov-chain-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-markov-chain-v0",
@@ -8956,6 +8987,12 @@
           "notes": "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."
         },
         {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."
+        },
+        {
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
@@ -9314,6 +9351,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-integration-v0",
           "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-kkt-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-kkt-v0",
+          "notes": "Finite KKT Checks"
         },
         {
           "id": "finite-martingales-v0",

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "finite-kkt-v0",
+  "title": "Finite KKT Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_calculus",
+    "curriculum_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_real_analysis",
+    "field_linear_algebra",
+    "bridge_rational_convexity_shadow"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "real_analysis",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "calculus",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite optimization replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "symbolic polynomial differentiation",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite KKT bad stationarity QF_LRA/Farkas regression seed",
+    "pressure": "Exact KKT replay computes stationarity residual -1 for multiplier 1 at x = 1, so the malformed zero-stationarity row has error 1.",
+    "evidence": [
+      "bad-kkt-stationarity-rejected"
+    ],
+    "next_step": "Promote additional KKT rows only when they add distinct stationarity, active-set, complementarity, duality, or SDP pressure; keep general KKT sufficiency, constraint qualifications, and algorithm convergence in horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-kkt-end-to-end.md",
+    "artifacts/examples/math/finite-kkt-v0/smt2/bad-stationarity-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "finite-quadratic-grid-minimum-replay",
+    "kkt-stationarity-replay",
+    "complementary-slackness-replay",
+    "bad-kkt-stationarity-rejected",
+    "general-kkt-sufficiency-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite KKT witnesses as deterministic exact-rational replay rows.",
+    "Replay polynomial values, derivative values, stationarity residuals, primal/dual feasibility, and complementary slackness over exact rationals.",
+    "Route false KKT stationarity claims through checked QF_LRA/Farkas evidence after replay computes the offending residual.",
+    "Keep general KKT necessity/sufficiency, constraint qualifications, SDP duality, and convergence claims marked Lean-horizon until proof artifacts exist."
+  ]
+}

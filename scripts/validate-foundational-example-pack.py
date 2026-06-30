@@ -10125,6 +10125,139 @@ def validate_finite_separation(expected: dict[str, Any]) -> None:
     require_string("separation theorem future_checker", data.get("future_checker"))
 
 
+def quadratic_derivative_value(polynomial: list[Fraction], point: Fraction) -> Fraction:
+    return polynomial[1] + 2 * polynomial[2] * point
+
+
+def quadratic_second_derivative(polynomial: list[Fraction]) -> Fraction:
+    return 2 * polynomial[2]
+
+
+def validate_finite_kkt(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    grid = checks["finite-quadratic-grid-minimum-replay"]
+    if grid["expected_result"] != "sat":
+        fail("finite-quadratic-grid-minimum-replay must expect sat")
+    values = single_witness_values(grid, witnesses)
+    polynomial = require_quadratic("KKT polynomial", values.get("polynomial"))
+    normal = require_fraction("KKT constraint_normal", values.get("constraint_normal"))
+    bound = require_fraction("KKT constraint_bound", values.get("constraint_bound"))
+    candidate_x = require_fraction("KKT candidate_x", values.get("candidate_x"))
+    objective_value = require_fraction("KKT objective_value", values.get("objective_value"))
+    gradient = require_fraction("KKT gradient", values.get("gradient"))
+    hessian = require_fraction("KKT hessian", values.get("hessian"))
+    constraint_value = require_fraction("KKT constraint_value", values.get("constraint_value"))
+    multiplier = require_fraction("KKT multiplier", values.get("multiplier"))
+    stationarity_residual = require_fraction(
+        "KKT stationarity_residual",
+        values.get("stationarity_residual"),
+    )
+    complementarity = require_fraction("KKT complementarity", values.get("complementarity"))
+    sample_points = require_fraction_vector("KKT sample_points", values.get("sample_points"))
+    sample_values = require_fraction_vector("KKT sample_values", values.get("sample_values"))
+    if normal == 0:
+        fail("finite KKT constraint_normal must be nonzero")
+    if len(sample_points) != len(sample_values):
+        fail("finite-quadratic-grid-minimum-replay sample point/value lengths differ")
+    if candidate_x not in sample_points:
+        fail("finite-quadratic-grid-minimum-replay sample grid must contain candidate_x")
+    if polynomial_eval(polynomial, candidate_x) != objective_value:
+        fail("finite-quadratic-grid-minimum-replay objective_value is incorrect")
+    for point, listed_value in zip(sample_points, sample_values):
+        if normal * point > bound:
+            fail("finite-quadratic-grid-minimum-replay sample point violates the linear constraint")
+        if polynomial_eval(polynomial, point) != listed_value:
+            fail("finite-quadratic-grid-minimum-replay sample value is incorrect")
+    if objective_value != min(sample_values):
+        fail("finite-quadratic-grid-minimum-replay candidate is not minimal on the listed grid")
+
+    stationarity = checks["kkt-stationarity-replay"]
+    if stationarity["expected_result"] != "sat":
+        fail("kkt-stationarity-replay must expect sat")
+    stationarity_values = single_witness_values(stationarity, witnesses)
+    if stationarity_values != values:
+        fail("kkt-stationarity-replay must cite the KKT witness")
+    if quadratic_derivative_value(polynomial, candidate_x) != gradient:
+        fail("kkt-stationarity-replay gradient is incorrect")
+    if quadratic_second_derivative(polynomial) != hessian:
+        fail("kkt-stationarity-replay hessian is incorrect")
+    if hessian <= 0:
+        fail("kkt-stationarity-replay expects a convex quadratic with positive Hessian")
+    if gradient + multiplier * normal != stationarity_residual:
+        fail("kkt-stationarity-replay stationarity_residual is incorrect")
+    if stationarity_residual != 0:
+        fail("kkt-stationarity-replay stationarity residual must be zero")
+
+    slackness = checks["complementary-slackness-replay"]
+    if slackness["expected_result"] != "sat":
+        fail("complementary-slackness-replay must expect sat")
+    slackness_values = single_witness_values(slackness, witnesses)
+    if slackness_values != values:
+        fail("complementary-slackness-replay must cite the KKT witness")
+    if normal * candidate_x - bound != constraint_value:
+        fail("complementary-slackness-replay constraint_value is incorrect")
+    if constraint_value > 0:
+        fail("complementary-slackness-replay candidate violates primal feasibility")
+    if multiplier < 0:
+        fail("complementary-slackness-replay multiplier violates dual feasibility")
+    if multiplier * constraint_value != complementarity:
+        fail("complementary-slackness-replay complementarity product is incorrect")
+    if complementarity != 0:
+        fail("complementary-slackness-replay complementarity must be zero")
+
+    bad = checks["bad-kkt-stationarity-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-kkt-stationarity-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "boundary-quadratic-kkt":
+        fail("bad-kkt-stationarity-rejected must cite the boundary-quadratic-kkt witness")
+    claimed_multiplier = require_fraction("bad KKT claimed_multiplier", data.get("claimed_multiplier"))
+    computed_residual = require_fraction(
+        "bad KKT computed_stationarity_residual",
+        data.get("computed_stationarity_residual"),
+    )
+    claimed_residual = require_fraction(
+        "bad KKT claimed_stationarity_residual",
+        data.get("claimed_stationarity_residual"),
+    )
+    computed_error = require_fraction(
+        "bad KKT computed_stationarity_error",
+        data.get("computed_stationarity_error"),
+    )
+    if gradient + claimed_multiplier * normal != computed_residual:
+        fail("bad-kkt-stationarity-rejected computed residual does not match replay")
+    if computed_residual == claimed_residual:
+        fail("bad-kkt-stationarity-rejected malformed residual must disagree with replay")
+    if claimed_residual - computed_residual != computed_error:
+        fail("bad-kkt-stationarity-rejected computed stationarity error is incorrect")
+    if computed_error <= 0:
+        fail("bad-kkt-stationarity-rejected stationarity error must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad KKT smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-kkt-v0/smt2/bad-stationarity-farkas-conflict.smt2":
+        fail("bad-kkt-stationarity-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad KKT smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad KKT farkas_regression", regression)
+    if "finite_kkt_bad_stationarity_artifact_emits_checked_farkas" not in regression:
+        fail("bad-kkt-stationarity-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad KKT certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-kkt-stationarity-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-kkt-sufficiency-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-kkt-sufficiency-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-kkt-sufficiency-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("KKT target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("KKT future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -16720,6 +16853,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_permutation_groups(expected)
     if metadata["id"] == "finite-integration-v0":
         validate_finite_integration(expected)
+    if metadata["id"] == "finite-kkt-v0":
+        validate_finite_kkt(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
     if metadata["id"] == "finite-measure-monotonicity-v0":

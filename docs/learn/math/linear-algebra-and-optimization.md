@@ -20,6 +20,7 @@ Example packs:
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
+- [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -67,7 +68,10 @@ finite-root-finding slice adds exact bisection/Newton iteration replay,
 residual-decrease checking, and a checked QF_LRA/Farkas bad Newton-step
 certificate. The finite-separation slice adds exact convex-hull membership,
 separating-hyperplane score replay, supporting-face checking, and a checked
-QF_LRA/Farkas bad-separator certificate. The finite random-matrix slice adds exact
+QF_LRA/Farkas bad-separator certificate. The finite-KKT slice adds exact
+constrained-quadratic grid replay, stationarity replay, complementary-slackness
+checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
+random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -262,6 +266,22 @@ outside-point inequality through checked QF_LRA/Farkas evidence. This is the
 finite-dimensional, exact-rational version of a separation certificate, not the
 general theorem.
 
+For a finite KKT example, encode one constrained quadratic and multiplier:
+
+```text
+minimize (x - 2)^2
+subject to x <= 1
+x = 1
+lambda = 2
+```
+
+The `finite-kkt-v0` validator recomputes objective values on a finite feasible
+grid, differentiates the quadratic, checks stationarity
+`f'(1) + lambda = 0`, and checks complementary slackness. Its bad row changes
+the multiplier to `1`, giving stationarity residual `-1` and stationarity error
+`1`; the final contradiction `error = 1` versus `error = 0` is checked through
+QF_LRA/Farkas evidence.
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -307,6 +327,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
@@ -343,6 +365,7 @@ replay, read
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md),
+[End To End: Finite KKT Checks](finite-kkt-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
@@ -364,8 +387,8 @@ Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
 moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
-eigenpairs, bad characteristic-polynomial rows, bad operator-bound rows, and
-negative-norm examples graduate through
+eigenpairs, bad characteristic-polynomial rows, bad operator-bound rows,
+bad KKT stationarity rows, and negative-norm examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
 conflicts use
@@ -385,5 +408,6 @@ duality and bidual theorems, Cauchy-Schwarz and Gram-Schmidt as general
 theorems, Hilbert projection/Riesz representation results, topological duals,
 module theory,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
-numerical stability, SDP, general convex analysis, and algorithm convergence
-need proof routes or carefully bounded numerical-experiment metadata.
+numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
+qualifications, and algorithm convergence need proof routes or carefully
+bounded numerical-experiment metadata.

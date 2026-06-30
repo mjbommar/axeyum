@@ -36,12 +36,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 91 non-template math packs.
-- 457 expected checks.
-- 211 checked proof/evidence rows.
-- 192 replay-only rows.
-- 54 Lean-horizon rows.
-- 91 promoted solver-reuse packs.
+- 92 non-template math packs.
+- 462 expected checks.
+- 212 checked proof/evidence rows.
+- 195 replay-only rows.
+- 55 Lean-horizon rows.
+- 92 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -84,7 +84,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Existing 91 Packs
+### Wave 1: Stabilize The Existing 92 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -97,7 +97,7 @@ Last row closed:
 
 | Pack | Upgrade Trigger |
 |---|---|
-| `finite-separation-v0` | added and promoted through a bad separator row with a source-linked QF_LRA/Farkas artifact and route regression |
+| `finite-kkt-v0` | added and promoted through a bad stationarity row with a source-linked QF_LRA/Farkas artifact and route regression |
 
 Exit criteria:
 
@@ -136,7 +136,7 @@ Goal: make checked evidence normal for representative UNSAT rows.
 | Bool/CNF DRAT/LRAT | logic, sets, graphs, counting, finite topology | commit small DIMACS artifact, emit DRAT, elaborate/check LRAT, add tamper regression | one representative row per source family is promoted |
 | QF_BV DRAT | finite fields/rings, residue arithmetic, bit encodings | add fixed-width SMT-LIB artifact and DRAT-backed bit-blast regression | width is educationally meaningful, not incidental |
 | QF_LIA/Diophantine | integer equations, gcd, counts, homology coefficients | encode minimal obstruction and check integer certificate | recurring obstruction has a cookbook example |
-| QF_LRA/Farkas | rationals, matrices, LP, probability tables, geometry, dynamics, root finding, separation | express exact rational conflict, emit/recheck Farkas certificate | source pack links artifact and learner page names trust boundary |
+| QF_LRA/Farkas | rationals, matrices, LP, probability tables, geometry, dynamics, root finding, separation, KKT | express exact rational conflict, emit/recheck Farkas certificate | source pack links artifact and learner page names trust boundary |
 | QF_UF/Alethe | finite functions, quotients, algebra maps, actions, modules | encode congruence/equality conflict and check Alethe | table replay and equality proof are distinct in docs |
 | Lean horizon | induction, completeness, compactness, measure, asymptotics, Hilbert/Banach facts | state theorem shape, prerequisites, and missing reconstruction dependency | finite rows are not counted as theorem proof |
 
@@ -207,13 +207,13 @@ Exit criteria:
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
-| `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation shadows | keep bounded shadows distinct from completeness/convergence/separation theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
+| `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation and KKT shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, homology | standalone finite-topology lesson and checked missing-empty-set Bool/CNF row landed; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
-| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows | LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, and finite hyperplane-separation replay landed; add only distinct duality, KKT, SDP, or convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
+| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows | LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, finite hyperplane-separation replay, and finite KKT replay landed; add only distinct duality, active-set variants, SDP, or convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding iterations | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area rational geometry | rigid-configuration geometry now has a checked bad distance-table row; add only distinct collinearity, midpoint, isometry, or polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
@@ -233,7 +233,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, and separation has a source-linked bad-separator row; keep completeness, convergence, separation, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, and KKT has a source-linked bad-stationarity row; keep completeness, convergence, separation, KKT sufficiency, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit and BV fixed-width residue routes distinct |
@@ -244,8 +244,8 @@ Exit criteria:
 | `sequences-and-limits` | deepen | bounded Cauchy-tail and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
-| `linear-algebra` | deepen | matrix corpus notes, dot-product/separator rows, and route-specific regression back-links |
-| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, and finite root-finding bad-step rows now have QF_LRA/Farkas regressions |
+| `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT rows, and route-specific regression back-links |
+| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step, and finite KKT bad-stationarity rows now have QF_LRA/Farkas regressions |
 
 ## Commit-Sized Queue
 
@@ -457,6 +457,12 @@ Pick one row per commit unless the change is purely navigational.
    QF_LRA/Farkas rejection of a false separator, a focused learner page, and
    concept links under reals, linear algebra, optimization/convexity, and the
    rational-convexity bridge.
+50. Landed: add `finite-kkt-v0` as the next distinct optimization/convexity
+   pack. The pack validates exact constrained-quadratic grid replay,
+   stationarity replay, complementary-slackness replay, checked QF_LRA/Farkas
+   rejection of a false stationarity multiplier, a focused learner page, and
+   concept links under reals, calculus, linear algebra, optimization/convexity,
+   and the rational-convexity bridge.
 
 ## Validation Checklist
 

@@ -190,8 +190,9 @@ python3 scripts/query-foundational-resources.py checks \
 
 For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
-bounds, and gradient/Hessian replay together while leaving duality, KKT, SDP,
-and convergence claims in the proof-horizon lane:
+bounds, gradient/Hessian replay, and finite KKT stationarity together while
+leaving duality, KKT sufficiency, SDP, and convergence claims in the
+proof-horizon lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \

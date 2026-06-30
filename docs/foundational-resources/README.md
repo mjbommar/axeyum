@@ -318,6 +318,10 @@ schemas, examples, and validation workflows.
   validates exact rational midpoint convexity, finite-grid second
   differences, affine threshold monotonicity, checked bad midpoint-convexity
   rejection, and a general convex-analysis Lean-horizon row.
+- [`artifacts/examples/math/finite-kkt-v0/`](../../artifacts/examples/math/finite-kkt-v0/)
+  validates exact constrained-quadratic grid replay, KKT stationarity,
+  complementary slackness, checked bad-stationarity rejection, and a general
+  KKT sufficiency Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks, plus checked rejection of a bad squared-distance claim.
@@ -467,6 +471,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/de
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
