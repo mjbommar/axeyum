@@ -430,7 +430,8 @@ First targets:
 
 - [modular-arithmetic-v0](../../artifacts/examples/math/modular-arithmetic-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the nonunit inverse
-  obstruction)
+  obstruction; the route-anatomy lesson now follows this same source artifact
+  through `UnsatDiophantine` checking and contradiction-row tamper rejection)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad binomial
   tail-count row)
@@ -495,6 +496,7 @@ Validation:
 cargo test -p axeyum-solver diophantine
 cargo test -p axeyum-solver certificate_tamper_is_rejected
 cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
+cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
 cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
 cargo test -p axeyum-solver --test math_resource_lia_routes
 ./scripts/check-foundational-resources.sh

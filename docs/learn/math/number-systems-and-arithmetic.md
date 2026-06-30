@@ -123,6 +123,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/na
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/integer-lia-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
@@ -140,6 +142,7 @@ modular quotient-ring replay, read
 [End To End: Integer Linear Arithmetic](integer-lia-end-to-end.md),
 [End To End: GCD And Bezout](gcd-bezout-end-to-end.md),
 [End To End: Modular Arithmetic](modular-arithmetic-end-to-end.md),
+[End To End: Diophantine Certificate Anatomy](diophantine-certificate-anatomy-end-to-end.md),
 [End To End: Bounded Number Theory](number-theory-end-to-end.md),
 [End To End: Complex Algebraic Replay](complex-algebraic-end-to-end.md),
 [End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md),

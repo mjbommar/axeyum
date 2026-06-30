@@ -99,6 +99,8 @@ Canonical examples:
   `diophantine-gcd-obstruction-conflict.smt2` for a direct gcd obstruction.
 - [Modular Arithmetic](../../../artifacts/examples/math/modular-arithmetic-v0/)
   promotes a nonunit inverse obstruction into checked integer evidence.
+  The learner-facing proof-object path is
+  [Diophantine Certificate Anatomy](../../learn/math/diophantine-certificate-anatomy-end-to-end.md).
 - [Exact Statistical Tests](../../../artifacts/examples/math/exact-statistical-tests-v0/)
   uses an impossible binomial tail-count row as a small count contradiction.
 - [Finite Simplicial Homology](../../../artifacts/examples/math/finite-simplicial-homology-v0/)

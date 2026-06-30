@@ -109,6 +109,9 @@ validated pack data and the repo-root command that replays it.
   witness, modular inverse witness, finite composite non-unit search, a
   checked QF_LIA/Diophantine nonunit obstruction, and a Fermat-style finite
   unit search.
+- [Diophantine Certificate Anatomy](diophantine-certificate-anatomy-end-to-end.md):
+  follows a nonunit modular-inverse obstruction through source SMT-LIB, emitted
+  `UnsatDiophantine` evidence, and corrupted-certificate rejection.
 - [Bounded Number Theory](number-theory-end-to-end.md): follows compatible
   non-coprime CRT replay, quadratic residue and nonresidue checks,
   sum-of-two-squares replay and rejection, and a Diophantine witness.

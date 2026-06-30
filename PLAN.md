@@ -166,6 +166,10 @@ The first Alethe certificate anatomy learner page now follows
 `equivalence-classes-v0` from a quotient-map congruence conflict through source
 SMT-LIB, emitted zero-trust `UnsatAletheProof` evidence, and same-artifact
 truncated-proof rejection.
+The first Diophantine certificate anatomy learner page now follows
+`modular-arithmetic-v0` from a nonunit modular-inverse obstruction through
+source SMT-LIB, emitted `UnsatDiophantine` evidence, and same-artifact
+contradiction-row tamper rejection.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

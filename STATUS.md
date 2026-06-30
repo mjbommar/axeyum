@@ -604,6 +604,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the genuine proof first, removes the closing Alethe command, and
   requires the corrupted certificate to reject.
 
+- **Diophantine certificate anatomy learner page landed.**
+  [`diophantine-certificate-anatomy-end-to-end.md`](docs/learn/math/diophantine-certificate-anatomy-end-to-end.md)
+  now follows `modular-arithmetic-v0` from the nonunit inverse equation
+  `2*b - 6*k = 1` through source SMT-LIB, emitted `UnsatDiophantine` evidence,
+  and same-artifact contradiction-row tamper rejection. The LIA route
+  regression already includes
+  `qf_lia_resource_route_rejects_tampered_diophantine_certificate`, which
+  checks the genuine certificate first, changes the recorded constant, and
+  requires the corrupted certificate to reject.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
   now records the refreshed 84-promoted, 0 non-benchmark-horizon, and

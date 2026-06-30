@@ -1404,6 +1404,10 @@ follows the exact LP threshold conflict through source SMT-LIB, emitted
 follows the quotient-map congruence conflict through source SMT-LIB, emitted
 zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof
 rejection.
+`modular-arithmetic-v0` now has a Diophantine certificate anatomy lesson that
+follows the nonunit inverse obstruction through source SMT-LIB, emitted
+`UnsatDiophantine` evidence, and same-artifact contradiction-row tamper
+rejection.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean
