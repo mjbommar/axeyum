@@ -27,6 +27,18 @@
     "Bool"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "finite graph reachability Bool regression slice",
+    "pressure": "Reachability, no-path, traversal-order, and edge-cut checks over deterministic finite graphs.",
+    "evidence": [
+      "bfs-shortest-distance-witness",
+      "dfs-long-tail-order-replay",
+      "disconnected-no-path",
+      "edge-cut-separates"
+    ],
+    "next_step": "Encode the graph relation and source/target rows as finite Bool fixtures with pack back-links."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

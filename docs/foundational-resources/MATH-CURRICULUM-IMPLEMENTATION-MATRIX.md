@@ -200,8 +200,9 @@ Build sequence:
    `math_resource_lra_routes` regression.
 7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
-8. Tag selected packs as solver-regression candidates only after evidence and
-   replay are deterministic.
+8. Selected deterministic R4 packs now have structured `solver_reuse`
+   candidate tags: Boolean basics, finite cardinality, finite graph packs,
+   integer LIA, bounded natural arithmetic, and bounded number theory.
 9. Add consumer-facing sample queries over the JSON data contract.
 10. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.

@@ -29,6 +29,19 @@
     "Bool"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "finite DAG d-separation Bool regression slice",
+    "pressure": "Conditioned path activation/blocking cases over fixed finite DAGs.",
+    "evidence": [
+      "chain-active-without-conditioning",
+      "chain-conditioned-blocks",
+      "fork-conditioned-blocks",
+      "collider-unconditioned-blocks",
+      "collider-descendant-opens"
+    ],
+    "next_step": "Encode the finite active-path search as Bool fixtures without claiming general causal-identification coverage."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

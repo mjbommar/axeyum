@@ -25,6 +25,20 @@
     "QF_LIA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/natural-arithmetic-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "bounded natural QF_BV/QF_LIA regression slice",
+    "pressure": "Small natural arithmetic identities and bounded no-counterexample rows.",
+    "evidence": [
+      "successor-addition-replay",
+      "addition-commutativity-fixed",
+      "multiplication-distributivity-fixed",
+      "successor-injective-bounded",
+      "zero-not-successor-bounded",
+      "bounded-natural-negative-rejected"
+    ],
+    "next_step": "Encode the fixed-width natural rows as BV or LIA fixtures with explicit width and finite-prefix metadata."
+  },
   "source_refs": [
     "docs/curriculum/01-number-systems/naturals.md",
     "docs/curriculum/00-foundations/induction.md",

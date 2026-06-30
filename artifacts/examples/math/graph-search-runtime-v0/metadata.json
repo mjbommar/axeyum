@@ -31,6 +31,18 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-search-runtime-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "finite graph search LIA/Bool regression slice",
+    "pressure": "BFS/DFS finite traversal counts and false traversal-cost bound rejection.",
+    "evidence": [
+      "bfs-nearest-target-witness",
+      "dfs-long-tail-target-witness",
+      "shortcut-tail-family-costs",
+      "bad-dfs-cost-bound-rejected"
+    ],
+    "next_step": "Encode traversal-cost counters as bounded LIA/Bool fixtures while leaving asymptotic runtime under Lean horizon."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

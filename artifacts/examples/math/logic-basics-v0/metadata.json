@@ -21,6 +21,19 @@
     "CNF"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "Bool/CNF smoke regression slice",
+    "pressure": "SAT model replay, tautology-by-negation, and tiny CNF UNSAT proof paths.",
+    "evidence": [
+      "and-formula-sat-witness",
+      "excluded-middle-no-counterexample",
+      "contradiction-unsat",
+      "demorgan-equivalence-no-counterexample",
+      "tiny-cnf-refutation"
+    ],
+    "next_step": "Encode the five rows as Axeyum Bool/CNF regression fixtures with back-links to this pack."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/propositional-logic.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

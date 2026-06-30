@@ -27,6 +27,20 @@
     "QF_LIA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "bounded number-theory BV/LIA regression slice",
+    "pressure": "Fixed residue, nonresidue, sum-of-squares, and bounded Diophantine rows.",
+    "evidence": [
+      "crt-compatible-noncoprime-witness",
+      "quadratic-residue-witness",
+      "quadratic-nonresidue-rejected",
+      "sum-two-squares-witness",
+      "sum-two-squares-mod4-rejected",
+      "bounded-diophantine-witness"
+    ],
+    "next_step": "Promote the bounded residue and Diophantine rows into BV/LIA fixtures while keeping deep number-theory theorems out of benchmark scoring."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/number-theory.md",
     "docs/curriculum/02-structures/divisibility-and-euclid.md",

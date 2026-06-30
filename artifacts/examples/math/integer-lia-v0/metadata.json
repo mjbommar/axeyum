@@ -23,6 +23,20 @@
     "QF_LIA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/integer-lia-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "QF_LIA integer arithmetic regression slice",
+    "pressure": "Linear integer witnesses, interval infeasibility, and gcd-divisibility obstruction rows.",
+    "evidence": [
+      "signed-trichotomy-fixed",
+      "order-transitivity-fixed",
+      "integer-ring-identity-replay",
+      "linear-equation-witness",
+      "integer-interval-infeasible",
+      "diophantine-gcd-obstruction"
+    ],
+    "next_step": "Promote the fixed integer rows into QF_LIA fixtures with model replay and Diophantine evidence back-links."
+  },
   "source_refs": [
     "docs/curriculum/01-number-systems/integers.md",
     "docs/curriculum/01-number-systems/naturals.md",

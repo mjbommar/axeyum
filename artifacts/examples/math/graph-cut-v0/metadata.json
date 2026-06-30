@@ -27,6 +27,18 @@
     "Bool"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "finite graph cut Bool regression slice",
+    "pressure": "Edge-cut and vertex-cut witnesses plus rejected undersized cut claims.",
+    "evidence": [
+      "min-edge-cut-partition-witness",
+      "one-edge-cut-rejected",
+      "min-vertex-cut-witness",
+      "one-vertex-cut-rejected"
+    ],
+    "next_step": "Promote the finite cut rows as deterministic Bool fixtures with explicit graph and cut-set encodings."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

@@ -100,6 +100,8 @@ Minimum row fields:
 - `proof_routes`: replay, SAT proof, LRAT/DRAT, Farkas, Alethe, Lean, or gap;
 - `source_refs`: local docs and upstream source notes;
 - `graduation`: concrete criteria for promoting status.
+- optional pack-level `solver_reuse`: candidate/promoted/non-benchmark-horizon
+  status, solver pressure, evidence rows, and the next promotion step.
 
 Rules:
 
@@ -118,7 +120,7 @@ Minimum pack files:
 
 - `README.md`: audience, concept rows, theorem/claim shape, limitations;
 - `metadata.json`: stable id, concepts, fields, fragments, proof route,
-  validator command;
+  validator command, optional solver-reuse candidate metadata;
 - `model.md`: finite model, encoding sketch, symbols, assumptions;
 - `checks.md`: list of SAT/UNSAT/UNKNOWN checks and expected trust story;
 - `expected.json`: machine-readable expected results and witnesses;

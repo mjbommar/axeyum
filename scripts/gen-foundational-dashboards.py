@@ -131,6 +131,20 @@ def has_solver_reuse(value: Any) -> bool:
     return any(marker in text for marker in SOLVER_REUSE_MARKERS)
 
 
+def solver_reuse_status(metadata: dict[str, Any]) -> str:
+    reuse = metadata.get("solver_reuse")
+    if not reuse:
+        return "unclassified"
+    return reuse["status"]
+
+
+def solver_reuse_label(metadata: dict[str, Any]) -> str:
+    reuse = metadata.get("solver_reuse")
+    if not reuse:
+        return "`unclassified`"
+    return f"`{reuse['status']}`: {table_cell(reuse['target'])}"
+
+
 def pack_has_evidence(pack: dict[str, Any]) -> bool:
     return any(
         check.get("proof_status") in EVIDENCE_STATUSES
@@ -154,7 +168,11 @@ def pack_gate(
         gate = max(gate, 3)
     if pack_has_evidence(pack):
         gate = max(gate, 4)
-    if has_solver_reuse(metadata) or has_solver_reuse(pack["expected"]):
+    if (
+        solver_reuse_status(metadata) == "promoted"
+        or has_solver_reuse(metadata.get("source_refs", []))
+        or has_solver_reuse(pack["expected"])
+    ):
         gate = max(gate, 5)
     if gate >= 5 and pack_id in atlas_pack_ids:
         gate = 6
@@ -349,8 +367,8 @@ def pack_route_coverage(packs: list[dict[str, Any]], pack_gates: dict[str, int])
     lines = [
         "## Example Pack Route Coverage",
         "",
-        "| Pack | Gate | Next Gate | Trust Status | Check Status Counts | Recipe Links | Validator |",
-        "|---|---|---|---|---|---|---|",
+        "| Pack | Gate | Next Gate | Solver Reuse | Trust Status | Check Status Counts | Recipe Links | Validator |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for pack in packs:
         metadata = pack["metadata"]
@@ -361,11 +379,59 @@ def pack_route_coverage(packs: list[dict[str, Any]], pack_gates: dict[str, int])
             f"`{metadata['id']}` | "
             f"`{gate_label(gate)}` | "
             f"`{next_gate_label(gate)}` | "
+            f"{solver_reuse_label(metadata)} | "
             f"`{metadata['trust_status']}` | "
             f"{count_text(counts)} | "
             f"{recipe_list(metadata)} | "
             f"`{metadata['validator_command']}` |"
         )
+    lines.append("")
+    return lines
+
+
+def pack_solver_reuse_queue(packs: list[dict[str, Any]], pack_gates: dict[str, int]) -> list[str]:
+    rows: list[tuple[str, str, str, str, str, str, str, str]] = []
+    for pack in packs:
+        metadata = pack["metadata"]
+        reuse = metadata.get("solver_reuse")
+        if not reuse:
+            continue
+        rows.append(
+            (
+                reuse["status"],
+                metadata["id"],
+                gate_label(pack_gates[metadata["id"]]),
+                next_gate_label(pack_gates[metadata["id"]]),
+                reuse["target"],
+                reuse["pressure"],
+                ",".join(reuse["evidence"]),
+                reuse["next_step"],
+            )
+        )
+    rows.sort()
+    lines = [
+        "## Example Pack Solver Reuse Queue",
+        "",
+        "| Status | Pack | Gate | Next Gate | Target | Pressure | Evidence Rows | Next Step |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for status, pack_id, gate, next_gate, target, pressure, evidence, next_step in rows:
+        lines.append(
+            "| "
+            f"`{status}` | "
+            f"`{pack_id}` | "
+            f"`{gate}` | "
+            f"`{next_gate}` | "
+            f"{table_cell(target)} | "
+            f"{table_cell(pressure)} | "
+            f"`{table_cell(evidence)}` | "
+            f"{table_cell(next_step)} |"
+        )
+    lines.extend(["", "### Solver Reuse Status Totals", ""])
+    for status, count in sorted(Counter(status for status, *_ in rows).items()):
+        lines.append(f"- `{status}`: {count}")
+    if not rows:
+        lines.append("- none")
     lines.append("")
     return lines
 
@@ -496,6 +562,7 @@ def proof_gap_dashboard(
         lines.append(f"- `{status}`: {count}")
     lines.append("")
     lines.extend(pack_route_coverage(packs, pack_gates))
+    lines.extend(pack_solver_reuse_queue(packs, pack_gates))
     lines.extend(pack_evidence_gaps(packs, pack_gates))
     return "\n".join(lines)
 
@@ -525,6 +592,7 @@ def learner_proof_upgrade_dashboard(
                 metadata["id"],
                 gate_label(gate),
                 next_gate_label(gate),
+                solver_reuse_label(metadata),
                 ",".join(metadata["field_ids"]),
                 metadata["trust_status"],
                 count_text(all_counts),
@@ -545,6 +613,7 @@ def learner_proof_upgrade_dashboard(
                     metadata["id"],
                     gate_label(gate),
                     next_gate_label(gate),
+                    solver_reuse_label(metadata),
                     status,
                     metadata["trust_status"],
                     count_text(nonchecked_counts),
@@ -583,17 +652,28 @@ def learner_proof_upgrade_dashboard(
             "",
             "## Learner Coverage",
             "",
-            "| Learner Status | Pack | Gate | Next Gate | Fields | Trust Status | Proof Status Counts | Learner Pages |",
-            "|---|---|---|---|---|---|---|---|",
+            "| Learner Status | Pack | Gate | Next Gate | Solver Reuse | Fields | Trust Status | Proof Status Counts | Learner Pages |",
+            "|---|---|---|---|---|---|---|---|---|",
         ]
     )
-    for status, pack_id, gate, next_gate, fields, trust_status, counts, refs in learner_rows:
+    for (
+        status,
+        pack_id,
+        gate,
+        next_gate,
+        solver_reuse,
+        fields,
+        trust_status,
+        counts,
+        refs,
+    ) in learner_rows:
         lines.append(
             "| "
             f"`{status}` | "
             f"`{pack_id}` | "
             f"`{gate}` | "
             f"`{next_gate}` | "
+            f"{solver_reuse} | "
             f"`{table_cell(fields)}` | "
             f"`{trust_status}` | "
             f"{counts} | "
@@ -608,7 +688,17 @@ def learner_proof_upgrade_dashboard(
             "|---|---|---|",
         ]
     )
-    for status, pack_id, _gate, _next_gate, _fields, _trust_status, _counts, refs in learner_rows:
+    for (
+        status,
+        pack_id,
+        _gate,
+        _next_gate,
+        _solver_reuse,
+        _fields,
+        _trust_status,
+        _counts,
+        refs,
+    ) in learner_rows:
         if status == "focused":
             continue
         lines.append(
@@ -622,17 +712,29 @@ def learner_proof_upgrade_dashboard(
             "",
             "## Proof Upgrade Queue",
             "",
-            "| Candidate Route | Pack | Gate | Next Gate | Learner Status | Trust Status | Non-Checked Rows | Fragments | Learner Pages |",
-            "|---|---|---|---|---|---|---|---|---|",
+            "| Candidate Route | Pack | Gate | Next Gate | Solver Reuse | Learner Status | Trust Status | Non-Checked Rows | Fragments | Learner Pages |",
+            "|---|---|---|---|---|---|---|---|---|---|",
         ]
     )
-    for routes, pack_id, gate, next_gate, status, trust_status, counts, fragments, refs in proof_rows:
+    for (
+        routes,
+        pack_id,
+        gate,
+        next_gate,
+        solver_reuse,
+        status,
+        trust_status,
+        counts,
+        fragments,
+        refs,
+    ) in proof_rows:
         lines.append(
             "| "
             f"{routes} | "
             f"`{pack_id}` | "
             f"`{gate}` | "
             f"`{next_gate}` | "
+            f"{solver_reuse} | "
             f"`{status}` | "
             f"`{trust_status}` | "
             f"{counts} | "

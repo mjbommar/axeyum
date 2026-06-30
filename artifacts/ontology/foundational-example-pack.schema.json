@@ -82,6 +82,9 @@
           "type": "string",
           "minLength": 1
         },
+        "solver_reuse": {
+          "$ref": "#/$defs/solverReuse"
+        },
         "source_refs": {
           "$ref": "#/$defs/stringList"
         },
@@ -90,6 +93,32 @@
         },
         "graduation_criteria": {
           "$ref": "#/$defs/stringList"
+        }
+      }
+    },
+    "solverReuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "target", "pressure", "evidence", "next_step"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["candidate", "promoted", "non-benchmark-horizon"]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pressure": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "$ref": "#/$defs/stringList"
+        },
+        "next_step": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },

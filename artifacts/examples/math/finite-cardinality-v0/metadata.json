@@ -28,6 +28,18 @@
     "BV / enumeration"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "finite function Bool/BV regression slice",
+    "pressure": "Finite injection, surjection, and bijection constraints with small SAT and UNSAT cases.",
+    "evidence": [
+      "finite-bijection-cardinality-witness",
+      "proper-subset-injection-witness",
+      "no-injection-four-to-three",
+      "no-surjection-two-to-three"
+    ],
+    "next_step": "Promote the finite injection/surjection rows to deterministic Bool or BV fixtures and keep Cantor-style infinite claims out of the corpus."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/cardinality.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",

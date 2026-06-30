@@ -29,6 +29,24 @@ CLAIM_STATUS = {"template", "planned", "witnessed", "checked", "proof-gap"}
 TRUST_STATUS = {"template", "planned", "replay-only", "checked-evidence", "proof-gap", "numerical"}
 EXPECTED_RESULT = {"sat", "unsat", "unknown", "not-run"}
 PROOF_STATUS = {"template", "checked", "replay-only", "proof-gap", "lean-horizon", "not-required"}
+SOLVER_REUSE_STATUS = {"candidate", "promoted", "non-benchmark-horizon"}
+METADATA_REQUIRED = {
+    "schema_version",
+    "id",
+    "title",
+    "domain",
+    "claim_status",
+    "trust_status",
+    "concept_ids",
+    "field_ids",
+    "curriculum_nodes",
+    "axeyum_fragments",
+    "validator_command",
+    "source_refs",
+    "expected_results",
+    "graduation_criteria",
+}
+METADATA_OPTIONAL = {"solver_reuse"}
 
 
 class ValidationError(Exception):
@@ -103,26 +121,10 @@ def validate_metadata(
     field_ids: set[str],
     curriculum_nodes: set[str],
 ) -> None:
-    require_keys(
-        "metadata",
-        metadata,
-        {
-            "schema_version",
-            "id",
-            "title",
-            "domain",
-            "claim_status",
-            "trust_status",
-            "concept_ids",
-            "field_ids",
-            "curriculum_nodes",
-            "axeyum_fragments",
-            "validator_command",
-            "source_refs",
-            "expected_results",
-            "graduation_criteria",
-        },
-    )
+    require_keys("metadata", metadata, METADATA_REQUIRED)
+    extra_keys = sorted(set(metadata) - METADATA_REQUIRED - METADATA_OPTIONAL)
+    if extra_keys:
+        fail(f"metadata has unknown keys: {', '.join(extra_keys)}")
     if metadata["schema_version"] != 1:
         fail("metadata.schema_version must be 1")
     if metadata["id"] != pack_dir.name:
@@ -158,12 +160,40 @@ def validate_metadata(
         metadata["expected_results"],
         nonempty=metadata["claim_status"] != "template",
     )
+    validate_solver_reuse(metadata, expected_ids)
     if metadata["claim_status"] == "template" and metadata["trust_status"] != "template":
         fail("template claim_status requires template trust_status")
     criteria = require_string_list("metadata.graduation_criteria", metadata["graduation_criteria"])
     if metadata["claim_status"] != "template" and not criteria:
         fail("non-template packs require graduation criteria")
     return expected_ids
+
+
+def validate_solver_reuse(metadata: dict[str, Any], expected_ids: list[str]) -> None:
+    if "solver_reuse" not in metadata:
+        return
+    if metadata["claim_status"] == "template":
+        fail("template packs must not set metadata.solver_reuse")
+    solver_reuse = metadata["solver_reuse"]
+    if not isinstance(solver_reuse, dict):
+        fail("metadata.solver_reuse must be an object")
+    required = {"status", "target", "pressure", "evidence", "next_step"}
+    require_keys("metadata.solver_reuse", solver_reuse, required)
+    extra_keys = sorted(set(solver_reuse) - required)
+    if extra_keys:
+        fail(f"metadata.solver_reuse has unknown keys: {', '.join(extra_keys)}")
+    if solver_reuse["status"] not in SOLVER_REUSE_STATUS:
+        fail(f"metadata.solver_reuse.status invalid: {solver_reuse['status']!r}")
+    require_string("metadata.solver_reuse.target", solver_reuse["target"])
+    require_string("metadata.solver_reuse.pressure", solver_reuse["pressure"])
+    evidence = require_string_list("metadata.solver_reuse.evidence", solver_reuse["evidence"])
+    missing = sorted(set(evidence) - set(expected_ids))
+    if missing:
+        fail(
+            "metadata.solver_reuse.evidence references unknown expected results: "
+            + ", ".join(missing)
+        )
+    require_string("metadata.solver_reuse.next_step", solver_reuse["next_step"])
 
 
 def validate_expected(metadata: dict[str, Any], expected: dict[str, Any], expected_ids: list[str]) -> None:
@@ -213,6 +243,17 @@ def validate_expected(metadata: dict[str, Any], expected: dict[str, Any], expect
             "metadata.expected_results must match expected.checks ids: "
             f"metadata={sorted(expected_ids)} expected={sorted(check_ids)}"
         )
+    if "solver_reuse" in metadata:
+        checks_by_id = {check["id"]: check for check in expected["checks"]}
+        for check_id in metadata["solver_reuse"]["evidence"]:
+            check = checks_by_id[check_id]
+            if check["expected_result"] == "not-run":
+                fail(f"metadata.solver_reuse.evidence uses not-run row {check_id}")
+            if check["proof_status"] not in {"checked", "replay-only", "not-required"}:
+                fail(
+                    "metadata.solver_reuse.evidence must reference deterministic "
+                    f"checked/replay rows, got {check_id} with {check['proof_status']!r}"
+                )
     validate_pack_semantics(metadata, expected)
 
 

@@ -679,6 +679,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regressions. The current pack split is 42 `R6 consumer boundary` rows and
   42 `R4 checked evidence` rows, making the next solver-reuse queue explicit.
 
+- **Structured solver-reuse candidate tags landed.**
+  [`foundational-example-pack.schema.json`](artifacts/ontology/foundational-example-pack.schema.json)
+  now admits an optional `solver_reuse` metadata object with status, target,
+  pressure, evidence rows, and next step. The example-pack validator checks
+  that candidate evidence points only at deterministic checked/replay rows.
+  The first candidate batch tags `logic-basics-v0`, `finite-cardinality-v0`,
+  `graph-reachability-v0`, `graph-matching-v0`, `graph-cut-v0`,
+  `graph-d-separation-v0`, `graph-search-runtime-v0`, `integer-lia-v0`,
+  `natural-arithmetic-v0`, and `number-theory-v0`; generated dashboards show
+  10 `candidate` rows while keeping all of them at `R4 checked evidence` until
+  actual regression/fuzz/corpus back-links exist.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

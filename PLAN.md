@@ -110,6 +110,11 @@ the optimization/Farkas proof-route lane.
 The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
 now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
 solver-reuse candidates visible without hand-maintained scans.
+The first structured solver-reuse candidate batch is also tagged in pack
+metadata for Boolean basics, finite cardinality, graph reachability/matching/
+cuts/d-separation/search-runtime, integer LIA, bounded natural arithmetic, and
+bounded number theory; these remain R4 until promoted to actual regression or
+fuzz artifacts with pack back-links.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

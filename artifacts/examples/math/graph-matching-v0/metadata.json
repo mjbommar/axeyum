@@ -27,6 +27,18 @@
     "Bool"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0",
+  "solver_reuse": {
+    "status": "candidate",
+    "target": "finite graph matching Bool regression slice",
+    "pressure": "Matching validity, augmenting-path replay, and tiny no-perfect-matching refutations.",
+    "evidence": [
+      "matching-size-two-witness",
+      "overlapping-matching-rejected",
+      "augmenting-path-improves",
+      "triangle-no-perfect-matching"
+    ],
+    "next_step": "Encode matching constraints as deterministic Bool fixtures before adding weighted or theorem-level matching claims."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

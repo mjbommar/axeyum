@@ -180,6 +180,9 @@ Concrete work:
 - Tag each pack with the solver fragments it exercises and the gap it can
   expose: Bool/SAT, QF_BV, QF_LIA, QF_LRA, QF_NRA, QF_UF, arrays, quantifiers,
   or replay-only computation.
+- Use the structured `solver_reuse` metadata object to mark candidate packs;
+  do not count a candidate as R5 until a regression, fuzz, benchmark, or
+  explicit non-benchmark-horizon back-link exists.
 - Promote representative rows into regression or fuzz corpora only after the
   mathematical witness replay is deterministic.
 - Add negative examples deliberately: bad table, bad witness, false bound,
@@ -347,6 +350,9 @@ Next buildout:
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards.
+   Candidate status: the first 10-pack `solver_reuse` batch now tags Boolean
+   basics, finite cardinality, finite graph packs, integer LIA, bounded natural
+   arithmetic, and bounded number theory as R4-to-R5 promotion candidates.
 9. Promote selected packs into solver regression/fuzz corpora with back-links to
    the resource pack.
 10. Add a rules/law reasoning resource plan that explicitly reuses finite
