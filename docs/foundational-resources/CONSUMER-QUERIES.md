@@ -585,12 +585,18 @@ python3 scripts/query-foundational-resources.py fields \
 ```
 
 Use the finite vocabulary lookup to expose the shared Diophantine and
-fixed-width residue families:
+fixed-width residue families, and the totality lookup to expose operation
+conventions and side-condition boundaries:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field number_theory \
   --text finite \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field number_theory \
+  --text totality \
   --require-any
 ```
 
@@ -689,7 +695,8 @@ python3 scripts/query-foundational-resources.py fields \
   --require-any
 ```
 
-Use atlas lookups for reusable numerical vocabulary:
+Use atlas lookups for reusable numerical vocabulary and the exact-vs-floating
+boundary:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
@@ -700,6 +707,11 @@ python3 scripts/query-foundational-resources.py concepts \
 python3 scripts/query-foundational-resources.py concepts \
   --field numerical_analysis \
   --text operator \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field numerical_analysis \
+  --text floating \
   --require-any
 ```
 
@@ -899,6 +911,8 @@ Other useful filters:
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra
 python3 scripts/query-foundational-resources.py concepts --decidability proof-horizon
 python3 scripts/query-foundational-resources.py concepts --pack finite-cardinality-v0
+python3 scripts/query-foundational-resources.py concepts --text totality
+python3 scripts/query-foundational-resources.py concepts --text floating
 python3 scripts/query-foundational-resources.py concepts --text Lean
 ```
 
@@ -979,6 +993,7 @@ python3 scripts/query-foundational-resources.py checks --field abstract_algebra 
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field number_theory --text totality --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
@@ -990,6 +1005,7 @@ python3 scripts/query-foundational-resources.py checks --field real_analysis --r
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text floating --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null

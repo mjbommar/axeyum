@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 48 bridge-concept rows.
+- 50 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -653,6 +653,14 @@ Pick one row per commit unless the change is purely navigational.
     QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon routes with explicit
     boundaries; `check-foundational-resources.sh` smoke-checks representative
     route summaries.
+77. Landed: add number-system semantic-boundary bridge rows.
+    `bridge_exact_vs_floating_arithmetic` makes exact rational replay,
+    QF_LRA/Farkas rows, numerical shadows, and floating-point/numerical-honesty
+    boundaries queryable across real analysis, linear algebra, numerical
+    analysis, statistics, and optimization. `bridge_totality_conventions`
+    makes SMT totality, explicit side conditions, and frontend
+    trapping/UB boundaries queryable across number theory, foundations, real
+    analysis, and numerical resources. The atlas now validates 50 bridge rows.
 
 ## Validation Checklist
 

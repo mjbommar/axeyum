@@ -1262,6 +1262,116 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_exact_vs_floating_arithmetic",
+        "title": "Exact Vs Floating Arithmetic",
+        "field_ids": [
+            "real_analysis",
+            "linear_algebra",
+            "numerical_analysis",
+            "statistics",
+            "optimization_and_convexity",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Exact rational and integer resource rows are checked by "
+            "symbolic or replayed arithmetic, not by tolerance-based "
+            "floating-point computations. Floating-point roundoff, "
+            "conditioning, stability, and asymptotic numerical claims stay "
+            "outside the checked claim unless a separate numerical-honesty "
+            "or QF_FP route is attached."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_qf_lra_farkas_anatomy",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "bridge_residual_bound",
+            "bridge_lu_replay",
+            "bridge_random_matrix_finite_moment",
+            "field_numerical_analysis",
+            "field_statistics",
+        ],
+        "decidability": "numerical",
+        "axeyum_fragments": [
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "QF_FP / bit-vector lowering boundary",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "rationals-lra-v0",
+                "Exact rational order, midpoint, and infeasibility rows checked without floating-point tolerance.",
+            ),
+            (
+                "real-analysis-rational-v0",
+                "Bounded epsilon-delta and rational-neighborhood rows replayed over exact rationals.",
+            ),
+            (
+                "numerical-linear-algebra-v0",
+                "Residual and solution-box rows that are exact rational shadows of numerical linear algebra.",
+            ),
+            (
+                "least-squares-regression-v0",
+                "Normal-equation and residual rows checked as exact rational linear algebra, not floating-point regression.",
+            ),
+            (
+                "finite-root-finding-v0",
+                "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
+            ),
+            (
+                "exact-statistical-tests-v0",
+                "Finite exact-test p-value rows represented as rational sums rather than floating-point statistical approximations.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "exact rational replay plus numerical-honesty boundary",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and QF_LRA/Farkas route regressions where a bad exact-linear row is present",
+                "lean_status": "not-required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+                    "docs/learn/math/exact-statistical-tests-end-to-end.md",
+                    "docs/foundational-resources/MATH-FIELDS.md",
+                ],
+                "notes": (
+                    "The checked object is the exact rational row or exact "
+                    "linear certificate. This route deliberately does not "
+                    "certify IEEE rounding, conditioning, stability, or "
+                    "statistical approximation behavior."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+            "docs/learn/math/exact-statistical-tests-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "Exact rational replay does not prove floating-point roundoff, conditioning, stability, or convergence guarantees.",
+            "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
+            "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Exact arithmetic packs state whether the checked row is rational/integer replay, QF_LRA/Farkas evidence, or a numerical-honesty horizon.",
+                "Consumer queries can find the exact-vs-floating boundary by field and text lookup.",
+                "No resource pack uses tolerance language as proof evidence without a separate numerical-honesty schema.",
+            ],
+        },
+    },
+    {
         "id": "bridge_lp_objective_farkas",
         "title": "LP Objective Threshold Replay",
         "field_ids": ["optimization_and_convexity", "linear_algebra", "real_analysis"],
@@ -1695,6 +1805,115 @@ BRIDGE_CONCEPTS = [
                 "Rows state the bit width, source SMT-LIB artifact, and generated CNF/DRAT route.",
                 "The route regression rechecks the DIMACS/DRAT pair and Evidence::check accepts the original obligation.",
                 "A truncated or corrupted DRAT certificate is rejected by the focused tamper test.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_totality_conventions",
+        "title": "Totality Conventions",
+        "field_ids": [
+            "logic_and_proof",
+            "set_theory_and_foundations",
+            "number_theory",
+            "real_analysis",
+            "numerical_analysis",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Axeyum resources must say whether an operation is total by "
+            "SMT/IR convention, guarded by an explicit side condition, or "
+            "left to a frontend's trapping or undefined-behavior semantics. "
+            "Division-by-zero, over-shifts, partial functions, and "
+            "algorithm preconditions are educational boundaries, not hidden "
+            "solver assumptions."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_qf_bv_bitblast_anatomy",
+            "curriculum_naturals",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "curriculum_modular_arithmetic",
+            "bridge_exact_vs_floating_arithmetic",
+            "field_number_theory",
+            "field_numerical_analysis",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "SMT-LIB total BV semantics",
+            "QF_BV",
+            "QF_LIA side conditions",
+            "finite function-table replay",
+            "frontend trapping/UB guards",
+        ],
+        "example_packs": [
+            (
+                "natural-arithmetic-v0",
+                "Bounded natural-number rows whose finite domain and predecessor/negative boundaries are explicit.",
+            ),
+            (
+                "integer-lia-v0",
+                "Linear integer rows that encode impossible intervals and divisibility side conditions explicitly.",
+            ),
+            (
+                "modular-arithmetic-v0",
+                "Nonunit inverse rows that check the missing inverse through an explicit arithmetic obstruction.",
+            ),
+            (
+                "number-theory-v0",
+                "Fixed-modulus residue rows where the modulus, width, and bounded search space are part of the claim.",
+            ),
+            (
+                "finite-fields-v0",
+                "Prime-field and composite-modulus rows that separate total table replay from field-inverse side conditions.",
+            ),
+            (
+                "relations-functions-v0",
+                "Finite relation/function rows that check totality, single-valuedness, injectivity, and surjectivity from tables.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "total semantics plus explicit side-condition replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py plus QF_LIA/QF_BV route regressions for rows with arithmetic or bit-vector evidence",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/research/01-foundations/bv-semantics-and-partial-operations.md",
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/learn/math/number-systems-and-arithmetic.md",
+                ],
+                "notes": (
+                    "The trusted-small-checking story depends on making "
+                    "operation conventions explicit. Frontends that need "
+                    "trapping, panic, or undefined-behavior semantics must "
+                    "encode those guards as ordinary claims."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/research/01-foundations/bv-semantics-and-partial-operations.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/learn/math/number-systems-and-arithmetic.md",
+            "docs/learn/math/sets-relations-and-finite-structures.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "The core total semantics do not model language-specific UB, traps, or panic behavior unless a frontend adds explicit guards.",
+            "Integer/rational division examples need stated nonzero side conditions before they can be treated as field or algorithm claims.",
+            "Broad Lean reconstruction for totality-sensitive bit-vector and arithmetic rewrites remains partial.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows involving division, shifts, inverses, predecessor-like operations, or partial functions state the operation convention or guard.",
+                "Consumer queries can find totality convention rows by field and text lookup.",
+                "Learner pages explain that `unknown` is a solver result, never a hidden operator value.",
             ],
         },
     },

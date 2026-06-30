@@ -1038,7 +1038,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generates five bridge rows for finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality checks, and cardinality theorem horizons. That
-  increment remains part of the current 94-row atlas.
+  increment remains part of the current bridge atlas.
 
 - **Standalone finite topology and finite measure lessons landed.**
   [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
@@ -1515,7 +1515,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It now records the current committed baseline of 94 concept
+  library splits. It now records the current committed baseline of 96 concept
   rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
   replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
@@ -1570,7 +1570,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 48 bridge rows. The proof-methodology rows are
+  is now generated with 50 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1578,6 +1578,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_lean_horizon`; the proof-object anatomy rows are
   `bridge_boolean_cnf_lrat_anatomy`, `bridge_qf_lra_farkas_anatomy`,
   `bridge_qf_uf_alethe_anatomy`, and `bridge_qf_bv_bitblast_anatomy`; the
+  number-system semantic-boundary rows are
+  `bridge_exact_vs_floating_arithmetic` and
+  `bridge_totality_conventions`, which make exact rational replay,
+  floating-point/numerical-honesty boundaries, SMT totality, explicit side
+  conditions, and frontend trapping/UB boundaries queryable; the
   optimization/convexity rows are `bridge_lp_objective_farkas` and
   `bridge_rational_convexity_shadow`; the
   set/foundations rows are `bridge_finite_boolean_algebra`,
@@ -1627,7 +1632,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The
-  foundational resource consumer now reports 94 concept rows while
+  foundational resource consumer now reports 96 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.

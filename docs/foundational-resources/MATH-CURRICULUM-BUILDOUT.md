@@ -1298,12 +1298,13 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 94 atlas rows validate, including generated bridge-concept rows for
+  Status: 96 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
-  QF_LRA Farkas certificate anatomy, LP objective-threshold replay, rational
-  convexity/gradient shadows, QF_UF Alethe certificate anatomy, QF_BV bit-blast
+  QF_LRA Farkas certificate anatomy, exact-vs-floating arithmetic, LP
+  objective-threshold replay, rational convexity/gradient shadows, QF_UF
+  Alethe certificate anatomy, QF_BV bit-blast
   certificate anatomy, finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
@@ -1315,7 +1316,8 @@ Exit criteria:
   finite conditional expectations, finite product-measure/integration replay,
   finite tail/count obstructions, homomorphism preservation, kernel/image
   replay, quotient maps, ideal closure, module actions, tensor bilinearity,
-  finite group actions, coordinate/incidence/rigid/oriented/circle/inversion/cyclic geometry replay,
+  finite group actions, totality conventions,
+  coordinate/incidence/rigid/oriented/circle/inversion/cyclic geometry replay,
   complex real-pair transform replay, finite inner-product/projection replay,
   finite operator/Chebyshev replay, and Lean horizons, plus example-family rows
   for recurring finite-algebra QF_UF/Alethe conflicts, exact-rational

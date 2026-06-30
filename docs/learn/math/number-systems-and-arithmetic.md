@@ -7,6 +7,9 @@ Concept rows:
   `curriculum_number_theory`, `curriculum_rationals`, and
   `curriculum_complex` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
+- `bridge_totality_conventions` and
+  `bridge_exact_vs_floating_arithmetic` in the
+  [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_number_theory`, `field_real_analysis`, and `field_complex_analysis`
   in the [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
 
@@ -36,6 +39,22 @@ and a checked counterexample to a false unit-complex-square claim.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.
+
+## Semantic Boundaries
+
+The arithmetic examples are deliberately exact. Natural, integer, modular, and
+rational rows name their finite domain, modulus, bit width, or nonzero side
+condition instead of hiding it in solver behavior. In Axeyum's core, operators
+are total over their sort; for example, fixed-width BV division and shifts
+follow the SMT-LIB conventions in
+[BV Semantics And Partial Operations](../../research/01-foundations/bv-semantics-and-partial-operations.md).
+If a frontend wants Rust panics, C undefined behavior, trapping division, or a
+partial mathematical function, it must encode that guard as an ordinary claim.
+
+Likewise, rational rows are not floating-point experiments. They teach exact
+arithmetic and certificate replay; roundoff, tolerances, conditioning, and
+stability need a separate numerical-honesty or QF_FP route before they become
+checked claims.
 
 ## Encode / Check Walkthrough
 

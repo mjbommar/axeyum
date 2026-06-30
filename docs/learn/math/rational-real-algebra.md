@@ -4,6 +4,8 @@ Concept rows:
 
 - `curriculum_rationals`, `curriculum_reals`, and `curriculum_polynomials` in
   the [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
+- `bridge_exact_vs_floating_arithmetic` in the
+  [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_real_analysis`, `field_optimization_and_convexity`, and
   `field_geometry` in the
   [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
@@ -72,6 +74,14 @@ Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
 This is where Axeyum can teach that many "real" examples have a small rational
 core that is directly replayable.
+
+The checked rows in this page use exact rational arithmetic unless they
+explicitly say otherwise. A finite Newton step, residual bound, least-squares
+normal equation, or rational epsilon-delta sample can be replayed exactly; that
+does not certify floating-point rounding behavior, conditioning, numerical
+stability, convergence rates, or a general real-analysis theorem. Those claims
+stay in the numerical-honesty or Lean-horizon lane until a separate route
+exists.
 
 ## Encode / Check Walkthrough
 

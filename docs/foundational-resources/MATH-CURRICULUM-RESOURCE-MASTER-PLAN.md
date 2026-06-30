@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 48 bridge-concept rows.
+- 50 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -238,7 +238,8 @@ Build plan:
 
 Next useful increments:
 
-- exact-vs-floating arithmetic notes for learners and consumers;
+- maintain the landed exact-vs-floating and totality convention concept rows
+  in learner and consumer surfaces;
 - additional algebraic-real/RCF shadows only when they create reusable NRA/RCF
   pressure;
 - complex-polynomial root and Mobius-transform rows only when distinct from the
@@ -407,7 +408,11 @@ Use one row per commit unless the change is purely navigational.
    `query-foundational-resources.py routes` summary command, making finite
    replay, Boolean, QF_BV, QF_LIA, QF_LRA, QF_UF, and Lean-horizon coverage
    queryable by route and optional field.
-20. Add future rules/law crosswalk examples only by reusing existing
+20. Landed: add number-system semantic-boundary bridge rows for
+   exact-vs-floating arithmetic and totality conventions, plus consumer smoke
+   queries for number-theory totality and numerical-analysis floating-boundary
+   lookup.
+21. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

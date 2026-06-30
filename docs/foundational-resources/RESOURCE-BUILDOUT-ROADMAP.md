@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 48 bridge-concept rows.
+- 50 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -299,9 +299,13 @@ Current resource surface:
 
 Build next:
 
-- Add concept rows for exact-vs-floating arithmetic, total operations, bounded
-  natural prefixes, integer divisibility obstructions, rational order, real
-  algebraic shadow, metric ball, epsilon-delta shadow, and analytic horizon.
+- Maintain the landed exact-vs-floating and totality-convention concept rows,
+  and keep new arithmetic packs attached to them whenever a row depends on
+  exact rational replay, SMT totality, or explicit side conditions.
+- Add concept rows for bounded natural prefixes, integer divisibility
+  obstructions, rational order, real algebraic shadow, metric ball,
+  epsilon-delta shadow, and analytic horizon only when they become repeated
+  cross-pack vocabulary.
 - Promote representative bad arithmetic rows into LIA, LRA, or QF_BV proof
   routes according to the source concept.
 - Add lesson notes that separate exact rationals and algebraic real shadows
@@ -1572,7 +1576,13 @@ Pick one item per commit unless the change is purely navigational.
     [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) and
     `query-foundational-resources.py routes`, making proof/evidence route
     coverage queryable by normalized route alias and optional field scope.
-88. Continue proof-route promotions or consumer-query examples; revisit the
+88. Landed: add number-system semantic-boundary bridge rows for
+    exact-vs-floating arithmetic and totality conventions. The rows attach to
+    exact rational, numerical, finite arithmetic, fixed-width BV, and finite
+    function-table packs; `CONSUMER-QUERIES.md` and the foundational smoke
+    check now exercise `number_theory` totality lookup and
+    `numerical_analysis` floating-boundary lookup.
+89. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

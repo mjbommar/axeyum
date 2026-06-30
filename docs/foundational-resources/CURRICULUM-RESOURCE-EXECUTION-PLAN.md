@@ -35,10 +35,11 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 94 atlas rows generated from curriculum, field data, 48 R1 bridge
+- 96 atlas rows generated from curriculum, field data, 50 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
+  number-system exact-vs-floating and totality convention vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
@@ -108,6 +109,10 @@ Concrete work:
   normal equations, residual bounds, gradient/Hessian replay, and
   related matrix checks without promoting duality, KKT sufficiency, SDP strong
   duality, or convergence theorem claims.
+- Keep semantic-boundary smokes representative: number-theory/totality exposes
+  SMT totality, finite-domain, and side-condition vocabulary, while
+  numerical-analysis/floating exposes exact-vs-floating arithmetic without
+  promoting roundoff, stability, or convergence claims.
 - Keep all status changes generated from `curriculum.toml`,
   [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md), and pack metadata.
 
@@ -200,6 +205,10 @@ pack has landed.
 
 Add bridge-concept or example-family rows for repeated subtopics:
 
+- number systems: landed bridge rows for exact-vs-floating arithmetic and
+  totality conventions, so exact rational replay, fixed-width SMT totality,
+  and frontend side-condition boundaries are queryable across number theory,
+  real analysis, numerical analysis, statistics, and optimization resources;
 - logic: landed bridge rows for refutation-as-query, finite proof-pattern
   replay, finite quantifier expansion, and bounded induction obligations;
   general induction schemas remain Lean horizon;
@@ -361,8 +370,8 @@ Next buildout:
   recipes.
 - Split "exact rational" from "real completeness" in learner pages so users see
   why Axeyum can check one and not the other.
-- Add concept rows for totality conventions, underspecified operations, and
-  exact-vs-floating arithmetic if they become repeated teaching points.
+- Keep the landed totality-convention and exact-vs-floating rows linked from
+  learner pages and consumer smokes as new arithmetic or numerical packs land.
 
 ### Layer 2: Core Structures And Tools
 

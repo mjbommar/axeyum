@@ -64,6 +64,7 @@ python3 scripts/query-foundational-resources.py checks --field abstract_algebra 
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field number_theory --text totality --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
@@ -75,6 +76,7 @@ python3 scripts/query-foundational-resources.py checks --field real_analysis --r
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text floating --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
