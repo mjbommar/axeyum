@@ -1020,8 +1020,14 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas`.
-19. Revisit the library boundary decision after confirming at least one
-    downstream consumer use of the promoted resource data.
+19. Landed: revisited the library boundary decision after promoted solver-reuse
+    rows reached the consumer query layer. The decision remains JSON-first and
+    in-repo: `scripts/query-foundational-resources.py packs --solver-reuse
+    promoted --require-any` proves promoted rows are consumer-readable, but no
+    external consumer or repeated typed API need justifies a crate or repo split.
+20. Continue proof-route promotions or consumer-query examples; revisit the
+    boundary again only when a non-repo consumer, three duplicated typed access
+    call sites, or repeated reusable encoders exist.
 
 ## Validation Checklist
 

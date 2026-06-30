@@ -170,7 +170,10 @@ JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
 pack discovery, field-plus-proof-route discovery, checked-row mining,
 solver-reuse rows, and atlas concept lookup without importing validators or
-generators.
+generators. The latest boundary review keeps the foundational resources
+JSON-first and in-repo: promoted solver-reuse rows are consumer-readable through
+the query helper, but there is still no external consumer or repeated typed API
+need that would justify a crate or repo split.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs

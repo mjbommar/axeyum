@@ -470,8 +470,11 @@ Next buildout:
     generated multi-row queries or the authorization/tax-benefit packs.
 12. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
-13. Revisit the library boundary decision once consumers or repeated encoders
-    make in-repo docs/scripts insufficient.
+13. Current boundary review: promoted solver-reuse rows are now readable through
+    the dependency-free query consumer, but that still does not justify a Rust
+    crate or separate repository. Revisit again once a non-repo consumer,
+    repeated typed access call sites, or reusable encoders make in-repo
+    docs/scripts insufficient.
 
 Each increment should be small, validate independently, update
 [STATUS.md](../../STATUS.md), and commit with enough context that another agent
