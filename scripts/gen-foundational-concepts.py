@@ -1563,6 +1563,460 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_probability_mass_table",
+        "title": "Finite Probability Mass Table",
+        "field_ids": ["probability_theory", "measure_theory", "statistics"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite probability mass table row checks a finite sample space, "
+            "exact rational atom weights, event masses, complements, "
+            "normalization, conditioning, and product rows without simulation "
+            "or continuous-distribution assumptions."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_counting",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "bridge_pushforward_distribution",
+            "bridge_stochastic_kernel",
+            "bridge_conditional_expectation",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite probability tables",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "finite-probability-v0",
+                "Finite mass-table normalization, conditioning, independence, and Bayes-rule replay.",
+            ),
+            (
+                "finite-measure-v0",
+                "Finite sigma-algebra, measure additivity, complement, and monotonicity replay.",
+            ),
+            (
+                "finite-product-measure-v0",
+                "Finite product-probability and marginal rows over exact rational masses.",
+            ),
+            (
+                "finite-concentration-v0",
+                "Finite event masses and tail probabilities used by concentration-shadow rows.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite mass-table replay plus QF_LRA/Farkas bad-table certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/finite-probability-end-to-end.md",
+                    "docs/learn/math/finite-topology-measure-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes atom sums and event masses "
+                    "exactly; malformed normalization, complement, Bayes, or "
+                    "product rows graduate only when the final rational "
+                    "conflict carries checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/finite-probability-end-to-end.md",
+            "docs/learn/math/finite-topology-measure-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite mass-table replay does not prove countable additivity, continuous distributions, convergence theorems, or sampling guarantees.",
+            "General measure and probability theorems remain Lean-horizon until kernel-checked reconstruction exists.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite sample space, atom masses, event sets, and exact rational arithmetic domain.",
+                "The validator recomputes normalization, event mass, complement, product, or conditioning claims from atoms.",
+                "Bad mass-table rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_pushforward_distribution",
+        "title": "Finite Pushforward Distribution",
+        "field_ids": ["probability_theory", "measure_theory", "statistics", "set_theory_and_foundations"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite pushforward row checks a random-variable function table "
+            "by summing the source atom masses mapped to each output value, "
+            "then comparing the computed distribution with the claimed target "
+            "mass table."
+        ),
+        "prerequisites": [
+            "bridge_probability_mass_table",
+            "curriculum_relations_and_functions",
+            "curriculum_counting",
+        ],
+        "unlocks": [
+            "bridge_conditional_expectation",
+            "bridge_random_matrix_finite_moment",
+            "field_statistics",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite functions",
+            "finite probability tables",
+            "exact rational sums",
+            "QF_LRA",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "finite-random-variables-v0",
+                "Finite random-variable image, pushforward distribution, expectation, and bad pushforward rows.",
+            ),
+            (
+                "finite-product-measure-v0",
+                "Finite product-space rows where coordinate projections induce marginal distributions.",
+            ),
+            (
+                "random-matrix-finite-v0",
+                "Matrix-valued random variables whose statistics are pushforwards of a finite distribution.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite pushforward replay plus QF_LRA/Farkas bad-distribution certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/finite-random-variables-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The validator recomputes each target mass as a sum over "
+                    "the source atoms with that output; false target masses "
+                    "use the QF_LRA/Farkas route when promoted."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/finite-random-variables-end-to-end.md",
+            "docs/learn/math/random-matrix-finite-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite pushforward replay does not prove measurability in general measure spaces.",
+            "Continuous random variables, distributional convergence, and regular conditional laws remain theorem horizons.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the source atoms, probability table, random-variable map, target values, and claimed target masses.",
+                "The validator recomputes each pushforward mass and rejects corrupted table entries.",
+                "Learner pages distinguish finite pushforward sums from general measurable-map theorems.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_stochastic_kernel",
+        "title": "Finite Stochastic Kernel",
+        "field_ids": [
+            "probability_theory",
+            "measure_theory",
+            "statistics",
+            "differential_equations_and_dynamical_systems",
+            "linear_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "A finite stochastic-kernel row checks exact rational transition "
+            "rows, row normalization, finite Markov-chain steps, absorption or "
+            "hitting-time equations, and policy-transition tables over a fixed "
+            "finite state space."
+        ),
+        "prerequisites": [
+            "bridge_probability_mass_table",
+            "bridge_residual_bound",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_conditional_expectation",
+            "field_probability_theory",
+            "field_differential_equations_and_dynamical_systems",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite transition systems",
+            "finite probability tables",
+            "finite matrices",
+            "QF_LRA",
+            "Farkas certificate",
+        ],
+        "example_packs": [
+            (
+                "finite-stochastic-kernels-v0",
+                "Finite transition-kernel normalization, marginal, composition, and bad-row checks.",
+            ),
+            (
+                "finite-markov-chain-v0",
+                "Finite stochastic matrices, one-step distributions, stationarity, and bad stochastic-row checks.",
+            ),
+            (
+                "finite-hitting-times-v0",
+                "Finite expected hitting-time equations and bad expected-time rows.",
+            ),
+            (
+                "bounded-dynamics-v0",
+                "Bounded recurrence and invariant rows that share finite transition-system vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite transition replay plus QF_LRA/Farkas kernel-row certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/finite-stochastic-kernels-end-to-end.md",
+                    "docs/learn/math/finite-markov-chain-end-to-end.md",
+                    "docs/learn/math/finite-hitting-times-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes row sums, transition "
+                    "composition, and expected-time equations exactly; bad "
+                    "row or threshold claims use checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/finite-stochastic-kernels-end-to-end.md",
+            "docs/learn/math/finite-markov-chain-end-to-end.md",
+            "docs/learn/math/finite-hitting-times-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite stochastic kernels do not prove regular conditional probabilities or general Markov-process theory.",
+            "Mixing, recurrence/transience over infinite state spaces, and optional stopping remain Lean/probability horizons.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite state spaces, transition matrix or kernel table, and exact rational entries.",
+                "The validator recomputes row normalization, composed kernels, distributions, and finite linear equations.",
+                "Bad kernel or expected-time rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_conditional_expectation",
+        "title": "Finite Conditional Expectation",
+        "field_ids": ["probability_theory", "measure_theory", "statistics", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite conditional-expectation row checks a finite partition or "
+            "filtration block by recomputing conditional masses, weighted "
+            "averages, tower-style finite identities, and martingale table "
+            "conditions over exact rational probabilities."
+        ),
+        "prerequisites": [
+            "bridge_probability_mass_table",
+            "bridge_pushforward_distribution",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "bridge_stochastic_kernel",
+            "bridge_lean_horizon",
+            "field_measure_theory",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite partitions",
+            "finite probability tables",
+            "exact rational expectation",
+            "QF_LRA",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-conditional-expectation-v0",
+                "Finite partition, conditional mean, tower-property, and bad high-block rows.",
+            ),
+            (
+                "finite-martingales-v0",
+                "Finite filtration, martingale, submartingale, and bad conditional-expectation rows.",
+            ),
+            (
+                "finite-integration-v0",
+                "Finite simple-function integral and expectation rows that share exact weighted-sum replay.",
+            ),
+            (
+                "finite-random-variables-v0",
+                "Finite random-variable expectation and independence rows used by conditional examples.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite conditional-expectation replay plus QF_LRA/Farkas bad-expectation certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-conditional-expectation-end-to-end.md",
+                    "docs/learn/math/finite-martingales-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes block probabilities and "
+                    "weighted averages exactly; general conditional "
+                    "expectation remains a Lean horizon."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-conditional-expectation-end-to-end.md",
+            "docs/learn/math/finite-martingales-end-to-end.md",
+            "docs/learn/math/finite-integration-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite conditional-expectation replay does not prove Radon-Nikodym existence, regular conditional probabilities, or stopping-time theorems.",
+            "General martingale convergence and optional stopping remain Lean horizons.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite partition or filtration, atom masses, random-variable values, and claimed conditional expectations.",
+                "The validator recomputes each conditional block average exactly and rejects corrupted claimed values.",
+                "General measure-theoretic conditional expectation is linked as Lean-horizon, not counted as finite solver evidence.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_tail_count_obstruction",
+        "title": "Finite Tail Count Obstruction",
+        "field_ids": ["statistics", "probability_theory", "discrete_math", "measure_theory"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite tail or count-obstruction row checks exact integer "
+            "counts, binomial or contingency margins, tail-event masses, and "
+            "bad threshold claims using finite enumeration plus LIA or LRA "
+            "certificate routes."
+        ),
+        "prerequisites": [
+            "bridge_probability_mass_table",
+            "curriculum_counting",
+            "curriculum_integers",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite enumeration",
+            "QF_LIA / Diophantine",
+            "QF_LRA / Farkas",
+            "exact rational tail bounds",
+            "finite count tables",
+        ],
+        "example_packs": [
+            (
+                "exact-statistical-tests-v0",
+                "Exact binomial tail counts, hypergeometric rows, and bad tail-count obstruction.",
+            ),
+            (
+                "descriptive-statistics-v0",
+                "Finite contingency-table counts and bad total-count rows.",
+            ),
+            (
+                "finite-concentration-v0",
+                "Finite tail-probability and bad concentration-bound rows.",
+            ),
+            (
+                "counting-v0",
+                "Finite counting rows and pigeonhole refutations that provide the count vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite count replay plus QF_LIA/Diophantine or QF_LRA/Farkas bad-threshold certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py, cargo test -p axeyum-solver --test math_resource_lia_routes, and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/exact-statistical-tests-end-to-end.md",
+                    "docs/learn/math/finite-concentration-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "Integer count contradictions use the Diophantine route; "
+                    "exact rational probability threshold contradictions use "
+                    "the Farkas route. In both cases the finite table is "
+                    "replayed before the solver artifact is trusted."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/exact-statistical-tests-end-to-end.md",
+            "docs/learn/math/finite-concentration-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite exact-test and tail rows do not prove asymptotic normality, CLT, concentration inequalities, or statistical inference guarantees.",
+            "Floating-point p-values, simulation, and sampling algorithms need separate numerical-honesty metadata before they become proof resources.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite population, table, trial count, event set, or threshold being counted.",
+                "The validator recomputes exact integer counts or rational tail masses before checking any solver certificate.",
+                "Bad count or probability-threshold rows carry the appropriate checked QF_LIA/Diophantine or QF_LRA/Farkas evidence.",
+            ],
+        },
+    },
+    {
         "id": "bridge_homomorphism_preservation",
         "title": "Finite Homomorphism Preservation",
         "field_ids": ["abstract_algebra", "set_theory_and_foundations"],

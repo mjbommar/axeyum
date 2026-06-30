@@ -645,6 +645,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   It is now part of `check-foundational-resources`, so any newly added
   unclassified pack appears in a freshness-checked queue.
 
+- **Probability/statistics bridge concepts landed.**
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
+  generates five bridge rows for finite probability mass tables, pushforward
+  distributions, stochastic kernels, conditional expectation, and tail/count
+  obstructions. The concept atlas now reports 70 rows total: 23 curriculum
+  rows, 18 field rows, 27 bridge rows, and 2 example-family rows.
+
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
   dashboard separates source `curriculum_status` from generated
@@ -1135,7 +1142,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with twenty-two bridge rows. The first proof-methodology rows are
+  is now generated with twenty-seven bridge rows. The first proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_bounded_theorem_shadow`, and `bridge_lean_horizon`; the analysis and
   topology boundary rows are `bridge_metric_ball`,
@@ -1144,16 +1151,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   linear-algebra computation rows are `bridge_lu_replay`,
   `bridge_rank_nullity`, `bridge_residual_bound`, `bridge_eigenpair`,
   `bridge_characteristic_polynomial`, and
-  `bridge_random_matrix_finite_moment`; the algebra-map rows are
+  `bridge_random_matrix_finite_moment`; the probability/statistics table rows
+  are `bridge_probability_mass_table`, `bridge_pushforward_distribution`,
+  `bridge_stochastic_kernel`, `bridge_conditional_expectation`, and
+  `bridge_tail_count_obstruction`; the algebra-map rows are
   `bridge_homomorphism_preservation`, `bridge_kernel_image`,
   `bridge_quotient_map`, `bridge_ideal_closure`, `bridge_module_action`,
   `bridge_tensor_bilinearity`, and `bridge_group_action`. The rows are
   generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 65 concept rows while preserving
-  23 curriculum rows and 18 field rows. Next resource work should add
-  either the next proof-frontier promotion or the remaining learner-audit pass,
+  foundational resource consumer now reports 70 concept rows while preserving
+  23 curriculum rows and 18 field rows. Next resource work should add the next
+  proof-frontier promotion or boundary evidence from a real repeated consumer,
   depending on which roadmap lane is being advanced.
 
 - **Proof-cookbook math examples landed.** The six active route recipes now
@@ -11754,6 +11764,13 @@ plan is built and committed on the current branch:
   from pack metadata, wired it into `check-foundational-resources`, and updated
   the curriculum buildout docs. The audit reports 84 promoted solver-reuse
   packs, 0 non-benchmark-horizon packs, and 0 unclassified packs.
+
+- **2026-06-30** — **Probability/statistics bridge concepts landed.**
+  Added generated bridge-concept rows for finite probability mass tables,
+  pushforward distributions, stochastic kernels, conditional expectation, and
+  tail/count obstructions. Regenerated the ontology and field dashboard; the
+  foundational concept atlas now validates at 70 rows: 23 curriculum rows,
+  18 field rows, 27 bridge rows, and 2 example-family rows.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

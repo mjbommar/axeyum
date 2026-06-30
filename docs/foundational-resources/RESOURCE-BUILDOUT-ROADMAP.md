@@ -37,7 +37,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 22 bridge-concept rows.
+- 27 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
 - 422 expected checks.
@@ -110,7 +110,7 @@ Near-term concept-row families:
 | algebraic structure maps | Current algebra packs are broad | homomorphism, kernel/image, quotient, action, ideal, module, tensor |
 | analysis/topology boundaries | Prevents overclaiming bounded examples | metric ball, epsilon-delta shadow, compactness shadow, connectedness shadow, continuity preimage |
 | matrix computation | Bridges education and solver corpora | LU replay, rank/nullity, residual bound, eigenpair, characteristic polynomial, finite random-matrix moment |
-| probability/statistics tables | Many packs share finite probability structure | pushforward, kernel, expectation, conditioning, tail-count obstruction |
+| probability/statistics tables | Many packs share finite probability structure | landed rows for finite probability mass tables, pushforward distributions, stochastic kernels, conditional expectation, and tail/count obstructions |
 | rules/law transfer | Reuses math concepts for policies | finite predicate, threshold, exception, precedence, temporal version |
 
 Graduation signal: `python3 scripts/validate-foundational-concepts.py` passes
@@ -1029,137 +1029,144 @@ Pick one item per commit unless the change is purely navigational.
     certificate route. Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe now each mutate an emitted resource
     certificate and require checker rejection in the route regression suite.
-12. Landed: promote `finite-group-actions-v0` through a source-linked
+12. Landed: add generated probability/statistics bridge-concept rows for
+    `bridge_probability_mass_table`, `bridge_pushforward_distribution`,
+    `bridge_stochastic_kernel`, `bridge_conditional_expectation`, and
+    `bridge_tail_count_obstruction`, tying existing finite probability,
+    measure, stochastic-kernel, random-variable, exact-test, concentration,
+    Markov-chain, hitting-time, and martingale packs to shared finite-table
+    vocabulary.
+13. Landed: promote `finite-group-actions-v0` through a source-linked
     QF_UF/Alethe regression for `bad-action-rejected`. The artifact
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_uf_routes finite_group_actions_bad_identity_emits_checked_alethe`.
-13. Landed: promote `finite-continuous-maps-v0` through a source-linked
+14. Landed: promote `finite-continuous-maps-v0` through a source-linked
     QF_UF/Alethe regression for `bad-continuous-map-rejected`. The artifact
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
-14. Landed: promote `finite-product-measure-v0` through a source-linked
+15. Landed: promote `finite-product-measure-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-product-measure-rejected`. The artifact
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_probability_emits_checked_farkas`.
-15. Landed: promote `finite-random-variables-v0` through a source-linked
+16. Landed: promote `finite-random-variables-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-pushforward-rejected`. The artifact
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_random_variables_bad_pushforward_emits_checked_farkas`.
-16. Landed: promote `finite-integration-v0` through a source-linked
+17. Landed: promote `finite-integration-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-expectation-rejected`. The artifact
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_integration_bad_expectation_emits_checked_farkas`.
-17. Landed: promote `finite-martingales-v0` through a source-linked
+18. Landed: promote `finite-martingales-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-martingale-rejected`. The artifact
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas`.
-18. Landed: promote `finite-markov-chain-v0` at the solver-reuse metadata layer
+19. Landed: promote `finite-markov-chain-v0` at the solver-reuse metadata layer
     for `bad-stochastic-row-rejected`. The existing source artifact
     `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas`.
-19. Landed: revisited the library boundary decision after promoted solver-reuse
+20. Landed: revisited the library boundary decision after promoted solver-reuse
     rows reached the consumer query layer. The decision remains JSON-first and
     in-repo: `scripts/query-foundational-resources.py packs --solver-reuse
     promoted --require-any` proves promoted rows are consumer-readable, but no
     external consumer or repeated typed API need justifies a crate or repo split.
-20. Landed: promote `finite-concentration-v0` through a source-linked
+21. Landed: promote `finite-concentration-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-concentration-bound-rejected`. The artifact
     `artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas`.
-21. Landed: promote `finite-conditional-expectation-v0` through a source-linked
+22. Landed: promote `finite-conditional-expectation-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-conditional-expectation-rejected`. The
     existing artifact
     `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas`.
-22. Landed: promote `finite-hitting-times-v0` through a source-linked
+23. Landed: promote `finite-hitting-times-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-expected-time-rejected`. The existing
     artifact
     `artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_expected_time_emits_checked_farkas`.
-23. Landed: promote `finite-euler-method-v0` through a source-linked
+24. Landed: promote `finite-euler-method-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-euler-step-rejected`. The existing
     artifact
     `artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas`.
-24. Landed: promote `polynomial-identities-v0` through a source-linked
+25. Landed: promote `polynomial-identities-v0` through a source-linked
     QF_LIA/Diophantine regression for `false-rational-root-rejected`. The
     artifact
     `artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence`.
-25. Landed: promote `finite-predicate-v0` through a source-linked Bool/CNF
+26. Landed: promote `finite-predicate-v0` through a source-linked Bool/CNF
     DRAT/LRAT regression for `forall-implies-exists-finite`. The artifact
     `artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf`
     is checked by
     `cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat`.
-26. Landed: promote `calculus-riemann-sum-v0` through a source-linked
+27. Landed: promote `calculus-riemann-sum-v0` through a source-linked
     QF_LRA/Farkas regression for `false-integral-claim-rejected`. The artifact
     `artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas`.
-27. Landed: promote `sequence-limit-shadow-v0` through a source-linked
+28. Landed: promote `sequence-limit-shadow-v0` through a source-linked
     QF_LRA/Farkas regression for `bounded-cauchy-tail-no-counterexample`. The
     artifact
     `artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas`.
-28. Landed: promote `multivariable-calculus-rational-v0` through a
+29. Landed: promote `multivariable-calculus-rational-v0` through a
     source-linked QF_LRA/Farkas regression for `bad-gradient-rejected`. The
     artifact
     `artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas`.
-29. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
+30. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
     QF_LRA/Farkas regression for `false-derivative-value-rejected`. The artifact
     `artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas`.
-30. Landed: promote `complex-plane-transforms-v0` through a source-linked
+31. Landed: promote `complex-plane-transforms-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-unit-square-real-part-rejected`. The
     artifact
     `artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas`.
-31. Landed: promote `induction-obligations-v0` through a source-linked
+32. Landed: promote `induction-obligations-v0` through a source-linked
     QF_LIA arithmetic-DPLL regression for `sum-formula-step-bounded`. The
     artifact
     `artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence`.
-32. Landed: promote `cardinality-principles-v0` through a source-linked
+33. Landed: promote `cardinality-principles-v0` through a source-linked
     QF_LIA/Diophantine regression for `overlap-additivity-count-conflict`. The
     artifact
     `artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence`.
-33. Landed: promote `polynomial-factorization-rational-v0` through a
+34. Landed: promote `polynomial-factorization-rational-v0` through a
     source-linked QF_LRA/Farkas regression for
     `irreducible-quadratic-discriminant-conflict`. The artifact
     `artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas`.
-34. Landed: promote `reals-rcf-shadow-v0` through a source-linked QF_LRA/Farkas
+35. Landed: promote `reals-rcf-shadow-v0` through a source-linked QF_LRA/Farkas
     regression for `negative-discriminant-farkas-conflict`. The artifact
     `artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas`.
-35. Landed: promote `finite-measure-v0` through a source-linked QF_LRA/Farkas
+36. Landed: promote `finite-measure-v0` through a source-linked QF_LRA/Farkas
     regression for `bad-complement-measure-rejected`. The artifact
     `artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas`.
-36. Continue proof-route promotions or consumer-query examples; revisit the
+37. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

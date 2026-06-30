@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 22 bridge-concept rows.
+- 27 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -323,6 +323,10 @@ Pick one row per commit unless the change is purely navigational.
    stay machine-visible.
 28. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
+29. Landed: add generated probability/statistics bridge rows for finite
+   probability mass tables, pushforward distributions, stochastic kernels,
+   conditional expectation, and tail/count obstructions, keeping the finite
+   table and theorem-horizon vocabulary shared across existing packs.
 
 ## Validation Checklist
 
