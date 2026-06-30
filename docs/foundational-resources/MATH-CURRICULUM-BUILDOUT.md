@@ -1369,7 +1369,8 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `multivariable-calculus-rational-v0`, Phase M4 graph-resource
 group and items 4-31, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
-and the route-oriented matrix-computation index have landed for the math seed.
+the route-oriented matrix-computation index, and the analysis/calculus
+theorem-horizon map have landed for the math seed.
 End-to-end lessons now exist for propositional
 logic basics, finite predicate logic, proof by refutation, proof method
 patterns, induction obligations, induction patterns, graph coloring, graph
@@ -2011,6 +2012,13 @@ which groups LU, rank/nullity, residual, projection, eigenpair,
 characteristic-polynomial, finite random-matrix, chain-complex, operator,
 module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
 QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundaries.
+The learner/planning layer now also has
+[`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md),
+which maps real completeness, IVT/MVT/FTC, compactness, convergence,
+root-finding, optimization, measure/probability, functional-analysis/operator,
+and dynamics finite shadows to checked evidence routes, missing Lean/theorem
+dependencies, and next build artifacts without counting finite checks as
+general theorem proofs.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

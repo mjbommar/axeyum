@@ -1338,6 +1338,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/linear-optimization-end-to-end.md",
             "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -1473,6 +1474,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
                     "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -1492,6 +1494,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -2205,6 +2208,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                 ],
                 "notes": (
                     "Exact finite shadows are checked as examples or regressions; "
@@ -2216,6 +2220,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
@@ -2283,6 +2288,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
                     "docs/learn/math/analysis-topology-proof-horizons.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                 ],
                 "notes": (
                     "The finite checker recomputes the ball from the distance "
@@ -2296,6 +2302,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
@@ -2381,6 +2388,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -2464,6 +2472,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-compactness-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
         ],
@@ -2546,6 +2555,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-connectedness-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
         ],
@@ -2628,6 +2638,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-continuous-maps-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
@@ -3236,6 +3247,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/finite-measure-monotonicity-end-to-end.md",
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
                     "docs/learn/math/probability-and-statistics.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -3253,6 +3265,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-measure-end-to-end.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-FIELDS.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -3334,6 +3347,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/finite-probability-end-to-end.md",
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -3350,6 +3364,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-probability-end-to-end.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -3433,6 +3448,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/finite-random-variables-end-to-end.md",
             "docs/learn/math/random-matrix-finite-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -3514,6 +3530,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/finite-stochastic-kernels-end-to-end.md",
                     "docs/learn/math/finite-markov-chain-end-to-end.md",
                     "docs/learn/math/finite-hitting-times-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -3529,6 +3546,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-stochastic-kernels-end-to-end.md",
             "docs/learn/math/finite-markov-chain-end-to-end.md",
             "docs/learn/math/finite-hitting-times-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -3604,6 +3622,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/finite-conditional-expectation-end-to-end.md",
                     "docs/learn/math/finite-martingales-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -3620,6 +3639,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-conditional-expectation-end-to-end.md",
             "docs/learn/math/finite-martingales-end-to-end.md",
             "docs/learn/math/finite-integration-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -3703,6 +3723,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/finite-product-measure-end-to-end.md",
                     "docs/learn/math/finite-integration-end-to-end.md",
                     "docs/learn/math/finite-conditional-expectation-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -3721,6 +3742,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-integration-end-to-end.md",
             "docs/learn/math/finite-conditional-expectation-end-to-end.md",
             "docs/learn/math/finite-random-variables-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -4734,6 +4756,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/inner-product-spaces-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -4751,6 +4774,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
@@ -4834,6 +4858,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/finite-operator-end-to-end.md",
                     "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -4853,6 +4878,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
@@ -4930,6 +4956,7 @@ BRIDGE_CONCEPTS = [
         "source_refs": [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [

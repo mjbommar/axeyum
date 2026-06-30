@@ -1487,7 +1487,14 @@ Pick one item per commit unless the change is purely navigational.
     operator, module, and tensor rows by proof route, with explicit
     finite-replay, QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine,
     Lean-horizon, and numerical-honesty boundaries.
-74. Continue proof-route promotions or consumer-query examples; revisit the
+74. Landed: add
+    [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md).
+    The new learner/planning map groups real completeness, IVT/MVT/FTC,
+    compactness, convergence, root-finding, optimization, measure/probability,
+    functional-analysis/operator, and dynamics theorem horizons by current
+    finite shadow, checked evidence route, missing Lean/theorem dependency, and
+    next build artifact.
+75. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

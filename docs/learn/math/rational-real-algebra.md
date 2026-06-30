@@ -40,6 +40,10 @@ Example packs:
 - [finite-inversion-geometry-v0](../../../artifacts/examples/math/finite-inversion-geometry-v0/)
 - [finite-cyclic-geometry-v0](../../../artifacts/examples/math/finite-cyclic-geometry-v0/)
 
+Companion map:
+
+- [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+
 ## What Axeyum Checks
 
 The real-algebra path is currently exact rational arithmetic plus algebraic

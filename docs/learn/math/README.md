@@ -29,6 +29,12 @@ Source maps:
 Each cluster page includes an `Encode / Check Walkthrough` section with
 validated pack data and the repo-root command that replays it.
 
+Companion maps:
+
+- [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
+  maps finite analysis, calculus, optimization, measure, dynamics, and operator
+  shadows to their missing Lean/theorem reconstruction routes.
+
 ## End-To-End Lessons
 
 - [Logic Basics](logic-basics-end-to-end.md): follows Boolean assignment replay,
@@ -207,6 +213,9 @@ validated pack data and the repo-root command that replays it.
   rank/nullity, residual, projection, eigenpair, characteristic-polynomial,
   random-matrix, module, tensor, chain-complex, and operator rows by proof
   route and theorem horizon.
+- [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
+  groups finite analysis, calculus, optimization, measure, dynamics, and
+  operator shadows by the general theorem route needed before graduation.
 - [Matrix Invariants](matrix-invariants-end-to-end.md): follows exact trace,
   determinant, characteristic-polynomial, root, Cayley-Hamilton, Gershgorin,
   and a QF_LRA/Farkas bad-characteristic-polynomial certificate for a fixed

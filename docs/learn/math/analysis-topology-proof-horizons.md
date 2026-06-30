@@ -41,6 +41,10 @@ Example packs:
 - [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 
+Companion map:
+
+- [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+
 ## What Axeyum Checks
 
 The checkable slice is finite or bounded: finite topological spaces, exact

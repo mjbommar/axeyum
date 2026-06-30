@@ -227,6 +227,12 @@ projection, eigenpair, characteristic-polynomial, finite random-matrix,
 chain-complex, operator, module, and tensor rows by replay, QF_LRA/Farkas,
 QF_UF/Alethe, QF_LIA/Diophantine, Lean-horizon, and numerical-honesty
 boundaries.
+The analysis/calculus theorem-horizon map now groups real completeness,
+IVT/MVT/FTC, compactness/connectedness, sequence and recurrence convergence,
+root-finding convergence, optimization convergence/duality,
+measure/probability convergence, functional-analysis/operator theory, and
+dynamics by finite shadow, checked evidence route, missing Lean/theorem
+dependency, and next build artifact.
 Those four certificate anatomy stories now also have first-class bridge rows in
 the foundational concept atlas, making the active proof-object routes queryable
 through shared R1 vocabulary.

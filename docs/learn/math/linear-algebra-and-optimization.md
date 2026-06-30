@@ -49,6 +49,7 @@ Example packs:
 Companion index:
 
 - [Matrix Computation Index](matrix-computation-index.md)
+- [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 
 ## What Axeyum Checks
 

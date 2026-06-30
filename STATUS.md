@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Analysis/calculus theorem-horizon map landed.**
+  [`analysis-calculus-theorem-horizon-map.md`](docs/learn/math/analysis-calculus-theorem-horizon-map.md)
+  now maps real completeness, IVT/MVT/FTC, compactness/connectedness, sequence
+  and recurrence convergence, root-finding convergence, optimization
+  convergence/duality, measure/probability convergence,
+  functional-analysis/operator theory, and dynamics from finite shadows to
+  missing Lean/theorem reconstruction routes. The atlas generator now cites
+  this page from analysis, topology, optimization, measure/probability,
+  stochastic/dynamics, operator, and generic Lean-horizon bridge rows; the
+  resource baseline remains unchanged because no new pack or concept row was
+  added.
+
 - **Matrix-computation learner index landed.**
   [`matrix-computation-index.md`](docs/learn/math/matrix-computation-index.md)
   now groups LU, rank/nullity, residual, projection, eigenpair,

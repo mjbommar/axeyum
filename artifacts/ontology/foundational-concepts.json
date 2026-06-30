@@ -2839,6 +2839,7 @@
         "docs/learn/math/linear-optimization-end-to-end.md",
         "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -3001,6 +3002,7 @@
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
@@ -3014,6 +3016,7 @@
         "docs/learn/math/multivariable-calculus-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -3819,7 +3822,8 @@
           "sources": [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
-            "docs/proof-cookbook/recipes/lean-horizon-template.md"
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md"
           ],
           "notes": "Exact finite shadows are checked as examples or regressions; the unbounded theorem remains open until a Lean route lands."
         }
@@ -3828,6 +3832,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
@@ -3906,7 +3911,8 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
-            "docs/learn/math/analysis-topology-proof-horizons.md"
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md"
           ],
           "notes": "The finite checker recomputes the ball from the distance table and rational radius; solver evidence is only needed when a later negative row isolates a linear contradiction."
         }
@@ -3916,6 +3922,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/finite-topology-measure-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
@@ -4012,6 +4019,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -4104,6 +4112,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/finite-compactness-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
       ],
@@ -4195,6 +4204,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/finite-connectedness-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
       ],
@@ -4286,6 +4296,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/finite-continuous-maps-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
@@ -4969,6 +4980,7 @@
             "docs/learn/math/finite-measure-monotonicity-end-to-end.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite checker recomputes event membership and atom sums exactly; false complement, monotonicity, or additivity claims are promoted only when the exact rational contradiction has checked QF_LRA/Farkas evidence."
@@ -4981,6 +4993,7 @@
         "docs/learn/math/finite-measure-end-to-end.md",
         "docs/learn/math/finite-topology-measure-end-to-end.md",
         "docs/learn/math/probability-and-statistics.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-FIELDS.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -5078,6 +5091,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/finite-probability-end-to-end.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite checker recomputes atom sums and event masses exactly; malformed normalization, complement, Bayes, or product rows graduate only when the final rational conflict carries checked Farkas evidence."
@@ -5089,6 +5103,7 @@
         "docs/learn/math/finite-probability-end-to-end.md",
         "docs/learn/math/finite-topology-measure-end-to-end.md",
         "docs/learn/math/probability-and-statistics.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -5181,6 +5196,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/finite-random-variables-end-to-end.md",
         "docs/learn/math/random-matrix-finite-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -5272,6 +5288,7 @@
             "docs/learn/math/finite-stochastic-kernels-end-to-end.md",
             "docs/learn/math/finite-markov-chain-end-to-end.md",
             "docs/learn/math/finite-hitting-times-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite checker recomputes row sums, transition composition, and expected-time equations exactly; bad row or threshold claims use checked Farkas evidence."
@@ -5283,6 +5300,7 @@
         "docs/learn/math/finite-stochastic-kernels-end-to-end.md",
         "docs/learn/math/finite-markov-chain-end-to-end.md",
         "docs/learn/math/finite-hitting-times-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -5373,6 +5391,7 @@
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-conditional-expectation-end-to-end.md",
             "docs/learn/math/finite-martingales-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite checker recomputes block probabilities and weighted averages exactly; general conditional expectation remains a Lean horizon."
@@ -5385,6 +5404,7 @@
         "docs/learn/math/finite-conditional-expectation-end-to-end.md",
         "docs/learn/math/finite-martingales-end-to-end.md",
         "docs/learn/math/finite-integration-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -5485,6 +5505,7 @@
             "docs/learn/math/finite-product-measure-end-to-end.md",
             "docs/learn/math/finite-integration-end-to-end.md",
             "docs/learn/math/finite-conditional-expectation-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite checker recomputes product atom masses, marginals, iterated sums, indicator integrals, and expectations exactly; false product or integral claims graduate only with checked QF_LRA/Farkas evidence."
@@ -5498,6 +5519,7 @@
         "docs/learn/math/finite-integration-end-to-end.md",
         "docs/learn/math/finite-conditional-expectation-end-to-end.md",
         "docs/learn/math/finite-random-variables-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -6625,6 +6647,7 @@
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite pack recomputes each rational inner-product quantity first; checked Farkas evidence is used only for the small bad positivity or linear-equation conflict."
@@ -6638,6 +6661,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/inner-product-spaces-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
@@ -6731,6 +6755,7 @@
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "Finite operator and Chebyshev packs replay the exact matrix, norm, recurrence, or interpolation calculation before handing the resulting small rational conflict to the shared Farkas route."
@@ -6745,6 +6770,7 @@
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/finite-operator-end-to-end.md",
         "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
@@ -6831,6 +6857,7 @@
       "source_refs": [
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [

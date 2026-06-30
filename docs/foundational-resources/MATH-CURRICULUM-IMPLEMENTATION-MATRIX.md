@@ -391,7 +391,13 @@ Build sequence:
     characteristic-polynomial, finite random-matrix, chain-complex, operator,
     module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
     QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundary.
-42. Revisit crate/repo boundaries only after three real consumers or repeated
+42. [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md)
+    now maps analysis/calculus-adjacent finite shadows to their theorem
+    horizons: real completeness, IVT/MVT/FTC, compactness/connectedness,
+    sequence and recurrence convergence, root-finding convergence,
+    optimization convergence and duality, measure/probability convergence,
+    functional/operator theory, and dynamics.
+43. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

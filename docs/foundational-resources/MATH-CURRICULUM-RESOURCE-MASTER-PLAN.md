@@ -327,9 +327,12 @@ Use one row per commit unless the change is purely navigational.
 4. Landed: add a matrix-computation index page that groups LU, rank/nullity,
    residual, eigenpair, characteristic-polynomial, random-matrix, projection,
    chain-complex, operator, and tensor/module rows by proof route.
-5. Add a theorem-horizon map for analysis/calculus: completeness, IVT/MVT/FTC,
-   compactness, convergence, root-finding convergence, optimization convergence,
-   and measure convergence.
+5. Landed: add
+   [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md),
+   mapping completeness, IVT/MVT/FTC, compactness, sequence convergence,
+   recurrence/asymptotics, root-finding convergence, optimization convergence,
+   measure/probability convergence, functional analysis, and dynamics from
+   finite shadows to missing Lean/theorem reconstruction routes.
 6. Promote one replay-heavy family per route only when a compact source artifact
    exists and a route-specific regression can check it.
 7. Add rules/law crosswalk examples only by reusing existing math-resource

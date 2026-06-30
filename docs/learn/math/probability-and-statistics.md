@@ -27,6 +27,10 @@ Example packs:
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 
+Companion map:
+
+- [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+
 ## What Axeyum Checks
 
 The statistics path is exact and finite. It checks probability mass tables,

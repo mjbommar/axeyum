@@ -547,6 +547,14 @@ Pick one row per commit unless the change is purely navigational.
     chain-complex, operator, module, and tensor rows. The index groups existing
     validated packs by replay, QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine,
     Lean-horizon, and numerical-honesty boundaries.
+63. Landed: add
+    [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md)
+    as the theorem-horizon map for analysis/calculus-adjacent resources. The
+    page groups completeness, IVT/MVT/FTC, compactness, sequence convergence,
+    recurrence/asymptotics, root-finding convergence, optimization convergence,
+    measure/probability convergence, functional analysis/operator theory, and
+    dynamics by current finite shadow, checked evidence route, missing Lean
+    dependency, and next build artifact.
 
 ## Validation Checklist
 
