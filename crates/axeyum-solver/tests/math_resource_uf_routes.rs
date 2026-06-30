@@ -44,6 +44,9 @@ const FINITE_MODULES_BAD_SUBMODULE: &str = include_str!(
 const FINITE_IDEALS_BAD_IDEAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2"
 );
+const FINITE_IDEALS_QUOTIENT_REPRESENTATIVE_CONGRUENCE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2"
+);
 const FINITE_TENSOR_PRODUCTS_BAD_BILINEAR: &str = include_str!(
     "../../../artifacts/examples/math/finite-tensor-products-v0/smt2/bad-bilinear-left-additivity-conflict.smt2"
 );
@@ -139,6 +142,14 @@ fn finite_modules_bad_submodule_emits_checked_alethe() {
 #[test]
 fn finite_ideals_bad_ideal_emits_checked_alethe() {
     assert_resource_euf_alethe("finite-ideals-v0 bad ideal", FINITE_IDEALS_BAD_IDEAL);
+}
+
+#[test]
+fn finite_ideals_quotient_representative_congruence_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-ideals-v0 quotient representative congruence",
+        FINITE_IDEALS_QUOTIENT_REPRESENTATIVE_CONGRUENCE,
+    );
 }
 
 #[test]

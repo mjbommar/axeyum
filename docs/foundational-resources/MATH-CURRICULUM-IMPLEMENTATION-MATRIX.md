@@ -70,9 +70,9 @@ Every new or upgraded resource should answer these questions before it lands:
 | `reals` | RCF shadow, bounded real analysis, metric continuity | Add concept rows for balls, limits, continuity, compactness, and completeness horizons. | QF_LRA/Farkas for bounded bad-delta rows, QF_LRA/NRA for algebraic shadows; Lean horizon for completeness/general topology. | Each epsilon-delta pack says fixed rational instance vs theorem, and metric-continuity now has a checked finite bad-delta route. |
 | `complex` | complex algebraic and transform packs | Add real-pair encoding note and analytic-horizon rows. | NRA/LRA real-pair replay; Lean horizon for holomorphic theory. | Algebraic complex checks avoid claiming analytic coverage. |
 | `divisibility-and-euclid` | `gcd-bezout-v0` | Add reusable gcd/divisibility witness schema for number-theory and algebra packs. | Computed witness replay; QF_LIA for divisibility obstructions. | Bezout rows validate both gcd and coefficient identity. |
-| `modular-arithmetic` | modular arithmetic and finite ideals | Add quotient-ring and CRT bridge rows. | QF_LIA/Diophantine and QF_BV fixed-width finite residues. | Nonunit inverse rows carry checked arithmetic evidence. |
+| `modular-arithmetic` | modular arithmetic and finite ideals | Add quotient-ring and CRT bridge rows. | QF_LIA/Diophantine, QF_UF/Alethe quotient congruence, and QF_BV fixed-width finite residues. | Nonunit inverse rows carry checked arithmetic evidence; quotient rows distinguish table replay from representative congruence. |
 | `groups` | finite groups, monoids, permutations, actions, homomorphisms | Landed bridge rows for homomorphism preservation, kernel/image replay, quotient maps, and finite group actions; orbit-stabilizer and Burnside can split later if reused broadly. | QF_UF/Alethe for table congruence and action-law conflicts. | Table checks keep associativity/action-law replay explicit. |
-| `rings` | finite rings, ideals, modules, homomorphisms | Extend the landed finite-ring BV route from bad distributivity to more fixed finite ring-table contradictions. | QF_BV bit-blast/DRAT plus QF_UF/Alethe for homomorphism preservation. | Unsat finite-ring rows carry checked CNF evidence without overclaiming Lean. |
+| `rings` | finite rings, ideals, modules, homomorphisms | Extend the landed finite-ring BV route from bad distributivity to more fixed finite ring-table contradictions. | QF_BV bit-blast/DRAT plus QF_UF/Alethe for homomorphism preservation and quotient representative congruence. | Unsat finite-ring rows carry checked CNF or Alethe evidence without overclaiming Lean. |
 | `fields` | finite fields, vector/dual/tensor packs | Extend the landed finite-field BV route from composite no-inverse to more fixed finite-field arithmetic contradictions, then add field-linear-algebra bridge rows for bases, covectors, and bilinear maps. | QF_BV for finite fields; QF_UF/Alethe for table equality conflicts. | Composite-modulus non-field contrast has a checked route. |
 | `polynomials` | identities, rational factorization, generating functions | Add coefficient-ring and polynomial-division reusable rows. | Finite replay, QF_LIA/LRA coefficient constraints, Lean horizon for general factorization. | Factorization rows replay product and degree/leading constraints. |
 | `sequences-and-limits` | sequence-limit shadow, real-analysis, generating functions | Add bounded tail, Cauchy, recurrence, and convergence-horizon rows. | Finite replay/LRA for bounded tails; Lean horizon for general convergence. | Lessons keep finite prefix evidence separate from convergence theorems. |
@@ -206,7 +206,7 @@ Build sequence:
    probability/statistics, and algebra/number theory.
 8. Recurring finite algebra equality conflicts now have the
    `family_finite_algebra_alethe` example-family row, backed by the shared
-   `math_resource_uf_routes` regression.
+   14-case `math_resource_uf_routes` regression.
 9. Recurring exact-rational infeasibility conflicts now have the
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
@@ -248,6 +248,10 @@ Build sequence:
     `finite-stochastic-kernels-v0` now links `bad-kernel-row-rejected` to
     `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    `finite-ideals-v0` now links
+    `qf-uf-quotient-ring-representative-alethe` to
+    `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
+    checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

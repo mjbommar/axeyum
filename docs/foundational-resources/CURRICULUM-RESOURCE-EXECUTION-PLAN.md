@@ -136,7 +136,7 @@ Priority proof upgrades:
 | CNF/LRAT | graph coloring, pigeonhole, finite counting refutations | smallest trusted-small-checking story |
 | QF_LRA/Farkas | rationals, LP, convexity, linear systems, finite concentration bounds | exact rational arithmetic with strong certificate story |
 | QF_LIA/Diophantine | gcd, integer linear arithmetic, exact statistical tests, homology rank rows | common arithmetic obstruction pattern |
-| QF_UF/Alethe | equivalence classes, functions, finite algebra homomorphisms, monoids | equality-heavy finite structure checks |
+| QF_UF/Alethe | equivalence classes, functions, finite algebra homomorphisms, monoids, ideals | equality-heavy finite structure and quotient congruence checks |
 | Lean horizon | induction, limits, compactness, measure, general algebra, Chebyshev spaces | general theorem layer beyond bounded replay |
 
 Exit criteria:
@@ -372,7 +372,9 @@ Next buildout:
    examples.
    Status: the first high-use learner-page route-note pass now names these
    routes and their trust boundaries; `family_finite_algebra_alethe` now groups
-   the recurring checked finite-algebra EUF/Alethe conflicts.
+   the recurring checked finite-algebra EUF/Alethe conflicts, including the
+   finite-ideals quotient representative congruence row through the 14-case
+   `math_resource_uf_routes` regression.
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-pressure view now
@@ -425,6 +427,9 @@ Next buildout:
    `finite-chebyshev-systems-v0` now adds
    `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_lra_routes.rs`.
+   `finite-ideals-v0` now adds
+   `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
+   checked from `crates/axeyum-solver/tests/math_resource_uf_routes.rs`.
 11. Add a rules/law reasoning resource plan that explicitly reuses finite
     predicates, graph reachability, optimization, and proof-route vocabulary.
 12. Add generated typed-consumer sketches only after at least one downstream

@@ -163,6 +163,24 @@
       "notes": "The validator checks the ideal cosets, quotient addition, quotient multiplication, and quotient ring axioms."
     },
     {
+      "id": "qf-uf-quotient-ring-representative-alethe",
+      "claim": "Quotient-ring addition is independent of choosing congruent representatives.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "representative_equalities": [
+          "quotient(0) = quotient(2)",
+          "quotient(1) = quotient(3)"
+        ],
+        "quotient_congruence_claim": "qadd(quotient(0), quotient(1)) = qadd(quotient(2), quotient(3))",
+        "smt2_artifact": "artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_ideals_quotient_representative_congruence_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
+      },
+      "notes": "The SMT-LIB artifact equates the quotient classes of 0 and 2 and of 1 and 3, then refutes equality of quotient addition over those representative pairs. Axeyum emits a pure EUF Alethe refutation for the congruence conflict."
+    },
+    {
       "id": "bad-ideal-rejected",
       "claim": "The subset {0,2} is an ideal of Z/6Z.",
       "expected_result": "unsat",

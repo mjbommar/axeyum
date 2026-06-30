@@ -452,7 +452,8 @@ tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the finite quotient-ring bridge with `Z/6Z`
 ideal replay, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring table replay, checked QF_UF/Alethe
-non-ideal rejection, and a general ideal-theory Lean-horizon row.
+non-ideal rejection, checked quotient representative congruence, and a general
+ideal-theory Lean-horizon row.
 `gcd-bezout-v0` now
 validates gcd/common-divisor replay, Bezout coefficient replay, direct
 divisibility witnesses, and a checked linear Diophantine gcd obstruction.
@@ -536,8 +537,8 @@ Recommended order:
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0` and `finite-ideals-v0`: CRT, modular inverse,
    residue witness checks, a checked QF_LIA nonunit Diophantine obstruction,
-   modular ring ideals, quotient-ring replay, and ring-homomorphism
-   kernel/image checks.
+   modular ring ideals, quotient-ring replay, quotient representative
+   congruence, and ring-homomorphism kernel/image checks.
 5. `finite-fields-v0` (landed), `finite-algebra-homomorphisms-v0`
    (landed), `finite-ideals-v0` (landed), `finite-vector-spaces-v0`
    (landed), `finite-dual-spaces-v0` (landed), `finite-modules-v0`
@@ -547,7 +548,8 @@ Recommended order:
    `finite-tensor-products-v0` (landed): prime-field axioms,
    composite-modulus counterexample, finite homomorphism tables, kernel/image
    replay, quotient maps, quotient rings, induced-map checks, QF_UF/Alethe
-   homomorphism-preservation proof rows, finite monoids, unit/idempotent replay,
+   homomorphism-preservation and quotient representative congruence proof rows,
+   finite monoids, unit/idempotent replay,
    finite permutation groups, cycle/sign replay,
    finite group actions, orbit/stabilizer replay, Burnside counting, finite
    vector spaces over `F2`, finite dual spaces and
@@ -1296,7 +1298,8 @@ tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the exact finite quotient-ring bridge over `Z/6Z`:
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring tables, checked QF_UF/Alethe non-ideal
-rejection, and an ideal-theory Lean-horizon row.
+rejection, checked quotient representative congruence, and an ideal-theory
+Lean-horizon row.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
 monotone-map fixed-point replay, checked QF_UF/Alethe bad-order rejection, and

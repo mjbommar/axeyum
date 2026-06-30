@@ -28,6 +28,16 @@ Expected result: `sat`.
 The validator checks that the even and odd cosets partition `Z/6Z`, then
 verifies quotient addition and multiplication from representatives.
 
+## `qf-uf-quotient-ring-representative-alethe`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact checks the congruence obligation behind quotient-ring
+well-definedness: if `0` and `2` are the same quotient class, and `1` and `3`
+are the same quotient class, then quotient addition on those representative
+pairs must agree. The row links that fixed EUF contradiction to checked
+QF_UF/Alethe evidence.
+
 ## `bad-ideal-rejected`
 
 Expected result: `unsat`.

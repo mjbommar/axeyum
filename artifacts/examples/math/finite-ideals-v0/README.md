@@ -12,6 +12,7 @@ The pack covers:
 - reduction modulo `2` as a unital ring homomorphism;
 - kernel/image replay for that ring homomorphism;
 - quotient-ring addition and multiplication table replay;
+- checked quotient-ring representative congruence with QF_UF/Alethe evidence;
 - checked rejection of a non-ideal subset with QF_UF/Alethe evidence;
 - a Lean-horizon row for general ideal and quotient-ring theory.
 
@@ -30,6 +31,10 @@ coset tables. It checks ring axioms, ideal additive subgroup closure, left and
 right absorption by every ring element, finite generated-ideal closure,
 ring-homomorphism preservation, kernel/image recomputation, and quotient-ring
 operations from representatives.
+
+The quotient representative row links the well-definedness obligation to a
+small QF_UF/Alethe proof: equal quotient classes must produce equal quotient
+addition results, independent of representative choice.
 
 For the bad ideal row, exact replay computes `2 + 2 = 4` in `Z/6Z` while the
 claimed subset marks `2` present and `4` absent. The linked `QF_UF` artifact

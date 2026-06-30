@@ -30,6 +30,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite ideal quotient-ring QF_UF/Alethe representative-congruence seed",
+    "pressure": "Quotient-ring addition must be independent of choosing representatives from the same ideal cosets; the fixed EUF row refutes a false distinction between even/odd representative additions.",
+    "evidence": [
+      "qf-uf-quotient-ring-representative-alethe"
+    ],
+    "next_step": "Promote additional ideal or quotient rows only when they add distinct congruence pressure; keep correspondence theorems, localization, and prime/maximal ideal theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/rings.md",
     "docs/curriculum/02-structures/fields.md",
@@ -39,6 +48,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
@@ -46,12 +56,14 @@
     "principal-ideal-span-replay",
     "mod-two-ring-hom-kernel-image",
     "quotient-ring-replay",
+    "qf-uf-quotient-ring-representative-alethe",
     "bad-ideal-rejected",
     "general-ideal-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite ideal and quotient-ring tables as deterministic finite-function and equality obligations.",
     "Replay ideal membership, principal-ideal generation, ring-homomorphism kernel/image, and quotient-ring witnesses through Axeyum model evaluation.",
+    "Route quotient representative congruence through checked QF_UF/Alethe evidence so quotient operations do not silently trust representative choice.",
     "Route bad finite ideal additive-closure conflicts through checked QF_UF/Alethe evidence once exact evaluation replay identifies the failing sum.",
     "Keep general ideal theory, quotient-ring theorems, correspondence theorems, localization, prime/maximal ideals, and algebraic geometry under Lean horizon until formal routes exist."
   ]

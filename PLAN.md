@@ -115,7 +115,7 @@ QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.
 The first example-family row now groups the recurring finite-algebra
 QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
-backed by the 13-case `math_resource_uf_routes` regression.
+backed by the 14-case `math_resource_uf_routes` regression.
 The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
 backed by the 24-test `math_resource_lra_routes` regression and scoped to
@@ -156,7 +156,8 @@ Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,
 bad subspace-closure, covector-additivity, submodule scalar-closure, ideal
-additive-closure, and bilinear left-additivity rows.
+additive-closure plus quotient-ring representative congruence, and bilinear
+left-additivity rows.
 Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
@@ -187,8 +188,9 @@ polynomial row, and finite Chebyshev systems now promoted for the duplicate-node
 determinant conflict, metric continuity now promoted for the finite
 bad-delta output-bound conflict, and finite stochastic kernels now promoted for
 the bad kernel-row normalization conflict. The first secondary QF_LRA/Farkas
-target set is now covered, the initial equality-heavy QF_UF/Alethe secondary set is now
-covered, and the first QF_BV bit-blast/DRAT resource promotion now covers the
+target set is now covered, the initial equality-heavy QF_UF/Alethe secondary
+set is now covered including the finite-ideals quotient representative row, and
+the first QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity row, the finite-fields composite no-inverse row,
 and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
 number theory now promoted for the modulo-7 quadratic nonresidue row; finite

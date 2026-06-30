@@ -4903,6 +4903,34 @@ def validate_finite_ideals(expected: dict[str, Any]) -> None:
     if failures:
         fail(f"quotient-ring-replay quotient tables failed ring axioms: {failures[0]}")
 
+    quotient_alethe = checks["qf-uf-quotient-ring-representative-alethe"]
+    if quotient_alethe["expected_result"] != "unsat" or quotient_alethe.get("proof_status") != "checked":
+        fail("qf-uf-quotient-ring-representative-alethe must be a checked unsat row")
+    if quotient_alethe["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-quotient-ring-representative-alethe must use the QF_UF/Alethe route")
+    data = quotient_alethe.get("data", {})
+    equalities = require_string_list(
+        "quotient representative equalities",
+        data.get("representative_equalities"),
+    )
+    if set(equalities) != {"quotient(0) = quotient(2)", "quotient(1) = quotient(3)"}:
+        fail("qf-uf-quotient-ring-representative-alethe must document both representative equalities")
+    quotient_claim = data.get("quotient_congruence_claim")
+    require_string("quotient representative congruence claim", quotient_claim)
+    if quotient_claim != "qadd(quotient(0), quotient(1)) = qadd(quotient(2), quotient(3))":
+        fail("qf-uf-quotient-ring-representative-alethe must document the quotient addition congruence claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("quotient representative smt2_artifact", smt2_artifact)
+    check_source("quotient representative smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("quotient representative proof_regression", proof_regression)
+    if "finite_ideals_quotient_representative_congruence_emits_checked_alethe" not in proof_regression:
+        fail("qf-uf-quotient-ring-representative-alethe must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("quotient representative certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf-quotient-ring-representative-alethe certificate must document zero-trust Alethe evidence")
+
     bad = checks["bad-ideal-rejected"]
     if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
         fail("bad-ideal-rejected must be a checked unsat row")

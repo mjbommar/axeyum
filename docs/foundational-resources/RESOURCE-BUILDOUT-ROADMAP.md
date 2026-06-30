@@ -37,11 +37,11 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 412 expected checks.
-- 194 checked proof/evidence rows.
+- 413 expected checks.
+- 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 15 promoted solver-reuse packs.
+- 16 promoted solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -954,8 +954,9 @@ Pick one item per commit unless the change is purely navigational.
    proof cookbook recipes.
 4. Landed: promote `finite-stochastic-kernels-v0` for a small exact-rational
    QF_LRA/Farkas bad-row normalization contradiction with strong learner value.
-5. Promote one QF_UF/Alethe algebra row that exercises homomorphism or quotient
-   congruence not already covered by the family row.
+5. Landed: promote `finite-ideals-v0` for a quotient-ring representative
+   congruence row that exercises equality of induced quotient addition beyond
+   the existing bad-ideal closure family row.
 6. Add a rules/law crosswalk doc that maps finite predicates, arithmetic
    thresholds, graph reachability, and proof routes to policy/rule checks.
 7. Add a consumer-query recipe for "find all packs for a field and route".

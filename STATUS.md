@@ -358,13 +358,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
   rechecks it independently.
 
-- **Finite-ideals QF_UF/Alethe regression landed.**
+- **Finite-ideals QF_UF/Alethe regressions landed.**
   [`finite-ideals-v0`](artifacts/examples/math/finite-ideals-v0/) now has a
-  checked proof-object row for the bad ideal additive-closure conflict. The
-  new SMT-LIB artifact records `2` present in the claimed subset, `4` absent,
-  `2 + 2 = 4`, and the fixed additive-closure membership claim; the shared UF
-  resource regression requires a pure EUF `Evidence::UnsatAletheProof` and
-  rechecks it independently.
+  checked proof-object row for the bad ideal additive-closure conflict and a
+  second checked proof-object row for quotient-ring representative congruence.
+  The first SMT-LIB artifact records `2` present in the claimed subset, `4`
+  absent, `2 + 2 = 4`, and the fixed additive-closure membership claim. The
+  second records equal even-coset representatives, equal odd-coset
+  representatives, and rejects unequal quotient addition results for those
+  congruent representative choices. The shared UF resource regression requires
+  pure EUF `Evidence::UnsatAletheProof` evidence and rechecks it independently.
 
 - **Finite-tensor-products QF_UF/Alethe regression landed.**
   [`finite-tensor-products-v0`](artifacts/examples/math/finite-tensor-products-v0/)
@@ -637,8 +640,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It records the current committed baseline of 65 concept rows,
-  84 non-template packs, 412 expected checks, 194 checked rows, 171 replay-only
-  rows, 47 Lean-horizon rows, and 15 promoted solver-reuse packs, then lays out
+  84 non-template packs, 413 expected checks, 195 checked rows, 171 replay-only
+  rows, 47 Lean-horizon rows, and 16 promoted solver-reuse packs, then lays out
   field-by-field build plans plus a prioritized execution queue. Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
@@ -693,7 +696,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_UF conflicts across equivalence classes, relations/functions, finite
   groups, function composition, homomorphisms, monoids, order lattices,
   permutation groups, vector/dual/module/ideal/tensor packs, and ties the
-  family to the checked
+  family to the checked 14-case
   [`math_resource_uf_routes`](crates/axeyum-solver/tests/math_resource_uf_routes.rs)
   regression. The row is scoped to `abstract_algebra` to avoid broad
   cross-field dashboard pollution; field dashboards now show the family as a
@@ -1437,9 +1440,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-ideals-quotient-rings-end-to-end.md`](docs/learn/math/finite-ideals-quotient-rings-end-to-end.md)
   as the learner-facing trace for the finite ideals pack: `Z/6Z` ideal
   closure, principal ideal generation by `2`, parity-map kernel/image replay,
-  quotient-ring table replay, checked non-ideal rejection, and the Lean horizon
-  for general ideal and quotient-ring theory. The lesson is linked from the
-  math learning index plus the algebra and arithmetic paths.
+  quotient-ring table replay, checked non-ideal rejection, checked quotient
+  representative congruence, and the Lean horizon for general ideal and
+  quotient-ring theory. The lesson is linked from the math learning index plus
+  the algebra and arithmetic paths.
 
 - **Finite monoid end-to-end lesson landed.** Added
   [`finite-monoids-end-to-end.md`](docs/learn/math/finite-monoids-end-to-end.md)
@@ -1567,9 +1571,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validates `Z/6Z` ideal table replay for `(2) = {0,2,4}`, principal ideal
   generation, reduction modulo `2` as a ring homomorphism, kernel/image
   recomputation, quotient-ring addition and multiplication replay, checked
-  rejection of a bad ideal, and a general ideal-theory Lean-horizon row. The
-  foundational example-pack validator now checks these rows by exact finite
-  table enumeration.
+  rejection of a bad ideal, checked quotient representative congruence, and a
+  general ideal-theory Lean-horizon row. The foundational example-pack
+  validator now checks replay rows by exact finite table enumeration and the
+  congruence rows through the shared QF_UF/Alethe route.
 
 - **Finite module foundations pack landed.** Added
   [`finite-modules-v0`](artifacts/examples/math/finite-modules-v0/README.md)
