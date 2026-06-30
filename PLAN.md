@@ -108,7 +108,9 @@ linear contradiction after replay computes the product mass, plus finite
 random-variables' bad pushforward row after replay computes the outcome mass
 and finite-integration's bad expectation row after replay computes the integral,
 with finite-martingales' bad conditional-expectation row now promoted after
-finite filtration replay computes the up-block expectation.
+finite filtration replay computes the up-block expectation, and finite
+Markov-chain's existing bad stochastic-row artifact is now explicitly promoted
+in solver-reuse metadata.
 The foundational concept atlas now also includes twenty-two generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 metric balls, bounded epsilon-delta shadows, compactness shadows,
@@ -218,8 +220,10 @@ the bad kernel-row normalization conflict, and finite product measure now
 promoted for the bad product-probability conflict, with finite random variables
 now promoted for the bad pushforward-distribution conflict and finite
 integration now promoted for the bad expectation conflict, and finite
-martingales now promoted for the bad conditional-expectation conflict. The first secondary
-QF_LRA/Farkas target set is now covered, the initial equality-heavy QF_UF/Alethe
+martingales now promoted for the bad conditional-expectation conflict, with
+finite Markov chains now carrying explicit promoted solver-reuse metadata for
+the existing bad stochastic-row conflict. The first secondary QF_LRA/Farkas
+target set is now covered, the initial equality-heavy QF_UF/Alethe
 secondary set is now covered including the finite-ideals quotient
 representative row, and finite group actions now promote a bad identity-action
 conflict through a checked QF_UF/Alethe regression, while finite continuous maps

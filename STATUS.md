@@ -257,6 +257,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `up_block_conditional_expectation = 1`; generated dashboards move promoted
   solver-reuse packs to 22.
 
+- **Finite Markov-chain solver-reuse promotion landed.**
+  [`finite-markov-chain-v0`](artifacts/examples/math/finite-markov-chain-v0/)
+  now carries explicit promoted `solver_reuse` metadata for the existing
+  `bad-stochastic-row-rejected` QF_LRA/Farkas artifact. The shared
+  `math_resource_lra_routes` regression continues to recheck
+  `row_sum = p10 + p11`, `p10 = 1/3`, `p11 = 1/3`, and `row_sum = 1`;
+  generated dashboards move promoted solver-reuse packs to 23.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,

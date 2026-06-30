@@ -32,6 +32,15 @@
     "QF_LRA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Markov-chain bad stochastic-row QF_LRA/Farkas regression seed",
+    "pressure": "Malformed transition row where exact replay computes row sum 2/3 but row-stochasticity claims 1.",
+    "evidence": [
+      "bad-stochastic-row-rejected"
+    ],
+    "next_step": "Promote additional stationary-distribution, finite-horizon, or absorbing-chain rows only when they add distinct exact-linear solver pressure; keep countably infinite chains, mixing times, and convergence theorems in the future theorem-prover backlog."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -40,6 +49,7 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

@@ -41,7 +41,7 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 22 promoted solver-reuse packs.
+- 23 promoted solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -1015,8 +1015,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas`.
-18. Revisit the library boundary decision after the next solver-reuse
-    promotion and at least one downstream consumer use.
+18. Landed: promote `finite-markov-chain-v0` at the solver-reuse metadata layer
+    for `bad-stochastic-row-rejected`. The existing source artifact
+    `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas`.
+19. Revisit the library boundary decision after confirming at least one
+    downstream consumer use of the promoted resource data.
 
 ## Validation Checklist
 
