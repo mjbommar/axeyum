@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 56 bridge-concept rows.
+- 57 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -213,7 +213,7 @@ Exit criteria:
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation/KKT/active-set/SDP/gradient-descent/line-search/Wolfe/projected-gradient/proximal-gradient shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | standalone finite-topology lesson and checked missing-empty-set Bool/CNF row landed; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | maintain landed topology-shadow and finite chain-complex/homology bridge rows; add only distinct closure/interior, homeomorphism, rank/torsion, or cohomology finite pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
@@ -702,7 +702,17 @@ Pick one row per commit unless the change is purely navigational.
     preserving the boundary around general circle, inversion,
     cyclic-quadrilateral, angle, Ptolemy, and synthetic geometry theorems. The
     geometry consumer smoke now includes circle lookup and concept-scoped
-    Farkas route queries, and the atlas now validates 56 bridge rows.
+    Farkas route queries, and that increment raised the atlas to 56 bridge
+    rows.
+84. Landed: add the finite chain-complex/homology replay bridge row.
+    `bridge_finite_chain_homology_replay` makes finite simplicial-complex
+    closure, oriented-boundary replay, boundary-squared-zero, Betti-rank
+    replay, and checked bad-boundary coefficient evidence queryable from the
+    atlas while preserving the boundary around homology invariance, exact
+    sequences, homotopy equivalence, cohomology, and general algebraic
+    topology. The topology consumer smoke now includes homology lookup and
+    concept-scoped Diophantine route queries, and the atlas now validates 57
+    bridge rows.
 
 ## Validation Checklist
 

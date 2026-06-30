@@ -35,10 +35,11 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 102 atlas rows generated from curriculum, field data, 56 R1 bridge
+- 103 atlas rows generated from curriculum, field data, 57 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
+  finite chain-complex/homology replay,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
   finite graph replay/obstruction and finite dynamics/Euler vocabulary,
@@ -474,6 +475,11 @@ Next buildout:
    counterexample, bounded theorem shadows, metric balls, bounded epsilon-delta
    shadows, compactness shadows, connectedness shadows, continuity-by-preimage,
    and Lean horizons.
+   A follow-up topology row, `bridge_finite_chain_homology_replay`, now makes
+   fixed finite simplicial-complex closure, oriented boundaries,
+   boundary-squared-zero, Betti-rank replay, and checked bad-boundary
+   coefficient evidence queryable without promoting general algebraic-topology
+   theorems.
 7. Landed: add bridge-concept rows for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
    characteristic-polynomial replay, and finite random-matrix moments.

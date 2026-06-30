@@ -41,10 +41,15 @@ python3 scripts/query-foundational-resources.py concepts --field differential_eq
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dynamics_euler_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field topology --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text homology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_chain_homology_replay --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_chain_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null

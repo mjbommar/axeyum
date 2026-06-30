@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 56 bridge-concept rows.
+- 57 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -306,7 +306,7 @@ Next useful increments:
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
 | `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
 | `complex_analysis` | real-pair algebra and transforms | polynomial-root, conjugation/norm, Mobius rows only if distinct; analytic horizon rows | real-pair LRA/NRA, finite replay, Lean horizon | no algebraic row is described as analytic coverage |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | closure/interior, homeomorphism, chain-complex, homology-rank refinements | Bool/CNF, QF_UF/Alethe, QF_LIA, finite replay, Lean horizon | dashboards distinguish finite set-family replay from topology theorems |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | landed finite chain-complex/homology replay bridge; add only distinct closure/interior, homeomorphism, rank/torsion, or cohomology finite pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, finite replay, Lean horizon | dashboards distinguish finite set-family and chain-complex replay from topology theorems |
 | `measure_theory` | finite measure, monotonicity, product measure, integration, random variables, conditioning, martingales | only distinct table/convergence vocabulary; keep countable/Lebesgue material horizon | QF_LRA/Farkas, finite replay, Lean horizon | finite universe and sigma-algebra are explicit |
 | `probability_theory` | finite PMFs, kernels, Markov chains, martingales, hitting times, concentration | exact discrete distributions, independence/conditioning variants, limit-theorem horizons | QF_LRA/Farkas, QF_LIA, finite replay | probability rows can be audited as exact rational tables |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | exact finite inference examples and numerical-honesty metadata | QF_LIA, QF_LRA/Farkas, replay | inference claims distinguish exact finite tests from statistical modeling |
@@ -436,8 +436,14 @@ Use one row per commit unless the change is purely navigational.
    and exact finite tail counts queryable from the atlas while keeping
    asymptotic counting and unbounded combinatorics in the horizon lane.
 26. Add future rules/law crosswalk examples only by reusing existing
-   math-resource patterns; do not create a separate rule ontology until the
-   current JSON boundary is exercised by more consumers.
+    math-resource patterns; do not create a separate rule ontology until the
+    current JSON boundary is exercised by more consumers.
+27. Landed: add `bridge_finite_chain_homology_replay` so finite
+    simplicial-complex closure, boundary replay, boundary-squared-zero,
+    Betti-rank replay, and the checked bad-boundary coefficient row are
+    discoverable as a shared topology/linear-algebra bridge without promoting
+    homology invariance, exact sequences, homotopy equivalence, cohomology, or
+    general algebraic-topology theorems.
 
 ## Anti-Patterns
 

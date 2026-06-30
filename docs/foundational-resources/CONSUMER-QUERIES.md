@@ -399,15 +399,21 @@ python3 scripts/query-foundational-resources.py checks \
 
 For topology, query the Boolean route to keep finite topology axioms,
 finite open-cover refutations, connectedness counterexamples, finite
-continuous-map/preimage rows, finite homology boundary checks, metric-ball
-examples, and bounded epsilon-delta shadows grouped while leaving arbitrary
-compactness, connectedness, homeomorphism invariance, and homology invariance
-in the proof-horizon lane:
+continuous-map/preimage rows, metric-ball examples, and bounded
+epsilon-delta shadows grouped; use the Diophantine route for the finite
+homology boundary-coefficient row. Arbitrary compactness, connectedness,
+homeomorphism invariance, homology invariance, exact sequences, and cohomology
+remain in the proof-horizon lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \
   --field topology \
   --route boolean \
+  --require-any
+
+python3 scripts/query-foundational-resources.py fields \
+  --field topology \
+  --route Diophantine \
   --require-any
 ```
 
@@ -423,10 +429,31 @@ python3 scripts/query-foundational-resources.py concepts \
   --field topology \
   --text preimage \
   --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field topology \
+  --text homology \
+  --require-any
 ```
 
-To display concrete checked topology rows, drill into the Boolean and Alethe
-routes separately:
+Concept-plus-route queries find the finite chain-complex/homology pack without
+hard-coding its pack id:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_chain_homology_replay \
+  --route Diophantine \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_chain_homology_replay \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+```
+
+To display concrete checked topology rows, drill into the Boolean, Alethe, and
+Diophantine routes separately:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
@@ -438,6 +465,12 @@ python3 scripts/query-foundational-resources.py checks \
 python3 scripts/query-foundational-resources.py checks \
   --field topology \
   --route alethe \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --field topology \
+  --route Diophantine \
   --proof-status checked \
   --require-any
 ```
@@ -1072,10 +1105,15 @@ python3 scripts/query-foundational-resources.py concepts --field differential_eq
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dynamics_euler_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field topology --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text homology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_chain_homology_replay --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_chain_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null

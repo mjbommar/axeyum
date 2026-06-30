@@ -12,6 +12,7 @@ Concept rows:
 - `field_topology`, `field_set_theory_and_foundations`,
   `field_linear_algebra`, and `field_abstract_algebra` in the
   [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
+- `bridge_finite_chain_homology_replay` in the Foundational Concept Atlas.
 
 ## Claim Shape
 
@@ -28,6 +29,11 @@ Concept rows:
 Every checked row is finite set and exact integer/rational linear-algebra
 replay. The pack does not prove homology invariance, exact sequences, homotopy
 equivalence, cohomology, or general algebraic topology.
+
+The shared `bridge_finite_chain_homology_replay` row is the atlas vocabulary
+for this finite chain-complex slice. It lets consumers find the exact replay
+and checked Diophantine coefficient route without treating the finite row as a
+general algebraic-topology theorem.
 
 ## Replay Simplicial Closure
 

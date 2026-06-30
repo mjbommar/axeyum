@@ -5014,6 +5014,101 @@
       }
     },
     {
+      "id": "bridge_finite_chain_homology_replay",
+      "kind": "bridge-concept",
+      "title": "Finite Chain Complex And Homology Replay",
+      "domain": "mathematics",
+      "field_ids": [
+        "topology",
+        "set_theory_and_foundations",
+        "linear_algebra",
+        "abstract_algebra"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Finite simplicial-homology rows state an explicit finite complex, oriented simplices, integer chain coefficients, boundary maps, and finite-rank data. The trusted object is exact replay of face closure, oriented boundaries, boundary-squared-zero, Betti-rank data, or a checked QF_LIA/Diophantine certificate for a malformed fixed boundary coefficient.",
+      "prerequisites": [
+        "bridge_finite_model_replay",
+        "bridge_rank_nullity",
+        "bridge_finite_counting_replay",
+        "family_integer_diophantine",
+        "curriculum_sets",
+        "curriculum_relations_and_functions",
+        "curriculum_linear_algebra"
+      ],
+      "unlocks": [
+        "field_topology",
+        "field_linear_algebra",
+        "bridge_lean_horizon"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite simplicial complexes",
+        "finite chain complexes",
+        "integer linear algebra",
+        "boundary matrix replay",
+        "Betti-rank replay",
+        "QF_LIA / Diophantine",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-simplicial-homology-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-simplicial-homology-v0",
+          "notes": "Finite simplicial-complex closure, oriented-boundary replay, boundary^2 replay, Betti-rank replay, and checked bad-boundary coefficient row."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite chain replay plus QF_LIA/Diophantine coefficient certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lia_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-simplicial-homology-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
+          ],
+          "notes": "The pack validator recomputes finite faces, boundaries, boundary matrices, ranks, and cycle generators first; the malformed boundary-sign row graduates only because the isolated integer coefficient contradiction has checked Diophantine evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/finite-simplicial-homology-end-to-end.md",
+        "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/learn/math/matrix-computation-index.md",
+        "artifacts/examples/math/finite-simplicial-homology-v0/smt2/bad-boundary-coefficient-diophantine-conflict.smt2",
+        "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite chain-complex replay does not prove homology invariance, exact sequences, homotopy equivalence, cohomology operations, or general algebraic-topology theorems.",
+        "Boundary-matrix rank rows are exact finite computations, not a proof of functoriality or topological invariance.",
+        "Additional rank, torsion, or cohomology rows should land only when they add distinct integer-linear or proof-reconstruction pressure."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite complex, orientation conventions, chain coefficients, boundary matrices, and rank or Betti witnesses.",
+          "The validator recomputes face closure, oriented boundaries, boundary-of-boundary cancellation, ranks, and listed cycle generators exactly.",
+          "Malformed fixed rows link source artifacts or route regressions before claiming checked Diophantine evidence.",
+          "General homology and algebraic-topology theorem claims remain Lean-horizon until kernel-checked proof routes exist."
+        ]
+      }
+    },
+    {
       "id": "bridge_lu_replay",
       "kind": "bridge-concept",
       "title": "LU Factorization Replay",

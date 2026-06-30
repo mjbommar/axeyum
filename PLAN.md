@@ -158,7 +158,7 @@ finite-martingales' bad conditional-expectation row now promoted after finite
 filtration replay computes the up-block expectation, and finite Markov-chain's
 existing bad stochastic-row artifact now explicitly promoted in solver-reuse
 metadata.
-The foundational concept atlas now also includes 56 generated R1 bridge
+The foundational concept atlas now also includes 57 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
@@ -170,13 +170,14 @@ obstruction, finite dynamics/Euler replay, finite Boolean algebra, finite
 partition/relation roundtrips, finite image/preimage/inverse tables, finite
 bijection/cardinality,
 cardinality theorem horizons, metric balls, bounded epsilon-delta shadows,
-compactness shadows, connectedness shadows, continuity-by-preimage, LU
-factorization replay, rank-nullity replay, residual bounds, eigenpair
-witnesses, characteristic polynomial replay, finite random-matrix moments,
-finite measure additivity, finite probability mass tables, finite pushforward
-distributions, finite stochastic kernels, finite conditional expectations,
-finite product-measure/integration replay, finite tail/count obstructions,
-homomorphism preservation, kernel/image replay, quotient maps,
+compactness shadows, connectedness shadows, continuity-by-preimage, finite
+chain-complex/homology replay, LU factorization replay, rank-nullity replay,
+residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
+random-matrix moments, finite measure additivity, finite probability mass
+tables, finite pushforward distributions, finite stochastic kernels, finite
+conditional expectations, finite product-measure/integration replay, finite
+tail/count obstructions, homomorphism preservation, kernel/image replay,
+quotient maps,
 ideal closure, module actions, tensor bilinearity, finite group actions,
 totality conventions, and Lean horizons, plus coordinate/incidence/rigid/
 oriented geometry replay, finite circle/inversion/cyclic geometry replay,
@@ -189,12 +190,14 @@ Fubini-style sum, and simple-function integral replay queryable while keeping
 Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
-topology lane: Boolean field readiness, compactness/preimage bridge lookups,
-and checked Boolean/Alethe rows for finite topology, compactness,
-connectedness, continuous maps, homology, metric balls, and bounded
-epsilon-delta shadows are smoke-checked through the committed JSON contract,
-while arbitrary compactness, connectedness, homeomorphism invariance, and
-homology invariance stay in the theorem-horizon lane.
+topology lane: Boolean and Diophantine field readiness,
+compactness/preimage/homology bridge lookups, concept-scoped finite
+chain-complex/homology queries, and checked Boolean/Alethe/Diophantine rows
+for finite topology, compactness, connectedness, continuous maps, homology,
+metric balls, and bounded epsilon-delta shadows are smoke-checked through the
+committed JSON contract, while arbitrary compactness, connectedness,
+homeomorphism invariance, homology invariance, exact sequences, and cohomology
+stay in the theorem-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 statistics lane: Farkas field readiness, finite-table/tail-count bridge
 lookups, and checked Farkas/Diophantine rows for exact finite tests,
