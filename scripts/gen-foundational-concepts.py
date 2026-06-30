@@ -172,6 +172,10 @@ CURRICULUM_MAP = {
                 "Finite two-by-two SDP primal/dual replay with checked bad-objective rejection.",
             ),
             (
+                "finite-gradient-descent-v0",
+                "Finite exact gradient-descent step replay with checked bad-decrease rejection.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
             ),
@@ -397,6 +401,10 @@ CURRICULUM_MAP = {
                 "finite-sdp-v0",
                 "Exact two-by-two PSD, trace, objective, slack, and dual-gap replay.",
             ),
+            (
+                "finite-gradient-descent-v0",
+                "Exact quadratic gradient, step update, objective decrease, and descent-bound replay.",
+            ),
         ],
     },
     "calculus": {
@@ -420,6 +428,10 @@ CURRICULUM_MAP = {
             (
                 "finite-kkt-v0",
                 "Finite KKT stationarity and complementary-slackness replay for a constrained quadratic.",
+            ),
+            (
+                "finite-gradient-descent-v0",
+                "Finite exact gradient-descent step replay and convergence-theorem horizon rows.",
             ),
         ],
     },
@@ -447,6 +459,7 @@ FIELD_PACKS = {
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
+        ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease rejection."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
@@ -1272,7 +1285,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
-            "gradient replay, Hessian-minor witnesses, finite KKT "
+            "gradient replay, Hessian-minor witnesses, finite gradient-descent "
+            "steps, finite KKT "
             "stationarity/complementarity, and finite SDP primal/dual slack "
             "rows over rational data while keeping "
             "general convex-analysis theorems separate."
@@ -1295,6 +1309,7 @@ BRIDGE_CONCEPTS = [
             "NRA / polynomial constraints",
             "exact rational derivatives",
             "finite grid replay",
+            "finite gradient descent replay",
             "finite KKT replay",
             "finite SDP replay",
             "Farkas certificate",
@@ -1320,6 +1335,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-kkt-v0",
                 "Finite constrained-quadratic stationarity and complementary-slackness rows over exact rationals.",
+            ),
+            (
+                "finite-gradient-descent-v0",
+                "Finite exact quadratic gradient step, descent-bound, and bad-decrease rows over exact rationals.",
             ),
             (
                 "finite-sdp-v0",
@@ -1353,7 +1372,7 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
-                    "normal-equation residuals, finite KKT residuals, and "
+                    "normal-equation residuals, finite gradient steps, finite KKT residuals, and "
                     "two-by-two SDP slack/objective arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),

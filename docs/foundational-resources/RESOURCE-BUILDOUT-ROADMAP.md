@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 93 non-template math example packs.
-- 467 expected checks.
-- 213 checked proof/evidence rows.
-- 198 replay-only rows.
-- 56 Lean-horizon rows.
-- 93 promoted solver-reuse packs.
+- 94 non-template math example packs.
+- 472 expected checks.
+- 214 checked proof/evidence rows.
+- 201 replay-only rows.
+- 57 Lean-horizon rows.
+- 94 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -187,7 +187,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients | Group recurring gcd/divisibility obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, SDP rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, and bad objective rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, SDP rows, gradient-descent rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad objective, and bad decrease rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -609,6 +609,7 @@ Current packs:
 - `finite-separation-v0`
 - `finite-kkt-v0`
 - `finite-sdp-v0`
+- `finite-gradient-descent-v0`
 - `metric-continuity-v0`
 - `calculus-algebraic-shadow-v0`
 - `calculus-riemann-sum-v0`
@@ -636,10 +637,11 @@ Build next:
   to its source QF_LRA/Farkas artifact; keep `finite-kkt-v0`'s bad
   stationarity row tied to its source QF_LRA/Farkas artifact; keep
   `finite-sdp-v0`'s bad objective row tied to its source QF_LRA/Farkas
-  artifact; and keep general
+  artifact; keep `finite-gradient-descent-v0`'s bad decrease row tied to its
+  source QF_LRA/Farkas artifact; and keep general
   convergence, Cauchy completeness, monotone convergence, closed-form
   recurrence solving, root existence, Newton/bisection convergence, separation
-  theorems, KKT sufficiency, SDP duality, asymptotics, and stability in the
+  theorems, KKT sufficiency, SDP duality, descent-rate, asymptotics, and stability in the
   Lean-horizon lane.
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
@@ -807,6 +809,7 @@ Current packs:
 - `finite-separation-v0`
 - `finite-kkt-v0`
 - `finite-sdp-v0`
+- `finite-gradient-descent-v0`
 
 Build next:
 
@@ -815,11 +818,13 @@ Build next:
   residual-decrease replay, and finite separation adds convex-hull/supporting
   face replay. Finite KKT now adds constrained-quadratic stationarity and
   complementary-slackness replay. Finite SDP now adds two-by-two PSD,
-  trace/objective, slack, and dual-gap replay. Add narrower rows only when
+  trace/objective, slack, and dual-gap replay. Finite gradient descent now adds
+  exact quadratic step and descent-bound replay. Add narrower rows only when
   multiple packs need distinct duality, active-set variants, higher-dimensional
-  SDP, affine monotonicity, or convergence vocabulary.
-- Promote small infeasible LP/convexity/root-finding/separation/KKT/SDP rows
-  through QF_LRA/Farkas.
+  SDP, line-search/projected-gradient, affine monotonicity, or stochastic
+  convergence vocabulary.
+- Promote small infeasible LP/convexity/root-finding/separation/KKT/SDP/descent
+  rows through QF_LRA/Farkas.
 - Keep general convex analysis, SDP strong duality, KKT sufficiency, and algorithm convergence
   as Lean-horizon until proof support exists.
 
@@ -1375,7 +1380,13 @@ Pick one item per commit unless the change is purely navigational.
     checking, checked QF_LRA/Farkas rejection of a false objective claim, and an
     SDP-duality Lean horizon. The learner path now includes a focused finite
     SDP end-to-end page.
-64. Continue proof-route promotions or consumer-query examples; revisit the
+64. Landed: add `finite-gradient-descent-v0`.
+    The new optimization/convexity and numerical-analysis pack validates exact
+    quadratic gradient replay, one descent step, objective-decrease and
+    descent-bound replay, checked QF_LRA/Farkas rejection of a false decrease
+    claim, and a convergence Lean horizon. The learner path now includes a
+    focused finite gradient-descent end-to-end page.
+65. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

@@ -58,6 +58,9 @@ const FINITE_KKT_BAD_STATIONARITY: &str = include_str!(
 const FINITE_SDP_BAD_OBJECTIVE: &str = include_str!(
     "../../../artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2"
 );
+const FINITE_GRADIENT_DESCENT_BAD_DECREASE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-decrease-farkas-conflict.smt2"
+);
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
@@ -487,6 +490,14 @@ fn finite_sdp_bad_objective_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-sdp-v0 bad-objective SMT-LIB artifact",
         FINITE_SDP_BAD_OBJECTIVE,
+    );
+}
+
+#[test]
+fn finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-gradient-descent-v0 bad-decrease SMT-LIB artifact",
+        FINITE_GRADIENT_DESCENT_BAD_DECREASE,
     );
 }
 

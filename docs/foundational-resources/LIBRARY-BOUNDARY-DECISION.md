@@ -2,7 +2,7 @@
 
 Date: 2026-06-29
 
-Reviewed: 2026-06-30; counts refreshed after all 93 current math packs carry
+Reviewed: 2026-06-30; counts refreshed after all 94 current math packs carry
 promoted solver-reuse metadata and no explicit non-benchmark-horizon packs
 remain.
 
@@ -42,18 +42,18 @@ The Phase M8 threshold is met for size and repeated structure:
 | Requirement | Current Evidence |
 |---|---|
 | At least 40 validated concept rows | 94 atlas rows: 23 curriculum rows, 18 field rows, 48 bridge-concept rows, and 5 example-family rows. |
-| At least 12 validated example packs | 93 non-template math packs are listed through the atlas data contract. |
-| At least 6 packs with checked proof/evidence routes | 93 non-template packs contain at least one `checked` expected-result row. |
+| At least 12 validated example packs | 94 non-template math packs are listed through the atlas data contract. |
+| At least 6 packs with checked proof/evidence routes | 94 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, and field-readiness queries without importing validators or generators. |
-| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 93 promoted packs. |
+| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 94 promoted packs. |
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 213 expected-result rows
-- `replay-only`: 198 expected-result rows
-- `lean-horizon`: 56 expected-result rows
-- `not-run`: 56 expected-result rows
-- `solver_reuse`: 93 promoted packs, 0 non-benchmark-horizon packs, and 0
+- `checked`: 214 expected-result rows
+- `replay-only`: 201 expected-result rows
+- `lean-horizon`: 57 expected-result rows
+- `not-run`: 57 expected-result rows
+- `solver_reuse`: 94 promoted packs, 0 non-benchmark-horizon packs, and 0
   unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof

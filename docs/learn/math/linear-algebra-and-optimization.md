@@ -22,6 +22,7 @@ Example packs:
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
+- [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -74,7 +75,10 @@ constrained-quadratic grid replay, stationarity replay, complementary-slackness
 checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and a checked QF_LRA/Farkas
-bad-objective certificate. The finite random-matrix slice adds exact
+bad-objective certificate. The finite-gradient-descent slice adds exact
+quadratic gradient replay, step-update replay, objective-decrease checking,
+finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
+certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -304,6 +308,24 @@ objective error `1`; the final contradiction `error = 1` versus `error = 0` is
 checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
 
+For a finite gradient-descent example, encode a quadratic, start point, step
+size, and gradient:
+
+```text
+f(x,y) = x^2 + 2y^2
+start = (1,1)
+gradient = (2,4)
+alpha = 1/4
+next = (1/2,0)
+```
+
+The `finite-gradient-descent-v0` validator recomputes the gradient, Hessian,
+next point, objective values `3` and `1/4`, decrease `11/4`, and finite
+descent-bound slack `1/4`. Its bad row changes the decrease to `2`, giving
+decrease error `3/4`; the final contradiction `error = 3/4` versus `error = 0`
+is checked through QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md).
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -353,6 +375,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0

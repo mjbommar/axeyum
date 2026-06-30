@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-gradient-descent-v0",
+  "witnesses": [
+    {
+      "id": "diagonal-quadratic-descent-step",
+      "description": "One exact gradient-descent step for f(x,y)=x^2+2y^2 from (1,1).",
+      "values": {
+        "quadratic_matrix": [["1", "0"], ["0", "2"]],
+        "hessian": [["2", "0"], ["0", "4"]],
+        "start_point": ["1", "1"],
+        "step_size": "1/4",
+        "gradient": ["2", "4"],
+        "next_point": ["1/2", "0"],
+        "start_value": "3",
+        "next_value": "1/4",
+        "decrease": "11/4",
+        "gradient_norm_squared": "20",
+        "lipschitz_bound": "4",
+        "descent_bound": "5/2",
+        "descent_slack": "1/4"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "quadratic-gradient-replay",
+      "claim": "For f(x,y)=x^2+2y^2 at (1,1), the gradient is (2,4) and the Hessian is diag(2,4).",
+      "expected_result": "sat",
+      "validation": "finite_quadratic_gradient_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-quadratic-descent-step"],
+      "notes": "The validator recomputes the gradient and Hessian from the listed quadratic matrix."
+    },
+    {
+      "id": "gradient-descent-step-replay",
+      "claim": "With step size 1/4, exact gradient descent moves from (1,1) to (1/2,0).",
+      "expected_result": "sat",
+      "validation": "finite_gradient_descent_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-quadratic-descent-step"],
+      "notes": "The validator checks next = start - step_size * gradient over exact rationals."
+    },
+    {
+      "id": "descent-bound-replay",
+      "claim": "The listed step decreases the objective by 11/4, exceeding the finite descent bound 5/2 with slack 1/4.",
+      "expected_result": "sat",
+      "validation": "finite_descent_bound_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-quadratic-descent-step"],
+      "notes": "The validator recomputes the objective values, gradient-norm square, descent lower bound, and slack."
+    },
+    {
+      "id": "bad-descent-value-rejected",
+      "claim": "The same step decreases the objective by only 2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_descent_value_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "diagonal-quadratic-descent-step",
+        "computed_decrease": "11/4",
+        "claimed_decrease": "2",
+        "decrease_error": "3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-decrease-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes decrease = 11/4, so the claimed decrease 2 has error 3/4; the source artifact checks that the same error cannot equal zero."
+    },
+    {
+      "id": "general-gradient-descent-convergence-lean-horizon",
+      "claim": "General gradient-descent convergence, smooth convex descent lemmas, stopping criteria, and rates require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Gradient descent convergence for smooth convex functions, step-size conditions, descent lemmas, stopping criteria, and rate theorems",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite-dimensional descent-step witnesses"
+      },
+      "notes": "The finite rows check only one rational quadratic step; convergence theory remains proof-assistant work."
+    }
+  ]
+}

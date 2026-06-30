@@ -10409,6 +10409,139 @@ def validate_finite_sdp(expected: dict[str, Any]) -> None:
     require_string("SDP future_checker", data.get("future_checker"))
 
 
+def quadratic_matrix_value(matrix: list[list[Fraction]], point: list[Fraction]) -> Fraction:
+    return dot_product(point, mat_vec(matrix, point))
+
+
+def validate_finite_gradient_descent(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gradient_check = checks["quadratic-gradient-replay"]
+    if gradient_check["expected_result"] != "sat":
+        fail("quadratic-gradient-replay must expect sat")
+    values = single_witness_values(gradient_check, witnesses)
+    quadratic_matrix = require_symmetric_matrix2(
+        "gradient descent quadratic_matrix",
+        values.get("quadratic_matrix"),
+    )
+    hessian = require_symmetric_matrix2("gradient descent hessian", values.get("hessian"))
+    start_point = require_fraction_vector("gradient descent start_point", values.get("start_point"))
+    step_size = require_fraction("gradient descent step_size", values.get("step_size"))
+    gradient = require_fraction_vector("gradient descent gradient", values.get("gradient"))
+    next_point = require_fraction_vector("gradient descent next_point", values.get("next_point"))
+    start_value = require_fraction("gradient descent start_value", values.get("start_value"))
+    next_value = require_fraction("gradient descent next_value", values.get("next_value"))
+    decrease = require_fraction("gradient descent decrease", values.get("decrease"))
+    gradient_norm_squared = require_fraction(
+        "gradient descent gradient_norm_squared",
+        values.get("gradient_norm_squared"),
+    )
+    lipschitz_bound = require_fraction(
+        "gradient descent lipschitz_bound",
+        values.get("lipschitz_bound"),
+    )
+    descent_bound = require_fraction("gradient descent descent_bound", values.get("descent_bound"))
+    descent_slack = require_fraction("gradient descent descent_slack", values.get("descent_slack"))
+    require_vector_length("gradient descent start_point", start_point, 2)
+    require_vector_length("gradient descent gradient", gradient, 2)
+    require_vector_length("gradient descent next_point", next_point, 2)
+    if step_size <= 0:
+        fail("gradient-descent-step-replay step_size must be positive")
+    if lipschitz_bound <= 0:
+        fail("descent-bound-replay lipschitz_bound must be positive")
+    computed_gradient = scalar_vec(Fraction(2), mat_vec(quadratic_matrix, start_point))
+    if gradient != computed_gradient:
+        fail("quadratic-gradient-replay gradient is incorrect")
+    if hessian != matrix2_scalar_mul(Fraction(2), quadratic_matrix):
+        fail("quadratic-gradient-replay hessian is incorrect")
+    if hessian[0][1] != 0 or hessian[1][0] != 0:
+        fail("quadratic-gradient-replay expects the finite example's diagonal Hessian")
+    if hessian[0][0] <= 0 or hessian[1][1] <= 0:
+        fail("quadratic-gradient-replay expects a positive diagonal Hessian")
+    if max(hessian[0][0], hessian[1][1]) != lipschitz_bound:
+        fail("descent-bound-replay lipschitz_bound must match the diagonal Hessian maximum")
+    if step_size * lipschitz_bound > 1:
+        fail("descent-bound-replay step_size must satisfy alpha * L <= 1")
+
+    step = checks["gradient-descent-step-replay"]
+    if step["expected_result"] != "sat":
+        fail("gradient-descent-step-replay must expect sat")
+    step_values = single_witness_values(step, witnesses)
+    if step_values != values:
+        fail("gradient-descent-step-replay must cite the gradient-descent witness")
+    computed_next = vector_add_fraction(start_point, scalar_vec(-step_size, gradient))
+    if next_point != computed_next:
+        fail("gradient-descent-step-replay next_point is incorrect")
+
+    descent = checks["descent-bound-replay"]
+    if descent["expected_result"] != "sat":
+        fail("descent-bound-replay must expect sat")
+    descent_values = single_witness_values(descent, witnesses)
+    if descent_values != values:
+        fail("descent-bound-replay must cite the gradient-descent witness")
+    if quadratic_matrix_value(quadratic_matrix, start_point) != start_value:
+        fail("descent-bound-replay start_value is incorrect")
+    if quadratic_matrix_value(quadratic_matrix, next_point) != next_value:
+        fail("descent-bound-replay next_value is incorrect")
+    if start_value - next_value != decrease:
+        fail("descent-bound-replay decrease is incorrect")
+    if dot_product(gradient, gradient) != gradient_norm_squared:
+        fail("descent-bound-replay gradient_norm_squared is incorrect")
+    if step_size * gradient_norm_squared / 2 != descent_bound:
+        fail("descent-bound-replay descent_bound is incorrect")
+    if decrease - descent_bound != descent_slack:
+        fail("descent-bound-replay descent_slack is incorrect")
+    if descent_slack <= 0:
+        fail("descent-bound-replay descent_slack must be positive")
+
+    bad = checks["bad-descent-value-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-descent-value-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "diagonal-quadratic-descent-step":
+        fail("bad-descent-value-rejected must cite the diagonal-quadratic-descent-step witness")
+    computed_decrease = require_fraction(
+        "bad gradient descent computed_decrease",
+        data.get("computed_decrease"),
+    )
+    claimed_decrease = require_fraction(
+        "bad gradient descent claimed_decrease",
+        data.get("claimed_decrease"),
+    )
+    decrease_error = require_fraction("bad gradient descent decrease_error", data.get("decrease_error"))
+    if computed_decrease != decrease:
+        fail("bad-descent-value-rejected computed_decrease does not match replay")
+    if computed_decrease == claimed_decrease:
+        fail("bad-descent-value-rejected malformed decrease must disagree with replay")
+    if computed_decrease - claimed_decrease != decrease_error:
+        fail("bad-descent-value-rejected decrease_error is incorrect")
+    if decrease_error <= 0:
+        fail("bad-descent-value-rejected decrease_error must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad gradient descent smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-decrease-farkas-conflict.smt2":
+        fail("bad-descent-value-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad gradient descent smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad gradient descent farkas_regression", regression)
+    if "finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas" not in regression:
+        fail("bad-descent-value-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad gradient descent certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-descent-value-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-gradient-descent-convergence-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-gradient-descent-convergence-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-gradient-descent-convergence-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("gradient descent target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("gradient descent future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -16976,6 +17109,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_dual_spaces(expected)
     if metadata["id"] == "finite-euler-method-v0":
         validate_finite_euler_method(expected)
+    if metadata["id"] == "finite-gradient-descent-v0":
+        validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-recurrence-prefix-v0":
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":

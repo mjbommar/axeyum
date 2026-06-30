@@ -177,6 +177,10 @@ schemas, examples, and validation workflows.
   validates two-by-two PSD replay, trace/objective arithmetic, dual-slack
   matrix replay, checked rejection of a false objective claim, and a general
   SDP-duality Lean-horizon row.
+- [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
+  validates exact quadratic gradient replay, finite descent-step arithmetic,
+  objective-decrease checking, checked rejection of a false decrease claim, and
+  a gradient-descent convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -330,6 +334,10 @@ schemas, examples, and validation workflows.
   validates exact two-by-two SDP primal/dual replay, objective arithmetic,
   slack PSD checks, checked bad-objective rejection, and a general
   SDP-duality Lean-horizon row.
+- [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
+  validates exact two-variable quadratic gradient replay, descent-step replay,
+  objective-decrease checking, checked bad-decrease rejection, and a general
+  gradient-descent convergence Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks, plus checked rejection of a bad squared-distance claim.
@@ -481,6 +489,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
