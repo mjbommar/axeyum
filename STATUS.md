@@ -445,10 +445,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   72 promoted, 6 non-benchmark-horizon, and 6 unclassified solver-reuse packs.
 
+- **Calculus-algebraic QF_LRA/Farkas promotion landed.**
+  `calculus-algebraic-shadow-v0` now carries promoted `solver_reuse` metadata
+  for its false derivative-value row. The new source-level artifact
+  `false-derivative-farkas-conflict.smt2` isolates replay's computed
+  `derivative_value = 6` against the malformed claim `derivative_value = 5`,
+  and
+  `math_resource_lra_routes::calculus_algebraic_false_derivative_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  73 promoted, 6 non-benchmark-horizon, and 5 unclassified solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 72-promoted, 6 non-benchmark-horizon, and
-  6-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 73-promoted, 6 non-benchmark-horizon, and
+  5-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11613,6 +11623,15 @@ plan is built and committed on the current branch:
   pack metadata now marks `solver_reuse.status` as `promoted`, the expected row
   records the checked `UnsatFarkas` certificate path, and generated dashboards
   report 72 promoted, 6 non-benchmark-horizon, and 6 unclassified packs.
+
+- **2026-06-30** — **Calculus-algebraic QF_LRA promotion landed.**
+  Added
+  `artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`
+  for the false derivative-value row and wired it into
+  `math_resource_lra_routes`. The pack metadata now marks
+  `solver_reuse.status` as `promoted`, the expected row records the checked
+  `UnsatFarkas` certificate path, and generated dashboards report 73 promoted,
+  6 non-benchmark-horizon, and 5 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

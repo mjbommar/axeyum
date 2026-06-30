@@ -126,6 +126,19 @@ The validator differentiates exactly and computes:
 
 so the false value is rejected.
 
+The promoted source artifact records the final exact-linear contradiction:
+
+```text
+derivative_value = 6
+derivative_value = 5
+```
+
+The `math_resource_lra_routes` regression parses
+`artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`,
+emits `UnsatFarkas` evidence, and checks the certificate independently. This is
+still a fixed polynomial-derivative row, not a proof of differentiability from
+limits.
+
 ## Replay Finite Riemann Sums
 
 The Riemann-sum pack fixes rational partitions and polynomial values. For
@@ -236,6 +249,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas
 ```
@@ -245,8 +259,8 @@ cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum
 The validators check coefficient differentiation, fixed product-rule
 identities, tangent-line arithmetic, critical-point witnesses, rational
 partitions, finite Riemann sums, midpoint sums, lower/upper sums, and exact
-polynomial antiderivative endpoint differences. The promoted false-integral
-row also checks a source QF_LRA/Farkas certificate for the final exact-linear
-conflict. These resources do not prove the limit definition of derivative,
-arbitrary integrability, tagged-partition convergence, or the fundamental
-theorem of calculus.
+polynomial antiderivative endpoint differences. The promoted false-derivative
+and false-integral rows also check source QF_LRA/Farkas certificates for the
+final exact-linear conflicts. These resources do not prove the limit definition
+of derivative, arbitrary integrability, tagged-partition convergence, or the
+fundamental theorem of calculus.

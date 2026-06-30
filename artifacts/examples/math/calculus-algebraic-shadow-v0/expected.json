@@ -88,9 +88,12 @@
       "data": {
         "polynomial": ["0", "0", "1"],
         "point": "3",
-        "claimed_derivative": "5"
+        "claimed_derivative": "5",
+        "actual_derivative": "6",
+        "smt2_artifact": "artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas"
       },
-      "notes": "The validator computes the derivative value exactly as 6 and rejects the false claim."
+      "notes": "The validator computes the derivative value exactly as 6 and rejects the false claim; the Axeyum regression checks the same actual-vs-claimed derivative contradiction through QF_LRA/Farkas evidence."
     },
     {
       "id": "general-calculus-lean-horizon",

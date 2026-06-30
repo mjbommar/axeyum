@@ -5,9 +5,9 @@ checkable slice of calculus without overstating analytic coverage.
 
 This pack checks polynomial derivative algebra: coefficient differentiation,
 the product rule for fixed polynomial instances, tangent-line replay, a convex
-quadratic critical point, and rejection of a false derivative value. It keeps
-epsilon-delta differentiability, integration, and the fundamental theorem of
-calculus under Lean horizon.
+quadratic critical point, and rejection of a false derivative value through
+source-linked QF_LRA/Farkas evidence. It keeps epsilon-delta differentiability,
+integration, and the fundamental theorem of calculus under Lean horizon.
 
 ## Concept Rows
 
@@ -38,7 +38,17 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 
 The validator differentiates coefficient lists, multiplies and adds
 polynomials, evaluates tangent lines, checks a fixed convex critical point, and
-keeps analytic theorem rows marked `lean-horizon`.
+keeps analytic theorem rows marked `lean-horizon`. The upgraded false
+derivative row also records replay's computed `derivative_value = 6` against
+the malformed claim `derivative_value = 5` in
+`smt2/false-derivative-farkas-conflict.smt2`, which Axeyum checks with
+`UnsatFarkas` evidence.
+
+The focused proof-route regression is:
+
+```sh
+cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas
+```
 
 ## Limitations
 

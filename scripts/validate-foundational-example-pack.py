@@ -8778,8 +8778,23 @@ def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     point = require_fraction("false derivative point", data.get("point"))
     claimed = require_fraction("false derivative claimed_derivative", data.get("claimed_derivative"))
     actual = polynomial_eval(polynomial_derivative(polynomial), point)
+    documented_actual = require_fraction("false derivative actual_derivative", data.get("actual_derivative"))
+    if documented_actual != actual:
+        fail("false-derivative-value-rejected actual_derivative is incorrect")
     if actual == claimed:
         fail("false-derivative-value-rejected claimed derivative unexpectedly matches")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("false derivative smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2"
+    ):
+        fail("false-derivative-value-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("false derivative smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("false derivative farkas_regression", farkas_regression)
+    if "calculus_algebraic_false_derivative_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("false-derivative-value-rejected must link the Farkas regression")
 
     horizon = checks["general-calculus-lean-horizon"]
     if horizon["expected_result"] != "not-run":

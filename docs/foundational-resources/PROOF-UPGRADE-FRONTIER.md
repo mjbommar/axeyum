@@ -196,6 +196,9 @@ First targets:
 - [calculus-riemann-sum-v0](../../artifacts/examples/math/calculus-riemann-sum-v0/)
   (source-linked Farkas regression landed for the bad exact
   polynomial-integral row after antiderivative replay computes the integral)
+- [calculus-algebraic-shadow-v0](../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
+  (source-linked Farkas regression landed for the bad derivative-value row
+  after exact polynomial derivative replay computes the derivative at a point)
 - [multivariable-calculus-rational-v0](../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   (source-linked Farkas regression landed for the bad gradient-component row
   after exact bivariate polynomial derivative replay computes the gradient)
@@ -259,8 +262,9 @@ Secondary targets:
   epsilon-delta exact-linear regression, and finite stochastic kernels now
   contribute a probability/statistics transition-row normalization regression.
   Finite integration now contributes a measure-theory expectation regression,
-  calculus Riemann sums now contribute a real-analysis/numerical-analysis
-  polynomial-integral regression,
+  calculus algebraic shadows now contribute a real-analysis/numerical-analysis
+  derivative-value regression, calculus Riemann sums now contribute a
+  real-analysis/numerical-analysis polynomial-integral regression,
   finite product measure contributes a product-probability exact-linear
   regression where the nonlinear product itself is replayed before Farkas checks
   the final contradictory masses, and finite random variables contribute a

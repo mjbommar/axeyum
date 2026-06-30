@@ -218,7 +218,9 @@ p' = -2 + 3*x^2
 The `calculus-algebraic-shadow-v0` validator differentiates coefficient lists,
 checks a product-rule identity for fixed polynomials, replays a tangent-line
 value, checks a convex quadratic critical point, and rejects a false derivative
-value.
+value. The upgraded false-derivative row routes the final exact-linear conflict
+`derivative_value = 6` versus `derivative_value = 5` through checked
+`UnsatFarkas` evidence.
 For a finite Riemann-sum calculus shadow, encode an exact rational partition:
 
 ```text
@@ -341,6 +343,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0

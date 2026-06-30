@@ -93,6 +93,9 @@ Canonical examples:
 - [Finite Calculus Shadows](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
   uses a false polynomial-integral row after exact antiderivative replay
   computes the integral.
+- [Calculus Algebraic Shadow](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
+  uses a false derivative-value row after exact polynomial derivative replay
+  computes the derivative at a point.
 - [Rational Multivariable Calculus](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   uses a bad gradient-component row after exact bivariate polynomial derivative
   replay computes the gradient.
@@ -143,6 +146,7 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [dominance scoreboard](../../../bench-results/DOMINANCE.md)
 - [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
+- [Calculus Algebraic Shadow pack](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [Finite Calculus Shadows pack](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [Rational Multivariable Calculus pack](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [Sequence And Limit Shadows pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)

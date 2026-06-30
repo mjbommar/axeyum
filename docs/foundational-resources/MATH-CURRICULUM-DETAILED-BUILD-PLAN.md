@@ -41,9 +41,9 @@ The committed resource query currently reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 72 promoted solver-reuse packs.
+- 73 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 6 unclassified solver-reuse packs.
+- 5 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -97,7 +97,6 @@ Current unclassified queue:
 | `cardinality-principles-v0` | choose a small inclusion-exclusion/double-counting proof route or mark theorem rows horizon |
 | `polynomial-factorization-rational-v0` | promote a rational coefficient obstruction or mark as replay-centered |
 | `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
-| `calculus-algebraic-shadow-v0` | promote a polynomial identity/refutation only if the chosen route checks the original claim |
 | `complex-plane-transforms-v0` | promote the false real-part row only if the real-pair route is source-linked |
 
 Recently classified as explicit non-benchmark-horizon rows:
@@ -254,7 +253,7 @@ Exit criteria:
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes and route-specific regression back-links |
-| `calculus` | deepen | Riemann-sum false integral and multivariable bad-gradient rows now have QF_LRA/Farkas regressions; one-variable derivative shadows still need a route decision |
+| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, and multivariable bad-gradient rows now have QF_LRA/Farkas regressions |
 
 ## Commit-Sized Queue
 
@@ -278,19 +277,21 @@ Pick one row per commit unless the change is purely navigational.
    Cauchy-tail QF_LRA/Farkas artifact and route regression.
 8. Landed: promote `multivariable-calculus-rational-v0` through a source-linked
    bad-gradient QF_LRA/Farkas artifact and route regression.
-9. Promote or classify the remaining unclassified packs, starting with compact
+9. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
+   false-derivative QF_LRA/Farkas artifact and route regression.
+10. Promote or classify the remaining unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-10. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+11. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-11. Upgrade finite-measure from non-benchmark with a finite-additivity or
+12. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-12. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+13. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-13. Add a proof-object learner page that follows one resource from source claim
+14. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-14. Add a generated or query-based audit for unclassified solver-reuse packs if
+15. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-15. Revisit the library boundary after unclassified packs are resolved and at
+16. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

@@ -1556,6 +1556,9 @@ through the same checked Farkas evidence path after exact negative-norm replay.
 checked Farkas evidence path after exact matrix-vector replay.
 `matrix-invariants-v0` now routes its bad characteristic-polynomial row through
 the same checked Farkas evidence path after exact witness-root replay.
+`calculus-algebraic-shadow-v0` now routes its false derivative-value row
+through the same checked Farkas evidence path after exact polynomial derivative
+replay computes the derivative at the fixed point.
 The structured atlas now records these recurring exact-rational contradictions
 as `family_exact_rational_farkas`, scoped to the optimization/Farkas
 proof-route lane and backed by the shared

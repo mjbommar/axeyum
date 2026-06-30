@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "one-variable derivative QF_LRA/Farkas regression seed",
+    "pressure": "Exact polynomial replay computes the derivative of x^2 at x=3 as 6, while the malformed row claims the same derivative value is 5.",
+    "evidence": [
+      "false-derivative-value-rejected"
+    ],
+    "next_step": "Promote additional calculus algebraic-shadow rows only when they add distinct exact-derivative, product-rule, tangent, convexity, or finite-polynomial solver pressure; keep differentiability from limits, MVT, integration, and FTC claims in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/calculus.md",
     "docs/curriculum/02-structures/polynomials.md",
@@ -39,6 +48,9 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -52,7 +64,7 @@
   "graduation_criteria": [
     "Encode derivative-rule identities as deterministic NRA polynomial equalities.",
     "Replay tangent and critical-point witnesses through Axeyum model evaluation.",
-    "Emit checked algebraic evidence for false derivative and polynomial-identity UNSAT rows.",
+    "Keep the false derivative row tied to source-linked QF_LRA/Farkas evidence for the exact derivative-value contradiction.",
     "Keep continuity, differentiability from limits, integration, and the fundamental theorem of calculus under Lean horizon until no-sorry Lean artifacts exist."
   ]
 }

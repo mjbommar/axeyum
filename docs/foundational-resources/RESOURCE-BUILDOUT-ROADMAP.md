@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 72 promoted solver-reuse packs.
+- 73 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 6 unclassified solver-reuse packs.
+- 5 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -617,6 +617,9 @@ Build next:
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
   Lean-horizon lane.
+- Keep `calculus-algebraic-shadow-v0`'s promoted false-derivative row tied to
+  the source QF_LRA/Farkas artifact, and keep differentiability-from-limits and
+  MVT statements in the Lean-horizon lane.
 - Keep completeness, Bolzano-Weierstrass, Heine-Borel, IVT, MVT, FTC, and
   general convergence as Lean-horizon.
 
@@ -1095,7 +1098,12 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas`.
-29. Continue proof-route promotions or consumer-query examples; revisit the
+29. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
+    QF_LRA/Farkas regression for `false-derivative-value-rejected`. The artifact
+    `artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas`.
+30. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 
