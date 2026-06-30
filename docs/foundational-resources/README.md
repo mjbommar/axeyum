@@ -20,6 +20,10 @@ schemas, examples, and validation workflows.
 - [MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
+- [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
+  operating roadmap for building the curriculum-driven resource system across
+  ontology rows, example packs, learner pages, proof routes, solver reuse,
+  consumer boundaries, rules/law transfer, and future library splits.
 - [CURRICULUM-RESOURCE-EXECUTION-PLAN.md](CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
   is the forward execution plan for moving those resources from validated packs
   into learner paths, proof upgrades, solver feedback, and eventual consumer

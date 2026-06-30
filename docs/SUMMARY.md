@@ -8,6 +8,7 @@
   - [University Math Field Taxonomy](foundational-resources/MATH-FIELDS.md)
   - [Math Curriculum Resource Buildout](foundational-resources/MATH-CURRICULUM-BUILDOUT.md)
   - [Math Curriculum Implementation Matrix](foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
+  - [Math Resource Buildout Roadmap](foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md)
   - [Math Curriculum Coverage](foundational-resources/generated/math-coverage.md)
   - [Math Field Dashboard](foundational-resources/generated/math-field-dashboard.md)
   - [Proof Gap Dashboard](foundational-resources/generated/proof-gap-dashboard.md)

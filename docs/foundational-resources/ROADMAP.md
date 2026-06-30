@@ -186,6 +186,8 @@ Forward execution plan:
 [Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 Commit-sized build matrix:
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
+Detailed resource-family operating roadmap:
+[Math Curriculum Resource Buildout Roadmap](RESOURCE-BUILDOUT-ROADMAP.md).
 
 Add depth in four waves:
 

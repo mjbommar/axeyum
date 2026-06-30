@@ -8,8 +8,10 @@ resource ecosystem. The companion
 [Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md) records
 the phase contract and landed history; the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
-gives the per-node/per-field build matrix; this file says what to build next
-and how to keep the work coherent.
+gives the per-node/per-field build matrix; the
+[Math Curriculum Resource Buildout Roadmap](RESOURCE-BUILDOUT-ROADMAP.md)
+gives the detailed operating plan across resource families; this file says what
+to build next and how to keep the work coherent.
 
 The invariant is:
 

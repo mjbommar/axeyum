@@ -14,6 +14,10 @@ For the current forward work plan, use the
 For commit-sized work selection across curriculum nodes, math fields, resource
 gates, and proof routes, use the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
+For the detailed operating plan that expands the curriculum into ontology rows,
+example packs, learner pages, proof routes, solver reuse, consumer boundaries,
+rules/law transfer, and future library splits, use the
+[Math Curriculum Resource Buildout Roadmap](RESOURCE-BUILDOUT-ROADMAP.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of

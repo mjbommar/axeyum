@@ -72,6 +72,7 @@ roadmap:
 - [source research ledger](foundational-resources/SOURCES.md);
 - [university math field taxonomy](foundational-resources/MATH-FIELDS.md);
 - [expansion roadmap](foundational-resources/ROADMAP.md).
+- [math resource buildout roadmap](foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md).
 
 This plan subsumes the earlier "Math Theory Library For Automation" idea into a
 larger resource ecosystem with schemas, example packs, validators, proof/replay

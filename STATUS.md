@@ -616,6 +616,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   execution plan. Next resource work should pick one row from that matrix and
   carry it through validation, status update, commit, and push.
 
+- **Math curriculum resource buildout roadmap landed.** Added
+  [`RESOURCE-BUILDOUT-ROADMAP.md`](docs/foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md)
+  as the detailed operating plan for turning the curriculum and 18-field math
+  taxonomy into ontology rows, example packs, learner pages, proof routes,
+  solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
+  library splits. It records the current committed baseline of 47 concept rows,
+  84 non-template packs, 412 expected checks, 194 checked rows, 171 replay-only
+  rows, 47 Lean-horizon rows, and 13 promoted solver-reuse packs, then lays out
+  field-by-field build plans plus a prioritized execution queue. Linked it from
+  `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
+  notes, roadmap, buildout plan, implementation matrix, and execution plan.
+
 - **R1 bridge-concept atlas rows landed.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
   is now generated with four proof-methodology bridge rows:
