@@ -910,6 +910,384 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_boolean_cnf_lrat_anatomy",
+        "title": "Boolean CNF DRAT/LRAT Anatomy",
+        "field_ids": ["logic_and_proof", "discrete_math", "graph_theory", "topology"],
+        "resource_status": "validated",
+        "summary": (
+            "A Boolean proof-object row starts from a committed source CNF, "
+            "lets untrusted SAT search emit DRAT/LRAT evidence, and accepts "
+            "the UNSAT claim only after the small proof object checks against "
+            "that source formula."
+        ),
+        "prerequisites": [
+            "bridge_refutation_query",
+            "bridge_finite_quantifier_expansion",
+            "curriculum_propositional_logic",
+        ],
+        "unlocks": [
+            "bridge_qf_bv_bitblast_anatomy",
+            "curriculum_counting",
+            "field_graph_theory",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "Bool / CNF",
+            "SAT",
+            "DRAT / LRAT",
+            "proof object anatomy",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "proof-methods-refutation-v0",
+                "PHP(3,2) source CNF with checked DRAT/LRAT proof objects and tamper rejection.",
+            ),
+            (
+                "logic-basics-v0",
+                "Tiny Boolean contradiction rows that exercise the smallest CNF certificate surface.",
+            ),
+            (
+                "finite-predicate-v0",
+                "Finite quantifier-expansion row backed by source-linked Bool/CNF evidence.",
+            ),
+            (
+                "graph-coloring-v0",
+                "Triangle non-2-colorability rows that separate graph encoding from CNF proof checking.",
+            ),
+            (
+                "finite-topology-v0",
+                "Finite topology missing-empty-set row with a source-linked Boolean certificate.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "source CNF plus checked DRAT/LRAT proof object",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/learn/math/proof-object-anatomy-end-to-end.md",
+                    "docs/learn/math/proof-methods-refutation-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "The CNF proof checker is the trusted object for the "
+                    "Boolean formula. Any source-to-CNF encoder remains a "
+                    "named trust boundary unless separately reconstructed."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/learn/math/proof-object-anatomy-end-to-end.md",
+            "docs/learn/math/logic-and-proof.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "A checked DRAT/LRAT proof certifies the concrete CNF, not an arbitrary mathematical encoding that produced the CNF.",
+            "General Lean reconstruction for the full Boolean proof route is still a graduation horizon.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows link to a committed DIMACS or source CNF artifact.",
+                "The focused regression emits and checks DRAT/LRAT evidence for the same artifact.",
+                "A tamper test rejects a truncated or corrupted proof object.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_qf_lra_farkas_anatomy",
+        "title": "QF_LRA Farkas Certificate Anatomy",
+        "field_ids": [
+            "linear_algebra",
+            "optimization_and_convexity",
+            "real_analysis",
+            "probability_theory",
+            "statistics",
+            "numerical_analysis",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "An exact-rational linear infeasibility row carries a Farkas "
+            "certificate: nonnegative rational multipliers combine the source "
+            "inequalities into an impossible constant inequality, and the "
+            "certificate is rechecked independently."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "curriculum_rationals",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_residual_bound",
+            "bridge_probability_mass_table",
+            "bridge_eigenpair",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "exact rational arithmetic",
+            "Farkas certificate",
+            "linear infeasibility",
+            "Lean partial",
+        ],
+        "example_packs": [
+            (
+                "linear-optimization-v0",
+                "Objective-threshold conflict with checked UnsatFarkas evidence and multiplier tamper rejection.",
+            ),
+            (
+                "linear-algebra-rational-v0",
+                "Singular inconsistent linear-system row that reduces to exact rational infeasibility.",
+            ),
+            (
+                "finite-probability-v0",
+                "Malformed probability-table rows checked through exact rational Farkas evidence.",
+            ),
+            (
+                "numerical-linear-algebra-v0",
+                "Bad residual-bound row whose final contradiction is exact rational linear arithmetic.",
+            ),
+            (
+                "finite-chebyshev-systems-v0",
+                "Finite determinant conflict that uses the same checked QF_LRA/Farkas route.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_LRA exact-rational Farkas certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
+                    "docs/learn/math/linear-algebra-and-optimization.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                    "crates/axeyum-solver/tests/evidence.rs",
+                ],
+                "notes": (
+                    "The arithmetic search is not trusted by itself. The "
+                    "accepted proof object is the exact-rational multiplier "
+                    "certificate checked against the original assertions."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
+            "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+            "crates/axeyum-solver/tests/evidence.rs",
+        ],
+        "open_gaps": [
+            "Farkas evidence covers exact linear arithmetic; nonlinear, floating-point, and theorem-level convexity claims need separate routes.",
+            "Rows that compute a linear conflict from a richer model must still replay that reduction independently.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows link to a committed SMT-LIB artifact or exact linear source constraints.",
+                "The route regression emits UnsatFarkas evidence and rechecks it against the source assertions.",
+                "A tamper test changes a multiplier or certificate row and the checker rejects it.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_qf_uf_alethe_anatomy",
+        "title": "QF_UF Alethe Certificate Anatomy",
+        "field_ids": [
+            "set_theory_and_foundations",
+            "abstract_algebra",
+            "linear_algebra",
+            "topology",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "A QF_UF proof-object row isolates an equality or congruence "
+            "conflict over finite functions, quotients, algebra maps, or "
+            "preimage tables, then checks an Alethe proof rather than trusting "
+            "the EUF search or an Ackermann rewrite."
+        ),
+        "prerequisites": [
+            "bridge_finite_quantifier_expansion",
+            "bridge_finite_model_replay",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "bridge_quotient_map",
+            "bridge_homomorphism_preservation",
+            "family_finite_algebra_alethe",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_UF",
+            "EUF congruence",
+            "Alethe proof",
+            "finite functions",
+            "Lean partial",
+        ],
+        "example_packs": [
+            (
+                "equivalence-classes-v0",
+                "Quotient-map congruence conflict with checked Alethe evidence and truncated-proof rejection.",
+            ),
+            (
+                "relations-functions-v0",
+                "Function single-valuedness and relation-table consistency rows that feed the same EUF route.",
+            ),
+            (
+                "finite-algebra-homomorphisms-v0",
+                "Homomorphism-preservation conflict over finite operation tables.",
+            ),
+            (
+                "finite-continuous-maps-v0",
+                "Preimage-membership consistency conflict over finite topological maps.",
+            ),
+            (
+                "finite-tensor-products-v0",
+                "Bilinearity and representative-consistency rows in the shared finite algebra family.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_UF congruence conflict with checked Alethe proof",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/alethe-certificate-anatomy-end-to-end.md",
+                    "docs/learn/math/sets-relations-and-finite-structures.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                    "crates/axeyum-solver/tests/evidence.rs",
+                ],
+                "notes": (
+                    "Finite table replay establishes the object being "
+                    "discussed; the Alethe certificate separately checks the "
+                    "isolated equality/congruence contradiction."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/alethe-certificate-anatomy-end-to-end.md",
+            "docs/learn/math/sets-relations-and-finite-structures.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+            "crates/axeyum-solver/tests/evidence.rs",
+        ],
+        "open_gaps": [
+            "The checked Alethe row proves the isolated EUF conflict, not arbitrary quotient, algebra, topology, or category-theory theorems.",
+            "Rows that derive EUF constraints from finite tables must keep table replay and proof-object checking distinct.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows link to a committed QF_UF source artifact or exact equality assertions.",
+                "The route regression emits Evidence::UnsatAletheProof and rechecks it independently.",
+                "A tamper test removes or corrupts a proof command and the checker rejects it.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_qf_bv_bitblast_anatomy",
+        "title": "QF_BV Bit-Blast Certificate Anatomy",
+        "field_ids": ["number_theory", "abstract_algebra", "graph_theory", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "A QF_BV proof-object row keeps the fixed bit width as part of "
+            "the mathematical claim, lowers the BV formula through AIG and "
+            "Tseitin CNF, and accepts UNSAT only after the generated DRAT "
+            "certificate rechecks."
+        ),
+        "prerequisites": [
+            "bridge_boolean_cnf_lrat_anatomy",
+            "curriculum_modular_arithmetic",
+            "curriculum_fields",
+        ],
+        "unlocks": [
+            "curriculum_number_theory",
+            "curriculum_rings",
+            "field_abstract_algebra",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_BV",
+            "bit-blast",
+            "AIG",
+            "Tseitin CNF",
+            "DRAT",
+        ],
+        "example_packs": [
+            (
+                "finite-fields-v0",
+                "Composite-modulus nonfield row with checked bit-blasted DRAT evidence and truncated-proof rejection.",
+            ),
+            (
+                "finite-rings-v0",
+                "Fixed finite ring-table contradiction where width is part of the educational claim.",
+            ),
+            (
+                "graph-coloring-v0",
+                "One-bit triangle coloring obstruction that exposes a separate BV route from source CNF.",
+            ),
+            (
+                "number-theory-v0",
+                "Quadratic nonresidue modulo 7 row checked through fixed-width bit-vector evidence.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_BV bit-blast to CNF plus checked DRAT certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_bv_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+                    "docs/learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md",
+                    "docs/learn/math/graph-coloring-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+                    "crates/axeyum-solver/tests/evidence.rs",
+                ],
+                "notes": (
+                    "The checked DRAT proof certifies the generated CNF. "
+                    "The BV-to-AIG and Tseitin lowering steps remain explicit "
+                    "trust steps until a Lean reconstruction covers the source shape."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md",
+            "docs/learn/math/graph-coloring-end-to-end.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+            "crates/axeyum-solver/tests/evidence.rs",
+        ],
+        "open_gaps": [
+            "QF_BV DRAT proves the generated CNF; broad bit-blast faithfulness and unbounded integer analogues remain separate proof work.",
+            "Use this row only when the fixed width is mathematically meaningful, not as an incidental encoding of an unbounded theorem.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the bit width, source SMT-LIB artifact, and generated CNF/DRAT route.",
+                "The route regression rechecks the DIMACS/DRAT pair and Evidence::check accepts the original obligation.",
+                "A truncated or corrupted DRAT certificate is rejected by the focused tamper test.",
+            ],
+        },
+    },
+    {
         "id": "bridge_bounded_theorem_shadow",
         "title": "Bounded Theorem Shadow",
         "field_ids": ["logic_and_proof"],

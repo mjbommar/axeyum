@@ -1105,24 +1105,25 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 74 atlas rows validate, including generated bridge-concept rows for
+  Status: 78 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
-  expansion, bounded induction obligations, metric balls, bounded
-  epsilon-delta shadows, compactness shadows, connectedness shadows,
-  continuity-by-preimage, LU factorization replay, rank-nullity replay,
-  residual bounds, eigenpair witnesses, characteristic-polynomial replay,
-  finite random-matrix moments, finite probability mass tables, finite
-  pushforward distributions, finite stochastic kernels, finite conditional
-  expectations, finite tail/count obstructions, homomorphism preservation,
-  kernel/image replay, quotient maps, ideal closure, module actions, tensor
-  bilinearity, finite group actions, and Lean horizons, plus example-family
-  rows for recurring finite-algebra QF_UF/Alethe conflicts and exact-rational
-  QF_LRA/Farkas infeasibility rows.
+  expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
+  QF_LRA Farkas certificate anatomy, QF_UF Alethe certificate anatomy, QF_BV
+  bit-blast certificate anatomy, metric balls, bounded epsilon-delta shadows,
+  compactness shadows, connectedness shadows, continuity-by-preimage, LU
+  factorization replay, rank-nullity replay, residual bounds, eigenpair
+  witnesses, characteristic-polynomial replay, finite random-matrix moments,
+  finite probability mass tables, finite pushforward distributions, finite
+  stochastic kernels, finite conditional expectations, finite tail/count
+  obstructions, homomorphism preservation, kernel/image replay, quotient maps,
+  ideal closure, module actions, tensor bilinearity, finite group actions, and
+  Lean horizons, plus example-family rows for recurring finite-algebra
+  QF_UF/Alethe conflicts and exact-rational QF_LRA/Farkas infeasibility rows.
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 79 non-template packs have at least one `checked` expected-result row.
+  Status: 84 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1421,6 +1422,10 @@ rejection.
 `finite-fields-v0` now has a QF_BV bit-blast certificate anatomy lesson that
 follows the fixed-width composite-modulus no-inverse row through source SMT-LIB,
 generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT rejection.
+The concept atlas now gives these certificate lessons first-class proof-object
+anatomy bridge rows for Boolean CNF DRAT/LRAT, QF_LRA/Farkas, QF_UF/Alethe, and
+QF_BV bit-blast evidence, so packs can point at shared route vocabulary instead
+of repeating the trust-boundary prose locally.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean

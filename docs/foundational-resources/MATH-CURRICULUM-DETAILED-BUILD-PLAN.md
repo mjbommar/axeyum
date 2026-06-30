@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 31 bridge-concept rows.
+- 35 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -197,7 +197,7 @@ Exit criteria:
 
 | Field | Current Role | Next Resource Work | Evidence Route |
 |---|---|---|---|
-| `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | finish proof-object anatomy and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
+| `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | maintain proof-object anatomy bridge rows and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | tighten finite/infinite boundaries and quotient/image/preimage vocabulary | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
 | `discrete_math` | counting, generating functions, graph resources, finite actions | maintain pigeonhole and coefficient-convolution examples; add new rows only for distinct counting pressure | Bool/CNF, QF_LIA, finite replay |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | keep one promoted representative per family; add asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
@@ -331,6 +331,10 @@ Pick one row per commit unless the change is purely navigational.
    finite proof-pattern replay, finite quantifier expansion, and bounded
    induction obligations, keeping proof-method and finite-logic vocabulary
    shared across existing packs.
+31. Landed: add generated proof-object anatomy bridge rows for Boolean
+   CNF DRAT/LRAT, QF_LRA Farkas, QF_UF Alethe, and QF_BV bit-blast
+   certificates, making the existing certificate lessons and route regressions
+   queryable as first-class atlas vocabulary.
 
 ## Validation Checklist
 

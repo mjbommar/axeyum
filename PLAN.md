@@ -141,19 +141,21 @@ the event and total measures, finite-martingales' bad conditional-expectation
 row now promoted after finite filtration replay computes the up-block
 expectation, and finite Markov-chain's existing bad stochastic-row artifact now
 explicitly promoted in solver-reuse metadata.
-The foundational concept atlas now also includes thirty-one generated R1 bridge
+The foundational concept atlas now also includes thirty-five generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
-bounded induction obligations, metric balls, bounded epsilon-delta shadows,
-compactness shadows, connectedness shadows, continuity-by-preimage, LU
-factorization replay, rank-nullity replay, residual bounds, eigenpair
-witnesses, characteristic polynomial replay, finite random-matrix moments,
-finite probability mass tables, finite pushforward distributions, finite
-stochastic kernels, finite conditional expectations, finite tail/count
-obstructions, homomorphism preservation, kernel/image replay, quotient maps,
-ideal closure, module actions, tensor bilinearity, finite group actions, and
-Lean horizons, so resource packs can point at shared evidence and boundary
-vocabulary instead of repeating it locally.
+bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
+certificate anatomy, QF_UF Alethe certificate anatomy, QF_BV bit-blast
+certificate anatomy, metric balls, bounded epsilon-delta shadows, compactness
+shadows, connectedness shadows, continuity-by-preimage, LU factorization
+replay, rank-nullity replay, residual bounds, eigenpair witnesses,
+characteristic polynomial replay, finite random-matrix moments, finite
+probability mass tables, finite pushforward distributions, finite stochastic
+kernels, finite conditional expectations, finite tail/count obstructions,
+homomorphism preservation, kernel/image replay, quotient maps, ideal closure,
+module actions, tensor bilinearity, finite group actions, and Lean horizons, so
+resource packs can point at shared evidence and boundary vocabulary instead of
+repeating it locally.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.
@@ -177,6 +179,9 @@ The first QF_BV bit-blast certificate anatomy learner page now follows
 `finite-fields-v0` from a fixed-width composite-modulus no-inverse row through
 source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT
 rejection.
+Those four certificate anatomy stories now also have first-class bridge rows in
+the foundational concept atlas, making the active proof-object routes queryable
+through shared R1 vocabulary.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

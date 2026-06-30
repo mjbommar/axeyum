@@ -657,8 +657,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
   generates four bridge rows for refutation-as-query, finite proof-pattern
   replay, finite quantifier expansion, and bounded induction obligations. The
-  concept atlas now reports 74 rows total: 23 curriculum rows, 18 field rows,
-  31 bridge rows, and 2 example-family rows.
+  rows remain part of the current bridge atlas and tie proof-method,
+  finite-predicate, induction, natural-arithmetic, and Boolean/CNF packs to
+  shared finite-proof vocabulary.
+
+- **Proof-object anatomy bridge concepts landed.**
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
+  generates four bridge rows for Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
+  certificate anatomy, QF_UF Alethe certificate anatomy, and QF_BV bit-blast
+  certificate anatomy. The concept atlas now reports 78 rows total:
+  23 curriculum rows, 18 field rows, 35 bridge rows, and 2 example-family rows.
 
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
@@ -1150,12 +1158,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with thirty-one bridge rows. The proof-methodology rows are
+  is now generated with thirty-five bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
   `bridge_bounded_induction_obligation`, `bridge_bounded_theorem_shadow`, and
-  `bridge_lean_horizon`; the analysis and
+  `bridge_lean_horizon`; the proof-object anatomy rows are
+  `bridge_boolean_cnf_lrat_anatomy`, `bridge_qf_lra_farkas_anatomy`,
+  `bridge_qf_uf_alethe_anatomy`, and `bridge_qf_bv_bitblast_anatomy`; the analysis and
   topology boundary rows are `bridge_metric_ball`,
   `bridge_bounded_epsilon_delta_shadow`, `bridge_compactness_shadow`,
   `bridge_connectedness_shadow`, and `bridge_continuity_preimage`; the
@@ -1172,7 +1182,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 74 concept rows while preserving
+  foundational resource consumer now reports 78 concept rows while preserving
   23 curriculum rows and 18 field rows. Next resource work should add the next
   proof-frontier promotion or boundary evidence from a real repeated consumer,
   depending on which roadmap lane is being advanced.
@@ -11787,8 +11797,15 @@ plan is built and committed on the current branch:
   Added generated bridge-concept rows for refutation-as-query, finite
   proof-pattern replay, finite quantifier expansion, and bounded induction
   obligations. Regenerated the ontology and field dashboard; the foundational
-  concept atlas now validates at 74 rows: 23 curriculum rows, 18 field rows,
+  concept atlas then validated at 74 rows: 23 curriculum rows, 18 field rows,
   31 bridge rows, and 2 example-family rows.
+
+- **2026-06-30** — **Proof-object anatomy bridge concepts landed.**
+  Added generated bridge-concept rows for Boolean CNF DRAT/LRAT anatomy,
+  QF_LRA Farkas certificate anatomy, QF_UF Alethe certificate anatomy, and
+  QF_BV bit-blast certificate anatomy. Regenerated the ontology and dashboards;
+  the foundational concept atlas now validates at 78 rows: 23 curriculum rows,
+  18 field rows, 35 bridge rows, and 2 example-family rows.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for
