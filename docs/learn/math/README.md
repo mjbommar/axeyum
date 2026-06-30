@@ -309,7 +309,8 @@ validated pack data and the repo-root command that replays it.
   finite Chebyshev-system replay.
 - [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md): follows
   exact Vandermonde unisolvence, interpolation, alternating residual signs,
-  duplicate-node rejection, and the Chebyshev/Haar/minimax Lean horizon.
+  checked QF_LRA/Farkas duplicate-node determinant rejection, and the
+  Chebyshev/Haar/minimax Lean horizon.
 
 ## How To Read These Pages
 

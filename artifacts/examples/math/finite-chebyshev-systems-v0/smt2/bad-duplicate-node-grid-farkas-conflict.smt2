@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const determinant Real)
+(assert (= determinant 0))
+(assert (= determinant 1))
+(check-sat)

@@ -852,11 +852,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the QF_BV resource lane with a fixed modulo-7 quadratic nonresidue artifact:
   [`quadratic-nonresidue-mod7-bitblast-conflict.smt2`](artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2).
   The `math_resource_bv_routes` regression now has four cases: finite rings,
-  finite fields, graph coloring, and bounded number theory. The generated
-  resource summary is `checks=412`, `checked=194`, and
-  `solver_reuse=promoted:10,unclassified:74`; the candidate query now returns
-  no rows, so the foundational-resource smoke test requires a promoted row
-  instead.
+  finite fields, graph coloring, and bounded number theory. The candidate
+  query now returns no rows, so the foundational-resource smoke test requires a
+  promoted row instead.
+
+- **Finite Chebyshev-system Farkas promotion landed.**
+  [`finite-chebyshev-systems-v0`](artifacts/examples/math/finite-chebyshev-systems-v0/)
+  now has a source-linked SMT-LIB artifact for the duplicate-node determinant
+  conflict:
+  [`bad-duplicate-node-grid-farkas-conflict.smt2`](artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2).
+  The `math_resource_lra_routes` regression checks the exact rational
+  contradiction `determinant = 0` and `determinant = 1` with
+  `Evidence::UnsatFarkas` plus independent `Evidence::check` rechecking. The
+  pack metadata marks `solver_reuse.status` as `promoted`; generated resource
+  summary now reports `solver_reuse=promoted:11,unclassified:73`.
 
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)

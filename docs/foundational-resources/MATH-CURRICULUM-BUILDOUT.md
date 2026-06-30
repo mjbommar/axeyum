@@ -745,8 +745,8 @@ Gram-Schmidt replay, checked QF_LRA/Farkas rejection of a bad inner product,
 and a general inner-product/Hilbert-space Lean-horizon row.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
 finite Vandermonde unisolvence, interpolation matrix replay, alternating
-residual sign patterns, checked rejection of a duplicate-node grid, and a
-general Chebyshev-system Lean-horizon row.
+residual sign patterns, checked QF_LRA/Farkas rejection of a duplicate-node
+determinant conflict, and a general Chebyshev-system Lean-horizon row.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
 arithmetic, conjugate/norm replay, and a fixed polynomial-root witness using
 real-pair algebra.
@@ -1288,8 +1288,8 @@ monotonicity, checked bad midpoint-convexity rejection, and the general
 convex-analysis Lean horizon.
 `finite-chebyshev-systems-v0` now has a learner-facing end-to-end lesson for
 exact Vandermonde unisolvence, interpolation, alternating residual signs,
-checked duplicate-node-grid rejection, and the Chebyshev/Haar/minimax Lean
-horizon.
+checked duplicate-node-grid rejection with QF_LRA/Farkas evidence, and the
+Chebyshev/Haar/minimax Lean horizon.
 `spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
 checking, spectral decomposition reconstruction, checked bad-eigenpair

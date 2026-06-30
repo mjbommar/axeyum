@@ -57,3 +57,16 @@ The checker verifies nonzero alternating signs and common magnitude `1/2`.
 The bad-grid row uses duplicate sample points `0, 0, 1`. The checker recomputes
 determinant `0` and verifies that the nonzero polynomial `x - x^2` vanishes on
 all listed sample points.
+
+## Axeyum Route
+
+The finite replay computes the degenerate determinant and null vector. The
+solver-facing artifact then checks the final exact-rational conflict:
+
+```text
+determinant = 0
+determinant = 1
+```
+
+This is a QF_LRA/Farkas row. It does not prove general Chebyshev-system or
+minimax theorems; those remain Lean-horizon claims.

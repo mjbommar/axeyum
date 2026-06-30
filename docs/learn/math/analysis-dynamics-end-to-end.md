@@ -113,7 +113,8 @@ r(-1), r(0), r(1) = 1/2, -1/2, 1/2
 ```
 
 It also rejects a duplicate-node grid by recomputing determinant `0` and a
-nonzero null vector.
+nonzero null vector, then checks the final false determinant-`1` claim through
+QF_LRA/Farkas evidence.
 
 For the Markov-chain row, it checks exact stochastic evolution:
 

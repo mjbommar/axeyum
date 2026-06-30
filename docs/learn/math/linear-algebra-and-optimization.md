@@ -237,6 +237,8 @@ Vandermonde matrix on sample points `-1, 0, 1`:
 
 It recomputes determinant `2`, checks interpolation values for
 `2 - x + 3*x^2`, and rejects a duplicate-node grid whose determinant is `0`.
+The bad-grid row now also routes the false determinant-`1` claim through
+checked QF_LRA/Farkas evidence.
 
 Run the checks from the repository root:
 

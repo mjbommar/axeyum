@@ -183,6 +183,20 @@ fn finite_concentration_bad_tail_bound_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_chebyshev_duplicate_node_grid_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let determinant = real(&mut arena, "determinant");
+    let determinant_is_zero = eq_ratio(&mut arena, determinant, 0, 1);
+    let false_nonzero_determinant = eq_ratio(&mut arena, determinant, 1, 1);
+
+    assert_farkas_checked(
+        "finite-chebyshev-systems-v0 bad-duplicate-node-grid-rejected",
+        &arena,
+        &[determinant_is_zero, false_nonzero_determinant],
+    );
+}
+
+#[test]
 fn finite_probability_bad_normalization_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let heads = real(&mut arena, "heads");

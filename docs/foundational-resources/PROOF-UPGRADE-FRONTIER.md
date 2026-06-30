@@ -182,10 +182,15 @@ First targets:
 - [matrix-invariants-v0](../../artifacts/examples/math/matrix-invariants-v0/)
   (resource-backed Farkas regression landed for the bad characteristic
   polynomial row)
+- [finite-chebyshev-systems-v0](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
+  (resource-backed Farkas regression landed for the duplicate-node determinant
+  conflict)
 
 Secondary targets:
 
-- first secondary QF_LRA/Farkas target set covered.
+- first secondary QF_LRA/Farkas target set covered; finite Chebyshev-system
+  determinant replay now contributes a functional-analysis/numerical-analysis
+  exact-linear regression.
 
 Expected artifact:
 

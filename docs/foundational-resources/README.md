@@ -344,8 +344,9 @@ schemas, examples, and validation workflows.
   recurrence checks.
 - [`artifacts/examples/math/finite-chebyshev-systems-v0/`](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   validates exact finite Vandermonde unisolvence, interpolation replay,
-  alternating residual signs, checked rejection of a duplicate-node grid, and a
-  general Chebyshev-system Lean-horizon row.
+  alternating residual signs, checked QF_LRA/Farkas rejection of a
+  duplicate-node determinant conflict, and a general Chebyshev-system
+  Lean-horizon row.
 - [`artifacts/examples/math/complex-algebraic-v0/`](../../artifacts/examples/math/complex-algebraic-v0/)
   validates exact complex arithmetic, conjugate/norm replay, and a fixed
   polynomial-root witness using real-pair algebra.

@@ -28,7 +28,8 @@ Concept rows:
 
 The positive rows replay finite exact-rational matrix and polynomial
 calculations. The negative row is a checked refutation of a false unisolvence
-claim. General Chebyshev-system and minimax theorems remain Lean-horizon.
+claim, with a promoted QF_LRA/Farkas route for the final determinant conflict.
+General Chebyshev-system and minimax theorems remain Lean-horizon.
 
 ## Replay Vandermonde Unisolvence
 
@@ -132,6 +133,18 @@ q(0), q(0), q(1) = 0, 0, 0
 So the grid cannot determine every quadratic polynomial uniquely, and the bad
 unisolvence claim is checked `unsat`.
 
+The promoted solver-facing slice isolates the final determinant contradiction:
+
+```text
+determinant = 0
+determinant = 1
+```
+
+The route test emits checked `UnsatFarkas` evidence for that exact-rational
+conflict. The determinant and null-vector computation still come from the
+finite replay layer; the Farkas certificate checks only the final linear
+inconsistency.
+
 ## Name The Lean Horizon
 
 The final row records the theorem-prover boundary:
@@ -154,6 +167,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas
 ```
 
 Expected output:
@@ -168,7 +182,7 @@ This lesson shows Axeyum's current Chebyshev-system resource pattern:
 
 ```text
 untrusted fast search -> grid, coefficients, residual, or bad-grid candidate
-trusted small checking -> exact rational determinant and polynomial replay
+trusted small checking -> exact rational determinant replay plus checked Farkas conflict
 remaining horizon -> general Chebyshev, Haar, minimax, and compactness proofs
 ```
 

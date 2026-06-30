@@ -30,6 +30,16 @@ The validator rejects the claimed unisolvence because the duplicate-node
 evaluation matrix has determinant zero and a listed nonzero coefficient vector
 vanishes on every listed sample point.
 
+The promoted QF_LRA route isolates the determinant conflict:
+
+```text
+determinant = 0
+determinant = 1
+```
+
+The solver regression emits checked `UnsatFarkas` evidence for that final
+linear contradiction after pack-local replay computes the determinant.
+
 ## `general-chebyshev-system-lean-horizon`
 
 Expected result: `not-run`.

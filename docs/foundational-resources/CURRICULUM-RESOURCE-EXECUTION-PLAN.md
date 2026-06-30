@@ -392,6 +392,9 @@ Next buildout:
    `number-theory-v0` now adds
    `artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_bv_routes.rs`.
+   `finite-chebyshev-systems-v0` now adds
+   `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
+   checked from `crates/axeyum-solver/tests/math_resource_lra_routes.rs`.
 11. Add a rules/law reasoning resource plan that explicitly reuses finite
     predicates, graph reachability, optimization, and proof-route vocabulary.
 12. Add generated typed-consumer sketches only after at least one downstream

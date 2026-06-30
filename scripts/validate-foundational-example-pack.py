@@ -9147,6 +9147,22 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
         fail("bad-duplicate-node-grid-rejected null_coefficients do not vanish on the grid")
     if any(value != 0 for value in zero_values):
         fail("bad-duplicate-node-grid-rejected zero_values must be all zero")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad duplicate-node Chebyshev smt2_artifact", smt2_artifact)
+    check_source("bad duplicate-node Chebyshev smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2"
+    ):
+        fail("bad-duplicate-node-grid-rejected smt2_artifact must name the checked QF_LRA artifact")
+    regression = data.get("farkas_regression")
+    require_string("bad duplicate-node Chebyshev farkas_regression", regression)
+    if "finite_chebyshev_duplicate_node_grid_emits_checked_farkas" not in regression:
+        fail("bad-duplicate-node-grid-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad duplicate-node Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-duplicate-node-grid-rejected certificate must document checked Farkas evidence")
 
     horizon = checks["general-chebyshev-system-lean-horizon"]
     if horizon["expected_result"] != "not-run":

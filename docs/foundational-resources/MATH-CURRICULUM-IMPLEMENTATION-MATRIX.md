@@ -229,6 +229,10 @@ Build sequence:
     `number-theory-v0` now links `quadratic-nonresidue-qf-bv-drat` to
     `artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`,
     checked by the `math_resource_bv_routes` QF_BV/DRAT regression.
+    `finite-chebyshev-systems-v0` now links
+    `bad-duplicate-node-grid-rejected` to
+    `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
+    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

@@ -89,9 +89,12 @@
         "claimed_determinant": "1",
         "actual_determinant": "0",
         "null_coefficients": ["0", "1", "-1"],
-        "zero_values": ["0", "0", "0"]
+        "zero_values": ["0", "0", "0"],
+        "smt2_artifact": "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas",
+        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the duplicate-node determinant contradiction determinant = 0 and determinant = 1"
       },
-      "notes": "The validator rejects the grid because the determinant is zero and x - x^2 vanishes on all listed sample points."
+      "notes": "The validator rejects the grid because the determinant is zero and x - x^2 vanishes on all listed sample points. The SMT-LIB artifact isolates the false determinant claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
     },
     {
       "id": "general-chebyshev-system-lean-horizon",
