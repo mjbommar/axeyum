@@ -2,6 +2,63 @@
 
 How we know each phase worked, and how we never ship a wrong verdict.
 
+## Measured baseline (2026-06-30) — the grounding number
+
+First head-to-head of the **existing** engine (`check_auto`) vs the `z3` 4.13.3
+binary on the curated non-incremental corpus (`measure_corpus`, 5 s cap, via
+`scripts/mem-run.sh`):
+
+| Division | axeyum decided | z3 decided | DISAGREE | axeyum PAR-2 | z3 PAR-2 |
+|---|---|---|---|---|---|
+| **QF_NRA** (curated, 36 considered) | **9 / 36 (25%)** | 36 / 36 | **0** | 7.524 s | 0.010 s |
+| **QF_NIA** (curated, 28 considered) | **20 / 28 (71%)** | 28 / 28 | **0** | 2.985 s | 0.025 s |
+
+**Reading:** soundness holds (DISAGREE=0). The CAD is decision-complete *in
+principle* but decides only 25% of curated QF_NRA within 5 s — axeyum's high PAR-2
+(7.5 s vs z3's 0.01 s) says the gap is dominated by **timeouts / not reaching a
+verdict**, not wrong answers. The per-instance `explain_corpus` route trace
+determines how much is (a) CAD too slow / cell blow-up (→ Phase B cheap tier +
+Phase D projection) vs (b) shapes not routed to CAD (→ dispatch/coverage). NIA at
+71% is closer; its residual is the UNSAT-side gap (→ Phase E incr-lin).
+
+> This table is the P2.5 scoreboard anchor. **Re-run it after every phase** and
+> record the delta here; no decide-rate claim without a re-run
+> ([SCOREBOARD](../../../../bench-results/SCOREBOARD.md)).
+
+### Why QF_NRA is 25% — per-instance decline breakdown (`explain_corpus`, 3 s)
+
+The route trace on the 27 undecided QF_NRA instances localizes the gap precisely:
+
+| Decline reason | ~count | Meaning |
+|---|---|---|
+| `nra: nonlinear abstraction: N cross-products exceed the bound of 2` | **~15** | the ADR-0024 ≤2-cross-product cap rejects N∈{3,6,7,9,12,14,15,20,31,322} |
+| `lra: Fourier–Motzkin elimination exceeded the wall-clock/size budget` | **~7** | the LRA relaxation's FM elimination blows the budget |
+| `milp: declined (unsupported)` (mixed real+int) | several | the {real,int} fragment isn't routed to a nonlinear path |
+| i128 overflow in LRA replay (`approx-sqrt-unsat`) | 1 | `real_cmp` evaluation overflows i128 → backend **error** (should be graceful unknown) |
+| parse-error | 1 | `real-numerals` front-end gap |
+
+**The decisive observation:** on *every* multi-variable instance the trace shows
+`nra-real-root: declined (not-applicable)` **before** falling to `nra.rs`. So the
+**CAD that is "decision-complete" almost never fires on real benchmarks** — its
+applicability gate only admits narrow conjunction/strict shapes, and Boolean-
+structured / mixed real-int instances bypass it entirely. The 25% is therefore a
+**routing + cap** problem, not a missing-algorithm problem.
+
+### Re-prioritized next levers (measured, not assumed)
+
+1. **Widen the CAD applicability gate** so the existing decision-complete CAD fires
+   on more multi-variable polynomial conjunctions (the biggest lever — the engine
+   exists, it just declines). → [Phase D](06-phaseD-nlsat-cac.md) / dispatch.
+2. **Raise/remove the ≤2 cross-product cap** in `nra.rs` now that the algebraic
+   path is bignum (the cap's stated reason — "multi-variable can OOM, needs CAD" —
+   is exactly what the CAD now provides). → [Phase B](04-phaseB-incremental-linearization.md).
+3. **Make the i128 LRA-replay overflow a graceful `unknown`**, not a backend error
+   (the [Rational-overflow class](../../../research/)). Quick soundness-hygiene win.
+4. **Route mixed real+int nonlinear** into the NRA path instead of `milp: unsupported`.
+
+NIA at 71% is closer; its residual is the UNSAT side → [Phase E](07-phaseE-nia.md)
+incremental linearization over UFLIA.
+
 ## Measurement protocol (no claim without a re-run)
 
 - **Corpus:** the public QF_NRA / QF_NIA / QF_UFNRA divisions (the gitignored NAS

@@ -1,8 +1,31 @@
-# P2.5 · Phase D — The complete oracle: Cylindrical Algebraic Coverings (CAC)
+# P2.5 · Phase D — The complete oracle (already exists as CAD; finish perf + proof)
 
-**Size:** XL (the completeness keystone) · **Depends on:** Phase A (projection,
-algebraic numbers, root isolation) · **Makes QF_NRA complete** behind a resource
-budget.
+> **Corrected 2026-06-30.** axeyum **already has a complete-on-the-decision-side
+> CAD** (not a greenfield CAC build): projection-by-resultant + lifting + cell
+> sampling, 2-variable complete for any coordinate, N-variable algebraic
+> critical-point lifting, fuzz-gated DISAGREE=0 (ADR-0044/45/46;
+> [`nra-cad-nlsat-plan.md`](../../../research/05-algorithms/nra-cad-nlsat-plan.md)
+> slices a/b/b2/c/c2). So this phase is **NOT "build the oracle"** — it is **(1)
+> performance** (McCallum/Hong projection to replace resultant-elimination lifting,
+> bound cell blow-up) and **(2) per-cell Positivstellensatz evidence** for Lean
+> parity (roadmap step 4 / "remaining (d)"). The CAC material below is retained as
+> background for a possible future explanation-driven variant; we are **not**
+> rebuilding the decision procedure. See [00-current-state.md](00-current-state.md).
+
+**Size:** ~~XL (build)~~ → **perf + proof on an existing engine** · **Depends on:**
+the existing CAD + Phase A T-A.8 (projection) · **QF_NRA decision side already
+complete** behind a resource budget.
+
+## What's already done vs. what remains
+
+- **DONE:** the CAD decision procedure (decision-complete, fuzz-sound) — see
+  [00-current-state.md](00-current-state.md) and the inventory in
+  [03-phaseA-algebraic-core.md](03-phaseA-algebraic-core.md).
+- **REMAINS (D.perf):** McCallum/Hong projection (Phase A T-A.8) to cut cell count;
+  measured wall-clock/cell reduction on public QF_NRA (no perf claim without it).
+- **REMAINS (D.proof):** per-cell sign-condition certificate format + emit it as
+  the engine decides; reconstruct degree-2 cells via the existing SOS→Lean pipeline
+  (ADR-0040). This is the NRA Lean-parity payoff and the roadmap's open item.
 
 > This is the multi-month destination. It is what makes axeyum *complete* on the
 > decidable real fragment — the thing Z3 (NLSAT) and cvc5 (CAC) have and we don't.
