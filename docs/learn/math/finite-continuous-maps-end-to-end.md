@@ -12,6 +12,9 @@ Concept rows:
 - `field_topology`, `field_set_theory_and_foundations`, and
   `field_real_analysis` in the
   [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
+- `bridge_continuity_preimage` and
+  `bridge_finite_topology_operator_homeomorphism` in the atlas bridge
+  vocabulary.
 
 ## Claim Shape
 

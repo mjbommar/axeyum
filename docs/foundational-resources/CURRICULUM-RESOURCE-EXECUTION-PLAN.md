@@ -35,11 +35,11 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 103 atlas rows generated from curriculum, field data, 57 R1 bridge
+- 104 atlas rows generated from curriculum, field data, 58 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
-  finite chain-complex/homology replay,
+  finite topology-operator/homeomorphism replay, finite chain-complex/homology replay,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
   finite graph replay/obstruction and finite dynamics/Euler vocabulary,
@@ -433,7 +433,7 @@ Next buildout:
 | `abstract_algebra` | QF_UF/Alethe upgrades for table and homomorphism packs |
 | `real_analysis` | bounded-vs-general concept rows for limits, continuity, compactness, integration |
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
-| `topology` | standalone finite topology lesson landed; maintain granular compactness/connectedness/homology rows |
+| `topology` | standalone finite topology lesson landed; maintain granular finite topology-operator/homeomorphism and homology rows |
 | `measure_theory` | standalone finite measure and monotonicity lessons landed; keep Lebesgue/convergence theorem rows Lean-horizon |
 | `probability_theory` | standalone finite probability mass-table lesson landed; maintain stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
@@ -475,6 +475,12 @@ Next buildout:
    counterexample, bounded theorem shadows, metric balls, bounded epsilon-delta
    shadows, compactness shadows, connectedness shadows, continuity-by-preimage,
    and Lean horizons.
+   A follow-up topology row,
+   `bridge_finite_topology_operator_homeomorphism`, now makes fixed finite
+   topology-axiom replay, closure/interior replay, finite preimage continuity,
+   finite homeomorphism replay, and checked malformed-topology/preimage
+   evidence queryable without promoting arbitrary closure-operator or
+   homeomorphism-invariance theorems.
    A follow-up topology row, `bridge_finite_chain_homology_replay`, now makes
    fixed finite simplicial-complex closure, oriented boundaries,
    boundary-squared-zero, Betti-rank replay, and checked bad-boundary

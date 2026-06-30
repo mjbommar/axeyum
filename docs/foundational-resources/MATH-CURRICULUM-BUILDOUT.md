@@ -1298,7 +1298,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 103 atlas rows validate, including generated bridge-concept rows for
+  Status: 104 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1312,7 +1312,8 @@ Exit criteria:
   image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
-  continuity-by-preimage, finite chain-complex/homology replay, LU
+  continuity-by-preimage, finite topology-operator/homeomorphism replay,
+  finite chain-complex/homology replay, LU
   factorization replay, rank-nullity replay,
   residual bounds, eigenpair witnesses, characteristic-polynomial replay,
   finite random-matrix moments, finite measure additivity, finite probability
@@ -2018,14 +2019,17 @@ that reads the committed rule-pack JSON and exposes 738 bounded sample rows plus
 per-pack query families for coverage, equivalence, thresholds, caps,
 version-deltas, and monotonicity.
 The consumer query layer now also exposes topology readiness:
-`CONSUMER-QUERIES.md` shows the Boolean field summary, compactness and preimage
-bridge lookups, and checked Boolean/Alethe topology row drill-downs. The
+`CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,
+compactness/preimage/closure/homeomorphism/homology bridge lookups, concept
+queries for finite topology-operator/homeomorphism and finite homology rows,
+and checked Boolean/Alethe/Diophantine topology row drill-downs. The
 foundational-resource smoke check runs those same queries so finite topology
-axioms, finite open-cover and connectedness refutations, continuous-map
-preimage consistency, finite homology boundary checks, metric-ball examples,
-and bounded epsilon-delta shadows stay visible through the public JSON boundary
-without promoting arbitrary compactness, connectedness, homeomorphism
-invariance, or homology-invariance theorems.
+axioms, finite open-cover and connectedness refutations, closure/interior
+replay, finite homeomorphism replay, continuous-map preimage consistency,
+finite homology boundary checks, metric-ball examples, and bounded
+epsilon-delta shadows stay visible through the public JSON boundary without
+promoting arbitrary compactness, connectedness, homeomorphism invariance,
+homology invariance, exact sequences, or cohomology theorems.
 The consumer query layer now also exposes statistics readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, finite-table and
 tail-count bridge lookups, and checked Farkas/Diophantine statistics row
@@ -2166,6 +2170,17 @@ finite orbit-count replay, and exact finite tail-count contradictions across
 exercises discrete-math counting lookup plus concept-scoped Boolean and
 Diophantine route queries while keeping asymptotic counting and unbounded
 combinatorics in the horizon lane.
+The topology concept layer now also has
+`bridge_finite_topology_operator_homeomorphism`. It groups finite topology
+axiom replay, closure/interior replay, continuity by open preimage, finite
+homeomorphism replay, checked malformed-topology Bool/CNF rows, and checked
+malformed-preimage QF_UF/Alethe rows across `finite-topology-v0`,
+`finite-continuous-maps-v0`, `finite-compactness-v0`, and
+`finite-connectedness-v0`. The foundational-resource smoke check now exercises
+topology closure/homeomorphism lookup plus concept-scoped Alethe route queries
+while keeping closure-operator theorems, homeomorphism invariance,
+compactness/connectedness preservation, homology invariance, and general
+topology in the horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -3312,6 +3312,120 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_topology_operator_homeomorphism",
+        "title": "Finite Topology Operators And Homeomorphism Replay",
+        "field_ids": ["topology", "set_theory_and_foundations", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite topology rows state an explicit finite universe and "
+            "open-set family, then replay interior, closure, continuity, "
+            "bijectivity, and inverse-continuity checks by enumeration. The "
+            "trusted object is exact finite replay plus checked Bool/CNF or "
+            "QF_UF/Alethe evidence for source-level malformed rows; arbitrary "
+            "homeomorphism-invariance and closure-operator theorems remain "
+            "Lean-horizon."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_metric_ball",
+            "bridge_continuity_preimage",
+            "bridge_finite_image_preimage_inverse",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "bridge_compactness_shadow",
+            "bridge_connectedness_shadow",
+            "bridge_finite_chain_homology_replay",
+            "field_topology",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite topology",
+            "finite closure/interior replay",
+            "finite functions",
+            "homeomorphism replay",
+            "Bool / CNF",
+            "QF_UF / Alethe",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-topology-v0",
+                "Finite topology axioms, closure/interior replay, metric-ball replay, and checked bad empty-open row.",
+            ),
+            (
+                "finite-continuous-maps-v0",
+                "Finite continuity, open-preimage replay, homeomorphism replay, checked bad-continuity row, and bad-homeomorphism rejection.",
+            ),
+            (
+                "finite-compactness-v0",
+                "Finite open-cover rows that depend on the same explicit finite topology operators.",
+            ),
+            (
+                "finite-connectedness-v0",
+                "Finite clopen and open-separation rows that depend on the same explicit finite topology operators.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite topology replay plus checked bad-row certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py, cargo test -p axeyum-cnf --test math_resource_boolean_routes, and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-topology-end-to-end.md",
+                    "docs/learn/math/finite-continuous-maps-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes open-set axioms, "
+                    "interior/closure, preimages, bijections, and inverse "
+                    "continuity. Malformed topology rows use checked Bool/CNF "
+                    "evidence; malformed preimage rows use checked "
+                    "QF_UF/Alethe evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-topology-end-to-end.md",
+            "docs/learn/math/finite-continuous-maps-end-to-end.md",
+            "docs/learn/math/finite-compactness-end-to-end.md",
+            "docs/learn/math/finite-connectedness-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "artifacts/examples/math/finite-topology-v0/cnf/bad-empty-open-rejected.cnf",
+            "artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite closure/interior replay checks one explicit topology and subset; it does not prove Kuratowski closure axioms or arbitrary closure/interior theorem schemas.",
+            "Finite homeomorphism replay checks one finite bijection with continuity in both directions; it does not prove homeomorphism invariance of compactness, connectedness, homology, or other topological invariants.",
+            "Additional homeomorphism, closure-operator, boundary, or specialization-order rows should land only when they add distinct Boolean, EUF, or Lean-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite universe, open-set family, subset, function table, inverse table, and the specific topological property being replayed.",
+                "The validator recomputes topology axioms, interior, closure, preimages, bijectivity, continuity, and inverse continuity exactly.",
+                "Bad topology or preimage rows link source artifacts and route regressions before claiming checked evidence.",
+                "General topology and homeomorphism-invariance theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
         "id": "bridge_finite_chain_homology_replay",
         "title": "Finite Chain Complex And Homology Replay",
         "field_ids": [

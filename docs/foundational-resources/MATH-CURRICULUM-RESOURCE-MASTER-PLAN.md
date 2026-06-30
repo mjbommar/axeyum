@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 57 bridge-concept rows.
+- 58 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -306,7 +306,7 @@ Next useful increments:
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
 | `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
 | `complex_analysis` | real-pair algebra and transforms | polynomial-root, conjugation/norm, Mobius rows only if distinct; analytic horizon rows | real-pair LRA/NRA, finite replay, Lean horizon | no algebraic row is described as analytic coverage |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | landed finite chain-complex/homology replay bridge; add only distinct closure/interior, homeomorphism, rank/torsion, or cohomology finite pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, finite replay, Lean horizon | dashboards distinguish finite set-family and chain-complex replay from topology theorems |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | landed finite topology-operator/homeomorphism and finite chain-complex/homology replay bridges; add only distinct rank/torsion, cohomology, specialization-order, or boundary-operator finite pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, finite replay, Lean horizon | dashboards distinguish finite set-family, homeomorphism replay, and chain-complex replay from topology theorems |
 | `measure_theory` | finite measure, monotonicity, product measure, integration, random variables, conditioning, martingales | only distinct table/convergence vocabulary; keep countable/Lebesgue material horizon | QF_LRA/Farkas, finite replay, Lean horizon | finite universe and sigma-algebra are explicit |
 | `probability_theory` | finite PMFs, kernels, Markov chains, martingales, hitting times, concentration | exact discrete distributions, independence/conditioning variants, limit-theorem horizons | QF_LRA/Farkas, QF_LIA, finite replay | probability rows can be audited as exact rational tables |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | exact finite inference examples and numerical-honesty metadata | QF_LIA, QF_LRA/Farkas, replay | inference claims distinguish exact finite tests from statistical modeling |
@@ -444,6 +444,14 @@ Use one row per commit unless the change is purely navigational.
     discoverable as a shared topology/linear-algebra bridge without promoting
     homology invariance, exact sequences, homotopy equivalence, cohomology, or
     general algebraic-topology theorems.
+28. Landed: add `bridge_finite_topology_operator_homeomorphism` so finite
+    topology axioms, closure/interior replay, finite continuity by preimage,
+    finite homeomorphism replay, checked malformed-topology Bool/CNF rows, and
+    checked malformed-preimage QF_UF/Alethe rows are discoverable as a shared
+    topology bridge without promoting arbitrary closure-operator,
+    homeomorphism-invariance, compactness-preservation,
+    connectedness-preservation, homology-invariance, or general topology
+    theorems.
 
 ## Anti-Patterns
 

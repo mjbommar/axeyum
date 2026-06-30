@@ -98,7 +98,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |
 | `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
-| `topology` | sets, reals, linear algebra | landed finite topology/compactness/connectedness/preimage bridge rows plus finite chain-complex/homology replay bridge; add only distinct closure/interior, homeomorphism, rank/torsion, or cohomology pressure | finite replay, QF_LIA/LRA, Lean horizon |
+| `topology` | sets, reals, linear algebra | landed finite topology/compactness/connectedness/preimage bridge rows plus finite topology-operator/homeomorphism and finite chain-complex/homology replay bridges; add only distinct rank/torsion, cohomology, specialization-order, or boundary-operator pressure | finite replay, QF_UF/Alethe, QF_LIA/LRA, Lean horizon |
 | `measure_theory` | sets, probability, reals | landed finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows; add narrower countable-measure or convergence rows only when reused | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
@@ -523,7 +523,16 @@ Build sequence:
     topology homology lookup and concept-scoped Diophantine route queries while
     keeping homology invariance, exact sequences, homotopy equivalence,
     cohomology, and general algebraic topology in the Lean-horizon lane.
-59. Revisit crate/repo boundaries only after three real consumers or repeated
+59. Landed: add the finite topology-operator/homeomorphism bridge row.
+    `bridge_finite_topology_operator_homeomorphism` makes finite topology
+    axiom replay, closure/interior replay, continuity by open preimage,
+    homeomorphism replay, checked malformed-topology Bool/CNF rows, and
+    checked malformed-preimage QF_UF/Alethe rows queryable through topology
+    closure/homeomorphism lookup and concept-scoped Alethe route queries while
+    keeping arbitrary closure-operator theorems, homeomorphism invariance,
+    compactness/connectedness preservation, homology invariance, and general
+    topology in the Lean-horizon lane.
+60. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

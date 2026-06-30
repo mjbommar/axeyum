@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 57 bridge-concept rows.
+- 58 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -717,15 +717,16 @@ Current packs:
 Build next:
 
 - Landed concept rows for metric balls, compactness shadows, connectedness
-  shadows, continuity-by-preimage, and finite chain-complex/homology replay.
-  Add narrower closure/interior, homeomorphism, rank/torsion, or cohomology
+  shadows, continuity-by-preimage, finite topology-operator/homeomorphism
+  replay, and finite chain-complex/homology replay. Add narrower rank/torsion,
+  cohomology, specialization-order, boundary-operator, or theorem-invariance
   rows only when reuse or solver pressure justifies the split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
   source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
 - Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
   or LIA only when the mathematical object is fixed and tiny.
-- Keep general compactness, connectedness, homotopy, homology invariance, and
-  topological spaces as Lean-horizon.
+- Keep general compactness, connectedness, homotopy, homeomorphism invariance,
+  homology invariance, and topological spaces as Lean-horizon.
 
 Graduation:
 
@@ -1627,6 +1628,14 @@ Pick one item per commit unless the change is purely navigational.
     Betti-rank replay, and the checked bad-boundary coefficient row
     discoverable without promoting homology invariance, exact sequences,
     homotopy equivalence, cohomology, or general algebraic topology.
+97. Landed: add `bridge_finite_topology_operator_homeomorphism` plus topology
+    closure/homeomorphism lookup and concept-scoped Alethe route smoke queries,
+    making finite topology axioms, closure/interior replay, finite continuity
+    by preimage, homeomorphism replay, checked malformed-topology Bool/CNF
+    rows, and checked malformed-preimage QF_UF/Alethe rows discoverable
+    without promoting arbitrary closure-operator, homeomorphism-invariance,
+    compactness-preservation, connectedness-preservation, homology-invariance,
+    or general topology theorems.
 
 ## Validation Checklist
 

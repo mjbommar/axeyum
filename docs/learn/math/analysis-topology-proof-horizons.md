@@ -9,6 +9,9 @@ Concept rows:
 - `curriculum_sequences_and_limits`, `curriculum_calculus`, and
   `curriculum_reals` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
+- `bridge_finite_topology_operator_homeomorphism` and
+  `bridge_finite_chain_homology_replay` in the atlas bridge vocabulary for the
+  finite topology and algebraic-topology slices.
 
 Example packs:
 

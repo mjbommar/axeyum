@@ -15,7 +15,9 @@ Concept rows:
   `curriculum_sequences_and_limits` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `bridge_finite_boolean_algebra`, `bridge_metric_ball`, and
-  `bridge_compactness_shadow` in the atlas bridge vocabulary.
+  `bridge_finite_topology_operator_homeomorphism` in the atlas bridge
+  vocabulary. `bridge_compactness_shadow` builds on the same finite topology
+  operators for open-cover rows.
 
 ## Claim Shape
 
