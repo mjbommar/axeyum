@@ -1063,11 +1063,13 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 52 atlas rows validate, including generated bridge-concept rows for
+  Status: 58 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows, metric
   balls, bounded epsilon-delta shadows, compactness shadows, connectedness
-  shadows, continuity-by-preimage, and Lean horizons, plus example-family rows
-  for recurring finite-algebra QF_UF/Alethe conflicts and exact-rational
+  shadows, continuity-by-preimage, LU factorization replay, rank-nullity
+  replay, residual bounds, eigenpair witnesses, characteristic-polynomial
+  replay, finite random-matrix moments, and Lean horizons, plus example-family
+  rows for recurring finite-algebra QF_UF/Alethe conflicts and exact-rational
   QF_LRA/Farkas infeasibility rows.
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.

@@ -97,11 +97,14 @@ rules/law transfer, consumer boundaries, and eventual library splits is
 Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, and finite monoids.
-The foundational concept atlas now also includes nine generated R1 bridge rows:
-finite model replay, counterexample proof, bounded theorem shadows, metric
-balls, bounded epsilon-delta shadows, compactness shadows, connectedness
-shadows, continuity-by-preimage, and Lean horizons, so resource packs can point
-at shared evidence and boundary vocabulary instead of repeating it locally.
+The foundational concept atlas now also includes fifteen generated R1 bridge
+rows: finite model replay, counterexample proof, bounded theorem shadows,
+metric balls, bounded epsilon-delta shadows, compactness shadows,
+connectedness shadows, continuity-by-preimage, LU factorization replay,
+rank-nullity replay, residual bounds, eigenpair witnesses, characteristic
+polynomial replay, finite random-matrix moments, and Lean horizons, so resource
+packs can point at shared evidence and boundary vocabulary instead of repeating
+it locally.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.

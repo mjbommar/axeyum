@@ -34,7 +34,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 9 bridge-concept rows.
+- 15 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
 - 412 expected checks.
@@ -104,7 +104,7 @@ Near-term concept-row families:
 | proof object anatomy | Explains checked UNSAT beyond "solver says no" | CNF/LRAT, Farkas, Alethe, QF_BV DRAT |
 | algebraic structure maps | Current algebra packs are broad | homomorphism, kernel/image, quotient, action, ideal, module, tensor |
 | analysis/topology boundaries | Prevents overclaiming bounded examples | metric ball, epsilon-delta shadow, compactness shadow, connectedness shadow, continuity preimage |
-| matrix computation | Bridges education and solver corpora | LU replay, rank/nullity, residual bound, eigenpair, characteristic polynomial |
+| matrix computation | Bridges education and solver corpora | LU replay, rank/nullity, residual bound, eigenpair, characteristic polynomial, finite random-matrix moment |
 | probability/statistics tables | Many packs share finite probability structure | pushforward, kernel, expectation, conditioning, tail-count obstruction |
 | rules/law transfer | Reuses math concepts for policies | finite predicate, threshold, exception, precedence, temporal version |
 
@@ -518,10 +518,12 @@ Current packs:
 
 Build next:
 
-- Add concept rows for matrix multiplication, LU replay, rank/nullity, kernel,
-  image, dual basis, transpose, tensor bilinear map, Gram matrix, projection,
-  residual bound, eigenpair, characteristic polynomial, and random-matrix
-  finite moment.
+- The first generated bridge rows now cover LU replay, rank/nullity replay,
+  residual bounds, eigenpair witnesses, characteristic-polynomial replay, and
+  finite random-matrix moments.
+- Add narrower concept rows for matrix multiplication, kernel/image, dual basis,
+  transpose, tensor bilinear map, Gram matrix, projection, and finite-field
+  linear algebra when one row can serve multiple packs.
 - Promote rational infeasibility rows through QF_LRA/Farkas and finite-field
   table rows through replay or QF_UF/Alethe.
 - Add a matrix corpus note that explains which rows can become solver
@@ -940,9 +942,9 @@ call sites or one external consumer.
 
 Pick one item per commit unless the change is purely navigational.
 
-1. Add concept rows for linear algebra computation families: LU, rank/nullity,
-   residual bound, eigenpair, characteristic polynomial, random-matrix finite
-   moment.
+1. Landed: add concept rows for linear algebra computation families: LU,
+   rank/nullity, residual bound, eigenpair, characteristic polynomial, and
+   random-matrix finite moment.
 2. Add concept rows for algebra maps: homomorphism, kernel/image, quotient,
    ideal, module, tensor bilinearity, group action.
 3. Add "math example using this route" sections to the six active proof

@@ -1048,6 +1048,521 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_lu_replay",
+        "title": "LU Factorization Replay",
+        "field_ids": ["linear_algebra", "numerical_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "A claimed LU factorization is checked by exact matrix multiplication "
+            "over a fixed rational matrix, with pivoting, singularity, and "
+            "stability claims kept separate from the replayed equality."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "bridge_residual_bound",
+            "field_numerical_analysis",
+            "field_optimization_and_convexity",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite matrices",
+            "exact rational arithmetic",
+            "LRA (exact rationals)",
+            "matrix multiplication replay",
+            "QF_LRA",
+        ],
+        "example_packs": [
+            (
+                "linear-algebra-rational-v0",
+                "Exact matrix-vector solution and LU factorization witnesses over rational matrices.",
+            ),
+            (
+                "numerical-linear-algebra-v0",
+                "Exact residual, solution-box, and one-step iterative checks that build on matrix replay.",
+            ),
+            (
+                "linear-optimization-v0",
+                "Linear feasibility and Farkas rows that reuse exact rational matrix constraints.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "exact rational matrix replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "not-required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/linear-system-end-to-end.md",
+                    "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+                ],
+                "notes": (
+                    "The pack validator recomputes L*U and A*x exactly over "
+                    "rationals; bad infeasible linear-system rows use the "
+                    "separate QF_LRA/Farkas route."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/linear-system-end-to-end.md",
+            "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "LU replay checks a fixed factorization; it does not prove existence, pivoting strategy correctness, or numerical stability.",
+            "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the exact matrix entries, lower/upper factors, and rational arithmetic domain.",
+                "The validator recomputes L*U and rejects corrupted factor entries.",
+                "Singularity, pivoting, and stability claims remain separate proof-horizon or numerical-analysis rows.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_rank_nullity",
+        "title": "Rank-Nullity Replay",
+        "field_ids": ["linear_algebra", "abstract_algebra", "set_theory_and_foundations"],
+        "resource_status": "validated",
+        "summary": (
+            "Rank-nullity is represented by finite carrier, kernel, image, and "
+            "map-table checks where the listed dimensions or cardinalities are "
+            "recomputed directly for the bounded vector space."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_fields",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_eigenpair",
+            "field_linear_algebra",
+            "field_abstract_algebra",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite vector spaces",
+            "finite fields",
+            "finite functions",
+            "QF_UF",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "finite-vector-spaces-v0",
+                "Finite F2 vector-space subspace, span, linear-map, kernel, image, and rank-nullity replay.",
+            ),
+            (
+                "finite-dual-spaces-v0",
+                "Finite covectors, annihilators, dual basis, and additivity checks.",
+            ),
+            (
+                "finite-modules-v0",
+                "Finite module submodule and scalar-action rows that reuse kernel/image vocabulary.",
+            ),
+            (
+                "random-matrix-finite-v0",
+                "Rank-mixture probabilities over a finite random-matrix distribution.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite kernel/image/cardinality replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/linear-algebra-and-optimization.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "Positive finite rows replay kernel/image membership and "
+                    "cardinality; equality-heavy bad closure rows can join "
+                    "the QF_UF/Alethe regression family."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite rank-nullity replay does not prove dimension uniqueness or rank-nullity over arbitrary fields.",
+            "General linear algebra theorems remain Lean-horizon until kernel/image and basis-extension proofs are reconstructed.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite field, vector-space carrier, linear map, kernel, image, and dimension or cardinality witnesses.",
+                "The validator recomputes closure, linearity, kernel/image membership, and rank-nullity equality.",
+                "General theorem statements remain linked to Lean-horizon rows instead of benchmark rows.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_residual_bound",
+        "title": "Residual Bound",
+        "field_ids": ["numerical_analysis", "linear_algebra", "optimization_and_convexity"],
+        "resource_status": "validated",
+        "summary": (
+            "A residual-bound row checks exact rational residuals, norms, "
+            "solution boxes, or normal-equation side conditions for a fixed "
+            "matrix problem, and separates exact infeasibility from floating "
+            "error analysis."
+        ),
+        "prerequisites": [
+            "bridge_lu_replay",
+            "bridge_counterexample_proof",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "field_numerical_analysis",
+            "field_optimization_and_convexity",
+            "bridge_random_matrix_finite_moment",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "Farkas certificate",
+            "exact rational residuals",
+            "finite matrices",
+            "bounded recurrence replay",
+        ],
+        "example_packs": [
+            (
+                "numerical-linear-algebra-v0",
+                "Residual-norm, solution-box, Jacobi contraction, and bad residual-bound rows.",
+            ),
+            (
+                "least-squares-regression-v0",
+                "Normal-equation, residual-orthogonality, and bad coefficient rows.",
+            ),
+            (
+                "inner-product-spaces-rational-v0",
+                "Projection, Gram matrix, and Cauchy-Schwarz rows over exact rational vectors.",
+            ),
+            (
+                "linear-algebra-rational-v0",
+                "Inconsistent rational linear-system row that reuses the Farkas route.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_LRA/Farkas residual infeasibility",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+                    "docs/learn/math/linear-algebra-and-optimization.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "Exact residual witnesses replay directly; false bound or "
+                    "coefficient claims graduate only when the final rational "
+                    "linear conflict has rechecked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Exact residual rows do not certify floating-point roundoff, conditioning, or asymptotic convergence rates.",
+            "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the matrix, candidate vector, norm or box, and exact rational residual computation.",
+                "Bad residual or coefficient rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
+                "Learner pages label numerical-analysis claims as exact rational shadows unless floating-point evidence exists.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_eigenpair",
+        "title": "Eigenpair Witness",
+        "field_ids": ["linear_algebra", "functional_analysis_and_operator_theory", "numerical_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite eigenpair row checks A*v = lambda*v exactly for a fixed "
+            "matrix, and may additionally replay orthogonality, Rayleigh "
+            "quotient, or spectral-decomposition witnesses within the bounded "
+            "matrix instance."
+        ),
+        "prerequisites": [
+            "bridge_lu_replay",
+            "bridge_residual_bound",
+            "bridge_characteristic_polynomial",
+        ],
+        "unlocks": [
+            "field_functional_analysis_and_operator_theory",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite matrices",
+            "LRA (exact rationals)",
+            "QF_LRA",
+            "NRA shadow",
+            "finite-dimensional operator replay",
+        ],
+        "example_packs": [
+            (
+                "spectral-linear-algebra-v0",
+                "Eigenpair, orthogonal eigenbasis, Rayleigh quotient, spectral decomposition, and bad eigenpair rows.",
+            ),
+            (
+                "matrix-invariants-v0",
+                "Characteristic roots and Cayley-Hamilton rows connected to fixed-matrix spectral checks.",
+            ),
+            (
+                "inner-product-spaces-rational-v0",
+                "Inner-product and projection rows that support orthogonality checks.",
+            ),
+            (
+                "finite-operator-v0",
+                "Finite-operator rows that expose the later operator-theory horizon.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "exact finite eigenpair replay plus QF_LRA/Farkas bad-eigenpair certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes A*v and lambda*v exactly; "
+                    "the promoted bad-eigenpair row checks the isolated rational "
+                    "component conflict with Farkas evidence. General spectral "
+                    "theorems remain Lean-horizon."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Fixed eigenpair replay does not prove existence of eigenvalues, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
+            "Nonlinear characteristic-root reasoning and infinite-dimensional operator theory remain separate theorem horizons.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state A, lambda, v, field/domain, and every side condition such as nonzero vector or orthogonality.",
+                "The validator recomputes A*v = lambda*v exactly and rejects corrupted component claims.",
+                "General spectral theorem statements are linked as Lean-horizon rows, not as finite solver evidence.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_characteristic_polynomial",
+        "title": "Characteristic Polynomial Replay",
+        "field_ids": ["linear_algebra", "abstract_algebra", "real_analysis", "numerical_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "A characteristic-polynomial row replays trace, determinant, fixed "
+            "polynomial coefficients, listed roots, and Cayley-Hamilton-style "
+            "matrix substitution for a bounded matrix instance."
+        ),
+        "prerequisites": [
+            "bridge_lu_replay",
+            "curriculum_polynomials",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_eigenpair",
+            "field_linear_algebra",
+            "field_abstract_algebra",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite matrices",
+            "fixed-degree polynomials",
+            "LRA (exact rationals)",
+            "QF_LRA",
+            "NRA shadow",
+        ],
+        "example_packs": [
+            (
+                "matrix-invariants-v0",
+                "Trace, determinant, characteristic polynomial, roots, Cayley-Hamilton, Gershgorin, and bad polynomial rows.",
+            ),
+            (
+                "spectral-linear-algebra-v0",
+                "Eigenpair and spectral rows that consume characteristic-polynomial vocabulary.",
+            ),
+            (
+                "polynomial-factorization-rational-v0",
+                "Fixed-degree rational polynomial division, GCD, factorization, and irreducibility replay.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "fixed-degree matrix invariant replay plus QF_LRA/Farkas bad-polynomial certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/matrix-invariants-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the listed invariant values; "
+                    "the promoted bad characteristic-polynomial row checks the "
+                    "isolated exact-rational conflict with Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/matrix-invariants-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Fixed characteristic-polynomial replay does not prove arbitrary determinant identities or general Cayley-Hamilton over all rings.",
+            "Root-existence and algebraic-closure claims remain Lean/NRA/RCF horizon work depending on the statement.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state matrix entries, polynomial coefficients, evaluation point or root witness, and exact arithmetic domain.",
+                "The validator recomputes trace, determinant, polynomial evaluation, and any matrix substitution claim.",
+                "Bad polynomial rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_random_matrix_finite_moment",
+        "title": "Finite Random-Matrix Moment",
+        "field_ids": ["probability_theory", "statistics", "linear_algebra", "numerical_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite random-matrix row enumerates an explicit matrix-valued "
+            "distribution and recomputes exact expectations, moments, ranks, "
+            "determinants, or Gram matrices without simulation or asymptotics."
+        ),
+        "prerequisites": [
+            "bridge_rank_nullity",
+            "bridge_residual_bound",
+            "curriculum_counting",
+        ],
+        "unlocks": [
+            "field_probability_theory",
+            "field_statistics",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite enumeration",
+            "finite probability tables",
+            "finite matrices",
+            "QF_LRA",
+            "exact rational expectation",
+        ],
+        "example_packs": [
+            (
+                "random-matrix-finite-v0",
+                "Finite sign-matrix moments, expected Gram matrix, rank mixture, and bad trace-moment rows.",
+            ),
+            (
+                "finite-probability-v0",
+                "Finite probability-table normalization and Bayes rows used by expectation replay.",
+            ),
+            (
+                "descriptive-statistics-v0",
+                "Exact finite statistic rows that share expectation and moment vocabulary.",
+            ),
+            (
+                "finite-concentration-v0",
+                "Finite tail-bound rows that separate exact enumeration from concentration theorem horizons.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite expectation replay plus QF_LRA/Farkas bad-moment certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/random-matrix-finite-end-to-end.md",
+                    "docs/learn/math/probability-and-statistics.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker normalizes the distribution and "
+                    "recomputes exact moments by enumeration; false moment "
+                    "claims graduate only when the exact rational conflict "
+                    "has checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/random-matrix-finite-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite enumeration is not random matrix asymptotics, concentration, or universality.",
+            "Simulation outputs must not be treated as proof unless they are converted into exact finite distributions or theorem-horizon artifacts.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the exact finite support, probabilities, matrix entries, and target statistic.",
+                "The validator recomputes normalization, expectations, ranks, determinants, and moment identities exactly.",
+                "Asymptotic random-matrix statements remain Lean/probability-theory horizons.",
+            ],
+        },
+    },
+    {
         "id": "bridge_lean_horizon",
         "title": "Lean Horizon",
         "field_ids": ["logic_and_proof"],

@@ -78,7 +78,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `sequences-and-limits` | sequence-limit shadow, real-analysis, generating functions | Add bounded tail, Cauchy, recurrence, and convergence-horizon rows. | Finite replay/LRA for bounded tails; Lean horizon for general convergence. | Lessons keep finite prefix evidence separate from convergence theorems. |
 | `counting` | counting, permutations, actions, generating functions | Add finite double-counting, Burnside, coefficient extraction, and asymptotic horizon rows. | CNF/LRAT for pigeonhole; finite replay for enumerative witnesses. | Count rows include deterministic universe, enumeration, and replay checksum. |
 | `number-theory` | number theory, modular, gcd, integer LIA | Add bounded Diophantine families and proof-route comparisons. | QF_LIA/Diophantine; QF_BV for fixed modulus; Lean horizon for deep theorems. | Each row identifies bounded search vs number-theory theorem. |
-| `linear-algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariants | Add matrix-corpus promotion plan for LU, rank, residual, eigenpair, and tensor rows. | QF_LRA/Farkas, finite-field replay, QF_UF/Alethe for algebraic table conflicts. | Matrix rows can become solver regressions with source-pack back-links. |
+| `linear-algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariants | Landed matrix-computation bridge rows for LU, rank/nullity, residual bounds, eigenpairs, characteristic polynomials, and finite random-matrix moments; next split tensor/dual/module maps when reuse demands it. | QF_LRA/Farkas, finite-field replay, QF_UF/Alethe for algebraic table conflicts. | Matrix rows can become solver regressions with source-pack back-links. |
 | `calculus` | algebraic calculus, Riemann sums, multivariable rational calculus | Add derivative/integral theorem horizon rows plus exact algebraic shadows. | LRA/NRA for polynomial shadows; Lean horizon for FTC, differentiability, convergence. | Calculus packs never conflate finite symbolic replay with analytic theorem proof. |
 
 ## Field Extension Matrix
@@ -188,33 +188,36 @@ Build sequence:
    terms: metric balls, bounded epsilon-delta shadows, compactness shadows,
    connectedness shadows, and continuity-by-preimage. Keep future bridge rows
    narrow and generated from `scripts/gen-foundational-concepts.py`.
-2. Add linear-algebra computation bridge rows for LU, rank/nullity, residual
-   bounds, eigenpairs, characteristic polynomials, and finite random-matrix
-   moments.
-3. Finish learner audit so every non-template pack appears in a focused lesson
+2. R1 bridge-concept rows landed for linear-algebra computation vocabulary:
+   LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
+   characteristic-polynomial replay, and finite random-matrix moments.
+3. Add algebra map bridge rows for homomorphism, kernel/image, quotient,
+   ideal, module, tensor bilinearity, and group action when one row can serve
+   multiple packs.
+4. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
-3. Continue QF_BV promotions only for fixed-width educational claims that are
+5. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.
-4. First route-specific proof-upgrade note pass landed on the highest-use
+6. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
-5. Recurring finite algebra equality conflicts now have the
+7. Recurring finite algebra equality conflicts now have the
    `family_finite_algebra_alethe` example-family row, backed by the shared
    `math_resource_uf_routes` regression.
-6. Recurring exact-rational infeasibility conflicts now have the
+8. Recurring exact-rational infeasibility conflicts now have the
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
-7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
+9. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
-8. The first deterministic `solver_reuse` batch is now fully promoted; no pack
+10. The first deterministic `solver_reuse` batch is now fully promoted; no pack
    remains tagged `candidate` in that initial batch.
-9. Consumer-facing sample queries now land through
+11. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    checked-row mining, solver-reuse rows, and atlas concept lookup over
    the committed JSON data contract.
-10. First solver-reuse promotions landed: `logic-basics-v0` now links
+12. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
     `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS
