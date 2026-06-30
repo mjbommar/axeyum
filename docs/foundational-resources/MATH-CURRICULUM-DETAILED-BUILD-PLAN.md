@@ -646,6 +646,13 @@ Pick one row per commit unless the change is purely navigational.
     residual, rank/nullity, eigenpair, random-matrix, tensor/module, operator,
     and Chebyshev resources; `check-foundational-resources.sh` now smoke-checks
     representative matrix concept queries.
+76. Landed: add proof-route summary queries.
+    [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) documents the
+    `routes --route ... [--field ...]` flow over proof-cookbook recipe links,
+    covering finite replay, Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine,
+    QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon routes with explicit
+    boundaries; `check-foundational-resources.sh` smoke-checks representative
+    route summaries.
 
 ## Validation Checklist
 

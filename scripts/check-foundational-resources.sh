@@ -10,6 +10,12 @@ python3 scripts/validate-foundational-example-pack.py
 python3 scripts/check-foundational-negative-fixtures.py
 python3 scripts/consume-foundational-resources.py
 python3 scripts/query-foundational-resources.py summary >/dev/null
+python3 scripts/query-foundational-resources.py routes --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route Diophantine --field number_theory --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route Farkas --field linear_algebra --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route Alethe --field abstract_algebra --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route lean --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null

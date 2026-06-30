@@ -402,7 +402,12 @@ Use one row per commit unless the change is purely navigational.
    concept filters on `query-foundational-resources.py packs/checks`, making
    matrix packs discoverable by computation bridge concept and proof route
    without introducing a typed API or separate package.
-19. Add future rules/law crosswalk examples only by reusing existing
+19. Landed: add
+   [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) plus the
+   `query-foundational-resources.py routes` summary command, making finite
+   replay, Boolean, QF_BV, QF_LIA, QF_LRA, QF_UF, and Lean-horizon coverage
+   queryable by route and optional field.
+20. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

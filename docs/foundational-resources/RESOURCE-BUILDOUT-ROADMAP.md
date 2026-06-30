@@ -1568,7 +1568,11 @@ Pick one item per commit unless the change is purely navigational.
     [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) and exact
     `--concept` filters for `query-foundational-resources.py packs/checks`,
     making matrix resources queryable by bridge concept plus proof route.
-87. Continue proof-route promotions or consumer-query examples; revisit the
+87. Landed: add
+    [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) and
+    `query-foundational-resources.py routes`, making proof/evidence route
+    coverage queryable by normalized route alias and optional field scope.
+88. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

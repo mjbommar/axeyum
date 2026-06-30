@@ -50,6 +50,9 @@ schemas, examples, and validation workflows.
   compact 18-field map of the smoke-checked readiness route, bridge lookup,
   checked-row drilldown, and theorem-horizon boundary for downstream
   consumers.
+- [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) is the compact
+  route-facing query map for finite replay, Boolean CNF/LRAT, QF_BV,
+  QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon rows.
 - [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) gives
   copyable concept-plus-route queries for LU, residuals, rank/nullity,
   eigenpairs, random matrices, tensor/module rows, operators, and Chebyshev

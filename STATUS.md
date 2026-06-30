@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-route query matrix landed.**
+  [PROOF-ROUTE-QUERY-MATRIX.md](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md)
+  now gives downstream consumers route-level discovery for finite replay,
+  Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine, QF_LRA/Farkas,
+  QF_UF/Alethe, and Lean-horizon resources. `scripts/query-foundational-resources.py`
+  now has a `routes` summary command with normalized aliases and optional field
+  scoping, and the foundational smoke check exercises representative route
+  summaries.
+
 - **Matrix computation concept queries landed.**
   [MATRIX-COMPUTATION-QUERIES.md](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md)
   now gives downstream consumers copyable concept-plus-route queries for LU,

@@ -22,6 +22,15 @@ ATLAS = ROOT / "artifacts" / "ontology" / "foundational-concepts.json"
 EXAMPLE_ROOT = ROOT / "artifacts" / "examples" / "math"
 DEFAULT_LIMIT = 20
 RECIPE_PREFIX = "docs/proof-cookbook/recipes/"
+ROUTE_ALIASES = {
+    "boolean-cnf-lrat": {"boolean", "cnf", "drat", "lrat"},
+    "finite-model-replay": {"finite", "finite-replay", "model-replay", "replay"},
+    "lean-horizon-template": {"lean", "lean-horizon", "horizon"},
+    "qf-bv-bitblast": {"qf-bv", "bv", "bitblast", "bit-blast"},
+    "qf-lia-diophantine": {"qf-lia", "lia", "diophantine"},
+    "qf-lra-farkas": {"qf-lra", "lra", "farkas"},
+    "qf-uf-congruence-alethe": {"qf-uf", "uf", "euf", "alethe", "congruence"},
+}
 
 
 class QueryError(Exception):
@@ -111,6 +120,19 @@ def recipe_names(metadata: dict[str, Any]) -> list[str]:
         if source_ref.startswith(RECIPE_PREFIX) and source_ref.endswith(".md"):
             names.append(Path(source_ref).stem)
     return sorted(set(names))
+
+
+def route_name_matches(route: str, needle: str | None) -> bool:
+    if needle is None:
+        return True
+    normalized = needle.lower().replace("_", "-")
+    route_name = route.lower().replace("_", "-")
+    aliases = ROUTE_ALIASES.get(route_name, set())
+    return (
+        normalized == route_name
+        or normalized in aliases
+        or route_name.startswith(f"{normalized}-")
+    )
 
 
 def shorten(value: str, width: int = 90) -> str:
@@ -341,6 +363,59 @@ class ResourceStore:
             )
         return rows
 
+    def route_summary_rows(self, *, field_id: str | None = None) -> list[dict[str, Any]]:
+        route_names = sorted(
+            {
+                route
+                for pack in self.packs
+                if field_id is None or field_id in pack["metadata"].get("field_ids", [])
+                for route in recipe_names(pack["metadata"])
+            }
+        )
+
+        rows = []
+        for route in route_names:
+            route_packs = [
+                pack
+                for pack in self.packs
+                if route in recipe_names(pack["metadata"])
+                and (field_id is None or field_id in pack["metadata"].get("field_ids", []))
+            ]
+            fields = set()
+            proof_counts: Counter[str] = Counter()
+            result_counts: Counter[str] = Counter()
+            solver_reuse_counts: Counter[str] = Counter()
+            route_text = [route]
+
+            for pack in route_packs:
+                metadata = pack["metadata"]
+                fields.update(metadata.get("field_ids", []))
+                solver_reuse = metadata.get("solver_reuse") or {}
+                solver_reuse_counts[solver_reuse.get("status", "unclassified")] += 1
+                route_text.extend(metadata.get("field_ids", []))
+                route_text.extend(metadata.get("curriculum_nodes", []))
+                route_text.extend(metadata_route_text(metadata))
+                for check in pack["checks"]:
+                    proof_counts[check.get("proof_status", "")] += 1
+                    result_counts[check.get("expected_result", "")] += 1
+                    route_text.extend(check_route_text(check))
+
+            rows.append(
+                {
+                    "route": route,
+                    "packs": len(route_packs),
+                    "checks": sum(result_counts.values()),
+                    "proof": count_text(proof_counts),
+                    "results": count_text(result_counts),
+                    "solver_reuse": count_text(solver_reuse_counts),
+                    "fields": sorted(fields),
+                    "sample_packs": [pack["id"] for pack in route_packs[:5]],
+                    "_route_text": route_text,
+                    "_packs": route_packs,
+                }
+            )
+        return rows
+
 
 def command_summary(args: argparse.Namespace) -> int:
     store = ResourceStore()
@@ -564,6 +639,39 @@ def command_fields(args: argparse.Namespace) -> int:
     )
 
 
+def command_routes(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    rows = []
+    for row in store.route_summary_rows(field_id=args.field):
+        if args.route and not route_name_matches(row["route"], args.route):
+            continue
+        if args.text and not contains_text(
+            [
+                row["route"],
+                *(row["fields"]),
+                *(row["sample_packs"]),
+                *(row["_route_text"]),
+            ],
+            args.text,
+        ):
+            continue
+        rows.append(clean_row(row))
+    return emit(
+        rows,
+        [
+            "route",
+            "packs",
+            "checks",
+            "proof",
+            "results",
+            "solver_reuse",
+            "fields",
+            "sample_packs",
+        ],
+        args,
+    )
+
+
 def clean_row(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if not key.startswith("_")}
 
@@ -645,6 +753,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_output_args(fields, default_limit=DEFAULT_LIMIT)
     fields.set_defaults(func=command_fields)
+
+    routes = subparsers.add_parser("routes", help="summarize proof routes")
+    routes.add_argument(
+        "--route",
+        help="case-insensitive proof/evidence route substring, such as Farkas or Alethe",
+    )
+    routes.add_argument("--field", help="exact field id, such as linear_algebra")
+    routes.add_argument(
+        "--text",
+        help="case-insensitive search over route, field, pack, and route-bearing text",
+    )
+    add_output_args(routes, default_limit=DEFAULT_LIMIT)
+    routes.set_defaults(func=command_routes)
     return parser
 
 

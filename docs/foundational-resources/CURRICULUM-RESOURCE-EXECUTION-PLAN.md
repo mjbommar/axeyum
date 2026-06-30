@@ -534,6 +534,10 @@ Next buildout:
    surface to expose LU, residual, rank/nullity, eigenpair, random-matrix,
    tensor/module, operator, and Chebyshev rows by bridge concept plus proof
    route, and the smoke set exercises representative matrix concept queries.
+   It now also supports route summaries through `routes --route ...`; the
+   [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) page records the
+   route aliases, field-scoped route queries, and theorem/benchmark boundaries
+   for the active proof and evidence routes.
 13. Landed: add negative fixtures for the foundational example-pack schema.
    `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
    packs with unknown fields, metadata/check id drift, and missing witness

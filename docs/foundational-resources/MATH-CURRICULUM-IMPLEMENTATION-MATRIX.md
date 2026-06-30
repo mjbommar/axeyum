@@ -498,7 +498,11 @@ Build sequence:
     `example_packs` membership so LU, residual, rank/nullity, eigenpair,
     random-matrix, tensor/module, operator, and Chebyshev rows are queryable by
     computation family and proof route.
-55. Revisit crate/repo boundaries only after three real consumers or repeated
+55. [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) now lands as
+    the proof-route consumer map. `query-foundational-resources.py routes`
+    summarizes route coverage from proof-cookbook recipe links with normalized
+    route aliases and optional field scoping.
+56. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

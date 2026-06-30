@@ -17,6 +17,8 @@ consumer would.
 For a compact all-field map of the current smoke-checked readiness routes,
 bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
+For proof-route summaries and route-specific boundaries, see
+[PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md).
 For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 
@@ -97,6 +99,24 @@ matches; `pack-metadata` means the pack advertises that route at the metadata
 level even if no individual check label contains the substring.
 Hyphen and underscore spellings are normalized for substring search, so
 `qf-bv` and `QF_BV` match the same route text.
+
+## Proof-Route Summary Discovery
+
+```sh
+python3 scripts/query-foundational-resources.py routes \
+  --route Farkas \
+  --field linear_algebra \
+  --require-any
+```
+
+This answers: "How much resource coverage does this proof route currently have
+for this field?" Route summaries are generated from proof-cookbook recipe links
+in pack metadata and report pack counts, check counts, proof-status mix,
+result mix, solver-reuse status, fields, and sample packs.
+
+The route filter uses normalized route aliases for active recipes. For example,
+`lean` matches `lean-horizon-template` but does not match
+`boolean-cnf-lrat`.
 
 ## Concept And Proof-Route Discovery
 
@@ -905,6 +925,12 @@ runs a small query smoke set after validating concepts and packs:
 
 ```sh
 python3 scripts/query-foundational-resources.py summary >/dev/null
+python3 scripts/query-foundational-resources.py routes --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route Diophantine --field number_theory --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route Farkas --field linear_algebra --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route Alethe --field abstract_algebra --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route lean --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null

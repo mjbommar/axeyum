@@ -129,6 +129,11 @@ The compact all-field consumer readiness table is
 [`docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md`](docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md);
 it records the smoke-checked route, bridge lookup, checked-row drilldown, and
 theorem boundary for all 18 math fields.
+The proof-route query matrix is
+[`docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md);
+it records route-level summary queries and boundaries for finite replay,
+Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and
+Lean-horizon resources.
 The matrix computation consumer query guide is
 [`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
 it records exact concept-plus-route queries for LU, residual, rank/nullity,
@@ -426,6 +431,11 @@ The matrix computation lane now has
 and the query helper accepts exact `--concept` filters on `packs` and `checks`,
 so consumers can discover matrix rows by bridge concept plus proof route without
 parsing generated Markdown or adding a typed API.
+The proof-route lane now has
+[`PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md),
+and the query helper accepts `routes` summaries with route aliases and optional
+field scoping, so consumers can inspect route coverage before drilling into
+packs or checked rows.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs
