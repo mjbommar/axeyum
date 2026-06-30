@@ -37,7 +37,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 44 bridge-concept rows.
+- 46 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math example packs.
 - 422 expected checks.
@@ -705,9 +705,11 @@ Current packs:
 
 Build next:
 
-- Add concept rows for finite sigma algebra, finite additivity, simple-function
-  integral, product measure, marginal, Fubini finite replay, random-variable
-  pushforward, conditioning by partition, and convergence-theorem horizon.
+- Landed bridge rows for finite event-algebra/additivity and finite
+  product-measure/integration replay. Add narrower concept rows only when
+  multiple packs need distinct finite sigma-algebra, monotonicity,
+  simple-function integral, marginal, finite Fubini, random-variable
+  pushforward, conditioning-by-partition, or convergence-theorem vocabulary.
 - Promote false finite measure/probability tables through QF_LRA/Farkas.
 - Keep Lebesgue measure, dominated convergence, monotone convergence, and
   almost-everywhere reasoning as Lean-horizon.
@@ -1256,10 +1258,18 @@ Pick one item per commit unless the change is purely navigational.
     residual, least-squares, and dual-space finite replay; and
     `bridge_finite_operator_chebyshev` groups finite operator bounds,
     Chebyshev recurrence, interpolation matrices, and alternating residual
-    witnesses. The generated atlas now validates 44 bridge rows and keeps
-    Banach, Hilbert, compact-operator, minimax, and infinite-dimensional
-    approximation claims in the Lean-horizon lane.
-51. Continue proof-route promotions or consumer-query examples; revisit the
+    witnesses. That increment raised the generated atlas to 44 bridge rows and
+    keeps Banach, Hilbert, compact-operator, minimax, and
+    infinite-dimensional approximation claims in the Lean-horizon lane.
+51. Landed: add generated measure-theory bridge concepts.
+    `bridge_finite_measure_additivity` groups finite event-algebra,
+    additivity, complement, monotonicity, and exact atom-sum replay; and
+    `bridge_finite_product_integration` groups finite product tables,
+    marginals, finite Fubini-style sums, simple-function integrals, and
+    expectation replay. The generated atlas now validates 46 bridge rows and
+    keeps Lebesgue measure, product-measure existence, convergence theorems,
+    and almost-everywhere claims in the Lean-horizon lane.
+52. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

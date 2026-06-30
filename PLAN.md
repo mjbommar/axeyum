@@ -127,7 +127,7 @@ The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
-Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
+Current resource-buildout status (2026-06-30): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with a topology/preimage extension for finite continuous
@@ -141,7 +141,7 @@ the event and total measures, finite-martingales' bad conditional-expectation
 row now promoted after finite filtration replay computes the up-block
 expectation, and finite Markov-chain's existing bad stochastic-row artifact now
 explicitly promoted in solver-reuse metadata.
-The foundational concept atlas now also includes 44 generated R1 bridge
+The foundational concept atlas now also includes 46 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
@@ -152,14 +152,20 @@ cardinality theorem horizons, metric balls, bounded epsilon-delta shadows,
 compactness shadows, connectedness shadows, continuity-by-preimage, LU
 factorization replay, rank-nullity replay, residual bounds, eigenpair
 witnesses, characteristic polynomial replay, finite random-matrix moments,
-finite probability mass tables, finite pushforward distributions, finite
-stochastic kernels, finite conditional expectations, finite tail/count
-obstructions, homomorphism preservation, kernel/image replay, quotient maps,
+finite measure additivity, finite probability mass tables, finite pushforward
+distributions, finite stochastic kernels, finite conditional expectations,
+finite product-measure/integration replay, finite tail/count obstructions,
+homomorphism preservation, kernel/image replay, quotient maps,
 ideal closure, module actions, tensor bilinearity, finite group actions, and
 Lean horizons, plus coordinate/oriented geometry replay, complex real-pair
 transform replay, finite inner-product/projection replay, and finite
 operator/Chebyshev replay, so resource packs can point at shared evidence and
 boundary vocabulary instead of repeating it locally.
+The measure-theory bridge rows now make finite event-algebra/additivity,
+complement, product-table, marginal, finite Fubini-style sum, and
+simple-function integral replay queryable while keeping Lebesgue measure,
+general product-measure existence, convergence theorems, and almost-everywhere
+reasoning in the Lean-horizon lane.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.

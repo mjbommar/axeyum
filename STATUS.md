@@ -653,6 +653,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   existing finite probability, measure, kernel, martingale, hitting-time,
   concentration, and exact-test packs.
 
+- **Measure-theory bridge concepts landed.**
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
+  generates `bridge_finite_measure_additivity` and
+  `bridge_finite_product_integration`, making finite event-algebra/additivity,
+  complement, product-table, marginal, finite Fubini-style sum, and
+  simple-function integral replay queryable without overstating Lebesgue,
+  convergence-theorem, or almost-everywhere coverage.
+
 - **Proof/logic bridge concepts landed.**
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
   generates four bridge rows for refutation-as-query, finite proof-pattern
@@ -672,9 +680,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
   generates five bridge rows for finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
-  bijection/cardinality checks, and cardinality theorem horizons. The concept
-  atlas now reports 86 rows total: 23 curriculum rows, 18 field rows, 40
-  bridge rows, and 5 example-family rows.
+  bijection/cardinality checks, and cardinality theorem horizons. That
+  increment remains part of the current 92-row atlas.
 
 - **Standalone finite topology and finite measure lessons landed.**
   [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
@@ -1207,7 +1214,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 44 bridge rows. The proof-methodology rows are
+  is now generated with 46 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1227,8 +1234,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_rank_nullity`, `bridge_residual_bound`, `bridge_eigenpair`,
   `bridge_characteristic_polynomial`, and
   `bridge_random_matrix_finite_moment`; the probability/statistics table rows
-  are `bridge_probability_mass_table`, `bridge_pushforward_distribution`,
-  `bridge_stochastic_kernel`, `bridge_conditional_expectation`, and
+  are `bridge_finite_measure_additivity`,
+  `bridge_probability_mass_table`, `bridge_pushforward_distribution`,
+  `bridge_stochastic_kernel`, `bridge_conditional_expectation`,
+  `bridge_finite_product_integration`, and
   `bridge_tail_count_obstruction`; the algebra-map rows are
   `bridge_homomorphism_preservation`, `bridge_kernel_image`,
   `bridge_quotient_map`, `bridge_ideal_closure`, `bridge_module_action`,
@@ -1246,8 +1255,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_finite_operator_chebyshev`, grouping finite Gram/projection,
   operator-bound, interpolation, and Chebyshev-grid replay without
   overclaiming Banach, Hilbert, compact-operator, minimax, or
-  infinite-dimensional approximation theorems. The foundational resource
-  consumer now reports 90 concept rows while
+  infinite-dimensional approximation theorems. The measure-theory bridge rows
+  now add finite event-algebra, additivity, complement, product-table,
+  marginal, finite Fubini-style sum, and simple-function integral replay while
+  keeping Lebesgue, convergence, and almost-everywhere theorems as Lean
+  horizons. The foundational resource consumer now reports 92 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.
@@ -11988,6 +12000,18 @@ plan is built and committed on the current branch:
   bounded-dynamics, finite-Euler, stochastic-kernel, and hitting-time resources
   visible through the public JSON consumer boundary.
 
+- **2026-06-30** — **Measure-theory bridge concepts landed.**
+  Extended
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) with
+  `bridge_finite_measure_additivity` and
+  `bridge_finite_product_integration`. The generated atlas now validates 92
+  concept rows: 23 curriculum rows, 18 field rows, 46 bridge rows, and 5
+  example-family rows. Measure-theory field queries now expose finite
+  event-algebra/additivity, complement, product-table, marginal,
+  finite Fubini-style sum, and simple-function integral replay slices while
+  keeping Lebesgue, convergence-theorem, product-measure existence, and
+  almost-everywhere claims in the Lean-horizon lane.
+
 - **2026-06-30** — **Geometry and complex bridge concepts landed.**
   Extended
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) with
@@ -12003,9 +12027,9 @@ plan is built and committed on the current branch:
   Extended
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) with
   `bridge_inner_product_projection` and
-  `bridge_finite_operator_chebyshev`. The generated atlas now validates 90
-  concept rows: 23 curriculum rows, 18 field rows, 44 bridge rows, and 5
-  example-family rows. Functional-analysis field queries now expose finite
+  `bridge_finite_operator_chebyshev`. That increment raised the generated
+  atlas to 90 concept rows: 23 curriculum rows, 18 field rows, 44 bridge rows,
+  and 5 example-family rows. Functional-analysis field queries now expose finite
   Gram/projection, operator-bound, Chebyshev recurrence, interpolation, and
   alternating-residual replay slices while keeping Banach, Hilbert,
   compact-operator, minimax, and infinite-dimensional approximation theorem

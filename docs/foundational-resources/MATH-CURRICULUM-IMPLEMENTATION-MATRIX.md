@@ -97,7 +97,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
 | `topology` | sets, reals, linear algebra | finite topologies, continuous maps, compactness, connectedness, homology | finite replay, QF_LIA/LRA, Lean horizon |
-| `measure_theory` | sets, probability, reals | finite sigma-algebras, product measure, simple integration | finite replay, QF_LRA, Lean horizon |
+| `measure_theory` | sets, probability, reals | landed finite measure/additivity and finite product/integration bridge rows; add narrower convergence or monotonicity rows only when reused | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
 | `optimization_and_convexity` | rationals, reals, linear algebra | standalone LP/Farkas lesson, convexity, gradients, Hessians | QF_LRA/Farkas, NRA shadows |
@@ -197,6 +197,7 @@ Build sequence:
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
 4. R1 bridge-concept rows landed for probability/statistics finite-table
+   vocabulary, measure-theory finite additivity/product/integration
    vocabulary, proof/logic vocabulary, proof-object anatomy vocabulary, and
    set/foundations vocabulary, including finite Boolean algebra,
    partition/relation roundtrips, image/preimage/inverse tables, finite
@@ -204,9 +205,9 @@ Build sequence:
    rows now also land for coordinate/oriented geometry replay and complex
    real-pair transform replay, plus finite inner-product/projection and finite
    operator/Chebyshev replay, keeping those field-specific finite shadows
-   queryable without overstating synthetic, differential, analytic, Banach,
-   Hilbert, compact-operator, minimax, or infinite-dimensional theorem
-   coverage.
+   queryable without overstating synthetic, differential, analytic, Lebesgue,
+   convergence, Banach, Hilbert, compact-operator, minimax, or
+   infinite-dimensional theorem coverage.
 5. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.
 6. Continue learner audit so every non-template pack appears in a focused

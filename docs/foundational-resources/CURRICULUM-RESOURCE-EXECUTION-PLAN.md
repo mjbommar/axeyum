@@ -33,14 +33,15 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 90 atlas rows generated from curriculum, field data, 44 R1 bridge
+- 92 atlas rows generated from curriculum, field data, 46 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
-  vocabulary, algebra-map vocabulary, coordinate/oriented geometry replay,
-  complex real-pair transform replay, finite inner-product/projection replay,
-  finite operator/Chebyshev replay, and Lean horizons, plus five route-specific
+  vocabulary, measure-theory additivity/product/integration vocabulary,
+  algebra-map vocabulary, coordinate/oriented geometry replay, complex
+  real-pair transform replay, finite inner-product/projection replay, finite
+  operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
@@ -195,6 +196,11 @@ Add bridge-concept or example-family rows for repeated subtopics:
   expectation, and tail/count obstructions, backed by finite probability,
   random-variable, kernel, martingale, hitting-time, concentration, and exact
   test packs;
+- measure theory: landed bridge rows for finite event-algebra/additivity,
+  complement, product-table, marginal, finite Fubini-style sum, and
+  simple-function integral replay, backed by finite measure, product-measure,
+  integration, random-variable, conditional-expectation, and martingale packs
+  while leaving Lebesgue/convergence/almost-everywhere claims as Lean horizons;
 - geometry/complex analysis: landed bridge rows for coordinate/oriented
   geometry replay and complex real-pair transform replay, backed by the
   coordinate, affine, orientation/area, complex algebraic, and complex-plane
@@ -417,19 +423,24 @@ Next buildout:
 9. Landed: add bridge-concept rows for probability/statistics finite-table
    vocabulary: finite probability mass tables, pushforward distributions,
    stochastic kernels, conditional expectation, and tail/count obstructions.
-10. Landed: add bridge-concept rows for proof-method and finite-logic
+10. Landed: add bridge-concept rows for measure-theory finite-table and
+   integration vocabulary: finite measure additivity and finite
+   product-measure/integration replay, keeping Lebesgue measure, general
+   product measures, convergence theorems, and almost-everywhere claims in the
+   Lean-horizon lane.
+11. Landed: add bridge-concept rows for proof-method and finite-logic
    vocabulary: refutation-as-query, finite proof-pattern replay, finite
    quantifier expansion, and bounded induction obligations.
-11. Landed: add bridge-concept rows for proof-object anatomy vocabulary:
+12. Landed: add bridge-concept rows for proof-object anatomy vocabulary:
    Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas certificate anatomy, QF_UF
    Alethe certificate anatomy, and QF_BV bit-blast certificate anatomy.
-12. Landed: add bridge-concept rows for set/foundations vocabulary: finite
+13. Landed: add bridge-concept rows for set/foundations vocabulary: finite
    Boolean algebra, finite partition/relation roundtrips, finite
    image/preimage/inverse tables, finite bijection/cardinality, and
    cardinality theorem horizons.
-13. Landed: add "math example using this route" sections to the six active proof
+14. Landed: add "math example using this route" sections to the six active proof
    cookbook recipes so proof-route docs point back to concrete packs.
-14. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
+15. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    linear-system, and probability/statistics table examples.
    Status: `family_exact_rational_farkas` now groups the recurring checked
    exact-rational infeasibility rows and ties them to the shared

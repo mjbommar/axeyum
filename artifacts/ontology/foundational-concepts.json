@@ -4376,6 +4376,110 @@
       }
     },
     {
+      "id": "bridge_finite_measure_additivity",
+      "kind": "bridge-concept",
+      "title": "Finite Measure Additivity",
+      "domain": "mathematics",
+      "field_ids": [
+        "measure_theory",
+        "probability_theory",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite measure-additivity row checks a finite universe, event algebra, exact rational atom weights, complements, monotonicity, and disjoint-union additivity before any probability, product, or integration claim is treated as solver-reusable evidence.",
+      "prerequisites": [
+        "bridge_finite_boolean_algebra",
+        "bridge_finite_model_replay",
+        "curriculum_rationals"
+      ],
+      "unlocks": [
+        "bridge_probability_mass_table",
+        "bridge_finite_product_integration",
+        "bridge_conditional_expectation"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite sets",
+        "finite event algebras",
+        "exact rational arithmetic",
+        "QF_LRA",
+        "Farkas certificate",
+        "finite replay"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-v0",
+          "notes": "Finite sigma-algebra, event measure, complement, monotonicity, and bad complement rows."
+        },
+        {
+          "id": "finite-probability-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-probability-v0",
+          "notes": "Probability mass-table rows as normalized finite measures."
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite measurable-function and pushforward rows built over finite event algebras."
+        },
+        {
+          "id": "finite-concentration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-concentration-v0",
+          "notes": "Finite event-mass rows used by tail-bound and concentration-shadow examples."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite measure replay plus QF_LRA/Farkas bad-complement certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-measure-end-to-end.md",
+            "docs/learn/math/finite-topology-measure-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker recomputes event membership and atom sums exactly; false complement or additivity claims are promoted only when the exact rational contradiction has checked QF_LRA/Farkas evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/finite-measure-end-to-end.md",
+        "docs/learn/math/finite-topology-measure-end-to-end.md",
+        "docs/learn/math/probability-and-statistics.md",
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite event-algebra replay does not prove countable additivity, completion, sigma-finiteness, or Lebesgue measure construction.",
+        "Monotone convergence, dominated convergence, almost-everywhere reasoning, and Radon-Nikodym theorems remain Lean horizons."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite universe, event algebra, atom weights, and exact rational measure domain.",
+          "The validator recomputes complements, disjoint unions, monotonicity, and event measures from atom tables.",
+          "Bad measure rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed."
+        ]
+      }
+    },
+    {
       "id": "bridge_probability_mass_table",
       "kind": "bridge-concept",
       "title": "Finite Probability Mass Table",
@@ -4393,6 +4497,7 @@
       "resource_status": "validated",
       "summary": "A finite probability mass table row checks a finite sample space, exact rational atom weights, event masses, complements, normalization, conditioning, and product rows without simulation or continuous-distribution assumptions.",
       "prerequisites": [
+        "bridge_finite_measure_additivity",
         "bridge_finite_model_replay",
         "curriculum_counting",
         "curriculum_rationals"
@@ -4400,7 +4505,8 @@
       "unlocks": [
         "bridge_pushforward_distribution",
         "bridge_stochastic_kernel",
-        "bridge_conditional_expectation"
+        "bridge_conditional_expectation",
+        "bridge_finite_product_integration"
       ],
       "decidability": "bounded",
       "axeyum_fragments": [
@@ -4767,6 +4873,119 @@
           "Rows state the finite partition or filtration, atom masses, random-variable values, and claimed conditional expectations.",
           "The validator recomputes each conditional block average exactly and rejects corrupted claimed values.",
           "General measure-theoretic conditional expectation is linked as Lean-horizon, not counted as finite solver evidence."
+        ]
+      }
+    },
+    {
+      "id": "bridge_finite_product_integration",
+      "kind": "bridge-concept",
+      "title": "Finite Product Measure And Integration",
+      "domain": "mathematics",
+      "field_ids": [
+        "measure_theory",
+        "probability_theory",
+        "statistics",
+        "real_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite product-measure and integration row checks Cartesian product atom tables, marginals, finite Fubini-style sums, simple function integrals, and expectations over exact rational weights while keeping general Lebesgue integration as a theorem horizon.",
+      "prerequisites": [
+        "bridge_finite_measure_additivity",
+        "bridge_probability_mass_table",
+        "bridge_pushforward_distribution",
+        "curriculum_rationals"
+      ],
+      "unlocks": [
+        "bridge_conditional_expectation",
+        "bridge_random_matrix_finite_moment",
+        "field_measure_theory",
+        "field_real_analysis"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite products",
+        "finite probability tables",
+        "exact rational weighted sums",
+        "QF_LRA",
+        "Farkas certificate",
+        "finite replay"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-product-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-product-measure-v0",
+          "notes": "Finite product atom table, marginal, Fubini shadow, and bad product-probability rows."
+        },
+        {
+          "id": "finite-integration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-integration-v0",
+          "notes": "Finite simple-function integral, indicator integral, expectation, and bad expectation rows."
+        },
+        {
+          "id": "finite-conditional-expectation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-conditional-expectation-v0",
+          "notes": "Partition conditional-expectation rows built from finite weighted sums."
+        },
+        {
+          "id": "finite-random-variables-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-random-variables-v0",
+          "notes": "Finite expectation and pushforward rows whose integrals are exact finite sums."
+        },
+        {
+          "id": "finite-martingales-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-martingales-v0",
+          "notes": "Finite filtration and martingale checks that reuse conditional weighted-sum replay."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite product/integral replay plus QF_LRA/Farkas bad-sum certificates",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-product-measure-end-to-end.md",
+            "docs/learn/math/finite-integration-end-to-end.md",
+            "docs/learn/math/finite-conditional-expectation-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker recomputes product atom masses, marginals, iterated sums, indicator integrals, and expectations exactly; false product or integral claims graduate only with checked QF_LRA/Farkas evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/finite-product-measure-end-to-end.md",
+        "docs/learn/math/finite-integration-end-to-end.md",
+        "docs/learn/math/finite-conditional-expectation-end-to-end.md",
+        "docs/learn/math/finite-random-variables-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite product-table replay does not prove product-measure existence for general measurable spaces.",
+        "General Fubini/Tonelli, dominated convergence, Lp-space theory, stochastic-process path measures, and almost-everywhere integration remain Lean horizons."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite factor spaces, atom masses, product table, marginal target, function values, and exact rational sum domain.",
+          "The validator recomputes product masses, marginals, finite iterated sums, simple integrals, and expectation values.",
+          "Bad product or integration rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed."
         ]
       }
     },

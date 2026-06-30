@@ -1120,7 +1120,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 90 atlas rows validate, including generated bridge-concept rows for
+  Status: 92 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1131,11 +1131,12 @@ Exit criteria:
   epsilon-delta shadows, compactness shadows, connectedness shadows,
   continuity-by-preimage, LU factorization replay, rank-nullity replay,
   residual bounds, eigenpair witnesses, characteristic-polynomial replay,
-  finite random-matrix moments, finite probability mass tables, finite
-  pushforward distributions, finite stochastic kernels, finite conditional
-  expectations, finite tail/count obstructions, homomorphism preservation,
-  kernel/image replay, quotient maps, ideal closure, module actions, tensor
-  bilinearity, finite group actions, coordinate/oriented geometry replay,
+  finite random-matrix moments, finite measure additivity, finite probability
+  mass tables, finite pushforward distributions, finite stochastic kernels,
+  finite conditional expectations, finite product-measure/integration replay,
+  finite tail/count obstructions, homomorphism preservation, kernel/image
+  replay, quotient maps, ideal closure, module actions, tensor bilinearity,
+  finite group actions, coordinate/oriented geometry replay,
   complex real-pair transform replay, finite inner-product/projection replay,
   finite operator/Chebyshev replay, and Lean horizons, plus example-family rows
   for recurring finite-algebra QF_UF/Alethe conflicts, exact-rational

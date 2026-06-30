@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 44 bridge-concept rows.
+- 46 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -210,7 +210,7 @@ Exit criteria:
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, homology | standalone finite-topology lesson and checked missing-empty-set Bool/CNF row landed; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
-| `measure_theory` | finite measures, product measure, integration, random variables | standalone finite-measure lesson and bad-complement QF_LRA/Farkas row landed; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
+| `measure_theory` | finite measures, product measure, integration, random variables | finite measure/additivity and finite product/integration bridge rows landed; promote only distinct monotonicity, convergence-horizon, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | standalone LP/Farkas lesson landed; add only distinct duality, KKT, convexity, gradient, or Hessian pressure next | QF_LRA/Farkas, QF_NRA shadows |
@@ -389,8 +389,17 @@ Pick one row per commit unless the change is purely navigational.
    concept; `bridge_finite_operator_chebyshev` makes finite-dimensional
    operator bounds, Chebyshev recurrence, interpolation matrices, and
    alternating residual rows queryable as a shared operator-theory concept. The
-   atlas now validates 44 bridge rows while keeping Banach, Hilbert,
+   increment raised the atlas to 44 bridge rows while keeping Banach, Hilbert,
    compact-operator, minimax, and infinite-dimensional approximation theorem
+   coverage in the Lean-horizon lane.
+42. Landed: add generated measure-theory bridge-concept rows.
+   `bridge_finite_measure_additivity` makes finite event-algebra/additivity,
+   complement, monotonicity, and exact atom-sum replay queryable as a shared
+   measure concept; `bridge_finite_product_integration` makes finite product
+   tables, marginals, finite Fubini-style sums, simple-function integrals, and
+   expectation replay queryable as a shared measure/probability concept. The
+   atlas now validates 46 bridge rows while keeping Lebesgue measure,
+   product-measure existence, convergence theorems, and almost-everywhere
    coverage in the Lean-horizon lane.
 
 ## Validation Checklist
