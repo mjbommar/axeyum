@@ -33,14 +33,14 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 83 atlas rows generated from curriculum, field data, forty R1 bridge
+- 88 atlas rows generated from curriculum, field data, 42 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
-  vocabulary, algebra-map vocabulary, and Lean horizons, plus the
-  finite-algebra QF_UF/Alethe and exact-rational QF_LRA/Farkas example
-  families.
+  vocabulary, algebra-map vocabulary, coordinate/oriented geometry replay,
+  complex real-pair transform replay, and Lean horizons, plus five
+  route-specific example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
@@ -194,14 +194,18 @@ Add bridge-concept or example-family rows for repeated subtopics:
   expectation, and tail/count obstructions, backed by finite probability,
   random-variable, kernel, martingale, hitting-time, concentration, and exact
   test packs;
+- geometry/complex analysis: landed bridge rows for coordinate/oriented
+  geometry replay and complex real-pair transform replay, backed by the
+  coordinate, affine, orientation/area, complex algebraic, and complex-plane
+  transform packs while leaving synthetic/differential geometry and analytic
+  complex analysis as Lean horizons;
 - proof-route families: landed example-family rows for finite algebra
   QF_UF/Alethe congruence, exact-rational QF_LRA/Farkas infeasibility, and
   finite Boolean CNF/LRAT refutations, plus integer/count QF_LIA Diophantine
   and arithmetic-DPLL obstructions, and fixed-width QF_BV/DRAT finite
   algebra/residue/one-bit graph obligations, each tied to a shared regression
   rather than repeated prose in every pack;
-- topology/geometry: finite topologies, continuous maps, simplicial homology,
-  affine maps, orientation/area.
+- topology: finite topologies, continuous maps, and simplicial homology.
 
 Exit criteria:
 

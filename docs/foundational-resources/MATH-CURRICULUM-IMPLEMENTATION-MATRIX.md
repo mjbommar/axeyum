@@ -200,7 +200,11 @@ Build sequence:
    vocabulary, proof/logic vocabulary, proof-object anatomy vocabulary, and
    set/foundations vocabulary, including finite Boolean algebra,
    partition/relation roundtrips, image/preimage/inverse tables, finite
-   bijection/cardinality, and cardinality theorem horizons.
+   bijection/cardinality, and cardinality theorem horizons. R1 bridge-concept
+   rows now also land for coordinate/oriented geometry replay and complex
+   real-pair transform replay, keeping those field-specific finite shadows
+   queryable without overstating synthetic, differential, or analytic theorem
+   coverage.
 5. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.
 6. Continue learner audit so every non-template pack appears in a focused

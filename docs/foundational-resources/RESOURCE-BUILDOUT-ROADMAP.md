@@ -37,7 +37,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 40 bridge-concept rows.
+- 42 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math example packs.
 - 422 expected checks.
@@ -1240,7 +1240,15 @@ Pick one item per commit unless the change is purely navigational.
     finite-Euler, stochastic-kernel, and hitting-time resources to the public
     consumer boundary; the foundational resource smoke check now includes the
     dynamics/Farkas field-readiness query.
-49. Continue proof-route promotions or consumer-query examples; revisit the
+49. Landed: add generated geometry and complex-analysis bridge concepts.
+    `bridge_coordinate_orientation_geometry` groups the coordinate, affine,
+    and orientation/area packs as a finite exact-rational geometry replay
+    concept; `bridge_complex_real_pair_transform` groups complex algebraic,
+    complex-plane transform, and polynomial-factorization packs as a real-pair
+    complex-analysis replay concept. The generated atlas now validates 42
+    bridge rows and keeps broader synthetic/differential/analytic theorem
+    claims in the Lean-horizon lane.
+50. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

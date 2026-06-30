@@ -1236,10 +1236,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 86 concept rows while preserving
-  23 curriculum rows and 18 field rows. Next resource work should add the next
-  proof-frontier promotion or boundary evidence from a real repeated consumer,
-  depending on which roadmap lane is being advanced.
+  geometry/complex bridge rows now add
+  `bridge_coordinate_orientation_geometry` and
+  `bridge_complex_real_pair_transform`, grouping finite coordinate, affine,
+  oriented-area replay and complex real-pair transform replay without
+  overclaiming synthetic, differential, global, or analytic theorem coverage.
+  The foundational resource consumer now reports 88 concept rows while
+  preserving 23 curriculum rows and 18 field rows. Next resource work should
+  add the next proof-frontier promotion or boundary evidence from a real
+  repeated consumer, depending on which roadmap lane is being advanced.
 
 - **Proof-cookbook math examples landed.** The six active route recipes now
   include `Math Examples Using This Route` sections that point to concrete
@@ -11976,6 +11981,17 @@ plan is built and committed on the current branch:
   alongside the probability/Farkas field summary, making the recent
   bounded-dynamics, finite-Euler, stochastic-kernel, and hitting-time resources
   visible through the public JSON consumer boundary.
+
+- **2026-06-30** — **Geometry and complex bridge concepts landed.**
+  Extended
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) with
+  `bridge_coordinate_orientation_geometry` and
+  `bridge_complex_real_pair_transform`. The generated atlas now validates 88
+  concept rows: 23 curriculum rows, 18 field rows, 42 bridge rows, and 5
+  example-family rows. Geometry and complex-analysis field queries now expose
+  the finite coordinate/affine/oriented-area and complex real-pair transform
+  replay slices while keeping synthetic, differential, global, and analytic
+  theorem claims in the Lean-horizon lane.
 
 - **2026-06-30** — **Authorization-policy rules/law pack landed.**
   Added

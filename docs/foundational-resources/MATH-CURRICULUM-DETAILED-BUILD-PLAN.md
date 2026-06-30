@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 40 bridge-concept rows.
+- 42 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -375,6 +375,14 @@ Pick one row per commit unless the change is purely navigational.
    `differential_equations_and_dynamical_systems` plus Farkas field summary so
    the recent bounded-dynamics, finite-Euler, stochastic-kernel, and
    hitting-time resources are discoverable from the public JSON contract.
+40. Landed: add generated geometry and complex-analysis bridge-concept rows.
+   `bridge_coordinate_orientation_geometry` makes coordinate, affine, and
+   oriented-area finite rational replay queryable as a shared geometry concept;
+   `bridge_complex_real_pair_transform` makes complex arithmetic and
+   rational-transform real-pair replay queryable as a shared complex-analysis
+   concept. The atlas now validates 42 bridge rows while keeping synthetic,
+   differential, global, and analytic theorem coverage in the Lean-horizon
+   lane.
 
 ## Validation Checklist
 

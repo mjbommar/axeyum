@@ -188,6 +188,9 @@ The set/foundations bridge rows now make powerset/Boolean algebra,
 partition/equivalence roundtrips, image/preimage/inverse tables,
 finite bijection/cardinality checks, and infinite-cardinality theorem horizons
 queryable through the same R1 vocabulary.
+The geometry and complex-analysis bridge rows now make finite coordinate,
+affine, oriented-area, and complex real-pair transform replay queryable without
+overstating synthetic, differential, global, or analytic theorem coverage.
 The learner spine now also splits the finite topology and finite measure
 first-principles stories into standalone end-to-end pages, leaving the combined
 topology/measure page as a cross-field bridge rather than the only entry point.

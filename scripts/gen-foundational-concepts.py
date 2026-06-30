@@ -3810,6 +3810,183 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_coordinate_orientation_geometry",
+        "title": "Coordinate And Oriented Geometry Replay",
+        "field_ids": ["geometry", "linear_algebra", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite coordinate-geometry rows turn midpoint, collinearity, "
+            "squared-distance, affine-map, and signed-area claims into exact "
+            "rational replay obligations with checked Farkas conflicts for "
+            "malformed linearized claims."
+        ),
+        "prerequisites": [
+            "curriculum_reals",
+            "curriculum_linear_algebra",
+            "bridge_qf_lra_farkas_anatomy",
+            "bridge_bounded_theorem_shadow",
+        ],
+        "unlocks": [
+            "field_geometry",
+            "field_linear_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "finite coordinate replay",
+            "signed-area determinants",
+            "affine map tables",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "coordinate-geometry-v0",
+                "Midpoint, collinearity, squared-distance, and bad-distance replay over exact rational coordinates.",
+            ),
+            (
+                "orientation-area-geometry-v0",
+                "Signed double-area orientation, polygon area, barycentric coordinate, and bad-orientation rows.",
+            ),
+            (
+                "affine-geometry-v0",
+                "Affine map composition, barycentric interpolation, fixed coordinate transforms, and bad distance-preservation rows.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite coordinate replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The packs replay the coordinate calculation first, then "
+                    "use the shared exact-rational Farkas route only for the "
+                    "small contradiction exposed by that replay."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "The finite coordinate rows do not prove synthetic Euclidean, projective, differential, or global geometry theorems.",
+            "Polynomial distance and incidence claims are replayed only when the source pack reduces them to exact finite arithmetic with an explicit proof route.",
+            "General geometric theorem statements remain Lean-horizon until a kernel-checked route exists.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state finite point sets, exact rational coordinates, and the coordinate formula being replayed.",
+                "Malformed exact-linear or linearized rows link to a checked QF_LRA/Farkas regression.",
+                "Learner pages keep coordinate replay separate from synthetic or analytic geometry horizons.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_complex_real_pair_transform",
+        "title": "Complex Real-Pair Transform Replay",
+        "field_ids": ["complex_analysis", "real_analysis", "linear_algebra", "abstract_algebra"],
+        "resource_status": "validated",
+        "summary": (
+            "Complex arithmetic, conjugation, norm, root-cycle, and small "
+            "rational-transform claims are represented as exact real-pair "
+            "calculations, with analytic complex analysis kept as an explicit "
+            "Lean horizon."
+        ),
+        "prerequisites": [
+            "curriculum_complex",
+            "curriculum_reals",
+            "curriculum_polynomials",
+            "bridge_qf_lra_farkas_anatomy",
+            "bridge_bounded_theorem_shadow",
+        ],
+        "unlocks": [
+            "field_complex_analysis",
+            "field_real_analysis",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "real-pair algebra",
+            "QF_LRA",
+            "NRA over exact rational pairs",
+            "finite rational-function replay",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "complex-algebraic-v0",
+                "Exact complex addition, multiplication, conjugation, norm-squared, and bad norm rows.",
+            ),
+            (
+                "complex-plane-transforms-v0",
+                "Unit-root cycle, conjugation product, Mobius-transform witness, and bad unit-square real-part rows.",
+            ),
+            (
+                "polynomial-factorization-rational-v0",
+                "Fixed polynomial factorization and discriminant rows that supply the algebraic boundary vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "real-pair replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/complex-algebraic-end-to-end.md",
+                    "docs/learn/math/complex-plane-transforms-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The packs replay exact real and imaginary components from "
+                    "the source complex expression, then check only the final "
+                    "small rational contradiction through Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/complex-algebraic-end-to-end.md",
+            "docs/learn/math/complex-plane-transforms-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Real-pair algebra replay does not prove holomorphicity, contour integration, residues, analytic continuation, or algebraic closure.",
+            "NRA-shaped complex identities remain bounded shadows unless they reduce to a checked exact-rational route.",
+            "Analytic complex-analysis theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the exact complex expression and its real-pair expansion.",
+                "Bad real-part, norm, or polynomial-boundary rows link to checked QF_LRA/Farkas regressions after replay.",
+                "Learner pages keep algebraic real-pair replay separate from analytic complex-analysis horizons.",
+            ],
+        },
+    },
+    {
         "id": "bridge_lean_horizon",
         "title": "Lean Horizon",
         "field_ids": ["logic_and_proof"],
