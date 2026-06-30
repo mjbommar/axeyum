@@ -156,6 +156,38 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For measure theory, use the same field-readiness query to keep finite
+event-algebra, product-measure, integration, random-variable, conditioning, and
+stochastic-process examples grouped without treating the finite rows as
+Lebesgue or convergence theorem coverage:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field measure_theory \
+  --route Farkas \
+  --require-any
+```
+
+The bridge rows are visible through the atlas query surface:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field measure_theory \
+  --text finite \
+  --require-any
+```
+
+To display concrete checked finite-measure or finite-integration examples, drill
+into checked Farkas rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field measure_theory \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 ## Proof And Check Mining
 
 ```sh
@@ -230,6 +262,9 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ex
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

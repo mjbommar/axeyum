@@ -401,6 +401,13 @@ Pick one row per commit unless the change is purely navigational.
    atlas now validates 46 bridge rows while keeping Lebesgue measure,
    product-measure existence, convergence theorems, and almost-everywhere
    coverage in the Lean-horizon lane.
+43. Landed: add measure-theory field-readiness consumer query coverage.
+   `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now exercise
+   measure/Farkas field readiness, measure bridge concept lookup, and checked
+   measure-theory Farkas rows, making finite measure, product-measure,
+   integration, random-variable, conditional-expectation, martingale, kernel,
+   hitting-time, and concentration resources discoverable from the committed
+   JSON contract.
 
 ## Validation Checklist
 

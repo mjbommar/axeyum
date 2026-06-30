@@ -1269,7 +1269,15 @@ Pick one item per commit unless the change is purely navigational.
     expectation replay. The generated atlas now validates 46 bridge rows and
     keeps Lebesgue measure, product-measure existence, convergence theorems,
     and almost-everywhere claims in the Lean-horizon lane.
-52. Continue proof-route promotions or consumer-query examples; revisit the
+52. Landed: add measure-theory field-readiness consumer query coverage.
+    `docs/foundational-resources/CONSUMER-QUERIES.md` now shows
+    measure/Farkas field readiness, measure bridge concept lookup, and checked
+    measure-theory Farkas row drill-downs. The foundational resource smoke
+    check now runs those same queries, tying finite measure, product-measure,
+    integration, random-variable, conditional-expectation, martingale, kernel,
+    hitting-time, and concentration resources to the public JSON consumer
+    boundary.
+53. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

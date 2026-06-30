@@ -661,6 +661,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   simple-function integral replay queryable without overstating Lebesgue,
   convergence-theorem, or almost-everywhere coverage.
 
+- **Measure-theory field-readiness consumer query landed.**
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows measure/Farkas field readiness, measure bridge concept lookup, and
+  checked measure-theory Farkas row drill-downs.
+  [`check-foundational-resources.sh`](scripts/check-foundational-resources.sh)
+  runs those same queries so finite measure, product-measure, integration,
+  random-variable, conditional-expectation, martingale, kernel, hitting-time,
+  and concentration resources stay visible through the committed JSON contract.
+
 - **Proof/logic bridge concepts landed.**
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
   generates four bridge rows for refutation-as-query, finite proof-pattern
@@ -1487,7 +1496,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `check-foundational-resources.sh` now runs a small query smoke set for
   summary output, promoted solver-reuse rows, probability/Farkas route pack
   discovery, graph-theory UNSAT rows, example-family atlas rows, and
-  probability/Farkas and dynamics/Farkas field-readiness rows.
+  probability/Farkas, dynamics/Farkas, and measure/Farkas field-readiness rows,
+  plus measure bridge concept lookup and checked measure-theory Farkas rows.
 
 - **Foundational example-pack negative fixtures landed.**
   [`check-foundational-negative-fixtures.py`](scripts/check-foundational-negative-fixtures.py)
@@ -12011,6 +12021,16 @@ plan is built and committed on the current branch:
   finite Fubini-style sum, and simple-function integral replay slices while
   keeping Lebesgue, convergence-theorem, product-measure existence, and
   almost-everywhere claims in the Lean-horizon lane.
+
+- **2026-06-30** — **Measure-theory field-readiness consumer query landed.**
+  Added measure/Farkas field readiness, measure bridge concept lookup, and
+  checked measure-theory Farkas row drill-down examples to
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
+  The foundational-resource smoke check now runs those queries alongside the
+  probability/Farkas and dynamics/Farkas examples, making finite measure,
+  product-measure, integration, random-variable, conditional-expectation,
+  martingale, kernel, hitting-time, and concentration resources visible through
+  the public JSON consumer boundary.
 
 - **2026-06-30** — **Geometry and complex bridge concepts landed.**
   Extended

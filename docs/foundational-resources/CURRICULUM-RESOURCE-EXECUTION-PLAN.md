@@ -93,8 +93,10 @@ Concrete work:
   is grouped by Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite replay, and
   Lean horizon without hand-maintained scans.
 - Keep consumer field-readiness smokes representative: probability/Farkas now
-  covers finite table-probability resources, and dynamics/Farkas now covers
-  recurrence, Euler, stochastic-kernel, and hitting-time resources.
+  covers finite table-probability resources, dynamics/Farkas covers
+  recurrence, Euler, stochastic-kernel, and hitting-time resources, and
+  measure/Farkas covers finite event-algebra, product-measure, integration,
+  random-variable, conditional-expectation, and stochastic-process resources.
 - Keep all status changes generated from `curriculum.toml`,
   [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md), and pack metadata.
 
@@ -473,7 +475,11 @@ Next buildout:
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
    concept, and field-readiness queries including field-plus-proof-route
    discovery, and `check-foundational-resources.sh` runs a small query smoke
-   set.
+   set. The smoke set now also covers measure-theory Farkas field readiness,
+   measure bridge concept lookup, and checked measure-theory Farkas rows,
+   tying finite measure, product-measure, integration, random-variable,
+   conditional-expectation, martingale, kernel, hitting-time, and
+   concentration packs to the public JSON consumer boundary.
 13. Landed: add negative fixtures for the foundational example-pack schema.
    `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
    packs with unknown fields, metadata/check id drift, and missing witness

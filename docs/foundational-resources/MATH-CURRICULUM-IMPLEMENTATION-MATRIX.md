@@ -257,8 +257,10 @@ Build sequence:
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
    atlas concept lookup, and field-level curriculum readiness over the
-   committed JSON data contract. The smoke set now covers both
-   probability/Farkas and dynamics/Farkas field-readiness examples.
+   committed JSON data contract. The smoke set now covers probability/Farkas,
+   dynamics/Farkas, and measure/Farkas field-readiness
+   examples, plus measure bridge concept lookup and checked measure-theory
+   Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
