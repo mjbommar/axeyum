@@ -97,9 +97,12 @@
           ["b", "c"],
           ["a", "c"]
         ],
-        "maximum_size": 1
+        "maximum_size": 1,
+        "cnf_artifact": "artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::graph_matching_triangle_no_perfect_matching_emits_checked_drat_and_lrat",
+        "certificate": "The Boolean resource regression emits a DRAT refutation, elaborates it to LRAT, and checks both proof objects independently."
       },
-      "notes": "The validator enumerates all matchings and confirms no matching covers all three vertices."
+      "notes": "The validator enumerates all matchings, checks the fixed DIMACS exact-cover artifact, and the Rust regression confirms emitted DRAT and LRAT proof objects independently check."
     }
   ]
 }

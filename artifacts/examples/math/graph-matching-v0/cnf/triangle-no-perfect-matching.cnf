@@ -1,0 +1,11 @@
+c graph-matching-v0 triangle-no-perfect-matching
+c Variables select edges of K3: 1=(a,b), 2=(b,c), 3=(a,c).
+c The first three clauses require every vertex to be covered by a selected edge.
+c The last three clauses require every vertex to be covered by at most one edge.
+p cnf 3 6
+1 3 0
+1 2 0
+2 3 0
+-1 -3 0
+-1 -2 0
+-2 -3 0

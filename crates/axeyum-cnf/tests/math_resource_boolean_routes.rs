@@ -23,6 +23,9 @@ const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
 const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
     "../../../artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf"
 );
+const GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING: &str = include_str!(
+    "../../../artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf"
+);
 
 fn assert_unsat_resource_cnf_checks(
     label: &str,
@@ -102,5 +105,15 @@ fn finite_cardinality_no_injection_four_to_three_emits_checked_drat_and_lrat() {
         FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE,
         12,
         34,
+    );
+}
+
+#[test]
+fn graph_matching_triangle_no_perfect_matching_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "graph-matching-v0 triangle-no-perfect-matching",
+        GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING,
+        3,
+        6,
     );
 }

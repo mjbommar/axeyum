@@ -28,16 +28,13 @@
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0",
   "solver_reuse": {
-    "status": "candidate",
-    "target": "finite graph matching Bool regression slice",
-    "pressure": "Matching validity, augmenting-path replay, and tiny no-perfect-matching refutations.",
+    "status": "promoted",
+    "target": "finite graph matching Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Triangle no-perfect-matching exact-cover obstruction with independent DRAT and LRAT rechecking.",
     "evidence": [
-      "matching-size-two-witness",
-      "overlapping-matching-rejected",
-      "augmenting-path-improves",
       "triangle-no-perfect-matching"
     ],
-    "next_step": "Encode matching constraints as deterministic Bool fixtures before adding weighted or theorem-level matching claims."
+    "next_step": "Promote overlapping invalid matching or augmenting-path constraints only when they add distinct graph-matching regression pressure; keep weighted or theorem-level matching claims out until the finite Bool route is exercised."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -45,7 +42,10 @@
     "docs/curriculum/00-foundations/sets.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/02-structures/counting.md",
-    "docs/proof-cookbook/recipes/finite-model-replay.md"
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "matching-size-two-witness",

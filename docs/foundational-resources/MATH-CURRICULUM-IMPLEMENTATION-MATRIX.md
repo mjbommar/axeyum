@@ -201,17 +201,19 @@ Build sequence:
 7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
 8. Selected deterministic R4 packs now have structured `solver_reuse`
-   candidate tags: finite graph packs, integer LIA, bounded natural arithmetic,
-   and bounded number theory.
+   candidate tags: remaining finite graph packs, integer LIA, bounded natural
+   arithmetic, and bounded number theory.
 9. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    checked-row mining, solver-reuse candidates, and atlas concept lookup over
    the committed JSON data contract.
 10. First solver-reuse promotions landed: `logic-basics-v0` now links
-    `tiny-cnf-refutation` to a DIMACS artifact, and `finite-cardinality-v0`
-    links `no-injection-four-to-three` to a DIMACS artifact. Both are checked by
-    the `math_resource_boolean_routes` DRAT/LRAT regression.
+    `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
+    `no-injection-four-to-three` to a DIMACS artifact, and
+    `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS
+    artifact. All are checked by the `math_resource_boolean_routes` DRAT/LRAT
+    regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

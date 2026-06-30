@@ -676,8 +676,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   learner/proof-upgrade dashboards now expose `Gate` / `Next Gate` columns so
   the resource lane can distinguish row-level R4 proof/evidence coverage from
   pack-level R6 consumer-boundary rows that already have source-linked solver
-  regressions. The current pack split is 44 `R6 consumer boundary` rows and
-  40 `R4 checked evidence` rows, making the remaining solver-reuse queue
+  regressions. The current pack split is 45 `R6 consumer boundary` rows and
+  39 `R4 checked evidence` rows, making the remaining solver-reuse queue
   explicit.
 
 - **Structured solver-reuse candidate tags landed.**
@@ -685,11 +685,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now admits an optional `solver_reuse` metadata object with status, target,
   pressure, evidence rows, and next step. The example-pack validator checks
   that candidate evidence points only at deterministic checked/replay rows.
-  The first candidate batch now has 8 remaining `candidate` rows:
-  `graph-reachability-v0`, `graph-matching-v0`, `graph-cut-v0`,
-  `graph-d-separation-v0`, `graph-search-runtime-v0`, `integer-lia-v0`,
-  `natural-arithmetic-v0`, and `number-theory-v0`. Generated dashboards also
-  show 2 `promoted` rows for `logic-basics-v0` and `finite-cardinality-v0`.
+  The first candidate batch now has 7 remaining `candidate` rows:
+  `graph-reachability-v0`, `graph-cut-v0`, `graph-d-separation-v0`,
+  `graph-search-runtime-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
+  `number-theory-v0`. Generated dashboards also show 3 `promoted` rows for
+  `logic-basics-v0`, `finite-cardinality-v0`, and `graph-matching-v0`.
 
 - **First solver-reuse candidate promoted: logic basics.**
   [`logic-basics-v0`](artifacts/examples/math/logic-basics-v0/) now has a
@@ -710,6 +710,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   objects. The pack metadata now marks `solver_reuse.status` as `promoted` for
   that row only; the validator enforces the fixed 4-into-3 DIMACS shape,
   regression name, and DRAT/LRAT trust-boundary note.
+
+- **Third solver-reuse candidate promoted: graph matching.**
+  [`graph-matching-v0`](artifacts/examples/math/graph-matching-v0/) now has a
+  source-linked DIMACS artifact for `triangle-no-perfect-matching`:
+  [`triangle-no-perfect-matching.cnf`](artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf).
+  The shared Boolean resource regression parses the `K3` exact-cover
+  contradiction, emits DRAT, elaborates to LRAT, and independently checks both
+  proof objects. The pack metadata now marks `solver_reuse.status` as
+  `promoted` for that row only; the validator enforces the fixed `K3` DIMACS
+  shape, regression name, and DRAT/LRAT trust-boundary note.
 
 - **Consumer-facing foundational-resource queries landed.**
   [`query-foundational-resources.py`](scripts/query-foundational-resources.py)

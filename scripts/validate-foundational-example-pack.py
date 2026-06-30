@@ -1808,6 +1808,22 @@ def validate_graph_matching(expected: dict[str, Any]) -> None:
         fail("triangle-no-perfect-matching maximum_size does not match enumeration")
     if has_perfect_matching(vertices, edges):
         fail("triangle-no-perfect-matching unexpectedly has a perfect matching")
+    if vertices != ["a", "b", "c"] or edges != [("a", "b"), ("b", "c"), ("a", "c")]:
+        fail("triangle-no-perfect-matching DIMACS artifact is fixed to K3")
+    require_dimacs_artifact(
+        "triangle-no-perfect-matching",
+        data.get("cnf_artifact"),
+        "p cnf 3 6",
+        [["1", "3"], ["1", "2"], ["2", "3"], ["-1", "-3"], ["-1", "-2"], ["-2", "-3"]],
+    )
+    proof_regression = data.get("proof_regression")
+    require_string("triangle-no-perfect-matching proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::graph_matching_triangle_no_perfect_matching" not in proof_regression:
+        fail("triangle-no-perfect-matching proof_regression must name the Boolean resource test")
+    certificate = data.get("certificate")
+    require_string("triangle-no-perfect-matching certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("triangle-no-perfect-matching certificate must document DRAT/LRAT independent checking")
 
 
 def require_directed_acyclic_graph(

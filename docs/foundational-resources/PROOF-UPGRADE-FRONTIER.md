@@ -83,6 +83,10 @@ First targets:
   (solver-reuse promotion landed for `no-injection-four-to-three`: source-linked
   4-into-3 injective-function DIMACS artifact, DRAT emission, LRAT elaboration,
   and independent checks)
+- [graph-matching-v0](../../artifacts/examples/math/graph-matching-v0/)
+  (solver-reuse promotion landed for `triangle-no-perfect-matching`:
+  source-linked `K3` exact-cover DIMACS artifact, DRAT emission, LRAT
+  elaboration, and independent checks)
 
 Expected artifact:
 
@@ -101,6 +105,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 ./scripts/check-foundational-resources.sh
 ```
 
