@@ -33,6 +33,9 @@ The validator recomputes the composed finite kernel
 Expected result: `unsat`.
 
 The validator rejects the malformed row because one source row sums to `6/5`.
+The source-linked QF_LRA artifact isolates the exact-rational contradiction and
+the `math_resource_lra_routes` regression checks Axeyum's emitted Farkas
+evidence independently.
 
 ## `general-kernel-lean-horizon`
 

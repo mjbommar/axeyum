@@ -191,8 +191,8 @@ one of:
       `linear_algebra`, `differential_equations_and_dynamical_systems`,
       `set_theory_and_foundations`.
     - Checks: finite kernel normalization, pushforward distributions, joint
-      factorization/disintegration, kernel composition, and bad kernel-row
-      rejection.
+      factorization/disintegration, kernel composition, and QF_LRA/Farkas bad
+      kernel-row rejection.
 15. `artifacts/examples/math/finite-hitting-times-v0/`
     - Fields: `probability_theory`, `differential_equations_and_dynamical_systems`,
       `linear_algebra`, `statistics`, `measure_theory`,

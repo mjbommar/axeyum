@@ -245,6 +245,9 @@ Build sequence:
     `bad-duplicate-node-grid-rejected` to
     `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    `finite-stochastic-kernels-v0` now links `bad-kernel-row-rejected` to
+    `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,
+    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

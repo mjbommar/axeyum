@@ -39,6 +39,8 @@ row normalization, pushforward sums, joint probabilities
 This pack is checked finite evidence for malformed kernel rows. It is not a
 proof of regular conditional probabilities, disintegration theorems, general
 Markov kernels on measurable spaces, or stochastic-process convergence.
+The malformed row also has a source-linked QF_LRA/Farkas regression so the
+`unsat` evidence is checked independently of solver search.
 
 Validation:
 

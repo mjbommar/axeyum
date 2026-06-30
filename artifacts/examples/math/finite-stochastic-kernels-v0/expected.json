@@ -126,9 +126,11 @@
           {"source": "rainy", "probabilities": {"walk": "3/5", "bus": "3/5"}}
         ],
         "row_sums": {"sunny": "1", "rainy": "6/5"},
-        "bad_source": "rainy"
+        "bad_source": "rainy",
+        "smt2_artifact": "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_row_emits_checked_farkas"
       },
-      "notes": "The validator rejects the row because its probabilities sum to 6/5."
+      "notes": "The validator rejects the row because its probabilities sum to 6/5; the Axeyum regression refutes rainy_row_sum = rainy_walk + rainy_bus, rainy_walk = 3/5, rainy_bus = 3/5, rainy_row_sum = 1 with rechecked Farkas evidence."
     },
     {
       "id": "general-kernel-lean-horizon",

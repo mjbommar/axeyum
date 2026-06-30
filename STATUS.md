@@ -524,6 +524,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resource regression requires `Evidence::UnsatFarkas` and rechecks the
   rational certificate independently.
 
+- **Finite-stochastic-kernels QF_LRA/Farkas regression landed.**
+  [`finite-stochastic-kernels-v0`](artifacts/examples/math/finite-stochastic-kernels-v0/)
+  now binds its bad kernel-row normalization row to Axeyum's evidence path.
+  The new SMT-LIB artifact encodes `rainy_walk = 3/5`, `rainy_bus = 3/5`,
+  `rainy_row_sum = rainy_walk + rainy_bus`, and the false stochastic-kernel
+  row claim `rainy_row_sum = 1`; the shared LRA resource regression requires
+  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+
 - **Finite-calculus-shadows end-to-end lesson landed.** Added
   [`calculus-shadows-end-to-end.md`](docs/learn/math/calculus-shadows-end-to-end.md)
   as the combined learner-facing trace for the calculus-algebraic-shadow and
@@ -630,7 +638,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It records the current committed baseline of 65 concept rows,
   84 non-template packs, 412 expected checks, 194 checked rows, 171 replay-only
-  rows, 47 Lean-horizon rows, and 14 promoted solver-reuse packs, then lays out
+  rows, 47 Lean-horizon rows, and 15 promoted solver-reuse packs, then lays out
   field-by-field build plans plus a prioritized execution queue. Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
@@ -698,7 +706,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rationals, linear algebra, LP thresholds, convexity, probability,
   Markov/hitting-time equations, regression, real-analysis bounds, Euler
   steps, affine/orientation geometry, numerical residuals, random matrices,
-  inner products, spectral rows, and matrix invariants. The row is tied to
+  inner products, spectral rows, matrix invariants, and stochastic-kernel row
+  normalization. The row is tied to
   [`math_resource_lra_routes`](crates/axeyum-solver/tests/math_resource_lra_routes.rs),
   which requires `Evidence::UnsatFarkas`, independently rechecks the evidence,
   and records the certified Farkas trust step. It is scoped to

@@ -118,7 +118,7 @@ QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
 backed by the 13-case `math_resource_uf_routes` regression.
 The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
-backed by the 21-test `math_resource_lra_routes` regression and scoped to
+backed by the 24-test `math_resource_lra_routes` regression and scoped to
 the optimization/Farkas proof-route lane.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
@@ -184,9 +184,10 @@ distance-preservation row and inner-product spaces now promoted for its bad
 negative-norm row, and spectral linear algebra now promoted for its bad
 eigenpair row, with matrix invariants now promoted for its bad characteristic
 polynomial row, and finite Chebyshev systems now promoted for the duplicate-node
-determinant conflict, and metric continuity now promoted for the finite
-bad-delta output-bound conflict. The first secondary QF_LRA/Farkas target set
-is now covered, the initial equality-heavy QF_UF/Alethe secondary set is now
+determinant conflict, metric continuity now promoted for the finite
+bad-delta output-bound conflict, and finite stochastic kernels now promoted for
+the bad kernel-row normalization conflict. The first secondary QF_LRA/Farkas
+target set is now covered, the initial equality-heavy QF_UF/Alethe secondary set is now
 covered, and the first QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity row, the finite-fields composite no-inverse row,
 and the graph-coloring one-bit triangle two-coloring obstruction, with bounded

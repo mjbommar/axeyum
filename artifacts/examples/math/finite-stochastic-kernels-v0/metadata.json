@@ -43,6 +43,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite stochastic-kernel bad-row QF_LRA/Farkas regression seed",
+    "pressure": "Malformed finite probability-transition row where the exact rational entries 3/5 and 3/5 sum to 6/5 but stochastic-kernel normalization requires row sum 1.",
+    "evidence": [
+      "bad-kernel-row-rejected"
+    ],
+    "next_step": "Promote additional kernel, Markov-chain, or policy-transition rows only when they add distinct exact-linear solver pressure; keep regular conditional probabilities and general disintegration in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -52,7 +61,10 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "kernel-normalization-witness",
@@ -65,7 +77,7 @@
   "graduation_criteria": [
     "Encode finite kernels as labeled source-to-target probability tables.",
     "Replay kernel normalization, pushforward, joint factorization, disintegration, and composition by exact rational sums.",
-    "Emit checked finite counterexample evidence for malformed kernel rows.",
+    "Emit checked finite counterexample evidence for malformed kernel rows; the bad-row normalization conflict now has checked QF_LRA/Farkas evidence.",
     "Keep regular conditional probabilities, disintegration theorems, and general Markov kernels on measurable spaces marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

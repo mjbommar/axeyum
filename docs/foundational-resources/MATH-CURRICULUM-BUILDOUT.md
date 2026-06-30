@@ -727,7 +727,8 @@ row.
 `artifacts/examples/math/finite-stochastic-kernels-v0/` now validates exact
 finite source-to-target probability kernels, pushforward distributions, joint
 factorization/disintegration replay, kernel composition, checked rejection of a
-malformed kernel row, and a regular-conditional-probability Lean-horizon row.
+malformed kernel row with QF_LRA/Farkas evidence, and a
+regular-conditional-probability Lean-horizon row.
 `artifacts/examples/math/finite-hitting-times-v0/` now validates exact finite
 first-hit distributions, survival probabilities, absorption-probability
 fixed-point equations, expected hitting-time equations, checked QF_LRA/Farkas
@@ -867,7 +868,7 @@ Recommended order:
     bad martingale rejection.
 29. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
-    composition, and bad kernel-row rejection.
+    composition, and QF_LRA/Farkas bad kernel-row rejection.
 30. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
     equations, and bad expected-time rejection.
@@ -1215,7 +1216,8 @@ bridge toward martingales and general conditional expectation.
 submartingale, and bounded-stopping bridge toward stochastic-process theory.
 `finite-stochastic-kernels-v0` now adds the finite conditional-distribution,
 pushforward, disintegration, and composition bridge toward Markov kernels and
-regular conditional probabilities. `finite-hitting-times-v0` now adds the
+regular conditional probabilities, with a checked QF_LRA/Farkas bad-row
+normalization seed. `finite-hitting-times-v0` now adds the
 finite first-hit, survival, absorption-probability, and expected-hitting-time
 bridge toward recurrence/transience and potential-theory horizons.
 `finite-concentration-v0` now adds the finite Markov/Chebyshev/union-bound
@@ -1393,8 +1395,8 @@ square-submartingale inequalities, bounded stopping replay, checked bad
 martingale rejection, and the general martingale Lean horizon.
 `finite-stochastic-kernels-v0` now has a learner-facing end-to-end lesson for
 row-normalized finite kernels, pushforward distributions, joint
-factorization/disintegration, kernel composition, checked bad kernel-row
-rejection, and the regular-conditional-probability Lean horizon.
+factorization/disintegration, kernel composition, checked QF_LRA/Farkas bad
+kernel-row rejection, and the regular-conditional-probability Lean horizon.
 `finite-hitting-times-v0` now has a learner-facing end-to-end lesson for finite
 absorbing-chain first-hit distributions, survival mass, absorption equations,
 expected hitting-time equations, checked QF_LRA/Farkas bad expected-time
@@ -1493,6 +1495,9 @@ Farkas evidence path after exact replay computes the disease-positive and
 evidence probabilities.
 `finite-markov-chain-v0` now routes its bad stochastic-row rejection through
 the same checked Farkas evidence path after exact replay computes the row sum.
+`finite-stochastic-kernels-v0` now routes its bad kernel-row rejection through
+the same checked Farkas evidence path after exact replay computes the malformed
+row sum `3/5 + 3/5 = 6/5`.
 `finite-hitting-times-v0` now routes its bad expected-time row through the same
 checked Farkas evidence path after clearing denominators in the finite linear
 equation.

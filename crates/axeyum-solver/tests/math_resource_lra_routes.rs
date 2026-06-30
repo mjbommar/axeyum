@@ -358,6 +358,30 @@ fn finite_conditional_expectation_bad_table_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_stochastic_kernel_bad_row_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let rainy_walk = real(&mut arena, "rainy_walk");
+    let rainy_bus = real(&mut arena, "rainy_bus");
+    let rainy_row_sum = real(&mut arena, "rainy_row_sum");
+    let rainy_walk_is_three_fifths = eq_ratio(&mut arena, rainy_walk, 3, 5);
+    let rainy_bus_is_three_fifths = eq_ratio(&mut arena, rainy_bus, 3, 5);
+    let row_entries_sum = arena.real_add(rainy_walk, rainy_bus).unwrap();
+    let row_sum_matches_entries = arena.eq(rainy_row_sum, row_entries_sum).unwrap();
+    let row_sum_is_one = eq_ratio(&mut arena, rainy_row_sum, 1, 1);
+
+    assert_farkas_checked(
+        "finite-stochastic-kernels-v0 bad-kernel-row-rejected",
+        &arena,
+        &[
+            rainy_walk_is_three_fifths,
+            rainy_bus_is_three_fifths,
+            row_sum_matches_entries,
+            row_sum_is_one,
+        ],
+    );
+}
+
+#[test]
 fn finite_euler_bad_step_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let state = real(&mut arena, "state");

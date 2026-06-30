@@ -363,10 +363,11 @@ Next buildout:
 9. Landed: add "math example using this route" sections to the six active proof
    cookbook recipes so proof-route docs point back to concrete packs.
 10. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
-   and linear-system examples.
+   linear-system, and probability/statistics table examples.
    Status: `family_exact_rational_farkas` now groups the recurring checked
    exact-rational infeasibility rows and ties them to the shared
-   `math_resource_lra_routes` regression.
+   `math_resource_lra_routes` regression; finite stochastic kernels now add a
+   source-linked bad-row normalization seed to that route.
 11. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
    Status: the first high-use learner-page route-note pass now names these
