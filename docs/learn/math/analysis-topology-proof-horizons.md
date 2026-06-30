@@ -10,8 +10,9 @@ Concept rows:
   `curriculum_reals` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `bridge_finite_topology_operator_homeomorphism`,
-  `bridge_finite_specialization_order_replay`, and
-  `bridge_finite_chain_homology_replay`, and
+  `bridge_finite_specialization_order_replay`,
+  `bridge_finite_chain_homology_replay`,
+  `bridge_finite_torsion_homology_replay`,
   `bridge_finite_cohomology_replay`, and
   `bridge_finite_cup_product_replay` in the atlas bridge vocabulary for the
   finite topology, topology-to-order, and algebraic-topology slices.
@@ -30,6 +31,7 @@ Example packs:
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+- [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
 - [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
@@ -69,10 +71,11 @@ separation checks, finite continuous-map preimages and homeomorphism checks,
 finite specialization preorders, singleton-closure characterization, finite
 `T0`/antisymmetry checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
-rank checks, fixed Betti-number replay, finite F2 cochain coboundary replay,
+rank checks, fixed Betti-number replay, one-entry Smith diagonal replay,
+finite torsion-generator replay, finite F2 cochain coboundary replay,
 cohomology-rank checks, finite F2 cup-product replay, one finite coboundary
-Leibniz row, and bad boundary-sign, coboundary-value, or cup-product-value
-rejection,
+Leibniz row, and bad boundary-sign, torsion-generator, coboundary-value, or
+cup-product-value rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
@@ -298,6 +301,22 @@ matrices, checks the three-edge circle has `b0 = 1` and `b1 = 1`, and rejects a
 false boundary sign for `[a,b,c]` with a checked QF_LIA/Diophantine coefficient
 certificate.
 
+For a finite integer torsion shadow, encode a two-term free abelian chain
+complex:
+
+```text
+C1 = Z<e>
+C0 = Z<v>
+d1(e) = 2v
+```
+
+The `finite-chain-complex-torsion-v0` validator checks `d0*d1 = 0`, replays
+the one-entry Smith diagonal `[2]`, records `H0 = Z/2` and `H1 = 0`, and
+rejects the false claim that `v` is a boundary with checked
+QF_LIA/Diophantine evidence for `2*k = 1`. This is a finite quotient-module
+calculation, not a proof of universal coefficients, Ext/Tor laws, or homology
+invariance.
+
 For a finite cohomology shadow over `F2`, encode cochain values on the same
 three-edge circle:
 
@@ -473,6 +492,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
@@ -526,6 +547,7 @@ replay, read
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
+[End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),
 [End To End: Finite Topology](finite-topology-end-to-end.md),
@@ -548,6 +570,8 @@ countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
 general Chebyshev spaces, specialization-order and separation-axiom theorems,
 sobriety/domain-theory results, homology invariance, exact sequences, homotopy
-equivalence, cup-product associativity, graded commutativity, naturality,
-cohomology-ring quotienting, cohomology-operation invariance, and
-infinite-dimensional spectral theory remain Lean-horizon material.
+equivalence, general Smith normal form, classification of finitely generated
+abelian groups, universal coefficient theorems, Ext/Tor functor laws,
+cup-product associativity, graded commutativity, naturality, cohomology-ring
+quotienting, cohomology-operation invariance, and infinite-dimensional
+spectral theory remain Lean-horizon material.

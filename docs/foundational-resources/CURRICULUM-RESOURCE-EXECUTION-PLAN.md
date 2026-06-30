@@ -35,13 +35,14 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 108 atlas rows generated from curriculum, field data, 62 R1 bridge
+- 109 atlas rows generated from curriculum, field data, 63 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   finite topology-operator/homeomorphism replay, finite specialization-order
   replay, finite boundary-operator replay, finite chain-complex/homology replay,
-  finite cohomology replay, finite cup-product replay,
+  finite torsion-homology replay, finite cohomology replay, finite
+  cup-product replay,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
   finite graph replay/obstruction and finite dynamics/Euler vocabulary,
@@ -53,7 +54,7 @@ As of this plan, the math resource lane has:
   finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 105 non-template math example packs, plus the validating template pack.
+- 106 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -542,7 +543,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 105 non-template packs
+   decision. The curriculum-pressure view now groups the 106 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:
@@ -611,7 +612,14 @@ Next buildout:
    `artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2`
    is checked by
    `cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat`.
-19. Promote selected packs into solver regression/fuzz corpora with back-links
+19. Landed: add `finite-chain-complex-torsion-v0` and
+   `bridge_finite_torsion_homology_replay` through a source-linked
+   QF_LIA/Diophantine regression for the `qf-lia-bad-torsion-generator`
+   integer boundary-membership conflict:
+   `artifacts/examples/math/finite-chain-complex-torsion-v0/smt2/bad-torsion-generator-diophantine-conflict.smt2`
+   is checked by
+   `cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence`.
+20. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and

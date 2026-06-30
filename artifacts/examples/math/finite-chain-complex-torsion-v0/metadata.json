@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "finite-chain-complex-torsion-v0",
+  "title": "Finite Chain-Complex Torsion Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "bridge_finite_torsion_homology_replay",
+    "bridge_finite_chain_homology_replay",
+    "bridge_finite_boundary_operator_replay",
+    "bridge_gcd_divisibility_witness",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "linear_algebra",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite chain complexes over Z",
+    "integer boundary matrices",
+    "Smith normal form replay",
+    "QF_LIA / Diophantine",
+    "UnsatDiophantine certificate",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite chain-complex torsion QF_LIA/Diophantine regression seed",
+    "pressure": "The fixed chain complex d1(e)=2v makes H0 = Z/2, so a malformed row claiming v is already a boundary isolates the impossible integer equation 2*k = 1.",
+    "evidence": [
+      "qf-lia-bad-torsion-generator"
+    ],
+    "next_step": "Promote additional torsion or universal-coefficient rows only when they add distinct Smith-normal-form, quotient, finite-field, or proof-reconstruction pressure; keep general homology invariance and universal coefficient theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-chain-complex-torsion-end-to-end.md",
+    "docs/learn/math/analysis-topology-proof-horizons.md",
+    "docs/learn/math/matrix-computation-index.md",
+    "artifacts/examples/math/finite-chain-complex-torsion-v0/smt2/bad-torsion-generator-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
+  ],
+  "expected_results": [
+    "integer-chain-complex-replay",
+    "smith-normal-form-replay",
+    "torsion-generator-replay",
+    "bad-torsion-boundary-rejected",
+    "qf-lia-bad-torsion-generator",
+    "general-universal-coefficient-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "State the finite free abelian chain groups, ordered bases, integer boundary matrices, and boundary-composition check explicitly.",
+    "Replay the Smith-normal-form diagonal and torsion factors with exact integer arithmetic rather than trusting a solver verdict.",
+    "Keep the promoted bad torsion-generator row tied to a committed SMT-LIB artifact and checked QF_LIA/Diophantine evidence.",
+    "Add larger Smith-normal-form and quotient-module proof resources only after they have deterministic replay data and route regressions.",
+    "Keep universal coefficient theorems, Ext/Tor functor laws, chain homotopy invariance, and topological invariance under Lean horizon until kernel-checked proof routes exist."
+  ]
+}

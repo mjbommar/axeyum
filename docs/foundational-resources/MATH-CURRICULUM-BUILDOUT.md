@@ -1298,7 +1298,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 108 atlas rows validate, including generated bridge-concept rows for
+  Status: 109 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1314,8 +1314,8 @@ Exit criteria:
   epsilon-delta shadows, compactness shadows, connectedness shadows,
   continuity-by-preimage, finite topology-operator/homeomorphism replay,
   finite specialization-order replay, finite boundary-operator replay, finite
-  chain-complex/homology replay, finite cohomology replay, finite
-  cup-product replay, LU
+  chain-complex/homology replay, finite torsion-homology replay, finite
+  cohomology replay, finite cup-product replay, LU
   factorization replay, rank-nullity replay,
   residual bounds, eigenpair witnesses, characteristic-polynomial replay,
   finite random-matrix moments, finite measure additivity, finite probability
@@ -1332,9 +1332,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 105 non-template math example packs validate.
+  Status: 106 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 105 non-template packs have at least one `checked` expected-result row.
+  Status: 106 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -2220,6 +2220,14 @@ exercises topology cup lookup plus concept-scoped QF_BV route queries while
 keeping associativity, graded commutativity, naturality, cohomology-ring
 quotienting, universal coefficients, and invariance theorems in the horizon
 lane.
+The topology concept layer now also has
+`bridge_finite_torsion_homology_replay`. It groups one finite integer chain
+complex, one-entry Smith diagonal replay, `H0 = Z/2`, and checked bad
+torsion-generator QF_LIA/Diophantine evidence across
+`finite-chain-complex-torsion-v0`. The foundational-resource smoke check now
+exercises topology torsion lookup plus concept-scoped Diophantine route queries
+while keeping general Smith normal form, universal coefficients, Ext/Tor
+functor laws, exact sequences, and homology invariance in the horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

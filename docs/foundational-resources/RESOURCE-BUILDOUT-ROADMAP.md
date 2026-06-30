@@ -40,14 +40,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 62 bridge-concept rows.
+- 63 bridge-concept rows.
 - 5 example-family rows.
-- 105 non-template math example packs.
-- 532 expected checks.
-- 227 checked proof/evidence rows.
-- 237 replay-only rows.
-- 68 Lean-horizon rows.
-- 105 promoted solver-reuse packs.
+- 106 non-template math example packs.
+- 538 expected checks.
+- 229 checked proof/evidence rows.
+- 240 replay-only rows.
+- 69 Lean-horizon rows.
+- 106 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -189,7 +189,7 @@ Route plan:
 | finite replay | SAT witnesses, finite table checks, computed witnesses | Make every replay row state what is recomputed independently. |
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
-| QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients | Group recurring gcd/divisibility obstructions as cookbook examples. |
+| QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
 | QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad Armijo, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
@@ -722,8 +722,8 @@ Build next:
 - Landed concept rows for metric balls, compactness shadows, connectedness
   shadows, continuity-by-preimage, finite topology-operator/homeomorphism
   replay, finite specialization-order replay, finite boundary-operator replay,
-  finite chain-complex/homology replay, finite cohomology replay, and finite
-  cup-product replay. Add narrower rank/torsion, quotient,
+  finite chain-complex/homology replay, finite torsion-homology replay, finite
+  cohomology replay, and finite cup-product replay. Add narrower quotient,
   universal-coefficient, cohomology-ring quotienting, or theorem-invariance
   rows only when reuse or solver pressure justifies the split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the

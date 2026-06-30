@@ -18,6 +18,9 @@ const EXACT_STATS_BAD_BINOMIAL_TAIL_COUNT: &str = include_str!(
 const FINITE_SIMPLICIAL_BAD_BOUNDARY_COEFFICIENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-simplicial-homology-v0/smt2/bad-boundary-coefficient-diophantine-conflict.smt2"
 );
+const FINITE_CHAIN_COMPLEX_TORSION_BAD_GENERATOR: &str = include_str!(
+    "../../../artifacts/examples/math/finite-chain-complex-torsion-v0/smt2/bad-torsion-generator-diophantine-conflict.smt2"
+);
 const INDUCTION_EVEN_PRODUCT_ODD: &str = include_str!(
     "../../../artifacts/examples/math/induction-patterns-v0/smt2/even-product-odd-diophantine-conflict.smt2"
 );
@@ -70,6 +73,14 @@ fn finite_simplicial_bad_boundary_coefficient_emits_checked_diophantine_evidence
     assert_resource_diophantine(
         "finite-simplicial-homology-v0 bad boundary coefficient obstruction",
         FINITE_SIMPLICIAL_BAD_BOUNDARY_COEFFICIENT,
+    );
+}
+
+#[test]
+fn finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "finite-chain-complex-torsion-v0 bad torsion generator obstruction",
+        FINITE_CHAIN_COMPLEX_TORSION_BAD_GENERATOR,
     );
 }
 

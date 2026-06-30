@@ -1939,6 +1939,7 @@ BRIDGE_CONCEPTS = [
             "curriculum_modular_arithmetic",
             "curriculum_number_theory",
             "family_integer_diophantine",
+            "bridge_finite_torsion_homology_replay",
             "field_number_theory",
         ],
         "decidability": "decidable",
@@ -3339,6 +3340,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_specialization_order_replay",
             "bridge_finite_boundary_operator_replay",
             "bridge_finite_chain_homology_replay",
+            "bridge_finite_torsion_homology_replay",
             "bridge_finite_cohomology_replay",
             "bridge_finite_cup_product_replay",
             "field_topology",
@@ -3543,6 +3545,7 @@ BRIDGE_CONCEPTS = [
         ],
         "unlocks": [
             "bridge_finite_chain_homology_replay",
+            "bridge_finite_torsion_homology_replay",
             "bridge_finite_cohomology_replay",
             "bridge_rank_nullity",
             "field_topology",
@@ -3642,6 +3645,7 @@ BRIDGE_CONCEPTS = [
             "curriculum_linear_algebra",
         ],
         "unlocks": [
+            "bridge_finite_torsion_homology_replay",
             "bridge_finite_cohomology_replay",
             "field_topology",
             "field_linear_algebra",
@@ -3711,6 +3715,107 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes face closure, oriented boundaries, boundary-of-boundary cancellation, ranks, and listed cycle generators exactly.",
                 "Malformed fixed rows link source artifacts or route regressions before claiming checked Diophantine evidence.",
                 "General homology and algebraic-topology theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_torsion_homology_replay",
+        "title": "Finite Torsion Homology Replay",
+        "field_ids": [
+            "topology",
+            "set_theory_and_foundations",
+            "linear_algebra",
+            "abstract_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite torsion-homology rows state an explicit finite free "
+            "abelian chain complex, ordered integer boundary matrix, Smith "
+            "diagonal, and quotient-generator claim. The trusted object is "
+            "exact integer replay of d^2=0, rank/torsion bookkeeping, and a "
+            "checked QF_LIA/Diophantine certificate for a malformed fixed "
+            "boundary membership equation."
+        ),
+        "prerequisites": [
+            "bridge_finite_boundary_operator_replay",
+            "bridge_finite_chain_homology_replay",
+            "bridge_gcd_divisibility_witness",
+            "bridge_rank_nullity",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_finite_cohomology_replay",
+            "field_topology",
+            "field_linear_algebra",
+            "field_abstract_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite chain complexes over Z",
+            "integer boundary matrices",
+            "Smith normal form replay",
+            "gcd/divisibility replay",
+            "QF_LIA / Diophantine",
+            "UnsatDiophantine certificate",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-chain-complex-torsion-v0",
+                "Two-term chain-complex replay with d1=[2], Smith diagonal [2], H0 torsion Z/2, and a checked bad torsion-generator Diophantine row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite torsion replay plus QF_LIA/Diophantine boundary-membership certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lia_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-chain-complex-torsion-end-to-end.md",
+                    "docs/learn/math/analysis-topology-proof-horizons.md",
+                    "docs/learn/math/matrix-computation-index.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator checks one finite integer chain "
+                    "complex and its Smith diagonal before trusting the "
+                    "torsion claim. The malformed boundary-membership row "
+                    "graduates only because the isolated equation 2*k = 1 "
+                    "has independently checked Diophantine evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-chain-complex-torsion-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "artifacts/examples/math/finite-chain-complex-torsion-v0/smt2/bad-torsion-generator-diophantine-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite torsion replay checks one fixed chain complex and one one-entry Smith diagonal; it does not implement a general Smith-normal-form solver or prove classification of finitely generated abelian groups.",
+            "The bad torsion-generator row isolates a fixed divisibility obstruction, not arbitrary quotient-module or exact-sequence reasoning.",
+            "Universal coefficients, Ext/Tor functor laws, chain homotopy invariance, and topological invariance remain Lean-horizon until kernel-checked proof routes exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the free abelian chain groups, ordered bases, integer boundary matrices, Smith diagonal, torsion factors, and quotient-generator claim.",
+                "The validator recomputes boundary composition, rational rank, one-entry Smith diagonal, free-rank bookkeeping, and divisibility obstructions exactly.",
+                "Malformed fixed boundary-membership rows link source artifacts and route regressions before claiming checked Diophantine evidence.",
+                "General torsion homology, universal coefficient theorems, exact sequences, and invariance claims remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },

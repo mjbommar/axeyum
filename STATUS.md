@@ -205,6 +205,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite chain-complex torsion resource and bridge landed.**
+  `finite-chain-complex-torsion-v0` and
+  `bridge_finite_torsion_homology_replay` now make a two-term integer chain
+  complex, one-entry Smith diagonal replay, `H0 = Z/2`, torsion-generator
+  replay, checked bad-generator rejection, and source-linked
+  QF_LIA/Diophantine evidence for `2*k = 1` queryable through the public JSON
+  boundary. The bridge keeps general Smith normal form, universal coefficient
+  theorems, Ext/Tor functor laws, exact sequences, and homology invariance in
+  the Lean-horizon lane. `PLAN.md`, the foundational-resource plans, learner
+  pages, `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`,
+  `PROOF-ROUTE-QUERY-MATRIX.md`, `MATRIX-COMPUTATION-QUERIES.md`, and
+  `check-foundational-resources.sh` now reflect the 106-pack / 63-bridge
+  baseline and exercise topology torsion lookup plus concept-scoped
+  Diophantine route queries.
+
 - **Finite cup-product resource and bridge landed.**
   `finite-simplicial-cup-products-v0` and
   `bridge_finite_cup_product_replay` now make ordered F2 cup-product replay,
@@ -215,8 +230,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   in the Lean-horizon lane. `PLAN.md`, the foundational-resource plans,
   learner pages, `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`,
   `PROOF-ROUTE-QUERY-MATRIX.md`, and `check-foundational-resources.sh` now
-  reflect the 105-pack / 62-bridge baseline and exercise topology cup lookup
-  plus concept-scoped QF_BV route queries.
+  reflected the then-current 105-pack / 62-bridge baseline and exercised
+  topology cup lookup plus concept-scoped QF_BV route queries.
 
 - **Finite cohomology resource and bridge landed.**
   `finite-simplicial-cohomology-v0` and

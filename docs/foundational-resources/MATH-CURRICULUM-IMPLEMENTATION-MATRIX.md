@@ -98,7 +98,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |
 | `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
-| `topology` | sets, reals, linear algebra | landed finite topology/compactness/connectedness/preimage bridge rows plus finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite cohomology, and finite cup-product replay bridges; add only distinct rank/torsion, quotient, universal-coefficient, cohomology-ring quotienting, or theorem-invariance pressure | finite replay, QF_UF/Alethe, QF_LIA/LRA, QF_BV, Lean horizon |
+| `topology` | sets, reals, linear algebra | landed finite topology/compactness/connectedness/preimage bridge rows plus finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product replay bridges; add only distinct quotient, universal-coefficient, cohomology-ring quotienting, or theorem-invariance pressure | finite replay, QF_UF/Alethe, QF_LIA/LRA, QF_BV, Lean horizon |
 | `measure_theory` | sets, probability, reals | landed finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows; add narrower countable-measure or convergence rows only when reused | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
@@ -562,7 +562,14 @@ Build sequence:
     route queries while keeping associativity, graded commutativity,
     naturality, cohomology-ring quotienting, universal coefficients, and
     invariance theorems in the Lean-horizon lane.
-64. Revisit crate/repo boundaries only after three real consumers or repeated
+64. Landed: add the finite torsion-homology replay bridge row.
+    `bridge_finite_torsion_homology_replay` makes a two-term integer chain
+    complex, one-entry Smith diagonal replay, `H0 = Z/2`, and checked bad
+    torsion-generator QF_LIA/Diophantine evidence queryable through topology
+    torsion lookup and concept-scoped Diophantine route queries while keeping
+    general Smith normal form, universal coefficients, Ext/Tor functor laws,
+    exact sequences, and homology invariance in the Lean-horizon lane.
+65. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

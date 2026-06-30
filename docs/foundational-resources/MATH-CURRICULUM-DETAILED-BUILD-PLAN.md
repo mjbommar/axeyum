@@ -36,14 +36,14 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 62 bridge-concept rows.
+- 63 bridge-concept rows.
 - 5 example-family rows.
-- 105 non-template math packs.
-- 532 expected checks.
-- 227 checked proof/evidence rows.
-- 237 replay-only rows.
-- 68 Lean-horizon rows.
-- 105 promoted solver-reuse packs.
+- 106 non-template math packs.
+- 538 expected checks.
+- 229 checked proof/evidence rows.
+- 240 replay-only rows.
+- 69 Lean-horizon rows.
+- 106 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -86,7 +86,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 105 Packs
+### Wave 1: Stabilize The Current 106 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -213,7 +213,7 @@ Exit criteria:
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation/KKT/active-set/SDP/gradient-descent/line-search/Wolfe/projected-gradient/proximal-gradient shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, specialization orders, homology, cohomology, cup products | maintain landed topology-shadow, finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite cohomology, and finite cup-product bridge rows; add only distinct rank/torsion, quotient, universal-coefficient, cohomology-ring quotienting, or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, Lean horizon |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, specialization orders, homology, torsion homology, cohomology, cup products | maintain landed topology-shadow, finite topology-operator/homeomorphism, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product bridge rows; add only distinct quotient, universal-coefficient, cohomology-ring quotienting, or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, Lean horizon |
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
@@ -759,6 +759,15 @@ Pick one row per commit unless the change is purely navigational.
     Lean-horizon lane. The topology consumer smoke now includes cup lookup and
     concept-scoped QF_BV route queries, and the atlas now validates 62 bridge
     rows.
+90. Landed: add `finite-chain-complex-torsion-v0` and the finite
+    torsion-homology replay bridge row. `bridge_finite_torsion_homology_replay`
+    makes a two-term integer chain complex, one-entry Smith diagonal replay,
+    `H0 = Z/2`, and checked bad torsion-generator QF_LIA/Diophantine evidence
+    queryable from one shared atlas concept while keeping general Smith normal
+    form, universal coefficients, Ext/Tor functor laws, exact sequences, and
+    homology invariance in the Lean-horizon lane. The topology consumer smoke
+    now includes torsion lookup and concept-scoped Diophantine route queries,
+    and the atlas now validates 63 bridge rows.
 
 ## Validation Checklist
 

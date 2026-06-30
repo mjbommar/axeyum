@@ -9,8 +9,10 @@ the finite open-cover slice in
 and the finite connectedness slice in
 [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/),
 plus finite continuous-map checks in
-[finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
-and finite algebraic-topology cochain operations in
+[finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/),
+finite chain-complex torsion in
+[finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
+and finite cochain operations in
 [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/).
 
 Concept rows:
@@ -32,6 +34,8 @@ Concept rows:
 | `bad-connected-claim-rejected` | `unsat` | checked Bool/CNF DRAT/LRAT |
 | `finite-continuous-map-witness` | `sat` | replay-only |
 | `bad-continuous-map-rejected` | `unsat` | checked |
+| `smith-normal-form-replay` | `sat` | replay-only |
+| `qf-lia-bad-torsion-generator` | `unsat` | checked QF_LIA/Diophantine |
 | `cup-product-replay` | `sat` | replay-only |
 | `qf-bv-bad-cup-product` | `unsat` | checked QF_BV/DRAT |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
@@ -147,6 +151,12 @@ boundary-matrix ranks, and rejects a bad boundary sign. For a fuller focused
 trace, read
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md).
 
+For finite integer torsion, the checker uses the two-term complex `d1=[2]`,
+checks `d0*d1=0`, replays the one-entry Smith diagonal `[2]`, and rejects the
+false claim that `v` is a boundary through checked QF_LIA/Diophantine evidence
+for `2*k = 1`. For a fuller focused trace, read
+[End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md).
+
 For finite simplicial cohomology, the checker keeps the finite complex but
 switches to F2 cochains, recomputes coboundaries, checks `delta^2 = 0`, replays
 finite cohomology ranks, and rejects a bad coboundary value through checked
@@ -173,6 +183,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
@@ -198,6 +210,9 @@ independent DRAT/LRAT certificate for the final missing-empty-set contradiction.
 The finite-specialization-order UNSAT row trusts only the explicit open-set
 neighborhood preorder and the independent Alethe certificate for the final
 equality conflict.
+The finite-chain-complex-torsion UNSAT row trusts only the explicit integer
+boundary matrix, the replayed divisibility obstruction, and the independent
+Diophantine certificate for `2*k = 1`.
 The finite-cohomology UNSAT row trusts only the explicit F2 coboundary replay
 and the independent Alethe certificate for the final value conflict.
 The finite-cup-product UNSAT row trusts only the explicit ordered-simplex F2

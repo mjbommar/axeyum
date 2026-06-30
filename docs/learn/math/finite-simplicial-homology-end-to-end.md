@@ -239,6 +239,8 @@ boundary and Betti rows through Axeyum model evaluation, and add emitted
 certificates for false-boundary and rank rows once finite matrix proof routes
 are promoted.
 
+For the integer quotient/torsion next step, read
+[End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md).
 For the finite cochain-side analogue over `F2`, read
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md).
 For a finite cochain operation built on that analogue, read

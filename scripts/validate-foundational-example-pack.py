@@ -14489,6 +14489,222 @@ def cup_product_f2(
     return result
 
 
+def require_int_matrix(context: str, value: Any, *, allow_empty: bool = False) -> list[list[int]]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a matrix")
+    if not value:
+        if allow_empty:
+            return []
+        fail(f"{context} must be a non-empty matrix")
+    matrix: list[list[int]] = []
+    width: int | None = None
+    for row_index, row in enumerate(value):
+        if not isinstance(row, list):
+            fail(f"{context}[{row_index}] must be a row list")
+        if width is None:
+            width = len(row)
+        elif len(row) != width:
+            fail(f"{context}[{row_index}] must have width {width}")
+        matrix_row = [
+            require_int(f"{context}[{row_index}][{col_index}]", entry)
+            for col_index, entry in enumerate(row)
+        ]
+        matrix.append(matrix_row)
+    return matrix
+
+
+def int_matrix_rank_over_q(matrix: list[list[int]]) -> int:
+    return matrix_rank([[Fraction(entry) for entry in row] for row in matrix])
+
+
+def require_int_list(context: str, value: Any, *, nonempty: bool = True) -> list[int]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    if nonempty and not value:
+        fail(f"{context} must not be empty")
+    return [require_int(f"{context}[{index}]", item) for index, item in enumerate(value)]
+
+
+def integer_matrix_product(
+    left: list[list[int]],
+    right: list[list[int]],
+    *,
+    left_width: int,
+    right_width: int,
+) -> list[list[int]]:
+    if not left:
+        return []
+    if left_width != len(right):
+        fail("integer matrix product left width must match right height")
+    columns = [
+        [right[row_index][col_index] for row_index in range(len(right))]
+        for col_index in range(right_width)
+    ]
+    return [
+        [sum(left_entry * right_entry for left_entry, right_entry in zip(row, column)) for column in columns]
+        for row in left
+    ]
+
+
+def require_single_entry_boundary(context: str, matrix: list[list[int]]) -> int:
+    if len(matrix) != 1 or len(matrix[0]) != 1:
+        fail(f"{context} currently expects a one-entry boundary matrix")
+    entry = matrix[0][0]
+    if entry == 0:
+        fail(f"{context} boundary entry must be nonzero")
+    return entry
+
+
+def validate_finite_chain_complex_torsion(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    chain = checks["integer-chain-complex-replay"]
+    if chain["expected_result"] != "sat":
+        fail("integer-chain-complex-replay must expect sat")
+    values = single_witness_values(chain, witnesses)
+    c1_basis = require_string_list("integer chain complex c1_basis", values.get("c1_basis"))
+    c0_basis = require_string_list("integer chain complex c0_basis", values.get("c0_basis"))
+    d1 = require_int_matrix("integer chain complex d1", values.get("d1"))
+    d0 = require_int_matrix("integer chain complex d0", values.get("d0"), allow_empty=True)
+    if len(d1) != len(c0_basis):
+        fail("integer-chain-complex-replay d1 height must match C0 basis length")
+    if any(len(row) != len(c1_basis) for row in d1):
+        fail("integer-chain-complex-replay d1 width must match C1 basis length")
+    if d0 and any(len(row) != len(c0_basis) for row in d0):
+        fail("integer-chain-complex-replay d0 width must match C0 basis length")
+    listed_composition = require_int_matrix(
+        "integer chain complex boundary_composition",
+        values.get("boundary_composition"),
+        allow_empty=True,
+    )
+    computed_composition = integer_matrix_product(
+        d0,
+        d1,
+        left_width=len(c0_basis),
+        right_width=len(c1_basis),
+    )
+    if computed_composition != listed_composition:
+        fail("integer-chain-complex-replay boundary composition is incorrect")
+    if any(any(entry != 0 for entry in row) for row in computed_composition):
+        fail("integer-chain-complex-replay composition did not reduce to zero")
+
+    smith = checks["smith-normal-form-replay"]
+    if smith["expected_result"] != "sat":
+        fail("smith-normal-form-replay must expect sat")
+    values = single_witness_values(smith, witnesses)
+    boundary_matrix_data = require_int_matrix("Smith boundary_matrix", values.get("boundary_matrix"))
+    entry = abs(require_single_entry_boundary("Smith boundary_matrix", boundary_matrix_data))
+    diagonal = require_int_list("Smith smith_diagonal", values.get("smith_diagonal"))
+    if diagonal != [entry]:
+        fail("smith-normal-form-replay Smith diagonal is incorrect")
+    if any(factor <= 1 for factor in diagonal):
+        fail("smith-normal-form-replay torsion diagonal entries must be greater than one")
+    matrix_rank_value = require_int("Smith matrix_rank", values.get("matrix_rank"))
+    if matrix_rank_value != int_matrix_rank_over_q(boundary_matrix_data):
+        fail("smith-normal-form-replay matrix_rank is incorrect")
+    chain_rank = require_int("Smith chain_rank", values.get("chain_rank"))
+    next_boundary_rank = require_int("Smith next_boundary_rank", values.get("next_boundary_rank"))
+    outgoing_boundary_rank = require_int("Smith outgoing_boundary_rank", values.get("outgoing_boundary_rank"))
+    free_rank = require_int("Smith free_rank", values.get("free_rank"))
+    if free_rank != chain_rank - next_boundary_rank - outgoing_boundary_rank:
+        fail("smith-normal-form-replay H0 free_rank bookkeeping is incorrect")
+    if free_rank < 0:
+        fail("smith-normal-form-replay H0 free_rank must be nonnegative")
+    torsion_factors = require_int_list("Smith torsion_factors", values.get("torsion_factors"))
+    if torsion_factors != [factor for factor in diagonal if factor > 1]:
+        fail("smith-normal-form-replay torsion_factors do not match Smith diagonal")
+    h1_chain_rank = require_int("Smith h1_chain_rank", values.get("h1_chain_rank"))
+    h1_outgoing = require_int("Smith h1_outgoing_boundary_rank", values.get("h1_outgoing_boundary_rank"))
+    h1_next = require_int("Smith h1_next_boundary_rank", values.get("h1_next_boundary_rank"))
+    h1_free = require_int("Smith h1_free_rank", values.get("h1_free_rank"))
+    if h1_free != h1_chain_rank - h1_outgoing - h1_next:
+        fail("smith-normal-form-replay H1 free_rank bookkeeping is incorrect")
+    if h1_free != 0:
+        fail("smith-normal-form-replay H1 free_rank must be zero for d1=[2]")
+
+    generator = checks["torsion-generator-replay"]
+    if generator["expected_result"] != "sat":
+        fail("torsion-generator-replay must expect sat")
+    values = single_witness_values(generator, witnesses)
+    require_string("torsion generator generator", values.get("generator"))
+    boundary = require_int_matrix("torsion generator boundary_matrix", values.get("boundary_matrix"))
+    divisor = abs(require_single_entry_boundary("torsion generator boundary_matrix", boundary))
+    double = values.get("double_boundary_witness")
+    if not isinstance(double, dict):
+        fail("torsion-generator-replay double_boundary_witness must be an object")
+    require_string("torsion double source_basis", double.get("source_basis"))
+    require_string("torsion double target_basis", double.get("target_basis"))
+    source_coefficient = require_int("torsion double source_coefficient", double.get("source_coefficient"))
+    target_coefficient = require_int("torsion double target_coefficient", double.get("target_coefficient"))
+    if source_coefficient * divisor != target_coefficient:
+        fail("torsion-generator-replay double_boundary_witness is incorrect")
+    single = values.get("single_boundary_claim")
+    if not isinstance(single, dict):
+        fail("torsion-generator-replay single_boundary_claim must be an object")
+    single_target = require_int("torsion single target_coefficient", single.get("target_coefficient"))
+    single_divisor = abs(require_int("torsion single divisor", single.get("divisor")))
+    if single_divisor != divisor:
+        fail("torsion-generator-replay single divisor must match boundary entry")
+    if single.get("has_integer_solution") is not False:
+        fail("torsion-generator-replay must document has_integer_solution=false")
+    if single_target % single_divisor == 0:
+        fail("torsion-generator-replay single target is unexpectedly divisible by the boundary entry")
+
+    bad = checks["bad-torsion-boundary-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-torsion-boundary-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    boundary = require_int_matrix("bad torsion boundary_matrix", data.get("boundary_matrix"))
+    divisor = abs(require_single_entry_boundary("bad torsion boundary_matrix", boundary))
+    target = require_int("bad torsion target_coefficient", data.get("target_coefficient"))
+    listed_divisor = require_int("bad torsion divisor", data.get("divisor"))
+    listed_gcd = require_int("bad torsion gcd", data.get("gcd"))
+    require_string("bad torsion generator", data.get("generator"))
+    if listed_divisor != divisor:
+        fail("bad-torsion-boundary-rejected divisor must match boundary entry")
+    if listed_gcd != gcd(divisor, 0):
+        fail("bad-torsion-boundary-rejected gcd is incorrect")
+    if data.get("has_integer_solution") is not False:
+        fail("bad-torsion-boundary-rejected must document has_integer_solution=false")
+    if target % listed_gcd == 0:
+        fail("bad-torsion-boundary-rejected target is unexpectedly in the image subgroup")
+
+    qf_lia = checks["qf-lia-bad-torsion-generator"]
+    if qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-bad-torsion-generator must expect unsat")
+    if qf_lia["proof_status"] != "checked":
+        fail("qf-lia-bad-torsion-generator must be checked")
+    if qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-bad-torsion-generator must use qf_lia_diophantine_evidence validation")
+    data = qf_lia.get("data", {})
+    boundary = require_int_matrix("qf-lia torsion boundary_matrix", data.get("boundary_matrix"))
+    divisor = abs(require_single_entry_boundary("qf-lia torsion boundary_matrix", boundary))
+    target = require_int("qf-lia torsion target_coefficient", data.get("target_coefficient"))
+    if target % divisor == 0:
+        fail("qf-lia-bad-torsion-generator target is unexpectedly divisible")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia torsion smt2_artifact", smt2_artifact)
+    check_source("qf-lia torsion smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("qf-lia torsion proof_regression", proof_regression)
+    if "finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("qf-lia-bad-torsion-generator must link the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("qf-lia torsion certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate or "2k = 1" not in certificate:
+        fail("qf-lia-bad-torsion-generator certificate must document checked 2k = 1 Diophantine evidence")
+
+    horizon = checks["general-universal-coefficient-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-universal-coefficient-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-universal-coefficient-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general universal coefficient target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general universal coefficient future_checker", data.get("future_checker"))
+
+
 def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -19341,6 +19557,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_markov_chain(expected)
     if metadata["id"] == "finite-simplicial-homology-v0":
         validate_finite_simplicial_homology(expected)
+    if metadata["id"] == "finite-chain-complex-torsion-v0":
+        validate_finite_chain_complex_torsion(expected)
     if metadata["id"] == "finite-simplicial-cohomology-v0":
         validate_finite_simplicial_cohomology(expected)
     if metadata["id"] == "finite-simplicial-cup-products-v0":

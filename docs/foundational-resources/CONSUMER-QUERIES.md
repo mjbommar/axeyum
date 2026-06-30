@@ -403,11 +403,13 @@ continuous-map/preimage rows, closure/interior replay, finite homeomorphism
 replay, metric-ball examples, and bounded epsilon-delta shadows grouped; use
 the Alethe route for finite specialization-order, cohomology, and
 homeomorphism/preimage conflicts, use the Diophantine route for finite
-boundary-operator and homology boundary-coefficient rows, and use the QF_BV
-route for fixed one-bit finite cup-product contradictions. Arbitrary
+boundary-operator, homology boundary-coefficient, and torsion-generator rows,
+and use the QF_BV route for fixed one-bit finite cup-product contradictions.
+Arbitrary
 compactness, connectedness, homeomorphism invariance, specialization-order
-theorems, homology/cohomology invariance, exact sequences, and general
-cohomology-ring or cohomology-operation laws remain in the proof-horizon lane:
+theorems, homology/cohomology invariance, exact sequences, universal
+coefficient theorems, and general cohomology-ring or cohomology-operation laws
+remain in the proof-horizon lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \
@@ -466,6 +468,11 @@ python3 scripts/query-foundational-resources.py concepts \
 
 python3 scripts/query-foundational-resources.py concepts \
   --field topology \
+  --text torsion \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field topology \
   --text cohomology \
   --require-any
 
@@ -477,8 +484,8 @@ python3 scripts/query-foundational-resources.py concepts \
 
 Concept-plus-route queries find finite topology-operator/homeomorphism rows,
 finite specialization-order rows, finite boundary-operator rows, finite
-chain-complex/homology rows, finite cohomology rows, and finite cup-product
-rows without hard-coding pack ids:
+chain-complex/homology rows, finite torsion-homology rows, finite cohomology
+rows, and finite cup-product rows without hard-coding pack ids:
 
 ```sh
 python3 scripts/query-foundational-resources.py packs \
@@ -521,6 +528,17 @@ python3 scripts/query-foundational-resources.py packs \
 
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_chain_homology_replay \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_torsion_homology_replay \
+  --route Diophantine \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_torsion_homology_replay \
   --route Diophantine \
   --proof-status checked \
   --require-any
@@ -1216,6 +1234,7 @@ python3 scripts/query-foundational-resources.py concepts --field topology --text
 python3 scripts/query-foundational-resources.py concepts --field topology --text specialization --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text boundary --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text homology --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text torsion --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text cohomology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text cup --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
@@ -1230,6 +1249,8 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_bo
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boundary_operator_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_chain_homology_replay --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_chain_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_torsion_homology_replay --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_cohomology_replay --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_cohomology_replay --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_cup_product_replay --route qf-bv --require-any >/dev/null

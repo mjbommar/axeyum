@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-chain-complex-torsion-v0",
+  "witnesses": [
+    {
+      "id": "two-cell-chain-complex",
+      "description": "A finite free abelian chain complex C1 = Z<e>, C0 = Z<v> with d1(e) = 2v and d0 = 0.",
+      "values": {
+        "c1_basis": ["e"],
+        "c0_basis": ["v"],
+        "d1": [[2]],
+        "d0": [],
+        "boundary_composition": []
+      }
+    },
+    {
+      "id": "z2-homology-summary",
+      "description": "Smith-normal-form data showing H0 is Z/2 and H1 is zero for d1 = [2].",
+      "values": {
+        "boundary_matrix": [[2]],
+        "smith_diagonal": [2],
+        "matrix_rank": 1,
+        "chain_rank": 1,
+        "next_boundary_rank": 1,
+        "outgoing_boundary_rank": 0,
+        "free_rank": 0,
+        "torsion_factors": [2],
+        "h1_chain_rank": 1,
+        "h1_outgoing_boundary_rank": 1,
+        "h1_next_boundary_rank": 0,
+        "h1_free_rank": 0
+      }
+    },
+    {
+      "id": "torsion-generator",
+      "description": "The class of v has order two: 2v is a boundary, but v is not.",
+      "values": {
+        "generator": "v",
+        "boundary_matrix": [[2]],
+        "double_boundary_witness": {
+          "source_basis": "e",
+          "source_coefficient": 1,
+          "target_basis": "v",
+          "target_coefficient": 2
+        },
+        "single_boundary_claim": {
+          "target_basis": "v",
+          "target_coefficient": 1,
+          "divisor": 2,
+          "has_integer_solution": false
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "integer-chain-complex-replay",
+      "claim": "The integer boundary maps d1(e)=2v and d0=0 form a chain complex because d0*d1 is zero.",
+      "expected_result": "sat",
+      "validation": "finite_integer_chain_complex_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-cell-chain-complex"],
+      "notes": "The validator checks basis sizes, boundary-matrix shape, and the listed zero boundary composition exactly over the integers."
+    },
+    {
+      "id": "smith-normal-form-replay",
+      "claim": "The boundary matrix [2] has Smith diagonal [2], so H0 has no free part and one Z/2 torsion factor while H1 has rank zero.",
+      "expected_result": "sat",
+      "validation": "finite_smith_torsion_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["z2-homology-summary"],
+      "notes": "The validator recomputes the rank over Q, checks the listed one-entry Smith diagonal, and verifies the free-rank and torsion-factor bookkeeping."
+    },
+    {
+      "id": "torsion-generator-replay",
+      "claim": "The class [v] in H0 has order two: 2v is in im(d1), but v is not in im(d1).",
+      "expected_result": "sat",
+      "validation": "finite_torsion_generator_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["torsion-generator"],
+      "notes": "The validator checks that d1(1*e)=2v and that the single-generator boundary equation 2*k=1 has no integer solution."
+    },
+    {
+      "id": "bad-torsion-boundary-rejected",
+      "claim": "The generator v is a boundary in the complex d1(e)=2v.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_torsion_boundary_refutation",
+      "proof_status": "checked",
+      "data": {
+        "boundary_matrix": [[2]],
+        "generator": "v",
+        "target_coefficient": 1,
+        "divisor": 2,
+        "gcd": 2,
+        "has_integer_solution": false
+      },
+      "notes": "The validator recomputes the fixed divisibility obstruction: the image of d1 is 2Z, so coefficient 1 is not a boundary."
+    },
+    {
+      "id": "qf-lia-bad-torsion-generator",
+      "claim": "There is an integer k with 2*k = 1, making v a boundary.",
+      "expected_result": "unsat",
+      "validation": "qf_lia_diophantine_evidence",
+      "proof_status": "checked",
+      "data": {
+        "boundary_matrix": [[2]],
+        "generator": "v",
+        "target_coefficient": 1,
+        "divisor": 2,
+        "smt2_artifact": "artifacts/examples/math/finite-chain-complex-torsion-v0/smt2/bad-torsion-generator-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check for the integer equation 2k = 1"
+      },
+      "notes": "The SMT-LIB artifact isolates the torsion-generator error as a one-variable integer Diophantine contradiction."
+    },
+    {
+      "id": "general-universal-coefficient-lean-horizon",
+      "claim": "General universal-coefficient and homology-invariance theorems require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "universal coefficient theorem, Ext/Tor functor laws, chain-homotopy invariance, exact sequences, and topological invariance of torsion homology",
+        "future_checker": "Lean modules for chain complexes over Z, finitely generated abelian groups, Smith normal form, Ext/Tor, and proof reconstruction from finite quotient certificates"
+      },
+      "notes": "The finite rows check one explicit chain complex and one torsion obstruction; general algebraic-topology theorem statements stay in the Lean-horizon lane."
+    }
+  ]
+}

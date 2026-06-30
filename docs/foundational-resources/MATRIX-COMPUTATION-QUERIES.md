@@ -48,6 +48,7 @@ when the consumer needs a concrete checked row to display.
 | Eigenpairs and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
 | Finite random-matrix moments | `bridge_random_matrix_finite_moment` | `Farkas` | `packs --concept bridge_random_matrix_finite_moment --route Farkas` |
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
+| Integer chain-complex torsion | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
 | Modules and tensor bilinearity | `bridge_tensor_bilinearity` | `Alethe` | `packs --concept bridge_tensor_bilinearity --route Alethe` |
 | Operators and Chebyshev systems | `bridge_finite_operator_chebyshev` | `Farkas` | `packs --concept bridge_finite_operator_chebyshev --route Farkas` |
 
@@ -100,6 +101,16 @@ python3 scripts/query-foundational-resources.py packs \
   --require-any
 ```
 
+Display checked finite torsion-homology matrix rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_torsion_homology_replay \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+```
+
 List finite tensor/module packs that use the equality route:
 
 ```sh
@@ -126,8 +137,8 @@ resource that wants examples by computation type.
 
 They do not prove:
 
-- general rank-nullity, spectral, Hilbert-space, Chebyshev, or homology
-  theorems;
+- general rank-nullity, spectral, Hilbert-space, Chebyshev, Smith-normal-form,
+  universal-coefficient, or homology theorems;
 - floating-point stability, conditioning, or convergence of numerical methods;
 - random-matrix asymptotics or simulation quality;
 - benchmark performance, PAR-2, or Z3/cvc5 parity.

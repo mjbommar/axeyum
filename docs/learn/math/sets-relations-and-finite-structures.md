@@ -26,6 +26,7 @@ Example packs:
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+- [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
 - [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
@@ -72,8 +73,11 @@ and rejection of a false connectedness claim. The continuous-map pack checks
 finite function preimages of open sets, homeomorphism witnesses, and rejection
 of false continuity/homeomorphism claims. The finite simplicial-homology pack
 checks face closure for finite complexes, oriented-boundary replay,
-`boundary^2 = 0`, and a fixed Betti-rank calculation. The measure pack checks
-finite sigma-algebra closure, rational measure tables, finite additivity, and
+`boundary^2 = 0`, and a fixed Betti-rank calculation. The finite
+chain-complex-torsion pack checks a two-term integer complex, one-entry Smith
+diagonal replay, a `Z/2` torsion generator, and a checked
+QF_LIA/Diophantine bad-generator row. The measure pack checks finite
+sigma-algebra closure, rational measure tables, finite additivity, and
 event/complement identities.
 The finite simplicial-cohomology pack checks F2 cochain coboundary replay,
 `delta^2 = 0`, cohomology-rank replay for the same three-edge circle, and a
@@ -286,8 +290,22 @@ boundary([a,b,c]) = [b,c] - [a,c] + [a,b]
 ```
 
 It verifies face closure, recomputes the alternating boundary, and rejects the
-false all-positive boundary. For finite cohomology, use F2 cochains on the
-same three-edge circle:
+false all-positive boundary.
+
+For finite integer torsion, use a two-term free abelian chain complex:
+
+```text
+C1 = Z<e>
+C0 = Z<v>
+d1(e) = 2v
+H0 = Z/2
+```
+
+The checker verifies `d0*d1 = 0`, replays the Smith diagonal `[2]`, checks that
+`2v` is a boundary, and rejects the false claim that `v` is a boundary through
+checked QF_LIA/Diophantine evidence for `2*k = 1`.
+
+For finite cohomology, use F2 cochains on the same three-edge circle:
 
 ```text
 f(a) = 0
@@ -341,6 +359,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
@@ -369,6 +389,7 @@ and measure replay, read
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
+[End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),
 [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md),
@@ -379,11 +400,12 @@ and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end
 The finite set, relation/function, equivalence-class, function-composition,
 finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
 cardinality-principles, topology, specialization-order, compactness-shadow, connectedness-shadow, continuous-map,
-finite-simplicial-homology, finite-simplicial-cohomology, and measure packs are now checked finite artifacts.
+finite-simplicial-homology, finite-chain-complex-torsion, finite-simplicial-cohomology, and measure packs are now checked finite artifacts.
 The finite-simplicial-cup-products pack adds a checked finite cochain-operation
 row without promoting general cohomology-ring laws.
-The finite-simplicial-homology pack now also carries a checked
-QF_LIA/Diophantine certificate for its bad boundary coefficient. The Alethe
+The finite-simplicial-homology and finite-chain-complex-torsion packs now also
+carry checked QF_LIA/Diophantine certificates for bad integer boundary
+coefficients and bad torsion-generator membership. The Alethe
 certificate-anatomy page now shows the shared QF_UF proof-object boundary for
 quotient-map congruence and tamper rejection. The next finite-structure gaps
 are narrower EUF/Alethe anatomy for secondary algebra/topology packs and Lean
@@ -392,4 +414,5 @@ infinite cardinality, general monoid, permutation-group, and group-action theore
 complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,
 continuous-image/homeomorphism theorems, homology invariance, exact sequences,
-and countable additivity remain proof-horizon material.
+universal coefficient theorems, and countable additivity remain proof-horizon
+material.

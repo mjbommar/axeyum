@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 105
-- learner-linked packs: 105 focused links
-- packs with non-checked proof rows: 94
-- non-checked proof rows: 305
+- math example packs: 106
+- learner-linked packs: 106 focused links
+- packs with non-checked proof rows: 95
+- non-checked proof rows: 309
 
 Candidate route totals:
 
@@ -27,10 +27,10 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 10 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 17 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 75 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 76 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -525,6 +525,9 @@ First targets:
 - [finite-simplicial-homology-v0](../../artifacts/examples/math/finite-simplicial-homology-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad boundary
   coefficient row)
+- [finite-chain-complex-torsion-v0](../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the bad torsion
+  generator row after exact Smith/torsion replay isolates `2*k = 1`)
 - [induction-patterns-v0](../../artifacts/examples/math/induction-patterns-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the finite
   even-product parity obstruction)
@@ -584,6 +587,7 @@ cargo test -p axeyum-solver diophantine
 cargo test -p axeyum-solver certificate_tamper_is_rejected
 cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
 cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
 cargo test -p axeyum-solver --test math_resource_lia_routes
 ./scripts/check-foundational-resources.sh
