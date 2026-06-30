@@ -29,6 +29,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite monoid associativity QF_UF/Alethe regression seed",
+    "pressure": "Associativity conflict where fixed table facts force (b*b)*b = a and b*(b*b) = b while the malformed row asserts associativity and a != b.",
+    "evidence": [
+      "bad-nonassociative-table-rejected"
+    ],
+    "next_step": "Promote additional finite monoid rows only when they add distinct associativity, identity, or finite-function solver pressure; keep free monoids, presentations, and general semigroup theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/02-structures/groups.md",
@@ -37,6 +46,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-monoids-v0/smt2/nonassociative-table-alethe-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

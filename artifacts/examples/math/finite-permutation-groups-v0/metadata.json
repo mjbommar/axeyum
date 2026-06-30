@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite permutation nonbijection QF_UF/Alethe regression seed",
+    "pressure": "Injectivity conflict where two distinct inputs map to image1 but the malformed permutation row demands distinct images.",
+    "evidence": [
+      "bad-nonbijection-rejected"
+    ],
+    "next_step": "Promote additional finite permutation or group-action rows only when they add distinct finite-function solver pressure; keep Cayley's theorem, Sylow theory, representation theory, and classification results in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/groups.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",
@@ -41,6 +50,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-permutation-groups-v0/smt2/bad-nonbijection-injectivity-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

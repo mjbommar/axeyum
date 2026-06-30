@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite module bad submodule QF_UF/Alethe regression seed",
+    "pressure": "Submodule scalar-closure conflict where 1 is present, 2*1 = 2, and 2 is absent while the malformed row demands scalar closure.",
+    "evidence": [
+      "bad-submodule-rejected"
+    ],
+    "next_step": "Promote additional finite module rows only when they add distinct scalar-closure, quotient, or homomorphism solver pressure; keep exact sequences, projective/injective modules, and homological algebra in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/rings.md",
     "docs/curriculum/02-structures/groups.md",
@@ -41,6 +50,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-modules-v0/smt2/bad-submodule-scalar-closure-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

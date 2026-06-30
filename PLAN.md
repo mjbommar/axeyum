@@ -247,9 +247,9 @@ bounded-natural negativity. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **36 promoted solver-reuse
-packs** and **48 unclassified packs** after the latest QF_LRA source-metadata
-promotion batch;
+the foundational resource dashboards now report **48 promoted solver-reuse
+packs** and **36 unclassified packs** after the latest QF_LRA and QF_UF
+source-metadata promotion batches;
 prefer the next
 proof-frontier lane or equality-heavy pack that can carry a small checked
 certificate and a resource-backed regression.

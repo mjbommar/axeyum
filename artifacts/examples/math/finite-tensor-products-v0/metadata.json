@@ -33,6 +33,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite tensor-product bad bilinear map QF_UF/Alethe regression seed",
+    "pressure": "Left-additivity conflict where 10 + 01 = 11 and beta(10,1)+beta(01,1)=11, but the malformed row forces beta(11,1)=00.",
+    "evidence": [
+      "bad-bilinear-map-rejected"
+    ],
+    "next_step": "Promote additional finite tensor rows only when they add distinct bilinearity, factorization, or finite-matrix solver pressure; keep arbitrary universal properties, multilinear algebra, and homological algebra in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/02-structures/fields.md",
@@ -42,6 +51,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-tensor-products-v0/smt2/bad-bilinear-left-additivity-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite vector-space bad subspace QF_UF/Alethe regression seed",
+    "pressure": "Subspace additive-closure conflict where 10 and 01 are present, 10 + 01 = 11, and 11 is absent while the malformed row demands closure.",
+    "evidence": [
+      "bad-subspace-rejected"
+    ],
+    "next_step": "Promote additional finite vector-space rows only when they add distinct finite-field, subspace, or linear-map solver pressure; keep basis-extension, dimension uniqueness, quotient-space, and arbitrary-field theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/02-structures/fields.md",
@@ -41,6 +50,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-vector-spaces-v0/smt2/bad-subspace-addition-closure-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

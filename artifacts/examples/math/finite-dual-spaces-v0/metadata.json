@@ -35,6 +35,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite dual-space covector additivity QF_UF/Alethe regression seed",
+    "pressure": "Covector additivity conflict where 10 + 01 = 11 and 1 + 1 = 0, but the malformed row forces f(11) = 1 and additivity.",
+    "evidence": [
+      "bad-covector-rejected"
+    ],
+    "next_step": "Promote additional finite dual-space rows only when they add distinct pairing, annihilator, or transpose-map solver pressure; keep bidual, adjoint, Hahn-Banach, and topological-dual theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/02-structures/fields.md",
@@ -44,6 +53,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-dual-spaces-v0/smt2/bad-covector-additivity-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

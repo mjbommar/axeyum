@@ -27,12 +27,23 @@
     "QF_UF"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite function single-valued QF_UF/Alethe regression seed",
+    "pressure": "Function-consistency conflict where f(x0) is forced to equal y0 and y1 while y0 != y1.",
+    "evidence": [
+      "qf-uf-function-single-valued-alethe"
+    ],
+    "next_step": "Promote additional finite-relation rows only when they add distinct equality, totality, or graph-consistency solver pressure; keep arbitrary relation algebra theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/00-foundations/sets.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md"
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "artifacts/examples/math/relations-functions-v0/smt2/function-single-valued-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "partial-order-witness",

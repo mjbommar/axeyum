@@ -29,6 +29,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite homomorphism preservation QF_UF/Alethe regression seed",
+    "pressure": "Homomorphism-preservation congruence conflict where congruent source pairs must preserve the same operation equality but the malformed row rejects the second pair.",
+    "evidence": [
+      "qf-uf-homomorphism-preservation-alethe"
+    ],
+    "next_step": "Promote additional finite homomorphism rows only when they add distinct equality or quotient-map solver pressure; keep general isomorphism theorems and categorical universal properties in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/groups.md",
     "docs/curriculum/02-structures/rings.md",
@@ -37,7 +46,9 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/homomorphism-preservation-congruence-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "z4-to-z2-group-homomorphism",

@@ -24,12 +24,23 @@
     "QF_UF"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-groups-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite group operation congruence QF_UF/Alethe regression seed",
+    "pressure": "Binary-operation congruence conflict where a = b and c = d but the malformed row demands mul(a,c) != mul(b,d).",
+    "evidence": [
+      "qf-uf-group-operation-congruence-alethe"
+    ],
+    "next_step": "Promote additional finite group table rows only when they add distinct EUF or finite-table solver pressure; keep Lagrange, Sylow, and classification theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/groups.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md"
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "artifacts/examples/math/finite-groups-v0/smt2/group-operation-congruence-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "z4-addition-group-table",

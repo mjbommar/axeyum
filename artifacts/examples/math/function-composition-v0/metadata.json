@@ -29,6 +29,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite function composition application QF_UF/Alethe regression seed",
+    "pressure": "Composition congruence/transitivity conflict where comp(a) = g(f(a)), f(a) = b, and g(b) = c but the row demands comp(a) != c.",
+    "evidence": [
+      "qf-uf-composition-application-alethe"
+    ],
+    "next_step": "Promote additional finite function-composition rows only when they add distinct EUF solver pressure; keep arbitrary extensional equality, inverse laws, and categorical function laws in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/00-foundations/sets.md",
@@ -36,7 +45,9 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/function-composition-v0/smt2/composition-application-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "composition-table-replay",

@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite order antisymmetry QF_UF/Alethe regression seed",
+    "pressure": "Antisymmetry conflict where x <= y and y <= x force x = y, but the malformed row also asserts x != y.",
+    "evidence": [
+      "bad-partial-order-rejected"
+    ],
+    "next_step": "Promote additional finite order or lattice rows only when they add distinct equality, monotonicity, or table solver pressure; keep complete lattices and fixed-point theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/sets.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",
@@ -41,6 +50,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-order-lattices-v0/smt2/bad-partial-order-antisymmetry-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [

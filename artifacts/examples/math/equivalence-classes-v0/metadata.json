@@ -29,13 +29,24 @@
     "finite model replay"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "equivalence-class quotient-map QF_UF/Alethe regression seed",
+    "pressure": "Quotient-map congruence conflict where a = c but the malformed row demands q(a) != q(c).",
+    "evidence": [
+      "qf-uf-quotient-congruence-alethe"
+    ],
+    "next_step": "Promote additional quotient or partition rows only when they add distinct equality/congruence solver pressure; keep infinite quotient-set and general equivalence-relation theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/00-foundations/sets.md",
     "docs/curriculum/00-foundations/cardinality.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md"
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "artifacts/examples/math/equivalence-classes-v0/smt2/quotient-map-congruence-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
     "equivalence-relation-classes-witness",

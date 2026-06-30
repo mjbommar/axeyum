@@ -310,9 +310,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   29-test QF_LRA resource route suite; generated dashboards move promoted
   solver-reuse packs to 36 and leave 48 unclassified packs.
 
+- **Equality-heavy QF_UF/Alethe promotion batch landed.**
+  `equivalence-classes-v0`, `relations-functions-v0`, `finite-groups-v0`,
+  `function-composition-v0`, `finite-algebra-homomorphisms-v0`,
+  `finite-monoids-v0`, `finite-order-lattices-v0`,
+  `finite-permutation-groups-v0`, `finite-vector-spaces-v0`,
+  `finite-dual-spaces-v0`, `finite-modules-v0`, and
+  `finite-tensor-products-v0` now carry promoted `solver_reuse` metadata tied
+  to source-level QF_UF artifacts. The shared `math_resource_uf_routes`
+  regression checks all twelve rows through the zero-trust Alethe route;
+  generated dashboards move promoted solver-reuse packs to 48 and leave
+  36 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 36-promoted-pack review count. The
+  now records the refreshed 48-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate
