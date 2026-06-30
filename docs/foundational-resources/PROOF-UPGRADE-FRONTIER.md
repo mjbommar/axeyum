@@ -201,7 +201,7 @@ First targets:
   (resource-backed Farkas regression landed for the bad kernel-row
   normalization conflict)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
-  (resource-backed Farkas regression landed for the bad fixed-step transition)
+  (source-linked solver-reuse promotion landed for the bad fixed-step transition)
 - [orientation-area-geometry-v0](../../artifacts/examples/math/orientation-area-geometry-v0/)
   (resource-backed Farkas regression landed for the bad fixed-orientation row)
 - [numerical-linear-algebra-v0](../../artifacts/examples/math/numerical-linear-algebra-v0/)

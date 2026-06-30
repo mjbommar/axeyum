@@ -206,11 +206,11 @@ QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
 stochastic-row obstruction and finite concentration now promoted for the bad
 tail-bound obstruction, with finite hitting times now source-linked and
 promoted for the bad expected-time equation; least-squares regression is now
-promoted for the bad
-coefficient row, and bounded rational real analysis for the bad
-linear-delta row, with finite conditional expectation now promoted for the bad
-high-block table and finite Euler method now promoted for the bad fixed-step
-transition, and finite probability now promoted for a bad Bayes-posterior
+promoted for the bad coefficient row, and bounded rational real analysis for
+the bad linear-delta row, with finite conditional expectation now promoted for
+the bad high-block table and finite Euler method now source-linked and promoted
+for the bad fixed-step transition, and finite probability now promoted for a
+bad Bayes-posterior
 conflict, with orientation/area geometry now promoted for its bad fixed
 orientation claim and numerical linear algebra now promoted for its bad
 residual-bound row, and random matrix finite now promoted for its bad

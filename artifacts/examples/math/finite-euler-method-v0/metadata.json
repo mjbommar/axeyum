@@ -31,6 +31,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Euler bad fixed-step QF_LRA/Farkas regression seed",
+    "pressure": "Malformed explicit-Euler step where exact replay forces next_state = state + (1/2)*derivative = 1/2, but the row claims next_state = 3/4.",
+    "evidence": [
+      "bad-euler-step-rejected"
+    ],
+    "next_step": "Promote additional finite-error or invariant rows only when they add distinct exact-linear solver pressure; keep continuous-time existence, uniqueness, stability, stiffness, convergence-rate, and PDE claims in Lean-horizon or numerical-honesty lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -40,6 +49,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

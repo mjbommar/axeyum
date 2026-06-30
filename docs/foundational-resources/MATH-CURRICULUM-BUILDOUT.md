@@ -1533,8 +1533,9 @@ same checked Farkas evidence path using the final output-bound contradiction.
 `finite-conditional-expectation-v0` now routes its bad high-block table through
 a source-linked checked Farkas evidence path using the denominator-cleared block
 average contradiction, and its metadata promotes that row for solver reuse.
-`finite-euler-method-v0` now routes its bad fixed-step transition through the
-same checked Farkas evidence path after exact derivative replay.
+`finite-euler-method-v0` now routes its bad fixed-step transition through a
+source-linked checked Farkas evidence path after exact derivative replay, and
+its metadata promotes that row for solver reuse.
 `orientation-area-geometry-v0` now routes its bad fixed-orientation row through
 the same checked Farkas evidence path after exact signed-area replay.
 `numerical-linear-algebra-v0` now routes its bad residual-bound row through the

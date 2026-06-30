@@ -291,9 +291,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and `2*h_start = 2 + h_start + h_middle`; generated dashboards move promoted
   solver-reuse packs to 26.
 
+- **Finite Euler-method QF_LRA promotion landed.**
+  [`finite-euler-method-v0`](artifacts/examples/math/finite-euler-method-v0/)
+  now carries promoted `solver_reuse` metadata for its existing source-level
+  QF_LRA artifact. The shared `math_resource_lra_routes` regression emits and
+  independently rechecks Farkas evidence for `state = 1`, `derivative = -1`,
+  `next_state = state + (1/2)*derivative`, and `next_state = 3/4`;
+  generated dashboards move promoted solver-reuse packs to 27.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the post-23-promoted-pack review and refreshed 26-pack count. The
+  now records the post-23-promoted-pack review and refreshed 27-pack count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate
