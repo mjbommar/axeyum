@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 66 promoted solver-reuse packs.
+- 67 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 12 unclassified solver-reuse packs.
+- 11 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:

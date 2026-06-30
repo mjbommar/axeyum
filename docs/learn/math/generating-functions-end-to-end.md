@@ -1,8 +1,8 @@
 # End To End: Generating Functions
 
 This lesson follows one finite generating-functions resource from coefficient
-lists to convolution replay, a bounded Fibonacci identity, bad-product
-rejection, and the general theorem horizon. It uses
+lists to convolution replay, a bounded Fibonacci identity, a checked
+QF_LIA/Diophantine bad-product certificate, and the general theorem horizon. It uses
 [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/).
 
 Concept rows:
@@ -21,7 +21,7 @@ Concept rows:
 | `coefficient-extraction-witness` | `sat` | replay-only |
 | `cauchy-product-convolution` | `sat` | replay-only |
 | `fibonacci-generating-prefix` | `sat` | replay-only |
-| `bad-cauchy-product-rejected` | `unsat` | checked |
+| `bad-cauchy-product-rejected` | `unsat` | QF_LIA/Diophantine checked |
 | `general-generating-functions-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is finite coefficient arithmetic. The pack does not prove
@@ -153,9 +153,21 @@ claimed c2 = 12
 actual  c2 = 13
 ```
 
-This is the trusted-small-checking pattern: a large or untrusted search could
-propose the product, but the checker only needs the two coefficient lists and
-one exact convolution replay.
+The source SMT-LIB artifact records the same mismatch as a tiny integer system:
+
+```text
+term_0_2 = 5
+term_1_1 = 8
+coeff_2 = term_0_2 + term_1_1
+coeff_2 = 12
+```
+
+That system is unsatisfiable because `coeff_2` is forced to be both `13` and
+`12`. Axeyum may search for the contradiction, but the accepted evidence is an
+`UnsatDiophantine` certificate checked back against those original equalities.
+This is the trusted-small-checking pattern: replay computes the finite
+coefficient, and the certificate checker validates the resulting integer
+contradiction.
 
 ## Name The Lean Horizon
 
@@ -176,12 +188,14 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence
 ```
 
 ## Trust Boundary
 
 The validator parses coefficient strings as exact rationals, recomputes
 coefficient extraction, finite convolution, the bounded Fibonacci identity, and
-the bad coefficient. There is no floating-point tolerance and no hidden
-asymptotic claim. General generating-function theory remains explicitly
-Lean-horizon.
+the bad coefficient. The QF_LIA route then checks the source-linked
+Diophantine certificate for the bad coefficient. There is no floating-point
+tolerance and no hidden asymptotic claim. General generating-function theory
+remains explicitly Lean-horizon.

@@ -89,7 +89,7 @@ A(x)B(x) = 1 + 3*x + 4*x^2 + 3*x^3 + x^4
 The `generating-functions-v0` pack recomputes the Cauchy convolution exactly.
 It also checks a bounded Fibonacci prefix identity for
 `(1 - x - x^2)F(x) = x` through a fixed degree and rejects a product with one
-bad coefficient.
+bad coefficient through a checked QF_LIA/Diophantine certificate.
 
 For orbit counting,
 first encode finite permutations as bijections:

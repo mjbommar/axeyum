@@ -64,16 +64,19 @@
       "id": "bad-cauchy-product-rejected",
       "claim": "The listed incorrect product is the Cauchy convolution of the two finite generating polynomials.",
       "expected_result": "unsat",
-      "validation": "finite_bad_cauchy_product_refutation",
+      "validation": "qf_lia_diophantine_evidence",
       "proof_status": "checked",
       "data": {
         "left": ["1", "2"],
         "right": ["3", "4", "5"],
         "claimed_product": ["3", "10", "12", "10"],
         "actual_product": ["3", "10", "13", "10"],
-        "first_bad_index": 2
+        "first_bad_index": 2,
+        "smt2_artifact": "artifacts/examples/math/generating-functions-v0/smt2/bad-cauchy-product-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check for the integer coefficient contradiction coeff_2 = 5 + 8 and coeff_2 = 12"
       },
-      "notes": "The validator recomputes the exact Cauchy product and finds the first incorrect coefficient."
+      "notes": "The validator recomputes the exact Cauchy product and the Axeyum regression checks the same bad coefficient through QF_LIA/Diophantine evidence."
     },
     {
       "id": "general-generating-functions-lean-horizon",

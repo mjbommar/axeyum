@@ -383,14 +383,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
   `finite-topology-v0` now carry explicit `non-benchmark-horizon`
   `solver_reuse` metadata. These packs remain useful educational finite-replay
-  resources until they gain negative, certificate-bearing rows; generated
-  dashboards now report 66 promoted, 6 non-benchmark-horizon, and 12
-  unclassified solver-reuse packs.
+  resources until they gain negative, certificate-bearing rows; the later
+  generating-functions promotion moved the current dashboards to 67 promoted,
+  6 non-benchmark-horizon, and 11 unclassified solver-reuse packs.
+
+- **Generating-functions QF_LIA/Diophantine promotion landed.**
+  `generating-functions-v0` now carries promoted `solver_reuse` metadata for
+  its bad finite Cauchy-product coefficient row. The new source-level artifact
+  `bad-cauchy-product-diophantine-conflict.smt2` isolates the contradiction
+  `coeff_2 = 5 + 8` and `coeff_2 = 12`, and
+  `math_resource_lia_routes::generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence`
+  checks the emitted `UnsatDiophantine` certificate. Generated dashboards now
+  report 67 promoted, 6 non-benchmark-horizon, and 11 unclassified
+  solver-reuse packs.
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 66-promoted, 6 non-benchmark-horizon, and
-  12-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 67-promoted, 6 non-benchmark-horizon, and
+  11-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11502,6 +11512,15 @@ plan is built and committed on the current branch:
   These rows remain learner-facing finite replay examples until they gain
   negative, certificate-bearing source artifacts; generated dashboards now
   report 66 promoted, 6 non-benchmark-horizon, and 12 unclassified packs.
+
+- **2026-06-30** — **Generating-functions QF_LIA promotion landed.**
+  Added
+  `artifacts/examples/math/generating-functions-v0/smt2/bad-cauchy-product-diophantine-conflict.smt2`
+  for the bad finite Cauchy-product coefficient row and wired it into
+  `math_resource_lia_routes`. The pack metadata now marks `solver_reuse.status`
+  as `promoted`, the expected row records the checked `UnsatDiophantine`
+  certificate path, and generated dashboards report 67 promoted,
+  6 non-benchmark-horizon, and 11 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

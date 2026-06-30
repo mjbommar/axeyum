@@ -27,7 +27,7 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 6 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 6 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 29 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
@@ -363,6 +363,12 @@ First targets:
 - [induction-patterns-v0](../../artifacts/examples/math/induction-patterns-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the finite
   even-product parity obstruction)
+- [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the bad
+  contingency-table total row)
+- [generating-functions-v0](../../artifacts/examples/math/generating-functions-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the bad finite
+  Cauchy-product coefficient row)
 - [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the
   `2*x + 4*y = 3` gcd divisibility obstruction)
@@ -389,8 +395,8 @@ Expected artifact:
 
 - an `UnsatDiophantine` certificate for integer equality systems;
 - integer-interval Lean reconstruction for covered inequality slices;
-- finite replay for rows that are count enumeration rather than a solver-form
-  LIA contradiction.
+- finite replay for rows that are count or coefficient enumeration rather than
+  a solver-form LIA contradiction.
 
 Validation:
 
@@ -411,6 +417,9 @@ Graduation:
   evidence or an explicitly checked finite table;
 - homology rank rows state whether the checked object is integer linear
   algebra, finite boundary replay, or the general homology Lean horizon.
+- generating-function rows state whether the checked object is finite
+  coefficient replay, a QF_LIA coefficient contradiction, or a general
+  generating-function Lean horizon.
 
 ### 5. QF_BV Bit-Blast
 

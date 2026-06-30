@@ -8082,6 +8082,8 @@ def validate_generating_functions(expected: dict[str, Any]) -> None:
     bad_product = checks["bad-cauchy-product-rejected"]
     if bad_product["expected_result"] != "unsat" or bad_product.get("proof_status") != "checked":
         fail("bad-cauchy-product-rejected must be a checked unsat row")
+    if bad_product["validation"] != "qf_lia_diophantine_evidence":
+        fail("bad-cauchy-product-rejected must use qf_lia_diophantine_evidence validation")
     data = bad_product.get("data", {})
     left = require_polynomial("bad Cauchy left", data.get("left"))
     right = require_polynomial("bad Cauchy right", data.get("right"))
@@ -8098,6 +8100,19 @@ def validate_generating_functions(expected: dict[str, Any]) -> None:
     actual_at_index = actual_product[first_bad_index] if first_bad_index < len(actual_product) else Fraction(0)
     if claimed_at_index == actual_at_index:
         fail("bad-cauchy-product-rejected first_bad_index does not identify a mismatch")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Cauchy smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/generating-functions-v0/smt2/bad-cauchy-product-diophantine-conflict.smt2":
+        fail("bad-cauchy-product-rejected smt2_artifact must name the checked QF_LIA artifact")
+    check_source("bad Cauchy smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad Cauchy proof_regression", proof_regression)
+    if "generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("bad-cauchy-product-rejected proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("bad Cauchy certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-cauchy-product-rejected certificate must document checked Diophantine evidence")
 
     horizon = checks["general-generating-functions-lean-horizon"]
     if horizon["expected_result"] != "not-run":

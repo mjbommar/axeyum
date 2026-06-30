@@ -41,9 +41,9 @@ The committed resource query currently reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 66 promoted solver-reuse packs.
+- 67 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 12 unclassified solver-reuse packs.
+- 11 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -98,7 +98,6 @@ Current unclassified queue:
 | `cardinality-principles-v0` | choose a small inclusion-exclusion/double-counting proof route or mark theorem rows horizon |
 | `polynomial-identities-v0` | add a coefficient-conflict artifact if it pressures LIA/LRA, otherwise keep replay-only |
 | `polynomial-factorization-rational-v0` | promote a rational coefficient obstruction or mark as replay-centered |
-| `generating-functions-v0` | add a finite convolution/coefficient QF_LIA artifact |
 | `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
 | `sequence-limit-shadow-v0` | promote one finite tail-bound LRA row or mark general convergence as Lean horizon |
 | `calculus-algebraic-shadow-v0` | promote a polynomial identity/refutation only if the chosen route checks the original claim |
@@ -217,7 +216,7 @@ Exit criteria:
 |---|---|---|---|
 | `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | finish proof-object anatomy and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | tighten finite/infinite boundaries and quotient/image/preimage vocabulary | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
-| `discrete_math` | counting, generating functions, graph resources, finite actions | promote pigeonhole and coefficient-convolution examples | Bool/CNF, QF_LIA, finite replay |
+| `discrete_math` | counting, generating functions, graph resources, finite actions | maintain pigeonhole and coefficient-convolution examples; add new rows only for distinct counting pressure | Bool/CNF, QF_LIA, finite replay |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | keep one promoted representative per family; add asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
@@ -272,16 +271,16 @@ Pick one row per commit unless the change is purely navigational.
    `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
    `finite-topology-v0` as explicit non-benchmark educational rows until they
    gain negative, certificate-bearing examples.
-3. Promote or classify the remaining algebra/calculus/counting unclassified
+3. Landed: promote `generating-functions-v0` through a source-linked finite
+   Cauchy-product coefficient QF_LIA/Diophantine artifact and route regression.
+4. Promote or classify the remaining algebra/calculus/counting unclassified
    packs, starting with coefficient conflicts where the source route is clear.
-4. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+5. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-5. Upgrade finite-measure from non-benchmark with a finite-additivity or
+6. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-6. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+7. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-7. Promote a generating-function coefficient-convolution conflict through
-   QF_LIA or keep it replay-centered with a non-benchmark note.
 8. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
 9. Add a generated or query-based audit for unclassified solver-reuse packs if

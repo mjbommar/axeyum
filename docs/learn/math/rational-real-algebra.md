@@ -119,7 +119,8 @@ coefficient lists and replay convolution:
 
 The `generating-functions-v0` validator recomputes every coefficient exactly
 and separately checks a bounded Fibonacci prefix identity for
-`(1 - x - x^2)F(x) = x`.
+`(1 - x - x^2)F(x) = x`; the bad finite Cauchy-product coefficient row now
+also carries a checked QF_LIA/Diophantine certificate.
 
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:

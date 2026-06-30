@@ -28,10 +28,20 @@
   "axeyum_fragments": [
     "fixed-degree polynomials",
     "LRA (exact rationals)",
+    "QF_LIA / Diophantine",
     "finite convolution replay",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite generating-function Cauchy-product QF_LIA/Diophantine regression seed",
+    "pressure": "Coefficient-convolution contradiction where left=[1,2] and right=[3,4,5] force coefficient c2 = 1*5 + 2*4 = 13, but the malformed row claims c2 = 12.",
+    "evidence": [
+      "bad-cauchy-product-rejected"
+    ],
+    "next_step": "Promote additional generating-function rows only when they add distinct integer coefficient, recurrence-prefix, or exact-rational solver pressure; keep closed-form extraction, convergence, and asymptotics in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -39,7 +49,10 @@
     "docs/curriculum/02-structures/polynomials.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/generating-functions-v0/smt2/bad-cauchy-product-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "coefficient-extraction-witness",
@@ -51,7 +64,7 @@
   "graduation_criteria": [
     "Encode fixed coefficient-extraction and Cauchy-product checks as deterministic polynomial obligations.",
     "Replay generating-function witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted certificates for bad convolution rows once fixed-degree polynomial proof routes are promoted.",
+    "Keep the bad Cauchy-product row tied to checked QF_LIA/Diophantine evidence for the finite coefficient contradiction.",
     "Keep closed-form extraction, convergence, asymptotics, and broad recurrence-solving theorems under Lean horizon until formal proof routes exist."
   ]
 }

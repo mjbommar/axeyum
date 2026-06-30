@@ -24,6 +24,9 @@ const INDUCTION_EVEN_PRODUCT_ODD: &str = include_str!(
 const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-contingency-total-diophantine-conflict.smt2"
 );
+const GENERATING_FUNCTIONS_BAD_CAUCHY_PRODUCT: &str = include_str!(
+    "../../../artifacts/examples/math/generating-functions-v0/smt2/bad-cauchy-product-diophantine-conflict.smt2"
+);
 const INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
     "../../../artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
 );
@@ -74,6 +77,14 @@ fn descriptive_stats_bad_contingency_total_emits_checked_diophantine_evidence() 
     assert_resource_diophantine(
         "descriptive-statistics-v0 bad contingency total obstruction",
         DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL,
+    );
+}
+
+#[test]
+fn generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "generating-functions-v0 bad Cauchy product coefficient obstruction",
+        GENERATING_FUNCTIONS_BAD_CAUCHY_PRODUCT,
     );
 }
 

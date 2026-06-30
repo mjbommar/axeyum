@@ -24,10 +24,10 @@ contradiction `0 = d` with `d != 0`.
 
 The route is used by Axeyum's integer evidence layer. Some math resource packs,
 such as integer LIA, gcd/Bezout, bounded number theory, modular arithmetic,
-exact statistical tests, finite simplicial homology, induction patterns, and
-descriptive statistics, still use finite replay for many rows today; this
-recipe is their graduation path when those examples are emitted as solver-form
-LIA obligations.
+exact statistical tests, finite simplicial homology, induction patterns,
+descriptive statistics, and generating functions, still use finite replay for
+many rows today; this recipe is their graduation path when those examples are
+emitted as solver-form LIA obligations.
 
 ## Evidence Artifact
 
@@ -106,6 +106,9 @@ Canonical examples:
 - [Induction Patterns](../../../artifacts/examples/math/induction-patterns-v0/)
   uses a finite even-product parity obstruction without claiming full
   induction-schema proof.
+- [Generating Functions](../../../artifacts/examples/math/generating-functions-v0/)
+  uses a bad finite Cauchy-product coefficient row as a small integer
+  convolution contradiction.
 - [Graph Search Runtime](../../../artifacts/examples/math/graph-search-runtime-v0/)
   and [Natural Arithmetic](../../../artifacts/examples/math/natural-arithmetic-v0/)
   use arithmetic-DPLL-backed LIA rows for finite DFS cost and bounded-natural
@@ -140,6 +143,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ex
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 ```
 
 ## Links
@@ -156,3 +160,4 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/de
 - [Finite Simplicial Homology pack](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [Induction Patterns pack](../../../artifacts/examples/math/induction-patterns-v0/)
 - [Descriptive Statistics pack](../../../artifacts/examples/math/descriptive-statistics-v0/)
+- [Generating Functions pack](../../../artifacts/examples/math/generating-functions-v0/)
