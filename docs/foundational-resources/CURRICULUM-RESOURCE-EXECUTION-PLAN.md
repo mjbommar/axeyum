@@ -29,11 +29,11 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 58 atlas rows generated from curriculum, field data, fifteen R1 bridge
+- 65 atlas rows generated from curriculum, field data, twenty-two R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   analysis/topology boundary vocabulary, linear-algebra computation vocabulary,
-  and Lean horizons, plus the finite-algebra QF_UF/Alethe and exact-rational
-  QF_LRA/Farkas example families.
+  algebra-map vocabulary, and Lean horizons, plus the finite-algebra
+  QF_UF/Alethe and exact-rational QF_LRA/Farkas example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, field, proof-gap, learner/proof-upgrade, and
   curriculum-pressure dashboards under [generated/](generated/).
@@ -157,8 +157,9 @@ Add bridge-concept or example-family rows for repeated subtopics:
   obligations, induction schemas;
 - set theory: equivalence classes, quotients, lattices, finite cardinal
   inequalities;
-- algebra: homomorphisms, kernels/images, ideals, quotients, modules, tensor
-  products, group actions;
+- algebra: landed bridge rows for homomorphism preservation, kernel/image
+  replay, quotient maps, ideal closure, module actions, tensor bilinearity,
+  and finite group actions;
 - analysis: landed bridge rows for metric balls, bounded epsilon-delta shadows,
   compactness shadows, connectedness shadows, and continuity-by-preimage, plus
   metric continuity with checked QF_LRA/Farkas bad-delta evidence, finite
@@ -356,12 +357,17 @@ Next buildout:
 7. Landed: add bridge-concept rows for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
    characteristic-polynomial replay, and finite random-matrix moments.
-8. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
+8. Landed: add bridge-concept rows for algebra-map vocabulary: homomorphism
+   preservation, kernel/image replay, quotient maps, ideal closure, module
+   actions, tensor bilinearity, and finite group actions.
+9. Add "math example using this route" sections to the six active proof
+   cookbook recipes so proof-route docs point back to concrete packs.
+10. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    and linear-system examples.
    Status: `family_exact_rational_farkas` now groups the recurring checked
    exact-rational infeasibility rows and ties them to the shared
    `math_resource_lra_routes` regression.
-9. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
+11. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
    Status: the first high-use learner-page route-note pass now names these
    routes and their trust boundaries; `family_finite_algebra_alethe` now groups
@@ -379,11 +385,11 @@ Next buildout:
    `graph-search-runtime-v0`, `integer-lia-v0`, and
    `natural-arithmetic-v0`, plus `number-theory-v0`, have moved from
    candidate to promoted for their source-linked regression artifacts.
-10. Landed: add consumer-facing sample queries over the JSON data contract.
+12. Landed: add consumer-facing sample queries over the JSON data contract.
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
    and concept queries, and `check-foundational-resources.sh` runs a small
    query smoke set.
-11. Promote selected packs into solver regression/fuzz corpora with back-links
+13. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and

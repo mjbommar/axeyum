@@ -3074,6 +3074,696 @@
       }
     },
     {
+      "id": "bridge_homomorphism_preservation",
+      "kind": "bridge-concept",
+      "title": "Finite Homomorphism Preservation",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite homomorphism row checks that an explicit map preserves the listed operation tables pointwise, while keeping general homomorphism and isomorphism theorems as proof-assistant targets.",
+      "prerequisites": [
+        "bridge_finite_model_replay",
+        "bridge_counterexample_proof",
+        "curriculum_relations_and_functions"
+      ],
+      "unlocks": [
+        "bridge_kernel_image",
+        "bridge_quotient_map",
+        "field_abstract_algebra"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite functions",
+        "finite algebra tables",
+        "QF_UF",
+        "Alethe proof checking",
+        "finite replay"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Group and ring homomorphism table replay plus checked homomorphism-preservation congruence."
+        },
+        {
+          "id": "finite-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-groups-v0",
+          "notes": "Finite group operation replay with an operation-congruence Alethe regression."
+        },
+        {
+          "id": "finite-permutation-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-permutation-groups-v0",
+          "notes": "Permutation composition and sign-homomorphism replay over finite tables."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Module endomorphism replay with additive and scalar preservation checks."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite homomorphism replay plus QF_UF/Alethe preservation conflict",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "The finite checker evaluates every operation-preservation equation over the source table; the promoted bad row uses the QF_UF/Alethe regression for the isolated congruence conflict."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite preservation replay does not prove homomorphism theorems for arbitrary algebraic structures.",
+        "Isomorphism, universal-property, and categorical statements remain Lean horizons until no-sorry reconstruction exists."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite source/codomain tables and the total map.",
+          "The validator recomputes preservation for each listed operation and rejects corrupted map entries.",
+          "Bad preservation rows carry source-linked QF_UF/Alethe evidence before solver reuse is claimed."
+        ]
+      }
+    },
+    {
+      "id": "bridge_kernel_image",
+      "kind": "bridge-concept",
+      "title": "Kernel And Image Replay",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "linear_algebra",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Kernel and image rows recompute the preimage of the identity or zero element and the range of a finite map, then connect those sets to homomorphism, linear-map, module-map, and quotient rows.",
+      "prerequisites": [
+        "bridge_homomorphism_preservation",
+        "bridge_rank_nullity",
+        "curriculum_groups"
+      ],
+      "unlocks": [
+        "bridge_quotient_map",
+        "bridge_module_action",
+        "field_linear_algebra",
+        "field_abstract_algebra"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite functions",
+        "finite algebra tables",
+        "finite vector spaces",
+        "QF_UF",
+        "finite replay"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Kernel and image replay for the parity homomorphism from Z/4Z to Z/2Z."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Linear-map kernel/image and rank-nullity replay over F2 vector spaces."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Module endomorphism kernel/image replay over Z/4Z."
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Ring-homomorphism kernel/image replay for the reduction map."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite kernel/image replay with equality-heavy Alethe conflicts",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
+            "docs/learn/math/finite-vector-spaces-end-to-end.md",
+            "docs/learn/math/finite-modules-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "Positive rows replay membership and map images directly; negative closure or congruence rows use the shared QF_UF/Alethe resource regression when promoted."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
+        "docs/learn/math/finite-vector-spaces-end-to-end.md",
+        "docs/learn/math/finite-modules-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite kernel/image replay does not prove the first isomorphism theorem or rank-nullity in arbitrary settings.",
+        "General kernel, image, exactness, and dimension theorems remain Lean horizons."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite map, identity or zero element, listed kernel, and listed image.",
+          "The validator recomputes kernel and image from the map table without relying on solver output.",
+          "The learner path links finite replay to the missing theorem-level Lean route."
+        ]
+      }
+    },
+    {
+      "id": "bridge_quotient_map",
+      "kind": "bridge-concept",
+      "title": "Finite Quotient Map",
+      "domain": "mathematics",
+      "field_ids": [
+        "set_theory_and_foundations",
+        "abstract_algebra",
+        "linear_algebra"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A quotient-map row checks a finite equivalence relation, coset or fiber partition, induced operation table, and induced map by representatives, with well-definedness kept explicit.",
+      "prerequisites": [
+        "bridge_kernel_image",
+        "bridge_homomorphism_preservation",
+        "curriculum_relations_and_functions"
+      ],
+      "unlocks": [
+        "bridge_ideal_closure",
+        "bridge_module_action",
+        "field_set_theory_and_foundations"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite equivalence relations",
+        "finite functions",
+        "finite algebra tables",
+        "QF_UF",
+        "Alethe proof checking"
+      ],
+      "example_packs": [
+        {
+          "id": "equivalence-classes-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/equivalence-classes-v0",
+          "notes": "Finite equivalence-class, quotient-map fiber, and checked quotient congruence rows."
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Kernel quotient and induced-isomorphism replay for the parity homomorphism."
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Quotient-ring table replay from an ideal in Z/6Z."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Quotient-module addition and scalar-action replay by representatives."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite quotient replay plus QF_UF/Alethe quotient congruence",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/equivalence-classes-end-to-end.md",
+            "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
+            "docs/learn/math/finite-ideals-quotient-rings-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "The validator recomputes classes, fibers, quotient tables, and induced maps; the quotient-map congruence artifact exercises the checked EUF route."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/learn/math/equivalence-classes-end-to-end.md",
+        "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
+        "docs/learn/math/finite-ideals-quotient-rings-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite quotient replay does not prove quotient construction theorems, correspondence theorems, or first isomorphism in general.",
+        "Well-definedness must be recomputed explicitly for each finite quotient row."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the equivalence relation, classes or cosets, quotient map, and induced operation or map table.",
+          "The validator recomputes partition coverage and representative-independent operations.",
+          "General quotient theory remains linked as a Lean horizon."
+        ]
+      }
+    },
+    {
+      "id": "bridge_ideal_closure",
+      "kind": "bridge-concept",
+      "title": "Finite Ideal Closure",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "number_theory",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite ideal row checks additive subgroup closure and absorption by ring multiplication over an explicit finite ring table, then uses that ideal as the source of quotient-ring replay.",
+      "prerequisites": [
+        "bridge_quotient_map",
+        "curriculum_rings",
+        "curriculum_modular_arithmetic"
+      ],
+      "unlocks": [
+        "bridge_module_action",
+        "field_abstract_algebra",
+        "field_number_theory"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite rings",
+        "finite ideals",
+        "finite quotient rings",
+        "QF_UF",
+        "Alethe proof checking"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Ideal closure, principal generation, ring-homomorphism kernel/image, quotient-ring replay, and bad ideal rows."
+        },
+        {
+          "id": "finite-rings-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-rings-v0",
+          "notes": "Finite ring table replay and fixed bad-distributivity QF_BV/DRAT evidence."
+        },
+        {
+          "id": "modular-arithmetic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/modular-arithmetic-v0",
+          "notes": "Residue arithmetic and nonunit inverse obstructions feeding quotient-ring examples."
+        },
+        {
+          "id": "finite-algebra-homomorphisms-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-algebra-homomorphisms-v0",
+          "notes": "Ring homomorphism replay whose kernels are ideal-like finite sets."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite ideal replay plus QF_UF/Alethe bad-closure certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/learn/math/finite-ideals-quotient-rings-end-to-end.md",
+            "docs/learn/math/finite-rings-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "The finite checker recomputes ideal closure and quotient tables; bad additive-closure rows use the checked QF_UF/Alethe route, while separate fixed ring-table contradictions may use QF_BV/DRAT."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+        "docs/learn/math/finite-ideals-quotient-rings-end-to-end.md",
+        "docs/learn/math/finite-rings-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite ideal closure does not prove ideal correspondence, localization, Noetherian/PID/UFD structure, or algebraic geometry claims.",
+        "General quotient-ring theorems remain Lean horizons even when the finite quotient table validates."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite ring table, candidate ideal, generated-set witness, and quotient table when present.",
+          "The validator recomputes additive closure, additive inverses, zero membership, absorption, and quotient operations.",
+          "Bad closure rows carry checked QF_UF/Alethe evidence before solver reuse is claimed."
+        ]
+      }
+    },
+    {
+      "id": "bridge_module_action",
+      "kind": "bridge-concept",
+      "title": "Finite Module Action",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "linear_algebra",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite module-action row checks an explicit scalar-action table against ring and additive-group operations, then reuses submodule, homomorphism, kernel/image, and quotient-module replay.",
+      "prerequisites": [
+        "bridge_ideal_closure",
+        "bridge_kernel_image",
+        "curriculum_rings"
+      ],
+      "unlocks": [
+        "bridge_tensor_bilinearity",
+        "bridge_rank_nullity",
+        "field_linear_algebra"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite modules",
+        "finite rings",
+        "finite functions",
+        "QF_UF",
+        "finite replay"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Finite Z/4Z module table, submodule, module homomorphism, kernel/image, quotient-module, and bad submodule rows."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Finite vector-space rows as field-module special cases."
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Finite dual-space and covector rows over F2."
+        },
+        {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Tensor rows that depend on finite module/vector-space actions."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite module replay plus QF_UF/Alethe submodule conflict",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/finite-modules-end-to-end.md",
+            "docs/learn/math/finite-vector-spaces-end-to-end.md",
+            "docs/learn/math/finite-dual-spaces-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "The finite checker recomputes module laws, submodule closure, homomorphism preservation, and quotient-module tables; the bad submodule row uses checked QF_UF/Alethe evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/learn/math/finite-modules-end-to-end.md",
+        "docs/learn/math/finite-vector-spaces-end-to-end.md",
+        "docs/learn/math/finite-dual-spaces-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite module-action replay does not prove general module theory, exact sequences, projective/injective modules, or homological algebra.",
+        "Linear algebra over arbitrary fields and infinite-dimensional module facts remain Lean horizons."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite ring, additive carrier, scalar-action table, and any submodule or homomorphism witnesses.",
+          "The validator recomputes module laws and rejects corrupted scalar-closure or homomorphism rows.",
+          "The lesson distinguishes finite module replay from general module theory."
+        ]
+      }
+    },
+    {
+      "id": "bridge_tensor_bilinearity",
+      "kind": "bridge-concept",
+      "title": "Tensor Bilinearity Replay",
+      "domain": "mathematics",
+      "field_ids": [
+        "linear_algebra",
+        "abstract_algebra",
+        "set_theory_and_foundations",
+        "functional_analysis_and_operator_theory"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite tensor row checks bilinearity and a bounded universal-property shadow over explicit finite vector-space or module tables, while general tensor theory remains a Lean horizon.",
+      "prerequisites": [
+        "bridge_module_action",
+        "bridge_homomorphism_preservation",
+        "curriculum_linear_algebra"
+      ],
+      "unlocks": [
+        "field_functional_analysis_and_operator_theory",
+        "bridge_lean_horizon"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite vector spaces",
+        "finite modules",
+        "finite bilinear maps",
+        "QF_UF",
+        "Alethe proof checking"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-tensor-products-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-tensor-products-v0",
+          "notes": "Finite tensor basis, bilinear map, factorization shadow, and bad bilinear-map rows."
+        },
+        {
+          "id": "finite-vector-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-vector-spaces-v0",
+          "notes": "Finite vector-space carrier, basis, and linear-map rows used by tensor examples."
+        },
+        {
+          "id": "finite-dual-spaces-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dual-spaces-v0",
+          "notes": "Finite covector rows that share linear functional vocabulary."
+        },
+        {
+          "id": "finite-modules-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-modules-v0",
+          "notes": "Finite module action and homomorphism rows that tensor examples generalize."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite bilinear replay plus QF_UF/Alethe bad-bilinearity certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-tensor-products-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+          ],
+          "notes": "The validator exhaustively checks finite additivity and scalar preservation in each argument; the bad bilinear row uses the shared QF_UF/Alethe regression."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/finite-tensor-products-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite tensor bilinearity replay does not prove the tensor-product universal property over arbitrary modules.",
+        "Exterior powers, symmetric powers, exactness, and homological algebra remain Lean-horizon topics."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite scalar field or ring, source carriers, codomain, and bilinear table.",
+          "The validator recomputes additivity and scalar preservation in each argument and any listed factorization.",
+          "General tensor-product theorem claims remain linked as Lean horizons."
+        ]
+      }
+    },
+    {
+      "id": "bridge_group_action",
+      "kind": "bridge-concept",
+      "title": "Finite Group Action",
+      "domain": "mathematics",
+      "field_ids": [
+        "abstract_algebra",
+        "discrete_math",
+        "set_theory_and_foundations"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A finite group-action row checks identity and compatibility of an explicit action table, then recomputes orbits, stabilizers, orbit-stabilizer counts, and finite Burnside averages.",
+      "prerequisites": [
+        "bridge_homomorphism_preservation",
+        "curriculum_groups",
+        "curriculum_counting"
+      ],
+      "unlocks": [
+        "field_abstract_algebra",
+        "field_discrete_math",
+        "bridge_lean_horizon"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite group actions",
+        "finite functions",
+        "finite counting",
+        "QF_UF",
+        "finite replay"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-group-actions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-group-actions-v0",
+          "notes": "Action-law, orbit, stabilizer, orbit-stabilizer, Burnside, and horizon rows."
+        },
+        {
+          "id": "finite-permutation-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-permutation-groups-v0",
+          "notes": "Natural permutation action, orbit/stabilizer, cycle, and sign rows."
+        },
+        {
+          "id": "finite-groups-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-groups-v0",
+          "notes": "Group Cayley-table rows that provide the acting group structure."
+        },
+        {
+          "id": "counting-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/counting-v0",
+          "notes": "Finite counting examples that share orbit-counting and enumeration vocabulary."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite action-table replay",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-group-actions-end-to-end.md",
+            "docs/learn/math/finite-permutation-groups-end-to-end.md"
+          ],
+          "notes": "The finite checker recomputes action laws, orbits, stabilizers, and Burnside fixed-point averages. General orbit-stabilizer, Burnside, and representation-theory statements remain Lean-horizon."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/finite-group-actions-end-to-end.md",
+        "docs/learn/math/finite-permutation-groups-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
+      ],
+      "open_gaps": [
+        "Finite action replay does not prove general orbit-stabilizer, Burnside/Cauchy-Frobenius, or representation-theory theorems.",
+        "Group actions on algebraic, topological, or analytic structures need their own concept rows and proof routes."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite group table, set carrier, action table, and target orbit/stabilizer/count claim.",
+          "The validator recomputes identity action, compatibility, orbits, stabilizers, and fixed-point counts.",
+          "General group-action theorems remain linked as Lean horizons."
+        ]
+      }
+    },
+    {
       "id": "bridge_lean_horizon",
       "kind": "bridge-concept",
       "title": "Lean Horizon",

@@ -34,7 +34,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 15 bridge-concept rows.
+- 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
 - 412 expected checks.
@@ -555,10 +555,13 @@ Current packs:
 
 Build next:
 
-- Split the current broad finite algebra row into concept families:
-  table axiom replay, homomorphism preservation, kernel/image, quotient,
-  ideal, module, action, orbit/stabilizer, tensor bilinearity, and polynomial
-  factorization.
+- The first generated algebra-map bridge rows now cover homomorphism
+  preservation, kernel/image replay, quotient maps, ideal closure, module
+  actions, tensor bilinearity, and finite group actions.
+- Split remaining broad finite algebra topics only when a new row can serve
+  multiple packs: table axiom replay, orbit/stabilizer refinements, Burnside,
+  units/idempotents, polynomial factorization, and representation-theory
+  horizons.
 - Use `family_finite_algebra_alethe` as the first family row and add narrower
   children only when dashboards need better routing.
 - Keep structure theorems, arbitrary groups/rings/modules, representation
@@ -945,8 +948,8 @@ Pick one item per commit unless the change is purely navigational.
 1. Landed: add concept rows for linear algebra computation families: LU,
    rank/nullity, residual bound, eigenpair, characteristic polynomial, and
    random-matrix finite moment.
-2. Add concept rows for algebra maps: homomorphism, kernel/image, quotient,
-   ideal, module, tensor bilinearity, group action.
+2. Landed: add concept rows for algebra maps: homomorphism, kernel/image,
+   quotient, ideal, module, tensor bilinearity, and group action.
 3. Add "math example using this route" sections to the six active proof
    cookbook recipes.
 4. Promote one QF_LRA/Farkas probability/statistics row that has a small exact

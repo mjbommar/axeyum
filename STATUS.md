@@ -628,7 +628,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It records the current committed baseline of 58 concept rows,
+  library splits. It records the current committed baseline of 65 concept rows,
   84 non-template packs, 412 expected checks, 194 checked rows, 171 replay-only
   rows, 47 Lean-horizon rows, and 14 promoted solver-reuse packs, then lays out
   field-by-field build plans plus a prioritized execution queue. Linked it from
@@ -637,7 +637,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with fifteen bridge rows. The first proof-methodology rows are
+  is now generated with twenty-two bridge rows. The first proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_bounded_theorem_shadow`, and `bridge_lean_horizon`; the analysis and
   topology boundary rows are `bridge_metric_ball`,
@@ -646,12 +646,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   linear-algebra computation rows are `bridge_lu_replay`,
   `bridge_rank_nullity`, `bridge_residual_bound`, `bridge_eigenpair`,
   `bridge_characteristic_polynomial`, and
-  `bridge_random_matrix_finite_moment`. The rows are generated from
+  `bridge_random_matrix_finite_moment`; the algebra-map rows are
+  `bridge_homomorphism_preservation`, `bridge_kernel_image`,
+  `bridge_quotient_map`, `bridge_ideal_closure`, `bridge_module_action`,
+  `bridge_tensor_bilinearity`, and `bridge_group_action`. The rows are
+  generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 58 concept rows while preserving
-  23 curriculum rows and 18 field rows. Next resource work should add the
-  algebra map bridge rows from the roadmap queue.
+  foundational resource consumer now reports 65 concept rows while preserving
+  23 curriculum rows and 18 field rows. Next resource work should add
+  math-example route sections to the active proof-cookbook recipes.
 
 - **High-use learner proof-route notes landed.** Added concise
   `Proof Upgrade Notes` sections to
@@ -11196,6 +11200,17 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-06-29** — **Algebra-map bridge concepts landed.**
+  Added generated bridge-concept rows for
+  `bridge_homomorphism_preservation`, `bridge_kernel_image`,
+  `bridge_quotient_map`, `bridge_ideal_closure`, `bridge_module_action`,
+  `bridge_tensor_bilinearity`, and `bridge_group_action`. The foundational
+  concept atlas now validates at 65 rows: 23 curriculum rows, 18 field rows,
+  22 bridge rows, and 2 example-family rows. The generated field dashboard now
+  exposes the added abstract-algebra, set-theory, linear-algebra, number-theory,
+  discrete-math, and functional-analysis bridge coverage, and the roadmap queue
+  advances to proof-cookbook route examples.
 
 - **2026-06-29** — **Linear-algebra computation bridge concepts landed.**
   Added generated bridge-concept rows for `bridge_lu_replay`,

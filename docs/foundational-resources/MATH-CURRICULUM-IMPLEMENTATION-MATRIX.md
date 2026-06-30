@@ -62,7 +62,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `proof-methods` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Turn direct/contrapositive/cases/contradiction into reusable proof-pattern rows. | CNF/LRAT for refutation examples; Lean horizon for natural deduction. | Learner page can trace proof method -> solver query -> checked evidence. |
 | `induction` | `induction-obligations-v0`, `induction-patterns-v0` | Split bounded base/step checks from induction-schema reconstruction targets. | QF_LIA for finite obstructions; Lean horizon for general induction. | No pack claims full induction from bounded prefixes. |
 | `sets` | finite sets, lattices, cardinality/topology packs | Add concept rows for Boolean algebra, finite lattice laws, compactness shadows, and counterexample replay. | CNF/LRAT for Boolean refutations including finite open-cover misses; QF_UF/Alethe for lattice/order conflicts. | Every false set/lattice/topology identity has either evidence or an explicit route gap. |
-| `relations-and-functions` | relation/function, equivalence, composition, monoid, permutation, action packs | Add reusable rows for quotient maps, image/preimage, inverse tables, and finite actions. | QF_UF/Alethe for function consistency and congruence conflicts. | Equality-heavy rows use checked Alethe where available. |
+| `relations-and-functions` | relation/function, equivalence, composition, monoid, permutation, action packs | Landed bridge rows for quotient maps and finite group actions; next add image/preimage and inverse-table rows only when multiple packs need them. | QF_UF/Alethe for function consistency and congruence conflicts. | Equality-heavy rows use checked Alethe where available. |
 | `cardinality` | finite cardinality and cardinality-principles packs | Add bridge rows for injection, surjection, bijection, powerset, and infinite horizon. | finite replay/CNF for bounded no-map rows; Lean horizon for Cantor/infinite facts. | Infinite claims are never benchmarked as finite checks. |
 | `naturals` | `natural-arithmetic-v0` | Add totality/Peano-shadow concept rows and BV-vs-LIA encoding notes. | Bounded replay, QF_LIA, QF_BV where fixed width is educationally relevant. | Width and finite prefix limits are visible in metadata and lesson text. |
 | `integers` | `integer-lia-v0` | Promote common linear-obstruction patterns into shared Diophantine examples. | QF_LIA/Diophantine. | Bad linear rows carry checked integer evidence or a named missing route. |
@@ -71,14 +71,14 @@ Every new or upgraded resource should answer these questions before it lands:
 | `complex` | complex algebraic and transform packs | Add real-pair encoding note and analytic-horizon rows. | NRA/LRA real-pair replay; Lean horizon for holomorphic theory. | Algebraic complex checks avoid claiming analytic coverage. |
 | `divisibility-and-euclid` | `gcd-bezout-v0` | Add reusable gcd/divisibility witness schema for number-theory and algebra packs. | Computed witness replay; QF_LIA for divisibility obstructions. | Bezout rows validate both gcd and coefficient identity. |
 | `modular-arithmetic` | modular arithmetic and finite ideals | Add quotient-ring and CRT bridge rows. | QF_LIA/Diophantine and QF_BV fixed-width finite residues. | Nonunit inverse rows carry checked arithmetic evidence. |
-| `groups` | finite groups, monoids, permutations, actions, homomorphisms | Add concept rows for kernels/images, orbit-stabilizer, Burnside, quotient groups. | QF_UF/Alethe for table congruence and action-law conflicts. | Table checks keep associativity/action-law replay explicit. |
+| `groups` | finite groups, monoids, permutations, actions, homomorphisms | Landed bridge rows for homomorphism preservation, kernel/image replay, quotient maps, and finite group actions; orbit-stabilizer and Burnside can split later if reused broadly. | QF_UF/Alethe for table congruence and action-law conflicts. | Table checks keep associativity/action-law replay explicit. |
 | `rings` | finite rings, ideals, modules, homomorphisms | Extend the landed finite-ring BV route from bad distributivity to more fixed finite ring-table contradictions. | QF_BV bit-blast/DRAT plus QF_UF/Alethe for homomorphism preservation. | Unsat finite-ring rows carry checked CNF evidence without overclaiming Lean. |
 | `fields` | finite fields, vector/dual/tensor packs | Extend the landed finite-field BV route from composite no-inverse to more fixed finite-field arithmetic contradictions, then add field-linear-algebra bridge rows for bases, covectors, and bilinear maps. | QF_BV for finite fields; QF_UF/Alethe for table equality conflicts. | Composite-modulus non-field contrast has a checked route. |
 | `polynomials` | identities, rational factorization, generating functions | Add coefficient-ring and polynomial-division reusable rows. | Finite replay, QF_LIA/LRA coefficient constraints, Lean horizon for general factorization. | Factorization rows replay product and degree/leading constraints. |
 | `sequences-and-limits` | sequence-limit shadow, real-analysis, generating functions | Add bounded tail, Cauchy, recurrence, and convergence-horizon rows. | Finite replay/LRA for bounded tails; Lean horizon for general convergence. | Lessons keep finite prefix evidence separate from convergence theorems. |
 | `counting` | counting, permutations, actions, generating functions | Add finite double-counting, Burnside, coefficient extraction, and asymptotic horizon rows. | CNF/LRAT for pigeonhole; finite replay for enumerative witnesses. | Count rows include deterministic universe, enumeration, and replay checksum. |
 | `number-theory` | number theory, modular, gcd, integer LIA | Add bounded Diophantine families and proof-route comparisons. | QF_LIA/Diophantine; QF_BV for fixed modulus; Lean horizon for deep theorems. | Each row identifies bounded search vs number-theory theorem. |
-| `linear-algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariants | Landed matrix-computation bridge rows for LU, rank/nullity, residual bounds, eigenpairs, characteristic polynomials, and finite random-matrix moments; next split tensor/dual/module maps when reuse demands it. | QF_LRA/Farkas, finite-field replay, QF_UF/Alethe for algebraic table conflicts. | Matrix rows can become solver regressions with source-pack back-links. |
+| `linear-algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariants | Landed matrix-computation bridge rows plus algebra-map rows for kernel/image, quotient maps, module actions, and tensor bilinearity; next split dual/projection maps only when reuse demands it. | QF_LRA/Farkas, finite-field replay, QF_UF/Alethe for algebraic table conflicts. | Matrix rows can become solver regressions with source-pack back-links. |
 | `calculus` | algebraic calculus, Riemann sums, multivariable rational calculus | Add derivative/integral theorem horizon rows plus exact algebraic shadows. | LRA/NRA for polynomial shadows; Lean horizon for FTC, differentiability, convergence. | Calculus packs never conflate finite symbolic replay with analytic theorem proof. |
 
 ## Field Extension Matrix
@@ -191,33 +191,35 @@ Build sequence:
 2. R1 bridge-concept rows landed for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
    characteristic-polynomial replay, and finite random-matrix moments.
-3. Add algebra map bridge rows for homomorphism, kernel/image, quotient,
-   ideal, module, tensor bilinearity, and group action when one row can serve
-   multiple packs.
-4. Finish learner audit so every non-template pack appears in a focused lesson
+3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
+   preservation, kernel/image replay, quotient maps, ideal closure, module
+   actions, tensor bilinearity, and finite group actions.
+4. Add "math example using this route" sections to the six active proof
+   cookbook recipes.
+5. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
-5. Continue QF_BV promotions only for fixed-width educational claims that are
+6. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.
-6. First route-specific proof-upgrade note pass landed on the highest-use
+7. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
-7. Recurring finite algebra equality conflicts now have the
+8. Recurring finite algebra equality conflicts now have the
    `family_finite_algebra_alethe` example-family row, backed by the shared
    `math_resource_uf_routes` regression.
-8. Recurring exact-rational infeasibility conflicts now have the
+9. Recurring exact-rational infeasibility conflicts now have the
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
-9. Generated dashboard columns for R0-R6 gate level and "next gate" now land
+10. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
-10. The first deterministic `solver_reuse` batch is now fully promoted; no pack
+11. The first deterministic `solver_reuse` batch is now fully promoted; no pack
    remains tagged `candidate` in that initial batch.
-11. Consumer-facing sample queries now land through
+12. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    checked-row mining, solver-reuse rows, and atlas concept lookup over
    the committed JSON data contract.
-12. First solver-reuse promotions landed: `logic-basics-v0` now links
+13. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
     `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS
