@@ -26,7 +26,7 @@ Candidate route totals:
 | Route | Pack Count | Meaning |
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 4 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 23 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 13 | Equality-heavy finite structures and congruence conflicts. |
@@ -346,12 +346,16 @@ First targets:
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
   (resource-backed QF_BV/DRAT regression landed for the one-bit triangle
   two-coloring obstruction)
+- [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
+  (resource-backed QF_BV/DRAT regression landed for the modulo-7 quadratic
+  nonresidue row)
 
 Secondary targets:
 
-- first QF_BV bit-blast target set is covered; pick the next fixed-width pack
-  only when the BV encoding teaches a distinct finite-domain claim rather than
-  duplicating a cleaner CNF/LRA/LIA route.
+- first QF_BV bit-blast target set plus the bounded number-theory residue
+  promotion are covered; pick the next fixed-width pack only when the BV
+  encoding teaches a distinct finite-domain claim rather than duplicating a
+  cleaner CNF/LRA/LIA route.
 
 Expected artifact:
 

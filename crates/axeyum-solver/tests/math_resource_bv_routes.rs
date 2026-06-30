@@ -19,6 +19,9 @@ const FINITE_FIELDS_COMPOSITE_NONFIELD: &str = include_str!(
 const GRAPH_COLORING_TRIANGLE_NOT_2_COLORABLE: &str = include_str!(
     "../../../artifacts/examples/math/graph-coloring-v0/smt2/triangle-not-2-colorable-bitblast-conflict.smt2"
 );
+const NUMBER_THEORY_QUADRATIC_NONRESIDUE: &str = include_str!(
+    "../../../artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2"
+);
 
 #[test]
 fn finite_rings_bad_distributivity_emits_checked_drat() {
@@ -41,6 +44,14 @@ fn graph_coloring_triangle_not_2_colorable_emits_checked_bv_drat() {
     assert_resource_qf_bv_drat(
         "graph-coloring-v0 triangle not 2-colorable bit-blast conflict",
         GRAPH_COLORING_TRIANGLE_NOT_2_COLORABLE,
+    );
+}
+
+#[test]
+fn number_theory_quadratic_nonresidue_emits_checked_bv_drat() {
+    assert_resource_qf_bv_drat(
+        "number-theory-v0 quadratic nonresidue mod 7 bit-blast conflict",
+        NUMBER_THEORY_QUADRATIC_NONRESIDUE,
     );
 }
 

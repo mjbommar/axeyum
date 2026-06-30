@@ -34,8 +34,7 @@ python3 scripts/query-foundational-resources.py summary --format json
 
 ```sh
 python3 scripts/query-foundational-resources.py packs \
-  --solver-reuse candidate \
-  --require-any
+  --solver-reuse candidate
 ```
 
 This answers: "Which validated education packs are ready to consider for
@@ -43,7 +42,16 @@ regression, fuzz, or benchmark reuse?"
 
 Candidate status is not the same as R5 promotion. A candidate is still R4 until
 a regression, fuzz seed, benchmark slice, or explicit non-benchmark-horizon
-back-link exists.
+back-link exists. It is valid for this query to return no rows after a candidate
+batch has been fully promoted.
+
+To list rows that already have solver-regression back-links:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --solver-reuse promoted \
+  --require-any
+```
 
 ## Field-Focused Pack Discovery
 
@@ -117,7 +125,7 @@ consumer workflows:
 
 - locating packs by field, curriculum node, fragment, or proof status;
 - mining checked `sat` and `unsat` rows for learner or benchmark views;
-- finding R4-to-R5 solver-reuse candidates without scanning prose;
+- finding candidate and promoted solver-reuse rows without scanning prose;
 - listing reusable concept families from the atlas.
 
 They do not prove solver correctness, proof-certificate validity, or general
@@ -132,7 +140,7 @@ runs a small query smoke set after validating concepts and packs:
 
 ```sh
 python3 scripts/query-foundational-resources.py summary >/dev/null
-python3 scripts/query-foundational-resources.py packs --solver-reuse candidate --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 ```

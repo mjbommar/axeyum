@@ -33,7 +33,7 @@ schemas, examples, and validation workflows.
   them.
 - [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) gives copyable sample queries over
   the committed JSON data contract for pack discovery, checked-row mining,
-  solver-reuse candidates, and atlas concept lookup.
+  solver-reuse rows, and atlas concept lookup.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.

@@ -36,6 +36,23 @@ x^2 == 3 mod 7
 
 The validator enumerates all residues modulo `7`.
 
+## `quadratic-nonresidue-qf-bv-drat`
+
+Expected result: `unsat`.
+
+The QF_BV artifact encodes the same nonresidue claim using a 3-bit residue
+variable:
+
+```text
+x < 7
+(x * x) mod 7 = 3
+```
+
+The product is computed at 6-bit width before `bvurem 7`, so this is an exact
+fixed-width encoding of the residue equation for the listed finite domain. The
+solver regression exports the bit-blasted CNF with a DRAT refutation and
+rechecks the certificate independently.
+
 ## `sum-two-squares-witness`
 
 Expected result: `sat`.

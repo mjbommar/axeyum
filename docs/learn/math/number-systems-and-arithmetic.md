@@ -94,9 +94,12 @@ number-theory slice, encode bounded residue and square-sum witnesses:
 ```
 
 The `number-theory-v0` pack also rejects `x^2 == 3 mod 7` by enumeration and
-rejects `7 = a^2 + b^2` by the fixed mod-4 obstruction. For
-rational density, encode `a = 1/3`, `b = 2/3`, and `midpoint = 1/2`; the checker
-verifies `a < midpoint < b` and `midpoint = (a + b) / 2`.
+now also promotes that nonresidue row to a QF_BV bit-blast/DRAT regression:
+`x` is a 3-bit residue with `x < 7`, `x*x` is computed at 6-bit width, and
+`x^2 mod 7 = 3` is refuted by a checked DIMACS/DRAT pair. It rejects
+`7 = a^2 + b^2` by the fixed mod-4 obstruction. For rational density, encode
+`a = 1/3`, `b = 2/3`, and `midpoint = 1/2`; the checker verifies
+`a < midpoint < b` and `midpoint = (a + b) / 2`.
 
 For complex arithmetic, encode `1 + 2i` as `[1, 2]` and `3 - i` as `[3, -1]`.
 The checker recomputes pair addition and twisted multiplication.

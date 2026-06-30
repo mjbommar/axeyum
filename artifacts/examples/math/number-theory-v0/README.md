@@ -9,6 +9,8 @@ The examples are exact finite arithmetic artifacts:
 - replay a compatible non-coprime CRT witness for `x = 8`;
 - replay `4^2 = 5 mod 11`;
 - reject `x^2 = 3 mod 7` by finite enumeration;
+- refute the same modulo-7 nonresidue row as a QF_BV bit-blast conflict with
+  checked DRAT evidence;
 - replay `65 = 1^2 + 8^2`;
 - reject `7 = a^2 + b^2` by the mod-4 square obstruction;
 - replay `14*(-1) + 21*1 = 7`.
@@ -31,13 +33,17 @@ are accepted only after exhaustive residue enumeration or a fixed modular
 obstruction. General number-theory theorems remain Lean-horizon; this pack is a
 bounded compute-and-check surface.
 
-This pack does not yet emit Axeyum BV/LIA terms or proof certificates. The
-graduation route is to lower finite residue searches into BV/enumeration and
-linear Diophantine rows into QF_LIA `UnsatDiophantine` evidence where
-applicable.
+The modulo-7 nonresidue row also has a QF_BV proof-route artifact:
+[`smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`](smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2).
+It represents a candidate residue as a 3-bit word with `x < 7`, computes `x*x`
+exactly after zero-extension, and refutes `x^2 mod 7 = 3` with a DIMACS/DRAT
+certificate that `UnsatProof::recheck` validates. The modular lowering and
+bit-blast/Tseitin steps remain explicit trust steps until Lean reconstruction
+covers the original formula.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
 ```

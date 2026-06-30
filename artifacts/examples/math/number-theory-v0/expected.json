@@ -73,6 +73,23 @@
       "notes": "The validator enumerates all residues modulo 7 and confirms none square to 3."
     },
     {
+      "id": "quadratic-nonresidue-qf-bv-drat",
+      "claim": "The modulo-7 nonresidue row lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 7,
+        "residue": 3,
+        "residue_width": 3,
+        "product_width": 6,
+        "smt2_artifact": "artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while modular lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The artifact quantifies a 3-bit residue x with x < 7, computes x*x exactly after zero-extension, and refutes x^2 mod 7 = 3 through a checked DIMACS/DRAT pair."
+    },
+    {
       "id": "sum-two-squares-witness",
       "claim": "The integer 65 is a sum of two squares.",
       "expected_result": "sat",

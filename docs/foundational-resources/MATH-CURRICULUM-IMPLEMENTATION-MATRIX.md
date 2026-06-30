@@ -200,12 +200,12 @@ Build sequence:
    `math_resource_lra_routes` regression.
 7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
-8. Selected deterministic R4 packs now have structured `solver_reuse`
-   candidate tags: bounded number theory.
+8. The first deterministic `solver_reuse` batch is now fully promoted; no pack
+   remains tagged `candidate` in that initial batch.
 9. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
-   checked-row mining, solver-reuse candidates, and atlas concept lookup over
+   checked-row mining, solver-reuse rows, and atlas concept lookup over
    the committed JSON data contract.
 10. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
@@ -226,6 +226,9 @@ Build sequence:
     `natural-arithmetic-v0` now links `bounded-natural-negative-rejected` to
     `artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2`,
     checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
+    `number-theory-v0` now links `quadratic-nonresidue-qf-bv-drat` to
+    `artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`,
+    checked by the `math_resource_bv_routes` QF_BV/DRAT regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

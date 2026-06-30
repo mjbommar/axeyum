@@ -6471,6 +6471,38 @@ def validate_number_theory(expected: dict[str, Any]) -> None:
     if has_square_root_mod(target, modulus):
         fail("quadratic-nonresidue-rejected found a square root unexpectedly")
 
+    qf_bv = checks["quadratic-nonresidue-qf-bv-drat"]
+    if qf_bv["expected_result"] != "unsat":
+        fail("quadratic-nonresidue-qf-bv-drat must expect unsat")
+    if qf_bv["proof_status"] != "checked":
+        fail("quadratic-nonresidue-qf-bv-drat must be checked")
+    if qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("quadratic-nonresidue-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = qf_bv.get("data", {})
+    modulus = require_modulus("quadratic nonresidue QF_BV modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("quadratic-nonresidue-qf-bv-drat must use a prime modulus")
+    target = require_residue("quadratic nonresidue QF_BV target", data.get("residue"), modulus)
+    if has_square_root_mod(target, modulus):
+        fail("quadratic-nonresidue-qf-bv-drat found a square root unexpectedly")
+    residue_width = require_int("quadratic nonresidue QF_BV residue_width", data.get("residue_width"))
+    product_width = require_int("quadratic nonresidue QF_BV product_width", data.get("product_width"))
+    if 2**residue_width <= modulus:
+        fail("quadratic nonresidue QF_BV residue_width must encode every residue and the modulus guard")
+    if 2**product_width <= (modulus - 1) * (modulus - 1):
+        fail("quadratic nonresidue QF_BV product_width must encode the maximum square exactly")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("quadratic-nonresidue-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("quadratic-nonresidue-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("quadratic-nonresidue-qf-bv-drat proof_regression", proof_regression)
+    if "number_theory_quadratic_nonresidue_emits_checked_bv_drat" not in proof_regression:
+        fail("quadratic-nonresidue-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("quadratic-nonresidue-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("quadratic-nonresidue-qf-bv-drat certificate must document DRAT and lowering trust")
+
     sum_squares = checks["sum-two-squares-witness"]
     if sum_squares["expected_result"] != "sat":
         fail("sum-two-squares-witness must expect sat")

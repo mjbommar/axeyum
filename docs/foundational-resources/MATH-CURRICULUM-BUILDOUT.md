@@ -450,8 +450,9 @@ non-ideal rejection, and a general ideal-theory Lean-horizon row.
 validates gcd/common-divisor replay, Bezout coefficient replay, direct
 divisibility witnesses, and a checked linear Diophantine gcd obstruction.
 `number-theory-v0` now validates bounded CRT compatibility, quadratic-residue
-replay, checked nonresidue enumeration, sum-of-two-squares replay, checked
-mod-4 two-squares obstruction, and bounded Diophantine replay. `integer-lia-v0`
+replay, checked nonresidue enumeration plus a QF_BV/DRAT proof-route row,
+sum-of-two-squares replay, checked mod-4 two-squares obstruction, and bounded
+Diophantine replay. `integer-lia-v0`
 now validates signed trichotomy, order transitivity, integer ring-identity
 replay, linear equation witnesses, checked interval infeasibility, and a fixed
 GCD-test Diophantine obstruction. `natural-arithmetic-v0` now validates
@@ -566,7 +567,8 @@ Recommended order:
    counting witnesses, finite cycle/sign replay, finite orbit counts, and
    Burnside fixed-point averages.
 10. `number-theory-v0` (landed): CRT compatibility, quadratic residues,
-    sum-of-two-squares, and bounded Diophantine checks.
+    QF_BV/DRAT nonresidue evidence, sum-of-two-squares, and bounded
+    Diophantine checks.
 11. `integer-lia-v0` (landed): signed order facts, linear equations,
     interval infeasibility, and GCD-test refutations.
 12. `natural-arithmetic-v0` (landed): bounded successor/addition replay,
@@ -1060,7 +1062,7 @@ Exit criteria:
   and example-pack JSON files directly without importing generator or validator
   internals. `scripts/query-foundational-resources.py` now adds sample
   consumer-facing queries over that same committed data boundary for summary
-  counts, pack discovery, checked-row mining, solver-reuse candidates, and atlas
+  counts, pack discovery, checked-row mining, solver-reuse rows, and atlas
   concept lookup. Generated dashboards expose gate/next-gate status derived
   from the same files.
 
@@ -1436,6 +1438,8 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 related LIA arithmetic-DPLL solver-reuse lane also has
 `graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row and
 `natural-arithmetic-v0` promoted for its bad bounded negative-domain row.
+The QF_BV/DRAT solver-reuse lane now also has `number-theory-v0` promoted for
+its modulo-7 quadratic nonresidue row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

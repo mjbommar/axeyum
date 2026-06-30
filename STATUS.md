@@ -676,21 +676,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   learner/proof-upgrade dashboards now expose `Gate` / `Next Gate` columns so
   the resource lane can distinguish row-level R4 proof/evidence coverage from
   pack-level R6 consumer-boundary rows that already have source-linked solver
-  regressions. The current pack split is 51 `R6 consumer boundary` rows and
-  33 `R4 checked evidence` rows, making the remaining solver-reuse queue
-  explicit.
+  regressions. The current pack split is 52 `R6 consumer boundary` rows and
+  32 `R4 checked evidence` rows, making solver-reuse state explicit.
 
 - **Structured solver-reuse candidate tags landed.**
   [`foundational-example-pack.schema.json`](artifacts/ontology/foundational-example-pack.schema.json)
   now admits an optional `solver_reuse` metadata object with status, target,
   pressure, evidence rows, and next step. The example-pack validator checks
   that candidate evidence points only at deterministic checked/replay rows.
-  The first candidate batch now has 1 remaining `candidate` row:
-  `number-theory-v0`.
-  Generated dashboards also show 9 `promoted` rows for `logic-basics-v0`,
+  The first candidate batch now has no remaining `candidate` rows.
+  Generated dashboards show 10 `promoted` rows for `logic-basics-v0`,
   `finite-cardinality-v0`, `graph-matching-v0`, `graph-reachability-v0`,
   `graph-cut-v0`, `graph-d-separation-v0`, `graph-search-runtime-v0`, and
-  `integer-lia-v0`, and `natural-arithmetic-v0`.
+  `integer-lia-v0`, `natural-arithmetic-v0`, and `number-theory-v0`.
 
 - **First solver-reuse candidate promoted: logic basics.**
   [`logic-basics-v0`](artifacts/examples/math/logic-basics-v0/) now has a
@@ -789,15 +787,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the fixed bound, SMT-LIB artifact path, regression name, and arithmetic-DPLL
   trust-boundary note.
 
+- **Tenth solver-reuse candidate promoted: number theory.**
+  [`number-theory-v0`](artifacts/examples/math/number-theory-v0/) now has a
+  source-linked SMT-LIB artifact for `quadratic-nonresidue-qf-bv-drat`:
+  [`quadratic-nonresidue-mod7-bitblast-conflict.smt2`](artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2).
+  The shared BV resource regression parses the fixed 3-bit residue equation
+  `x < 7` and `x^2 mod 7 = 3`, proves it `unsat`, exports the bit-blasted
+  DIMACS plus DRAT refutation, and independently rechecks the certificate. The
+  pack metadata now marks `solver_reuse.status` as `promoted` for that row only;
+  the validator enforces the prime modulus, residue, width bounds, SMT-LIB
+  artifact path, regression name, and bit-blast/Tseitin trust-boundary note.
+
 - **Consumer-facing foundational-resource queries landed.**
   [`query-foundational-resources.py`](scripts/query-foundational-resources.py)
   is a dependency-free read-only consumer over the committed atlas,
   `metadata.json`, and `expected.json` data contract. It supports `summary`,
   `packs`, `checks`, and `concepts` queries for pack discovery, checked-row
-  mining, solver-reuse candidates, and atlas concept lookup, with examples in
+  mining, solver-reuse rows, and atlas concept lookup, with examples in
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
   `check-foundational-resources.sh` now runs a small query smoke set for
-  summary output, solver-reuse candidates, graph-theory UNSAT rows, and
+  summary output, promoted solver-reuse rows, graph-theory UNSAT rows, and
   example-family atlas rows.
 
 - **First QF_BV resource proof-route row landed.**
@@ -837,6 +846,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   bit-blast/Tseitin trust-boundary note. The first QF_BV proof-frontier target
   set is now covered; continue with fixed-width BV promotions only when the
   encoding teaches a distinct finite-domain claim.
+
+- **Bounded number-theory QF_BV resource row landed.**
+  [`number-theory-v0`](artifacts/examples/math/number-theory-v0/) now extends
+  the QF_BV resource lane with a fixed modulo-7 quadratic nonresidue artifact:
+  [`quadratic-nonresidue-mod7-bitblast-conflict.smt2`](artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2).
+  The `math_resource_bv_routes` regression now has four cases: finite rings,
+  finite fields, graph coloring, and bounded number theory. The generated
+  resource summary is `checks=412`, `checked=194`, and
+  `solver_reuse=promoted:10,unclassified:74`; the candidate query now returns
+  no rows, so the foundational-resource smoke test requires a promoted row
+  instead.
 
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)

@@ -110,13 +110,12 @@ the optimization/Farkas proof-route lane.
 The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
 now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
 solver-reuse candidates visible without hand-maintained scans.
-The first structured solver-reuse candidate batch is also tagged in pack
-metadata for bounded number theory; this remains R4 until promoted to actual
-regression or fuzz artifacts with pack back-links.
+The first structured solver-reuse batch is now fully promoted from R4 candidate
+rows into source-linked regression artifacts with pack back-links.
 `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,
 `graph-reachability-v0`, `graph-cut-v0`, `graph-d-separation-v0`,
-`graph-search-runtime-v0`, `integer-lia-v0`, and `natural-arithmetic-v0` are
-the first promoted packs from that batch:
+`graph-search-runtime-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
+`number-theory-v0` are the first promoted packs from that batch:
 `tiny-cnf-refutation`,
 `no-injection-four-to-three`, `triangle-no-perfect-matching`,
 `disconnected-no-path`, `one-edge-cut-rejected`, and
@@ -127,11 +126,13 @@ QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA
 artifact checked by the `math_resource_lia_routes` Diophantine regression, and
 `bounded-natural-negative-rejected` now has a source-linked QF_LIA artifact
-checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
+checked by the `math_resource_lia_routes` arithmetic-DPLL regression, while
+`quadratic-nonresidue-qf-bv-drat` now has a source-linked QF_BV artifact checked
+by the `math_resource_bv_routes` DRAT regression.
 The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
-pack discovery, checked-row mining, solver-reuse candidates, and atlas concept
+pack discovery, checked-row mining, solver-reuse rows, and atlas concept
 lookup without importing validators or generators.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
@@ -168,9 +169,10 @@ polynomial row. The first secondary QF_LRA/Farkas target set is now covered,
 the initial equality-heavy QF_UF/Alethe secondary set is now covered, and the
 first QF_BV bit-blast/DRAT resource promotion now covers the finite-rings bad
 distributivity row, the finite-fields composite no-inverse row, and the
-graph-coloring one-bit triangle two-coloring obstruction; graph search runtime
-and natural arithmetic now contribute checked arithmetic-DPLL regressions for
-bad finite DFS cost and bounded-natural negativity; prefer the next
+graph-coloring one-bit triangle two-coloring obstruction, with bounded number
+theory now promoted for the modulo-7 quadratic nonresidue row; graph search
+runtime and natural arithmetic now contribute checked arithmetic-DPLL
+regressions for bad finite DFS cost and bounded-natural negativity; prefer the next
 proof-frontier lane or equality-heavy pack that can carry a small checked
 certificate and a resource-backed regression.
 

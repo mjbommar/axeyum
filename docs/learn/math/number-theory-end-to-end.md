@@ -19,6 +19,7 @@ Concept rows:
 | `crt-compatible-noncoprime-witness` | `sat` | checked |
 | `quadratic-residue-witness` | `sat` | checked |
 | `quadratic-nonresidue-rejected` | `unsat` | checked |
+| `quadratic-nonresidue-qf-bv-drat` | `unsat` | checked |
 | `sum-two-squares-witness` | `sat` | checked |
 | `sum-two-squares-mod4-rejected` | `unsat` | checked |
 | `bounded-diophantine-witness` | `sat` | checked |
@@ -62,6 +63,19 @@ x^2 == 3 mod 7
 
 The validator enumerates all residues modulo `7` and finds no square root for
 `3`.
+
+The promoted solver-facing row encodes the same finite claim as QF_BV:
+
+```text
+x < 7
+(x * x) mod 7 = 3
+```
+
+`x` is a 3-bit residue and the square is computed at 6-bit width before
+`bvurem 7`, so the bit-vector formula is an exact finite-domain encoding. The
+route test exports the bit-blasted CNF, checks a DRAT refutation, and leaves
+modular lowering plus bit-blast/Tseitin as explicit trust steps for future Lean
+reconstruction.
 
 ## Replay And Reject Two-Squares Claims
 
@@ -126,6 +140,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
 ```
 
 Expected output:
@@ -140,8 +155,10 @@ This lesson shows Axeyum's current number-theory resource pattern:
 
 ```text
 untrusted fast search -> residue, square-sum, or Diophantine candidate
-trusted small checking -> exact integer replay, finite enumeration, mod obstruction
+trusted small checking -> exact integer replay, finite enumeration, mod obstruction, checked DRAT
 ```
 
-The graduation route is deterministic BV/enumeration evidence for residue
-searches and QF_LIA evidence for Diophantine rows.
+The first graduation step is now landed for a residue search: the modulo-7
+nonresidue row is tied to deterministic QF_BV/DRAT evidence. Remaining
+graduation work is QF_LIA evidence for Diophantine rows and carefully scoped
+BV/LIA artifacts for CRT or two-squares examples that add new solver pressure.

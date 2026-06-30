@@ -287,7 +287,8 @@ The bounded destination pack adds fixed number-theory shapes:
 ```
 
 The `number-theory-v0` pack also checks that no residue squares to `3 mod 7`
-and that no sum of two integer squares equals `7`.
+and now promotes that finite nonresidue check to a QF_BV bit-blast/DRAT
+regression. It also checks that no sum of two integer squares equals `7`.
 
 For a field-flavored example, the `finite-fields-v0` pack lists every nonzero
 inverse in `F_7`:
