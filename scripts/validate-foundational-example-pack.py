@@ -14023,6 +14023,110 @@ def map_preimage(mapping: dict[str, str], subset: frozenset[str]) -> frozenset[s
     return frozenset(source for source, target in mapping.items() if target in subset)
 
 
+def map_image(mapping: dict[str, str], subset: frozenset[str]) -> frozenset[str]:
+    return frozenset(mapping[source] for source in subset)
+
+
+def quotient_fibers(
+    domain: list[str],
+    quotient: list[str],
+    mapping: dict[str, str],
+) -> dict[str, frozenset[str]]:
+    return {
+        point: frozenset(source for source in domain if mapping[source] == point)
+        for point in quotient
+    }
+
+
+def require_quotient_fibers(
+    context: str,
+    value: Any,
+    domain: list[str],
+    quotient: list[str],
+    mapping: dict[str, str],
+) -> dict[str, frozenset[str]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list")
+    domain_set = set(domain)
+    quotient_set = set(quotient)
+    listed: dict[str, frozenset[str]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", item, {"point", "members"})
+        point = item.get("point")
+        require_string(f"{context}[{index}].point", point)
+        if point not in quotient_set:
+            fail(f"{context}[{index}].point references a missing quotient point")
+        if point in listed:
+            fail(f"{context} repeats quotient point {point!r}")
+        members = require_subset(f"{context}[{index}].members", item.get("members"), domain)
+        if not members:
+            fail(f"{context}[{index}].members must be non-empty for a quotient map")
+        listed[point] = members
+    if set(listed) != quotient_set:
+        missing = sorted(quotient_set - set(listed))
+        extra = sorted(set(listed) - quotient_set)
+        fail(f"{context} must list exactly one fiber per quotient point; missing={missing} extra={extra}")
+    actual = quotient_fibers(domain, quotient, mapping)
+    if listed != actual:
+        fail(f"{context} does not match the quotient map fibers")
+    if set().union(*(set(members) for members in listed.values())) != domain_set:
+        fail(f"{context} fibers do not cover the domain")
+    return listed
+
+
+def quotient_topology_from_preimages(
+    quotient: list[str],
+    domain_open_sets: set[frozenset[str]],
+    mapping: dict[str, str],
+) -> set[frozenset[str]]:
+    return {
+        subset
+        for subset in all_subsets(quotient)
+        if map_preimage(mapping, subset) in domain_open_sets
+    }
+
+
+def require_quotient_topology_data(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], set[frozenset[str]], list[str], set[frozenset[str]], dict[str, str], dict[str, frozenset[str]]]:
+    domain = require_string_list(f"{context}.domain_universe", values.get("domain_universe"))
+    domain_open_sets = require_set_family(
+        f"{context}.domain_open_sets",
+        values.get("domain_open_sets"),
+        domain,
+    )
+    validate_topology_axioms(f"{context}.domain", domain, domain_open_sets)
+    quotient = require_string_list(f"{context}.quotient_universe", values.get("quotient_universe"))
+    mapping = require_total_function_map(f"{context}.quotient_map", values.get("quotient_map"), domain, quotient)
+    if set(mapping.values()) != set(quotient):
+        missing = sorted(set(quotient) - set(mapping.values()))
+        fail(f"{context}.quotient_map must be surjective; missing fibers={missing}")
+    fibers = require_quotient_fibers(
+        f"{context}.fibers",
+        values.get("fibers"),
+        domain,
+        quotient,
+        mapping,
+    )
+    quotient_open_sets = require_set_family(
+        f"{context}.quotient_open_sets",
+        values.get("quotient_open_sets"),
+        quotient,
+    )
+    validate_topology_axioms(f"{context}.quotient", quotient, quotient_open_sets)
+    computed = quotient_topology_from_preimages(quotient, domain_open_sets, mapping)
+    if quotient_open_sets != computed:
+        fail(f"{context}.quotient_open_sets do not match the preimage-open quotient topology")
+    return domain, domain_open_sets, quotient, quotient_open_sets, mapping, fibers
+
+
+def is_saturated_subset(subset: frozenset[str], fibers: dict[str, frozenset[str]]) -> bool:
+    return all(fiber <= subset or not (fiber & subset) for fiber in fibers.values())
+
+
 def topology_continuity_failures(
     domain_open_sets: set[frozenset[str]],
     codomain_open_sets: set[frozenset[str]],
@@ -15866,6 +15970,117 @@ def validate_finite_continuous_maps(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general continuous map target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general continuous map future_checker", data.get("future_checker"))
+
+
+def validate_finite_quotient_topology(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    quotient_map = checks["quotient-map-fiber-witness"]
+    if quotient_map["expected_result"] != "sat":
+        fail("quotient-map-fiber-witness must expect sat")
+    values = single_witness_values(quotient_map, witnesses)
+    domain, _, quotient, _, mapping, _ = require_quotient_topology_data("quotient map fiber", values)
+    domain_set = set(domain)
+    equivalence_pairs = require_pair_set(
+        "quotient map equivalence_pairs",
+        values.get("equivalence_pairs"),
+        domain_set,
+        domain_set,
+    )
+    actual_pairs = {
+        (left, right)
+        for left in domain
+        for right in domain
+        if mapping[left] == mapping[right]
+    }
+    if equivalence_pairs != actual_pairs:
+        fail("quotient-map-fiber-witness equivalence_pairs do not match quotient-map fibers")
+    if not is_reflexive(domain, equivalence_pairs) or not is_symmetric(equivalence_pairs) or not is_transitive(equivalence_pairs):
+        fail("quotient-map-fiber-witness equivalence_pairs must form an equivalence relation")
+    if set(mapping.values()) != set(quotient):
+        fail("quotient-map-fiber-witness quotient_map must be surjective")
+
+    quotient_topology = checks["quotient-topology-witness"]
+    if quotient_topology["expected_result"] != "sat":
+        fail("quotient-topology-witness must expect sat")
+    values = single_witness_values(quotient_topology, witnesses)
+    require_quotient_topology_data("quotient topology", values)
+
+    saturated_open = checks["saturated-open-image-witness"]
+    if saturated_open["expected_result"] != "sat":
+        fail("saturated-open-image-witness must expect sat")
+    values = single_witness_values(saturated_open, witnesses)
+    domain, domain_open_sets, quotient, quotient_open_sets, mapping, fibers = require_quotient_topology_data(
+        "saturated open",
+        values,
+    )
+    subset = require_subset("saturated open domain_subset", values.get("domain_subset"), domain)
+    listed_image = require_subset("saturated open image", values.get("image"), quotient)
+    listed_preimage = require_subset("saturated open preimage_of_image", values.get("preimage_of_image"), domain)
+    if map_image(mapping, subset) != listed_image:
+        fail("saturated-open-image-witness image does not match quotient map")
+    if map_preimage(mapping, listed_image) != listed_preimage:
+        fail("saturated-open-image-witness preimage_of_image is incorrect")
+    if listed_preimage != subset:
+        fail("saturated-open-image-witness subset must equal preimage(image(subset))")
+    if not is_saturated_subset(subset, fibers):
+        fail("saturated-open-image-witness subset is not saturated by quotient fibers")
+    if subset not in domain_open_sets:
+        fail("saturated-open-image-witness subset must be open in the domain topology")
+    if listed_image not in quotient_open_sets:
+        fail("saturated-open-image-witness image must be open in the quotient topology")
+    if values.get("is_saturated") is not True:
+        fail("saturated-open-image-witness must state is_saturated=true")
+    if values.get("is_open") is not True:
+        fail("saturated-open-image-witness must state is_open=true")
+
+    bad_open = checks["bad-quotient-open-rejected"]
+    if bad_open["expected_result"] != "unsat" or bad_open.get("proof_status") != "checked":
+        fail("bad-quotient-open-rejected must be a checked unsat row")
+    if bad_open["validation"] != "qf_uf_congruence_alethe":
+        fail("bad-quotient-open-rejected must use qf_uf_congruence_alethe validation")
+    data = bad_open.get("data", {})
+    domain, domain_open_sets, quotient, quotient_open_sets, mapping, _ = require_quotient_topology_data(
+        "bad quotient open",
+        data,
+    )
+    claimed_open = require_subset("bad quotient claimed_open", data.get("claimed_open"), quotient)
+    listed_preimage = require_subset("bad quotient preimage", data.get("preimage"), domain)
+    if map_preimage(mapping, claimed_open) != listed_preimage:
+        fail("bad-quotient-open-rejected preimage does not match quotient map")
+    if listed_preimage in domain_open_sets:
+        fail("bad-quotient-open-rejected preimage is unexpectedly open in the domain")
+    if claimed_open in quotient_open_sets:
+        fail("bad-quotient-open-rejected claimed_open is unexpectedly quotient-open")
+    reason = data.get("reason")
+    require_string("bad quotient reason", reason)
+    if reason != "preimage-not-open":
+        fail("bad-quotient-open-rejected reason must be preimage-not-open")
+    alethe_claim = data.get("alethe_open_claim")
+    require_string("bad quotient alethe_open_claim", alethe_claim)
+    if alethe_claim != "preimage({r}) is open":
+        fail("bad-quotient-open-rejected must document the Alethe open-status claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad quotient smt2_artifact", smt2_artifact)
+    check_source("bad quotient smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad quotient proof_regression", proof_regression)
+    if "finite_quotient_topology_bad_open_emits_checked_alethe" not in proof_regression:
+        fail("bad-quotient-open-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad quotient certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-quotient-open-rejected certificate must document checked Alethe evidence")
+
+    horizon = checks["general-quotient-topology-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-quotient-topology-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-quotient-topology-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general quotient topology target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general quotient topology future_checker", data.get("future_checker"))
 
 
 def validate_finite_specialization_order(expected: dict[str, Any]) -> None:
@@ -19695,6 +19910,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":
         validate_finite_continuous_maps(expected)
+    if metadata["id"] == "finite-quotient-topology-v0":
+        validate_finite_quotient_topology(expected)
     if metadata["id"] == "finite-dual-spaces-v0":
         validate_finite_dual_spaces(expected)
     if metadata["id"] == "finite-euler-method-v0":

@@ -205,12 +205,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite quotient-topology resource and bridge landed.**
+  `finite-quotient-topology-v0` and
+  `bridge_finite_quotient_topology_replay` now make quotient-map fibers,
+  same-fiber equivalence pairs, quotient topology by preimage-open
+  enumeration, saturated-open image replay, and checked bad quotient-open
+  QF_UF/Alethe evidence queryable through the public JSON boundary. The bridge
+  keeps quotient topology universal properties, quotient-map theorem schemas,
+  preservation/invariance theorems, and arbitrary quotient-space reasoning in
+  the Lean-horizon lane. `PLAN.md`, the foundational-resource plans, learner
+  pages, `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`,
+  `PROOF-ROUTE-QUERY-MATRIX.md`, `PROOF-UPGRADE-FRONTIER.md`, and
+  `check-foundational-resources.sh` now reflect the 108-pack / 65-bridge
+  baseline and exercise topology quotient lookup plus concept-scoped Alethe
+  route queries. Focused validation passed for the pack validator and the
+  `finite_quotient_topology_bad_open_emits_checked_alethe` regression; full
+  foundational-resource smoke also passes after regenerating dashboards.
+
 - **Curriculum resource build sequence landed.** Added
   `docs/foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md` as
   the practical plan for turning the math curriculum into educational content,
   ontology/bridge rows, example packs, proof artifacts, solver-feedback rows,
   rules/law transfer examples, and eventual library boundaries. The document
-  records the current 110-concept / 107-pack / 543-check / 107-promoted-pack
+  records the current 111-concept / 108-pack / 548-check / 108-promoted-pack
   baseline, R0-R6 gates, staged learner/proof/solver work, field-specific next
   work for delta-epsilon balls, graph runtime pathologies, random matrices,
   LU/matrix computation, topology quotients, Chebyshev/operator rows, and

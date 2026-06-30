@@ -1,0 +1,10 @@
+; QF_UF open-status conflict for finite-quotient-topology-v0.
+(set-logic QF_UF)
+(declare-sort OpenStatus 0)
+(declare-fun preimage_r_status () OpenStatus)
+(declare-fun open_status () OpenStatus)
+(declare-fun not_open_status () OpenStatus)
+(assert (= preimage_r_status not_open_status))
+(assert (not (= open_status not_open_status)))
+(assert (= preimage_r_status open_status))
+(check-sat)

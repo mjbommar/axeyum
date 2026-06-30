@@ -3337,6 +3337,7 @@ BRIDGE_CONCEPTS = [
         "unlocks": [
             "bridge_compactness_shadow",
             "bridge_connectedness_shadow",
+            "bridge_finite_quotient_topology_replay",
             "bridge_finite_specialization_order_replay",
             "bridge_finite_boundary_operator_replay",
             "bridge_finite_chain_homology_replay",
@@ -3429,6 +3430,101 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes topology axioms, interior, closure, preimages, bijectivity, continuity, and inverse continuity exactly.",
                 "Bad topology or preimage rows link source artifacts and route regressions before claiming checked evidence.",
                 "General topology and homeomorphism-invariance theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_quotient_topology_replay",
+        "title": "Finite Quotient Topology Replay",
+        "field_ids": ["topology", "set_theory_and_foundations", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite quotient-topology rows state an explicit source topology, "
+            "surjective quotient map, quotient fibers, and quotient open-set "
+            "family. The trusted object is exact finite replay of fibers, "
+            "same-fiber equivalence pairs, preimage-open quotient topology, "
+            "and saturated-open images, plus checked QF_UF/Alethe evidence for "
+            "a malformed quotient-open claim."
+        ),
+        "prerequisites": [
+            "bridge_finite_topology_operator_homeomorphism",
+            "bridge_quotient_map",
+            "bridge_partition_relation_roundtrip",
+            "bridge_finite_image_preimage_inverse",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "field_topology",
+            "field_set_theory_and_foundations",
+            "field_discrete_math",
+            "bridge_finite_specialization_order_replay",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite topology",
+            "finite quotient maps",
+            "finite equivalence relations",
+            "finite preimage replay",
+            "QF_UF / Alethe",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-quotient-topology-v0",
+                "Finite quotient-map fibers, quotient topology by preimage-open replay, saturated-open image replay, and checked bad quotient-open Alethe row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite quotient-topology replay plus QF_UF/Alethe bad-open certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-quotient-topology-end-to-end.md",
+                    "docs/learn/math/analysis-topology-proof-horizons.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The validator recomputes source topology axioms, "
+                    "surjectivity, fibers, same-fiber equivalence pairs, "
+                    "quotient-open subsets by preimage enumeration, and "
+                    "saturated-open image/preimage data. The malformed "
+                    "quotient-open row graduates only because the isolated "
+                    "open-status contradiction has checked Alethe evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-topology-end-to-end.md",
+            "docs/learn/math/finite-quotient-topology-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-quotient-open-alethe-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite quotient-topology replay checks one fixed finite quotient map; it does not prove the quotient topology universal property or arbitrary quotient-map continuity theorems.",
+            "The bad quotient-open row isolates a fixed open-status contradiction, not arbitrary saturated-set, separation, compactness, connectedness, or invariance reasoning.",
+            "Additional quotient-topology rows should land only when they add distinct saturation, universal-property, invariance, or proof-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite source topology, quotient universe, quotient map, fibers, same-fiber relation, quotient-open family, and saturated subset data.",
+                "The validator recomputes fibers, surjectivity, equivalence pairs, every quotient subset preimage, quotient-open status, and saturated-open image/preimage behavior exactly.",
+                "Malformed fixed quotient-open rows link source artifacts and route regressions before claiming checked Alethe evidence.",
+                "Quotient-space universal properties, quotient-map theorem schemas, preservation theorems, and arbitrary quotient constructions remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },
@@ -5627,12 +5723,13 @@ BRIDGE_CONCEPTS = [
     {
         "id": "bridge_quotient_map",
         "title": "Finite Quotient Map",
-        "field_ids": ["set_theory_and_foundations", "abstract_algebra", "linear_algebra"],
+        "field_ids": ["set_theory_and_foundations", "abstract_algebra", "linear_algebra", "topology"],
         "resource_status": "validated",
         "summary": (
             "A quotient-map row checks a finite equivalence relation, coset or "
-            "fiber partition, induced operation table, and induced map by "
-            "representatives, with well-definedness kept explicit."
+            "fiber partition, induced operation table, induced map by "
+            "representatives, or quotient topology by preimage-open replay, "
+            "with well-definedness and saturation kept explicit."
         ),
         "prerequisites": [
             "bridge_kernel_image",
@@ -5640,9 +5737,11 @@ BRIDGE_CONCEPTS = [
             "curriculum_relations_and_functions",
         ],
         "unlocks": [
+            "bridge_finite_quotient_topology_replay",
             "bridge_ideal_closure",
             "bridge_module_action",
             "field_set_theory_and_foundations",
+            "field_topology",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -5669,6 +5768,10 @@ BRIDGE_CONCEPTS = [
                 "finite-modules-v0",
                 "Quotient-module addition and scalar-action replay by representatives.",
             ),
+            (
+                "finite-quotient-topology-v0",
+                "Quotient-map fibers, saturated-open replay, and quotient-open preimage checks for a finite topological quotient.",
+            ),
         ],
         "proof_routes": [
             {
@@ -5682,12 +5785,14 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/equivalence-classes-end-to-end.md",
                     "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
                     "docs/learn/math/finite-ideals-quotient-rings-end-to-end.md",
+                    "docs/learn/math/finite-quotient-topology-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
                 ],
                 "notes": (
                     "The validator recomputes classes, fibers, quotient "
-                    "tables, and induced maps; the quotient-map congruence "
-                    "artifact exercises the checked EUF route."
+                    "tables, induced maps, quotient-open preimages, and "
+                    "saturated subsets; the quotient-map congruence artifacts "
+                    "exercise the checked EUF route."
                 ),
             }
         ],
@@ -5697,18 +5802,20 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/equivalence-classes-end-to-end.md",
             "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
             "docs/learn/math/finite-ideals-quotient-rings-end-to-end.md",
+            "docs/learn/math/finite-quotient-topology-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
         ],
         "open_gaps": [
             "Finite quotient replay does not prove quotient construction theorems, correspondence theorems, or first isomorphism in general.",
+            "Finite quotient-topology replay does not prove quotient topology universal properties or arbitrary quotient-map theorem schemas.",
             "Well-definedness must be recomputed explicitly for each finite quotient row.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state the equivalence relation, classes or cosets, quotient map, and induced operation or map table.",
-                "The validator recomputes partition coverage and representative-independent operations.",
+                "The validator recomputes partition coverage, representative-independent operations, quotient-open preimages, and saturated subsets where relevant.",
                 "General quotient theory remains linked as a Lean horizon.",
             ],
         },

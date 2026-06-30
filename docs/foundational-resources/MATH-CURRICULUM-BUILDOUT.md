@@ -1302,7 +1302,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 110 atlas rows validate, including generated bridge-concept rows for
+  Status: 111 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1317,7 +1317,7 @@ Exit criteria:
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
   continuity-by-preimage, finite topology-operator/homeomorphism replay,
-  finite specialization-order replay, finite boundary-operator replay, finite
+  finite quotient-topology replay, finite specialization-order replay, finite boundary-operator replay, finite
   chain-complex/homology replay, finite torsion-homology replay, finite
   cohomology replay, finite cup-product replay, LU
   factorization replay, rank-nullity replay,
@@ -1336,9 +1336,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 107 non-template math example packs validate.
+  Status: 108 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 107 non-template packs have at least one `checked` expected-result row.
+  Status: 108 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas

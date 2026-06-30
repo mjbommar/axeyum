@@ -29,13 +29,13 @@ is checked, what is trusted, and what remains a theorem/proof horizon.
 
 The committed public query boundary currently reports:
 
-- 110 concept rows: 23 curriculum nodes, 18 field rows, 64 bridge concepts, and
+- 111 concept rows: 23 curriculum nodes, 18 field rows, 65 bridge concepts, and
   5 example-family rows.
-- 107 non-template math example packs.
-- 543 expected checks: 324 `sat`, 149 `unsat`, and 70 `not-run`.
-- 231 checked proof/evidence rows, 242 replay-only rows, and 70 Lean-horizon
+- 108 non-template math example packs.
+- 548 expected checks: 327 `sat`, 150 `unsat`, and 71 `not-run`.
+- 232 checked proof/evidence rows, 245 replay-only rows, and 71 Lean-horizon
   rows.
-- 107 promoted solver-reuse packs.
+- 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 The seed phase is complete. The build problem is now depth, navigation, proof
@@ -87,7 +87,7 @@ pack metadata.
 
 ## Stage 1: Normalize Navigation
 
-Goal: make the existing 107 packs easy to discover by curriculum layer, field,
+Goal: make the existing 108 packs easy to discover by curriculum layer, field,
 concept, proof route, and solver pressure.
 
 Work:
@@ -359,10 +359,12 @@ Pick one item per commit unless the change is purely navigational.
 
 1. Refresh stale planning counts and link this sequence from the resource
    indexes.
-2. Audit learner coverage for the current 107 packs and record any remaining
+2. Audit learner coverage for the current 108 packs and record any remaining
    combined-page-only rows.
-3. Add the finite quotient-topology pack and bridge if topology remains the
-   next distinct field gap.
+3. Landed: add the finite quotient-topology pack and bridge as the next
+   distinct topology/set-theory gap, with quotient-map fibers, quotient-open
+   preimage replay, saturated-open image replay, and checked QF_UF/Alethe bad
+   quotient-open evidence.
 4. Add a delta-epsilon/metric-ball learner index across bounded real-analysis,
    metric continuity, compactness, and topology shadows.
 5. Add graph BFS/DFS runtime-pathology resources only as finite trace/cost

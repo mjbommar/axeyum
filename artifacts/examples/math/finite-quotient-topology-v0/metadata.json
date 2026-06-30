@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-quotient-topology-v0",
+  "title": "Finite Quotient Topology Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "bridge_finite_quotient_topology_replay",
+    "bridge_finite_topology_operator_homeomorphism",
+    "bridge_quotient_map",
+    "bridge_partition_relation_roundtrip",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_discrete_math"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions"
+  ],
+  "axeyum_fragments": [
+    "finite topology",
+    "finite quotient maps",
+    "finite set partitions",
+    "finite preimage replay",
+    "QF_UF / Alethe",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite quotient-topology bad-open QF_UF/Alethe regression seed",
+    "pressure": "A fixed quotient map makes quotient-openness depend on the preimage-open condition; the negative row refutes a malformed claim that {r} is quotient-open even though its preimage {c} is not open in the source topology.",
+    "evidence": [
+      "bad-quotient-open-rejected"
+    ],
+    "next_step": "Promote additional quotient-topology rows only when they add distinct saturation, universal-property, invariance, or proof-reconstruction pressure; keep quotient-space theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-quotient-topology-end-to-end.md",
+    "docs/learn/math/analysis-topology-proof-horizons.md",
+    "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-quotient-open-alethe-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+  ],
+  "expected_results": [
+    "quotient-map-fiber-witness",
+    "quotient-topology-witness",
+    "saturated-open-image-witness",
+    "bad-quotient-open-rejected",
+    "general-quotient-topology-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode a finite source topology, surjective quotient map, quotient fibers, quotient open sets, and the induced equivalence relation.",
+    "Replay quotient openness by recomputing preimages of every quotient subset and comparing them against the source topology.",
+    "Replay saturated-open image/preimage behavior from the quotient-map fibers.",
+    "Route the bad quotient-open row through checked QF_UF/Alethe evidence after finite replay identifies the non-open preimage.",
+    "Keep quotient-space universal properties, quotient-map theorem schemas, and invariance under quotient constructions under Lean horizon until formal routes exist."
+  ]
+}

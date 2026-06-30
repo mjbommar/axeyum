@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 107
-- learner-linked packs: 107 focused links
-- packs with non-checked proof rows: 96
-- non-checked proof rows: 312
+- math example packs: 108
+- learner-linked packs: 108 focused links
+- packs with non-checked proof rows: 97
+- non-checked proof rows: 316
 
 Candidate route totals:
 
@@ -29,8 +29,8 @@ Candidate route totals:
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 10 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
-| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 18 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 77 | General theorem statements that remain outside bounded SMT replay. |
+| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 78 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -466,6 +466,9 @@ First targets:
   (resource-backed QF_UF/Alethe regression landed for the bad identity-action conflict)
 - [finite-continuous-maps-v0](../../artifacts/examples/math/finite-continuous-maps-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad preimage-membership conflict)
+- [finite-quotient-topology-v0](../../artifacts/examples/math/finite-quotient-topology-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad
+  quotient-open conflict after finite quotient-preimage replay)
 - [finite-specialization-order-v0](../../artifacts/examples/math/finite-specialization-order-v0/)
   (resource-backed QF_UF/Alethe regression landed for the false `T0`
   specialization antisymmetry conflict)
@@ -481,7 +484,7 @@ Secondary targets:
 - initial module/ideal/tensor equality-heavy secondary set is covered, including
   the finite-ideals quotient representative congruence row and the finite
   group-action identity row; the topology lane now has small preimage-membership,
-  specialization-antisymmetry, cohomology coboundary-value, and finite
+  quotient-open-status, specialization-antisymmetry, cohomology coboundary-value, and finite
   universal-coefficient group-identity EUF certificates.
   Pick the next equality-heavy pack only when it exposes a small fixed EUF
   certificate.
@@ -498,6 +501,7 @@ Validation:
 cargo test -p axeyum-solver --test math_resource_uf_routes
 cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe

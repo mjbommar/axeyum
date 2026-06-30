@@ -21,6 +21,7 @@ Example packs:
 - [finite-cardinality-v0](../../../artifacts/examples/math/finite-cardinality-v0/)
 - [cardinality-principles-v0](../../../artifacts/examples/math/cardinality-principles-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
+- [finite-quotient-topology-v0](../../../artifacts/examples/math/finite-quotient-topology-v0/)
 - [finite-specialization-order-v0](../../../artifacts/examples/math/finite-specialization-order-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
@@ -64,6 +65,10 @@ additivity counterexamples, and a checked QF_LIA/Diophantine overlap-additivity
 count contradiction. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
+finite-quotient-topology pack checks quotient-map fibers, same-fiber
+equivalence pairs, quotient topology by preimage-open enumeration,
+saturated-open image replay, and a checked QF_UF/Alethe bad quotient-open row.
+The
 finite-specialization-order pack derives a preorder from open neighborhoods,
 checks singleton-closure characterization, confirms one finite `T0` slice, and
 uses checked QF_UF/Alethe evidence for a false `T0`/antisymmetry claim. The
@@ -201,6 +206,19 @@ recomputes meet and join as greatest lower and least upper bounds, checks both
 distributive laws over all triples, checks monotonicity of `f`, recomputes the
 fixed points, and links the bad antisymmetry row to checked QF_UF/Alethe
 evidence.
+For finite quotient topology, reuse the quotient-map and finite-open-set data:
+
+```text
+X = {a,b,c}
+open(X) = {}, {a,b}, {a,b,c}
+q(a)=p, q(b)=p, q(c)=r
+```
+
+The `finite-quotient-topology-v0` validator recomputes fibers, the same-fiber
+equivalence relation, every quotient subset preimage, and the saturated-open
+image `{a,b} -> {p}`. It rejects the false claim that `{r}` is quotient-open,
+because its preimage `{c}` is not open in `X`, and links the fixed open-status
+conflict to checked QF_UF/Alethe evidence.
 For finite cardinality, encode the same function graph as a cardinality witness:
 
 ```text
@@ -356,6 +374,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-specialization-order-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
@@ -390,6 +410,7 @@ and measure replay, read
 [End To End: Finite Cardinality](finite-cardinality-end-to-end.md),
 [End To End: Cardinality Principles](cardinality-principles-end-to-end.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
+[End To End: Finite Quotient Topology](finite-quotient-topology-end-to-end.md),
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
 [End To End: Finite Compactness](finite-compactness-end-to-end.md),
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),

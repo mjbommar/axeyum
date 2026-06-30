@@ -49,14 +49,14 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 64 bridge-concept rows.
+- 65 bridge-concept rows.
 - 5 example-family rows.
-- 107 non-template math packs.
-- 543 expected checks.
-- 231 checked proof/evidence rows.
-- 242 replay-only rows.
-- 70 Lean-horizon rows.
-- 107 promoted solver-reuse packs.
+- 108 non-template math packs.
+- 548 expected checks.
+- 232 checked proof/evidence rows.
+- 245 replay-only rows.
+- 71 Lean-horizon rows.
+- 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This means the seed phase is over. The next work is systematic depth:
@@ -91,7 +91,7 @@ For each `not-run` row, say what proof horizon blocks graduation.
 
 ### Wave A: Preserve The Contract
 
-Goal: make the current 107 packs a stable, queryable data product.
+Goal: make the current 108 packs a stable, queryable data product.
 
 Work:
 

@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-quotient-topology-v0",
+  "witnesses": [
+    {
+      "id": "three-point-quotient",
+      "description": "A three-point finite topology quotiented by the partition {a,b} | {c}.",
+      "values": {
+        "domain_universe": ["a", "b", "c"],
+        "domain_open_sets": [
+          [],
+          ["a", "b"],
+          ["a", "b", "c"]
+        ],
+        "quotient_universe": ["p", "r"],
+        "quotient_map": {
+          "a": "p",
+          "b": "p",
+          "c": "r"
+        },
+        "fibers": [
+          {"point": "p", "members": ["a", "b"]},
+          {"point": "r", "members": ["c"]}
+        ],
+        "equivalence_pairs": [
+          ["a", "a"],
+          ["a", "b"],
+          ["b", "a"],
+          ["b", "b"],
+          ["c", "c"]
+        ],
+        "quotient_open_sets": [
+          [],
+          ["p"],
+          ["p", "r"]
+        ],
+        "domain_subset": ["a", "b"],
+        "image": ["p"],
+        "preimage_of_image": ["a", "b"],
+        "is_saturated": true,
+        "is_open": true
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "quotient-map-fiber-witness",
+      "claim": "The listed quotient map is surjective and its fibers induce the listed equivalence relation.",
+      "expected_result": "sat",
+      "validation": "finite_quotient_map_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-quotient"],
+      "notes": "The validator recomputes fibers from the total map, checks surjectivity, and rebuilds the same-fiber equivalence relation."
+    },
+    {
+      "id": "quotient-topology-witness",
+      "claim": "The quotient topology contains exactly the subsets whose preimages are open in the source topology.",
+      "expected_result": "sat",
+      "validation": "finite_quotient_topology_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-quotient"],
+      "notes": "The validator enumerates every subset of the quotient universe and accepts precisely those with open preimage."
+    },
+    {
+      "id": "saturated-open-image-witness",
+      "claim": "The saturated open set {a,b} maps to the quotient-open set {p}.",
+      "expected_result": "sat",
+      "validation": "finite_saturated_open_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-quotient"],
+      "notes": "The validator recomputes image({a,b})={p}, preimage({p})={a,b}, saturation by fibers, and openness on both sides."
+    },
+    {
+      "id": "bad-quotient-open-rejected",
+      "claim": "The singleton {r} is open in the quotient topology.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "domain_universe": ["a", "b", "c"],
+        "domain_open_sets": [
+          [],
+          ["a", "b"],
+          ["a", "b", "c"]
+        ],
+        "quotient_universe": ["p", "r"],
+        "quotient_map": {
+          "a": "p",
+          "b": "p",
+          "c": "r"
+        },
+        "fibers": [
+          {"point": "p", "members": ["a", "b"]},
+          {"point": "r", "members": ["c"]}
+        ],
+        "quotient_open_sets": [
+          [],
+          ["p"],
+          ["p", "r"]
+        ],
+        "claimed_open": ["r"],
+        "preimage": ["c"],
+        "reason": "preimage-not-open",
+        "alethe_open_claim": "preimage({r}) is open",
+        "smt2_artifact": "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-quotient-open-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof; Evidence::check independently rechecks the proof against the source assertions."
+      },
+      "notes": "Finite replay computes preimage({r})={c}, which is not open in the source topology. The linked QF_UF artifact checks the isolated open-status contradiction through Alethe evidence."
+    },
+    {
+      "id": "general-quotient-topology-lean-horizon",
+      "claim": "General quotient-space theorems require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "quotient topology universal property, quotient-map continuity, saturated-open correspondence, quotient preservation or failure of compactness/connectedness properties, and invariance under quotient constructions for arbitrary spaces",
+        "future_checker": "Lean modules for quotient topologies, saturated sets, quotient maps, continuity, separation axioms, compactness/connectedness preservation theorems, and proof reconstruction from finite quotient certificates"
+      },
+      "notes": "The finite rows replay one explicit quotient map and one false open-set claim; they do not prove arbitrary quotient-space theorems."
+    }
+  ]
+}

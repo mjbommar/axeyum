@@ -10,13 +10,15 @@ Concept rows:
   `curriculum_reals` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `bridge_finite_topology_operator_homeomorphism`,
+  `bridge_finite_quotient_topology_replay`,
   `bridge_finite_specialization_order_replay`,
   `bridge_finite_chain_homology_replay`,
   `bridge_finite_torsion_homology_replay`,
   `bridge_finite_cohomology_replay`,
   `bridge_finite_universal_coefficient_shadow`, and
   `bridge_finite_cup_product_replay` in the atlas bridge vocabulary for the
-  finite topology, topology-to-order, and algebraic-topology slices.
+  finite topology, topology-to-quotient, topology-to-order, and
+  algebraic-topology slices.
 
 Example packs:
 
@@ -31,6 +33,7 @@ Example packs:
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
+- [finite-quotient-topology-v0](../../../artifacts/examples/math/finite-quotient-topology-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
@@ -70,6 +73,7 @@ tail-gap checks, finite recurrence-prefix and companion-matrix replay, finite
 root-finding bisection/Newton replay, finite generating-function coefficient identities, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
+finite quotient topology by preimage-open replay, saturated-open image checks,
 finite specialization preorders, singleton-closure characterization, finite
 `T0`/antisymmetry checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
@@ -288,6 +292,23 @@ The `finite-continuous-maps-v0` validator recomputes preimages of every
 codomain open set, checks continuity, checks a finite homeomorphism by
 bijectivity plus continuity of the inverse, and rejects a false continuity
 claim for the same map into the discrete topology.
+
+For a finite quotient topology shadow, encode a source topology and a
+surjective quotient map:
+
+```text
+X = {a,b,c}
+open(X) = {}, {a,b}, {a,b,c}
+q(a)=p, q(b)=p, q(c)=r
+```
+
+The `finite-quotient-topology-v0` validator recomputes quotient fibers,
+same-fiber equivalence pairs, and every quotient-subset preimage. The quotient
+open sets are exactly `{}`, `{p}`, and `{p,r}` because `{r}` has preimage
+`{c}`, which is not open in `X`. The bad row rejects the false claim that
+`{r}` is quotient-open with checked QF_UF/Alethe evidence for the isolated
+open-status conflict. This is finite quotient replay, not a proof of quotient
+topology universal properties or arbitrary quotient-map theorems.
 
 For a finite algebraic-topology shadow, encode a simplicial complex as vertices
 and non-empty simplices:
@@ -509,6 +530,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/me
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
@@ -566,6 +589,7 @@ replay, read
 [End To End: Finite Compactness](finite-compactness-end-to-end.md),
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
+[End To End: Finite Quotient Topology](finite-quotient-topology-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
@@ -590,6 +614,7 @@ closed-form generating-function extraction, asymptotic coefficient estimates,
 countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
 general Chebyshev spaces, specialization-order and separation-axiom theorems,
+quotient topology universal properties, quotient-map theorem schemas,
 sobriety/domain-theory results, homology invariance, exact sequences, homotopy
 equivalence, general Smith normal form, classification of finitely generated
 abelian groups, universal coefficient theorems, Ext/Tor functor laws,

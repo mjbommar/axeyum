@@ -2,7 +2,7 @@
 
 Date: 2026-06-29
 
-Reviewed: 2026-06-30; counts refreshed after all 107 current math packs carry
+Reviewed: 2026-06-30; counts refreshed after all 108 current math packs carry
 promoted solver-reuse metadata and no explicit non-benchmark-horizon packs
 remain.
 
@@ -54,22 +54,22 @@ The Phase M8 threshold is met for size and repeated structure:
 
 | Requirement | Current Evidence |
 |---|---|
-| At least 40 validated concept rows | 110 atlas rows: 23 curriculum rows, 18 field rows, 64 bridge-concept rows, and 5 example-family rows. |
-| At least 12 validated example packs | 107 non-template math packs are listed through the atlas data contract. |
-| At least 6 packs with checked proof/evidence routes | 107 non-template packs contain at least one `checked` expected-result row. |
+| At least 40 validated concept rows | 111 atlas rows: 23 curriculum rows, 18 field rows, 65 bridge-concept rows, and 5 example-family rows. |
+| At least 12 validated example packs | 108 non-template math packs are listed through the atlas data contract. |
+| At least 6 packs with checked proof/evidence routes | 108 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, and field-readiness queries without importing validators or generators. |
-| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 107 promoted packs. |
+| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 108 promoted packs. |
 | At least one documentation surface maps consumer queries by field | `FIELD-READINESS-QUERY-MATRIX.md` records the smoke-checked route, bridge lookup, checked-row drilldown, and theorem boundary for all 18 math fields without adding a typed API. |
 | At least one documentation surface maps consumer queries by proof route | `PROOF-ROUTE-QUERY-MATRIX.md` records route-summary, pack-drilldown, and checked-row queries for the active proof/evidence routes, and `check-foundational-resources.sh` smoke-checks representative `routes --route ...` commands. |
 | At least one documentation surface maps resources by bridge concept and route | `MATRIX-COMPUTATION-QUERIES.md` records concept-plus-route matrix queries, and `check-foundational-resources.sh` smoke-checks representative `packs/checks --concept ... --route ...` commands. |
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 231 expected-result rows
-- `replay-only`: 242 expected-result rows
-- `lean-horizon`: 70 expected-result rows
-- `not-run`: 70 expected-result rows
-- `solver_reuse`: 107 promoted packs, 0 non-benchmark-horizon packs, and 0
+- `checked`: 232 expected-result rows
+- `replay-only`: 245 expected-result rows
+- `lean-horizon`: 71 expected-result rows
+- `not-run`: 71 expected-result rows
+- `solver_reuse`: 108 promoted packs, 0 non-benchmark-horizon packs, and 0
   unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof

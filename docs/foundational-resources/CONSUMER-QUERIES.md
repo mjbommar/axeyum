@@ -453,6 +453,11 @@ python3 scripts/query-foundational-resources.py concepts \
 
 python3 scripts/query-foundational-resources.py concepts \
   --field topology \
+  --text quotient \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field topology \
   --text specialization \
   --require-any
 
@@ -488,7 +493,8 @@ python3 scripts/query-foundational-resources.py concepts \
 ```
 
 Concept-plus-route queries find finite topology-operator/homeomorphism rows,
-finite specialization-order rows, finite boundary-operator rows, finite
+finite quotient-topology rows, finite specialization-order rows, finite
+boundary-operator rows, finite
 chain-complex/homology rows, finite torsion-homology rows, finite cohomology
 rows, finite universal-coefficient shadow rows, and finite cup-product rows
 without hard-coding pack ids:
@@ -501,6 +507,17 @@ python3 scripts/query-foundational-resources.py packs \
 
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_topology_operator_homeomorphism \
+  --route Alethe \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_quotient_topology_replay \
+  --route Alethe \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_quotient_topology_replay \
   --route Alethe \
   --proof-status checked \
   --require-any

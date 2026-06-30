@@ -43,14 +43,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 64 bridge-concept rows.
+- 65 bridge-concept rows.
 - 5 example-family rows.
-- 107 non-template math example packs.
-- 543 expected checks.
-- 231 checked proof/evidence rows.
-- 242 replay-only rows.
-- 70 Lean-horizon rows.
-- 107 promoted solver-reuse packs.
+- 108 non-template math example packs.
+- 548 expected checks.
+- 232 checked proof/evidence rows.
+- 245 replay-only rows.
+- 71 Lean-horizon rows.
+- 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -711,6 +711,7 @@ Graduation:
 Current packs:
 
 - `finite-topology-v0`
+- `finite-quotient-topology-v0`
 - `finite-specialization-order-v0`
 - `metric-continuity-v0`
 - `finite-compactness-v0`
@@ -726,11 +727,12 @@ Build next:
 
 - Landed concept rows for metric balls, compactness shadows, connectedness
   shadows, continuity-by-preimage, finite topology-operator/homeomorphism
-  replay, finite specialization-order replay, finite boundary-operator replay,
+  replay, finite quotient-topology replay, finite specialization-order replay,
+  finite boundary-operator replay,
   finite chain-complex/homology replay, finite torsion-homology replay, finite
-  cohomology replay, and finite cup-product replay. Add narrower quotient,
-  universal-coefficient, cohomology-ring quotienting, or theorem-invariance
-  rows only when reuse or solver pressure justifies the split.
+  cohomology replay, and finite cup-product replay. Add narrower
+  cohomology-ring quotienting or theorem-invariance rows only when reuse or
+  solver pressure justifies the split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
   source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
 - Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
@@ -1683,6 +1685,14 @@ Pick one item per commit unless the change is purely navigational.
      checked bad `H^1 = 0` evidence discoverable without promoting the
      universal coefficient theorem, naturality, splitting choices, Ext/Tor
      laws, exact sequences, or invariance theorems.
+103. Landed: add `finite-quotient-topology-v0` and
+     `bridge_finite_quotient_topology_replay` plus topology quotient lookup
+     and concept-scoped Alethe route smoke queries, making quotient-map
+     fibers, same-fiber equivalence pairs, quotient topology by preimage-open
+     replay, saturated-open image replay, and checked bad quotient-open
+     evidence discoverable without promoting quotient topology universal
+     properties, quotient-map theorem schemas, or arbitrary preservation and
+     invariance theorems.
 
 ## Validation Checklist
 

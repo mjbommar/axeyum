@@ -145,6 +145,10 @@ remaining horizon -> general topology theorems and infinite-space proof work
 ```
 
 Use this page for the first-principles finite topology story. For the
+topology-to-quotient bridge through fibers, saturated opens, and preimage-open
+quotient topology, read
+[End To End: Finite Quotient Topology](finite-quotient-topology-end-to-end.md).
+For the
 topology-to-order bridge through open neighborhoods and `T0` separation, read
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md).
 For the cross-field bridge from topology into finite sigma-algebras and
