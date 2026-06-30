@@ -46,7 +46,8 @@ validated pack data and the repo-root command that replays it.
   counterexample, and the natural-deduction Lean horizon.
 - [Induction Obligations](induction-obligations-end-to-end.md): follows
   prefix-sum base, bounded step and conclusion checks, a bad-step
-  counterexample, and the induction-schema Lean horizon.
+  counterexample, a QF_LIA arithmetic-DPLL bad step-count certificate, and the
+  induction-schema Lean horizon.
 - [Induction Patterns](induction-patterns-end-to-end.md): follows finite weak
   induction, a QF_LIA/Diophantine even-product certificate, strong induction,
   loop-invariant replay, invalid-step rejection, and the general

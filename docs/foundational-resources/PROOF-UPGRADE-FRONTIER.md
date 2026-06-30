@@ -27,7 +27,7 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 6 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 8 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 33 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
@@ -402,6 +402,11 @@ First targets:
 
 Related checked integer-arithmetic solver-reuse promotion:
 
+- [induction-obligations-v0](../../artifacts/examples/math/induction-obligations-v0/)
+  (resource-backed `UnsatArithDpll` regression landed for the bounded
+  bad-step count row after finite replay computes zero prefix-sum step
+  counterexamples; this is a bounded-count LIA refutation, not a
+  Diophantine-equality certificate)
 - [graph-search-runtime-v0](../../artifacts/examples/math/graph-search-runtime-v0/)
   (resource-backed `UnsatArithDpll` regression landed for the bad finite DFS
   cost-bound row; this is a Boolean-structured LIA refutation, not a
@@ -424,6 +429,8 @@ Expected artifact:
 - integer-interval Lean reconstruction for covered inequality slices;
 - finite replay for rows that are count or coefficient enumeration rather than
   a solver-form LIA contradiction.
+- an `UnsatArithDpll` certificate for bounded-domain or bounded-count
+  inequality contradictions.
 
 Validation:
 
@@ -444,6 +451,9 @@ Graduation:
   evidence or an explicitly checked finite table;
 - homology rank rows state whether the checked object is integer linear
   algebra, finite boundary replay, or the general homology Lean horizon.
+- induction-obligation rows state whether the checked object is finite
+  obligation replay, a QF_LIA bad-step count contradiction, or the full
+  induction-schema Lean horizon.
 - generating-function rows state whether the checked object is finite
   coefficient replay, a QF_LIA coefficient contradiction, or a general
   generating-function Lean horizon.

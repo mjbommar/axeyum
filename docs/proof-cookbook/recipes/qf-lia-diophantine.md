@@ -25,9 +25,10 @@ contradiction `0 = d` with `d != 0`.
 The route is used by Axeyum's integer evidence layer. Some math resource packs,
 such as integer LIA, gcd/Bezout, bounded number theory, modular arithmetic,
 exact statistical tests, finite simplicial homology, induction patterns,
-descriptive statistics, generating functions, and polynomial identities, still
-use finite replay for many rows today; this recipe is their graduation path
-when those examples are emitted as solver-form LIA obligations.
+induction obligations, descriptive statistics, generating functions, and
+polynomial identities, still use finite replay for many rows today; this recipe
+is their graduation path when those examples are emitted as solver-form LIA
+obligations.
 
 ## Evidence Artifact
 
@@ -106,6 +107,9 @@ Canonical examples:
 - [Induction Patterns](../../../artifacts/examples/math/induction-patterns-v0/)
   uses a finite even-product parity obstruction without claiming full
   induction-schema proof.
+- [Induction Obligations](../../../artifacts/examples/math/induction-obligations-v0/)
+  uses a bounded bad-step count contradiction after finite replay computes zero
+  counterexamples to the prefix-sum step obligation.
 - [Generating Functions](../../../artifacts/examples/math/generating-functions-v0/)
   uses a bad finite Cauchy-product coefficient row as a small integer
   convolution contradiction.
@@ -144,6 +148,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
@@ -162,6 +167,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 - [Modular Arithmetic pack](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [Exact Statistical Tests pack](../../../artifacts/examples/math/exact-statistical-tests-v0/)
 - [Finite Simplicial Homology pack](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+- [Induction Obligations pack](../../../artifacts/examples/math/induction-obligations-v0/)
 - [Induction Patterns pack](../../../artifacts/examples/math/induction-patterns-v0/)
 - [Descriptive Statistics pack](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [Generating Functions pack](../../../artifacts/examples/math/generating-functions-v0/)

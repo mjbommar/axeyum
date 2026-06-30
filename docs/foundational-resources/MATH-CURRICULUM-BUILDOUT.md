@@ -483,10 +483,10 @@ Lean-horizon. `cardinality-principles-v0` now validates finite
 inclusion-exclusion, disjoint-union additivity, bipartite-edge double
 counting, powerset cardinality, checked false disjoint-additivity rejection,
 and an arbitrary-cardinality Lean-horizon row. `induction-obligations-v0` now
-validates exact prefix-sum
-base-case replay, bounded step-obligation enumeration, bounded conclusion
-checking, a bad-step counterexample witness, and a full-schema Lean-horizon
-row. `induction-patterns-v0` now validates finite weak-induction evenness
+validates exact prefix-sum base-case replay, bounded step-obligation
+enumeration with a source-linked QF_LIA arithmetic-DPLL bad-step count
+regression, bounded conclusion checking, a bad-step counterexample witness,
+and a full-schema Lean-horizon row. `induction-patterns-v0` now validates finite weak-induction evenness
 prefixes, a checked QF_LIA finite even-product parity obstruction,
 strong-induction Fibonacci bounds, loop-invariant trace replay, checked
 bad-step rejection, and a full-schema Lean-horizon row.
@@ -600,8 +600,9 @@ Recommended order:
     infinite-cardinality Lean-horizon metadata.
 14. `induction-obligations-v0` (landed) and `induction-patterns-v0` (landed):
     bounded base/step obligations, finite weak and strong induction patterns,
-    a checked QF_LIA finite even-product parity obstruction, loop-invariant
-    replay, bad-step witnesses, and full-schema Lean-horizon metadata.
+    a checked QF_LIA arithmetic-DPLL bad-step count obstruction, a checked
+    QF_LIA finite even-product parity obstruction, loop-invariant replay,
+    bad-step witnesses, and full-schema Lean-horizon metadata.
 15. `logic-basics-v0` (landed): SAT witness replay, tautology and
     contradiction checks, De Morgan equivalence, and tiny CNF refutation.
 16. `finite-predicate-v0` (landed): finite-domain quantifier expansion,
@@ -1490,7 +1491,8 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 `descriptive-statistics-v0` promoted for its bad contingency total row, with
 `integer-lia-v0` now promoted for its gcd divisibility obstruction. The
 related LIA arithmetic-DPLL solver-reuse lane also has
-`graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row and
+`induction-obligations-v0` promoted for its bounded bad-step count row,
+`graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row, and
 `natural-arithmetic-v0` promoted for its bad bounded negative-domain row.
 The QF_BV/DRAT solver-reuse lane now also has `number-theory-v0` promoted for
 its modulo-7 quadratic nonresidue row.

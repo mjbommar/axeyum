@@ -16,5 +16,15 @@ The validator checks:
 - bad-step witness: the candidate property `n = 0` has a base case but fails
   the step at `k = 0`.
 
+For the promoted solver row, finite replay over `k = 0..8` computes:
+
+```text
+bad_step_count = 0
+```
+
+The rejected solver artifact asks for `bad_step_count >= 1`, so Axeyum can
+check the final bounded-step obstruction as a tiny QF_LIA arithmetic-DPLL
+certificate without pretending to prove the universal induction theorem.
+
 The general induction schema is not encoded as a solver claim. It is metadata
 for a future Lean proof route.

@@ -14,7 +14,8 @@ The finite examples use the prefix-sum formula:
 The checks are exact bounded artifacts:
 
 - replay the base case at `n = 0`;
-- reject a bounded step counterexample through `k <= 8`;
+- reject a bounded step counterexample through `k <= 8`, with the final
+  bad-step count contradiction checked through QF_LIA arithmetic-DPLL evidence;
 - reject a bounded conclusion counterexample through `n <= 9`;
 - replay a counterexample showing that a false candidate property can have a
   base case but fail the step;
@@ -33,8 +34,11 @@ all natural numbers.
 ## Trust Story
 
 The validator recomputes each finite obligation using exact integer arithmetic
-over bounded natural-number domains. UNSAT rows are accepted only after
-enumerating the fixed bound named in `expected.json`.
+over bounded natural-number domains. The upgraded step row first enumerates the
+fixed bound named in `expected.json`, computes `bad_step_count = 0`, and then
+checks the source artifact
+`smt2/bounded-step-counterexample-count-lia-conflict.smt2` with Axeyum's
+`UnsatArithDpll` evidence against the malformed claim `bad_step_count >= 1`.
 
 The schema row remains `lean-horizon` until a no-sorry Lean proof assembles the
 checked obligations into the universal statement.
@@ -43,4 +47,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence
 ```

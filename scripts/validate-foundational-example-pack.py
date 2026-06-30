@@ -6842,10 +6842,29 @@ def validate_induction_obligations(expected: dict[str, Any]) -> None:
     step = checks["sum-formula-step-bounded"]
     if step["expected_result"] != "unsat":
         fail("sum-formula-step-bounded must expect unsat")
-    max_k = require_bounded_induction_limit("sum-formula-step-bounded", step.get("data", {}), "max_k")
+    step_data = step.get("data", {})
+    max_k = require_bounded_induction_limit("sum-formula-step-bounded", step_data, "max_k")
+    bad_step_count = require_natural("sum-formula-step-bounded.bad_step_count", step_data.get("bad_step_count"))
+    actual_bad_step_count = 0
     for k_value in range(max_k + 1):
         if prefix_sum_property_holds(k_value) and not prefix_sum_property_holds(k_value + 1):
-            fail("sum-formula-step-bounded found a step counterexample")
+            actual_bad_step_count += 1
+    if bad_step_count != actual_bad_step_count:
+        fail("sum-formula-step-bounded bad_step_count does not match replay")
+    if bad_step_count != 0:
+        fail("sum-formula-step-bounded must record zero bad steps")
+    smt2_artifact = step_data.get("smt2_artifact")
+    require_string("sum-formula-step-bounded smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2"
+    ):
+        fail("sum-formula-step-bounded smt2_artifact must name the checked QF_LIA artifact")
+    check_source("sum-formula-step-bounded smt2_artifact", smt2_artifact)
+    lia_regression = step_data.get("lia_regression")
+    require_string("sum-formula-step-bounded lia_regression", lia_regression)
+    if "induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence" not in lia_regression:
+        fail("sum-formula-step-bounded must link the LIA route regression")
 
     conclusion = checks["sum-formula-conclusion-bounded"]
     if conclusion["expected_result"] != "unsat":

@@ -17,7 +17,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `sum-formula-base-case` | `sat` | checked |
-| `sum-formula-step-bounded` | `unsat` | checked |
+| `sum-formula-step-bounded` | `unsat` | checked QF_LIA arithmetic-DPLL |
 | `sum-formula-conclusion-bounded` | `unsat` | checked |
 | `bad-step-counterexample-witness` | `sat` | checked |
 | `induction-schema-lean-horizon` | `not-run` | lean-horizon |
@@ -72,8 +72,22 @@ P(k + 1) is false
 ```
 
 The validator enumerates `k = 0..8`, recomputes both `P(k)` and `P(k+1)`, and
-finds no bounded counterexample. Therefore the bounded step-counterexample
-search is checked `unsat`.
+finds no bounded counterexample. It records the computed count:
+
+```text
+bad_step_count = 0
+```
+
+The source SMT-LIB artifact then checks the malformed counter-claim:
+
+```text
+bad_step_count >= 1
+```
+
+That final contradiction is parsed from
+`artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
+and checked by Axeyum's arithmetic-DPLL evidence route. This is deliberately
+still a bounded step-count check, not the full induction schema.
 
 ## Check The Bounded Conclusion
 
@@ -128,6 +142,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence
 ```
 
 Expected output:
@@ -142,7 +157,7 @@ This lesson shows Axeyum's resource pattern for induction:
 
 ```text
 untrusted fast search -> bounded obligation or counterexample candidate
-trusted small checking -> exact arithmetic replay over a fixed finite bound
+trusted small checking -> exact arithmetic replay plus a checked QF_LIA certificate
 ```
 
 The induction schema itself requires a stronger proof route, not just more

@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 74 promoted solver-reuse packs.
+- 75 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 4 unclassified solver-reuse packs.
+- 3 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -399,6 +399,9 @@ Build next:
 - Keep `finite-predicate-v0`'s promoted finite quantifier-expansion row tied to
   the source CNF/DRAT/LRAT route, and do not treat it as arbitrary-domain
   first-order validity.
+- Keep `induction-obligations-v0`'s promoted bounded step-count row tied to
+  source QF_LIA arithmetic-DPLL evidence after finite replay computes zero bad
+  prefix-sum steps.
 - Add a proof-object anatomy lesson that starts from a tiny CNF, emits
   DRAT/LRAT, tampers with it, and shows checker rejection.
 - Promote one small proof-method contradiction row to the Boolean CNF route if
@@ -1112,7 +1115,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas`.
-31. Continue proof-route promotions or consumer-query examples; revisit the
+31. Landed: promote `induction-obligations-v0` through a source-linked
+    QF_LIA arithmetic-DPLL regression for `sum-formula-step-bounded`. The
+    artifact
+    `artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence`.
+32. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

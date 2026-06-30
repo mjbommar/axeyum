@@ -12,7 +12,17 @@ side exactly.
 Expected: `unsat`.
 
 The validator enumerates `k = 0..8` and confirms there is no bounded step
-counterexample where `P(k)` holds and `P(k + 1)` fails.
+counterexample where `P(k)` holds and `P(k + 1)` fails. The source SMT-LIB
+artifact records the final finite-count contradiction:
+
+```text
+bad_step_count = 0
+bad_step_count >= 1
+```
+
+The `math_resource_lia_routes` regression parses
+`smt2/bounded-step-counterexample-count-lia-conflict.smt2`, emits
+`UnsatArithDpll` evidence, and independently checks the certificate.
 
 ## `sum-formula-conclusion-bounded`
 

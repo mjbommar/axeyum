@@ -204,8 +204,10 @@ boundary coefficient and induction patterns promoted for a finite even-product
 parity obstruction. The QF_LIA/Diophantine first-target set is now covered;
 the first secondary statistics margin/count row is now promoted in
 descriptive statistics, integer LIA is now promoted for its gcd divisibility
-obstruction, bounded natural arithmetic is now promoted for its bad negative
-domain row, and the finite-probability bad-normalization row now has a checked
+obstruction, bounded induction obligations are now promoted for a bounded
+bad-step count arithmetic-DPLL row, bounded natural arithmetic is now promoted
+for its bad negative domain row, and the finite-probability
+bad-normalization row now has a checked
 QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
 stochastic-row obstruction and finite concentration now promoted for the bad
 tail-bound obstruction, with finite hitting times now source-linked and
@@ -252,15 +254,17 @@ and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
 number theory now promoted for the modulo-7 quadratic nonresidue row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
-connectedness row, and graph search runtime and natural arithmetic now
-contribute checked arithmetic-DPLL regressions for bad finite DFS cost and
-bounded-natural negativity. The five active resource proof-certificate routes
+connectedness row, and induction obligations, graph search runtime, and natural
+arithmetic now contribute checked arithmetic-DPLL regressions for bounded bad
+step counts, bad finite DFS cost, and bounded-natural negativity. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **74 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **4 unclassified packs** after
-the latest complex-plane bad unit-square real-part QF_LRA/Farkas promotion,
+the foundational resource dashboards now report **75 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **3 unclassified packs** after
+the latest induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL
+promotion,
+complex-plane bad unit-square real-part QF_LRA/Farkas promotion,
 calculus-algebraic false-derivative QF_LRA/Farkas promotion,
 multivariable-calculus bad-gradient QF_LRA/Farkas promotion,
 sequence-limit bounded Cauchy-tail QF_LRA/Farkas promotion,

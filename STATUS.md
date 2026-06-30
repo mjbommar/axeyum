@@ -464,10 +464,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   74 promoted, 6 non-benchmark-horizon, and 4 unclassified solver-reuse packs.
 
+- **Induction-obligations QF_LIA arithmetic-DPLL promotion landed.**
+  `induction-obligations-v0` now carries promoted `solver_reuse` metadata for
+  its bounded step no-counterexample row. The new source-level artifact
+  `bounded-step-counterexample-count-lia-conflict.smt2` isolates finite
+  replay's computed `bad_step_count = 0` against the malformed claim
+  `bad_step_count >= 1`, and
+  `math_resource_lia_routes::induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence`
+  checks the emitted `UnsatArithDpll` certificate. Generated dashboards now
+  report 75 promoted, 6 non-benchmark-horizon, and 3 unclassified
+  solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 74-promoted, 6 non-benchmark-horizon, and
-  4-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 75-promoted, 6 non-benchmark-horizon, and
+  3-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11650,6 +11661,15 @@ plan is built and committed on the current branch:
   `solver_reuse.status` as `promoted`, the expected row records the checked
   `UnsatFarkas` certificate path, and generated dashboards report 74 promoted,
   6 non-benchmark-horizon, and 4 unclassified packs.
+
+- **2026-06-30** — **Induction-obligations QF_LIA promotion landed.**
+  Added
+  `artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
+  for the bounded bad-step count row and wired it into
+  `math_resource_lia_routes`. The pack metadata now marks
+  `solver_reuse.status` as `promoted`, the expected row records the checked
+  `UnsatArithDpll` certificate path, and generated dashboards report 75
+  promoted, 6 non-benchmark-horizon, and 3 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

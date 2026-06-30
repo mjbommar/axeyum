@@ -39,9 +39,12 @@
       "validation": "bounded_induction_step_enumeration",
       "proof_status": "checked",
       "data": {
-        "max_k": 8
+        "max_k": 8,
+        "bad_step_count": 0,
+        "smt2_artifact": "artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2",
+        "lia_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence"
       },
-      "notes": "The validator enumerates k = 0..8 and finds no bounded step counterexample."
+      "notes": "The validator enumerates k = 0..8 and finds no bounded step counterexample; the Axeyum regression checks the final bad_step_count = 0 versus bad_step_count >= 1 contradiction through arithmetic-DPLL evidence."
     },
     {
       "id": "sum-formula-conclusion-bounded",

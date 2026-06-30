@@ -22,15 +22,28 @@
   "axeyum_fragments": [
     "bounded induction obligations",
     "LIA / BV",
+    "QF_LIA / arithmetic-DPLL",
     "finite-domain enumeration",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "bounded induction step-count QF_LIA/arithmetic-DPLL regression seed",
+    "pressure": "Exact finite replay over k = 0..8 computes zero prefix-sum step counterexamples, while the malformed row asks for at least one bounded bad step.",
+    "evidence": [
+      "sum-formula-step-bounded"
+    ],
+    "next_step": "Promote the bounded conclusion row only if it adds distinct finite-prefix counting pressure; keep the full natural-number induction schema in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/induction.md",
     "docs/curriculum/01-number-systems/naturals.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -43,7 +56,8 @@
   "graduation_criteria": [
     "Encode bounded base and step obligations as deterministic QF_LIA or QF_BV formulas.",
     "Replay finite SAT witnesses through Axeyum model evaluation.",
-    "Emit checked evidence for bounded step and conclusion no-counterexample rows.",
+    "Keep the bounded step no-counterexample row tied to source-linked QF_LIA arithmetic-DPLL evidence after finite replay computes the bad-step count.",
+    "Emit checked evidence for the bounded conclusion no-counterexample row only when it adds distinct solver pressure.",
     "Keep the full induction schema marked Lean-horizon until a no-sorry Lean route assembles the obligations into a universal theorem."
   ]
 }

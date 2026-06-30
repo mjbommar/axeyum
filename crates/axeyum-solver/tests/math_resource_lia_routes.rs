@@ -21,6 +21,9 @@ const FINITE_SIMPLICIAL_BAD_BOUNDARY_COEFFICIENT: &str = include_str!(
 const INDUCTION_EVEN_PRODUCT_ODD: &str = include_str!(
     "../../../artifacts/examples/math/induction-patterns-v0/smt2/even-product-odd-diophantine-conflict.smt2"
 );
+const INDUCTION_OBLIGATIONS_BOUNDED_STEP_COUNT: &str = include_str!(
+    "../../../artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2"
+);
 const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-contingency-total-diophantine-conflict.smt2"
 );
@@ -72,6 +75,14 @@ fn induction_even_product_odd_emits_checked_diophantine_evidence() {
     assert_resource_diophantine(
         "induction-patterns-v0 even product odd obstruction",
         INDUCTION_EVEN_PRODUCT_ODD,
+    );
+}
+
+#[test]
+fn induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence() {
+    assert_resource_lia_dpll(
+        "induction-obligations-v0 bounded step-count obstruction",
+        INDUCTION_OBLIGATIONS_BOUNDED_STEP_COUNT,
     );
 }
 

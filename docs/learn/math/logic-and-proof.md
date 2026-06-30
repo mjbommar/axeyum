@@ -31,8 +31,10 @@ CNF truth-table enumeration plus checked DRAT/LRAT evidence for the source
 DIMACS artifact. The proof-patterns pack checks direct proof,
 contrapositive, proof by cases, contradiction, and invalid converse examples
 by assignment replay and truth-table enumeration. The induction pack checks
-bounded base, step, and conclusion obligations while keeping the full induction
-schema under Lean horizon. The induction-patterns pack checks finite weak
+bounded base, step, and conclusion obligations; its bounded step row now
+reduces the replayed zero bad-step count to a checked QF_LIA arithmetic-DPLL
+certificate while keeping the full induction schema under Lean horizon. The
+induction-patterns pack checks finite weak
 induction, a checked QF_LIA/Diophantine even-product obstruction, strong
 induction, loop invariants, and invalid-step rejection. The graph-coloring
 pack adds a finite non-colorability example that can be
@@ -129,6 +131,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/in
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat
+cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence
 ```
 
 For fuller traces, read:
@@ -152,7 +155,7 @@ Boolean refutations such as proof-by-contradiction, pigeonhole, and triangle
 non-colorability graduate through
 [Boolean CNF DRAT/LRAT Evidence](../../proof-cookbook/recipes/boolean-cnf-lrat.md)
 when they have a deterministic CNF and checked certificate. Bounded arithmetic
-obstructions in induction patterns use
+obstructions in induction obligations and patterns use
 [QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
 General first-order soundness, natural-deduction metatheory, and the full
 induction schema remain under the
