@@ -14331,6 +14331,137 @@ def betti_numbers_for_dimensions(
     }
 
 
+def simplices_of_dimension(
+    simplices: set[Simplex],
+    dimension: int,
+    vertex_index: dict[str, int],
+) -> list[Simplex]:
+    return sorted(
+        (simplex for simplex in simplices if len(simplex) - 1 == dimension),
+        key=lambda simplex: simplex_sort_key(simplex, vertex_index),
+    )
+
+
+def require_f2_value(context: str, value: Any) -> int:
+    bit = require_int(context, value)
+    if bit not in {0, 1}:
+        fail(f"{context} must be 0 or 1")
+    return bit
+
+
+def require_cochain_f2(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    simplices: set[Simplex],
+    dimension: int,
+) -> dict[Simplex, int]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a cochain list")
+    vertex_index = simplex_vertex_index(vertices)
+    basis = set(simplices_of_dimension(simplices, dimension, vertex_index))
+    cochain: dict[Simplex, int] = {}
+    for index, term in enumerate(value):
+        if not isinstance(term, dict):
+            fail(f"{context}[{index}] must be an object")
+        require_keys(f"{context}[{index}]", term, {"simplex", "value"})
+        simplex = require_simplex(f"{context}[{index}].simplex", term.get("simplex"), vertices)
+        if simplex not in simplices:
+            fail(f"{context}[{index}].simplex is not in the complex")
+        if len(simplex) - 1 != dimension:
+            fail(f"{context}[{index}].simplex must have dimension {dimension}")
+        if simplex in cochain:
+            fail(f"{context} repeats simplex {simplex}")
+        cochain[simplex] = require_f2_value(f"{context}[{index}].value", term.get("value"))
+    if set(cochain) != basis:
+        missing = sorted(basis - set(cochain), key=lambda simplex: simplex_sort_key(simplex, vertex_index))
+        extra = sorted(set(cochain) - basis, key=lambda simplex: simplex_sort_key(simplex, vertex_index))
+        fail(f"{context} must list exactly dimension-{dimension} simplices; missing={missing} extra={extra}")
+    return cochain
+
+
+def coboundary_f2(
+    cochain: dict[Simplex, int],
+    simplices: set[Simplex],
+    dimension: int,
+    vertex_index: dict[str, int],
+) -> dict[Simplex, int]:
+    result: dict[Simplex, int] = {}
+    for simplex in simplices_of_dimension(simplices, dimension + 1, vertex_index):
+        total = 0
+        for face in oriented_boundary(simplex):
+            total ^= cochain.get(face, 0)
+        result[simplex] = total
+    return result
+
+
+def matrix_rank_f2(matrix: list[list[int]]) -> int:
+    rows = [[entry % 2 for entry in row] for row in matrix]
+    if not rows:
+        return 0
+    height = len(rows)
+    width = len(rows[0])
+    rank = 0
+    for col_index in range(width):
+        pivot = None
+        for row_index in range(rank, height):
+            if rows[row_index][col_index]:
+                pivot = row_index
+                break
+        if pivot is None:
+            continue
+        rows[rank], rows[pivot] = rows[pivot], rows[rank]
+        for row_index in range(height):
+            if row_index != rank and rows[row_index][col_index]:
+                rows[row_index] = [
+                    left ^ right
+                    for left, right in zip(rows[row_index], rows[rank])
+                ]
+        rank += 1
+        if rank == height:
+            break
+    return rank
+
+
+def coboundary_rank_f2(simplices: set[Simplex], dimension: int, vertex_index: dict[str, int]) -> int:
+    boundary = boundary_matrix(simplices, dimension + 1, vertex_index)
+    matrix = [[int(entry) % 2 for entry in row] for row in boundary]
+    return matrix_rank_f2(matrix)
+
+
+def cohomology_dimensions_f2(
+    simplices: set[Simplex],
+    dimensions: set[int],
+    vertex_index: dict[str, int],
+) -> dict[int, int]:
+    max_dimension = max(dimensions | {0})
+    cochain_dimensions = simplex_dimension_counts(simplices, max_dimension + 1)
+    return {
+        dimension: cochain_dimensions[dimension]
+        - coboundary_rank_f2(simplices, dimension, vertex_index)
+        - (coboundary_rank_f2(simplices, dimension - 1, vertex_index) if dimension > 0 else 0)
+        for dimension in dimensions
+    }
+
+
+def is_coboundary_f2(
+    target: dict[Simplex, int],
+    simplices: set[Simplex],
+    dimension: int,
+    vertex_index: dict[str, int],
+) -> bool:
+    if dimension == 0:
+        return all(value == 0 for value in target.values())
+    previous_basis = simplices_of_dimension(simplices, dimension - 1, vertex_index)
+    if len(previous_basis) > 12:
+        fail("finite cohomology coboundary search expects at most 12 basis elements")
+    for bits in product([0, 1], repeat=len(previous_basis)):
+        source = dict(zip(previous_basis, bits))
+        if coboundary_f2(source, simplices, dimension - 1, vertex_index) == target:
+            return True
+    return False
+
+
 def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -14476,6 +14607,151 @@ def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general homology target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general homology future_checker", data.get("future_checker"))
+
+
+def validate_finite_simplicial_cohomology(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    coboundary = checks["coboundary-replay"]
+    if coboundary["expected_result"] != "sat":
+        fail("coboundary-replay must expect sat")
+    values = single_witness_values(coboundary, witnesses)
+    vertices, simplices = require_simplicial_complex("cohomology coboundary", values)
+    vertex_index = simplex_vertex_index(vertices)
+    dimension = require_int("cohomology coboundary dimension", values.get("dimension"))
+    if dimension < 0:
+        fail("cohomology coboundary dimension must be non-negative")
+    cochain = require_cochain_f2("cohomology coboundary cochain", values.get("cochain"), vertices, simplices, dimension)
+    listed_coboundary = require_cochain_f2(
+        "cohomology coboundary coboundary",
+        values.get("coboundary"),
+        vertices,
+        simplices,
+        dimension + 1,
+    )
+    if coboundary_f2(cochain, simplices, dimension, vertex_index) != listed_coboundary:
+        fail("coboundary-replay listed coboundary is incorrect")
+
+    squared = checks["coboundary-squared-zero"]
+    if squared["expected_result"] != "sat":
+        fail("coboundary-squared-zero must expect sat")
+    values = single_witness_values(squared, witnesses)
+    vertices, simplices = require_simplicial_complex("cohomology squared", values)
+    vertex_index = simplex_vertex_index(vertices)
+    dimension = require_int("cohomology squared dimension", values.get("dimension"))
+    if dimension < 0:
+        fail("cohomology squared dimension must be non-negative")
+    cochain = require_cochain_f2("cohomology squared cochain", values.get("cochain"), vertices, simplices, dimension)
+    first = require_cochain_f2(
+        "cohomology squared first_coboundary",
+        values.get("first_coboundary"),
+        vertices,
+        simplices,
+        dimension + 1,
+    )
+    if coboundary_f2(cochain, simplices, dimension, vertex_index) != first:
+        fail("coboundary-squared-zero first coboundary is incorrect")
+    second = require_cochain_f2(
+        "cohomology squared second_coboundary",
+        values.get("second_coboundary"),
+        vertices,
+        simplices,
+        dimension + 2,
+    )
+    computed_second = coboundary_f2(first, simplices, dimension + 1, vertex_index)
+    if computed_second != second:
+        fail("coboundary-squared-zero second coboundary is incorrect")
+    if any(value != 0 for value in computed_second.values()):
+        fail("coboundary-squared-zero did not reduce to the zero cochain")
+
+    rank = checks["cohomology-rank-replay"]
+    if rank["expected_result"] != "sat":
+        fail("cohomology-rank-replay must expect sat")
+    values = single_witness_values(rank, witnesses)
+    vertices, simplices = require_simplicial_complex("cohomology rank", values)
+    vertex_index = simplex_vertex_index(vertices)
+    cochain_dimensions = require_dimension_int_map("cohomology rank cochain_dimensions", values.get("cochain_dimensions"))
+    if simplex_dimension_counts(simplices, max(cochain_dimensions)) != cochain_dimensions:
+        fail("cohomology-rank-replay cochain dimensions are incorrect")
+    coboundary_ranks = require_dimension_int_map("cohomology rank coboundary_ranks", values.get("coboundary_ranks"))
+    computed_ranks = {
+        dimension: coboundary_rank_f2(simplices, dimension, vertex_index)
+        for dimension in coboundary_ranks
+    }
+    if computed_ranks != coboundary_ranks:
+        fail("cohomology-rank-replay coboundary ranks are incorrect")
+    dimensions = require_dimension_int_map("cohomology rank cohomology_dimensions", values.get("cohomology_dimensions"))
+    if cohomology_dimensions_f2(simplices, set(dimensions), vertex_index) != dimensions:
+        fail("cohomology-rank-replay cohomology dimensions are incorrect")
+    cocycle_dimension = require_int("cohomology rank cocycle_dimension", values.get("cocycle_dimension"))
+    if cocycle_dimension < 0:
+        fail("cohomology rank cocycle_dimension must be non-negative")
+    cocycle = require_cochain_f2("cohomology rank cocycle", values.get("cocycle"), vertices, simplices, cocycle_dimension)
+    if any(value != 0 for value in coboundary_f2(cocycle, simplices, cocycle_dimension, vertex_index).values()):
+        fail("cohomology-rank-replay listed cocycle is not closed")
+    if values.get("non_coboundary") is not True:
+        fail("cohomology-rank-replay must document non_coboundary=true")
+    if is_coboundary_f2(cocycle, simplices, cocycle_dimension, vertex_index):
+        fail("cohomology-rank-replay listed cocycle is unexpectedly a coboundary")
+
+    bad = checks["bad-coboundary-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-coboundary-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    vertices, simplices = require_simplicial_complex("bad cohomology coboundary", data)
+    vertex_index = simplex_vertex_index(vertices)
+    dimension = require_int("bad cohomology coboundary dimension", data.get("dimension"))
+    cochain = require_cochain_f2("bad cohomology cochain", data.get("cochain"), vertices, simplices, dimension)
+    mismatch = require_simplex("bad cohomology mismatch_simplex", data.get("mismatch_simplex"), vertices)
+    if mismatch not in simplices or len(mismatch) - 1 != dimension + 1:
+        fail("bad-coboundary-rejected mismatch_simplex must be a target simplex")
+    actual = require_f2_value("bad cohomology actual_value", data.get("actual_value"))
+    claimed = require_f2_value("bad cohomology claimed_value", data.get("claimed_value"))
+    computed = coboundary_f2(cochain, simplices, dimension, vertex_index)
+    if computed.get(mismatch) != actual:
+        fail("bad-coboundary-rejected actual value is incorrect")
+    if claimed == actual:
+        fail("bad-coboundary-rejected claimed value unexpectedly matches actual")
+
+    qf_uf = checks["qf-uf-bad-coboundary-value"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-coboundary-value must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-coboundary-value must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-coboundary-value must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    qf_vertices = require_string_list("qf-uf cohomology vertices", data.get("vertices"))
+    qf_mismatch = require_simplex("qf-uf cohomology mismatch_simplex", data.get("mismatch_simplex"), qf_vertices)
+    if qf_mismatch != mismatch:
+        fail("qf-uf-bad-coboundary-value mismatch simplex must match rejected row")
+    qf_actual = require_f2_value("qf-uf cohomology actual_value", data.get("actual_value"))
+    qf_claimed = require_f2_value("qf-uf cohomology claimed_value", data.get("claimed_value"))
+    if qf_actual != actual or qf_claimed != claimed:
+        fail("qf-uf-bad-coboundary-value values must match rejected row")
+    if qf_actual == qf_claimed:
+        fail("qf-uf-bad-coboundary-value must document a value conflict")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf cohomology smt2_artifact", smt2_artifact)
+    check_source("qf-uf cohomology smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("qf-uf cohomology proof_regression", proof_regression)
+    if "finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe" not in proof_regression:
+        fail("qf-uf-bad-coboundary-value must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("qf-uf cohomology certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-uf-bad-coboundary-value certificate must document checked Alethe evidence")
+
+    horizon = checks["general-cohomology-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-cohomology-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-cohomology-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general cohomology target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general cohomology future_checker", data.get("future_checker"))
 
 
 def require_point_values(
@@ -18809,6 +19085,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_markov_chain(expected)
     if metadata["id"] == "finite-simplicial-homology-v0":
         validate_finite_simplicial_homology(expected)
+    if metadata["id"] == "finite-simplicial-cohomology-v0":
+        validate_finite_simplicial_cohomology(expected)
     if metadata["id"] == "finite-specialization-order-v0":
         validate_finite_specialization_order(expected)
     if metadata["id"] == "finite-hitting-times-v0":

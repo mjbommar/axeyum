@@ -1298,7 +1298,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 106 atlas rows validate, including generated bridge-concept rows for
+  Status: 107 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1314,7 +1314,7 @@ Exit criteria:
   epsilon-delta shadows, compactness shadows, connectedness shadows,
   continuity-by-preimage, finite topology-operator/homeomorphism replay,
   finite specialization-order replay, finite boundary-operator replay, finite
-  chain-complex/homology replay, LU
+  chain-complex/homology replay, finite cohomology replay, LU
   factorization replay, rank-nullity replay,
   residual bounds, eigenpair witnesses, characteristic-polynomial replay,
   finite random-matrix moments, finite measure additivity, finite probability
@@ -1331,9 +1331,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 103 non-template math example packs validate.
+  Status: 104 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 103 non-template packs have at least one `checked` expected-result row.
+  Status: 104 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -2201,7 +2201,16 @@ checked bad-boundary coefficient evidence across
 `finite-simplicial-homology-v0`. The foundational-resource smoke check now
 exercises topology boundary lookup plus concept-scoped Diophantine route
 queries while keeping functoriality, exactness, homology invariance,
-cohomology, and general algebraic topology in the horizon lane.
+cohomology operations, and general algebraic topology in the horizon lane.
+The topology concept layer now also has `bridge_finite_cohomology_replay`. It
+groups finite F2 cochain coboundary replay, `delta^2 = 0`,
+cohomology-rank replay, non-coboundary cocycle checking, and checked bad
+coboundary-value QF_UF/Alethe evidence across
+`finite-simplicial-cohomology-v0`. The foundational-resource smoke check now
+exercises topology cohomology lookup plus concept-scoped Alethe route queries
+while keeping cohomology functoriality, cup products, universal coefficients,
+de Rham comparison, sheaf cohomology, duality, and invariance theorems in the
+horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

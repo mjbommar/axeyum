@@ -26,6 +26,7 @@ Example packs:
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+- [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
 ## What Axeyum Checks
@@ -73,6 +74,9 @@ checks face closure for finite complexes, oriented-boundary replay,
 `boundary^2 = 0`, and a fixed Betti-rank calculation. The measure pack checks
 finite sigma-algebra closure, rational measure tables, finite additivity, and
 event/complement identities.
+The finite simplicial-cohomology pack checks F2 cochain coboundary replay,
+`delta^2 = 0`, cohomology-rank replay for the same three-edge circle, and a
+checked QF_UF/Alethe bad coboundary-value row.
 
 ## Encode / Check Walkthrough
 
@@ -278,7 +282,20 @@ boundary([a,b,c]) = [b,c] - [a,c] + [a,b]
 ```
 
 It verifies face closure, recomputes the alternating boundary, and rejects the
-false all-positive boundary. For measure, use the partition
+false all-positive boundary. For finite cohomology, use F2 cochains on the
+same three-edge circle:
+
+```text
+f(a) = 0
+f(b) = 1
+f(c) = 0
+delta f([a,c]) = 0
+```
+
+The checker recomputes coboundaries, `delta^2 = 0`, and the finite
+cohomology dimensions `h0 = 1`, `h1 = 1`, then rejects a bad claim that
+`delta f([a,c]) = 1` with checked QF_UF/Alethe evidence.
+For measure, use the partition
 `{a,b}` / `{c,d}` with masses `1/3` and `2/3`; the checker verifies
 normalization, finite additivity, and the event/complement identity.
 
@@ -307,6 +324,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -331,6 +350,7 @@ and measure replay, read
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
+[End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
@@ -339,7 +359,7 @@ and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end
 The finite set, relation/function, equivalence-class, function-composition,
 finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
 cardinality-principles, topology, specialization-order, compactness-shadow, connectedness-shadow, continuous-map,
-finite-simplicial-homology, and measure packs are now checked finite artifacts.
+finite-simplicial-homology, finite-simplicial-cohomology, and measure packs are now checked finite artifacts.
 The finite-simplicial-homology pack now also carries a checked
 QF_LIA/Diophantine certificate for its bad boundary coefficient. The Alethe
 certificate-anatomy page now shows the shared QF_UF proof-object boundary for

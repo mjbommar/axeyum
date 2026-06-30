@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cohomology resource and bridge landed.**
+  `finite-simplicial-cohomology-v0` and
+  `bridge_finite_cohomology_replay` now make finite F2 cochain coboundary
+  replay, `delta^2 = 0`, F2 cohomology-rank replay, non-coboundary cocycle
+  checking, and checked bad coboundary-value QF_UF/Alethe evidence queryable
+  through the public JSON boundary. The bridge keeps cohomology functoriality,
+  cup products, universal coefficients, de Rham comparison, sheaf cohomology,
+  duality, and invariance theorems in the Lean-horizon lane. `PLAN.md`, the
+  foundational-resource plans, learner pages, `CONSUMER-QUERIES.md`,
+  `FIELD-READINESS-QUERY-MATRIX.md`, `PROOF-ROUTE-QUERY-MATRIX.md`, and
+  `check-foundational-resources.sh` now reflect the 104-pack / 61-bridge
+  baseline and exercise topology cohomology lookup plus concept-scoped Alethe
+  route queries.
+
 - **Finite specialization-order resource and bridge landed.**
   `finite-specialization-order-v0` and
   `bridge_finite_specialization_order_replay` now make finite topology to
@@ -215,7 +229,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   specialization-order theorems in the Lean-horizon lane. `PLAN.md`, the
   foundational-resource plans, learner pages, `CONSUMER-QUERIES.md`,
   `FIELD-READINESS-QUERY-MATRIX.md`, `PROOF-ROUTE-QUERY-MATRIX.md`, and
-  `check-foundational-resources.sh` now reflect the 103-pack / 60-bridge
+  `check-foundational-resources.sh` reflected the 103-pack / 60-bridge
   baseline and exercise topology specialization lookup plus concept-scoped
   Alethe route queries.
 
@@ -224,8 +238,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
   the checked QF_LIA/Diophantine bad boundary coefficient row queryable from
   one shared atlas concept. The bridge keeps functoriality, exactness,
-  homology invariance, cohomology, and general algebraic-topology theorem
-  claims in the Lean-horizon lane. `CONSUMER-QUERIES.md`,
+  homology invariance, cohomology operations, and general algebraic-topology
+  theorem claims in the Lean-horizon lane. `CONSUMER-QUERIES.md`,
   `FIELD-READINESS-QUERY-MATRIX.md`, and `check-foundational-resources.sh`
   now exercise boundary lookup plus concept-scoped Diophantine route queries
   through the public JSON/query boundary.
@@ -248,8 +262,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   simplicial-complex closure, oriented-boundary replay, `boundary^2 = 0`,
   Betti-rank replay, and the checked QF_LIA/Diophantine bad boundary
   coefficient row queryable from one shared atlas concept. The bridge keeps
-  homology invariance, exact sequences, homotopy equivalence, cohomology, and
-  general algebraic-topology theorem claims in the Lean-horizon lane.
+  homology invariance, exact sequences, homotopy equivalence, cohomology
+  operations, and general algebraic-topology theorem claims in the
+  Lean-horizon lane.
   `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`, and
   `check-foundational-resources.sh` now exercise homology lookup plus
   concept-scoped Diophantine route queries through the public JSON/query
@@ -401,16 +416,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Topology consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
-  now shows public JSON queries for topology Boolean/Diophantine field
-  readiness, compactness/preimage/closure/homeomorphism/boundary/homology bridge
-  lookups, concept-scoped finite topology-operator/homeomorphism and finite
-  boundary-operator plus chain-complex/homology queries, and checked
+  now shows public JSON queries for topology Boolean/Alethe/Diophantine field
+  readiness, compactness/preimage/closure/homeomorphism/specialization/boundary/
+  homology/cohomology bridge lookups, concept-scoped finite
+  topology-operator/homeomorphism, finite specialization-order, finite
+  boundary-operator, chain-complex/homology, and finite cohomology queries, and checked
   Boolean/Alethe/Diophantine topology rows across finite topology, compactness,
   connectedness, continuous maps, homeomorphism replay, boundary replay,
-  homology, metric balls, and bounded epsilon-delta resources.
+  homology, cohomology, metric balls, and bounded epsilon-delta resources.
   `check-foundational-resources.sh` now smoke-checks those queries without
-  promoting arbitrary compactness, connectedness, homeomorphism, homology
-  invariance, exact sequence, or cohomology claims.
+  promoting arbitrary compactness, connectedness, homeomorphism,
+  homology/cohomology invariance, exact sequence, cohomology-operation, or
+  general algebraic-topology claims.
 
 - **Functional-analysis/operator consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)

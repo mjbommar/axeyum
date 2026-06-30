@@ -40,14 +40,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 60 bridge-concept rows.
+- 61 bridge-concept rows.
 - 5 example-family rows.
-- 103 non-template math example packs.
-- 521 expected checks.
-- 223 checked proof/evidence rows.
-- 232 replay-only rows.
-- 66 Lean-horizon rows.
-- 103 promoted solver-reuse packs.
+- 104 non-template math example packs.
+- 527 expected checks.
+- 225 checked proof/evidence rows.
+- 235 replay-only rows.
+- 67 Lean-horizon rows.
+- 104 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -714,15 +714,16 @@ Current packs:
 - `finite-connectedness-v0`
 - `finite-continuous-maps-v0`
 - `finite-simplicial-homology-v0`
+- `finite-simplicial-cohomology-v0`
 
 Build next:
 
 - Landed concept rows for metric balls, compactness shadows, connectedness
   shadows, continuity-by-preimage, finite topology-operator/homeomorphism
   replay, finite specialization-order replay, finite boundary-operator replay,
-  and finite chain-complex/homology replay. Add narrower rank/torsion,
-  cohomology, quotient, or theorem-invariance rows only when reuse or solver
-  pressure justifies the split.
+  finite chain-complex/homology replay, and finite cohomology replay. Add
+  narrower rank/torsion, quotient, cup-product, or theorem-invariance rows only
+  when reuse or solver pressure justifies the split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
   source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
 - Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
@@ -1629,7 +1630,7 @@ Pick one item per commit unless the change is purely navigational.
     simplicial-complex closure, oriented boundaries, boundary-squared-zero,
     Betti-rank replay, and the checked bad-boundary coefficient row
     discoverable without promoting homology invariance, exact sequences,
-    homotopy equivalence, cohomology, or general algebraic topology.
+    homotopy equivalence, cohomology operations, or general algebraic topology.
 97. Landed: add `bridge_finite_topology_operator_homeomorphism` plus topology
     closure/homeomorphism lookup and concept-scoped Alethe route smoke queries,
     making finite topology axioms, closure/interior replay, finite continuity
@@ -1643,7 +1644,7 @@ Pick one item per commit unless the change is purely navigational.
     oriented boundary coefficients, boundary-of-boundary cancellation,
     boundary-matrix shape, and checked bad-boundary coefficient evidence
     discoverable without promoting functoriality, exactness, homology
-    invariance, cohomology, or general algebraic topology.
+    invariance, cohomology operations, or general algebraic topology.
 99. Landed: add `finite-specialization-order-v0` and
     `bridge_finite_specialization_order_replay` plus topology specialization
     lookup and concept-scoped Alethe route smoke queries, making finite
@@ -1651,6 +1652,13 @@ Pick one item per commit unless the change is purely navigational.
     `T0` antisymmetry replay, and checked bad `T0` evidence discoverable
     without promoting T0 quotients, sobriety, Alexandroff-space/domain-theory
     results, or arbitrary-space specialization-order theorems.
+100. Landed: add `finite-simplicial-cohomology-v0` and
+     `bridge_finite_cohomology_replay` plus topology cohomology lookup and
+     concept-scoped Alethe route smoke queries, making finite F2 coboundary
+     replay, `delta^2 = 0`, cohomology-rank replay, non-coboundary cocycle
+     checking, and checked bad coboundary-value evidence discoverable without
+     promoting cohomology functoriality, cup products, universal coefficients,
+     de Rham comparison, sheaf cohomology, duality, or invariance theorems.
 
 ## Validation Checklist
 

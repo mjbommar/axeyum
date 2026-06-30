@@ -117,7 +117,7 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 103 current math packs,
+The current execution ledger for stabilizing the 104 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
@@ -145,9 +145,10 @@ policy/rule checks is
 Current resource-buildout status (2026-06-30): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
-finite group actions, with topology/preimage and finite specialization-order
-extensions. The measure/probability QF_LRA/Farkas lane now also promotes finite
-product-measure's bad product-probability row through a source-linked exact
+finite group actions, with topology/preimage, finite specialization-order, and
+finite cohomology extensions. The measure/probability QF_LRA/Farkas lane now
+also promotes finite product-measure's bad product-probability row through a
+source-linked exact
 linear contradiction after replay computes the product mass, plus finite
 random-variables' bad pushforward row after replay computes the outcome mass
 and finite-integration's bad expectation row after replay computes the integral,
@@ -158,7 +159,7 @@ finite-martingales' bad conditional-expectation row now promoted after finite
 filtration replay computes the up-block expectation, and finite Markov-chain's
 existing bad stochastic-row artifact now explicitly promoted in solver-reuse
 metadata.
-The foundational concept atlas now also includes 60 generated R1 bridge
+The foundational concept atlas now also includes 61 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
@@ -172,7 +173,9 @@ bijection/cardinality,
 cardinality theorem horizons, metric balls, bounded epsilon-delta shadows,
 compactness shadows, connectedness shadows, continuity-by-preimage, finite
 topology closure/interior and homeomorphism replay,
-finite specialization-order replay, finite boundary-operator replay, finite chain-complex/homology replay, LU factorization replay, rank-nullity replay,
+finite specialization-order replay, finite boundary-operator replay, finite
+chain-complex/homology replay, finite cohomology replay, LU factorization
+replay, rank-nullity replay,
 residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
 random-matrix moments, finite measure additivity, finite probability mass
 tables, finite pushforward distributions, finite stochastic kernels, finite
@@ -191,18 +194,20 @@ Fubini-style sum, and simple-function integral replay queryable while keeping
 Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
-topology lane: Boolean and Diophantine field readiness,
-compactness/preimage/closure/homeomorphism/specialization/boundary/homology
+topology lane: Boolean, Alethe, and Diophantine field readiness,
+compactness/preimage/closure/homeomorphism/specialization/boundary/homology/
+cohomology
 bridge lookups, concept-scoped finite topology-operator/homeomorphism, finite
-specialization-order, finite boundary-operator, and chain-complex/homology
+specialization-order, finite boundary-operator, chain-complex/homology, and
+finite cohomology
 queries, and checked
 Boolean/Alethe/Diophantine rows for finite topology, compactness, connectedness,
 continuous maps, homeomorphism replay, finite specialization order, boundary
-replay, homology, metric balls, and bounded epsilon-delta shadows are
+replay, homology, cohomology, metric balls, and bounded epsilon-delta shadows are
 smoke-checked through the committed JSON contract, while arbitrary compactness,
 connectedness, specialization-order theorems, homeomorphism invariance,
-homology invariance, exact sequences, and cohomology stay in the theorem-horizon
-lane.
+homology/cohomology invariance, exact sequences, cohomology operations, and
+general algebraic-topology theorems stay in the theorem-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 statistics lane: Farkas field readiness, finite-table/tail-count bridge
 lookups, and checked Farkas/Diophantine rows for exact finite tests,

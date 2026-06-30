@@ -11,7 +11,8 @@ Concept rows:
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `bridge_finite_topology_operator_homeomorphism`,
   `bridge_finite_specialization_order_replay`, and
-  `bridge_finite_chain_homology_replay` in the atlas bridge vocabulary for the
+  `bridge_finite_chain_homology_replay`, and
+  `bridge_finite_cohomology_replay` in the atlas bridge vocabulary for the
   finite topology, topology-to-order, and algebraic-topology slices.
 
 Example packs:
@@ -28,6 +29,7 @@ Example packs:
 - [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/)
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+- [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
@@ -65,7 +67,8 @@ separation checks, finite continuous-map preimages and homeomorphism checks,
 finite specialization preorders, singleton-closure characterization, finite
 `T0`/antisymmetry checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
-rank checks, fixed Betti-number replay, and bad boundary-sign rejection,
+rank checks, fixed Betti-number replay, finite F2 cochain coboundary replay,
+cohomology-rank checks, and bad boundary-sign or coboundary-value rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
@@ -291,6 +294,23 @@ matrices, checks the three-edge circle has `b0 = 1` and `b1 = 1`, and rejects a
 false boundary sign for `[a,b,c]` with a checked QF_LIA/Diophantine coefficient
 certificate.
 
+For a finite cohomology shadow over `F2`, encode cochain values on the same
+three-edge circle:
+
+```text
+f(a) = 0
+f(b) = 1
+f(c) = 0
+delta f([a,b]) = 1
+delta f([a,c]) = 0
+delta f([b,c]) = 1
+```
+
+The `finite-simplicial-cohomology-v0` validator recomputes F2 coboundary
+values from simplex faces, checks `delta^2 = 0` on a filled triangle, computes
+F2 cohomology dimensions `h0 = 1` and `h1 = 1` for the three-edge circle, and
+rejects a false coboundary value with checked QF_UF/Alethe evidence.
+
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
 
@@ -433,6 +453,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
@@ -482,6 +504,7 @@ replay, read
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
+[End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Topology](finite-topology-end-to-end.md),
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
 [End To End: Finite Measure](finite-measure-end-to-end.md),

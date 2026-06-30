@@ -32,6 +32,9 @@ const FINITE_ORDER_LATTICES_BAD_PARTIAL_ORDER: &str = include_str!(
 const FINITE_SPECIALIZATION_ORDER_BAD_T0: &str = include_str!(
     "../../../artifacts/examples/math/finite-specialization-order-v0/smt2/bad-t0-antisymmetry-alethe-conflict.smt2"
 );
+const FINITE_SIMPLICIAL_COHOMOLOGY_BAD_COBOUNDARY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-simplicial-cohomology-v0/smt2/bad-coboundary-value-alethe-conflict.smt2"
+);
 const FINITE_PERMUTATION_GROUPS_BAD_NONBIJECTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-permutation-groups-v0/smt2/bad-nonbijection-injectivity-conflict.smt2"
 );
@@ -121,6 +124,14 @@ fn finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-specialization-order-v0 bad T0 antisymmetry",
         FINITE_SPECIALIZATION_ORDER_BAD_T0,
+    );
+}
+
+#[test]
+fn finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-simplicial-cohomology-v0 bad coboundary value",
+        FINITE_SIMPLICIAL_COHOMOLOGY_BAD_COBOUNDARY,
     );
 }
 

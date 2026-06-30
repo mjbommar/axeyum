@@ -24,7 +24,7 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 103 math packs,
+  is the current execution ledger for stabilizing the existing 104 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
@@ -235,6 +235,10 @@ schemas, examples, and validation workflows.
   validates finite simplicial-complex closure, oriented-boundary replay,
   `boundary^2 = 0`, Betti-rank replay for a three-edge circle, checked
   rejection of a bad boundary sign, and a homology Lean-horizon row.
+- [`artifacts/examples/math/finite-simplicial-cohomology-v0/`](../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
+  validates finite F2 cochain coboundary replay, `delta^2 = 0`, cohomology-rank
+  replay for a three-edge circle, checked QF_UF/Alethe rejection of a bad
+  coboundary value, and a cohomology Lean-horizon row.
 - [`artifacts/examples/math/calculus-algebraic-shadow-v0/`](../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
   validates polynomial derivative replay, a product-rule polynomial identity,
   tangent-line replay, a convex quadratic critical point, false-derivative
@@ -526,6 +530,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0

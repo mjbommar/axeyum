@@ -40,7 +40,7 @@
     "evidence": [
       "qf-lia-bad-boundary-coefficient"
     ],
-    "next_step": "Promote additional finite chain-complex rows only when they add distinct integer-linear solver pressure; keep homology invariance, exact sequences, and cohomology theory in the Lean-horizon lane."
+    "next_step": "Promote additional finite chain-complex rows only when they add distinct integer-linear solver pressure; keep homology invariance, exact sequences, and cohomology operations in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -68,6 +68,6 @@
     "Replay boundary, chain-complex, and Betti-rank rows through Axeyum model evaluation rather than pack-local Python only.",
     "Keep promoted bad boundary coefficient rows tied to checked QF_LIA/Diophantine evidence.",
     "Add emitted certificates for false-boundary and rank rows once finite matrix proof routes are promoted.",
-    "Keep homology invariance, exact sequences, homotopy equivalence, cohomology, and general algebraic-topology theorems under Lean horizon until formal routes exist."
+    "Keep homology invariance, exact sequences, homotopy equivalence, cohomology operations, and general algebraic-topology theorems under Lean horizon until formal routes exist."
   ]
 }

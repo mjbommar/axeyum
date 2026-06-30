@@ -49,6 +49,6 @@ inconsistent equalities.
 
 Expected result: `not-run`.
 
-Homology invariance, exact sequences, homotopy equivalence, cohomology, and
-higher-dimensional algebraic topology belong in future Lean resources. The
-finite rows above are exact replay checks only.
+Homology invariance, exact sequences, homotopy equivalence, cohomology
+operations, and higher-dimensional algebraic topology belong in future Lean
+resources. The finite rows above are exact replay checks only.

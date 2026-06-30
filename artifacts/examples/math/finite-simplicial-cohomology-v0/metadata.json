@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-simplicial-cohomology-v0",
+  "title": "Exact Finite Simplicial Cohomology Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "bridge_finite_cohomology_replay",
+    "bridge_finite_boundary_operator_replay",
+    "bridge_finite_chain_homology_replay",
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "linear_algebra",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "finite cochains over F2",
+    "finite chain complexes",
+    "QF_UF / Alethe",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite simplicial cohomology coboundary QF_UF/Alethe regression seed",
+    "pressure": "Finite replay computes a coboundary value over F2, while the malformed row claims the opposite value for the same edge.",
+    "evidence": [
+      "qf-uf-bad-coboundary-value"
+    ],
+    "next_step": "Promote additional cohomology rows only when they add distinct cup-product, torsion, universal-coefficient, or proof-reconstruction pressure; keep general cohomology theory in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-simplicial-cohomology-v0/smt2/bad-coboundary-value-alethe-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+  ],
+  "expected_results": [
+    "coboundary-replay",
+    "coboundary-squared-zero",
+    "cohomology-rank-replay",
+    "bad-coboundary-rejected",
+    "qf-uf-bad-coboundary-value",
+    "general-cohomology-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite simplicial complexes and F2 cochains as deterministic finite-set and finite-linear obligations.",
+    "Replay coboundary values from simplex faces rather than trusting listed cochain tables.",
+    "Replay cohomology dimensions by exact F2 matrix-rank checks on the finite coboundary matrices.",
+    "Route the bad coboundary row through checked QF_UF/Alethe evidence after finite replay identifies the value mismatch.",
+    "Keep cup products, universal coefficients, de Rham comparison, sheaf cohomology, and cohomology invariance under Lean horizon until formal routes exist."
+  ]
+}

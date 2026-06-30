@@ -35,7 +35,8 @@ Diophantine evidence.
 
 This is finite replay evidence plus a small checked QF_LIA certificate for the
 bad coefficient. It does not prove homology invariance, exact sequences,
-homotopy equivalence, cohomology, or higher-dimensional algebraic topology.
+homotopy equivalence, cohomology operations, or higher-dimensional algebraic
+topology.
 
 Validation:
 

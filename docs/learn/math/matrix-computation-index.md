@@ -17,6 +17,7 @@ Concept rows:
   `bridge_eigenpair`, `bridge_characteristic_polynomial`,
   `bridge_random_matrix_finite_moment`,
   `bridge_finite_boundary_operator_replay`,
+  `bridge_finite_cohomology_replay`,
   `bridge_inner_product_projection`, `bridge_module_action`,
   `bridge_tensor_bilinearity`, and
   `bridge_finite_operator_chebyshev` in the
@@ -38,7 +39,7 @@ Concept rows:
 | Modules and tensors | [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/), [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/) | Scalar actions, generated submodules, module homomorphisms, quotients, bilinear maps, tensor basis rows, Kronecker products | finite table replay plus QF_UF/Alethe |
 | Spectral rows | [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/), [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/) | Eigenpairs, orthogonal eigenbasis arithmetic, Rayleigh quotients, spectral reconstruction, trace, determinant, characteristic roots, Cayley-Hamilton, Gershgorin intervals | finite replay plus QF_LRA/Farkas |
 | Random matrices | [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/) | Finite matrix-valued probability tables, trace/determinant moments, expected Gram matrices, rank mixture probabilities | finite expectation replay plus QF_LRA/Farkas |
-| Chain-complex matrices | [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/) | Boundary matrices, boundary squared, Betti-rank replay, bad oriented-boundary coefficient | finite replay plus QF_LIA/Diophantine |
+| Chain and cochain matrices | [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/), [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/) | Boundary matrices, boundary squared, Betti-rank replay, F2 coboundary matrices, cohomology-rank replay, bad oriented-boundary coefficient, bad coboundary value | finite replay plus QF_LIA/Diophantine or QF_UF/Alethe |
 | Operators and interpolation matrices | [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/), [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/) | Operator norm bounds, matrix action, Chebyshev recurrence, Vandermonde unisolvence, interpolation values, alternating residuals | finite replay plus QF_LRA/Farkas |
 
 ## What The Checker Trusts
@@ -54,18 +55,21 @@ kernel/image membership, and the one bad equality or closure condition. The
 QF_UF/Alethe route checks the equality-heavy contradiction after replay exposes
 it.
 
-For integer chain-complex rows, the trusted work is exact integer matrix
-arithmetic plus a Diophantine contradiction row. This is useful for finite
-homology examples, but it is not a proof of homology invariance.
+For chain and cochain rows, the trusted work is exact finite matrix arithmetic:
+integer boundary matrices for homology and F2 coboundary matrices for
+cohomology, plus a small checked contradiction row when a malformed value is
+claimed. This is useful for finite algebraic-topology examples, but it is not a
+proof of homology or cohomology invariance.
 
 ## What Remains A Horizon
 
 The finite rows do not prove general rank-nullity, spectral theorem,
 Cayley-Hamilton over arbitrary rings, Hilbert projection, Riesz representation,
 Hahn-Banach, stability or conditioning of numerical algorithms, asymptotic
-random-matrix laws, minimax approximation, or homology invariance. Those claims
-remain Lean-horizon or numerical-honesty work until there is a kernel-checked
-or explicitly experimental artifact.
+random-matrix laws, minimax approximation, homology invariance, cohomology
+operations, or cohomology invariance. Those claims remain Lean-horizon or
+numerical-honesty work until there is a kernel-checked or explicitly
+experimental artifact.
 
 ## Focused Lessons
 
@@ -78,6 +82,7 @@ or explicitly experimental artifact.
 - [Finite Dual Spaces](finite-dual-spaces-end-to-end.md)
 - [Finite Modules](finite-modules-end-to-end.md)
 - [Finite Tensor Products](finite-tensor-products-end-to-end.md)
+- [Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md)
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md)
 - [Matrix Invariants](matrix-invariants-end-to-end.md)
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md)
@@ -100,6 +105,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes

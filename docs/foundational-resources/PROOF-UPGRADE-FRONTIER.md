@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 103
-- learner-linked packs: 103 focused links
-- packs with non-checked proof rows: 92
-- non-checked proof rows: 298
+- math example packs: 104
+- learner-linked packs: 104 focused links
+- packs with non-checked proof rows: 93
+- non-checked proof rows: 302
 
 Candidate route totals:
 
@@ -29,8 +29,8 @@ Candidate route totals:
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
-| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 16 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 73 | General theorem statements that remain outside bounded SMT replay. |
+| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 17 | Equality-heavy finite structures and congruence conflicts. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 74 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -469,14 +469,18 @@ First targets:
 - [finite-specialization-order-v0](../../artifacts/examples/math/finite-specialization-order-v0/)
   (resource-backed QF_UF/Alethe regression landed for the false `T0`
   specialization antisymmetry conflict)
+- [finite-simplicial-cohomology-v0](../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad F2
+  coboundary-value conflict)
 
 Secondary targets:
 
 - initial module/ideal/tensor equality-heavy secondary set is covered, including
   the finite-ideals quotient representative congruence row and the finite
-  group-action identity row; the topology lane now has small preimage-membership
-  and specialization-antisymmetry EUF certificates. Pick the next equality-heavy
-  pack only when it exposes a small fixed EUF certificate.
+  group-action identity row; the topology lane now has small preimage-membership,
+  specialization-antisymmetry, and cohomology coboundary-value EUF certificates.
+  Pick the next equality-heavy pack only when it exposes a small fixed EUF
+  certificate.
 
 Expected artifact:
 
@@ -491,6 +495,7 @@ cargo test -p axeyum-solver --test math_resource_uf_routes
 cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean

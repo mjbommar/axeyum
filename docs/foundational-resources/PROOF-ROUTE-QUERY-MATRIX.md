@@ -38,13 +38,13 @@ public substring filter, so use canonical recipe names such as
 
 | Route | Current Pack Count | Start Query | Drilldown Query | Do Not Claim |
 |---|---:|---|---|---|
-| `finite-model-replay` | 103 | `routes --route finite-replay` | `packs --route finite-model-replay --solver-reuse promoted` | Certificate checking, theorem proof, performance, or solver parity. This route proves exact replay of finite source data. |
+| `finite-model-replay` | 104 | `routes --route finite-replay` | `packs --route finite-model-replay --solver-reuse promoted` | Certificate checking, theorem proof, performance, or solver parity. This route proves exact replay of finite source data. |
 | `boolean-cnf-lrat` | 15 | `routes --route boolean` | `checks --route boolean --proof-status checked` | General graph/set/proof theorems or trust in the encoder. The trusted claim is the checked finite CNF proof object. |
 | `qf-bv-bitblast` | 5 | `routes --route qf-bv` | `checks --route qf-bv --proof-status checked` | Unbounded arithmetic, arbitrary finite algebra, or width-independent claims. Width must be part of the source claim. |
 | `qf-lia-diophantine` | 12 | `routes --route Diophantine` | `checks --route Diophantine --proof-status checked` | General number theory, arbitrary integer theorem schemas, or asymptotic combinatorics. The row is a concrete integer obstruction. |
 | `qf-lra-farkas` | 57 | `routes --route Farkas` | `checks --route Farkas --proof-status checked` | Real completeness, calculus/optimization convergence, floating-point stability, duality theorems, or performance claims. |
-| `qf-uf-congruence-alethe` | 16 | `routes --route Alethe` | `checks --route Alethe --proof-status checked` | Arbitrary algebraic/topological structure theorems or full first-order reasoning. This route checks equality/congruence conflicts after finite replay exposes them. |
-| `lean-horizon-template` | 73 | `routes --route lean` | `packs --route lean-horizon-template --proof-status lean-horizon` | That the theorem is proved. A Lean-horizon row records theorem shape and missing reconstruction dependency. |
+| `qf-uf-congruence-alethe` | 17 | `routes --route Alethe` | `checks --route Alethe --proof-status checked` | Arbitrary algebraic/topological structure theorems or full first-order reasoning. This route checks equality/congruence conflicts after finite replay exposes them. |
+| `lean-horizon-template` | 74 | `routes --route lean` | `packs --route lean-horizon-template --proof-status lean-horizon` | That the theorem is proved. A Lean-horizon row records theorem shape and missing reconstruction dependency. |
 
 ## Field-Scoped Route Queries
 

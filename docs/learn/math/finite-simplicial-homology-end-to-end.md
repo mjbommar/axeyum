@@ -202,7 +202,6 @@ The following remain proof-assistant targets:
 homology invariance
 long exact sequences
 homotopy equivalence
-cohomology operations
 higher-dimensional algebraic topology
 ```
 
@@ -238,3 +237,6 @@ deterministic finite-set and integer-linear-algebra obligations, replay
 boundary and Betti rows through Axeyum model evaluation, and add emitted
 certificates for false-boundary and rank rows once finite matrix proof routes
 are promoted.
+
+For the finite cochain-side analogue over `F2`, read
+[End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md).

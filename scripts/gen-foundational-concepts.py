@@ -3339,6 +3339,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_specialization_order_replay",
             "bridge_finite_boundary_operator_replay",
             "bridge_finite_chain_homology_replay",
+            "bridge_finite_cohomology_replay",
             "field_topology",
             "bridge_lean_horizon",
         ],
@@ -3541,6 +3542,7 @@ BRIDGE_CONCEPTS = [
         ],
         "unlocks": [
             "bridge_finite_chain_homology_replay",
+            "bridge_finite_cohomology_replay",
             "bridge_rank_nullity",
             "field_topology",
             "field_linear_algebra",
@@ -3598,7 +3600,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite boundary replay checks fixed oriented simplices and fixed matrices; it does not prove functoriality, homology invariance, exactness, or topological invariance.",
             "Boundary-matrix rank rows are exact finite computations, not a general theorem about chain complexes over arbitrary rings.",
-            "Additional torsion, cohomology, or chain-map rows should land only when they add distinct integer-linear or proof-reconstruction pressure.",
+            "Additional torsion, cup-product, or chain-map rows should land only when they add distinct integer-linear, finite-field, or proof-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3639,6 +3641,7 @@ BRIDGE_CONCEPTS = [
             "curriculum_linear_algebra",
         ],
         "unlocks": [
+            "bridge_finite_cohomology_replay",
             "field_topology",
             "field_linear_algebra",
             "bridge_lean_horizon",
@@ -3698,7 +3701,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite chain-complex replay does not prove homology invariance, exact sequences, homotopy equivalence, cohomology operations, or general algebraic-topology theorems.",
             "Boundary-matrix rank rows are exact finite computations, not a proof of functoriality or topological invariance.",
-            "Additional rank, torsion, or cohomology rows should land only when they add distinct integer-linear or proof-reconstruction pressure.",
+            "Additional rank, torsion, cup-product, or chain-map rows should land only when they add distinct integer-linear, finite-field, or proof-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3707,6 +3710,104 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes face closure, oriented boundaries, boundary-of-boundary cancellation, ranks, and listed cycle generators exactly.",
                 "Malformed fixed rows link source artifacts or route regressions before claiming checked Diophantine evidence.",
                 "General homology and algebraic-topology theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_cohomology_replay",
+        "title": "Finite Simplicial Cohomology Replay",
+        "field_ids": [
+            "topology",
+            "set_theory_and_foundations",
+            "linear_algebra",
+            "abstract_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite cohomology rows state an explicit finite simplicial complex, "
+            "F2 cochain basis, coboundary tables, and finite-rank data. The "
+            "trusted object is exact replay of coboundary values, delta-squared "
+            "cancellation, F2 rank calculations, or checked QF_UF/Alethe evidence "
+            "for a malformed fixed coboundary value."
+        ),
+        "prerequisites": [
+            "bridge_finite_boundary_operator_replay",
+            "bridge_finite_chain_homology_replay",
+            "bridge_rank_nullity",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "field_topology",
+            "field_linear_algebra",
+            "field_abstract_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite simplicial complexes",
+            "finite cochains over F2",
+            "finite cochain complexes",
+            "F2 matrix rank replay",
+            "QF_UF / Alethe",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-simplicial-cohomology-v0",
+                "Finite F2 coboundary replay, delta-squared-zero replay, cohomology-rank replay, non-coboundary cocycle witness, and checked bad-coboundary Alethe row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite F2 cochain replay plus QF_UF/Alethe value certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-simplicial-cohomology-end-to-end.md",
+                    "docs/learn/math/analysis-topology-proof-horizons.md",
+                    "docs/learn/math/matrix-computation-index.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator recomputes coboundary values from "
+                    "finite simplex faces, checks delta-squared-zero, computes "
+                    "F2 matrix ranks, and accepts the malformed value row only "
+                    "after the isolated equality conflict has checked Alethe "
+                    "evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-simplicial-homology-end-to-end.md",
+            "docs/learn/math/finite-simplicial-cohomology-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "artifacts/examples/math/finite-simplicial-cohomology-v0/smt2/bad-coboundary-value-alethe-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite cohomology replay checks fixed F2 cochain tables; it does not prove cohomology functoriality, cup-product laws, universal coefficients, de Rham comparison, sheaf cohomology, Poincare duality, or topological invariance.",
+            "The bad coboundary row isolates a fixed value mismatch after finite replay, not arbitrary finite-field linear algebra proof reconstruction.",
+            "Additional cohomology rows should land only when they add distinct cup-product, torsion/universal-coefficient, or proof-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite complex, cochain basis, coefficient field, coboundary values, and rank or cocycle witnesses.",
+                "The validator recomputes simplex closure, F2 coboundaries, delta-squared-zero, F2 ranks, and non-coboundary status exactly.",
+                "Malformed fixed rows link source artifacts and route regressions before claiming checked Alethe evidence.",
+                "Cohomology operations, functoriality, universal coefficients, duality, and topological invariance remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },

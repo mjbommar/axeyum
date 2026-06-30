@@ -143,6 +143,12 @@ boundary-matrix ranks, and rejects a bad boundary sign. For a fuller focused
 trace, read
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md).
 
+For finite simplicial cohomology, the checker keeps the finite complex but
+switches to F2 cochains, recomputes coboundaries, checks `delta^2 = 0`, replays
+finite cohomology ranks, and rejects a bad coboundary value through checked
+QF_UF/Alethe evidence. For a fuller focused trace, read
+[End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md).
+
 ## Run It
 
 From the repository root:
@@ -157,6 +163,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 ```
 
 Expected output for each command:
@@ -178,3 +186,5 @@ independent DRAT/LRAT certificate for the final missing-empty-set contradiction.
 The finite-specialization-order UNSAT row trusts only the explicit open-set
 neighborhood preorder and the independent Alethe certificate for the final
 equality conflict.
+The finite-cohomology UNSAT row trusts only the explicit F2 coboundary replay
+and the independent Alethe certificate for the final value conflict.
