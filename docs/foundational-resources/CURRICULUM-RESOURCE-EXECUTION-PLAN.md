@@ -35,8 +35,9 @@ As of this plan, the math resource lane has:
   algebra-map vocabulary, and Lean horizons, plus the finite-algebra
   QF_UF/Alethe and exact-rational QF_LRA/Farkas example families.
 - 84 non-template math example packs, plus the validating template pack.
-- generated coverage, field, proof-gap, learner/proof-upgrade, and
-  curriculum-pressure dashboards under [generated/](generated/).
+- generated coverage, curriculum-status audit, field, proof-gap,
+  learner/proof-upgrade, and curriculum-pressure dashboards under
+  [generated/](generated/).
 - learner paths under [docs/learn/math](../learn/math/README.md).
 - a stable in-repo data boundary through JSON schemas, validators, generated
   dashboards, and `scripts/consume-foundational-resources.py`.
@@ -70,10 +71,11 @@ interpretation.
 
 Concrete work:
 
-- Audit `curriculum_status`, `resource_status`, and proof-route statuses for
-  curriculum rows whose packs have already landed.
-- Decide which rows should remain `planned` because they are bounded shadows
-  of broader theory, even when the first pack validates.
+- Keep a generated status-audit view that separates source
+  `curriculum_status` from generated `resource_status`.
+- Review curriculum rows that still say `planned` after their resource packs
+  validate, and decide whether the source row should become `covered` for a
+  mature finite/computable slice or `lean-horizon` for the general theorem.
 - Add a generated "needs learner page" and "needs proof upgrade" view instead
   of relying on manual scans.
 - Add generated R0-R6 "gate" and "next gate" columns so solver-reuse and
@@ -89,7 +91,8 @@ Exit criteria:
 - `scripts/check-foundational-resources.sh` regenerates identical dashboards on
   a clean checkout.
 - Every `planned` curriculum row has a reason: missing pack, bounded-only
-  shadow, proof-route gap, or Lean horizon.
+  shadow, proof-route gap, Lean horizon, or explicit source-status review in
+  [generated/curriculum-status-audit.md](generated/curriculum-status-audit.md).
 
 ### B. Learner Path Completion
 
@@ -346,7 +349,10 @@ Next buildout:
 
 1. Landed: add generated learner-coverage, proof-upgrade gap, and
    curriculum-pressure-by-fragment views.
-2. Normalize concept-atlas statuses so `planned` means a real remaining gap.
+2. Landed: add generated curriculum-status audit so `planned` source rows with
+   validated resources are surfaced for review; generated `resource_status`
+   now reflects resource maturity (`validated`, `proof-horizon`, or
+   `planned`) rather than a historical seed marker.
 3. Add focused graph lessons for reachability, search runtime, matching, cuts,
    and d-separation.
 4. Add standalone finite probability and finite measure lessons.
@@ -378,10 +384,11 @@ Next buildout:
    `math_resource_uf_routes` regression.
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
-   and learner/proof-upgrade dashboards. The curriculum-pressure view now
-   groups the 84 non-template packs into overlapping Bool/CNF, QF_BV, QF_LIA,
-   QF_LRA, QF_UF, finite-replay, and Lean-horizon buckets for fragment-level
-   planning.
+   and learner/proof-upgrade dashboards. The curriculum-status audit now shows
+   where source `planned` rows have validated resources and need a source DAG
+   decision. The curriculum-pressure view now groups the 84 non-template packs
+   into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
+   Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:
    `logic-basics-v0`,
    `finite-cardinality-v0`, `graph-matching-v0`, `graph-reachability-v0`,

@@ -19,6 +19,7 @@ python3 scripts/gen-foundational-dashboards.py
 git diff --exit-code -- \
   artifacts/ontology/foundational-concepts.json \
   docs/foundational-resources/generated/math-coverage.md \
+  docs/foundational-resources/generated/curriculum-status-audit.md \
   docs/foundational-resources/generated/math-field-dashboard.md \
   docs/foundational-resources/generated/proof-gap-dashboard.md \
   docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md \

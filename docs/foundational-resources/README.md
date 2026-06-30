@@ -46,6 +46,9 @@ schemas, examples, and validation workflows.
   math path built from the curriculum, concept atlas, and validated packs.
 - [generated/math-coverage.md](generated/math-coverage.md) is generated
   curriculum-node coverage from the current concept atlas.
+- [generated/curriculum-status-audit.md](generated/curriculum-status-audit.md)
+  audits source curriculum status against generated resource maturity so
+  `planned` versus `covered` decisions stay explicit.
 - [generated/math-field-dashboard.md](generated/math-field-dashboard.md) is
   generated field coverage from the current concept atlas.
 - [generated/proof-gap-dashboard.md](generated/proof-gap-dashboard.md) is the

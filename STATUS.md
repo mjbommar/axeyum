@@ -206,6 +206,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   buckets. It is now part of `check-foundational-resources`, so stale fragment
   planning output fails the same gate as coverage and proof-gap dashboards.
 
+- **Curriculum status audit landed.** The generated
+  [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
+  dashboard separates source `curriculum_status` from generated
+  `resource_status`: non-horizon curriculum rows with validated packs now
+  generate `validated` resource maturity, while source `planned` rows remain
+  visible as explicit `covered` versus `lean-horizon` review items. The
+  dashboard is now freshness-checked by `check-foundational-resources`.
+
 - **`needs-proof-route` cleanup landed.** Classified
   [`descriptive-statistics-v0`](artifacts/examples/math/descriptive-statistics-v0/)
   as finite replay for current SAT witness rows plus QF_LRA/Farkas for future

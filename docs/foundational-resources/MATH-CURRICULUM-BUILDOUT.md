@@ -67,6 +67,7 @@ docs/foundational-resources/
   MATH-CURRICULUM-BUILDOUT.md
   generated/
     math-coverage.md
+    curriculum-status-audit.md
     math-field-dashboard.md
     proof-gap-dashboard.md
     learner-proof-upgrade-dashboard.md
@@ -180,6 +181,7 @@ Generated dashboards turn the resources into a planning and measurement surface.
 Required first views:
 
 - coverage by curriculum node;
+- audit of source curriculum status versus generated resource maturity;
 - coverage by math field;
 - coverage by decidability class;
 - coverage by proof/evidence route;
@@ -1017,8 +1019,12 @@ math learner pages for explicit pack references, reports focused/path-only/
 missing learner coverage, and groups non-checked proof rows by candidate
 cookbook route. The curriculum-pressure dashboard groups packs into overlapping
 Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and Lean-horizon buckets
-so solver/proof demand is visible without hand-maintained scans. `just
-foundational-resources` and the plain-shell fallback now regenerate the concept
+so solver/proof demand is visible without hand-maintained scans. The
+curriculum-status audit now separates source `curriculum_status` from generated
+`resource_status`, so source `planned` rows with validated resource packs are
+reviewed as explicit `covered` versus `lean-horizon` decisions instead of
+hidden inside historical seed status. `just foundational-resources` and the
+plain-shell fallback now regenerate the concept
 atlas, validate it, validate all math example packs, require committed invalid
 example-pack fixtures to fail with expected diagnostics, regenerate dashboards,
 and fail if generated atlas or dashboard files are stale; CI runs the same gate
@@ -1027,6 +1033,7 @@ before docs link checking.
 Deliverables:
 
 - `docs/foundational-resources/generated/math-coverage.md`.
+- `docs/foundational-resources/generated/curriculum-status-audit.md`.
 - `docs/foundational-resources/generated/math-field-dashboard.md`.
 - `docs/foundational-resources/generated/proof-gap-dashboard.md`.
 - `docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md`.
@@ -1094,8 +1101,8 @@ Exit criteria:
   consumer-facing queries over that same committed data boundary for summary
   counts, pack discovery, field-plus-proof-route discovery, checked-row mining,
   solver-reuse rows, and atlas concept lookup. Generated dashboards expose
-  gate/next-gate status and fragment-pressure buckets derived from the same
-  files.
+  gate/next-gate status, status-audit recommendations, and fragment-pressure
+  buckets derived from the same files.
 
 ## First Ten Commits To Make
 

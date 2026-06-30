@@ -977,8 +977,10 @@ Pick one item per commit unless the change is purely navigational.
 9. Landed: add negative validator fixtures for the foundational example-pack
    schema, covering unknown fields, metadata/check id drift, and missing
    witness references.
-10. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
-    dashboards so status means current resource maturity, not historical state.
+10. Landed: audit `planned` vs `covered` statuses through
+    [generated/curriculum-status-audit.md](generated/curriculum-status-audit.md)
+    so generated resource maturity is separate from source curriculum DAG
+    status.
 11. Add one route-specific tamper/rejection test per proof certificate route.
 12. Revisit the library boundary decision after the next five solver-reuse
     promotions and at least one downstream consumer use.

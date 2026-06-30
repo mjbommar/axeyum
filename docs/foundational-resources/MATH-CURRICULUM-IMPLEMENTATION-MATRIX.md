@@ -211,7 +211,9 @@ Build sequence:
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
 10. Generated dashboard columns for R0-R6 gate level and "next gate" now land
-   in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
+   in the coverage, field, proof-gap, and learner/proof-upgrade dashboards;
+   the curriculum-status audit now separates source curriculum status from
+   generated resource maturity.
 11. The first deterministic `solver_reuse` batch is now fully promoted; no pack
    remains tagged `candidate` in that initial batch.
 12. Consumer-facing sample queries now land through

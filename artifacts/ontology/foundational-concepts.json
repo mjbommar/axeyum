@@ -20,7 +20,7 @@
       "curriculum_area": "foundations",
       "curriculum_status": "covered",
       "curriculum_family": "Logic",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Boolean variables, connectives, validity and satisfiability.",
       "prerequisites": [],
       "unlocks": [
@@ -85,7 +85,7 @@
       "curriculum_area": "foundations",
       "curriculum_status": "covered",
       "curriculum_family": "Predicate",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Quantifiers over a domain; validity is undecidable in general, decidable over finite domains.",
       "prerequisites": [
         "curriculum_propositional_logic",
@@ -151,7 +151,7 @@
       "curriculum_area": "foundations",
       "curriculum_status": "planned",
       "curriculum_family": "",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Direct, contrapositive, and contradiction proofs; refutation is exactly what a solver does.",
       "prerequisites": [
         "curriculum_propositional_logic",
@@ -223,7 +223,7 @@
       "curriculum_area": "foundations",
       "curriculum_status": "planned",
       "curriculum_family": "",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "The induction schema is undecidable; individual base/step obligations are decidable.",
       "prerequisites": [
         "curriculum_proof_methods",
@@ -294,7 +294,7 @@
       "curriculum_area": "foundations",
       "curriculum_status": "covered",
       "curriculum_family": "Sets",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Membership, subset, union/intersection; finite-set identities are exhaustively checkable.",
       "prerequisites": [
         "curriculum_propositional_logic"
@@ -367,7 +367,7 @@
       "curriculum_area": "foundations",
       "curriculum_status": "planned",
       "curriculum_family": "",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Relations, equivalence, functions; properties (injective/surjective) decidable on finite domains.",
       "prerequisites": [
         "curriculum_sets"
@@ -546,7 +546,7 @@
       "curriculum_area": "number-systems",
       "curriculum_status": "covered",
       "curriculum_family": "NumberSystem",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Peano successor arithmetic; concrete arithmetic decidable, the induction axiom is not.",
       "prerequisites": [
         "curriculum_sets"
@@ -612,7 +612,7 @@
       "curriculum_area": "number-systems",
       "curriculum_status": "covered",
       "curriculum_family": "NumberSystem",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Signed arithmetic and ordering; linear integer facts decided by simplex + branch-and-bound.",
       "prerequisites": [
         "curriculum_naturals"
@@ -680,7 +680,7 @@
       "curriculum_area": "number-systems",
       "curriculum_status": "planned",
       "curriculum_family": "",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Exact fractions; linear rational facts decided by the exact-rational simplex.",
       "prerequisites": [
         "curriculum_integers"
@@ -752,7 +752,7 @@
       "curriculum_area": "number-systems",
       "curriculum_status": "planned",
       "curriculum_family": "",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Ordered complete field; the elementary (algebraic) theory is decidable (Tarski), completeness is not.",
       "prerequisites": [
         "curriculum_rationals"
@@ -888,7 +888,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "NumberTheory",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Divisibility, gcd, B\u00e9zout's identity, unique factorization; gcd/B\u00e9zout are compute-and-check.",
       "prerequisites": [
         "curriculum_integers"
@@ -955,7 +955,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "NumberTheory",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Congruences mod n, inverses, CRT; modular identities exhaustively checkable over fixed moduli.",
       "prerequisites": [
         "curriculum_divisibility_and_euclid"
@@ -1027,7 +1027,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "Algebra",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Closure/associativity/identity/inverse; finite-group axiom checks via Cayley tables.",
       "prerequisites": [
         "curriculum_relations_and_functions"
@@ -1140,7 +1140,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "Algebra",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Two operations with distributivity; finite-ring identities checkable; \u2124 as the motivating ring.",
       "prerequisites": [
         "curriculum_groups",
@@ -1226,7 +1226,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "Algebra",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Rings with multiplicative inverses; \u211a and \ud835\udd3d\u209a give concrete, checkable arithmetic.",
       "prerequisites": [
         "curriculum_rings",
@@ -1320,7 +1320,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "Polynomial",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Polynomial arithmetic, identities, roots, factoring; fixed-degree identities are decidable.",
       "prerequisites": [
         "curriculum_rings",
@@ -1466,7 +1466,7 @@
       "curriculum_area": "structures",
       "curriculum_status": "covered",
       "curriculum_family": "Counting",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Permutations, combinations, the pigeonhole principle; finite counting identities are checkable.",
       "prerequisites": [
         "curriculum_sets",
@@ -1544,7 +1544,7 @@
       "curriculum_area": "destinations",
       "curriculum_status": "covered",
       "curriculum_family": "NumberTheory",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Primes, factorization, congruences, Diophantine equations; bounded instances are self-checkable.",
       "prerequisites": [
         "curriculum_divisibility_and_euclid",
@@ -1612,7 +1612,7 @@
       "curriculum_area": "destinations",
       "curriculum_status": "covered",
       "curriculum_family": "LinearAlgebra",
-      "resource_status": "seeded",
+      "resource_status": "validated",
       "summary": "Vector spaces, matrices, determinants, eigenvalues; fixed-size identities over \u211a are decidable.",
       "prerequisites": [
         "curriculum_fields",

@@ -129,6 +129,10 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
+The generated curriculum-status audit now separates source `curriculum_status`
+from generated `resource_status`, making source `planned` rows with validated
+resource packs visible as explicit `covered` versus `lean-horizon` review
+items.
 The first structured solver-reuse batch is now fully promoted from R4 candidate
 rows into source-linked regression artifacts with pack back-links.
 `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,

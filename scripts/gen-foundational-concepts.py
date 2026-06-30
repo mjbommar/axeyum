@@ -2658,11 +2658,16 @@ def make_curriculum_row(node: dict[str, Any], node_by_id: dict[str, dict[str, An
     row_id = curriculum_row_id(node["id"])
     decidability = concept_decidability(node["decidability"])
     lean_required = node["status"] == "lean-horizon" or decidability == "proof-horizon"
-    status = "proof-horizon" if lean_required else "seeded"
     route_status = "lean-horizon" if lean_required else "planned"
     lean_status = "required" if lean_required else "planned"
     doc_path = curriculum_doc_path(node)
     is_pack_validated = any(pack_status(pack_id) == "validated" for pack_id, _ in pack_specs)
+    if lean_required:
+        status = "proof-horizon"
+    elif is_pack_validated:
+        status = "validated"
+    else:
+        status = "planned"
     if is_pack_validated:
         gaps = [
             "Validated example pack exists; solver/proof integration still needs promotion where noted.",
