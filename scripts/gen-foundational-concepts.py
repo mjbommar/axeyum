@@ -290,6 +290,12 @@ CURRICULUM_MAP = {
         "pack": "sequence-limit-shadow-v0",
         "slice": "Bounded epsilon/N templates and algebraic sequence checks.",
         "proof": "Bounded arithmetic replay; general limits require Lean.",
+        "extra_packs": [
+            (
+                "bounded-monotone-sequence-v0",
+                "Finite monotone-prefix, supremum, tail-gap, and bad upper-bound checks.",
+            ),
+        ],
     },
     "counting": {
         "field_ids": ["discrete_math", "probability_theory"],
@@ -1964,6 +1970,10 @@ BRIDGE_CONCEPTS = [
                 "Finite prefix and bounded epsilon-N checks for convergence-shaped claims.",
             ),
             (
+                "bounded-monotone-sequence-v0",
+                "Finite monotone-prefix, finite supremum, and tail-gap checks for monotone-convergence shadows.",
+            ),
+            (
                 "real-analysis-rational-v0",
                 "Exact rational ball, delta, and neighborhood checks for analysis shadows.",
             ),
@@ -2132,6 +2142,10 @@ BRIDGE_CONCEPTS = [
             (
                 "sequence-limit-shadow-v0",
                 "Bounded epsilon-N and finite Cauchy-tail checks for sequence-limit shadows.",
+            ),
+            (
+                "bounded-monotone-sequence-v0",
+                "Finite monotone-prefix and bad upper-bound checks for monotone-convergence shadows.",
             ),
         ],
         "proof_routes": [

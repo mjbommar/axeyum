@@ -170,3 +170,6 @@ inequalities, finite monotone-prefix inequalities, one geometric partial-sum
 identity, and every pair in one finite Cauchy-tail row. The Farkas route checks
 the final exact-rational max-distance threshold contradiction. The full
 epsilon-N definition and completeness theorems remain future Lean work.
+
+For a focused monotone-prefix and upper-bound trace, read
+[End To End: Bounded Monotone Sequence](bounded-monotone-sequence-end-to-end.md).

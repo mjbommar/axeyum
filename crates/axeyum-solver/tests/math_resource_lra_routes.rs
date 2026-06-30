@@ -40,6 +40,9 @@ const COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART: &str = include_str!(
 const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
     "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
 );
+const BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2"
+);
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
@@ -421,6 +424,14 @@ fn sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "sequence-limit-shadow-v0 bounded-Cauchy-tail SMT-LIB artifact",
         SEQUENCE_LIMIT_BOUNDED_CAUCHY,
+    );
+}
+
+#[test]
+fn bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "bounded-monotone-sequence-v0 bad-upper-bound SMT-LIB artifact",
+        BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND,
     );
 }
 

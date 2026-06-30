@@ -8811,6 +8811,114 @@ def validate_sequence_limit_shadow(expected: dict[str, Any]) -> None:
     require_string("general limit future_checker", data.get("future_checker"))
 
 
+def validate_bounded_monotone_sequence(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    monotone = checks["monotone-upper-bound-prefix"]
+    if monotone["expected_result"] != "sat":
+        fail("monotone-upper-bound-prefix must expect sat")
+    values = single_witness_values(monotone, witnesses)
+    upper_bound = require_fraction("bounded monotone upper_bound", values.get("upper_bound"))
+    sequence = require_fraction_sequence("bounded monotone values", values.get("values"))
+    if len(sequence) < 2:
+        fail("monotone-upper-bound-prefix requires at least two values")
+    for index, value in enumerate(sequence):
+        expected_value = Fraction(index, index + 1)
+        if value != expected_value:
+            fail(f"monotone-upper-bound-prefix value {index} does not equal n/(n+1)")
+        if value >= upper_bound:
+            fail("monotone-upper-bound-prefix value violates the upper bound")
+    for left, right in zip(sequence, sequence[1:]):
+        if not left < right:
+            fail("monotone-upper-bound-prefix is not strictly increasing")
+
+    supremum = checks["finite-prefix-supremum"]
+    if supremum["expected_result"] != "sat":
+        fail("finite-prefix-supremum must expect sat")
+    values = single_witness_values(supremum, witnesses)
+    prefix = require_fraction_sequence("finite prefix supremum values", values.get("values"))
+    documented_supremum = require_fraction(
+        "finite prefix supremum prefix_supremum",
+        values.get("prefix_supremum"),
+    )
+    argmax_index = require_nonnegative_int("finite prefix supremum argmax_index", values.get("argmax_index"))
+    if argmax_index >= len(prefix):
+        fail("finite-prefix-supremum argmax_index is outside the prefix")
+    actual_supremum = max(prefix)
+    if documented_supremum != actual_supremum:
+        fail("finite-prefix-supremum prefix_supremum does not match the finite maximum")
+    if prefix[argmax_index] != actual_supremum:
+        fail("finite-prefix-supremum argmax_index does not realize the maximum")
+
+    tail = checks["tail-gap-below-epsilon"]
+    if tail["expected_result"] != "sat":
+        fail("tail-gap-below-epsilon must expect sat")
+    values = single_witness_values(tail, witnesses)
+    limit = require_fraction("tail gap limit", values.get("limit"))
+    epsilon = require_fraction("tail gap epsilon", values.get("epsilon"))
+    start_index = require_nonnegative_int("tail gap start_index", values.get("start_index"))
+    horizon = require_nonnegative_int("tail gap horizon", values.get("horizon"))
+    tail_sequence = require_fraction_sequence("tail gap values", values.get("values"))
+    documented_max_gap = require_fraction("tail gap max_tail_gap", values.get("max_tail_gap"))
+    if epsilon <= 0:
+        fail("tail-gap-below-epsilon epsilon must be positive")
+    if start_index > horizon:
+        fail("tail-gap-below-epsilon start_index must be <= horizon")
+    if len(tail_sequence) != horizon + 1:
+        fail("tail-gap-below-epsilon values must cover indices 0..horizon")
+    for index, value in enumerate(tail_sequence):
+        expected_value = Fraction(index, index + 1)
+        if value != expected_value:
+            fail(f"tail-gap-below-epsilon value {index} does not equal n/(n+1)")
+    max_gap = max((abs(limit - value) for value in tail_sequence[start_index : horizon + 1]), default=Fraction(0))
+    if documented_max_gap != max_gap:
+        fail("tail-gap-below-epsilon max_tail_gap does not match replay")
+    if max_gap >= epsilon:
+        fail("tail-gap-below-epsilon found a finite tail gap outside epsilon")
+
+    bad = checks["bad-upper-bound-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-upper-bound-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rational-monotone-prefix":
+        fail("bad-upper-bound-rejected must cite the rational-monotone-prefix source witness")
+    claimed_upper_bound = require_fraction(
+        "bad upper bound claimed_upper_bound",
+        data.get("claimed_upper_bound"),
+    )
+    witness_index = require_nonnegative_int("bad upper bound witness_index", data.get("witness_index"))
+    witness_value = require_fraction("bad upper bound witness_value", data.get("witness_value"))
+    if witness_index >= len(sequence):
+        fail("bad-upper-bound-rejected witness_index is outside the source prefix")
+    if sequence[witness_index] != witness_value:
+        fail("bad-upper-bound-rejected witness_value does not match replay")
+    if witness_value <= claimed_upper_bound:
+        fail("bad-upper-bound-rejected witness must violate the claimed upper bound")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad upper bound smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2":
+        fail("bad-upper-bound-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad upper bound smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad upper bound farkas_regression", farkas_regression)
+    if "bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-upper-bound-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad upper bound certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-upper-bound-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["monotone-convergence-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("monotone-convergence-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("monotone-convergence-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("monotone convergence target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("monotone convergence future_checker", data.get("future_checker"))
+
+
 def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -16372,6 +16480,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_relations_functions(expected)
     if metadata["id"] == "sequence-limit-shadow-v0":
         validate_sequence_limit_shadow(expected)
+    if metadata["id"] == "bounded-monotone-sequence-v0":
+        validate_bounded_monotone_sequence(expected)
     if metadata["id"] == "spectral-linear-algebra-v0":
         validate_spectral_linear_algebra(expected)
     if metadata["id"] == "linear-algebra-rational-v0":

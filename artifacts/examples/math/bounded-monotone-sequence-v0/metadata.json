@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "bounded-monotone-sequence-v0",
+  "title": "Bounded Monotone Sequence Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_sequences_and_limits",
+    "curriculum_reals",
+    "field_real_analysis",
+    "field_topology",
+    "bridge_bounded_epsilon_delta_shadow"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "topology"
+  ],
+  "curriculum_nodes": [
+    "sequences-and-limits",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "bounded epsilon-N templates",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "bounded monotone-sequence bad upper-bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay computes a_6 = 6/7 for the prefix a_n=n/(n+1), while the malformed row claims the prefix is bounded above by 5/6.",
+    "evidence": [
+      "bad-upper-bound-rejected"
+    ],
+    "next_step": "Promote additional sequence rows only when they add distinct bounded-tail, recurrence-prefix, supremum, or exact-sum solver pressure; keep monotone convergence, completeness, compactness, and all quantified infinite-tail theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
+    "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "monotone-upper-bound-prefix",
+    "finite-prefix-supremum",
+    "tail-gap-below-epsilon",
+    "bad-upper-bound-rejected",
+    "monotone-convergence-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite monotone-prefix and tail-gap checks as deterministic exact-rational replay rows.",
+    "Replay finite sequence witnesses through Axeyum model evaluation.",
+    "Route false finite upper-bound claims through checked QF_LRA/Farkas evidence after exact replay computes the offending witness value.",
+    "Keep monotone convergence, completeness of the reals, compactness, and quantified infinite-tail theorems marked Lean-horizon."
+  ]
+}

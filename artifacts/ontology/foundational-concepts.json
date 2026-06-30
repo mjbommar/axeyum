@@ -1418,6 +1418,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/sequence-limit-shadow-v0",
           "notes": "Bounded epsilon/N templates and algebraic sequence checks."
+        },
+        {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Finite monotone-prefix, supremum, tail-gap, and bad upper-bound checks."
         }
       ],
       "proof_routes": [
@@ -1446,7 +1452,7 @@
       "graduation": {
         "status": "planned",
         "criteria": [
-          "Create and validate artifacts/examples/math/sequence-limit-shadow-v0.",
+          "Create and validate planned curriculum example packs, starting with artifacts/examples/math/sequence-limit-shadow-v0.",
           "Replay SAT witnesses against the original mathematical claim.",
           "Name checked evidence for each UNSAT claim or keep the proof gap explicit."
         ]
@@ -3515,6 +3521,12 @@
           "notes": "Finite prefix and bounded epsilon-N checks for convergence-shaped claims."
         },
         {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Finite monotone-prefix, finite supremum, and tail-gap checks for monotone-convergence shadows."
+        },
+        {
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
@@ -3707,6 +3719,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/sequence-limit-shadow-v0",
           "notes": "Bounded epsilon-N and finite Cauchy-tail checks for sequence-limit shadows."
+        },
+        {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Finite monotone-prefix and bad upper-bound checks for monotone-convergence shadows."
         }
       ],
       "proof_routes": [
@@ -9094,6 +9112,12 @@
           "notes": "Exact Affine Geometry Checks"
         },
         {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Bounded Monotone Sequence Checks"
+        },
+        {
           "id": "calculus-algebraic-shadow-v0",
           "status": "validated",
           "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
@@ -9726,6 +9750,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
           "notes": "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."
+        },
+        {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Bounded Monotone Sequence Checks"
         },
         {
           "id": "finite-compactness-v0",

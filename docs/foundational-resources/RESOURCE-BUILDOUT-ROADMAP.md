@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 87 non-template math example packs.
-- 437 expected checks.
-- 207 checked proof/evidence rows.
-- 180 replay-only rows.
-- 50 Lean-horizon rows.
-- 87 promoted solver-reuse packs.
+- 88 non-template math example packs.
+- 442 expected checks.
+- 208 checked proof/evidence rows.
+- 183 replay-only rows.
+- 51 Lean-horizon rows.
+- 88 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -603,6 +603,7 @@ Current packs:
 - `reals-rcf-shadow-v0`
 - `real-analysis-rational-v0`
 - `sequence-limit-shadow-v0`
+- `bounded-monotone-sequence-v0`
 - `metric-continuity-v0`
 - `calculus-algebraic-shadow-v0`
 - `calculus-riemann-sum-v0`
@@ -621,9 +622,10 @@ Build next:
 - Add concept rows for rational interval, sequence tail, Cauchy shadow,
   squeeze shadow, derivative identity, and integration horizon.
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
-- Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row tied to
-  the source QF_LRA/Farkas artifact, and keep general convergence and Cauchy
-  completeness in the Lean-horizon lane.
+- Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row and
+  `bounded-monotone-sequence-v0`'s bad upper-bound row tied to source
+  QF_LRA/Farkas artifacts, and keep general convergence, Cauchy completeness,
+  and monotone convergence in the Lean-horizon lane.
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
   Lean-horizon lane.
@@ -1159,7 +1161,10 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas`.
-33. Landed: promote `multivariable-calculus-rational-v0` through a
+33. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix
+    replay, finite prefix supremum replay, finite tail-gap replay, and a
+    source-linked QF_LRA/Farkas regression for `bad-upper-bound-rejected`.
+34. Landed: promote `multivariable-calculus-rational-v0` through a
     source-linked QF_LRA/Farkas regression for `bad-gradient-rejected`. The
     artifact
     `artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`

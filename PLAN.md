@@ -115,7 +115,7 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 87 existing math packs,
+The current execution ledger for stabilizing the 88 existing math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
@@ -169,6 +169,10 @@ complement, monotonicity, subadditivity, product-table, marginal, finite
 Fubini-style sum, and simple-function integral replay queryable while keeping
 Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
+The sequence/real-analysis lane now also splits bounded monotone sequence
+checks into a focused pack: finite monotone-prefix replay, finite prefix
+supremum, finite tail-gap replay, and checked QF_LRA/Farkas rejection of a bad
+upper-bound row, while the monotone convergence theorem remains Lean-horizon.
 The optimization/convexity bridge rows now make exact LP feasibility,
 objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
 monotonicity, gradient replay, Hessian-minor witnesses, and least-squares
@@ -397,7 +401,7 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **87 promoted solver-reuse
+the foundational resource dashboards now report **88 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest bounded-dynamics bad invariant-bound QF_LRA/Farkas promotion,
 complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
@@ -406,6 +410,7 @@ coordinate-geometry bad squared-distance QF_LRA/Farkas promotion,
 incidence-geometry bad point-on-line QF_LRA/Farkas promotion,
 rigid-configuration bad distance-table QF_LRA/Farkas promotion,
 finite-measure-monotonicity bad subset-measure QF_LRA/Farkas promotion,
+bounded-monotone-sequence bad upper-bound QF_LRA/Farkas promotion,
 finite-topology missing-empty-set Bool/CNF DRAT/LRAT promotion,
 finite-measure bad-complement QF_LRA/Farkas promotion,
 real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas

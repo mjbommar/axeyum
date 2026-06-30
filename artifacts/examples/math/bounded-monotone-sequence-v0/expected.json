@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "pack_id": "bounded-monotone-sequence-v0",
+  "witnesses": [
+    {
+      "id": "rational-monotone-prefix",
+      "description": "A finite prefix of a_n = n/(n+1), bounded above by 1.",
+      "values": {
+        "upper_bound": "1",
+        "values": ["0", "1/2", "2/3", "3/4", "4/5", "5/6", "6/7"],
+        "prefix_supremum": "6/7",
+        "argmax_index": 6
+      }
+    },
+    {
+      "id": "bounded-tail-gap",
+      "description": "A finite tail of a_n = n/(n+1) whose gap to 1 is below 1/4.",
+      "values": {
+        "limit": "1",
+        "epsilon": "1/4",
+        "start_index": 4,
+        "horizon": 8,
+        "values": ["0", "1/2", "2/3", "3/4", "4/5", "5/6", "6/7", "7/8", "8/9"],
+        "max_tail_gap": "1/5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "monotone-upper-bound-prefix",
+      "claim": "The listed finite prefix is strictly increasing and bounded above by 1.",
+      "expected_result": "sat",
+      "validation": "finite_monotone_prefix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-monotone-prefix"],
+      "notes": "The validator checks a_n = n/(n+1), adjacent strict inequalities, and every upper-bound inequality."
+    },
+    {
+      "id": "finite-prefix-supremum",
+      "claim": "The displayed finite prefix supremum is 6/7 at index 6.",
+      "expected_result": "sat",
+      "validation": "finite_sequence_supremum_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-monotone-prefix"],
+      "notes": "The validator recomputes the maximum over the listed finite prefix."
+    },
+    {
+      "id": "tail-gap-below-epsilon",
+      "claim": "For n = 4..8, the listed values are within 1/4 of the limit 1.",
+      "expected_result": "sat",
+      "validation": "bounded_tail_gap_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["bounded-tail-gap"],
+      "notes": "The validator checks a_n = n/(n+1) and recomputes the largest listed tail gap as 1/5."
+    },
+    {
+      "id": "bad-upper-bound-rejected",
+      "claim": "The finite prefix is bounded above by 5/6.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_monotone_upper_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rational-monotone-prefix",
+        "claimed_upper_bound": "5/6",
+        "witness_index": 6,
+        "witness_value": "6/7",
+        "smt2_artifact": "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The validator replays the finite prefix to compute a_6 = 6/7; the source artifact checks that 6/7 <= 5/6 is impossible through QF_LRA/Farkas evidence."
+    },
+    {
+      "id": "monotone-convergence-lean-horizon",
+      "claim": "The general monotone convergence theorem for bounded monotone real sequences requires future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "every bounded monotone sequence of real numbers converges to its supremum",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows check only listed prefixes and finite tail gaps; completeness and quantified convergence remain proof-assistant territory."
+    }
+  ]
+}

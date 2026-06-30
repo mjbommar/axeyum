@@ -36,12 +36,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 87 non-template math packs.
-- 437 expected checks.
-- 207 checked proof/evidence rows.
-- 180 replay-only rows.
-- 50 Lean-horizon rows.
-- 87 promoted solver-reuse packs.
+- 88 non-template math packs.
+- 442 expected checks.
+- 208 checked proof/evidence rows.
+- 183 replay-only rows.
+- 51 Lean-horizon rows.
+- 88 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -84,7 +84,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Existing 87 Packs
+### Wave 1: Stabilize The Existing 88 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -241,7 +241,7 @@ Exit criteria:
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
 | `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization now has a QF_LRA/Farkas discriminant regression |
-| `sequences-and-limits` | deepen | bounded Cauchy-tail no-counterexample now has a QF_LRA/Farkas regression; convergence theorem stays Lean horizon |
+| `sequences-and-limits` | deepen | bounded Cauchy-tail and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes and route-specific regression back-links |
@@ -268,11 +268,14 @@ Pick one row per commit unless the change is purely navigational.
    integral QF_LRA/Farkas artifact and route regression.
 7. Landed: promote `sequence-limit-shadow-v0` through a source-linked bounded
    Cauchy-tail QF_LRA/Farkas artifact and route regression.
-8. Landed: promote `multivariable-calculus-rational-v0` through a source-linked
+8. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix,
+   finite supremum, finite tail-gap replay, a checked bad upper-bound
+   QF_LRA/Farkas artifact, and a monotone-convergence Lean-horizon row.
+9. Landed: promote `multivariable-calculus-rational-v0` through a source-linked
    bad-gradient QF_LRA/Farkas artifact and route regression.
-9. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
+10. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
    false-derivative QF_LRA/Farkas artifact and route regression.
-10. Landed: promote `complex-plane-transforms-v0` through a source-linked
+11. Landed: promote `complex-plane-transforms-v0` through a source-linked
    bad unit-square real-part QF_LRA/Farkas artifact and route regression.
 11. Landed: promote `induction-obligations-v0` through a source-linked bounded
    bad-step count QF_LIA arithmetic-DPLL artifact and route regression.

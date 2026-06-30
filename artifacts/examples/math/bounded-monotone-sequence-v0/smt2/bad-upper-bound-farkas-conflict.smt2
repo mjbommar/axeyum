@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const witness_value Real)
+(declare-const claimed_upper_bound Real)
+(assert (= witness_value (/ 6 7)))
+(assert (= claimed_upper_bound (/ 5 6)))
+(assert (<= witness_value claimed_upper_bound))
+(check-sat)

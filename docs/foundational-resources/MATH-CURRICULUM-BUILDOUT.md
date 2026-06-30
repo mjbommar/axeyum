@@ -222,7 +222,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection with QF_LRA/Farkas evidence, coefficient extraction, and finite convolution. |
-| `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
+| `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, finite monotone-prefix/supremum/tail-gap replay, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, finite cycle/sign replay, finite orbit counting, Burnside fixed-point averages, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
 | `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, exact rational inner products, Gram matrices, projections, Gram-Schmidt replay, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, and Hessians. |
@@ -515,7 +515,10 @@ Lean-horizon row.
 `sequence-limit-shadow-v0` now validates finite epsilon-tail replay, finite
 limit-counterexample replay, monotone bounded prefix replay, a fixed geometric
 partial-sum identity, a bounded Cauchy-tail no-counterexample row, and a
-general convergence Lean-horizon row. `calculus-algebraic-shadow-v0` now
+general convergence Lean-horizon row. `bounded-monotone-sequence-v0` now
+validates finite monotone-prefix replay, finite prefix supremum replay, finite
+tail-gap replay, checked QF_LRA/Farkas rejection of a false upper-bound row,
+and a monotone-convergence Lean-horizon row. `calculus-algebraic-shadow-v0` now
 validates polynomial derivative coefficient replay, a checked product-rule
 polynomial identity, tangent-line replay, convex quadratic critical-point
 replay, false derivative rejection, and a general calculus Lean-horizon row.
@@ -619,7 +622,10 @@ Recommended order:
 18. `sequence-limit-shadow-v0` (landed): bounded epsilon-tail replay, finite
     counterexamples, monotone bounded prefixes, fixed geometric partial sums,
     and general convergence Lean-horizon metadata.
-19. `calculus-algebraic-shadow-v0` (landed),
+19. `bounded-monotone-sequence-v0` (landed): finite monotone-prefix,
+    finite supremum, finite tail-gap replay, checked bad upper-bound
+    QF_LRA/Farkas rejection, and monotone-convergence Lean-horizon metadata.
+20. `calculus-algebraic-shadow-v0` (landed),
     `calculus-riemann-sum-v0` (landed), and
     `multivariable-calculus-rational-v0` (landed): polynomial derivative
     replay, product-rule identity checks, tangent-line replay, critical-point
@@ -1163,9 +1169,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 87 non-template math example packs validate.
+  Status: 88 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 87 non-template packs have at least one `checked` expected-result row.
+  Status: 88 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1595,6 +1601,10 @@ enumeration, and the Boolean CNF/LRAT proof-upgrade route.
 finite epsilon-tail replay, proposed-limit counterexample replay, monotone
 bounded prefix checks, geometric partial sums, finite Cauchy-tail
 enumeration, and the general limit Lean horizon.
+`bounded-monotone-sequence-v0` now has a learner-facing end-to-end lesson for
+finite monotone-prefix replay, finite prefix supremum, finite tail-gap replay,
+checked QF_LRA/Farkas bad upper-bound rejection, and the monotone convergence
+Lean horizon.
 `calculus-algebraic-shadow-v0` and `calculus-riemann-sum-v0` now have a
 combined learner-facing end-to-end lesson for polynomial derivative replay,
 product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
@@ -1675,6 +1685,9 @@ finite linear equation, and its metadata promotes that row for solver reuse.
 same checked Farkas evidence path using the first failed normal equation.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the
 same checked Farkas evidence path using the final output-bound contradiction.
+`bounded-monotone-sequence-v0` now routes its bad upper-bound row through the
+same checked Farkas evidence path after exact finite-prefix replay computes
+`a_6 = 6/7`.
 `polynomial-factorization-rational-v0` now routes its fixed
 irreducible-quadratic discriminant row through the same checked Farkas evidence
 path after exact replay computes `D = -4`.
