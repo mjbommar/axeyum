@@ -133,6 +133,140 @@ Use this view for curriculum navigation, dashboards, or external sites that
 need a field-level readiness summary before drilling into individual packs or
 checks.
 
+For logic and proof, query the Boolean route to keep propositional truth-table
+checks, proof-pattern examples, finite predicate expansion, small CNF
+refutations, and finite graph/coloring refutations grouped while leaving full
+proof-assistant automation, quantified metatheory, and general induction
+schemas in the Lean-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field logic_and_proof \
+  --route boolean \
+  --require-any
+```
+
+Use the atlas lookup for reusable proof-route vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field logic_and_proof \
+  --text proof \
+  --require-any
+```
+
+To display concrete checked logic/proof rows, drill into checked Boolean
+examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field logic_and_proof \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+```
+
+For set theory and foundations, query the Alethe route to keep finite
+relations, functions, quotient maps, lattices, continuous-map preimages,
+finite algebra maps, modules, tensors, and equality-heavy finite structure
+rows grouped while leaving ZFC, ordinals, choice, infinite cardinality, and
+complete-lattice theorems in the proof-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field set_theory_and_foundations \
+  --route Alethe \
+  --require-any
+```
+
+Use atlas lookups for reusable partition and quotient vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field set_theory_and_foundations \
+  --text partition \
+  --require-any
+```
+
+To display concrete checked foundation rows, drill into checked Alethe
+examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field set_theory_and_foundations \
+  --route Alethe \
+  --proof-status checked \
+  --require-any
+```
+
+For discrete math, query the Diophantine route to keep finite counting,
+overlap-additivity, coefficient-convolution, exact tail-count, and finite
+runtime-counter rows grouped while leaving asymptotic enumeration, recurrence
+closed forms, and broad combinatorial theorem families in the proof-horizon
+lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field discrete_math \
+  --route Diophantine \
+  --require-any
+```
+
+Use the finite atlas lookup for recurring finite bijection/cardinality,
+quantifier-expansion, Boolean CNF, and integer-obstruction families:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field discrete_math \
+  --text finite \
+  --require-any
+```
+
+To display concrete checked discrete-math rows, drill into checked
+Diophantine examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field discrete_math \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+```
+
+For probability theory, query the Farkas route to keep finite probability
+mass tables, Bayes tables, product measures, pushforwards, conditional
+expectations, stochastic kernels, finite Markov chains, martingales, hitting
+times, concentration rows, and exact random-matrix moments grouped while
+leaving continuous distributions, stochastic-process limit theorems, and
+asymptotic probability theory in proof-horizon or numerical-honesty lanes:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field probability_theory \
+  --route Farkas \
+  --require-any
+```
+
+Use the atlas lookup for reusable finite-probability vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field probability_theory \
+  --text probability \
+  --require-any
+```
+
+To display concrete checked probability rows, drill into checked Farkas
+examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field probability_theory \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 For a field where the useful finite slice crosses several recent learner pages,
 query the exact-rational route directly:
 
@@ -726,6 +860,17 @@ python3 scripts/query-foundational-resources.py packs --field probability_theory
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field probability_theory --text probability --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field logic_and_proof --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field set_theory_and_foundations --text partition --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field set_theory_and_foundations --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field discrete_math --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field discrete_math --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field discrete_math --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null

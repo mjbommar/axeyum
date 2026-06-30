@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Foundations/discrete/probability consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for logic/proof Boolean readiness,
+  proof-vocabulary lookups, checked proof-pattern/CNF rows, set-theory and
+  foundations Alethe readiness, partition lookups, checked finite
+  relation/function/quotient rows, discrete-math Diophantine readiness,
+  finite-family lookups, checked counting/coefficient/tail-count rows,
+  probability-theory Farkas readiness, probability-table lookups, and checked
+  finite probability/process rows. The smoke check exercises those queries
+  without promoting proof automation, ZFC/infinite set theory, asymptotic
+  combinatorics, continuous probability, stochastic-process limits, or
+  theorem-level probability claims.
+
 - **Analysis/numerical/complex consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for real-analysis Farkas readiness,

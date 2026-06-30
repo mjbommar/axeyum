@@ -384,7 +384,14 @@ Use one row per commit unless the change is purely navigational.
    and operator rows, numerical-analysis bridge vocabulary, real-pair complex
    algebra rows, and complex-analysis bridge vocabulary visible through the
    public JSON contract.
-16. Add future rules/law crosswalk examples only by reusing existing
+16. Landed: add foundations/discrete/probability consumer-query coverage
+   through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making logic/proof Boolean rows,
+   proof vocabulary, set-theory Alethe rows, partition vocabulary,
+   discrete-math Diophantine rows, finite-family vocabulary,
+   probability-theory Farkas rows, and probability-table vocabulary visible
+   through the public JSON contract.
+17. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

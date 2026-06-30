@@ -261,14 +261,17 @@ Build sequence:
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
    atlas concept lookup, and field-level curriculum readiness over the
-   committed JSON data contract. The smoke set now covers probability/Farkas,
+   committed JSON data contract. The smoke set now covers logic/Boolean,
+   set-theory/Alethe, discrete-math/Diophantine, probability/Farkas,
    dynamics/Farkas, topology/Boolean+Alethe, measure/Farkas,
    statistics/Farkas+Diophantine, linear-algebra/Farkas+Alethe,
    abstract-algebra/Alethe+QF_BV, number-theory/Diophantine,
    graph-theory/Boolean, real-analysis/Farkas, numerical-analysis/Farkas,
    complex-analysis/Farkas, optimization/Farkas, geometry/Farkas, and
    functional-analysis/operator Farkas field-readiness examples, plus topology
-   compactness/preimage bridge lookups, measure bridge concept lookup,
+   compactness/preimage bridge lookups, proof-vocabulary lookup, partition
+   bridge lookup, discrete finite-family lookup, probability bridge lookup,
+   measure bridge concept lookup,
    statistics finite-table/tail-count bridge lookups, linear-algebra
    rank/projection bridge lookups, abstract-algebra homomorphism/ideal bridge
    lookups, number-theory finite-family lookup, graph-family lookup,
@@ -280,9 +283,11 @@ Build sequence:
    Farkas/Alethe rows, checked abstract-algebra Alethe/QF_BV rows, checked
    number-theory Diophantine rows, checked graph-theory Boolean rows, checked
    real-analysis Farkas rows, checked numerical-analysis Farkas rows, checked
-   complex-analysis Farkas rows, checked optimization/convexity Farkas rows,
-   checked geometry Farkas rows, and checked functional-analysis/operator
-   Farkas rows.
+   complex-analysis Farkas rows, checked logic/proof Boolean rows, checked
+   set-theory/foundations Alethe rows, checked discrete-math Diophantine rows,
+   checked probability-theory Farkas rows, checked optimization/convexity
+   Farkas rows, checked geometry Farkas rows, and checked
+   functional-analysis/operator Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
@@ -470,7 +475,18 @@ Build sequence:
     bridge lookup, and checked algebraic complex rows without promoting
     completeness, convergence, floating-point stability, holomorphic,
     analytic-continuation, or theorem-level calculus claims.
-52. Revisit crate/repo boundaries only after three real consumers or repeated
+52. Foundations/discrete/probability field-readiness consumer queries now land
+    in [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+    `scripts/check-foundational-resources.sh`, covering logic/proof Boolean
+    readiness, proof-vocabulary lookups, checked proof-pattern/CNF rows,
+    set-theory/foundations Alethe readiness, partition lookups, checked finite
+    relation/function/quotient rows, discrete-math Diophantine readiness,
+    finite-family lookups, checked counting/coefficient/tail-count rows,
+    probability-theory Farkas readiness, probability-table lookups, and checked
+    finite probability/process rows without promoting proof automation,
+    ZFC/infinite set theory, asymptotic combinatorics, continuous probability,
+    stochastic-process limits, or theorem-level probability claims.
+53. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

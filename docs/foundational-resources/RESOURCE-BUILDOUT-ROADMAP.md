@@ -1550,7 +1550,16 @@ Pick one item per commit unless the change is purely navigational.
     readiness, residual/operator bridge lookups, checked exact numerical rows,
     complex-analysis Farkas readiness, real-pair bridge lookup, and checked
     algebraic complex rows.
-84. Continue proof-route promotions or consumer-query examples; revisit the
+84. Landed: add foundations/discrete/probability field-readiness consumer
+    queries through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the
+    foundational smoke check, covering logic/proof Boolean readiness,
+    proof-vocabulary lookups, checked proof-pattern/CNF rows,
+    set-theory/foundations Alethe readiness, partition bridge lookups, checked
+    finite relation/function/quotient rows, discrete-math Diophantine
+    readiness, finite-family lookups, checked counting/coefficient/tail-count
+    rows, probability-theory Farkas readiness, probability-table lookups, and
+    checked finite probability/process rows.
+85. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

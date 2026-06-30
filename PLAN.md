@@ -213,6 +213,17 @@ checked algebraic complex rows. These are smoke-checked through the committed
 JSON contract without promoting completeness, convergence, floating-point
 stability, holomorphic, analytic-continuation, or theorem-level calculus
 claims.
+The public foundational-resource consumer query layer now also exercises the
+foundations/discrete/probability lanes: logic/proof Boolean readiness,
+proof-vocabulary lookups, and checked proof-pattern/CNF rows; set-theory and
+foundations Alethe readiness, partition lookups, and checked finite
+relation/function/quotient/equality rows; discrete-math Diophantine readiness,
+finite-family lookups, and checked counting/coefficient/tail-count rows; and
+probability-theory Farkas readiness, probability-table lookups, and checked
+finite probability/process rows. These are smoke-checked through the committed
+JSON contract without promoting proof automation, ZFC/infinite set theory,
+asymptotic combinatorics, continuous probability, stochastic-process limits,
+or theorem-level probability claims.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
 finite recurrence-prefix, separation/root-finding, KKT, active-set QP, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix
@@ -387,13 +398,15 @@ solver-reuse rows, atlas concept lookup, and curriculum field-readiness
 summaries without importing validators or generators. The latest boundary
 review keeps the foundational resources
 JSON-first and in-repo: promoted solver-reuse rows are consumer-readable through
-the query helper, and the field-readiness smoke set now covers
-probability/Farkas, differential-equations/dynamics Farkas, and measure-theory
-Farkas lanes, with measure also smoke-tested through atlas concept lookup and
-checked-row drill-downs. It now also covers optimization/convexity Farkas field
-readiness, LP-objective and convexity bridge lookups, and checked
-optimization/convexity Farkas rows; there is still no external consumer or
-repeated typed API need that would justify a crate or repo split.
+the query helper, and the field-readiness smoke set now spans all 18 math
+fields: logic/proof, set foundations, discrete math, graph theory, number
+theory, algebra, linear algebra, analysis, topology, measure/probability,
+statistics, optimization, numerical analysis, dynamics, geometry, complex
+analysis, and functional/operator theory. The smoke layer also exercises
+representative bridge lookups and checked-row drilldowns for the active
+Boolean, Alethe, Diophantine, Farkas, and QF_BV routes; there is still no
+external consumer or repeated typed API need that would justify a crate or repo
+split.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs

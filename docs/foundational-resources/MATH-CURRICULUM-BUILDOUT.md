@@ -2055,6 +2055,19 @@ root-finding rows, residual/Euler/operator/recurrence/optimization-step rows,
 and real-pair complex algebra stay visible through the public JSON boundary
 without promoting completeness, convergence, floating-point stability,
 holomorphic, analytic-continuation, or theorem-level calculus claims.
+The consumer query layer now also exposes foundations, discrete-math, and
+probability readiness: `CONSUMER-QUERIES.md` shows logic/proof Boolean field
+summaries, proof-vocabulary lookups, checked proof-pattern/CNF rows,
+set-theory/foundations Alethe field summaries, partition bridge lookups,
+checked finite relation/function/quotient rows, discrete-math Diophantine
+field summaries, finite-family lookups, checked counting/coefficient/tail-count
+rows, probability-theory Farkas field summaries, probability-table bridge
+lookups, and checked finite probability/process row drill-downs. The
+foundational-resource smoke check runs those same queries so the first
+curriculum and finite-probability lanes are visible through the public JSON
+boundary without promoting proof automation, ZFC/infinite set theory,
+asymptotic combinatorics, continuous probability, stochastic-process limits, or
+theorem-level probability claims.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

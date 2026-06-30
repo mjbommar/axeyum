@@ -622,6 +622,17 @@ Pick one row per commit unless the change is purely navigational.
     visible through the committed JSON contract without promoting
     completeness, convergence, floating-point stability, holomorphic,
     analytic-continuation, or theorem-level calculus claims.
+73. Landed: add foundations/discrete/probability field-readiness consumer query
+    coverage. `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now
+    exercise logic/proof Boolean field readiness, proof-vocabulary lookups,
+    checked proof-pattern/CNF rows, set-theory/foundations Alethe field
+    readiness, partition bridge lookups, checked finite
+    relation/function/quotient rows, discrete-math Diophantine field
+    readiness, finite-family lookups, checked counting/coefficient/tail-count
+    rows, probability-theory Farkas field readiness, probability-table
+    lookups, and checked finite probability/process rows, making those early
+    curriculum and probability lanes visible through the committed JSON
+    contract without promoting theorem-horizon claims.
 
 ## Validation Checklist
 
