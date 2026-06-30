@@ -148,8 +148,8 @@ schemas, examples, and validation workflows.
   compactness Lean-horizon row.
 - [`artifacts/examples/math/finite-connectedness-v0/`](../../artifacts/examples/math/finite-connectedness-v0/)
   validates finite connectedness via clopen-subset enumeration, open
-  separations, bad-connected-claim rejection, and a connectedness Lean-horizon
-  row.
+  separations, checked Bool/CNF bad-connected-claim rejection, and a
+  connectedness Lean-horizon row.
 - [`artifacts/examples/math/finite-continuous-maps-v0/`](../../artifacts/examples/math/finite-continuous-maps-v0/)
   validates finite continuity by open-set preimage enumeration, finite
   homeomorphism replay, bad-continuity and bad-homeomorphism rejection, and a

@@ -895,8 +895,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The `math_resource_boolean_routes` regression checks the one-variable
   contradiction `c_covered = false` and `c_covered = true` by emitting DRAT,
   elaborating to LRAT, and independently checking both proof objects. The pack
-  metadata marks `solver_reuse.status` as `promoted`; generated resource
-  summary now reports `solver_reuse=promoted:13,unclassified:71`.
+  metadata marks `solver_reuse.status` as `promoted`.
+
+- **Finite-connectedness Boolean proof promotion landed.**
+  [`finite-connectedness-v0`](artifacts/examples/math/finite-connectedness-v0/)
+  now has a source-linked DIMACS artifact for the bad connectedness row:
+  [`bad-connected-claim-rejected.cnf`](artifacts/examples/math/finite-connectedness-v0/cnf/bad-connected-claim-rejected.cnf).
+  The `math_resource_boolean_routes` regression checks the one-variable
+  contradiction `no_nontrivial_clopen = false` and
+  `no_nontrivial_clopen = true` by emitting DRAT, elaborating to LRAT, and
+  independently checking both proof objects. The pack metadata marks
+  `solver_reuse.status` as `promoted`; generated resource summary now reports
+  `solver_reuse=promoted:14,unclassified:70`.
 
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)

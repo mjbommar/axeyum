@@ -20,11 +20,13 @@ Concept rows:
 | `finite-connected-space-witness` | `sat` | replay-only |
 | `finite-disconnected-separation-witness` | `sat` | replay-only |
 | `clopen-subset-disconnection-witness` | `sat` | replay-only |
-| `bad-connected-claim-rejected` | `unsat` | checked |
+| `bad-connected-claim-rejected` | `unsat` | checked Bool/CNF DRAT/LRAT |
 | `general-connectedness-lean-horizon` | `not-run` | lean-horizon |
 
-Every checked row is finite enumeration over explicit open-set families. The
-pack does not prove connected-image theorems, interval connectedness,
+Every checked row starts from finite enumeration over explicit open-set
+families. The bad-connectedness row additionally isolates the final Boolean
+contradiction in a DIMACS artifact and checks emitted DRAT/LRAT proof objects.
+The pack does not prove connected-image theorems, interval connectedness,
 path-connectedness, or general topological connectedness.
 
 ## Replay A Connected Finite Space
@@ -110,6 +112,18 @@ counterexample_clopen = {a}
 Because `{a}` is nonempty, not the whole universe, and clopen, it refutes the
 connectedness claim by finite enumeration.
 
+The source-linked CNF artifact then checks the final Boolean contradiction:
+
+```text
+variable 1 = no non-trivial clopen subset exists
+topology facts: not 1
+false connectedness claim: 1
+```
+
+Axeyum emits a DRAT refutation, elaborates it to LRAT, and independently checks
+both proof objects. The topology enumeration is still the source-level check;
+the CNF proof checks the isolated Boolean contradiction.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -140,6 +154,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -153,12 +168,12 @@ validated 1 foundational example pack(s)
 This lesson shows Axeyum's current finite connectedness resource pattern:
 
 ```text
-untrusted fast search -> connectedness, separation, or clopen-subset row
-trusted small checking -> finite subset enumeration and open-set lookup
+untrusted fast search -> connectedness, separation, clopen-subset, or CNF row
+trusted small checking -> finite subset enumeration, open-set lookup, DRAT/LRAT checks
 remaining horizon -> general connectedness theorems
 ```
 
 The graduation target is to encode finite connectedness as deterministic
 clopen-subset and open-separation checks, replay finite witnesses through
-Axeyum model evaluation, and emit checked enumeration evidence for rejected
-connectedness claims.
+Axeyum model evaluation, and emit checked Bool/CNF evidence for source-level
+obvious rejected connectedness claims.

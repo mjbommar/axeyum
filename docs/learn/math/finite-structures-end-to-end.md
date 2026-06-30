@@ -26,7 +26,7 @@ Concept rows:
 | `minimal-subcover-size-witness` | `sat` | checked |
 | `bad-open-cover-rejected` | `unsat` | checked |
 | `finite-connected-space-witness` | `sat` | replay-only |
-| `bad-connected-claim-rejected` | `unsat` | checked |
+| `bad-connected-claim-rejected` | `unsat` | checked Bool/CNF DRAT/LRAT |
 | `finite-continuous-map-witness` | `sat` | replay-only |
 | `bad-continuous-map-rejected` | `unsat` | checked |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |

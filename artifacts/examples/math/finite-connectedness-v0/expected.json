@@ -77,9 +77,12 @@
           ["b"],
           ["a", "b"]
         ],
-        "counterexample_clopen": ["a"]
+        "counterexample_clopen": ["a"],
+        "cnf_artifact": "artifacts/examples/math/finite-connectedness-v0/cnf/bad-connected-claim-rejected.cnf",
+        "boolean_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat",
+        "certificate": "solve_with_drat_proof emits a DRAT refutation for no_nontrivial_clopen = false and no_nontrivial_clopen = true, elaborate_drat_to_lrat emits LRAT, and check_drat/check_lrat independently recheck both proof objects"
       },
-      "notes": "The validator rejects the connectedness claim by recomputing the non-trivial clopen subset {a}."
+      "notes": "The validator rejects the connectedness claim by recomputing the non-trivial clopen subset {a}. The DIMACS artifact isolates the false no-nontrivial-clopen claim, and Axeyum emits checked DRAT/LRAT evidence."
     },
     {
       "id": "general-connectedness-lean-horizon",

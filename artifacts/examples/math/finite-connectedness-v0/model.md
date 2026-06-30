@@ -45,3 +45,15 @@ that the space is disconnected.
 The false claim says the two-point discrete topology is connected. The checker
 rejects it by recomputing the non-trivial clopen subset `{a}` and the induced
 separation `{a}`, `{b}`.
+
+The checked CNF artifact isolates the last contradiction:
+
+```text
+variable 1 = "no non-trivial clopen subset exists"
+topology facts imply not 1
+false connectedness claim implies 1
+```
+
+The graph of the topology and the clopen subset are still checked at the source
+level by the pack validator; the CNF proof checks only the final Boolean
+contradiction.

@@ -27,9 +27,19 @@
     "finite sets",
     "finite topology",
     "Bool / enumeration",
+    "Bool / CNF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite connectedness bad connected-claim Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Finite connectedness row where the fixed discrete topology has a non-trivial clopen subset {a}, but the false connectedness claim denies any non-trivial clopen subset.",
+    "evidence": [
+      "bad-connected-claim-rejected"
+    ],
+    "next_step": "Promote additional topology rows only when the Boolean encoding adds distinct finite set/topology pressure; keep arbitrary connectedness, interval connectedness, and path-connectedness theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -37,7 +47,10 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-connectedness-v0/cnf/bad-connected-claim-rejected.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "finite-connected-space-witness",
@@ -49,7 +62,7 @@
   "graduation_criteria": [
     "Encode finite connectedness as deterministic clopen-subset and open-separation checks.",
     "Replay finite connected and disconnected witnesses through Axeyum model evaluation over finite topological spaces.",
-    "Emit checked finite enumeration evidence for rejected connectedness claims.",
+    "Emit checked finite enumeration evidence for rejected connectedness claims; the bad-connectedness row now has checked Bool/CNF DRAT/LRAT evidence.",
     "Keep connected-image, interval-connectedness, path-connectedness, and general connectedness theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

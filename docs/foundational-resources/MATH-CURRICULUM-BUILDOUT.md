@@ -685,7 +685,8 @@ finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and a
 compactness Lean-horizon row.
 `artifacts/examples/math/finite-connectedness-v0/` now validates finite
 connectedness by clopen-subset enumeration, open-separation replay, checked
-rejection of a false connectedness claim, and a connectedness Lean-horizon row.
+Bool/CNF rejection of a false connectedness claim, and a connectedness
+Lean-horizon row.
 `artifacts/examples/math/finite-continuous-maps-v0/` now validates finite
 continuity by open-set preimage enumeration, finite homeomorphism replay,
 checked rejection of false continuity and homeomorphism claims, and a
@@ -840,7 +841,8 @@ Recommended order:
     enumeration, finite-intersection families, and checked Bool/CNF bad-cover
     rejection.
 21. `finite-connectedness-v0`: finite connected spaces, open separations,
-    clopen-subset enumeration, and bad-connected-claim rejection.
+    clopen-subset enumeration, and checked Bool/CNF bad-connected-claim
+    rejection.
 22. `finite-continuous-maps-v0`: finite topological continuity, open-set
     preimages, homeomorphism replay, and bad-map rejection.
 23. `finite-simplicial-homology-v0`: finite simplicial-complex closure,
@@ -1180,8 +1182,9 @@ epsilon-delta and open-ball preimage bridge for analysis/topology learners.
 `finite-compactness-v0` now adds the finite open-cover/subcover and
 finite-intersection bridge to the compactness horizon.
 `finite-connectedness-v0` now adds the finite clopen-subset/open-separation
-bridge to the connectedness horizon. `finite-continuous-maps-v0` now adds the
-finite preimage/homeomorphism bridge connecting continuity to compactness and
+bridge to the connectedness horizon, with checked Bool/CNF evidence for the
+bad connectedness row. `finite-continuous-maps-v0` now adds the finite
+preimage/homeomorphism bridge connecting continuity to compactness and
 connectedness horizons. `finite-simplicial-homology-v0` now adds the exact
 finite algebraic-topology bridge: simplicial closure, oriented boundaries,
 `boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, a checked

@@ -167,7 +167,9 @@ clopen_subsets = {}, {0,1}
 The `finite-connectedness-v0` validator enumerates every finite subset,
 recomputes clopen subsets, checks that the Sierpinski example has no open
 separation, and rejects a false connectedness claim for the two-point discrete
-topology.
+topology. The upgraded bad-connectedness row also routes the final contradiction
+"a non-trivial clopen subset exists" versus "no non-trivial clopen subset
+exists" through checked DRAT/LRAT evidence.
 
 For a finite continuous-map shadow, encode domain and codomain topologies plus
 a total map:

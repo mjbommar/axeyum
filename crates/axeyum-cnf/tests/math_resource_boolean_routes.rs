@@ -21,6 +21,9 @@ const FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF: &str = include_str!(
 const FINITE_COMPACTNESS_BAD_OPEN_COVER: &str = include_str!(
     "../../../artifacts/examples/math/finite-compactness-v0/cnf/bad-open-cover-rejected.cnf"
 );
+const FINITE_CONNECTEDNESS_BAD_CONNECTED_CLAIM: &str = include_str!(
+    "../../../artifacts/examples/math/finite-connectedness-v0/cnf/bad-connected-claim-rejected.cnf"
+);
 const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
     include_str!("../../../artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf");
 const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
@@ -104,6 +107,16 @@ fn finite_compactness_bad_open_cover_emits_checked_drat_and_lrat() {
     assert_unsat_resource_cnf_checks(
         "finite-compactness-v0 bad-open-cover-rejected",
         FINITE_COMPACTNESS_BAD_OPEN_COVER,
+        1,
+        2,
+    );
+}
+
+#[test]
+fn finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "finite-connectedness-v0 bad-connected-claim-rejected",
+        FINITE_CONNECTEDNESS_BAD_CONNECTED_CLAIM,
         1,
         2,
     );

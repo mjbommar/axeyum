@@ -1,0 +1,7 @@
+c finite-connectedness-v0 bad-connected-claim-rejected
+c variable 1: no nontrivial clopen subset exists in the discrete two-point topology
+c fixed topology facts: {a} is nonempty, proper, open, and has open complement {b}
+c false connectedness claim: every clopen subset is trivial
+p cnf 1 2
+-1 0
+1 0

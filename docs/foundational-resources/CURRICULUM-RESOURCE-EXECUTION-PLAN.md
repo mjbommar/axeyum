@@ -395,6 +395,9 @@ Next buildout:
    `number-theory-v0` now adds
    `artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_bv_routes.rs`.
+   `finite-connectedness-v0` now adds
+   `artifacts/examples/math/finite-connectedness-v0/cnf/bad-connected-claim-rejected.cnf`,
+   checked from `crates/axeyum-cnf/tests/math_resource_boolean_routes.rs`.
    `finite-chebyshev-systems-v0` now adds
    `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_lra_routes.rs`.

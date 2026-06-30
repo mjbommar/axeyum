@@ -25,7 +25,7 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 5 | Boolean refutations that should carry checked CNF proof objects. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 6 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 24 | Exact rational infeasibility and linear inequality obligations. |
@@ -103,12 +103,17 @@ First targets:
   (solver-reuse promotion landed for `bad-open-cover-rejected`: source-linked
   finite open-cover DIMACS artifact, DRAT emission, LRAT elaboration, and
   independent checks)
+- [finite-connectedness-v0](../../artifacts/examples/math/finite-connectedness-v0/)
+  (solver-reuse promotion landed for `bad-connected-claim-rejected`:
+  source-linked finite connectedness DIMACS artifact, DRAT emission, LRAT
+  elaboration, and independent checks)
 
 Secondary targets:
 
-- topology/set-family Boolean rows are now represented by finite compactness;
-  pick the next topology CNF target only when the finite set-family encoding is
-  still source-level obvious and not better expressed as finite replay.
+- topology/set-family Boolean rows are now represented by finite compactness
+  and finite connectedness; pick the next topology CNF target only when the
+  finite set-family encoding is still source-level obvious and not better
+  expressed as finite replay.
 
 Expected artifact:
 
@@ -131,6 +136,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 ./scripts/check-foundational-resources.sh
 ```
 

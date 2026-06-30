@@ -11637,6 +11637,19 @@ def validate_finite_connectedness(expected: dict[str, Any]) -> None:
         fail("bad-connected-claim-rejected counterexample is not clopen")
     if not topology_separations(universe, open_sets):
         fail("bad-connected-claim-rejected topology unexpectedly has no separation")
+    cnf_artifact = data.get("cnf_artifact")
+    require_string("bad connected cnf_artifact", cnf_artifact)
+    check_source("bad connected cnf_artifact", cnf_artifact)
+    if cnf_artifact != "artifacts/examples/math/finite-connectedness-v0/cnf/bad-connected-claim-rejected.cnf":
+        fail("bad-connected-claim-rejected cnf_artifact must name the checked DIMACS artifact")
+    regression = data.get("boolean_regression")
+    require_string("bad connected boolean_regression", regression)
+    if "finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat" not in regression:
+        fail("bad-connected-claim-rejected must link the Boolean proof-route regression")
+    certificate = data.get("certificate")
+    require_string("bad connected certificate", certificate)
+    if not all(token in certificate for token in ("DRAT", "LRAT", "check_drat", "check_lrat")):
+        fail("bad-connected-claim-rejected certificate must document checked DRAT/LRAT evidence")
 
     horizon = checks["general-connectedness-lean-horizon"]
     if horizon["expected_result"] != "not-run":

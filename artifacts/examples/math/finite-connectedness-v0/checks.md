@@ -28,6 +28,11 @@ Expected result: `unsat`.
 The validator recomputes the non-trivial clopen subset `{a}` in the discrete
 topology and rejects the connectedness claim.
 
+The resource-backed Axeyum regression checks the final false-connectedness
+contradiction as `Bool/CNF`: variable `1` means "no non-trivial clopen subset
+exists"; the fixed topology facts assert `not 1`, the false connectedness claim
+asserts `1`, and DRAT/LRAT proof objects are independently checked.
+
 ## `general-connectedness-lean-horizon`
 
 Expected result: `not-run`.

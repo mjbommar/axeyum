@@ -118,16 +118,16 @@ The first structured solver-reuse batch is now fully promoted from R4 candidate
 rows into source-linked regression artifacts with pack back-links.
 `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,
 `graph-reachability-v0`, `graph-cut-v0`, `graph-d-separation-v0`,
-`finite-compactness-v0`, `graph-search-runtime-v0`, `integer-lia-v0`,
-`natural-arithmetic-v0`, and `number-theory-v0` are the first promoted packs
-from that batch:
+`finite-compactness-v0`, `finite-connectedness-v0`,
+`graph-search-runtime-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
+`number-theory-v0` are the first promoted packs from that batch:
 `tiny-cnf-refutation`,
 `no-injection-four-to-three`, `triangle-no-perfect-matching`,
 `disconnected-no-path`, `one-edge-cut-rejected`, and
 `chain-conditioned-blocks` now have source-linked DIMACS artifacts; topology's
-`bad-open-cover-rejected` now does too. The Boolean
-`math_resource_boolean_routes` regression checks emitted DRAT and LRAT proof
-objects, while
+`bad-open-cover-rejected` and `bad-connected-claim-rejected` now do too. The
+Boolean `math_resource_boolean_routes` regression checks emitted DRAT and LRAT
+proof objects, while
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA
@@ -181,9 +181,10 @@ finite-rings bad distributivity row, the finite-fields composite no-inverse row,
 and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
 number theory now promoted for the modulo-7 quadratic nonresidue row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
-and graph search runtime and natural arithmetic now contribute checked
-arithmetic-DPLL regressions for bad finite DFS cost and bounded-natural
-negativity; prefer the next
+finite connectedness now contributes checked DRAT/LRAT evidence for a bad
+connectedness row, and graph search runtime and natural arithmetic now
+contribute checked arithmetic-DPLL regressions for bad finite DFS cost and
+bounded-natural negativity; prefer the next
 proof-frontier lane or equality-heavy pack that can carry a small checked
 certificate and a resource-backed regression.
 
