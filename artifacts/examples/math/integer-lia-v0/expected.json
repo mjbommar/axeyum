@@ -96,9 +96,12 @@
       "proof_status": "checked",
       "data": {
         "coefficients": [2, 4],
-        "target": 3
+        "target": 3,
+        "smt2_artifact": "artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes integer_lia_diophantine_gcd_obstruction_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check; the certificate records gcd(2,4) does not divide 3"
       },
-      "notes": "The validator checks gcd(2,4) = 2 and 2 does not divide 3."
+      "notes": "The validator checks gcd(2,4) = 2 and 2 does not divide 3. The SMT-LIB artifact encodes 2*x + 4*y = 3, and Axeyum emits a Diophantine certificate for the divisibility obstruction."
     }
   ]
 }

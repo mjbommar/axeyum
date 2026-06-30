@@ -60,8 +60,9 @@ z >= 5 and z <= 2
 ```
 
 The `integer-lia-v0` validator replays the SAT rows and rejects the impossible
-interval and `2*x + 4*y = 3` by exact integer checks. For gcd and divisibility,
-encode the integer witness directly:
+interval by exact integer checks. Its `2*x + 4*y = 3` row now also emits a
+checked QF_LIA/Diophantine certificate through the shared LIA resource
+regression. For gcd and divisibility, encode the integer witness directly:
 
 ```text
 gcd(252, 198) = 18

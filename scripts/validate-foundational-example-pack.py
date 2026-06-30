@@ -6605,6 +6605,21 @@ def validate_integer_lia(expected: dict[str, Any]) -> None:
         fail("diophantine-gcd-obstruction coefficients must not all be zero")
     if target % coefficient_gcd == 0:
         fail("diophantine-gcd-obstruction data is satisfiable by the gcd criterion")
+    if coefficients != [2, 4] or target != 3 or coefficient_gcd != 2:
+        fail("diophantine-gcd-obstruction solver promotion is fixed to 2*x + 4*y = 3")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("integer-lia gcd smt2_artifact", smt2_artifact)
+    check_source("integer-lia gcd smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2":
+        fail("diophantine-gcd-obstruction smt2_artifact must name the checked QF_LIA artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("integer-lia gcd proof_regression", proof_regression)
+    if "integer_lia_diophantine_gcd_obstruction_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("diophantine-gcd-obstruction proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("integer-lia gcd certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("diophantine-gcd-obstruction certificate must document checked Diophantine evidence")
 
 
 def require_natural(context: str, value: Any) -> int:

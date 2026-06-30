@@ -64,3 +64,9 @@ The fixed false claim is that integers `x,y` satisfy:
 
 The validator checks the exact GCD obstruction: `gcd(2,4) = 2` and `2` does
 not divide `3`.
+
+The promoted solver artifact is
+`artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2`.
+The shared LIA resource regression parses that `QF_LIA` fixture, requires
+`Evidence::UnsatDiophantine`, and independently rechecks the certificate with
+`Evidence::check`.

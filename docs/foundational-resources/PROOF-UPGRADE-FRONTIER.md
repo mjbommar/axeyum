@@ -288,6 +288,9 @@ First targets:
 - [induction-patterns-v0](../../artifacts/examples/math/induction-patterns-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the finite
   even-product parity obstruction)
+- [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the
+  `2*x + 4*y = 3` gcd divisibility obstruction)
 
 Related checked integer-arithmetic solver-reuse promotion:
 
@@ -298,7 +301,6 @@ Related checked integer-arithmetic solver-reuse promotion:
 
 Reference packs already on the route:
 
-- [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
 - [gcd-bezout-v0](../../artifacts/examples/math/gcd-bezout-v0/)
 - [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
 

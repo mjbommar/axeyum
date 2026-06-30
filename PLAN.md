@@ -111,12 +111,12 @@ The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
 now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
 solver-reuse candidates visible without hand-maintained scans.
 The first structured solver-reuse candidate batch is also tagged in pack
-metadata for integer LIA, bounded natural arithmetic, and bounded number
-theory; these remain R4 until promoted to actual regression or fuzz artifacts
-with pack back-links.
+metadata for bounded natural arithmetic and bounded number theory; these remain
+R4 until promoted to actual regression or fuzz artifacts with pack back-links.
 `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,
 `graph-reachability-v0`, `graph-cut-v0`, `graph-d-separation-v0`, and
-`graph-search-runtime-v0` are the first promoted packs from that batch:
+`graph-search-runtime-v0`, and `integer-lia-v0` are the first promoted packs
+from that batch:
 `tiny-cnf-refutation`,
 `no-injection-four-to-three`, `triangle-no-perfect-matching`,
 `disconnected-no-path`, `one-edge-cut-rejected`, and
@@ -124,7 +124,8 @@ with pack back-links.
 Boolean `math_resource_boolean_routes` regression checks emitted DRAT and LRAT
 proof objects, while `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
-regression.
+regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA
+artifact checked by the `math_resource_lia_routes` Diophantine regression.
 The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
@@ -144,11 +145,12 @@ tail-count row, with finite simplicial homology now promoted for its bad
 boundary coefficient and induction patterns promoted for a finite even-product
 parity obstruction. The QF_LIA/Diophantine first-target set is now covered;
 the first secondary statistics margin/count row is now promoted in
-descriptive statistics, and the finite-probability bad-normalization row now
-has a checked QF_LRA/Farkas regression, with finite Markov chains now promoted
-for the bad stochastic-row obstruction and finite hitting times promoted for
-the bad expected-time equation; least-squares regression is now promoted for
-the bad coefficient row, and bounded rational real analysis for the bad
+descriptive statistics, integer LIA is now promoted for its gcd divisibility
+obstruction, and the finite-probability bad-normalization row now has a
+checked QF_LRA/Farkas regression, with finite Markov chains now promoted for
+the bad stochastic-row obstruction and finite hitting times promoted for the
+bad expected-time equation; least-squares regression is now promoted for the
+bad coefficient row, and bounded rational real analysis for the bad
 linear-delta row, with finite conditional expectation now promoted for the bad
 high-block table and finite Euler method now promoted for the bad fixed-step
 transition, and finite probability now promoted for a bad Bayes-posterior

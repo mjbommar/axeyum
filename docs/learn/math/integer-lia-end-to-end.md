@@ -23,7 +23,9 @@ Concept rows:
 | `diophantine-gcd-obstruction` | `unsat` | checked |
 
 The `sat` rows are exact integer witnesses. The `unsat` rows use small trusted
-checks: one bound comparison and one gcd divisibility test.
+checks: one bound comparison and one gcd divisibility test. The GCD row is also
+a solver-backed `QF_LIA` artifact whose `UnsatDiophantine` certificate is
+independently rechecked by the shared LIA resource regression.
 
 ## Replay Signed Order
 
@@ -106,7 +108,17 @@ gcd(2, 4) = 2
 ```
 
 Therefore no integer solution exists. This is the small certificate shape that
-the QF_LIA Diophantine recipe should eventually emit and check.
+the QF_LIA Diophantine recipe emits and checks for this row.
+
+The promoted SMT-LIB artifact keeps the equation in solver form:
+
+```text
+(assert (= (+ (* 2 x) (* 4 y)) 3))
+```
+
+The `math_resource_lia_routes` regression parses that artifact, requires
+`Evidence::UnsatDiophantine`, and rechecks the certificate against the original
+assertion.
 
 ## Name The Lean Horizon
 
@@ -143,5 +155,6 @@ untrusted fast search -> integer witness or infeasibility candidate
 trusted small checking -> exact integer replay, bound comparison, gcd test
 ```
 
-The graduation route is deterministic QF_LIA lowering plus checked integer
-evidence for interval and Diophantine `unsat` rows.
+The GCD obstruction has graduated to deterministic QF_LIA plus checked integer
+evidence. The SAT rows and interval row remain exact finite replay until they
+add distinct solver-regression pressure.

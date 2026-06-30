@@ -29,10 +29,13 @@ accepted only after replaying the listed values against the original claim.
 UNSAT rows are accepted only after checking the fixed interval contradiction or
 the exact GCD non-divisibility criterion.
 
-This pack does not yet emit Axeyum `QF_LIA` terms or proof artifacts. The
-graduation route is to lower these rows to solver-form integer obligations and
-check the resulting integer-prelude evidence, including `UnsatDiophantine` for
-the GCD obstruction.
+The GCD obstruction is also a solver-backed resource. Its SMT-LIB artifact is
+[`smt2/diophantine-gcd-obstruction-conflict.smt2`](smt2/diophantine-gcd-obstruction-conflict.smt2):
+it encodes `2*x + 4*y = 3` as a tiny `QF_LIA` Diophantine contradiction. The
+`math_resource_lia_routes` regression requires Axeyum to emit
+`UnsatDiophantine` evidence and independently re-check the certificate. The
+SAT witness rows and the simple interval contradiction remain exact replay rows
+until they add distinct solver-regression pressure.
 
 Validation:
 

@@ -24,6 +24,9 @@ const INDUCTION_EVEN_PRODUCT_ODD: &str = include_str!(
 const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-contingency-total-diophantine-conflict.smt2"
 );
+const INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
+    "../../../artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
+);
 const GRAPH_SEARCH_BAD_DFS_COST_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2"
 );
@@ -65,6 +68,14 @@ fn descriptive_stats_bad_contingency_total_emits_checked_diophantine_evidence() 
     assert_resource_diophantine(
         "descriptive-statistics-v0 bad contingency total obstruction",
         DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL,
+    );
+}
+
+#[test]
+fn integer_lia_diophantine_gcd_obstruction_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "integer-lia-v0 Diophantine gcd obstruction",
+        INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION,
     );
 }
 

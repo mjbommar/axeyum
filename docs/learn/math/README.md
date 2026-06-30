@@ -92,7 +92,7 @@ validated pack data and the repo-root command that replays it.
   no-counterexample enumeration, and the universal Nat theorem horizon.
 - [Integer Linear Arithmetic](integer-lia-end-to-end.md): follows signed order
   replay, integer ring and linear-equation witnesses, interval infeasibility,
-  and a gcd-based Diophantine refutation.
+  and a checked QF_LIA/Diophantine gcd refutation.
 - [GCD And Bezout](gcd-bezout-end-to-end.md): follows gcd/common-divisor
   replay, Bezout coefficient checking, divisibility quotient replay, and a
   fixed Diophantine gcd obstruction.

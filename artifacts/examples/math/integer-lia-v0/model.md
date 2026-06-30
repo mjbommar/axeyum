@@ -25,3 +25,13 @@ Diophantine unsat: gcd(coefficients) does not divide target
 
 The intended Axeyum route is `QF_LIA`: SAT rows replay integer models directly,
 and UNSAT rows graduate to checked integer-prelude evidence.
+
+The promoted GCD obstruction already takes that route. The source finite row
+records `coefficients = [2, 4]` and `target = 3`; the SMT-LIB artifact encodes:
+
+```text
+exists x y. 2*x + 4*y = 3
+```
+
+The independent certificate check re-derives the fact that `gcd(2,4) = 2` does
+not divide `3`, so no integer model exists.
