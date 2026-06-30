@@ -276,6 +276,7 @@ derivative/Jacobian replay, exact rational inner-product replay,
 finite-field vector-space replay, finite dual-space replay, and finite module
 replay, read
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
+[End To End: Linear Optimization](linear-optimization-end-to-end.md),
 [End To End: Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md),
 [End To End: Rational Convexity](convexity-rational-end-to-end.md),
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),

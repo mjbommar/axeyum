@@ -959,6 +959,9 @@ sigma-algebras, additivity, and event complements.
 The finite topology and finite measure first-principles stories are now also
 split into focused standalone pages, while the combined topology/measure page
 remains the cross-field bridge.
+The exact linear-optimization first-principles story is now also split into a
+focused standalone LP/Farkas page, while the combined linear-system/LP page
+remains the matrix-to-optimization bridge.
 
 Deliverables:
 
@@ -1419,6 +1422,9 @@ proof objects, and same-artifact corrupted-proof rejection.
 `linear-optimization-v0` now has a Farkas certificate anatomy lesson that
 follows the exact LP threshold conflict through source SMT-LIB, emitted
 `UnsatFarkas` evidence, and same-artifact multiplier tamper rejection.
+It now also has a standalone linear-optimization page for exact feasible-point
+replay, objective-threshold replay, checked QF_LRA/Farkas evidence, and
+tampered-certificate rejection.
 `equivalence-classes-v0` now has an Alethe certificate anatomy lesson that
 follows the quotient-map congruence conflict through source SMT-LIB, emitted
 zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof

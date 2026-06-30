@@ -210,7 +210,7 @@ Exit criteria:
 | `measure_theory` | finite measures, product measure, integration, random variables | standalone finite-measure lesson and bad-complement QF_LRA/Farkas row landed; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
-| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | add route notes from LP to Farkas and from Hessians to exact matrix checks | QF_LRA/Farkas, QF_NRA shadows |
+| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | standalone LP/Farkas lesson landed; add only distinct duality, KKT, convexity, gradient, or Hessian pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, affine, orientation/area rational geometry | coordinate geometry now has a checked bad squared-distance row; add only distinct incidence, collinearity, midpoint, or rigid-configuration pressure | QF_LRA/Farkas, finite replay |
@@ -344,6 +344,10 @@ Pick one row per commit unless the change is purely navigational.
    splitting first-principles topology axiom replay and finite
    sigma-algebra/measure replay out of the combined topology/measure bridge
    lesson.
+34. Landed: add standalone linear optimization learner page, splitting exact
+   LP feasible-point replay, objective-threshold replay, checked
+   QF_LRA/Farkas infeasible-threshold evidence, and tamper rejection out of the
+   combined linear-system/LP bridge lesson.
 
 ## Validation Checklist
 

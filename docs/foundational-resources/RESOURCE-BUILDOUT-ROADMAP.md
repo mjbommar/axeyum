@@ -1196,7 +1196,12 @@ Pick one item per commit unless the change is purely navigational.
     follows `finite-measure-v0` through finite sigma-algebra replay, exact
     finite additivity, event complements, and checked QF_LRA/Farkas
     bad-complement rejection.
-41. Continue proof-route promotions or consumer-query examples; revisit the
+41. Landed: add standalone linear optimization learner page.
+    `docs/learn/math/linear-optimization-end-to-end.md` follows
+    `linear-optimization-v0` through exact LP feasible-point replay,
+    objective-threshold replay, checked QF_LRA/Farkas infeasible-threshold
+    evidence, and tampered-certificate rejection.
+42. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

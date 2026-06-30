@@ -191,6 +191,9 @@ validated pack data and the repo-root command that replays it.
   bad-gradient rejection, and the analysis Lean horizon.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
+- [Linear Optimization](linear-optimization-end-to-end.md): follows exact LP
+  feasible-point replay, objective-threshold replay, checked QF_LRA/Farkas
+  infeasible-threshold evidence, and tampered-certificate rejection.
 - [Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md):
   follows an exact LP threshold conflict through source SMT-LIB, emitted
   `UnsatFarkas` evidence, and corrupted-certificate rejection.

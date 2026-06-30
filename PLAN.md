@@ -191,6 +191,10 @@ queryable through the same R1 vocabulary.
 The learner spine now also splits the finite topology and finite measure
 first-principles stories into standalone end-to-end pages, leaving the combined
 topology/measure page as a cross-field bridge rather than the only entry point.
+`linear-optimization-v0` now also has a standalone LP/Farkas end-to-end page
+for feasible-point replay, objective-threshold replay, checked
+QF_LRA/Farkas evidence, and tampered-certificate rejection, leaving the
+combined linear-system/LP page as the matrix-to-optimization bridge.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

@@ -100,7 +100,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `measure_theory` | sets, probability, reals | finite sigma-algebras, product measure, simple integration | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
-| `optimization_and_convexity` | rationals, reals, linear algebra | LP/Farkas, convexity, gradients, Hessians | QF_LRA/Farkas, NRA shadows |
+| `optimization_and_convexity` | rationals, reals, linear algebra | standalone LP/Farkas lesson, convexity, gradients, Hessians | QF_LRA/Farkas, NRA shadows |
 | `numerical_analysis` | linear algebra, calculus | residual bounds, Euler steps, interval boxes, exact error recurrences | QF_LRA, replay, numerical-honesty metadata |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | bounded recurrences, Euler traces, invariant checks | QF_LRA, BV/LIA counters, Lean horizon |
 | `geometry` | reals, polynomials, linear algebra | coordinate, affine, oriented-area, incidence, rigidity shadows | QF_LRA/NRA, replay |
@@ -206,11 +206,12 @@ Build sequence:
 6. Continue learner audit so every non-template pack appears in a focused
    lesson or a named combined lesson; standalone finite topology and finite
    measure pages now split those first-principles stories from the combined
-   topology/measure bridge.
+   topology/measure bridge, and standalone linear optimization now splits the
+   LP/Farkas story from the combined linear-system/LP bridge.
 7. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.
-7. First route-specific proof-upgrade note pass landed on the highest-use
+8. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
 8. Recurring finite algebra equality conflicts now have the

@@ -687,6 +687,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   bad-complement rejection. The combined topology/measure page remains as the
   cross-field bridge.
 
+- **Standalone linear optimization lesson landed.**
+  [`linear-optimization-end-to-end.md`](docs/learn/math/linear-optimization-end-to-end.md)
+  now follows `linear-optimization-v0` through exact LP feasible-point replay,
+  objective-threshold replay, checked QF_LRA/Farkas infeasible-threshold
+  evidence, and tampered-certificate rejection. The combined linear-system/LP
+  page remains as the matrix-to-optimization bridge.
+
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
   dashboard separates source `curriculum_status` from generated
@@ -11848,6 +11855,14 @@ plan is built and committed on the current branch:
   `finite-measure-v0`. Updated the learner index and topology/probability
   cluster pages so the existing combined topology/measure page is a bridge
   rather than the only entry point.
+
+- **2026-06-30** — **Standalone linear optimization lesson landed.**
+  Added
+  [`linear-optimization-end-to-end.md`](docs/learn/math/linear-optimization-end-to-end.md)
+  as the focused first-principles learner page for `linear-optimization-v0`.
+  Updated the learner index plus rational/real and linear-algebra cluster pages
+  so the combined linear-system/LP page is a bridge rather than the only LP
+  entry point.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

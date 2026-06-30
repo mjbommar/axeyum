@@ -208,6 +208,8 @@ finite eigenpair and spectral-decomposition replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md).
 For exact multivariable derivative replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md).
+For exact LP feasibility and Farkas threshold evidence, read
+[End To End: Linear Optimization](linear-optimization-end-to-end.md).
 For exact finite convexity replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md). For exact
 finite coordinate, affine, and oriented geometry replay, read

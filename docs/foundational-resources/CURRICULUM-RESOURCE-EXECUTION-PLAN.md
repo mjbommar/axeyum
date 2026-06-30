@@ -354,7 +354,7 @@ Next buildout:
 | `measure_theory` | standalone finite measure lesson landed; keep Lebesgue/convergence theorem rows Lean-horizon |
 | `probability_theory` | standalone finite probability lesson and stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
-| `optimization_and_convexity` | standalone LP/Farkas lesson and convexity/gradient/Hessian bridge rows |
+| `optimization_and_convexity` | standalone LP/Farkas lesson landed; maintain convexity/gradient/Hessian bridge rows |
 | `numerical_analysis` | residual/error-bound examples with exact rational shadows and numerical limits |
 | `differential_equations_and_dynamical_systems` | bounded recurrence/Euler lessons plus invariant-counterexample rows |
 | `geometry` | keep combined coordinate/affine/orientation lesson; add incidence/rigidity rows later |
@@ -374,11 +374,12 @@ Next buildout:
    finite probability page was already focused; the new finite measure page now
    follows finite sigma-algebra replay, exact finite additivity, event
    complements, and checked QF_LRA/Farkas bad-complement rejection.
-5. Partially landed: add standalone linear optimization and finite topology
-   lessons. The finite topology page now follows topology axiom replay,
-   closure/interior replay, exact metric-ball replay, and checked Bool/CNF
-   missing-empty-set rejection; standalone linear optimization remains a future
-   split from the combined linear-system/LP page.
+5. Landed: add standalone linear optimization and finite topology lessons. The
+   finite topology page now follows topology axiom replay, closure/interior
+   replay, exact metric-ball replay, and checked Bool/CNF missing-empty-set
+   rejection; the linear optimization page now follows exact LP feasible-point
+   replay, objective-threshold replay, checked QF_LRA/Farkas
+   infeasible-threshold evidence, and tampered-certificate rejection.
 6. Landed: add bridge-concept rows for finite model replay, proof by
    counterexample, bounded theorem shadows, metric balls, bounded epsilon-delta
    shadows, compactness shadows, connectedness shadows, continuity-by-preimage,

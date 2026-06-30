@@ -4,6 +4,8 @@ This lesson follows exact rational linear-algebra and optimization resources
 from data row to replayed result. It uses
 [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 and [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/).
+For the LP-only first-principles view, read
+[End To End: Linear Optimization](linear-optimization-end-to-end.md).
 
 Concept rows:
 
