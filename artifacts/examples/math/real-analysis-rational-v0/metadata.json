@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "bounded real-analysis bad linear-delta QF_LRA/Farkas regression seed",
+    "pressure": "Bounded epsilon-delta counterexample where exact replay computes output_distance = 4/3, but the malformed row claims output_distance < 1.",
+    "evidence": [
+      "bad-linear-delta-rejected"
+    ],
+    "next_step": "Promote additional bounded real-analysis rows only when they add distinct exact-linear solver pressure; keep completeness, fully quantified limit laws, and arbitrary epsilon-delta theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -41,6 +50,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/real-analysis-rational-v0/smt2/bad-linear-delta-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

@@ -30,6 +30,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "orientation/area bad fixed-orientation QF_LRA/Farkas regression seed",
+    "pressure": "Malformed orientation row where exact signed-area replay computes signed_double_area = -1, but the row claims signed_double_area > 0.",
+    "evidence": [
+      "bad-orientation-rejected"
+    ],
+    "next_step": "Promote additional fixed coordinate-geometry rows only when they add distinct exact-linear solver pressure; keep projective, differential, and higher-dimensional orientation theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -39,6 +48,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-orientation-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

@@ -299,9 +299,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `next_state = state + (1/2)*derivative`, and `next_state = 3/4`;
   generated dashboards move promoted solver-reuse packs to 27.
 
+- **Linear, geometry, statistics, and numerical QF_LRA promotion batch landed.**
+  `least-squares-regression-v0`, `real-analysis-rational-v0`,
+  `orientation-area-geometry-v0`, `numerical-linear-algebra-v0`,
+  `random-matrix-finite-v0`, `affine-geometry-v0`,
+  `inner-product-spaces-rational-v0`, `spectral-linear-algebra-v0`, and
+  `matrix-invariants-v0` now carry promoted `solver_reuse` metadata pointing at
+  their checked Farkas rows and source-level SMT-LIB artifacts. The shared
+  `math_resource_lra_routes` regression checks all nine rows as part of the
+  29-test QF_LRA resource route suite; generated dashboards move promoted
+  solver-reuse packs to 36 and leave 48 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the post-23-promoted-pack review and refreshed 27-pack count. The
+  now records the refreshed 36-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

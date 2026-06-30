@@ -30,6 +30,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "affine geometry bad distance-preservation QF_LRA/Farkas regression seed",
+    "pressure": "Exact affine replay computes original squared distance 1 and transformed squared distance 5, but the malformed row claims they are equal.",
+    "evidence": [
+      "bad-distance-preservation-rejected"
+    ],
+    "next_step": "Promote additional affine-coordinate rows only when they add distinct exact-linear solver pressure; keep general affine-combination, incidence, ratio, and synthetic-geometry theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -39,6 +48,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/affine-geometry-v0/smt2/bad-distance-preservation-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

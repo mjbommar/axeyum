@@ -30,6 +30,15 @@
     "bounded recurrence replay"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "numerical linear algebra bad residual-bound QF_LRA/Farkas regression seed",
+    "pressure": "Malformed residual-bound row where exact replay computes residual_inf_norm = 1, but the row claims residual_inf_norm <= 1/2.",
+    "evidence": [
+      "bad-residual-bound-rejected"
+    ],
+    "next_step": "Promote additional finite residual, interval, or iteration rows only when they add distinct exact-linear solver pressure; keep floating-point error, conditioning, and convergence-rate claims in Lean-horizon or numerical-honesty lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -38,6 +47,7 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-residual-bound-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

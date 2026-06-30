@@ -32,6 +32,15 @@
     "QF_LRA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite random-matrix bad trace-square moment QF_LRA/Farkas regression seed",
+    "pressure": "Finite matrix-distribution replay computes E[tr(A)^2] = 2, but the malformed row claims the same moment is 1.",
+    "evidence": [
+      "bad-trace-moment-rejected"
+    ],
+    "next_step": "Promote additional finite matrix-distribution rows only when they add distinct exact-linear or finite-rank solver pressure; keep asymptotic spectra, concentration, and continuous random-matrix theory in Lean-horizon or numerical-honesty lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -40,6 +49,7 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/random-matrix-finite-v0/smt2/bad-trace-moment-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

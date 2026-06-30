@@ -35,6 +35,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "inner-product bad negative-norm QF_LRA/Farkas regression seed",
+    "pressure": "Exact quadratic-form replay computes norm_square = -1 for a nonzero vector, but the malformed row claims norm_square > 0.",
+    "evidence": [
+      "bad-inner-product-rejected"
+    ],
+    "next_step": "Promote additional finite-dimensional inner-product rows only when they add distinct exact-linear solver pressure; keep general Cauchy-Schwarz, Riesz representation, Hilbert projection, adjoints, and spectral theorem statements in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/01-number-systems/rationals.md",
@@ -44,6 +53,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-inner-product-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

@@ -30,6 +30,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "least-squares bad coefficient QF_LRA/Farkas regression seed",
+    "pressure": "Malformed regression coefficient row where exact normal-equation replay forces 3*beta0 + 3*beta1 = 7, but the row claims beta0 = 1 and beta1 = 1.",
+    "evidence": [
+      "bad-regression-coefficients-rejected"
+    ],
+    "next_step": "Promote additional regression rows only when they add distinct exact-linear solver pressure; keep Gauss-Markov optimality, inference, asymptotics, model selection, and floating-point procedures in Lean-horizon or numerical-honesty lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -39,6 +48,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/least-squares-regression-v0/smt2/bad-coefficients-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

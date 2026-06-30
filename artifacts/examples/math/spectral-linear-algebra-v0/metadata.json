@@ -33,6 +33,15 @@
     "NRA shadow"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "spectral linear algebra bad eigenpair QF_LRA/Farkas regression seed",
+    "pressure": "Exact matrix-vector replay computes eigen_image_0 = 3, but the malformed row claims the same component is 2.",
+    "evidence": [
+      "bad-eigenpair-rejected"
+    ],
+    "next_step": "Promote additional fixed spectral rows only when they add distinct exact-linear solver pressure; keep general spectral theorems, compact-operator theory, and numerical eigenvalue algorithms in Lean-horizon or numerical-honesty lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -41,6 +50,7 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-eigenpair-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
