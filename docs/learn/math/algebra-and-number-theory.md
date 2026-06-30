@@ -321,7 +321,8 @@ gcd(x^3 - x, x^2 - 1) = x^2 - 1
 It also checks a square-free decomposition for
 `(x - 1)^2*(x + 2) = x^3 - 3x + 2` by recomputing `gcd(p,p') = x - 1`, and
 rejects a rational linear factorization claim for `x^2 + 1` using the exact
-negative discriminant.
+negative discriminant. The promoted solver row then checks the final
+nonnegative-discriminant contradiction through QF_LRA/Farkas evidence.
 
 The complex pack then encodes `i` as the real pair `[0, 1]`. The validator
 squares the pair and checks:
@@ -360,6 +361,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas

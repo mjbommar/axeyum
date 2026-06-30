@@ -37,13 +37,13 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 414 expected checks.
-- 196 checked proof/evidence rows.
+- 415 expected checks.
+- 197 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 76 promoted solver-reuse packs.
+- 77 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 2 unclassified solver-reuse packs.
+- 1 unclassified solver-reuse pack.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -93,7 +93,6 @@ Current unclassified queue:
 
 | Pack | Practical Next Step |
 |---|---|
-| `polynomial-factorization-rational-v0` | promote a rational coefficient obstruction or mark as replay-centered |
 | `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
 
 Recently classified as explicit non-benchmark-horizon rows:
@@ -245,7 +244,7 @@ Exit criteria:
 | `groups` | maintain | table replay plus Alethe equality conflicts |
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
-| `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization still needs a solver-reuse decision |
+| `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization now has a QF_LRA/Farkas discriminant regression |
 | `sequences-and-limits` | deepen | bounded Cauchy-tail no-counterexample now has a QF_LRA/Farkas regression; convergence theorem stays Lean horizon |
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
@@ -282,19 +281,22 @@ Pick one row per commit unless the change is purely navigational.
    bad-step count QF_LIA arithmetic-DPLL artifact and route regression.
 12. Landed: promote `cardinality-principles-v0` through a source-linked
    overlap-additivity count QF_LIA/Diophantine artifact and route regression.
-13. Promote or classify the remaining unclassified packs, starting with compact
+13. Landed: promote `polynomial-factorization-rational-v0` through a
+   source-linked irreducible-quadratic discriminant QF_LRA/Farkas artifact and
+   route regression.
+14. Promote or classify the remaining unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-14. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+15. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-15. Upgrade finite-measure from non-benchmark with a finite-additivity or
+16. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-16. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+17. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-17. Add a proof-object learner page that follows one resource from source claim
+18. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-18. Add a generated or query-based audit for unclassified solver-reuse packs if
+19. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-19. Revisit the library boundary after unclassified packs are resolved and at
+20. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

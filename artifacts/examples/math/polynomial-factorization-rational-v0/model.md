@@ -19,6 +19,9 @@ discriminant = -4
 ```
 
 A negative discriminant rules out rational linear factors for this fixed
-quadratic. General irreducibility, unique factorization, algebraic closure, and
+quadratic. The promoted solver row keeps the same boundary: exact polynomial
+replay computes the discriminant, and QF_LRA/Farkas only checks the final
+linear contradiction between `discriminant = -4` and `discriminant >= 0`.
+General irreducibility, unique factorization, algebraic closure, and
 factorization algorithms over arbitrary fields remain proof-assistant and
 library-boundary work.

@@ -109,7 +109,8 @@ gcd(x^3 - x, x^2 - 1) = x^2 - 1
 ```
 
 It also rejects rational linear factors for `x^2 + 1` by recomputing the
-negative discriminant. For a finite generating-function check, encode
+negative discriminant, then checks the final nonnegative-discriminant conflict
+through QF_LRA/Farkas evidence. For a finite generating-function check, encode
 coefficient lists and replay convolution:
 
 ```text
@@ -172,6 +173,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0

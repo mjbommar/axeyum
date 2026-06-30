@@ -211,7 +211,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets, finite Boolean lattices, checked QF_LIA overlap-additivity conflict; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
-| `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, and factorization replay. |
+| `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, factorization replay, and a QF_LRA discriminant conflict. |
 | `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, exact rational gradients, and Hessian checks; completeness marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
@@ -219,7 +219,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite permutation groups, cycle/sign replay, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
-| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection, coefficient extraction, and finite convolution. |
+| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection with QF_LRA/Farkas evidence, coefficient extraction, and finite convolution. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, and finite recurrence/generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, finite cycle/sign replay, finite orbit counting, Burnside fixed-point averages, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
@@ -414,8 +414,9 @@ and a checked false rational-root rejection. `counting-v0` now validates fixed
 permutation and binomial counts plus an exhaustive `3 -> 2` pigeonhole
 refutation. `polynomial-factorization-rational-v0` now validates exact
 rational factor-list product replay, polynomial division, Euclidean GCD replay,
-square-free decomposition, checked irreducible-quadratic rejection, and a
-general factorization-theory Lean-horizon row. `generating-functions-v0` now
+square-free decomposition, checked irreducible-quadratic rejection, a
+source-linked QF_LRA/Farkas discriminant conflict, and a general
+factorization-theory Lean-horizon row. `generating-functions-v0` now
 validates finite coefficient
 extraction, Cauchy product convolution, Fibonacci generating-function prefix
 replay, checked rejection of a bad convolution coefficient, and a
@@ -1280,7 +1281,8 @@ coefficient, and a generating-functions Lean-horizon row.
 `polynomial-factorization-rational-v0` now adds the next exact finite
 polynomial bridge: rational factor-list product replay, polynomial division,
 Euclidean GCD replay, square-free decomposition, checked irreducible-quadratic
-rejection, and a general polynomial-factorization Lean-horizon row.
+rejection, a checked QF_LRA/Farkas discriminant conflict, and a general
+polynomial-factorization Lean-horizon row.
 `finite-euler-method-v0` now adds the next exact finite dynamics/numerical
 bridge: explicit Euler replay, polynomial-solution error replay, finite
 invariant checks, checked QF_LRA/Farkas rejection of a bad Euler step, and an
@@ -1543,6 +1545,9 @@ finite linear equation, and its metadata promotes that row for solver reuse.
 same checked Farkas evidence path using the first failed normal equation.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the
 same checked Farkas evidence path using the final output-bound contradiction.
+`polynomial-factorization-rational-v0` now routes its fixed
+irreducible-quadratic discriminant row through the same checked Farkas evidence
+path after exact replay computes `D = -4`.
 `finite-conditional-expectation-v0` now routes its bad high-block table through
 a source-linked checked Farkas evidence path using the denominator-cleared block
 average contradiction, and its metadata promotes that row for solver reuse.

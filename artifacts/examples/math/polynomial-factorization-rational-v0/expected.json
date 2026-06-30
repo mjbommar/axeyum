@@ -90,6 +90,21 @@
       "notes": "The validator recomputes the discriminant and rejects rational linear factors for this fixed quadratic."
     },
     {
+      "id": "irreducible-quadratic-discriminant-conflict",
+      "claim": "The fixed quadratic x^2 + 1 has a nonnegative discriminant, as required by rational linear factors.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_quadratic_discriminant_farkas_conflict",
+      "proof_status": "checked",
+      "data": {
+        "polynomial": ["1", "0", "1"],
+        "discriminant": "-4",
+        "required_nonnegative_discriminant": true,
+        "smt2_artifact": "artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2",
+        "lra_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas"
+      },
+      "notes": "After exact replay computes the discriminant -4, Axeyum checks the final nonnegative-discriminant contradiction through QF_LRA/Farkas evidence."
+    },
+    {
       "id": "general-factorization-theory-lean-horizon",
       "claim": "General polynomial factorization and irreducibility theory requires a proof-assistant route.",
       "expected_result": "not-run",

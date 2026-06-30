@@ -8115,6 +8115,41 @@ def validate_polynomial_factorization_rational(expected: dict[str, Any]) -> None
     if discriminant >= 0:
         fail("irreducible-quadratic-rational-rejected discriminant must be negative")
 
+    conflict = checks["irreducible-quadratic-discriminant-conflict"]
+    if conflict["expected_result"] != "unsat" or conflict.get("proof_status") != "checked":
+        fail("irreducible-quadratic-discriminant-conflict must be a checked unsat row")
+    data = conflict.get("data", {})
+    conflict_polynomial = require_quadratic(
+        "irreducible discriminant conflict polynomial",
+        data.get("polynomial"),
+    )
+    conflict_discriminant = require_fraction(
+        "irreducible discriminant conflict discriminant",
+        data.get("discriminant"),
+    )
+    if conflict_polynomial != polynomial:
+        fail("irreducible-quadratic-discriminant-conflict polynomial does not match replay row")
+    if conflict_discriminant != discriminant:
+        fail("irreducible-quadratic-discriminant-conflict discriminant does not match replay row")
+    if quadratic_discriminant(conflict_polynomial) != conflict_discriminant:
+        fail("irreducible-quadratic-discriminant-conflict discriminant is incorrect")
+    if conflict_discriminant >= 0:
+        fail("irreducible-quadratic-discriminant-conflict must record a negative discriminant")
+    if data.get("required_nonnegative_discriminant") is not True:
+        fail("irreducible-quadratic-discriminant-conflict must require a nonnegative discriminant")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("irreducible discriminant conflict smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2"
+    ):
+        fail("irreducible-quadratic-discriminant-conflict smt2_artifact must name the checked QF_LRA artifact")
+    check_source("irreducible discriminant conflict smt2_artifact", smt2_artifact)
+    lra_regression = data.get("lra_regression")
+    require_string("irreducible discriminant conflict lra_regression", lra_regression)
+    if "polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas" not in lra_regression:
+        fail("irreducible-quadratic-discriminant-conflict must link the LRA route regression")
+
     horizon = checks["general-factorization-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-factorization-theory-lean-horizon must be not-run")

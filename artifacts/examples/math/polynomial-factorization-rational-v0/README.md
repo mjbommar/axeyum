@@ -10,7 +10,8 @@ It checks:
 - exact polynomial division with quotient and zero remainder;
 - Euclidean GCD replay over rational coefficients;
 - square-free decomposition replay through `gcd(p,p')`;
-- rejection of a rational linear factorization claim for `x^2 + 1`;
+- rejection of a rational linear factorization claim for `x^2 + 1`, plus a
+  QF_LRA/Farkas discriminant conflict for the replayed `-4 >= 0` obstruction;
 - general polynomial factorization theory as Lean horizon.
 
 Run from the repository root:

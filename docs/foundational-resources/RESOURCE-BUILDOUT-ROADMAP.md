@@ -40,13 +40,13 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 414 expected checks.
-- 196 checked proof/evidence rows.
+- 415 expected checks.
+- 197 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 76 promoted solver-reuse packs.
+- 77 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 2 unclassified solver-reuse packs.
+- 1 unclassified solver-reuse pack.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -582,7 +582,10 @@ Build next:
   children only when dashboards need better routing.
 - Keep the promoted polynomial-identity false-root row tied to the
   QF_LIA/Diophantine regression; promote factorization only when the source
-  artifact adds distinct coefficient, root, or irreducibility pressure.
+  artifact adds distinct coefficient, root, or irreducibility pressure. The
+  current factorization promotion is the fixed discriminant obstruction for
+  `x^2 + 1`, checked through QF_LRA/Farkas after exact replay computes
+  `D = -4`.
 - Keep structure theorems, arbitrary groups/rings/modules, representation
   theory, and category-level facts as Lean-horizon.
 
@@ -1130,7 +1133,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence`.
-33. Continue proof-route promotions or consumer-query examples; revisit the
+33. Landed: promote `polynomial-factorization-rational-v0` through a
+    source-linked QF_LRA/Farkas regression for
+    `irreducible-quadratic-discriminant-conflict`. The artifact
+    `artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas`.
+34. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

@@ -256,6 +256,9 @@ First targets:
 - [finite-chebyshev-systems-v0](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   (resource-backed Farkas regression landed for the duplicate-node determinant
   conflict)
+- [polynomial-factorization-rational-v0](../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+  (resource-backed Farkas regression landed for the fixed irreducible-quadratic
+  discriminant conflict after exact replay computes `D = -4`)
 
 Secondary targets:
 
@@ -275,7 +278,9 @@ Secondary targets:
   pushforward-distribution regression with the same replay-then-Farkas boundary.
   Finite martingales now add the stochastic-process version of that pattern:
   replay a conditional expectation from a finite filtration, then let Farkas
-  check the contradictory martingale equality.
+  check the contradictory martingale equality. Polynomial factorization now
+  contributes the algebra version of the same pattern: replay the discriminant
+  exactly, then let Farkas check the final nonnegative-discriminant conflict.
 
 Expected artifact:
 
@@ -299,6 +304,9 @@ Graduation:
 - nonlinear or general-analysis claims stay replay-only or Lean-horizon unless
   the row has been reduced to a linear certificate with explicit lowering
   evidence;
+- polynomial-factorization rows state whether the checked object is exact
+  coefficient/division/GCD replay, a QF_LRA discriminant conflict, or general
+  factorization theory in the Lean-horizon lane;
 - dashboards show fewer QF_LRA/Farkas replay-only rows.
 
 ### 3. QF_UF/Alethe

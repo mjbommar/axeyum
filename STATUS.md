@@ -486,10 +486,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   report 76 promoted, 6 non-benchmark-horizon, and 2 unclassified
   solver-reuse packs.
 
+- **Polynomial-factorization QF_LRA/Farkas promotion landed.**
+  `polynomial-factorization-rational-v0` now carries promoted `solver_reuse`
+  metadata for its fixed irreducible-quadratic discriminant row. The new
+  source-level artifact
+  `irreducible-quadratic-discriminant-farkas-conflict.smt2` isolates exact
+  replay's computed `discriminant = -4` as `discriminant + 4 = 0` against the
+  nonnegative-discriminant requirement for rational linear factors, and
+  `math_resource_lra_routes::polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  77 promoted, 6 non-benchmark-horizon, and 1 unclassified solver-reuse pack.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 76-promoted, 6 non-benchmark-horizon, and
-  2-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 77-promoted, 6 non-benchmark-horizon, and
+  1-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -953,8 +964,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It records the current committed baseline of 65 concept rows,
-  84 non-template packs, 414 expected checks, 196 checked rows, 171 replay-only
-  rows, 47 Lean-horizon rows, and 76 promoted solver-reuse packs, then lays out
+  84 non-template packs, 415 expected checks, 197 checked rows, 171 replay-only
+  rows, 47 Lean-horizon rows, and 77 promoted solver-reuse packs, then lays out
   field-by-field build plans plus a prioritized execution queue. Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
@@ -11690,6 +11701,15 @@ plan is built and committed on the current branch:
   `solver_reuse.status` as `promoted`, the expected row records the checked
   `UnsatDiophantine` certificate path, and generated dashboards report 76
   promoted, 6 non-benchmark-horizon, and 2 unclassified packs.
+
+- **2026-06-30** — **Polynomial-factorization QF_LRA promotion landed.**
+  Added
+  `artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2`
+  for the fixed irreducible-quadratic discriminant row and wired it into
+  `math_resource_lra_routes`. The pack metadata now marks
+  `solver_reuse.status` as `promoted`, the expected row records the checked
+  `UnsatFarkas` certificate path, and generated dashboards report 77 promoted,
+  6 non-benchmark-horizon, and 1 unclassified pack.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

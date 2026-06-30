@@ -224,8 +224,9 @@ trace-square moment row, with affine geometry now promoted for its bad
 distance-preservation row and inner-product spaces now promoted for its bad
 negative-norm row, and spectral linear algebra now promoted for its bad
 eigenpair row, with matrix invariants now promoted for its bad characteristic
-polynomial row, and finite Chebyshev systems now promoted for the duplicate-node
-determinant conflict, metric continuity now promoted for the finite
+polynomial row, polynomial factorization now promoted for its fixed
+irreducible-quadratic discriminant conflict, and finite Chebyshev systems now
+promoted for the duplicate-node determinant conflict, metric continuity now promoted for the finite
 bad-delta output-bound conflict, finite stochastic kernels now promoted for
 the bad kernel-row normalization conflict, and finite product measure now
 promoted for the bad product-probability conflict, with finite random variables
@@ -262,9 +263,10 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **76 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **2 unclassified packs** after
-the latest cardinality-principles overlap-additivity count QF_LIA/Diophantine
+the foundational resource dashboards now report **77 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **1 unclassified pack** after
+the latest polynomial-factorization discriminant QF_LRA/Farkas promotion,
+cardinality-principles overlap-additivity count QF_LIA/Diophantine
 promotion,
 induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL promotion,
 complex-plane bad unit-square real-part QF_LRA/Farkas promotion,

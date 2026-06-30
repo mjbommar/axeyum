@@ -116,6 +116,9 @@ Canonical examples:
   and [Metric Continuity](../../../artifacts/examples/math/metric-continuity-v0/)
   use bounded exact-rational epsilon-delta shadows, not general continuity
   theorems.
+- [Rational Polynomial Factorization](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+  uses a fixed negative-discriminant row after exact polynomial replay computes
+  the discriminant of `x^2 + 1`.
 - [Numerical Linear Algebra](../../../artifacts/examples/math/numerical-linear-algebra-v0/),
   [Random Matrix Finite](../../../artifacts/examples/math/random-matrix-finite-v0/),
   [Spectral Linear Algebra](../../../artifacts/examples/math/spectral-linear-algebra-v0/),
@@ -154,3 +157,4 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [Finite Calculus Shadows pack](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [Rational Multivariable Calculus pack](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [Sequence And Limit Shadows pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
+- [Rational Polynomial Factorization pack](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)

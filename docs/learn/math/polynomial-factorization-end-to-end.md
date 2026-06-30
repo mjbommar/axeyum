@@ -2,7 +2,7 @@
 
 This lesson follows one rational-polynomial resource from factor-list replay to
 division, Euclidean GCD, square-free decomposition, and a fixed irreducibility
-rejection. It uses the
+rejection with QF_LRA/Farkas evidence. It uses the
 [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 pack.
 
@@ -23,6 +23,7 @@ Concept rows:
 | `euclidean-gcd-replay` | `sat` | checked |
 | `square-free-decomposition-replay` | `sat` | checked |
 | `irreducible-quadratic-rational-rejected` | `unsat` | checked |
+| `irreducible-quadratic-discriminant-conflict` | `unsat` | checked QF_LRA/Farkas |
 | `general-factorization-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The pack checks fixed low-degree univariate polynomials over exact rational
@@ -109,6 +110,18 @@ b^2 - 4ac = -4
 The negative discriminant rejects rational linear factors for this fixed
 quadratic.
 
+The promoted solver row then checks the final exact-linear contradiction:
+
+```text
+discriminant + 4 = 0
+discriminant >= 0
+```
+
+That source artifact lives at
+`artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2`.
+The route emits and independently rechecks `UnsatFarkas` evidence for the
+nonnegative-discriminant conflict.
+
 ## Name The Lean Horizon
 
 The final row records the theorem-prover boundary:
@@ -131,9 +144,10 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
 ```
 
-Expected output:
+The validator prints:
 
 ```text
 validated 1 foundational example pack(s)
@@ -145,9 +159,10 @@ This lesson shows Axeyum's current rational-polynomial resource pattern:
 
 ```text
 untrusted fast search -> factor, quotient, GCD, or irreducibility candidate
-trusted small checking -> exact rational coefficient arithmetic
+trusted small checking -> exact rational coefficient arithmetic, QF_LRA certificate
 remaining horizon -> broad algebraic factorization proof reconstruction
 ```
 
 The graduation route is deterministic exact-rational obligations plus emitted
+QF_LRA/Farkas evidence for fixed linear discriminant conflicts, and eventually
 QF_NRA/SOS or algebra-specific certificates for broader no-factor rows.

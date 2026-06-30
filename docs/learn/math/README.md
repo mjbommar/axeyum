@@ -138,7 +138,8 @@ validated pack data and the repo-root command that replays it.
   and checked false-root rejection through QF_LIA/Diophantine evidence.
 - [Rational Polynomial Factorization](polynomial-factorization-end-to-end.md):
   follows factor-list replay, long division, Euclidean GCD, square-free
-  decomposition, fixed irreducibility rejection, and the algebra Lean horizon.
+  decomposition, fixed irreducibility rejection, a QF_LRA/Farkas discriminant
+  conflict, and the algebra Lean horizon.
 - [Generating Functions](generating-functions-end-to-end.md): follows finite
   coefficient extraction, Cauchy product convolution, a bounded Fibonacci
   generating-function identity, bad-product rejection, and the general

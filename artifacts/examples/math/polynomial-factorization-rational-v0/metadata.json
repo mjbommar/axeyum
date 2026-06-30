@@ -26,16 +26,29 @@
   "axeyum_fragments": [
     "fixed-degree polynomials",
     "LRA (exact rationals)",
+    "QF_LRA / Farkas",
     "NRA shadow",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "fixed rational quadratic discriminant QF_LRA/Farkas regression seed",
+    "pressure": "Exact polynomial replay computes discriminant(x^2 + 1) = -4, while the malformed rational-linear-factor row requires the discriminant to be nonnegative.",
+    "evidence": [
+      "irreducible-quadratic-discriminant-conflict"
+    ],
+    "next_step": "Promote additional polynomial-factorization rows only when they add distinct coefficient, discriminant, root, division, GCD, square-free, or irreducibility pressure; keep arbitrary-field factorization theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/polynomials.md",
     "docs/curriculum/02-structures/fields.md",
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -44,11 +57,13 @@
     "euclidean-gcd-replay",
     "square-free-decomposition-replay",
     "irreducible-quadratic-rational-rejected",
+    "irreducible-quadratic-discriminant-conflict",
     "general-factorization-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed rational factorization, division, GCD, and square-free rows as deterministic exact-rational obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over normalized coefficient lists.",
+    "Keep fixed discriminant obstructions tied to source-linked QF_LRA/Farkas evidence after exact replay computes the discriminant.",
     "Add emitted QF_NRA/SOS or algebra-specific certificates for broader no-factor rows once proof routes are promoted.",
     "Keep arbitrary-degree factorization, irreducibility over arbitrary fields, UFD/PID theorems, and algebraic-closure results under Lean horizon until formal routes exist."
   ]
