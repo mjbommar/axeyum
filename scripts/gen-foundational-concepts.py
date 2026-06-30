@@ -3340,6 +3340,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_boundary_operator_replay",
             "bridge_finite_chain_homology_replay",
             "bridge_finite_cohomology_replay",
+            "bridge_finite_cup_product_replay",
             "field_topology",
             "bridge_lean_horizon",
         ],
@@ -3600,7 +3601,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite boundary replay checks fixed oriented simplices and fixed matrices; it does not prove functoriality, homology invariance, exactness, or topological invariance.",
             "Boundary-matrix rank rows are exact finite computations, not a general theorem about chain complexes over arbitrary rings.",
-            "Additional torsion, cup-product, or chain-map rows should land only when they add distinct integer-linear, finite-field, or proof-reconstruction pressure.",
+            "Additional torsion, universal-coefficient, or chain-map rows should land only when they add distinct integer-linear, finite-field, or proof-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3701,7 +3702,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite chain-complex replay does not prove homology invariance, exact sequences, homotopy equivalence, cohomology operations, or general algebraic-topology theorems.",
             "Boundary-matrix rank rows are exact finite computations, not a proof of functoriality or topological invariance.",
-            "Additional rank, torsion, cup-product, or chain-map rows should land only when they add distinct integer-linear, finite-field, or proof-reconstruction pressure.",
+            "Additional rank, torsion, universal-coefficient, or chain-map rows should land only when they add distinct integer-linear, finite-field, or proof-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3742,6 +3743,7 @@ BRIDGE_CONCEPTS = [
             "field_topology",
             "field_linear_algebra",
             "field_abstract_algebra",
+            "bridge_finite_cup_product_replay",
             "bridge_lean_horizon",
         ],
         "decidability": "bounded",
@@ -3788,9 +3790,11 @@ BRIDGE_CONCEPTS = [
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-simplicial-homology-end-to-end.md",
             "docs/learn/math/finite-simplicial-cohomology-end-to-end.md",
+            "docs/learn/math/finite-simplicial-cup-products-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
             "docs/learn/math/matrix-computation-index.md",
             "artifacts/examples/math/finite-simplicial-cohomology-v0/smt2/bad-coboundary-value-alethe-conflict.smt2",
@@ -3799,7 +3803,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite cohomology replay checks fixed F2 cochain tables; it does not prove cohomology functoriality, cup-product laws, universal coefficients, de Rham comparison, sheaf cohomology, Poincare duality, or topological invariance.",
             "The bad coboundary row isolates a fixed value mismatch after finite replay, not arbitrary finite-field linear algebra proof reconstruction.",
-            "Additional cohomology rows should land only when they add distinct cup-product, torsion/universal-coefficient, or proof-reconstruction pressure.",
+            "Additional cohomology rows should land only when they add distinct torsion/universal-coefficient, cohomology-ring, or proof-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3808,6 +3812,102 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes simplex closure, F2 coboundaries, delta-squared-zero, F2 ranks, and non-coboundary status exactly.",
                 "Malformed fixed rows link source artifacts and route regressions before claiming checked Alethe evidence.",
                 "Cohomology operations, functoriality, universal coefficients, duality, and topological invariance remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_cup_product_replay",
+        "title": "Finite Simplicial Cup Product Replay",
+        "field_ids": [
+            "topology",
+            "set_theory_and_foundations",
+            "linear_algebra",
+            "abstract_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite cup-product rows state an explicit ordered simplicial complex, "
+            "F2 cochain basis, Alexander-Whitney split convention, and listed "
+            "cup-product values. The trusted object is exact replay of F2 products, "
+            "one finite coboundary Leibniz row, or checked QF_BV/DRAT evidence for "
+            "a malformed fixed cup-product bit."
+        ),
+        "prerequisites": [
+            "bridge_finite_cohomology_replay",
+            "bridge_finite_boundary_operator_replay",
+            "bridge_finite_chain_homology_replay",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "field_topology",
+            "field_linear_algebra",
+            "field_abstract_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite simplicial complexes",
+            "finite cochains over F2",
+            "finite cup products",
+            "QF_BV / DRAT",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-simplicial-cup-products-v0",
+                "Finite F2 cup-product replay, finite coboundary Leibniz replay, and checked bad cup-product QF_BV/DRAT row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite F2 cup-product replay plus QF_BV/DRAT value certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_bv_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-simplicial-cup-products-end-to-end.md",
+                    "docs/learn/math/analysis-topology-proof-horizons.md",
+                    "docs/learn/math/matrix-computation-index.md",
+                    "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator recomputes the Alexander-Whitney split "
+                    "for finite ordered simplices, checks one F2 coboundary "
+                    "Leibniz row, and accepts the malformed value row only after "
+                    "the one-bit cup-product conflict has checked DRAT evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-simplicial-cohomology-end-to-end.md",
+            "docs/learn/math/finite-simplicial-cup-products-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite cup-product replay checks fixed ordered F2 cochain tables; it does not prove associativity, graded commutativity, naturality, cohomology-ring quotienting, or topological invariance.",
+            "The bad cup-product row isolates a fixed one-bit value mismatch after finite replay, not arbitrary cohomology-ring proof reconstruction.",
+            "Additional cup-product rows should land only when they add distinct associativity, graded-commutativity, Steenrod-operation, or proof-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite complex, cochain basis, coefficient field, split convention, cup-product values, and coboundary relation being replayed.",
+                "The validator recomputes simplex closure, F2 cup products, coboundaries, and the listed finite Leibniz row exactly.",
+                "Malformed fixed rows link source artifacts and route regressions before claiming checked QF_BV/DRAT evidence.",
+                "Associativity, graded commutativity, naturality, cohomology rings, and topological invariance remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },

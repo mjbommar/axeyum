@@ -16,21 +16,21 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 104
-- learner-linked packs: 104 focused links
-- packs with non-checked proof rows: 93
-- non-checked proof rows: 302
+- math example packs: 105
+- learner-linked packs: 105 focused links
+- packs with non-checked proof rows: 94
+- non-checked proof rows: 305
 
 Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 17 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 74 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 75 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -625,6 +625,9 @@ First targets:
 - [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
   (resource-backed QF_BV/DRAT regression landed for the modulo-7 quadratic
   nonresidue row)
+- [finite-simplicial-cup-products-v0](../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
+  (resource-backed QF_BV/DRAT regression landed for the one-bit F2
+  cup-product value conflict)
 
 Secondary targets:
 
@@ -646,6 +649,7 @@ Validation:
 cargo test -p axeyum-solver --test math_resource_bv_routes
 cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
 cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
 cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
 ./scripts/check-foundational-resources.sh

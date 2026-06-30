@@ -14462,6 +14462,33 @@ def is_coboundary_f2(
     return False
 
 
+def add_cochains_f2(left: dict[Simplex, int], right: dict[Simplex, int]) -> dict[Simplex, int]:
+    if set(left) != set(right):
+        fail("F2 cochain addition requires matching bases")
+    return {simplex: left[simplex] ^ right[simplex] for simplex in left}
+
+
+def cup_product_f2(
+    left: dict[Simplex, int],
+    right: dict[Simplex, int],
+    simplices: set[Simplex],
+    left_dimension: int,
+    right_dimension: int,
+    vertex_index: dict[str, int],
+) -> dict[Simplex, int]:
+    target_dimension = left_dimension + right_dimension
+    result: dict[Simplex, int] = {}
+    for simplex in simplices_of_dimension(simplices, target_dimension, vertex_index):
+        left_simplex = simplex[: left_dimension + 1]
+        right_simplex = simplex[left_dimension:]
+        if left_simplex not in left:
+            fail(f"cup product missing left face {left_simplex}")
+        if right_simplex not in right:
+            fail(f"cup product missing right face {right_simplex}")
+        result[simplex] = left[left_simplex] & right[right_simplex]
+    return result
+
+
 def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -14752,6 +14779,235 @@ def validate_finite_simplicial_cohomology(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general cohomology target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general cohomology future_checker", data.get("future_checker"))
+
+
+def validate_finite_simplicial_cup_products(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    cup = checks["cup-product-replay"]
+    if cup["expected_result"] != "sat":
+        fail("cup-product-replay must expect sat")
+    values = single_witness_values(cup, witnesses)
+    vertices, simplices = require_simplicial_complex("cup product replay", values)
+    vertex_index = simplex_vertex_index(vertices)
+    left_dimension = require_int("cup product left_dimension", values.get("left_dimension"))
+    right_dimension = require_int("cup product right_dimension", values.get("right_dimension"))
+    if left_dimension < 0 or right_dimension < 0:
+        fail("cup product dimensions must be non-negative")
+    left = require_cochain_f2(
+        "cup product left_cochain",
+        values.get("left_cochain"),
+        vertices,
+        simplices,
+        left_dimension,
+    )
+    right = require_cochain_f2(
+        "cup product right_cochain",
+        values.get("right_cochain"),
+        vertices,
+        simplices,
+        right_dimension,
+    )
+    listed_cup = require_cochain_f2(
+        "cup product cup_product",
+        values.get("cup_product"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension,
+    )
+    if cup_product_f2(left, right, simplices, left_dimension, right_dimension, vertex_index) != listed_cup:
+        fail("cup-product-replay listed cup product is incorrect")
+    listed_reverse = require_cochain_f2(
+        "cup product reverse_cup_product",
+        values.get("reverse_cup_product"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension,
+    )
+    if cup_product_f2(right, left, simplices, right_dimension, left_dimension, vertex_index) != listed_reverse:
+        fail("cup-product-replay listed reverse cup product is incorrect")
+
+    leibniz = checks["cup-coboundary-leibniz-replay"]
+    if leibniz["expected_result"] != "sat":
+        fail("cup-coboundary-leibniz-replay must expect sat")
+    values = single_witness_values(leibniz, witnesses)
+    vertices, simplices = require_simplicial_complex("cup Leibniz replay", values)
+    vertex_index = simplex_vertex_index(vertices)
+    left_dimension = require_int("cup Leibniz left_dimension", values.get("left_dimension"))
+    right_dimension = require_int("cup Leibniz right_dimension", values.get("right_dimension"))
+    if left_dimension < 0 or right_dimension < 0:
+        fail("cup Leibniz dimensions must be non-negative")
+    left = require_cochain_f2(
+        "cup Leibniz left_cochain",
+        values.get("left_cochain"),
+        vertices,
+        simplices,
+        left_dimension,
+    )
+    right = require_cochain_f2(
+        "cup Leibniz right_cochain",
+        values.get("right_cochain"),
+        vertices,
+        simplices,
+        right_dimension,
+    )
+    listed_cup = require_cochain_f2(
+        "cup Leibniz cup_product",
+        values.get("cup_product"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension,
+    )
+    computed_cup = cup_product_f2(left, right, simplices, left_dimension, right_dimension, vertex_index)
+    if computed_cup != listed_cup:
+        fail("cup-coboundary-leibniz-replay listed cup product is incorrect")
+    left_coboundary = require_cochain_f2(
+        "cup Leibniz left_coboundary",
+        values.get("left_coboundary"),
+        vertices,
+        simplices,
+        left_dimension + 1,
+    )
+    right_coboundary = require_cochain_f2(
+        "cup Leibniz right_coboundary",
+        values.get("right_coboundary"),
+        vertices,
+        simplices,
+        right_dimension + 1,
+    )
+    if coboundary_f2(left, simplices, left_dimension, vertex_index) != left_coboundary:
+        fail("cup-coboundary-leibniz-replay left coboundary is incorrect")
+    if coboundary_f2(right, simplices, right_dimension, vertex_index) != right_coboundary:
+        fail("cup-coboundary-leibniz-replay right coboundary is incorrect")
+    cup_coboundary = require_cochain_f2(
+        "cup Leibniz cup_coboundary",
+        values.get("cup_coboundary"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension + 1,
+    )
+    if coboundary_f2(computed_cup, simplices, left_dimension + right_dimension, vertex_index) != cup_coboundary:
+        fail("cup-coboundary-leibniz-replay cup coboundary is incorrect")
+    left_term = require_cochain_f2(
+        "cup Leibniz leibniz_left_term",
+        values.get("leibniz_left_term"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension + 1,
+    )
+    computed_left_term = cup_product_f2(
+        left_coboundary,
+        right,
+        simplices,
+        left_dimension + 1,
+        right_dimension,
+        vertex_index,
+    )
+    if computed_left_term != left_term:
+        fail("cup-coboundary-leibniz-replay left Leibniz term is incorrect")
+    right_term = require_cochain_f2(
+        "cup Leibniz leibniz_right_term",
+        values.get("leibniz_right_term"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension + 1,
+    )
+    computed_right_term = cup_product_f2(
+        left,
+        right_coboundary,
+        simplices,
+        left_dimension,
+        right_dimension + 1,
+        vertex_index,
+    )
+    if computed_right_term != right_term:
+        fail("cup-coboundary-leibniz-replay right Leibniz term is incorrect")
+    listed_sum = require_cochain_f2(
+        "cup Leibniz leibniz_sum",
+        values.get("leibniz_sum"),
+        vertices,
+        simplices,
+        left_dimension + right_dimension + 1,
+    )
+    if add_cochains_f2(left_term, right_term) != listed_sum:
+        fail("cup-coboundary-leibniz-replay listed Leibniz sum is incorrect")
+    if listed_sum != cup_coboundary:
+        fail("cup-coboundary-leibniz-replay Leibniz sum does not match cup coboundary")
+
+    bad = checks["bad-cup-product-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-cup-product-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    vertices, simplices = require_simplicial_complex("bad cup product", data)
+    vertex_index = simplex_vertex_index(vertices)
+    left_dimension = require_int("bad cup product left_dimension", data.get("left_dimension"))
+    right_dimension = require_int("bad cup product right_dimension", data.get("right_dimension"))
+    left = require_cochain_f2(
+        "bad cup product left_cochain",
+        data.get("left_cochain"),
+        vertices,
+        simplices,
+        left_dimension,
+    )
+    right = require_cochain_f2(
+        "bad cup product right_cochain",
+        data.get("right_cochain"),
+        vertices,
+        simplices,
+        right_dimension,
+    )
+    mismatch = require_simplex("bad cup product mismatch_simplex", data.get("mismatch_simplex"), vertices)
+    if mismatch not in simplices or len(mismatch) - 1 != left_dimension + right_dimension:
+        fail("bad-cup-product-rejected mismatch_simplex must be a target simplex")
+    actual = require_f2_value("bad cup product actual_value", data.get("actual_value"))
+    claimed = require_f2_value("bad cup product claimed_value", data.get("claimed_value"))
+    computed = cup_product_f2(left, right, simplices, left_dimension, right_dimension, vertex_index)
+    if computed.get(mismatch) != actual:
+        fail("bad-cup-product-rejected actual value is incorrect")
+    if claimed == actual:
+        fail("bad-cup-product-rejected claimed value unexpectedly matches actual")
+
+    qf_bv = checks["qf-bv-bad-cup-product"]
+    if qf_bv["expected_result"] != "unsat":
+        fail("qf-bv-bad-cup-product must expect unsat")
+    if qf_bv["proof_status"] != "checked":
+        fail("qf-bv-bad-cup-product must be checked")
+    if qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("qf-bv-bad-cup-product must use qf_bv_bitblast_drat validation")
+    data = qf_bv.get("data", {})
+    qf_vertices = require_string_list("qf-bv cup product vertices", data.get("vertices"))
+    qf_mismatch = require_simplex("qf-bv cup product mismatch_simplex", data.get("mismatch_simplex"), qf_vertices)
+    if qf_mismatch != mismatch:
+        fail("qf-bv-bad-cup-product mismatch simplex must match rejected row")
+    qf_actual = require_f2_value("qf-bv cup product actual_value", data.get("actual_value"))
+    qf_claimed = require_f2_value("qf-bv cup product claimed_value", data.get("claimed_value"))
+    if qf_actual != actual or qf_claimed != claimed:
+        fail("qf-bv-bad-cup-product values must match rejected row")
+    if qf_actual == qf_claimed:
+        fail("qf-bv-bad-cup-product must document a value conflict")
+    if require_int("qf-bv cup product bit_width", data.get("bit_width")) != 1:
+        fail("qf-bv-bad-cup-product must use one-bit F2 values")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-bv cup product smt2_artifact", smt2_artifact)
+    check_source("qf-bv cup product smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("qf-bv cup product proof_regression", proof_regression)
+    if "finite_simplicial_cup_product_bad_value_emits_checked_bv_drat" not in proof_regression:
+        fail("qf-bv-bad-cup-product must link the BV route test")
+    certificate = data.get("certificate")
+    require_string("qf-bv cup product certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("qf-bv-bad-cup-product certificate must document DRAT and lowering trust")
+
+    horizon = checks["general-cup-product-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-cup-product-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-cup-product-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general cup product target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general cup product future_checker", data.get("future_checker"))
 
 
 def require_point_values(
@@ -19087,6 +19343,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_simplicial_homology(expected)
     if metadata["id"] == "finite-simplicial-cohomology-v0":
         validate_finite_simplicial_cohomology(expected)
+    if metadata["id"] == "finite-simplicial-cup-products-v0":
+        validate_finite_simplicial_cup_products(expected)
     if metadata["id"] == "finite-specialization-order-v0":
         validate_finite_specialization_order(expected)
     if metadata["id"] == "finite-hitting-times-v0":

@@ -31,7 +31,9 @@ Concept rows:
 Every replay row is finite simplex and F2 cochain arithmetic. The checked
 solver row is a fixed QF_UF/Alethe equality contradiction after replay computes
 the coboundary value. The pack does not prove cohomology functoriality, cup
-products, universal coefficients, duality, de Rham comparison, or invariance.
+product laws, cohomology rings, universal coefficients, duality, de Rham
+comparison, or invariance. The next finite cochain operation is covered by
+[End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md).
 
 ## Encode The Cochain
 
@@ -160,8 +162,10 @@ validated 1 foundational example pack(s)
 ```text
 untrusted fast search -> candidate cochain table or bad coboundary value
 trusted small checking -> finite F2 coboundary replay and checked Alethe value proof
-remaining horizon -> cohomology operations, functoriality, duality, and invariance
+remaining horizon -> general cup-product laws, cohomology rings, functoriality, duality, and invariance
 ```
 
 For the boundary and homology side of the same finite complex style, read
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md).
+For the finite cup-product operation on cochains, read
+[End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md).

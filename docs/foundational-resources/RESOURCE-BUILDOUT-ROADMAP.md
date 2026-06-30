@@ -40,14 +40,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 61 bridge-concept rows.
+- 62 bridge-concept rows.
 - 5 example-family rows.
-- 104 non-template math example packs.
-- 527 expected checks.
-- 225 checked proof/evidence rows.
-- 235 replay-only rows.
-- 67 Lean-horizon rows.
-- 104 promoted solver-reuse packs.
+- 105 non-template math example packs.
+- 532 expected checks.
+- 227 checked proof/evidence rows.
+- 237 replay-only rows.
+- 68 Lean-horizon rows.
+- 105 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -715,21 +715,24 @@ Current packs:
 - `finite-continuous-maps-v0`
 - `finite-simplicial-homology-v0`
 - `finite-simplicial-cohomology-v0`
+- `finite-simplicial-cup-products-v0`
 
 Build next:
 
 - Landed concept rows for metric balls, compactness shadows, connectedness
   shadows, continuity-by-preimage, finite topology-operator/homeomorphism
   replay, finite specialization-order replay, finite boundary-operator replay,
-  finite chain-complex/homology replay, and finite cohomology replay. Add
-  narrower rank/torsion, quotient, cup-product, or theorem-invariance rows only
-  when reuse or solver pressure justifies the split.
+  finite chain-complex/homology replay, finite cohomology replay, and finite
+  cup-product replay. Add narrower rank/torsion, quotient,
+  universal-coefficient, cohomology-ring quotienting, or theorem-invariance
+  rows only when reuse or solver pressure justifies the split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
   source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
 - Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
   or LIA only when the mathematical object is fixed and tiny.
 - Keep general compactness, connectedness, homotopy, homeomorphism invariance,
-  homology invariance, and topological spaces as Lean-horizon.
+  homology/cohomology invariance, cohomology-ring laws, and topological spaces
+  as Lean-horizon.
 
 Graduation:
 
@@ -1630,7 +1633,8 @@ Pick one item per commit unless the change is purely navigational.
     simplicial-complex closure, oriented boundaries, boundary-squared-zero,
     Betti-rank replay, and the checked bad-boundary coefficient row
     discoverable without promoting homology invariance, exact sequences,
-    homotopy equivalence, cohomology operations, or general algebraic topology.
+    homotopy equivalence, cohomology-operation laws, or general algebraic
+    topology.
 97. Landed: add `bridge_finite_topology_operator_homeomorphism` plus topology
     closure/homeomorphism lookup and concept-scoped Alethe route smoke queries,
     making finite topology axioms, closure/interior replay, finite continuity
@@ -1644,7 +1648,7 @@ Pick one item per commit unless the change is purely navigational.
     oriented boundary coefficients, boundary-of-boundary cancellation,
     boundary-matrix shape, and checked bad-boundary coefficient evidence
     discoverable without promoting functoriality, exactness, homology
-    invariance, cohomology operations, or general algebraic topology.
+    invariance, cohomology-operation laws, or general algebraic topology.
 99. Landed: add `finite-specialization-order-v0` and
     `bridge_finite_specialization_order_replay` plus topology specialization
     lookup and concept-scoped Alethe route smoke queries, making finite
@@ -1657,8 +1661,16 @@ Pick one item per commit unless the change is purely navigational.
      concept-scoped Alethe route smoke queries, making finite F2 coboundary
      replay, `delta^2 = 0`, cohomology-rank replay, non-coboundary cocycle
      checking, and checked bad coboundary-value evidence discoverable without
-     promoting cohomology functoriality, cup products, universal coefficients,
-     de Rham comparison, sheaf cohomology, duality, or invariance theorems.
+     promoting cohomology functoriality, cohomology-operation laws, universal
+     coefficients, de Rham comparison, sheaf cohomology, duality, or invariance
+     theorems.
+101. Landed: add `finite-simplicial-cup-products-v0` and
+     `bridge_finite_cup_product_replay` plus topology cup lookup and
+     concept-scoped QF_BV route smoke queries, making ordered F2 cup-product
+     replay, one finite coboundary-Leibniz row, and checked bad cup-product
+     QF_BV/DRAT evidence discoverable without promoting associativity, graded
+     commutativity, naturality, cohomology-ring quotienting, universal
+     coefficients, or invariance theorems.
 
 ## Validation Checklist
 

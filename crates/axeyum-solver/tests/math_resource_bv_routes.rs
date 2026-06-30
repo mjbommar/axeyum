@@ -22,6 +22,9 @@ const GRAPH_COLORING_TRIANGLE_NOT_2_COLORABLE: &str = include_str!(
 const NUMBER_THEORY_QUADRATIC_NONRESIDUE: &str = include_str!(
     "../../../artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2"
 );
+const FINITE_SIMPLICIAL_CUP_PRODUCT_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2"
+);
 
 #[test]
 fn finite_rings_bad_distributivity_emits_checked_drat() {
@@ -52,6 +55,14 @@ fn number_theory_quadratic_nonresidue_emits_checked_bv_drat() {
     assert_resource_qf_bv_drat(
         "number-theory-v0 quadratic nonresidue mod 7 bit-blast conflict",
         NUMBER_THEORY_QUADRATIC_NONRESIDUE,
+    );
+}
+
+#[test]
+fn finite_simplicial_cup_product_bad_value_emits_checked_bv_drat() {
+    assert_resource_qf_bv_drat(
+        "finite-simplicial-cup-products-v0 bad cup-product value",
+        FINITE_SIMPLICIAL_CUP_PRODUCT_BAD_VALUE,
     );
 }
 

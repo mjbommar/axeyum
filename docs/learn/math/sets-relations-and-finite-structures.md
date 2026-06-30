@@ -27,6 +27,7 @@ Example packs:
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
+- [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
 ## What Axeyum Checks
@@ -77,6 +78,9 @@ event/complement identities.
 The finite simplicial-cohomology pack checks F2 cochain coboundary replay,
 `delta^2 = 0`, cohomology-rank replay for the same three-edge circle, and a
 checked QF_UF/Alethe bad coboundary-value row.
+The finite simplicial-cup-products pack checks ordered-simplex F2 cup-product
+replay, one finite coboundary-Leibniz row, and a checked QF_BV/DRAT bad
+cup-product value row.
 
 ## Encode / Check Walkthrough
 
@@ -295,6 +299,19 @@ delta f([a,c]) = 0
 The checker recomputes coboundaries, `delta^2 = 0`, and the finite
 cohomology dimensions `h0 = 1`, `h1 = 1`, then rejects a bad claim that
 `delta f([a,c]) = 1` with checked QF_UF/Alethe evidence.
+For finite cup products, keep the ordered filled triangle and split the
+2-simplex:
+
+```text
+alpha([a,b]) = 1
+beta([b,c]) = 1
+(alpha cup beta)([a,b,c]) = 1
+```
+
+The checker recomputes the Alexander-Whitney split, checks one finite
+`delta(f cup g) = delta(f) cup g + f cup delta(g)` row over `F2`, and rejects a
+bad claim that `(alpha cup beta)([a,b,c]) = 0` with checked QF_BV/DRAT
+evidence.
 For measure, use the partition
 `{a,b}` / `{c,d}` with masses `1/3` and `2/3`; the checker verifies
 normalization, finite additivity, and the event/complement identity.
@@ -326,6 +343,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 
@@ -351,6 +370,7 @@ and measure replay, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
+[End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),
 [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
@@ -360,6 +380,8 @@ The finite set, relation/function, equivalence-class, function-composition,
 finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
 cardinality-principles, topology, specialization-order, compactness-shadow, connectedness-shadow, continuous-map,
 finite-simplicial-homology, finite-simplicial-cohomology, and measure packs are now checked finite artifacts.
+The finite-simplicial-cup-products pack adds a checked finite cochain-operation
+row without promoting general cohomology-ring laws.
 The finite-simplicial-homology pack now also carries a checked
 QF_LIA/Diophantine certificate for its bad boundary coefficient. The Alethe
 certificate-anatomy page now shows the shared QF_UF proof-object boundary for

@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-simplicial-cup-products-v0",
+  "witnesses": [
+    {
+      "id": "edge-cup-filled-triangle",
+      "description": "Two 1-cochains on a filled triangle and their order-sensitive F2 cup product.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "simplices": [
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "left_dimension": 1,
+        "right_dimension": 1,
+        "left_cochain": [
+          {"simplex": ["a", "b"], "value": 1},
+          {"simplex": ["a", "c"], "value": 0},
+          {"simplex": ["b", "c"], "value": 0}
+        ],
+        "right_cochain": [
+          {"simplex": ["a", "b"], "value": 0},
+          {"simplex": ["a", "c"], "value": 0},
+          {"simplex": ["b", "c"], "value": 1}
+        ],
+        "cup_product": [
+          {"simplex": ["a", "b", "c"], "value": 1}
+        ],
+        "reverse_cup_product": [
+          {"simplex": ["a", "b", "c"], "value": 0}
+        ]
+      }
+    },
+    {
+      "id": "zero-cochain-leibniz",
+      "description": "Two 0-cochains whose cup product satisfies the F2 coboundary Leibniz identity on edges.",
+      "values": {
+        "vertices": ["a", "b", "c"],
+        "simplices": [
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"]
+        ],
+        "left_dimension": 0,
+        "right_dimension": 0,
+        "left_cochain": [
+          {"simplex": ["a"], "value": 1},
+          {"simplex": ["b"], "value": 0},
+          {"simplex": ["c"], "value": 1}
+        ],
+        "right_cochain": [
+          {"simplex": ["a"], "value": 1},
+          {"simplex": ["b"], "value": 1},
+          {"simplex": ["c"], "value": 0}
+        ],
+        "cup_product": [
+          {"simplex": ["a"], "value": 1},
+          {"simplex": ["b"], "value": 0},
+          {"simplex": ["c"], "value": 0}
+        ],
+        "left_coboundary": [
+          {"simplex": ["a", "b"], "value": 1},
+          {"simplex": ["a", "c"], "value": 0},
+          {"simplex": ["b", "c"], "value": 1}
+        ],
+        "right_coboundary": [
+          {"simplex": ["a", "b"], "value": 0},
+          {"simplex": ["a", "c"], "value": 1},
+          {"simplex": ["b", "c"], "value": 1}
+        ],
+        "cup_coboundary": [
+          {"simplex": ["a", "b"], "value": 1},
+          {"simplex": ["a", "c"], "value": 1},
+          {"simplex": ["b", "c"], "value": 0}
+        ],
+        "leibniz_left_term": [
+          {"simplex": ["a", "b"], "value": 1},
+          {"simplex": ["a", "c"], "value": 0},
+          {"simplex": ["b", "c"], "value": 0}
+        ],
+        "leibniz_right_term": [
+          {"simplex": ["a", "b"], "value": 0},
+          {"simplex": ["a", "c"], "value": 1},
+          {"simplex": ["b", "c"], "value": 0}
+        ],
+        "leibniz_sum": [
+          {"simplex": ["a", "b"], "value": 1},
+          {"simplex": ["a", "c"], "value": 1},
+          {"simplex": ["b", "c"], "value": 0}
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "cup-product-replay",
+      "claim": "The listed 1-cochains have the stated order-sensitive F2 cup products on the filled triangle.",
+      "expected_result": "sat",
+      "validation": "finite_cup_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["edge-cup-filled-triangle"],
+      "notes": "The validator recomputes alpha cup beta and beta cup alpha from the ordered simplex split."
+    },
+    {
+      "id": "cup-coboundary-leibniz-replay",
+      "claim": "The listed 0-cochains satisfy delta(f cup g) = delta(f) cup g + f cup delta(g) over F2 on each edge.",
+      "expected_result": "sat",
+      "validation": "finite_cup_coboundary_leibniz_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["zero-cochain-leibniz"],
+      "notes": "The validator recomputes the pointwise cup product, both coboundaries, both cup terms, and their F2 sum."
+    },
+    {
+      "id": "bad-cup-product-rejected",
+      "claim": "The cup product alpha cup beta has value 0 on [a,b,c].",
+      "expected_result": "unsat",
+      "validation": "finite_bad_cup_product_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "simplices": [
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "left_dimension": 1,
+        "right_dimension": 1,
+        "left_cochain": [
+          {"simplex": ["a", "b"], "value": 1},
+          {"simplex": ["a", "c"], "value": 0},
+          {"simplex": ["b", "c"], "value": 0}
+        ],
+        "right_cochain": [
+          {"simplex": ["a", "b"], "value": 0},
+          {"simplex": ["a", "c"], "value": 0},
+          {"simplex": ["b", "c"], "value": 1}
+        ],
+        "mismatch_simplex": ["a", "b", "c"],
+        "actual_value": 1,
+        "claimed_value": 0
+      },
+      "notes": "The finite replay computes alpha([a,b]) * beta([b,c]) = 1, so the claimed value 0 is rejected."
+    },
+    {
+      "id": "qf-bv-bad-cup-product",
+      "claim": "The replayed F2 cup-product value can be both 1 and 0.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "mismatch_simplex": ["a", "b", "c"],
+        "actual_value": 1,
+        "claimed_value": 0,
+        "bit_width": 1,
+        "smt2_artifact": "artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while finite cup-product lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The SMT-LIB artifact records the final F2 multiplication as a one-bit BV AND contradiction whose DIMACS/DRAT pair is rechecked by the regression."
+    },
+    {
+      "id": "general-cup-product-lean-horizon",
+      "claim": "General cup-product and cohomology-ring theorems require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "cup-product associativity, graded commutativity, Leibniz rule on arbitrary cochain complexes, cohomology rings, naturality, and topological invariance",
+        "future_checker": "Lean modules for simplicial cochains, cup products, graded rings, cohomology-ring quotienting, naturality, and proof reconstruction from finite cup-product certificates"
+      },
+      "notes": "The finite rows are F2 cochain-table checks; general cohomology-ring theory remains a proof-assistant horizon."
+    }
+  ]
+}

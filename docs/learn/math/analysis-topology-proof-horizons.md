@@ -12,7 +12,8 @@ Concept rows:
 - `bridge_finite_topology_operator_homeomorphism`,
   `bridge_finite_specialization_order_replay`, and
   `bridge_finite_chain_homology_replay`, and
-  `bridge_finite_cohomology_replay` in the atlas bridge vocabulary for the
+  `bridge_finite_cohomology_replay`, and
+  `bridge_finite_cup_product_replay` in the atlas bridge vocabulary for the
   finite topology, topology-to-order, and algebraic-topology slices.
 
 Example packs:
@@ -30,6 +31,7 @@ Example packs:
 - [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
+- [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
@@ -68,7 +70,9 @@ finite specialization preorders, singleton-closure characterization, finite
 `T0`/antisymmetry checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
 rank checks, fixed Betti-number replay, finite F2 cochain coboundary replay,
-cohomology-rank checks, and bad boundary-sign or coboundary-value rejection,
+cohomology-rank checks, finite F2 cup-product replay, one finite coboundary
+Leibniz row, and bad boundary-sign, coboundary-value, or cup-product-value
+rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
@@ -311,6 +315,22 @@ values from simplex faces, checks `delta^2 = 0` on a filled triangle, computes
 F2 cohomology dimensions `h0 = 1` and `h1 = 1` for the three-edge circle, and
 rejects a false coboundary value with checked QF_UF/Alethe evidence.
 
+For a finite cup-product shadow over `F2`, keep an ordered filled triangle and
+split the top simplex:
+
+```text
+alpha([a,b]) = 1
+beta([b,c]) = 1
+(alpha cup beta)([a,b,c]) = alpha([a,b]) * beta([b,c]) = 1
+```
+
+The `finite-simplicial-cup-products-v0` validator recomputes the
+Alexander-Whitney split, checks the reverse order separately, replays one
+finite `delta(f cup g) = delta(f) cup g + f cup delta(g)` row over `F2`, and
+rejects a false cup-product value with checked QF_BV/DRAT evidence. This is a
+finite cochain-operation check, not a proof of cup-product associativity,
+graded commutativity, naturality, cohomology-ring quotienting, or invariance.
+
 For the algebraic shadow of calculus, encode polynomial coefficients and the
 derived coefficient list:
 
@@ -455,6 +475,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
@@ -505,6 +527,7 @@ replay, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
+[End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),
 [End To End: Finite Topology](finite-topology-end-to-end.md),
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
 [End To End: Finite Measure](finite-measure-end-to-end.md),
@@ -525,5 +548,6 @@ countably infinite Markov chains,
 recurrence/transience classifications, optional stopping, mixing-time bounds,
 general Chebyshev spaces, specialization-order and separation-axiom theorems,
 sobriety/domain-theory results, homology invariance, exact sequences, homotopy
-equivalence, and infinite-dimensional spectral theory remain Lean-horizon
-material.
+equivalence, cup-product associativity, graded commutativity, naturality,
+cohomology-ring quotienting, cohomology-operation invariance, and
+infinite-dimensional spectral theory remain Lean-horizon material.

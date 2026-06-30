@@ -9,7 +9,9 @@ the finite open-cover slice in
 and the finite connectedness slice in
 [finite-connectedness-v0](../../../artifacts/examples/math/finite-connectedness-v0/),
 plus finite continuous-map checks in
-[finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/).
+[finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/)
+and finite algebraic-topology cochain operations in
+[finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/).
 
 Concept rows:
 
@@ -30,6 +32,8 @@ Concept rows:
 | `bad-connected-claim-rejected` | `unsat` | checked Bool/CNF DRAT/LRAT |
 | `finite-continuous-map-witness` | `sat` | replay-only |
 | `bad-continuous-map-rejected` | `unsat` | checked |
+| `cup-product-replay` | `sat` | replay-only |
+| `qf-bv-bad-cup-product` | `unsat` | checked QF_BV/DRAT |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
 | `bad-complement-measure-rejected` | `unsat` | checked QF_LRA/Farkas |
@@ -149,6 +153,12 @@ finite cohomology ranks, and rejects a bad coboundary value through checked
 QF_UF/Alethe evidence. For a fuller focused trace, read
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md).
 
+For finite simplicial cup products, the checker keeps ordered simplices and F2
+cochains, applies the Alexander-Whitney split, checks one finite
+coboundary-Leibniz row, and rejects a false product value through checked
+QF_BV/DRAT evidence. For a fuller focused trace, read
+[End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md).
+
 ## Run It
 
 From the repository root:
@@ -165,6 +175,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
 ```
 
 Expected output for each command:
@@ -188,3 +200,6 @@ neighborhood preorder and the independent Alethe certificate for the final
 equality conflict.
 The finite-cohomology UNSAT row trusts only the explicit F2 coboundary replay
 and the independent Alethe certificate for the final value conflict.
+The finite-cup-product UNSAT row trusts only the explicit ordered-simplex F2
+cup-product replay and the independent QF_BV/DRAT certificate for the final
+one-bit value conflict.

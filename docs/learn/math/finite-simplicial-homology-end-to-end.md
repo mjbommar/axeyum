@@ -29,7 +29,7 @@ Concept rows:
 
 Every checked row is finite set and exact integer/rational linear-algebra
 replay. The pack does not prove homology invariance, exact sequences, homotopy
-equivalence, cohomology, or general algebraic topology.
+equivalence, general cohomology theory, or general algebraic topology.
 
 The shared `bridge_finite_boundary_operator_replay` row is the atlas vocabulary
 for oriented boundary coefficients, `boundary^2 = 0`, and checked bad-sign
@@ -202,6 +202,7 @@ The following remain proof-assistant targets:
 homology invariance
 long exact sequences
 homotopy equivalence
+general cohomology and cohomology-ring theory
 higher-dimensional algebraic topology
 ```
 
@@ -240,3 +241,5 @@ are promoted.
 
 For the finite cochain-side analogue over `F2`, read
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md).
+For a finite cochain operation built on that analogue, read
+[End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md).

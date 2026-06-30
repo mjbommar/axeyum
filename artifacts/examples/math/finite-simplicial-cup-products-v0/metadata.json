@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-simplicial-cup-products-v0",
+  "title": "Exact Finite Simplicial Cup Product Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "bridge_finite_cup_product_replay",
+    "bridge_finite_cohomology_replay",
+    "bridge_finite_boundary_operator_replay",
+    "bridge_finite_chain_homology_replay",
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "linear_algebra",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "finite cochains over F2",
+    "finite cup products",
+    "QF_BV / DRAT",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite simplicial cup product QF_BV/DRAT regression seed",
+    "pressure": "Finite replay computes a 1-bit F2 cup-product value as alpha_ab AND beta_bc, while the malformed row claims the opposite bit.",
+    "evidence": [
+      "qf-bv-bad-cup-product"
+    ],
+    "next_step": "Promote additional cup-product rows only when they add distinct associativity, graded-commutativity, cohomology-ring, or proof-reconstruction pressure; keep general cohomology-ring theory in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
+  ],
+  "expected_results": [
+    "cup-product-replay",
+    "cup-coboundary-leibniz-replay",
+    "bad-cup-product-rejected",
+    "qf-bv-bad-cup-product",
+    "general-cup-product-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Rows state the finite complex, coefficient field, cochain basis, cup-product split convention, and listed product values.",
+    "The validator recomputes finite F2 cup products and the finite coboundary Leibniz row exactly.",
+    "Malformed fixed rows link source artifacts and route regressions before claiming checked QF_BV/DRAT evidence.",
+    "Associativity, graded commutativity, cup products on arbitrary complexes, cohomology rings, and topological invariance remain Lean-horizon until kernel-checked proof routes exist."
+  ]
+}
