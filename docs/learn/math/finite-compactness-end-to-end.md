@@ -24,8 +24,9 @@ Concept rows:
 | `general-compactness-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is finite set enumeration over an explicit topology. The pack
-does not prove arbitrary topological compactness, Heine-Borel, or the general
-finite-intersection-property theorem.
+also checks the bad-cover row with a DRAT/LRAT certificate for the final
+missing-point Boolean contradiction. It does not prove arbitrary topological
+compactness, Heine-Borel, or the general finite-intersection-property theorem.
 
 ## Encode A Finite Topology
 
@@ -136,6 +137,16 @@ is an open cover of `{a,b,c}`. The checker recomputes:
 
 and rejects the claim because `c` is missing.
 
+The resource regression also checks the final contradiction as `Bool/CNF`:
+
+```text
+c_covered = false
+c_covered = true
+```
+
+That `unsat` result must emit DRAT, elaborate to LRAT, and pass the independent
+`check_drat` and `check_lrat` proof checkers.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -168,6 +179,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_compactness_bad_open_cover_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -182,10 +194,11 @@ This lesson shows Axeyum's current finite compactness resource pattern:
 
 ```text
 untrusted fast search -> cover, subcover, closed family, or bad-cover row
-trusted small checking -> finite set unions, intersections, and enumeration
+trusted small checking -> finite set unions, intersections, enumeration, and a DRAT/LRAT certificate for the bad-cover CNF
 remaining horizon -> general compactness theorems
 ```
 
 The graduation target is to encode finite open-cover, subcover, and
-finite-intersection checks as deterministic finite-set obligations, then emit
-checked enumeration evidence for minimal-subcover and bad-cover refutations.
+finite-intersection checks as deterministic finite-set obligations, then
+promote only those Boolean refutations whose source-level finite-set meaning is
+explicit.

@@ -18,6 +18,9 @@ const CONTRADICTION_REFUTATION_CNF: &str = include_str!(
 const FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF: &str = include_str!(
     "../../../artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf"
 );
+const FINITE_COMPACTNESS_BAD_OPEN_COVER: &str = include_str!(
+    "../../../artifacts/examples/math/finite-compactness-v0/cnf/bad-open-cover-rejected.cnf"
+);
 const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
     include_str!("../../../artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf");
 const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
@@ -93,6 +96,16 @@ fn finite_sets_distributive_counterexample_emits_checked_drat_and_lrat() {
         FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF,
         5,
         13,
+    );
+}
+
+#[test]
+fn finite_compactness_bad_open_cover_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "finite-compactness-v0 bad-open-cover-rejected",
+        FINITE_COMPACTNESS_BAD_OPEN_COVER,
+        1,
+        2,
     );
 }
 

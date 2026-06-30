@@ -1,0 +1,7 @@
+c finite-compactness-v0 bad-open-cover-rejected
+c variable 1: point c is covered by the claimed open-cover union
+c fixed cover facts: {a} union {b} misses c
+c false open-cover claim: every universe point, including c, is covered
+p cnf 1 2
+-1 0
+1 0

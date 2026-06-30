@@ -677,8 +677,8 @@ Lipschitz, epsilon-delta, and open-ball preimage checks with exact rational
 metrics, plus checked QF_LRA/Farkas rejection of an overlarge delta.
 `artifacts/examples/math/finite-compactness-v0/` now validates finite
 open-cover/subcover checks, minimal subcover enumeration,
-finite-intersection-family replay, bad-cover rejection, and a compactness
-Lean-horizon row.
+finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and a
+compactness Lean-horizon row.
 `artifacts/examples/math/finite-connectedness-v0/` now validates finite
 connectedness by clopen-subset enumeration, open-separation replay, checked
 rejection of a false connectedness claim, and a connectedness Lean-horizon row.
@@ -833,7 +833,8 @@ Recommended order:
     preimage, and checked QF_LRA/Farkas bad-delta checks over exact rational
     metric spaces.
 20. `finite-compactness-v0`: finite open covers, minimal subcover
-    enumeration, finite-intersection families, and bad-cover rejection.
+    enumeration, finite-intersection families, and checked Bool/CNF bad-cover
+    rejection.
 21. `finite-connectedness-v0`: finite connected spaces, open separations,
     clopen-subset enumeration, and bad-connected-claim rejection.
 22. `finite-continuous-maps-v0`: finite topological continuity, open-set
@@ -1338,8 +1339,8 @@ open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and the
 continuity Lean horizon.
 `finite-compactness-v0` now has a learner-facing end-to-end lesson for finite
 open-cover replay, subcover replay, minimal-subcover enumeration,
-finite-intersection-family replay, checked bad-cover rejection, and the
-compactness Lean horizon.
+finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and
+the compactness Lean horizon.
 `finite-connectedness-v0` now has a learner-facing end-to-end lesson for finite
 connected-space replay, open-separation replay, clopen-subset disconnection,
 checked bad-connectedness rejection, and the connectedness Lean horizon.

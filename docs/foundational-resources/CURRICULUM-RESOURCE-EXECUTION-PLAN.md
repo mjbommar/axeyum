@@ -154,8 +154,8 @@ Add bridge-concept or example-family rows for repeated subtopics:
 - algebra: homomorphisms, kernels/images, ideals, quotients, modules, tensor
   products, group actions;
 - analysis: bounded epsilon-delta shadows, metric continuity with checked
-  QF_LRA/Farkas bad-delta evidence, finite
-  compactness, finite connectedness, finite integration;
+  QF_LRA/Farkas bad-delta evidence, finite compactness with checked
+  Bool/CNF bad-cover evidence, finite connectedness, finite integration;
 - linear algebra: LU replay, rank/nullity, dual spaces, inner products,
   spectral decompositions, numerical residual bounds;
 - probability/statistics: finite kernels, conditional expectation,

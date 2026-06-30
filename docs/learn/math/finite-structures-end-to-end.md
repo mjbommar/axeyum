@@ -105,7 +105,8 @@ additivity over disjoint measurable sets.
 
 For compactness, the checker recomputes the cover union, checks the listed
 subcover, enumerates smaller subfamilies for the minimal-size row, and rejects
-the bad cover `{a}, {b}` because it misses `c`.
+the bad cover `{a}, {b}` because it misses `c`; the final Boolean
+missing-point contradiction is checked by DRAT/LRAT proof objects.
 For a fuller focused trace, read
 [End To End: Finite Compactness](finite-compactness-end-to-end.md).
 

@@ -30,6 +30,11 @@ Expected result: `unsat`.
 The validator recomputes the union of `{a}` and `{b}` and rejects the open-cover
 claim because `c` is missing.
 
+The resource-backed Axeyum regression checks the final missing-point
+contradiction as `Bool/CNF`: variable `1` means "`c` is covered"; the cover
+facts assert `not 1`, the false open-cover claim asserts `1`, and DRAT/LRAT
+proof objects are independently checked.
+
 ## `general-compactness-lean-horizon`
 
 Expected result: `not-run`.

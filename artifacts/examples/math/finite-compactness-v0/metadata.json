@@ -27,9 +27,19 @@
     "finite sets",
     "finite topology",
     "Bool / enumeration",
+    "Bool / CNF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite compactness bad open-cover Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Finite open-cover row where the computed cover union misses point c but the false open-cover claim requires c to be covered.",
+    "evidence": [
+      "bad-open-cover-rejected"
+    ],
+    "next_step": "Promote additional topology rows only when the Boolean encoding adds distinct finite set/topology pressure; keep arbitrary compactness and finite-intersection-property theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -37,7 +47,10 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-compactness-v0/cnf/bad-open-cover-rejected.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "finite-open-cover-subcover",
@@ -49,7 +62,7 @@
   "graduation_criteria": [
     "Encode finite open-cover, subcover, and finite-intersection checks as deterministic finite-set obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over finite topological spaces.",
-    "Emit checked finite enumeration evidence for minimal-subcover and bad-cover refutations.",
+    "Emit checked finite enumeration evidence for minimal-subcover and bad-cover refutations; the bad-cover row now has checked Bool/CNF DRAT/LRAT evidence.",
     "Keep arbitrary topological compactness, Heine-Borel, and finite-intersection-property theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

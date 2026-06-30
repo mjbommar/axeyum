@@ -56,3 +56,12 @@ The bad cover is:
 
 Its union misses `c`, so the open-cover claim is rejected by exact finite-set
 arithmetic.
+
+The final Boolean contradiction is:
+
+```text
+c_covered = false
+c_covered = true
+```
+
+The pack keeps that contradiction on the checked `Bool/CNF` DRAT/LRAT route.

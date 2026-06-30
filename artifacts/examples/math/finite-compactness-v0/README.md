@@ -9,7 +9,7 @@ The examples are:
 - a finite open-cover/subcover witness;
 - a checked minimal-subcover-size witness;
 - a finite-intersection-family witness;
-- checked rejection of a bad open cover;
+- checked Bool/CNF DRAT/LRAT rejection of a bad open cover;
 - a general compactness Lean-horizon row.
 
 ## Concepts
@@ -26,7 +26,16 @@ The examples are:
 The validator checks the finite topology axioms, confirms that cover elements
 are open, recomputes cover unions, enumerates smaller subfamilies for the
 minimal-subcover claim, checks closedness by open complements, and validates
-the finite-intersection property by enumeration.
+the finite-intersection property by enumeration. The bad-cover row is also
+encoded as a tiny `Bool/CNF` contradiction:
+
+```text
+c is not covered by {a} union {b}
+c is covered by the claimed open cover
+```
+
+Axeyum emits a DRAT refutation, elaborates it to LRAT, and independently
+checks both proof objects.
 
 This pack is checked finite evidence for the minimal-subcover and bad-cover
 rows. It is not a proof of arbitrary topological compactness, Heine-Borel, or
@@ -36,4 +45,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_compactness_bad_open_cover_emits_checked_drat_and_lrat
 ```

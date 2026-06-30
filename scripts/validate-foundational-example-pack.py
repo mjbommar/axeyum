@@ -11542,6 +11542,19 @@ def validate_finite_compactness(expected: dict[str, Any]) -> None:
         fail("bad-open-cover-rejected missing_points are incorrect")
     if not actual_missing:
         fail("bad-open-cover-rejected cover unexpectedly covers the universe")
+    cnf_artifact = data.get("cnf_artifact")
+    require_string("bad open cover cnf_artifact", cnf_artifact)
+    check_source("bad open cover cnf_artifact", cnf_artifact)
+    if cnf_artifact != "artifacts/examples/math/finite-compactness-v0/cnf/bad-open-cover-rejected.cnf":
+        fail("bad-open-cover-rejected cnf_artifact must name the checked DIMACS artifact")
+    regression = data.get("boolean_regression")
+    require_string("bad open cover boolean_regression", regression)
+    if "finite_compactness_bad_open_cover_emits_checked_drat_and_lrat" not in regression:
+        fail("bad-open-cover-rejected must link the Boolean proof-route regression")
+    certificate = data.get("certificate")
+    require_string("bad open cover certificate", certificate)
+    if not all(token in certificate for token in ("DRAT", "LRAT", "check_drat", "check_lrat")):
+        fail("bad-open-cover-rejected certificate must document checked DRAT/LRAT evidence")
 
     horizon = checks["general-compactness-lean-horizon"]
     if horizon["expected_result"] != "not-run":

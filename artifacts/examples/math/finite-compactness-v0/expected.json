@@ -86,9 +86,12 @@
           ["a"],
           ["b"]
         ],
-        "missing_points": ["c"]
+        "missing_points": ["c"],
+        "cnf_artifact": "artifacts/examples/math/finite-compactness-v0/cnf/bad-open-cover-rejected.cnf",
+        "boolean_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_compactness_bad_open_cover_emits_checked_drat_and_lrat",
+        "certificate": "solve_with_drat_proof emits a DRAT refutation for c_covered = false and c_covered = true, elaborate_drat_to_lrat emits LRAT, and check_drat/check_lrat independently recheck both proof objects"
       },
-      "notes": "The validator recomputes the cover union and rejects the missing point c."
+      "notes": "The validator recomputes the cover union and rejects the missing point c. The DIMACS artifact isolates the false c-covered claim, and Axeyum emits checked DRAT/LRAT evidence."
     },
     {
       "id": "general-compactness-lean-horizon",

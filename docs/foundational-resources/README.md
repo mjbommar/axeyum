@@ -140,8 +140,8 @@ schemas, examples, and validation workflows.
   overlarge delta.
 - [`artifacts/examples/math/finite-compactness-v0/`](../../artifacts/examples/math/finite-compactness-v0/)
   validates finite open-cover/subcover checks, minimal subcover enumeration,
-  finite-intersection families, bad-cover rejection, and a compactness
-  Lean-horizon row.
+  finite-intersection families, checked Bool/CNF bad-cover rejection, and a
+  compactness Lean-horizon row.
 - [`artifacts/examples/math/finite-connectedness-v0/`](../../artifacts/examples/math/finite-connectedness-v0/)
   validates finite connectedness via clopen-subset enumeration, open
   separations, bad-connected-claim rejection, and a connectedness Lean-horizon

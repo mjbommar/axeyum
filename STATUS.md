@@ -874,8 +874,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The `math_resource_lra_routes` regression checks the exact rational
   contradiction `output_distance = 1` and `output_distance < 1` with
   `Evidence::UnsatFarkas` plus independent `Evidence::check` rechecking. The
-  pack metadata marks `solver_reuse.status` as `promoted`; generated resource
-  summary now reports `solver_reuse=promoted:12,unclassified:72`.
+  pack metadata marks `solver_reuse.status` as `promoted`.
+
+- **Finite-compactness Boolean proof promotion landed.**
+  [`finite-compactness-v0`](artifacts/examples/math/finite-compactness-v0/)
+  now has a source-linked DIMACS artifact for the bad open-cover row:
+  [`bad-open-cover-rejected.cnf`](artifacts/examples/math/finite-compactness-v0/cnf/bad-open-cover-rejected.cnf).
+  The `math_resource_boolean_routes` regression checks the one-variable
+  contradiction `c_covered = false` and `c_covered = true` by emitting DRAT,
+  elaborating to LRAT, and independently checking both proof objects. The pack
+  metadata marks `solver_reuse.status` as `promoted`; generated resource
+  summary now reports `solver_reuse=promoted:13,unclassified:71`.
 
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)

@@ -151,7 +151,9 @@ subcover = {a,b}, {b,c}
 
 The `finite-compactness-v0` validator checks the topology, recomputes cover
 unions, enumerates smaller subfamilies for a minimal-subcover claim, checks a
-finite-intersection family, and rejects a bad cover that misses a point.
+finite-intersection family, and rejects a bad cover that misses a point. The
+upgraded bad-cover row also routes the final contradiction `c_covered = false`
+and `c_covered = true` through checked DRAT/LRAT evidence.
 
 For a finite connectedness shadow, encode a tiny topology and enumerate clopen
 subsets:

@@ -286,8 +286,8 @@ validated pack data and the repo-root command that replays it.
   sigma-algebra closure, finite additivity, and event-complement replay.
 - [Finite Compactness](finite-compactness-end-to-end.md): follows finite
   open-cover replay, subcover replay, minimal-subcover enumeration,
-  finite-intersection-family replay, bad-cover rejection, and the compactness
-  Lean horizon.
+  finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and
+  the compactness Lean horizon.
 - [Finite Connectedness](finite-connectedness-end-to-end.md): follows finite
   connected-space replay, open-separation replay, clopen-subset disconnection,
   checked bad-connectedness rejection, and the connectedness Lean horizon.

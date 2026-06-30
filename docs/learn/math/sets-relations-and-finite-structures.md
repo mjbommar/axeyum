@@ -225,7 +225,8 @@ subcover = {a,b}, {b,c}
 
 It checks that the listed subcover covers the universe, enumerates smaller
 subfamilies for the minimality row, and rejects the bad cover `{a}, {b}` because
-it misses `c`. For connectedness, enumerate all clopen subsets of a tiny
+it misses `c`; the final missing-point contradiction now has checked
+Bool/CNF DRAT/LRAT evidence. For connectedness, enumerate all clopen subsets of a tiny
 topology:
 
 ```text
