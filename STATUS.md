@@ -222,6 +222,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_uf_routes` drops the closing Alethe command. Each test requires
   the independent checker to reject the doctored certificate.
 
+- **Optimization/convexity consumer-query coverage landed.**
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md) now
+  shows optimization/Farkas field readiness, LP-objective and convexity bridge
+  lookups, and checked optimization/convexity Farkas row drill-downs. The
+  foundational-resource smoke check runs the same commands so exact LP,
+  convexity, least-squares, gradient/Hessian, residual, eigenpair, and related
+  matrix examples remain visible through the public JSON boundary.
+
 - **Finite group-action QF_UF promotion landed.**
   [`finite-group-actions-v0`](artifacts/examples/math/finite-group-actions-v0/)
   now links `bad-action-rejected` to a source-level QF_UF artifact for the
@@ -12058,6 +12066,17 @@ plan is built and committed on the current branch:
   shadows, affine monotonicity, gradient replay, Hessian-minor witnesses, and
   least-squares normal-equation replay while keeping duality, KKT sufficiency,
   SDP, and convergence claims in the Lean-horizon lane.
+
+- **2026-06-30** — **Optimization/convexity field-readiness consumer query landed.**
+  Added optimization/Farkas field readiness, LP-objective and convexity bridge
+  concept lookup, and checked optimization/convexity Farkas row drill-down
+  examples to
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
+  The foundational-resource smoke check now runs those queries alongside the
+  probability/Farkas, dynamics/Farkas, and measure/Farkas examples, making exact
+  LP thresholds, finite convexity shadows, least-squares normal equations,
+  gradient/Hessian replay, residual bounds, eigenpair, and related matrix
+  witnesses visible through the public JSON consumer boundary.
 
 - **2026-06-30** — **Geometry and complex bridge concepts landed.**
   Extended

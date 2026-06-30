@@ -97,6 +97,10 @@ Concrete work:
   recurrence, Euler, stochastic-kernel, and hitting-time resources, and
   measure/Farkas covers finite event-algebra, product-measure, integration,
   random-variable, conditional-expectation, and stochastic-process resources.
+  Optimization/Farkas covers exact LP thresholds, finite convexity shadows,
+  least-squares normal equations, residual bounds, gradient/Hessian replay, and
+  related matrix checks without promoting duality, KKT, SDP, or convergence
+  theorem claims.
 - Keep all status changes generated from `curriculum.toml`,
   [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md), and pack metadata.
 
@@ -484,7 +488,11 @@ Next buildout:
    measure bridge concept lookup, and checked measure-theory Farkas rows,
    tying finite measure, product-measure, integration, random-variable,
    conditional-expectation, martingale, kernel, hitting-time, and
-   concentration packs to the public JSON consumer boundary.
+   concentration packs to the public JSON consumer boundary. It now also covers
+   optimization/convexity Farkas field readiness, LP-objective and convexity
+   bridge lookups, and checked optimization Farkas rows, tying LP thresholds,
+   convexity shadows, least-squares, gradients, residual bounds, and matrix
+   witnesses to the same boundary.
 13. Landed: add negative fixtures for the foundational example-pack schema.
    `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
    packs with unknown fields, metadata/check id drift, and missing witness

@@ -188,6 +188,43 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For optimization and convexity, query the Farkas route to keep exact LP
+thresholds, finite convexity shadows, regression normal equations, residual
+bounds, and gradient/Hessian replay together while leaving duality, KKT, SDP,
+and convergence claims in the proof-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field optimization_and_convexity \
+  --route Farkas \
+  --require-any
+```
+
+Use atlas lookups for the two reusable bridge concepts:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field optimization_and_convexity \
+  --text objective \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field optimization_and_convexity \
+  --text convexity \
+  --require-any
+```
+
+To display concrete checked optimization, convexity, least-squares, gradient,
+residual, or eigenpair rows, drill into checked Farkas examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field optimization_and_convexity \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 ## Proof And Check Mining
 
 ```sh
@@ -265,6 +302,10 @@ python3 scripts/query-foundational-resources.py fields --field differential_equa
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

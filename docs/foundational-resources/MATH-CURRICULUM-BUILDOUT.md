@@ -1696,6 +1696,14 @@ The rules/law transfer lane now also has its second concrete pack:
 explicit deny precedence, bounded version-delta witnesses, and checked
 Bool/QF_LIA evidence for tenant isolation, deny precedence, admin tenant
 boundaries, and implementation equivalence.
+The consumer query layer now also exposes optimization/convexity readiness:
+`CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
+convexity bridge lookups, and checked optimization/convexity Farkas row
+drill-downs. The foundational-resource smoke check runs the same queries so
+exact LP thresholds, finite convexity shadows, least-squares normal equations,
+gradient/Hessian replay, residual bounds, and matrix witnesses stay visible
+through the public JSON boundary without promoting duality, KKT, SDP, or
+convergence-theorem claims.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

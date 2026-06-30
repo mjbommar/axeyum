@@ -1286,7 +1286,15 @@ Pick one item per commit unless the change is purely navigational.
     least-squares normal-equation replay. The generated atlas now validates 48
     bridge rows and keeps duality, KKT sufficiency, SDP, and convergence claims
     in the Lean-horizon lane.
-54. Continue proof-route promotions or consumer-query examples; revisit the
+54. Landed: add optimization/convexity field-readiness consumer query coverage.
+    `docs/foundational-resources/CONSUMER-QUERIES.md` now shows
+    optimization/Farkas field readiness, LP-objective and convexity bridge
+    lookup, and checked optimization/convexity Farkas row drill-downs. The
+    foundational resource smoke check now runs those same queries, tying exact
+    LP thresholds, finite convexity shadows, least-squares normal equations,
+    gradient/Hessian replay, residual bounds, and matrix witnesses to the
+    public JSON consumer boundary.
+55. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

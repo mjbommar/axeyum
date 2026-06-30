@@ -19,6 +19,10 @@ python3 scripts/query-foundational-resources.py fields --field differential_equa
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/gen-foundational-dashboards.py
 
 git diff --exit-code -- \

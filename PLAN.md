@@ -298,8 +298,10 @@ JSON-first and in-repo: promoted solver-reuse rows are consumer-readable through
 the query helper, and the field-readiness smoke set now covers
 probability/Farkas, differential-equations/dynamics Farkas, and measure-theory
 Farkas lanes, with measure also smoke-tested through atlas concept lookup and
-checked-row drill-downs; there is still no external consumer or repeated typed
-API need that would justify a crate or repo split.
+checked-row drill-downs. It now also covers optimization/convexity Farkas field
+readiness, LP-objective and convexity bridge lookups, and checked
+optimization/convexity Farkas rows; there is still no external consumer or
+repeated typed API need that would justify a crate or repo split.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs

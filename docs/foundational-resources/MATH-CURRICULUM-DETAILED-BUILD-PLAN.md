@@ -416,6 +416,13 @@ Pick one row per commit unless the change is purely navigational.
    least-squares normal-equation replay queryable as a shared convexity
    concept. The atlas now validates 48 bridge rows while keeping duality, KKT
    sufficiency, SDP, and convergence theorem coverage in the Lean-horizon lane.
+45. Landed: add optimization/convexity field-readiness consumer query
+   coverage. `CONSUMER-QUERIES.md` and
+   `check-foundational-resources.sh` now exercise optimization/Farkas field
+   readiness, LP-objective bridge lookup, convexity bridge lookup, and checked
+   optimization/convexity Farkas rows, making LP thresholds, finite convexity
+   shadows, least-squares, gradient/Hessian replay, residual bounds, eigenpair,
+   and related matrix witnesses discoverable from the committed JSON contract.
 
 ## Validation Checklist
 
