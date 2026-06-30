@@ -224,7 +224,9 @@ det(H_f) = 8
 ```
 
 The `multivariable-calculus-rational-v0` validator recomputes the derivative
-matrix entries and checks the positive principal minors exactly.
+matrix entries and checks the positive principal minors exactly. Its
+bad-gradient row also checks the final exact-linear contradiction
+`gradient_y = 14` versus `gradient_y = 13` through QF_LRA/Farkas evidence.
 
 For a finite Chebyshev-system example, the validator checks the quadratic
 Vandermonde matrix on sample points `-1, 0, 1`:
@@ -255,6 +257,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0

@@ -148,7 +148,9 @@ H_f(point) = [[2,2],
 The `multivariable-calculus-rational-v0` validator differentiates each
 monomial, recomputes the gradient and Hessian exactly, checks a directional
 derivative as a dot product, replays a Jacobian chain-rule matrix product, and
-rejects the false gradient `(7,13)`.
+rejects the false gradient `(7,13)`. The bad-gradient row also routes the final
+component conflict `gradient_y = 14` versus `gradient_y = 13` through checked
+QF_LRA/Farkas evidence.
 
 For a coordinate-geometry check, encode two endpoints and the proposed midpoint:
 
@@ -173,6 +175,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0

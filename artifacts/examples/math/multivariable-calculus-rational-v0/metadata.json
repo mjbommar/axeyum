@@ -35,6 +35,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "exact bivariate gradient QF_LRA/Farkas regression seed",
+    "pressure": "Exact polynomial replay computes the y-gradient component at (1,2) as 14, while the malformed row claims the same component is 13.",
+    "evidence": [
+      "bad-gradient-rejected"
+    ],
+    "next_step": "Promote additional multivariable-calculus rows only when they add distinct exact-gradient, Jacobian, Hessian, or finite-matrix solver pressure; keep differentiability from limits, inverse/implicit function theorems, and manifold calculus in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/calculus.md",
     "docs/curriculum/03-destinations/linear-algebra.md",
@@ -44,6 +53,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -57,7 +68,7 @@
   "graduation_criteria": [
     "Encode fixed multivariable polynomial derivative rows as deterministic exact rational arithmetic obligations.",
     "Replay gradients, directional derivatives, Jacobians, chain-rule matrices, and Hessian minors through Axeyum model evaluation.",
-    "Add checked algebraic certificates for bad derivative rows once the polynomial/NRA proof route is promoted.",
+    "Keep the bad-gradient row tied to source-linked QF_LRA/Farkas evidence for the exact gradient-component contradiction.",
     "Keep differentiability from limits, inverse/implicit function theorems, manifolds, and general multivariable analysis marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

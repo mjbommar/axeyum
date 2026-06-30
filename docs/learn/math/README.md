@@ -174,8 +174,8 @@ validated pack data and the repo-root command that replays it.
   checks.
 - [Rational Multivariable Calculus](multivariable-calculus-end-to-end.md):
   follows exact polynomial gradient replay, directional derivatives, Jacobian
-  chain-rule matrix multiplication, Hessian minor checks, bad-gradient
-  rejection, and the analysis Lean horizon.
+  chain-rule matrix multiplication, Hessian minor checks, QF_LRA/Farkas
+  bad-gradient rejection, and the analysis Lean horizon.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
 - [Rational Convexity](convexity-rational-end-to-end.md): follows exact

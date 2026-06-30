@@ -25,6 +25,9 @@ const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
 const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
     "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
 );
+const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
+    "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -300,6 +303,14 @@ fn sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "sequence-limit-shadow-v0 bounded-Cauchy-tail SMT-LIB artifact",
         SEQUENCE_LIMIT_BOUNDED_CAUCHY,
+    );
+}
+
+#[test]
+fn multivariable_calculus_bad_gradient_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "multivariable-calculus-rational-v0 bad-gradient SMT-LIB artifact",
+        MULTIVARIABLE_CALCULUS_BAD_GRADIENT,
     );
 }
 

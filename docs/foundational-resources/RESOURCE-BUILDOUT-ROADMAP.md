@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 71 promoted solver-reuse packs.
+- 72 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 7 unclassified solver-reuse packs.
+- 6 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -356,6 +356,8 @@ Current resource surface:
 - Inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix finite packs.
 - Algebraic calculus, finite Riemann sums, and multivariable rational calculus.
+- Multivariable rational calculus now has a promoted bad-gradient QF_LRA/Farkas
+  route for the final exact gradient-component contradiction.
 
 Build next:
 
@@ -1087,7 +1089,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas`.
-28. Continue proof-route promotions or consumer-query examples; revisit the
+28. Landed: promote `multivariable-calculus-rational-v0` through a
+    source-linked QF_LRA/Farkas regression for `bad-gradient-rejected`. The
+    artifact
+    `artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas`.
+29. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

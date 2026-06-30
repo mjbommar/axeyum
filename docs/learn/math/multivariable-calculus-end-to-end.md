@@ -114,6 +114,18 @@ grad f(1,2) = (7,13)
 The validator recomputes the gradient as `(7,14)` and rejects the false second
 component.
 
+The source SMT-LIB artifact
+`artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`
+checks the final exact-rational conflict:
+
+```text
+gradient_y = 14
+gradient_y = 13
+```
+
+Axeyum emits and independently checks `UnsatFarkas` evidence for that
+actual-vs-claimed component contradiction.
+
 ## Name The Lean Horizon
 
 The final row records the theorem-prover boundary:
@@ -135,6 +147,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -149,9 +162,9 @@ This lesson shows Axeyum's current multivariable-calculus resource pattern:
 
 ```text
 untrusted fast search -> derivative table, Jacobian, Hessian, or counterexample
-trusted small checking -> exact rational polynomial and matrix replay
+trusted small checking -> exact rational polynomial and matrix replay plus Farkas evidence for the final bad-gradient contradiction
 remaining horizon -> analytic differentiability and manifold proof routes
 ```
 
 The graduation route is deterministic exact-rational polynomial obligations
-plus checked algebraic certificates for bad derivative rows.
+plus checked Farkas certificates for exact-linear bad derivative rows.

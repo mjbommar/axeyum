@@ -7890,6 +7890,18 @@ def validate_multivariable_calculus_rational(expected: dict[str, Any]) -> None:
         fail("bad-gradient-rejected actual_gradient is incorrect")
     if claimed == recomputed:
         fail("bad-gradient-rejected claimed gradient unexpectedly matches")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad gradient smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
+    ):
+        fail("bad-gradient-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad gradient smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad gradient farkas_regression", farkas_regression)
+    if "multivariable_calculus_bad_gradient_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-gradient-rejected must link the Farkas regression")
 
     horizon = checks["general-multivariable-calculus-lean-horizon"]
     if horizon["expected_result"] != "not-run":

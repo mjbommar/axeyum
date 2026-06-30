@@ -249,7 +249,9 @@ directional derivative = 7
 The `multivariable-calculus-rational-v0` validator recomputes partial
 derivatives, checks the directional derivative as a dot product, verifies a
 Jacobian chain-rule matrix product for a fixed polynomial map composition, and
-checks a positive-definite Hessian by exact minors.
+checks a positive-definite Hessian by exact minors. The bad-gradient row routes
+the final exact-linear component conflict `gradient_y = 14` versus
+`gradient_y = 13` through checked `UnsatFarkas` evidence.
 
 For a finite-dimensional inner-product shadow, encode rational vectors and a
 Gram matrix. The `inner-product-spaces-rational-v0` validator recomputes
@@ -342,6 +344,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0

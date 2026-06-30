@@ -436,10 +436,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   71 promoted, 6 non-benchmark-horizon, and 7 unclassified solver-reuse packs.
 
+- **Multivariable-calculus QF_LRA/Farkas promotion landed.**
+  `multivariable-calculus-rational-v0` now carries promoted `solver_reuse`
+  metadata for its bad-gradient row. The new source-level artifact
+  `bad-gradient-farkas-conflict.smt2` isolates replay's computed
+  `gradient_y = 14` against the malformed claim `gradient_y = 13`, and
+  `math_resource_lra_routes::multivariable_calculus_bad_gradient_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  72 promoted, 6 non-benchmark-horizon, and 6 unclassified solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 71-promoted, 6 non-benchmark-horizon, and
-  7-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 72-promoted, 6 non-benchmark-horizon, and
+  6-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11596,6 +11605,14 @@ plan is built and committed on the current branch:
   `solver_reuse.status` as `promoted`, the expected row records the checked
   `UnsatFarkas` certificate path, and generated dashboards report 71 promoted,
   6 non-benchmark-horizon, and 7 unclassified packs.
+
+- **2026-06-30** — **Multivariable-calculus QF_LRA promotion landed.**
+  Added
+  `artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`
+  for the bad-gradient row and wired it into `math_resource_lra_routes`. The
+  pack metadata now marks `solver_reuse.status` as `promoted`, the expected row
+  records the checked `UnsatFarkas` certificate path, and generated dashboards
+  report 72 promoted, 6 non-benchmark-horizon, and 6 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof
