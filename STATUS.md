@@ -265,12 +265,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `row_sum = p10 + p11`, `p10 = 1/3`, `p11 = 1/3`, and `row_sum = 1`;
   generated dashboards move promoted solver-reuse packs to 23.
 
+- **Finite concentration QF_LRA promotion landed.**
+  [`finite-concentration-v0`](artifacts/examples/math/finite-concentration-v0/)
+  now links `bad-concentration-bound-rejected` to a source-level QF_LRA artifact
+  for the malformed finite tail-bound row. The shared
+  `math_resource_lra_routes` regression emits and independently rechecks
+  Farkas evidence for `tail_probability = 1/4` and
+  `tail_probability <= 1/8`; generated dashboards move promoted solver-reuse
+  packs to 24.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the post-23-promoted-pack review. The decision remains in-repo
-  and JSON-first: the query consumer reads promoted solver-reuse rows, but there
-  is still no external consumer, repeated typed API demand, or reusable encoder
-  boundary that warrants a new crate or separate repository.
+  now records the post-23-promoted-pack review and refreshed 24-pack count. The
+  decision remains in-repo and JSON-first: the query consumer reads promoted
+  solver-reuse rows, but there is still no external consumer, repeated typed API
+  demand, or reusable encoder boundary that warrants a new crate or separate
+  repository.
 
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)

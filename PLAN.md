@@ -203,7 +203,8 @@ descriptive statistics, integer LIA is now promoted for its gcd divisibility
 obstruction, bounded natural arithmetic is now promoted for its bad negative
 domain row, and the finite-probability bad-normalization row now has a checked
 QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
-stochastic-row obstruction and finite hitting times promoted for the bad
+stochastic-row obstruction and finite concentration now promoted for the bad
+tail-bound obstruction, with finite hitting times promoted for the bad
 expected-time equation; least-squares regression is now promoted for the bad
 coefficient row, and bounded rational real analysis for the bad
 linear-delta row, with finite conditional expectation now promoted for the bad
@@ -224,8 +225,9 @@ promoted for the bad product-probability conflict, with finite random variables
 now promoted for the bad pushforward-distribution conflict and finite
 integration now promoted for the bad expectation conflict, and finite
 martingales now promoted for the bad conditional-expectation conflict, with
-finite Markov chains now carrying explicit promoted solver-reuse metadata for
-the existing bad stochastic-row conflict. The first secondary QF_LRA/Farkas
+finite Markov chains carrying explicit promoted solver-reuse metadata for the
+existing bad stochastic-row conflict and finite concentration carrying a
+source-linked promoted bad tail-bound conflict. The first secondary QF_LRA/Farkas
 target set is now covered, the initial equality-heavy QF_UF/Alethe
 secondary set is now covered including the finite-ideals quotient
 representative row, and finite group actions now promote a bad identity-action

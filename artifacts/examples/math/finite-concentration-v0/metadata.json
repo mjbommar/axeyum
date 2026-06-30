@@ -37,6 +37,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite concentration bad tail-bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay computes tail probability 1/4 but the malformed concentration row claims the bound tail_probability <= 1/8.",
+    "evidence": [
+      "bad-concentration-bound-rejected"
+    ],
+    "next_step": "Promote additional finite concentration rows only when they add distinct exact-linear or integer-count solver pressure; keep Chernoff, Hoeffding, LLN, CLT, martingale concentration, and asymptotic inference in the Lean-horizon or numerical-honesty lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -47,6 +56,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

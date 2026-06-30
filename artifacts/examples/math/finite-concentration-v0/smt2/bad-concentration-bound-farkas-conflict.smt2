@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const tail_probability Real)
+(assert (= tail_probability (/ 1 4)))
+(assert (<= tail_probability (/ 1 8)))
+(check-sat)

@@ -41,7 +41,7 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 23 promoted solver-reuse packs.
+- 24 promoted solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -1025,7 +1025,12 @@ Pick one item per commit unless the change is purely navigational.
     in-repo: `scripts/query-foundational-resources.py packs --solver-reuse
     promoted --require-any` proves promoted rows are consumer-readable, but no
     external consumer or repeated typed API need justifies a crate or repo split.
-20. Continue proof-route promotions or consumer-query examples; revisit the
+20. Landed: promote `finite-concentration-v0` through a source-linked
+    QF_LRA/Farkas regression for `bad-concentration-bound-rejected`. The artifact
+    `artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas`.
+21. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

@@ -26,7 +26,7 @@ Candidate route totals:
 | Route | Pack Count | Meaning |
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 6 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 29 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
@@ -167,7 +167,8 @@ First targets:
   (resource-backed Farkas regression landed for the bad midpoint-convexity
   row)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
-  (resource-backed Farkas regression landed for the bad finite tail-bound row)
+  (source-linked solver-reuse promotion landed for the bad finite tail-bound
+  row)
 - [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
   (resource-backed Farkas regressions landed for the bad normalization row and
   the bad Bayes-posterior row)

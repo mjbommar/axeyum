@@ -1510,9 +1510,9 @@ replay.
 `convexity-rational-v0` now routes its bad midpoint-convexity row through the
 same checked Farkas evidence path after reducing the midpoint inequality to
 division-free linear form.
-`finite-concentration-v0` now routes its bad finite tail-bound row through the
-same checked Farkas evidence path after finite replay computes the tail
-probability.
+`finite-concentration-v0` now routes its bad finite tail-bound row through a
+source-linked checked Farkas evidence path after finite replay computes the tail
+probability, and its metadata promotes that row for solver reuse.
 `finite-probability-v0` now routes its bad normalization row through the same
 checked Farkas evidence path after exact replay computes the atom total.
 It also routes a bad diagnostic-test Bayes posterior through the same checked
