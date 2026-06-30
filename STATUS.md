@@ -206,7 +206,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 ## Process/documentation lane (2026-06-27) — `WIP`
 
 - **Proof-upgrade frontier planned.** The learner path sweep is mechanically
-  complete for the current queue (92 focused math packs, 0 path-only links).
+  complete for the current queue (93 focused math packs, 0 path-only links).
   The next resource layer is
   [`PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md):
   classify the two `needs-proof-route` packs, then upgrade CNF/LRAT,
@@ -227,8 +227,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   shows optimization/Farkas field readiness, LP-objective and convexity bridge
   lookups, and checked optimization/convexity Farkas row drill-downs. The
   foundational-resource smoke check runs the same commands so exact LP,
-  convexity, least-squares, gradient/Hessian, residual, eigenpair, and related
-  matrix examples remain visible through the public JSON boundary.
+  convexity, finite SDP objective/slack, least-squares, gradient/Hessian,
+  residual, eigenpair, and related matrix examples remain visible through the
+  public JSON boundary.
+
+- **Finite SDP resource landed.**
+  [`finite-sdp-v0`](artifacts/examples/math/finite-sdp-v0/README.md) and
+  [`finite-sdp-end-to-end.md`](docs/learn/math/finite-sdp-end-to-end.md) now
+  add exact two-by-two SDP replay to the optimization/convexity, real-analysis,
+  and linear-algebra resource paths. The pack validates primal PSD replay,
+  trace/objective replay, dual-slack PSD replay, zero duality-gap checking, a
+  source-linked checked QF_LRA/Farkas rejection for a false objective claim,
+  and an SDP-duality Lean-horizon row. The generated resource summary is now
+  93 promoted non-template packs, 467 checks, 213 checked rows, 198 replay-only
+  rows, and 56 Lean-horizon rows.
 
 - **Finite KKT resource landed.**
   [`finite-kkt-v0`](artifacts/examples/math/finite-kkt-v0/README.md) and
@@ -238,7 +250,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validates one finite feasible-grid replay, one stationarity replay, one
   complementary-slackness replay, a source-linked checked QF_LRA/Farkas
   rejection for a false stationarity multiplier, and a KKT-sufficiency
-  Lean-horizon row. The generated resource summary is now 92 promoted
+  Lean-horizon row. At that point, the generated resource summary was 92 promoted
   non-template packs, 462 checks, 212 checked rows, 195 replay-only rows, and
   55 Lean-horizon rows.
 
@@ -670,7 +682,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 92-promoted, 0 non-benchmark-horizon, and
+  now records the refreshed 93-promoted, 0 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -678,7 +690,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
-  dashboard groups the 92 non-template math packs into overlapping Bool/CNF,
+  dashboard groups the 93 non-template math packs into overlapping Bool/CNF,
   QF_BV, QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and Lean-horizon
   buckets. It is now part of `check-foundational-resources`, so stale fragment
   planning output fails the same gate as coverage and proof-gap dashboards.
@@ -686,7 +698,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Solver-reuse disposition audit landed.** The generated
   [`solver-reuse-disposition-audit.md`](docs/foundational-resources/generated/solver-reuse-disposition-audit.md)
   dashboard audits every non-template math pack's `solver_reuse` disposition,
-  reporting 92 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
+  reporting 93 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
   It is now part of `check-foundational-resources`, so any newly added
   unclassified pack appears in a freshness-checked queue.
 
@@ -712,9 +724,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_rational_convexity_shadow`, making exact LP feasibility,
   objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
   monotonicity, gradient replay, Hessian-minor witnesses, and least-squares
-  normal-equation replay queryable. The finite KKT pack now contributes
-  stationarity/complementarity replay while KKT sufficiency, duality, SDP, and
-  algorithm-convergence theorem coverage remain horizons.
+  normal-equation replay queryable. The finite KKT pack contributes
+  stationarity/complementarity replay, and the finite SDP pack contributes
+  two-by-two PSD/objective/slack replay, while KKT sufficiency, duality, SDP
+  strong duality, and algorithm-convergence theorem coverage remain horizons.
 
 - **Measure-theory field-readiness consumer query landed.**
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md)
@@ -745,7 +758,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generates five bridge rows for finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality checks, and cardinality theorem horizons. That
-  increment remains part of the current 92-row atlas.
+  increment remains part of the current 94-row atlas.
 
 - **Standalone finite topology and finite measure lessons landed.**
   [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
@@ -1188,8 +1201,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 92 non-template packs, 92 focused learner links, 0 path-only
-  links, 0 missing learner links, and 81 packs with non-checked proof rows.
+  generated queue: 93 non-template packs, 93 focused learner links, 0 path-only
+  links, 0 missing learner links, and 82 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added
   [`CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
@@ -1210,7 +1223,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Math curriculum detailed build ledger landed.** Added
   [`MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  as the execution ledger for the current 92-pack math resource surface. It
+  as the execution ledger for the current 93-pack math resource surface. It
   records the baseline counts, the R0-R6 gate contract, build waves, the empty
   unclassified solver-reuse queue, field-by-field next steps, curriculum-node
   next steps, and a commit-sized queue. Next resource work should continue
@@ -1223,8 +1236,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It now records the current committed baseline of 94 concept
-  rows, 92 non-template packs, 462 expected checks, 212 checked rows, 195
-  replay-only rows, 55 Lean-horizon rows, and 92 promoted solver-reuse packs,
+  rows, 93 non-template packs, 467 expected checks, 213 checked rows, 198
+  replay-only rows, 56 Lean-horizon rows, and 93 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
   Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
@@ -1328,9 +1341,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
   monotonicity, gradient replay, Hessian-minor witnesses, least-squares
   normal-equation replay, finite root-finding, and finite hyperplane
-  separation, plus finite KKT stationarity/complementarity replay while keeping
-  duality, KKT sufficiency, SDP, general separation, and convergence theorems
-  as Lean horizons. The foundational resource consumer now reports 94 concept rows while
+  separation, plus finite KKT stationarity/complementarity replay and finite
+  SDP objective/slack replay while keeping duality, KKT sufficiency, SDP strong
+  duality, general separation, and convergence theorems as Lean horizons. The
+  foundational resource consumer now reports 94 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.

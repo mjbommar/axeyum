@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 92
-- learner-linked packs: 92 focused links
-- packs with non-checked proof rows: 81
-- non-checked proof rows: 250
+- math example packs: 93
+- learner-linked packs: 93 focused links
+- packs with non-checked proof rows: 82
+- non-checked proof rows: 254
 
 Candidate route totals:
 
@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 47 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 48 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 62 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 63 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -240,6 +240,9 @@ First targets:
   (source-linked Farkas regression landed for the bad stationarity row after
   exact constrained-quadratic KKT replay computes stationarity residual `-1`
   and stationarity error `1`)
+- [finite-sdp-v0](../../artifacts/examples/math/finite-sdp-v0/)
+  (source-linked Farkas regression landed for the bad objective row after exact
+  two-by-two SDP replay computes objective value `1` and objective error `1`)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regression landed for the bad product-probability
   row after exact finite product replay computes the product mass)
@@ -346,6 +349,10 @@ Secondary targets:
   boundary: exact replay computes the derivative, multiplier equation, and
   complementary-slackness product, then Farkas checks the final bad-stationarity
   error conflict.
+  Finite SDP now contributes the primal/dual-slack version of that boundary:
+  exact replay computes two-by-two PSD minors, trace/objective arithmetic,
+  slack PSD, and zero gap, then Farkas checks the final bad-objective error
+  conflict.
 
 Expected artifact:
 

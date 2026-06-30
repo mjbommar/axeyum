@@ -21,6 +21,7 @@ Example packs:
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
+- [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -71,7 +72,9 @@ separating-hyperplane score replay, supporting-face checking, and a checked
 QF_LRA/Farkas bad-separator certificate. The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness
 checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
-random-matrix slice adds exact
+SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
+matrix replay, zero duality-gap checking, and a checked QF_LRA/Farkas
+bad-objective certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -282,6 +285,25 @@ the multiplier to `1`, giving stationarity residual `-1` and stationarity error
 `1`; the final contradiction `error = 1` versus `error = 0` is checked through
 QF_LRA/Farkas evidence.
 
+For a finite SDP example, encode a two-by-two trace-one PSD matrix and dual
+slack:
+
+```text
+C = [[1,0],
+     [0,2]]
+X = [[1,0],
+     [0,0]]
+y = 1
+S = C - yI
+```
+
+The `finite-sdp-v0` validator checks the primal matrix and slack matrix by
+two-by-two principal minors, recomputes `<I,X> = 1`, `<C,X> = 1`, and verifies
+zero primal-dual gap. Its bad row changes the objective to `0`, giving
+objective error `1`; the final contradiction `error = 1` versus `error = 0` is
+checked through QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -329,6 +351,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0

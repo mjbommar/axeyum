@@ -20,6 +20,7 @@ Example packs:
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
+- [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -41,7 +42,7 @@ factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
-complementary-slackness replay, LP feasibility and
+complementary-slackness replay, finite SDP primal/dual slack replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -194,6 +195,25 @@ Its bad row changes the multiplier to `1`, computes stationarity residual
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md).
 
+For a finite SDP check, encode one trace-one primal matrix and dual slack:
+
+```text
+C = [[1,0],
+     [0,2]]
+X = [[1,0],
+     [0,0]]
+y = 1
+S = [[0,0],
+     [0,1]]
+```
+
+The `finite-sdp-v0` validator recomputes two-by-two principal minors, trace,
+objective value, slack matrix, dual objective, and primal-dual gap. Its bad row
+changes the objective to `0`, computes objective error `1`, and checks the
+resulting exact-linear contradiction through QF_LRA/Farkas evidence. For a
+focused trace, read
+[End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -269,6 +289,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas

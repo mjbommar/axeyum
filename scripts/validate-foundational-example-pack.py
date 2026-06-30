@@ -10258,6 +10258,157 @@ def validate_finite_kkt(expected: dict[str, Any]) -> None:
     require_string("KKT future_checker", data.get("future_checker"))
 
 
+def require_symmetric_matrix2(context: str, value: Any) -> list[list[Fraction]]:
+    matrix = require_matrix2(context, value)
+    if matrix[0][1] != matrix[1][0]:
+        fail(f"{context} must be symmetric")
+    return matrix
+
+
+def matrix2_trace(matrix: list[list[Fraction]]) -> Fraction:
+    return matrix[0][0] + matrix[1][1]
+
+
+def matrix2_frobenius_inner(left: list[list[Fraction]], right: list[list[Fraction]]) -> Fraction:
+    return sum(
+        (
+            left[row_index][col_index] * right[row_index][col_index]
+            for row_index in range(2)
+            for col_index in range(2)
+        ),
+        Fraction(0),
+    )
+
+
+def matrix2_principal_minors(matrix: list[list[Fraction]]) -> list[Fraction]:
+    return [
+        matrix[0][0],
+        matrix[1][1],
+        matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0],
+    ]
+
+
+def matrix2_scalar_mul(scalar: Fraction, matrix: list[list[Fraction]]) -> list[list[Fraction]]:
+    return [
+        [scalar * matrix[row_index][col_index] for col_index in range(2)]
+        for row_index in range(2)
+    ]
+
+
+def matrix2_sub(left: list[list[Fraction]], right: list[list[Fraction]]) -> list[list[Fraction]]:
+    return [
+        [left[row_index][col_index] - right[row_index][col_index] for col_index in range(2)]
+        for row_index in range(2)
+    ]
+
+
+def validate_finite_sdp(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    primal = checks["finite-sdp-primal-psd-replay"]
+    if primal["expected_result"] != "sat":
+        fail("finite-sdp-primal-psd-replay must expect sat")
+    values = single_witness_values(primal, witnesses)
+    constraint_matrix = require_symmetric_matrix2("SDP constraint_matrix", values.get("constraint_matrix"))
+    objective_matrix = require_symmetric_matrix2("SDP objective_matrix", values.get("objective_matrix"))
+    primal_matrix = require_symmetric_matrix2("SDP primal_matrix", values.get("primal_matrix"))
+    trace_constraint = require_fraction("SDP trace_constraint", values.get("trace_constraint"))
+    objective_value = require_fraction("SDP objective_value", values.get("objective_value"))
+    dual_variable = require_fraction("SDP dual_variable", values.get("dual_variable"))
+    slack_matrix = require_symmetric_matrix2("SDP slack_matrix", values.get("slack_matrix"))
+    dual_objective = require_fraction("SDP dual_objective", values.get("dual_objective"))
+    duality_gap = require_fraction("SDP duality_gap", values.get("duality_gap"))
+    primal_principal_minors = require_fraction_vector(
+        "SDP primal_principal_minors",
+        values.get("primal_principal_minors"),
+    )
+    slack_principal_minors = require_fraction_vector(
+        "SDP slack_principal_minors",
+        values.get("slack_principal_minors"),
+    )
+    if primal_principal_minors != matrix2_principal_minors(primal_matrix):
+        fail("finite-sdp-primal-psd-replay primal principal minors are incorrect")
+    if any(minor < 0 for minor in primal_principal_minors):
+        fail("finite-sdp-primal-psd-replay primal matrix is not PSD by principal minors")
+    if matrix2_frobenius_inner(constraint_matrix, primal_matrix) != trace_constraint:
+        fail("finite-sdp-primal-psd-replay trace constraint is incorrect")
+    if trace_constraint <= 0:
+        fail("finite-sdp-primal-psd-replay trace constraint must be positive")
+
+    objective = checks["finite-sdp-objective-replay"]
+    if objective["expected_result"] != "sat":
+        fail("finite-sdp-objective-replay must expect sat")
+    objective_values = single_witness_values(objective, witnesses)
+    if objective_values != values:
+        fail("finite-sdp-objective-replay must cite the SDP witness")
+    if matrix2_frobenius_inner(objective_matrix, primal_matrix) != objective_value:
+        fail("finite-sdp-objective-replay objective value is incorrect")
+
+    dual = checks["finite-sdp-dual-slack-replay"]
+    if dual["expected_result"] != "sat":
+        fail("finite-sdp-dual-slack-replay must expect sat")
+    dual_values = single_witness_values(dual, witnesses)
+    if dual_values != values:
+        fail("finite-sdp-dual-slack-replay must cite the SDP witness")
+    computed_slack = matrix2_sub(
+        objective_matrix,
+        matrix2_scalar_mul(dual_variable, constraint_matrix),
+    )
+    if slack_matrix != computed_slack:
+        fail("finite-sdp-dual-slack-replay slack matrix is incorrect")
+    if slack_principal_minors != matrix2_principal_minors(slack_matrix):
+        fail("finite-sdp-dual-slack-replay slack principal minors are incorrect")
+    if any(minor < 0 for minor in slack_principal_minors):
+        fail("finite-sdp-dual-slack-replay slack matrix is not PSD by principal minors")
+    if dual_variable * trace_constraint != dual_objective:
+        fail("finite-sdp-dual-slack-replay dual objective is incorrect")
+    if objective_value - dual_objective != duality_gap:
+        fail("finite-sdp-dual-slack-replay duality gap is incorrect")
+    if duality_gap != 0:
+        fail("finite-sdp-dual-slack-replay expects zero duality gap")
+
+    bad = checks["bad-sdp-objective-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-sdp-objective-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rank-one-primal-dual-sdp":
+        fail("bad-sdp-objective-rejected must cite the rank-one-primal-dual-sdp witness")
+    computed_objective = require_fraction("bad SDP computed_objective", data.get("computed_objective"))
+    claimed_objective = require_fraction("bad SDP claimed_objective", data.get("claimed_objective"))
+    objective_error = require_fraction("bad SDP objective_error", data.get("objective_error"))
+    if computed_objective != objective_value:
+        fail("bad-sdp-objective-rejected computed objective does not match replay")
+    if computed_objective == claimed_objective:
+        fail("bad-sdp-objective-rejected malformed objective must disagree with replay")
+    if computed_objective - claimed_objective != objective_error:
+        fail("bad-sdp-objective-rejected objective error is incorrect")
+    if objective_error <= 0:
+        fail("bad-sdp-objective-rejected objective error must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad SDP smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2":
+        fail("bad-sdp-objective-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad SDP smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad SDP farkas_regression", regression)
+    if "finite_sdp_bad_objective_artifact_emits_checked_farkas" not in regression:
+        fail("bad-sdp-objective-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad SDP certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-sdp-objective-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-sdp-duality-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-sdp-duality-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-sdp-duality-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("SDP target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("SDP future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -16855,6 +17006,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_integration(expected)
     if metadata["id"] == "finite-kkt-v0":
         validate_finite_kkt(expected)
+    if metadata["id"] == "finite-sdp-v0":
+        validate_finite_sdp(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
     if metadata["id"] == "finite-measure-monotonicity-v0":

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-sdp-v0",
+  "witnesses": [
+    {
+      "id": "rank-one-primal-dual-sdp",
+      "description": "A two-by-two SDP witness with trace-one primal matrix and matching dual slack.",
+      "values": {
+        "constraint_matrix": [["1", "0"], ["0", "1"]],
+        "objective_matrix": [["1", "0"], ["0", "2"]],
+        "primal_matrix": [["1", "0"], ["0", "0"]],
+        "trace_constraint": "1",
+        "objective_value": "1",
+        "dual_variable": "1",
+        "slack_matrix": [["0", "0"], ["0", "1"]],
+        "dual_objective": "1",
+        "duality_gap": "0",
+        "primal_principal_minors": ["1", "0", "0"],
+        "slack_principal_minors": ["0", "1", "0"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-sdp-primal-psd-replay",
+      "claim": "The listed two-by-two primal matrix is positive semidefinite and satisfies the trace-one constraint.",
+      "expected_result": "sat",
+      "validation": "finite_sdp_primal_psd_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rank-one-primal-dual-sdp"],
+      "notes": "The validator checks symmetry and two-by-two principal minors over exact rationals."
+    },
+    {
+      "id": "finite-sdp-objective-replay",
+      "claim": "The listed primal matrix has exact objective value 1 for objective matrix diag(1,2).",
+      "expected_result": "sat",
+      "validation": "finite_sdp_objective_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rank-one-primal-dual-sdp"],
+      "notes": "The validator recomputes the Frobenius inner product <C,X> exactly."
+    },
+    {
+      "id": "finite-sdp-dual-slack-replay",
+      "claim": "Dual variable y = 1 yields slack matrix C - yI that is positive semidefinite and has zero duality gap.",
+      "expected_result": "sat",
+      "validation": "finite_sdp_dual_slack_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rank-one-primal-dual-sdp"],
+      "notes": "The validator recomputes the slack matrix, its principal minors, the dual objective, and the primal-dual gap."
+    },
+    {
+      "id": "bad-sdp-objective-rejected",
+      "claim": "The same primal matrix has objective value 0.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_sdp_objective_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rank-one-primal-dual-sdp",
+        "computed_objective": "1",
+        "claimed_objective": "0",
+        "objective_error": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes <C,X> = 1, so the claimed objective 0 has error 1; the source artifact checks that the same error cannot equal zero."
+    },
+    {
+      "id": "general-sdp-duality-lean-horizon",
+      "claim": "General SDP weak/strong duality, Slater-style conditions, and KKT sufficiency require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Semidefinite-programming weak and strong duality, complementary slackness, Slater conditions, and KKT sufficiency for finite-dimensional convex programs",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite-dimensional SDP witnesses"
+      },
+      "notes": "The finite rows check only one two-by-two rational SDP witness; general SDP theory remains proof-assistant work."
+    }
+  ]
+}

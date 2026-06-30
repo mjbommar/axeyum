@@ -168,6 +168,10 @@ CURRICULUM_MAP = {
                 "Finite constrained-quadratic KKT replay with checked bad-stationarity rejection.",
             ),
             (
+                "finite-sdp-v0",
+                "Finite two-by-two SDP primal/dual replay with checked bad-objective rejection.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
             ),
@@ -389,6 +393,10 @@ CURRICULUM_MAP = {
                 "finite-kkt-v0",
                 "Exact constrained-quadratic stationarity and complementary-slackness replay.",
             ),
+            (
+                "finite-sdp-v0",
+                "Exact two-by-two PSD, trace, objective, slack, and dual-gap replay.",
+            ),
         ],
     },
     "calculus": {
@@ -438,6 +446,7 @@ FIELD_PACKS = {
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
+        ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
@@ -1263,8 +1272,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
-            "gradient replay, Hessian-minor witnesses, and finite KKT "
-            "stationarity/complementarity over rational data while keeping "
+            "gradient replay, Hessian-minor witnesses, finite KKT "
+            "stationarity/complementarity, and finite SDP primal/dual slack "
+            "rows over rational data while keeping "
             "general convex-analysis theorems separate."
         ),
         "prerequisites": [
@@ -1286,6 +1296,7 @@ BRIDGE_CONCEPTS = [
             "exact rational derivatives",
             "finite grid replay",
             "finite KKT replay",
+            "finite SDP replay",
             "Farkas certificate",
             "Lean horizon",
         ],
@@ -1309,6 +1320,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-kkt-v0",
                 "Finite constrained-quadratic stationarity and complementary-slackness rows over exact rationals.",
+            ),
+            (
+                "finite-sdp-v0",
+                "Finite two-by-two PSD, trace, objective, slack, and dual-gap rows over exact rationals.",
             ),
             (
                 "reals-rcf-shadow-v0",
@@ -1338,7 +1353,8 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
-                    "normal-equation residuals exactly; false linearized "
+                    "normal-equation residuals, finite KKT residuals, and "
+                    "two-by-two SDP slack/objective arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),
             }

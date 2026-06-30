@@ -173,6 +173,10 @@ schemas, examples, and validation workflows.
   validates exact convex-combination replay, separating-hyperplane dot-product
   replay, supporting-face checks, checked rejection of a false separator, and a
   general separation-theorem Lean-horizon row.
+- [`artifacts/examples/math/finite-sdp-v0/`](../../artifacts/examples/math/finite-sdp-v0/)
+  validates two-by-two PSD replay, trace/objective arithmetic, dual-slack
+  matrix replay, checked rejection of a false objective claim, and a general
+  SDP-duality Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -322,6 +326,10 @@ schemas, examples, and validation workflows.
   validates exact constrained-quadratic grid replay, KKT stationarity,
   complementary slackness, checked bad-stationarity rejection, and a general
   KKT sufficiency Lean-horizon row.
+- [`artifacts/examples/math/finite-sdp-v0/`](../../artifacts/examples/math/finite-sdp-v0/)
+  validates exact two-by-two SDP primal/dual replay, objective arithmetic,
+  slack PSD checks, checked bad-objective rejection, and a general
+  SDP-duality Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks, plus checked rejection of a bad squared-distance claim.
@@ -472,6 +480,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/le
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0

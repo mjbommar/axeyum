@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "finite-sdp-v0",
+  "title": "Finite SDP Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "bridge_rational_convexity_shadow",
+    "bridge_lp_objective_farkas"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "linear_algebra",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite SDP replay",
+    "finite matrices",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite SDP bad objective QF_LRA/Farkas regression seed",
+    "pressure": "Exact SDP replay computes objective 1 for a trace-one rank-one primal matrix, so the malformed objective 0 row has error 1.",
+    "evidence": [
+      "bad-sdp-objective-rejected"
+    ],
+    "next_step": "Promote additional SDP rows only when they add distinct primal/dual slack, complementarity, active-set, or certificate pressure; keep general SDP duality, Slater conditions, and convergence claims in horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-sdp-end-to-end.md",
+    "artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "finite-sdp-primal-psd-replay",
+    "finite-sdp-objective-replay",
+    "finite-sdp-dual-slack-replay",
+    "bad-sdp-objective-rejected",
+    "general-sdp-duality-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite SDP witnesses as deterministic exact-rational replay rows.",
+    "Replay matrix symmetry, principal minors, trace constraints, objective values, slack matrices, dual objectives, and primal-dual gaps over exact rationals.",
+    "Route false SDP objective claims through checked QF_LRA/Farkas evidence after replay computes the offending objective error.",
+    "Keep general SDP weak/strong duality, Slater conditions, KKT sufficiency, and algorithm convergence marked Lean-horizon until proof artifacts exist."
+  ]
+}
