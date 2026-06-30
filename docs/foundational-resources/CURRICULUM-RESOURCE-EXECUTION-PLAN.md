@@ -35,12 +35,12 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 97 atlas rows generated from curriculum, field data, 51 R1 bridge
+- 98 atlas rows generated from curriculum, field data, 52 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
-  number-system exact-vs-floating, totality convention, and gcd/divisibility
-  witness vocabulary,
+  number-system exact-vs-floating, totality convention, gcd/divisibility
+  witness vocabulary, and modular CRT/inverse witness vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
@@ -111,7 +111,8 @@ Concrete work:
   related matrix checks without promoting duality, KKT sufficiency, SDP strong
   duality, or convergence theorem claims.
 - Keep semantic-boundary smokes representative: number-theory/totality exposes
-  SMT totality, finite-domain, and side-condition vocabulary, while
+  SMT totality, finite-domain, and side-condition vocabulary,
+  number-theory/CRT exposes modular congruence and inverse witnesses, while
   numerical-analysis/floating exposes exact-vs-floating arithmetic without
   promoting roundoff, stability, or convergence claims.
 - Keep all status changes generated from `curriculum.toml`,
@@ -622,9 +623,15 @@ Next buildout:
     Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
     tenant guarding, and implementation equivalence. Next work is generated
     multi-row queries or the tax-benefit arithmetic pack.
-12. Add generated typed-consumer sketches only after at least one downstream
+12. Landed: add the modular CRT/inverse witness bridge row and number-theory
+    CRT consumer smoke lookup, making concrete CRT congruence witnesses,
+    modular inverse witnesses, fixed residue searches, finite-field unit
+    contrasts, and the checked nonunit Diophantine certificate discoverable from
+    the atlas without claiming the full Chinese remainder theorem or arbitrary
+    field theory.
+13. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
-13. Current boundary review: promoted solver-reuse rows are now readable through
+14. Current boundary review: promoted solver-reuse rows are now readable through
     the dependency-free query consumer, but that still does not justify a Rust
     crate or separate repository. Revisit again once a non-repo consumer,
     repeated typed access call sites, or reusable encoders make in-repo

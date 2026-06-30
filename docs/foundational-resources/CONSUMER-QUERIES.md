@@ -586,8 +586,9 @@ python3 scripts/query-foundational-resources.py fields \
 
 Use the finite vocabulary lookup to expose the shared Diophantine and
 fixed-width residue families, the totality lookup to expose operation
-conventions and side-condition boundaries, and the gcd lookup to expose
-divisibility witness and non-divisibility certificate vocabulary:
+conventions and side-condition boundaries, the gcd lookup to expose
+divisibility witness and non-divisibility certificate vocabulary, and the CRT
+lookup to expose concrete modular congruence and inverse witnesses:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
@@ -603,6 +604,11 @@ python3 scripts/query-foundational-resources.py concepts \
 python3 scripts/query-foundational-resources.py concepts \
   --field number_theory \
   --text gcd \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field number_theory \
+  --text CRT \
   --require-any
 ```
 
@@ -1001,6 +1007,7 @@ python3 scripts/query-foundational-resources.py fields --field number_theory --r
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text totality --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text gcd --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field number_theory --text CRT --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null

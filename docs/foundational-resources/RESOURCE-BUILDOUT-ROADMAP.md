@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 51 bridge-concept rows.
+- 52 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -1588,7 +1588,13 @@ Pick one item per commit unless the change is purely navigational.
     `number-theory-v0` to shared gcd/common-divisor replay, Bezout replay,
     quotient replay, and checked gcd non-divisibility evidence. The
     foundational smoke check now exercises number-theory gcd concept lookup.
-90. Continue proof-route promotions or consumer-query examples; revisit the
+90. Landed: add the modular CRT/inverse witness bridge row, tying
+    `modular-arithmetic-v0`, `number-theory-v0`, `finite-fields-v0`, and
+    `finite-ideals-v0` to concrete CRT congruence replay, modular inverse
+    replay, fixed residue searches, finite-field unit/nonunit contrasts, and
+    checked nonunit Diophantine evidence. The foundational smoke check now
+    exercises number-theory CRT concept lookup.
+91. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

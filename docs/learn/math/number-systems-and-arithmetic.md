@@ -9,7 +9,8 @@ Concept rows:
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `bridge_totality_conventions` and
   `bridge_exact_vs_floating_arithmetic`, plus
-  `bridge_gcd_divisibility_witness`, in the
+  `bridge_gcd_divisibility_witness` and
+  `bridge_modular_crt_inverse_witness`, in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_number_theory`, `field_real_analysis`, and `field_complex_analysis`
   in the [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
@@ -107,8 +108,12 @@ x == 3 mod 5
 
 The validator checks both congruences and confirms the moduli are coprime. For
 the nonunit inverse row, the pack also encodes `2*b == 1 mod 6` as
-`2*b - 6*k = 1` and checks the Diophantine gcd obstruction. For the destination
-number-theory slice, encode bounded residue and square-sum witnesses:
+`2*b - 6*k = 1` and checks the Diophantine gcd obstruction. These rows now
+share the `bridge_modular_crt_inverse_witness` concept: the small checked
+object is the listed congruence, inverse, finite residue search, or gcd
+obstruction, not the full Chinese remainder theorem or arbitrary field theory.
+For the destination number-theory slice, encode bounded residue and square-sum
+witnesses:
 
 ```text
 4^2 == 5 mod 11

@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 51 bridge-concept rows.
+- 52 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -666,8 +666,15 @@ Pick one row per commit unless the change is purely navigational.
     `bridge_gcd_divisibility_witness` makes gcd/common-divisor replay, Bezout
     coefficient replay, quotient witnesses, modular nonunit obstructions, and
     checked gcd non-divisibility certificates queryable from the atlas. The
-    number-theory consumer smoke now includes gcd concept lookup, and the atlas
-    now validates 51 bridge rows.
+    number-theory consumer smoke now includes gcd concept lookup, and that
+    increment raised the atlas to 51 bridge rows.
+79. Landed: add the modular CRT/inverse witness bridge row.
+    `bridge_modular_crt_inverse_witness` makes concrete CRT congruence
+    witnesses, modular inverse witnesses, fixed residue searches, finite-field
+    unit/nonunit contrasts, quotient-ring-adjacent vocabulary, and the checked
+    nonunit Diophantine certificate queryable from the atlas. The
+    number-theory consumer smoke now includes CRT concept lookup, and the atlas
+    now validates 52 bridge rows.
 
 ## Validation Checklist
 

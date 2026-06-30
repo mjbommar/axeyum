@@ -3579,6 +3579,112 @@
       }
     },
     {
+      "id": "bridge_modular_crt_inverse_witness",
+      "kind": "bridge-concept",
+      "title": "Modular CRT And Inverse Witness",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory",
+        "abstract_algebra",
+        "discrete_math"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A modular-arithmetic row checks concrete residue data: CRT congruences, modular inverse witnesses, fixed residue searches, and nonunit inverse obstructions. The trusted object is the replayed congruence/inverse table or the checked QF_LIA/Diophantine gcd obstruction, not a general CRT or field theorem.",
+      "prerequisites": [
+        "bridge_gcd_divisibility_witness",
+        "bridge_totality_conventions",
+        "curriculum_modular_arithmetic",
+        "curriculum_divisibility_and_euclid"
+      ],
+      "unlocks": [
+        "curriculum_fields",
+        "curriculum_number_theory",
+        "bridge_qf_bv_bitblast_anatomy",
+        "field_abstract_algebra",
+        "field_number_theory"
+      ],
+      "decidability": "decidable",
+      "axeyum_fragments": [
+        "finite modular arithmetic",
+        "CRT witness replay",
+        "modular inverse replay",
+        "QF_LIA / Diophantine",
+        "QF_BV fixed-width residues",
+        "finite table replay"
+      ],
+      "example_packs": [
+        {
+          "id": "modular-arithmetic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/modular-arithmetic-v0",
+          "notes": "CRT witness replay, modular inverse replay, composite nonunit search, Fermat-style finite search, and checked nonunit Diophantine evidence."
+        },
+        {
+          "id": "number-theory-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/number-theory-v0",
+          "notes": "Bounded residue, quadratic nonresidue, and two-squares rows that reuse fixed-modulus witness vocabulary."
+        },
+        {
+          "id": "finite-fields-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-fields-v0",
+          "notes": "Prime-field inverse tables and composite-modulus nonfield rows that contrast units with nonunits at fixed width."
+        },
+        {
+          "id": "finite-ideals-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ideals-v0",
+          "notes": "Finite modular-ring ideal and quotient-ring table replay with representative congruence kept on the QF_UF/Alethe route."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "modular replay plus QF_LIA/Diophantine nonunit certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/learn/math/modular-arithmetic-end-to-end.md",
+            "docs/learn/math/number-systems-and-arithmetic.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+            "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2"
+          ],
+          "notes": "SAT witness rows recompute each residue equation. The promoted UNSAT nonunit row lowers 2*b == 1 mod 6 to 2*b - 6*k = 1 and checks the gcd non-divisibility certificate independently."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+        "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+        "docs/learn/math/modular-arithmetic-end-to-end.md",
+        "docs/learn/math/number-systems-and-arithmetic.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
+      ],
+      "open_gaps": [
+        "This bridge covers fixed modulus rows and concrete CRT/inverse witnesses, not the full Chinese remainder theorem or arbitrary ring/field structure.",
+        "Composite-modulus and finite-field rows must keep unit/nonunit side conditions explicit and state any fixed bit width or finite carrier.",
+        "Quotient-ring representative congruence remains a separate QF_UF/Alethe bridge; this row only points at it as adjacent modular-ring vocabulary."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the modulus, residues, inverse candidate, CRT congruences, and fixed finite search space.",
+          "Nonunit UNSAT rows link the SMT-LIB artifact and focused math_resource_lia_routes regression before claiming checked evidence.",
+          "Learner pages distinguish concrete witness replay from CRT, field, or quotient-ring theorem proof."
+        ]
+      }
+    },
+    {
       "id": "bridge_finite_boolean_algebra",
       "kind": "bridge-concept",
       "title": "Finite Boolean Algebra",

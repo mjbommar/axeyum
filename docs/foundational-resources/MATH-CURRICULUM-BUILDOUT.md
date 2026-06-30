@@ -1298,14 +1298,15 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 97 atlas rows validate, including generated bridge-concept rows for
+  Status: 98 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
   QF_LRA Farkas certificate anatomy, exact-vs-floating arithmetic, LP
   objective-threshold replay, rational convexity/gradient shadows, QF_UF
   Alethe certificate anatomy, QF_BV bit-blast
-  certificate anatomy, gcd/divisibility witnesses, finite Boolean algebra, finite
+  certificate anatomy, gcd/divisibility witnesses, modular CRT/inverse
+  witnesses, finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
@@ -2142,6 +2143,15 @@ modular nonunit obstructions, and checked gcd non-divisibility certificates
 across `gcd-bezout-v0`, `integer-lia-v0`, `modular-arithmetic-v0`, and
 `number-theory-v0`, and the foundational-resource smoke check now exercises
 the number-theory gcd concept lookup through the public JSON/query boundary.
+The number-system concept layer now also has
+`bridge_modular_crt_inverse_witness`. It groups concrete CRT congruence
+witnesses, modular inverse witnesses, fixed residue searches, finite-field
+unit/nonunit contrasts, quotient-ring-adjacent vocabulary, and checked nonunit
+Diophantine evidence across `modular-arithmetic-v0`, `number-theory-v0`,
+`finite-fields-v0`, and `finite-ideals-v0`. The foundational-resource smoke
+check now exercises the number-theory CRT concept lookup through the public
+JSON/query boundary while keeping full CRT, arbitrary field theory, and
+quotient-ring theorem claims in the horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
