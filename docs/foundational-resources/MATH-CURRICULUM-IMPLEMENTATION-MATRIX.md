@@ -213,8 +213,10 @@ Build sequence:
     `no-injection-four-to-three` to a DIMACS artifact, and
     `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS
     artifact. `graph-reachability-v0` now links `disconnected-no-path` to a
-    bounded reachability fixed-point DIMACS artifact. All are checked by the
-    `math_resource_boolean_routes` DRAT/LRAT regression.
+    bounded reachability fixed-point DIMACS artifact, and `graph-cut-v0` links
+    `one-edge-cut-rejected` to a bounded post-removal reachability DIMACS
+    artifact. All are checked by the `math_resource_boolean_routes` DRAT/LRAT
+    regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

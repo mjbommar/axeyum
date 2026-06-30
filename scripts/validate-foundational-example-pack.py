@@ -1298,6 +1298,40 @@ def shortest_distances(
     return distances
 
 
+def expected_bounded_reachability_dimacs(
+    vertices: list[str],
+    edges: list[tuple[str, str]],
+    source: str,
+    target: str,
+    depth_bound: int,
+    final_reachable: bool,
+) -> list[list[str]]:
+    adjacency = graph_adjacency(vertices, edges)
+    expected_dimacs: list[list[str]] = []
+    vertex_count = len(vertices)
+    for vertex_index, vertex in enumerate(vertices):
+        variable = vertex_index + 1
+        expected_dimacs.append([str(variable if vertex == source else -variable)])
+    for depth in range(1, depth_bound + 1):
+        for vertex_index, vertex in enumerate(vertices):
+            current = depth * vertex_count + vertex_index + 1
+            previous_sources = [
+                (depth - 1) * vertex_count + vertices.index(previous_vertex) + 1
+                for previous_vertex in [vertex, *adjacency[vertex]]
+            ]
+            for previous_source in previous_sources:
+                expected_dimacs.append([f"-{previous_source}", str(current)])
+            expected_dimacs.append(
+                [
+                    f"-{current}",
+                    *[str(previous_source) for previous_source in previous_sources],
+                ]
+            )
+    target_variable = depth_bound * vertex_count + vertices.index(target) + 1
+    expected_dimacs.append([str(target_variable if final_reachable else -target_variable)])
+    return expected_dimacs
+
+
 def deterministic_dfs_order(vertices: list[str], edges: list[tuple[str, str]], start: str) -> list[str]:
     adjacency = graph_adjacency(vertices, edges)
     seen: set[str] = set()
@@ -1465,31 +1499,18 @@ def validate_graph_reachability(expected: dict[str, Any]) -> None:
         fail("disconnected-no-path DIMACS artifact is fixed to the two-component s-a/b-t graph")
     if source != "s" or target != "t" or depth_bound != len(vertices) - 1:
         fail("disconnected-no-path DIMACS artifact is fixed to s, t, and depth bound 3")
-    adjacency = graph_adjacency(vertices, edges)
-    expected_dimacs: list[list[str]] = []
-    vertex_count = len(vertices)
-    for vertex_index, vertex in enumerate(vertices):
-        variable = vertex_index + 1
-        expected_dimacs.append([str(variable if vertex == source else -variable)])
-    for depth in range(1, depth_bound + 1):
-        for vertex_index, vertex in enumerate(vertices):
-            current = depth * vertex_count + vertex_index + 1
-            previous_sources = [
-                (depth - 1) * vertex_count + vertices.index(previous_vertex) + 1
-                for previous_vertex in [vertex, *adjacency[vertex]]
-            ]
-            for previous_source in previous_sources:
-                expected_dimacs.append([f"-{previous_source}", str(current)])
-            expected_dimacs.append(
-                [f"-{current}", *[str(previous_source) for previous_source in previous_sources]]
-            )
-    target_variable = depth_bound * vertex_count + vertices.index(target) + 1
-    expected_dimacs.append([str(target_variable)])
     require_dimacs_artifact(
         "disconnected-no-path",
         data.get("cnf_artifact"),
         "p cnf 16 41",
-        expected_dimacs,
+        expected_bounded_reachability_dimacs(
+            vertices,
+            edges,
+            source,
+            target,
+            depth_bound,
+            final_reachable=True,
+        ),
     )
     proof_regression = data.get("proof_regression")
     require_string("disconnected-no-path proof_regression", proof_regression)
@@ -2232,6 +2253,41 @@ def validate_graph_cut(expected: dict[str, Any]) -> None:
     cut_edges = require_graph_edge_list("bad edge cut.cut_edges", values.get("cut_edges"), vertices, edges)
     if graph_separates(vertices, remove_edges(edges, cut_edges), source, target):
         fail("one-edge-cut-rejected unexpectedly separates source and target")
+    data = bad_edge_cut.get("data", {})
+    depth_bound = require_int("one-edge-cut-rejected depth_bound", data.get("depth_bound"))
+    if vertices != ["s", "a", "b", "t"] or edges != [
+        ("s", "a"),
+        ("a", "t"),
+        ("s", "b"),
+        ("b", "t"),
+    ]:
+        fail("one-edge-cut-rejected DIMACS artifact is fixed to the diamond graph")
+    if source != "s" or target != "t" or graph_edge_set(cut_edges) != {tuple(sorted(("s", "a")))}:
+        fail("one-edge-cut-rejected DIMACS artifact is fixed to removing edge (s,a)")
+    if depth_bound != len(vertices) - 1:
+        fail("one-edge-cut-rejected DIMACS artifact is fixed to depth bound 3")
+    remaining_edges = remove_edges(edges, cut_edges)
+    require_dimacs_artifact(
+        "one-edge-cut-rejected",
+        data.get("cnf_artifact"),
+        "p cnf 16 47",
+        expected_bounded_reachability_dimacs(
+            vertices,
+            remaining_edges,
+            source,
+            target,
+            depth_bound,
+            final_reachable=False,
+        ),
+    )
+    proof_regression = data.get("proof_regression")
+    require_string("one-edge-cut-rejected proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::graph_cut_one_edge_rejected" not in proof_regression:
+        fail("one-edge-cut-rejected proof_regression must name the Boolean resource test")
+    certificate = data.get("certificate")
+    require_string("one-edge-cut-rejected certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("one-edge-cut-rejected certificate must document DRAT/LRAT independent checking")
 
     vertex_cut = checks["min-vertex-cut-witness"]
     if vertex_cut["expected_result"] != "sat" or vertex_cut.get("proof_status") != "checked":

@@ -5,7 +5,7 @@ reachability, matching, and d-separation. It keeps cut claims finite and
 checkable:
 
 - a minimum `s-t` edge cut with a partition certificate;
-- rejection of a one-edge non-cut;
+- a CNF-backed rejection of a one-edge non-cut;
 - a minimum internal vertex cut;
 - rejection of a one-vertex non-cut.
 
@@ -24,6 +24,9 @@ candidate cuts on the small graph.
 
 - Edge-cut witnesses are checked against the original graph, the listed
   partition, and exhaustive smaller-cut enumeration.
+- The one-edge non-cut row also has a source-linked bounded post-removal
+  reachability DIMACS artifact and a Boolean regression that emits and
+  independently checks DRAT and LRAT proof objects.
 - Vertex-cut witnesses are checked by removing only non-source/non-target
   vertices and enumerating smaller internal cuts.
 - The pack does not claim max-flow/min-cut theorem coverage; that remains a

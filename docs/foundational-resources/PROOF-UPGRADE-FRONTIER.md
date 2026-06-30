@@ -91,6 +91,10 @@ First targets:
   (solver-reuse promotion landed for `disconnected-no-path`: source-linked
   bounded reachability fixed-point DIMACS artifact, DRAT emission, LRAT
   elaboration, and independent checks)
+- [graph-cut-v0](../../artifacts/examples/math/graph-cut-v0/)
+  (solver-reuse promotion landed for `one-edge-cut-rejected`: source-linked
+  bounded post-removal reachability DIMACS artifact, DRAT emission, LRAT
+  elaboration, and independent checks)
 
 Expected artifact:
 
@@ -111,6 +115,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/lo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
 ./scripts/check-foundational-resources.sh
 ```
 

@@ -102,7 +102,7 @@ Concrete work:
 
 High-priority focused lessons still worth auditing or adding:
 
-- graph search runtime, graph cuts, and graph d-separation;
+- graph search runtime and graph d-separation;
 - finite probability and finite measure as separate first-principles lessons;
 - linear optimization as a standalone LP/Farkas bridge;
 - finite topology as a standalone topology-axiom/closure/interior bridge;
@@ -353,12 +353,12 @@ Next buildout:
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards.
-   Candidate status: the first `solver_reuse` batch now has 6 remaining
+   Candidate status: the first `solver_reuse` batch now has 5 remaining
    R4-to-R5 promotion candidates: remaining finite graph packs, integer LIA,
    bounded natural arithmetic, and bounded number theory. `logic-basics-v0`,
    `finite-cardinality-v0`, `graph-matching-v0`, and
-   `graph-reachability-v0` have moved from candidate to promoted for their
-   source-linked DIMACS/DRAT/LRAT regressions.
+   `graph-reachability-v0`, and `graph-cut-v0` have moved from candidate to
+   promoted for their source-linked DIMACS/DRAT/LRAT regressions.
 9. Landed: add consumer-facing sample queries over the JSON data contract.
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
    and concept queries, and `check-foundational-resources.sh` runs a small
@@ -373,6 +373,8 @@ Next buildout:
    `artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf`.
    `graph-reachability-v0` now adds
    `artifacts/examples/math/graph-reachability-v0/cnf/disconnected-no-path.cnf`.
+   `graph-cut-v0` now adds
+   `artifacts/examples/math/graph-cut-v0/cnf/one-edge-cut-rejected.cnf`.
    All are checked from `crates/axeyum-cnf/tests/math_resource_boolean_routes.rs`.
 11. Add a rules/law reasoning resource plan that explicitly reuses finite
     predicates, graph reachability, optimization, and proof-route vocabulary.

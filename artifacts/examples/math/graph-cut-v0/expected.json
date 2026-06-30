@@ -93,7 +93,13 @@
       "validation": "finite_edge_cut_rejection",
       "proof_status": "checked",
       "witnesses": ["single-edge-noncut"],
-      "notes": "The validator confirms the remaining path s-b-t still reaches the target."
+      "data": {
+        "depth_bound": 3,
+        "cnf_artifact": "artifacts/examples/math/graph-cut-v0/cnf/one-edge-cut-rejected.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::graph_cut_one_edge_rejected_emits_checked_drat_and_lrat",
+        "certificate": "The Boolean resource regression emits a DRAT refutation, elaborates it to LRAT, and checks both proof objects independently."
+      },
+      "notes": "The validator confirms the remaining path s-b-t still reaches the target, checks the bounded post-removal reachability DIMACS artifact, and the Rust regression confirms emitted DRAT and LRAT proof objects independently check."
     },
     {
       "id": "min-vertex-cut-witness",

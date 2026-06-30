@@ -1,0 +1,54 @@
+c graph-cut-v0 one-edge-cut-rejected
+c Variables r_{i,v} mean vertex v is reachable from s in at most i steps after
+c removing the listed cut edge (s,a). Vertex order is s,a,b,t and depths are
+c 0..3, so var = 4*i + vertex_index + 1.
+c The remaining undirected edges are (a,t), (s,b), and (b,t). The final clause
+c asserts !r_{3,t}, contradicting the remaining path s-b-t.
+p cnf 16 47
+1 0
+-2 0
+-3 0
+-4 0
+-1 5 0
+-3 5 0
+-5 1 3 0
+-2 6 0
+-4 6 0
+-6 2 4 0
+-3 7 0
+-1 7 0
+-4 7 0
+-7 3 1 4 0
+-4 8 0
+-2 8 0
+-3 8 0
+-8 4 2 3 0
+-5 9 0
+-7 9 0
+-9 5 7 0
+-6 10 0
+-8 10 0
+-10 6 8 0
+-7 11 0
+-5 11 0
+-8 11 0
+-11 7 5 8 0
+-8 12 0
+-6 12 0
+-7 12 0
+-12 8 6 7 0
+-9 13 0
+-11 13 0
+-13 9 11 0
+-10 14 0
+-12 14 0
+-14 10 12 0
+-11 15 0
+-9 15 0
+-12 15 0
+-15 11 9 12 0
+-12 16 0
+-10 16 0
+-11 16 0
+-16 12 10 11 0
+-16 0

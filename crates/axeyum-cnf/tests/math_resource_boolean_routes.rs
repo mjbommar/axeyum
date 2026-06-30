@@ -23,6 +23,8 @@ const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
 const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
     "../../../artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf"
 );
+const GRAPH_CUT_ONE_EDGE_REJECTED: &str =
+    include_str!("../../../artifacts/examples/math/graph-cut-v0/cnf/one-edge-cut-rejected.cnf");
 const GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING: &str = include_str!(
     "../../../artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf"
 );
@@ -108,6 +110,16 @@ fn finite_cardinality_no_injection_four_to_three_emits_checked_drat_and_lrat() {
         FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE,
         12,
         34,
+    );
+}
+
+#[test]
+fn graph_cut_one_edge_rejected_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "graph-cut-v0 one-edge-cut-rejected",
+        GRAPH_CUT_ONE_EDGE_REJECTED,
+        16,
+        47,
     );
 }
 
