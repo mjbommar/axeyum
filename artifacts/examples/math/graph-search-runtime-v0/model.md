@@ -36,6 +36,20 @@ s, a1, a2, a3, a4, t
 The checker verifies `visited_until_target = 6`, even though the shortest
 distance remains `1`.
 
+## Bad Bound LIA Artifact
+
+The promoted negative row extracts the length-four graph's cost counters into a
+minimal integer contradiction:
+
+```text
+dfs_visits = 6
+claimed_upper_bound = 3
+dfs_visits <= claimed_upper_bound
+```
+
+The graph replay justifies the constants. The SMT-LIB artifact then exercises
+Axeyum's `QF_LIA` arithmetic-DPLL evidence route for the false cost bound.
+
 ## Family Rows
 
 For tail lengths `2, 4, 8`, the generated graph has:

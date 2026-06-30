@@ -28,6 +28,14 @@ Expected result: `unsat`.
 The validator rejects the claimed DFS bound because the recomputed visited
 count exceeds the claimed upper bound.
 
+The promoted solver artifact is
+`artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2`.
+It fixes `tail_length = 4`, `actual_dfs_visited_until_target = 6`,
+`actual_bfs_visited_until_target = 3`, and `claimed_upper_bound = 3`, then
+checks that `crates/axeyum-solver/tests/math_resource_lia_routes.rs` emits and
+independently verifies arithmetic-DPLL evidence for the resulting `QF_LIA`
+contradiction.
+
 ## `asymptotic-search-runtime-lean-horizon`
 
 Expected result: `not-run`.

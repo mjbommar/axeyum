@@ -1392,8 +1392,9 @@ BFS shortest-distance replay, deterministic DFS traversal replay, checked
 disconnected no-path refutation, and edge-cut separation.
 `graph-search-runtime-v0` now has a learner-facing end-to-end lesson for
 finite BFS/DFS visited-node counter replay, shortcut-tail family checks,
-checked bad DFS-bound rejection, and the asymptotic graph-search runtime
-Lean horizon.
+checked bad DFS-bound rejection, a source-linked QF_LIA arithmetic-DPLL
+regression for the bad finite cost bound, and the asymptotic graph-search
+runtime Lean horizon.
 `graph-matching-v0` now has a learner-facing end-to-end lesson for finite
 matching witness replay, overlapping-edge rejection, augmenting-path flip
 replay, checked `K3` perfect-matching refutation, and the general matching
@@ -1430,7 +1431,9 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 `exact-statistical-tests-v0` promoted for its bad binomial tail-count row and
 `finite-simplicial-homology-v0` promoted for its bad boundary coefficient row,
 `induction-patterns-v0` promoted for its finite even-product parity row, and
-`descriptive-statistics-v0` promoted for its bad contingency total row.
+`descriptive-statistics-v0` promoted for its bad contingency total row. The
+related LIA arithmetic-DPLL solver-reuse lane now also has
+`graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

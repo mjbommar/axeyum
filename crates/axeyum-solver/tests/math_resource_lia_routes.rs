@@ -2,12 +2,11 @@
 //!
 //! These tests keep integer-obstruction educational resources tied to Axeyum's
 //! small checked evidence: the solver may search over the integer system, but
-//! the accepted evidence must re-check the Diophantine certificate against the
-//! original equalities.
+//! accepted evidence must independently re-check against the original terms.
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, Evidence, SolverConfig, check_auto, produce_diophantine_evidence,
+    CheckResult, Evidence, SolverConfig, check_auto, produce_diophantine_evidence, produce_evidence,
 };
 
 const MODULAR_NONUNIT_DIOPHANTINE: &str = include_str!(
@@ -24,6 +23,9 @@ const INDUCTION_EVEN_PRODUCT_ODD: &str = include_str!(
 );
 const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-contingency-total-diophantine-conflict.smt2"
+);
+const GRAPH_SEARCH_BAD_DFS_COST_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2"
 );
 
 #[test]
@@ -66,6 +68,14 @@ fn descriptive_stats_bad_contingency_total_emits_checked_diophantine_evidence() 
     );
 }
 
+#[test]
+fn graph_search_bad_dfs_cost_bound_emits_checked_lia_dpll_evidence() {
+    assert_resource_lia_dpll(
+        "graph-search-runtime-v0 bad DFS cost-bound obstruction",
+        GRAPH_SEARCH_BAD_DFS_COST_BOUND,
+    );
+}
+
 fn assert_resource_diophantine(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
@@ -89,5 +99,30 @@ fn assert_resource_diophantine(label: &str, smt2: &str) {
     assert!(
         report.evidence.check(&script.arena, &assertions).unwrap(),
         "{label}: Diophantine certificate must independently re-check"
+    );
+}
+
+fn assert_resource_lia_dpll(label: &str, smt2: &str) {
+    let mut script = parse_script(smt2)
+        .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
+    let assertions = script.assertions.clone();
+
+    assert_eq!(
+        check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat,
+        "{label}: resource obligation must be unsat"
+    );
+
+    let report = produce_evidence(&mut script.arena, &assertions, &SolverConfig::default())
+        .unwrap_or_else(|error| panic!("{label}: evidence production failed: {error}"));
+    assert!(
+        matches!(report.evidence, Evidence::UnsatArithDpll(_)),
+        "{label}: expected certified arithmetic-DPLL evidence, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
+    assert!(
+        report.evidence.check(&script.arena, &assertions).unwrap(),
+        "{label}: arithmetic-DPLL refutation must independently re-check"
     );
 }

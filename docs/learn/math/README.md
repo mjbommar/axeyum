@@ -76,7 +76,8 @@ validated pack data and the repo-root command that replays it.
   disconnected no-path refutation, and edge-cut separation over finite graphs.
 - [Graph Search Runtime Counters](graph-search-runtime-end-to-end.md):
   follows finite BFS and DFS visited-node counter replay, shortcut-tail family
-  checks, bad DFS-bound rejection, and the asymptotic runtime Lean horizon.
+  checks, checked QF_LIA arithmetic-DPLL bad DFS-bound rejection, and the
+  asymptotic runtime Lean horizon.
 - [Graph Matching And Augmenting Paths](graph-matching-end-to-end.md): follows
   finite matching witness replay, overlapping-edge rejection, augmenting-path
   flip replay, and a `K3` perfect-matching refutation.

@@ -30,6 +30,13 @@ the target is reached, and checks every listed visited-count counter. The family
 row is checked by generating the same shortcut-plus-tail graph for each listed
 tail length.
 
+The bad-bound row is also a solver-backed resource. Its SMT-LIB artifact is
+[`smt2/bad-dfs-cost-bound-lia-conflict.smt2`](smt2/bad-dfs-cost-bound-lia-conflict.smt2):
+it encodes `dfs_visits = 6`, `claimed_upper_bound = 3`, and
+`dfs_visits <= claimed_upper_bound` as a tiny `QF_LIA` contradiction. The
+`math_resource_lia_routes` regression requires Axeyum to emit checked
+arithmetic-DPLL evidence and independently re-check the proof object.
+
 This pack is finite checked evidence. It is not a proof of asymptotic graph
 search complexity, average-case behavior, heuristic search, parallel search, or
 algorithmic lower bounds.

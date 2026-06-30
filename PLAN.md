@@ -111,17 +111,20 @@ The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
 now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
 solver-reuse candidates visible without hand-maintained scans.
 The first structured solver-reuse candidate batch is also tagged in pack
-metadata for graph search runtime,
-integer LIA, bounded natural arithmetic, and bounded number theory; these remain
-R4 until promoted to actual regression or fuzz artifacts with pack back-links.
+metadata for integer LIA, bounded natural arithmetic, and bounded number
+theory; these remain R4 until promoted to actual regression or fuzz artifacts
+with pack back-links.
 `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,
-`graph-reachability-v0`, `graph-cut-v0`, and `graph-d-separation-v0` are the
-first promoted packs from that batch: `tiny-cnf-refutation`,
+`graph-reachability-v0`, `graph-cut-v0`, `graph-d-separation-v0`, and
+`graph-search-runtime-v0` are the first promoted packs from that batch:
+`tiny-cnf-refutation`,
 `no-injection-four-to-three`, `triangle-no-perfect-matching`,
 `disconnected-no-path`, `one-edge-cut-rejected`, and
-`chain-conditioned-blocks` now have
-source-linked DIMACS artifacts and the Boolean `math_resource_boolean_routes`
-regression checks emitted DRAT and LRAT proof objects.
+`chain-conditioned-blocks` now have source-linked DIMACS artifacts and the
+Boolean `math_resource_boolean_routes` regression checks emitted DRAT and LRAT
+proof objects, while `bad-dfs-cost-bound-rejected` now has a source-linked
+QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
+regression.
 The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
@@ -160,9 +163,10 @@ polynomial row. The first secondary QF_LRA/Farkas target set is now covered,
 the initial equality-heavy QF_UF/Alethe secondary set is now covered, and the
 first QF_BV bit-blast/DRAT resource promotion now covers the finite-rings bad
 distributivity row, the finite-fields composite no-inverse row, and the
-graph-coloring one-bit triangle two-coloring obstruction;
-prefer the next proof-frontier lane or equality-heavy pack that can carry a
-small checked certificate and a resource-backed regression.
+graph-coloring one-bit triangle two-coloring obstruction; graph search runtime
+now contributes a checked arithmetic-DPLL regression for the bad finite DFS
+cost bound; prefer the next proof-frontier lane or equality-heavy pack that can
+carry a small checked certificate and a resource-backed regression.
 
 ## ⚠ Course correction (2026-06-23): MEASURE, don't seed
 

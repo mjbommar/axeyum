@@ -289,6 +289,13 @@ First targets:
   (resource-backed QF_LIA/Diophantine regression landed for the finite
   even-product parity obstruction)
 
+Related checked integer-arithmetic solver-reuse promotion:
+
+- [graph-search-runtime-v0](../../artifacts/examples/math/graph-search-runtime-v0/)
+  (resource-backed `UnsatArithDpll` regression landed for the bad finite DFS
+  cost-bound row; this is a Boolean-structured LIA refutation, not a
+  Diophantine-equality certificate)
+
 Reference packs already on the route:
 
 - [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
@@ -308,6 +315,7 @@ Validation:
 cargo test -p axeyum-solver diophantine
 cargo test -p axeyum-solver certificate_tamper_is_rejected
 cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
+cargo test -p axeyum-solver --test math_resource_lia_routes
 ./scripts/check-foundational-resources.sh
 ```
 

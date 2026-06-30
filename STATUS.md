@@ -676,8 +676,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   learner/proof-upgrade dashboards now expose `Gate` / `Next Gate` columns so
   the resource lane can distinguish row-level R4 proof/evidence coverage from
   pack-level R6 consumer-boundary rows that already have source-linked solver
-  regressions. The current pack split is 48 `R6 consumer boundary` rows and
-  36 `R4 checked evidence` rows, making the remaining solver-reuse queue
+  regressions. The current pack split is 49 `R6 consumer boundary` rows and
+  35 `R4 checked evidence` rows, making the remaining solver-reuse queue
   explicit.
 
 - **Structured solver-reuse candidate tags landed.**
@@ -685,11 +685,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now admits an optional `solver_reuse` metadata object with status, target,
   pressure, evidence rows, and next step. The example-pack validator checks
   that candidate evidence points only at deterministic checked/replay rows.
-  The first candidate batch now has 4 remaining `candidate` rows:
-  `graph-search-runtime-v0`, `integer-lia-v0`, `natural-arithmetic-v0`, and
-  `number-theory-v0`. Generated dashboards also show 6 `promoted` rows for
-  `logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,
-  `graph-reachability-v0`, `graph-cut-v0`, and `graph-d-separation-v0`.
+  The first candidate batch now has 3 remaining `candidate` rows:
+  `integer-lia-v0`, `natural-arithmetic-v0`, and `number-theory-v0`.
+  Generated dashboards also show 7 `promoted` rows for `logic-basics-v0`,
+  `finite-cardinality-v0`, `graph-matching-v0`, `graph-reachability-v0`,
+  `graph-cut-v0`, `graph-d-separation-v0`, and `graph-search-runtime-v0`.
 
 - **First solver-reuse candidate promoted: logic basics.**
   [`logic-basics-v0`](artifacts/examples/math/logic-basics-v0/) now has a
@@ -753,6 +753,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   metadata now marks `solver_reuse.status` as `promoted` for that row only; the
   validator enforces the fixed chain, conditioning set, DIMACS shape,
   regression name, and DRAT/LRAT trust-boundary note.
+
+- **Seventh solver-reuse candidate promoted: graph search runtime.**
+  [`graph-search-runtime-v0`](artifacts/examples/math/graph-search-runtime-v0/)
+  now has a source-linked SMT-LIB artifact for `bad-dfs-cost-bound-rejected`:
+  [`bad-dfs-cost-bound-lia-conflict.smt2`](artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2).
+  The shared LIA resource regression parses the fixed length-four
+  shortcut-tail DFS cost conflict, requires checked `UnsatArithDpll` evidence,
+  and independently rechecks the proof object. The pack metadata now marks
+  `solver_reuse.status` as `promoted` for that row only; the validator enforces
+  the fixed tail length, traversal counts, SMT-LIB artifact path, regression
+  name, and arithmetic-DPLL trust-boundary note.
 
 - **Consumer-facing foundational-resource queries landed.**
   [`query-foundational-resources.py`](scripts/query-foundational-resources.py)

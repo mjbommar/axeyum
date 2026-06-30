@@ -93,9 +93,12 @@
         "target": "t",
         "claimed_upper_bound": 3,
         "actual_dfs_visited_until_target": 6,
-        "actual_bfs_visited_until_target": 3
+        "actual_bfs_visited_until_target": 3,
+        "smt2_artifact": "artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2",
+        "proof_regression": "crates/axeyum-solver/tests/math_resource_lia_routes.rs::graph_search_bad_dfs_cost_bound_emits_checked_lia_dpll_evidence",
+        "certificate": "The LIA resource regression emits a checked arithmetic-DPLL refutation and checks the proof object independently."
       },
-      "notes": "The validator rejects the bound because deterministic DFS visits six vertices before reaching the target."
+      "notes": "The validator rejects the bound because deterministic DFS visits six vertices before reaching the target. The SMT-LIB artifact isolates the false cost bound as a tiny QF_LIA contradiction, and Axeyum emits a checked arithmetic-DPLL refutation."
     },
     {
       "id": "asymptotic-search-runtime-lean-horizon",

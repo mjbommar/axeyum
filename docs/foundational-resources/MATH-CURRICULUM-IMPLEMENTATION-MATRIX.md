@@ -201,8 +201,8 @@ Build sequence:
 7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
 8. Selected deterministic R4 packs now have structured `solver_reuse`
-   candidate tags: remaining finite graph packs, integer LIA, bounded natural
-   arithmetic, and bounded number theory.
+   candidate tags: integer LIA, bounded natural arithmetic, and bounded number
+   theory.
 9. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
@@ -216,8 +216,11 @@ Build sequence:
     bounded reachability fixed-point DIMACS artifact, and `graph-cut-v0` links
     `one-edge-cut-rejected` to a bounded post-removal reachability DIMACS
     artifact. `graph-d-separation-v0` now links `chain-conditioned-blocks` to
-    a conditioned non-collider blocking DIMACS artifact. All are checked by the
-    `math_resource_boolean_routes` DRAT/LRAT regression.
+    a conditioned non-collider blocking DIMACS artifact. These Boolean rows are
+    checked by the `math_resource_boolean_routes` DRAT/LRAT regression.
+    `graph-search-runtime-v0` now links `bad-dfs-cost-bound-rejected` to
+    `artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2`,
+    checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

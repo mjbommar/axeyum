@@ -1674,6 +1674,28 @@ def validate_graph_search_runtime(expected: dict[str, Any]) -> None:
         fail("bad-dfs-cost-bound-rejected actual BFS count is incorrect")
     if actual_dfs <= claimed_upper_bound:
         fail("bad-dfs-cost-bound-rejected claimed upper bound unexpectedly holds")
+    if (
+        tail_length != 4
+        or source != "s"
+        or target != "t"
+        or claimed_upper_bound != 3
+        or actual_dfs != 6
+        or actual_bfs != 3
+    ):
+        fail("bad-dfs-cost-bound-rejected SMT-LIB promotion is fixed to the length-four shortcut-tail graph")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad DFS smt2_artifact", smt2_artifact)
+    check_source("bad DFS smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2":
+        fail("bad-dfs-cost-bound-rejected smt2_artifact must name the checked LIA conflict artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("bad DFS proof_regression", proof_regression)
+    if "math_resource_lia_routes.rs::graph_search_bad_dfs_cost_bound_emits_checked_lia_dpll_evidence" not in proof_regression:
+        fail("bad-dfs-cost-bound-rejected proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("bad DFS certificate", certificate)
+    if "arithmetic-DPLL" not in certificate or "independently" not in certificate:
+        fail("bad-dfs-cost-bound-rejected certificate must document independent arithmetic-DPLL checking")
 
     horizon = checks["asymptotic-search-runtime-lean-horizon"]
     if horizon["expected_result"] != "not-run":

@@ -40,7 +40,8 @@ tiny `K3` two-colorability refutation by exhaustive finite search. The graph
 reachability pack checks finite BFS distances, deterministic DFS traversal
 order, disconnected no-path claims, and edge-cut separation. The graph search
 runtime pack adds finite visited-node counters for BFS and DFS target discovery,
-checks a shortcut-tail family, and rejects a false DFS cost bound. The graph
+checks a shortcut-tail family, and rejects a false DFS cost bound with a
+checked QF_LIA arithmetic-DPLL regression. The graph
 matching pack checks finite matching witnesses, invalid overlapping edges,
 augmenting path flips, and a perfect-matching obstruction. The DAG
 d-separation pack checks chains, forks, colliders, and descendant-opened
@@ -254,10 +255,12 @@ once a deterministic CNF is the source artifact. Fixed-width graph encodings,
 such as the one-bit triangle two-coloring obstruction, belong to
 [QF_BV Bit-Blast Evidence](../../proof-cookbook/recipes/qf-bv-bitblast.md)
 only when the finite width is part of the lesson. Traversal-cost counters and
-finite counting equalities can graduate through
+finite counting equalities can graduate through checked LIA evidence. Pure
+integer-equality obstructions use
 [QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md)
-when the row is an integer obstruction rather than a graph replay. Asymptotic
-runtime, extremal graph theory, and closed-form combinatorics remain
+while Boolean-structured LIA rows, such as the bad DFS cost bound, are pinned by
+resource regressions that independently recheck arithmetic-DPLL evidence.
+Asymptotic runtime, extremal graph theory, and closed-form combinatorics remain
 [Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) targets.
 
 ## Horizon
