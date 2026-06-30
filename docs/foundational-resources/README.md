@@ -21,7 +21,7 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 86 math packs,
+  is the current execution ledger for stabilizing the existing 87 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
@@ -320,6 +320,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-measure-v0/`](../../artifacts/examples/math/finite-measure-v0/)
   validates finite sigma-algebra axioms, exact finite additivity, and
   event/complement measure replay.
+- [`artifacts/examples/math/finite-measure-monotonicity-v0/`](../../artifacts/examples/math/finite-measure-monotonicity-v0/)
+  validates finite measure-table replay, subset monotonicity, union
+  subadditivity, checked rejection of a false subset-measure claim, and a
+  convergence/countable-measure Lean-horizon row.
 - [`artifacts/examples/math/finite-integration-v0/`](../../artifacts/examples/math/finite-integration-v0/)
   validates exact finite simple-function integrals, indicator integrals,
   integral linearity, checked rejection of a false expectation, and a
@@ -448,6 +452,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/af
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-monotonicity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0

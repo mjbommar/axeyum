@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-measure-monotonicity-v0",
+  "witnesses": [
+    {
+      "id": "powerset-probability-measure",
+      "description": "A normalized exact measure table over the full powerset of a three-point universe.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "measurable_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "measures": [
+          {"set": [], "measure": "0"},
+          {"set": ["a"], "measure": "1/6"},
+          {"set": ["b"], "measure": "1/3"},
+          {"set": ["c"], "measure": "1/2"},
+          {"set": ["a", "b"], "measure": "1/2"},
+          {"set": ["a", "c"], "measure": "2/3"},
+          {"set": ["b", "c"], "measure": "5/6"},
+          {"set": ["a", "b", "c"], "measure": "1"}
+        ]
+      }
+    },
+    {
+      "id": "subset-monotonicity",
+      "description": "The event {a} is contained in {a,b}; the difference event accounts for the larger measure.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "measurable_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "measures": [
+          {"set": [], "measure": "0"},
+          {"set": ["a"], "measure": "1/6"},
+          {"set": ["b"], "measure": "1/3"},
+          {"set": ["c"], "measure": "1/2"},
+          {"set": ["a", "b"], "measure": "1/2"},
+          {"set": ["a", "c"], "measure": "2/3"},
+          {"set": ["b", "c"], "measure": "5/6"},
+          {"set": ["a", "b", "c"], "measure": "1"}
+        ],
+        "subset": ["a"],
+        "superset": ["a", "b"],
+        "difference": ["b"],
+        "subset_measure": "1/6",
+        "superset_measure": "1/2",
+        "difference_measure": "1/3"
+      }
+    },
+    {
+      "id": "finite-union-subadditivity",
+      "description": "Two overlapping events satisfy inclusion-exclusion and therefore union subadditivity.",
+      "values": {
+        "universe": ["a", "b", "c"],
+        "measurable_sets": [
+          [],
+          ["a"],
+          ["b"],
+          ["c"],
+          ["a", "b"],
+          ["a", "c"],
+          ["b", "c"],
+          ["a", "b", "c"]
+        ],
+        "measures": [
+          {"set": [], "measure": "0"},
+          {"set": ["a"], "measure": "1/6"},
+          {"set": ["b"], "measure": "1/3"},
+          {"set": ["c"], "measure": "1/2"},
+          {"set": ["a", "b"], "measure": "1/2"},
+          {"set": ["a", "c"], "measure": "2/3"},
+          {"set": ["b", "c"], "measure": "5/6"},
+          {"set": ["a", "b", "c"], "measure": "1"}
+        ],
+        "left": ["a", "b"],
+        "right": ["b", "c"],
+        "union": ["a", "b", "c"],
+        "intersection": ["b"],
+        "left_measure": "1/2",
+        "right_measure": "5/6",
+        "union_measure": "1",
+        "intersection_measure": "1/3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "finite-measure-table",
+      "claim": "The listed powerset table is a normalized finite measure.",
+      "expected_result": "sat",
+      "validation": "exact_rational_finite_measure_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["powerset-probability-measure"],
+      "notes": "The validator checks sigma-algebra closure, nonnegativity, normalization, and finite additivity on disjoint measurable sets."
+    },
+    {
+      "id": "subset-monotonicity-witness",
+      "claim": "If A is contained in B, then mu(A) <= mu(B) for the listed finite measure table.",
+      "expected_result": "sat",
+      "validation": "exact_rational_finite_measure_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["subset-monotonicity"],
+      "notes": "The validator recomputes B \\ A and checks mu(B) = mu(A) + mu(B \\ A), then checks the monotonicity inequality."
+    },
+    {
+      "id": "finite-union-subadditivity-witness",
+      "claim": "The listed overlapping finite events satisfy union subadditivity.",
+      "expected_result": "sat",
+      "validation": "exact_rational_finite_measure_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["finite-union-subadditivity"],
+      "notes": "The validator checks inclusion-exclusion exactly and derives mu(A union B) <= mu(A) + mu(B)."
+    },
+    {
+      "id": "bad-subset-measure-rejected",
+      "claim": "The subset {a} has measure 2/3 in the source table where {a,b} has measure 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_measure_bad_monotonicity_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "subset-monotonicity",
+        "claimed_subset_measure": "2/3",
+        "computed_subset_measure": "1/6",
+        "computed_superset_measure": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-subset-measure-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_monotonicity_bad_subset_measure_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The validator replays the finite measure table to compute mu({a}) = 1/6 and mu({a,b}) = 1/2; the source artifact checks the false subset-measure equality through QF_LRA/Farkas evidence."
+    },
+    {
+      "id": "general-measure-monotonicity-lean-horizon",
+      "claim": "General measure monotonicity, countable subadditivity, and convergence theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "measure monotonicity, countable subadditivity, monotone convergence, and dominated convergence over arbitrary measure spaces",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are exact table replays; arbitrary sigma-algebras, countable operations, and almost-everywhere reasoning remain a proof-assistant horizon."
+    }
+  ]
+}

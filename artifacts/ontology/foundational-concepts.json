@@ -4633,7 +4633,13 @@
           "id": "finite-measure-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
-          "notes": "Finite sigma-algebra, event measure, complement, monotonicity, and bad complement rows."
+          "notes": "Finite sigma-algebra, event measure, complement, and bad complement rows."
+        },
+        {
+          "id": "finite-measure-monotonicity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-monotonicity-v0",
+          "notes": "Finite subset monotonicity, union subadditivity, and bad subset-measure rows."
         },
         {
           "id": "finite-probability-v0",
@@ -4656,7 +4662,7 @@
       ],
       "proof_routes": [
         {
-          "name": "finite measure replay plus QF_LRA/Farkas bad-complement certificate",
+          "name": "finite measure replay plus QF_LRA/Farkas bad-complement and bad-monotonicity certificates",
           "status": "checked",
           "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
           "lean_status": "partial",
@@ -4665,11 +4671,12 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-measure-end-to-end.md",
+            "docs/learn/math/finite-measure-monotonicity-end-to-end.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes event membership and atom sums exactly; false complement or additivity claims are promoted only when the exact rational contradiction has checked QF_LRA/Farkas evidence."
+          "notes": "The finite checker recomputes event membership and atom sums exactly; false complement, monotonicity, or additivity claims are promoted only when the exact rational contradiction has checked QF_LRA/Farkas evidence."
         }
       ],
       "source_refs": [
@@ -4744,7 +4751,13 @@
           "id": "finite-measure-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
-          "notes": "Finite sigma-algebra, measure additivity, complement, and monotonicity replay."
+          "notes": "Finite sigma-algebra, measure additivity, and complement replay."
+        },
+        {
+          "id": "finite-measure-monotonicity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-monotonicity-v0",
+          "notes": "Finite measure monotonicity and union subadditivity replay."
         },
         {
           "id": "finite-product-measure-v0",
@@ -8424,7 +8437,7 @@
           "id": "finite-measure-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
-          "notes": "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."
+          "notes": "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."
         },
         {
           "id": "finite-concentration-v0",
@@ -8455,6 +8468,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-martingales-v0",
           "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-measure-monotonicity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-monotonicity-v0",
+          "notes": "Finite Measure Monotonicity And Subadditivity Checks"
         },
         {
           "id": "finite-probability-v0",
@@ -8956,6 +8975,12 @@
           "notes": "Finite Martingale Checks"
         },
         {
+          "id": "finite-measure-monotonicity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-monotonicity-v0",
+          "notes": "Finite Measure Monotonicity And Subadditivity Checks"
+        },
+        {
           "id": "finite-measure-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-v0",
@@ -9413,6 +9438,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-martingales-v0",
           "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-measure-monotonicity-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-measure-monotonicity-v0",
+          "notes": "Finite Measure Monotonicity And Subadditivity Checks"
         },
         {
           "id": "finite-measure-v0",

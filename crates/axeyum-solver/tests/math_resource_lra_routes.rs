@@ -46,6 +46,9 @@ const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
 const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2"
 );
+const FINITE_MEASURE_MONOTONICITY_BAD_SUBSET_MEASURE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-subset-measure-farkas-conflict.smt2"
+);
 const COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED: &str = include_str!(
     "../../../artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2"
 );
@@ -553,6 +556,14 @@ fn finite_measure_bad_complement_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-measure-v0 bad-complement SMT-LIB artifact",
         FINITE_MEASURE_BAD_COMPLEMENT,
+    );
+}
+
+#[test]
+fn finite_measure_monotonicity_bad_subset_measure_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-measure-monotonicity-v0 bad-subset-measure SMT-LIB artifact",
+        FINITE_MEASURE_MONOTONICITY_BAD_SUBSET_MEASURE,
     );
 }
 

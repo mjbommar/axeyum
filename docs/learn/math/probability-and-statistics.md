@@ -23,6 +23,7 @@ Example packs:
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
+- [finite-measure-monotonicity-v0](../../../artifacts/examples/math/finite-measure-monotonicity-v0/)
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 
@@ -30,8 +31,9 @@ Example packs:
 
 The statistics path is exact and finite. It checks probability mass tables,
 conditional probability, Bayes replay, finite sigma-algebra axioms, finite
-additivity, event complements, a checked QF_LRA bad-complement certificate,
-checked QF_LRA bad-normalization and bad-Bayes certificates,
+additivity, event complements, finite measure monotonicity, finite union
+subadditivity, a checked QF_LRA bad-complement certificate, a checked QF_LRA
+bad subset-measure certificate, checked QF_LRA bad-normalization and bad-Bayes certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, finite partition conditional
@@ -80,6 +82,9 @@ probability it also rejects a false normalization row, `1/2 + 1/2 = 3/2`, with
 checked `UnsatFarkas` evidence. For finite measure, the same route rejects a
 bad complement row where `mu(A)=1/3`, `mu(U)=1`, and the malformed claim
 requires `mu(A^c)=1/2` while preserving `mu(A)+mu(A^c)=mu(U)`.
+The finite-measure monotonicity pack replays `A subset B` by computing
+`B \ A`, checking `mu(B)=mu(A)+mu(B\A)`, and rejecting a false
+`mu({a})=2/3` row after replay computes `mu({a})=1/6`.
 For finite random variables, it checks
 pushforwards and expectations such as:
 

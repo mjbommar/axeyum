@@ -237,7 +237,7 @@ losing the curriculum anchor.
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, checked finite axiom conflicts, continuous maps, compactness, connectedness, and finite chain-complex checks. |
-| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
+| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-measure-monotonicity-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue and convergence theory remain horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, and threshold checks. |
@@ -732,6 +732,10 @@ coefficient obstruction, and a general homology Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, event/complement measure
 replay, and checked QF_LRA/Farkas rejection of a bad complement-measure row.
+`artifacts/examples/math/finite-measure-monotonicity-v0/` now validates
+normalized finite measure-table replay, subset monotonicity, union
+subadditivity, checked QF_LRA/Farkas rejection of a bad subset-measure row,
+and a convergence/countable-measure Lean-horizon row.
 `artifacts/examples/math/finite-integration-v0/` now validates exact finite
 simple-function integrals, indicator integrals, integral linearity, checked
 QF_LRA/Farkas rejection of a false expectation, and a Lebesgue-integration
@@ -850,8 +854,9 @@ Recommended order:
    rejection, and QF_LRA/Farkas false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior, metric-ball examples, and
    checked Bool/CNF bad-empty-open rejection.
-9. `finite-measure-v0`: finite sigma-algebras, finite measure checks, and
-   QF_LRA/Farkas false complement-measure rejection.
+9. `finite-measure-v0` and `finite-measure-monotonicity-v0`: finite
+   sigma-algebras, finite measure checks, monotonicity/subadditivity, and
+   QF_LRA/Farkas false complement-measure and false subset-measure rejection.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
    Euler step replay, finite error checks, invariants, and QF_LRA/Farkas bad
    fixed-step rejection.
@@ -1158,9 +1163,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 86 non-template math example packs validate.
+  Status: 87 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 86 non-template packs have at least one `checked` expected-result row.
+  Status: 87 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1655,6 +1660,9 @@ evidence probabilities.
 `finite-measure-v0` now routes its bad complement-measure row through the same
 checked Farkas evidence path after finite replay computes `mu(A) = 1/3` and
 `mu(U) = 1`.
+`finite-measure-monotonicity-v0` routes its bad subset-measure row through the
+same checked Farkas evidence path after finite replay computes
+`mu({a}) = 1/6` and `mu({a,b}) = 1/2`.
 `finite-markov-chain-v0` now routes its bad stochastic-row rejection through
 the same checked Farkas evidence path after exact replay computes the row sum.
 `finite-stochastic-kernels-v0` now routes its bad kernel-row rejection through

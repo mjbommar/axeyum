@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const subset_measure Real)
+(assert (= subset_measure (/ 1 6)))
+(assert (= subset_measure (/ 2 3)))
+(check-sat)

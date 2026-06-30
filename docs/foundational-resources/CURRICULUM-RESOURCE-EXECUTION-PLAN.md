@@ -44,7 +44,7 @@ As of this plan, the math resource lane has:
   transform replay, finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 86 non-template math example packs, plus the validating template pack.
+- 87 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -130,7 +130,8 @@ Concrete work:
 
 High-priority focused lessons still worth auditing or adding:
 
-- finite probability and finite measure as separate first-principles lessons;
+- finite probability, finite measure, and finite measure monotonicity as
+  separate first-principles lessons;
 - linear optimization as a standalone LP/Farkas bridge;
 - finite topology as a standalone topology-axiom/closure/interior bridge;
 - finite operators now have a standalone finite-dimensional
@@ -392,7 +393,7 @@ Next buildout:
 | `real_analysis` | bounded-vs-general concept rows for limits, continuity, compactness, integration |
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
 | `topology` | standalone finite topology lesson landed; maintain granular compactness/connectedness/homology rows |
-| `measure_theory` | standalone finite measure lesson landed; keep Lebesgue/convergence theorem rows Lean-horizon |
+| `measure_theory` | standalone finite measure and monotonicity lessons landed; keep Lebesgue/convergence theorem rows Lean-horizon |
 | `probability_theory` | standalone finite probability mass-table lesson landed; maintain stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
 | `optimization_and_convexity` | standalone LP/Farkas lesson landed; maintain convexity/gradient/Hessian bridge rows |
@@ -417,6 +418,10 @@ Next buildout:
    bad-normalization rejection, and checked bad-posterior rejection; the finite
    measure page follows finite sigma-algebra replay, exact finite additivity,
    event complements, and checked QF_LRA/Farkas bad-complement rejection.
+   `docs/learn/math/finite-measure-monotonicity-end-to-end.md` now follows
+   normalized finite measure-table replay, subset monotonicity, union
+   subadditivity, checked QF_LRA/Farkas bad subset-measure rejection, and the
+   convergence/countable-measure Lean horizon.
 5. Landed: add standalone linear optimization and finite topology lessons. The
    finite topology page now follows topology axiom replay, closure/interior
    replay, exact metric-ball replay, and checked Bool/CNF missing-empty-set
@@ -472,7 +477,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 86 non-template packs
+   decision. The curriculum-pressure view now groups the 87 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:
@@ -489,8 +494,9 @@ Next buildout:
    set. The smoke set now also covers measure-theory Farkas field readiness,
    measure bridge concept lookup, and checked measure-theory Farkas rows,
    tying finite measure, product-measure, integration, random-variable,
-   conditional-expectation, martingale, kernel, hitting-time, and
-   concentration packs to the public JSON consumer boundary. It now also covers
+   conditional-expectation, finite measure monotonicity, martingale, kernel,
+   hitting-time, and concentration packs to the public JSON consumer boundary.
+   It now also covers
    optimization/convexity Farkas field readiness, LP-objective and convexity
    bridge lookups, and checked optimization Farkas rows, tying LP thresholds,
    convexity shadows, least-squares, gradients, residual bounds, and matrix

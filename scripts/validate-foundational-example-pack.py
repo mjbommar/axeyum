@@ -12811,6 +12811,154 @@ def validate_finite_measure(expected: dict[str, Any]) -> None:
         fail("bad-complement-measure-rejected must link the LRA route regression")
 
 
+def validate_finite_measure_monotonicity(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    table = checks["finite-measure-table"]
+    if table["expected_result"] != "sat":
+        fail("finite-measure-table must expect sat")
+    values = single_witness_values(table, witnesses)
+    universe, measurable_sets = require_sigma_algebra_data("finite measure monotonicity table", values)
+    measures = require_measure_table(
+        "finite measure monotonicity table",
+        values.get("measures"),
+        universe,
+        measurable_sets,
+    )
+    validate_finite_measure_table("finite-measure-table", universe, measurable_sets, measures)
+
+    monotonicity = checks["subset-monotonicity-witness"]
+    if monotonicity["expected_result"] != "sat":
+        fail("subset-monotonicity-witness must expect sat")
+    values = single_witness_values(monotonicity, witnesses)
+    universe, measurable_sets = require_sigma_algebra_data("subset monotonicity sigma algebra", values)
+    measures = require_measure_table(
+        "subset monotonicity measure table",
+        values.get("measures"),
+        universe,
+        measurable_sets,
+    )
+    validate_finite_measure_table("subset-monotonicity-witness", universe, measurable_sets, measures)
+    subset = require_subset("subset monotonicity subset", values.get("subset"), universe)
+    superset = require_subset("subset monotonicity superset", values.get("superset"), universe)
+    difference = require_subset("subset monotonicity difference", values.get("difference"), universe)
+    if not subset <= superset:
+        fail("subset-monotonicity-witness subset is not contained in superset")
+    if difference != frozenset(superset - subset):
+        fail("subset-monotonicity-witness difference must equal superset minus subset")
+    subset_measure = require_fraction("subset monotonicity subset_measure", values.get("subset_measure"))
+    superset_measure = require_fraction("subset monotonicity superset_measure", values.get("superset_measure"))
+    difference_measure = require_fraction(
+        "subset monotonicity difference_measure",
+        values.get("difference_measure"),
+    )
+    if measures[subset] != subset_measure:
+        fail("subset-monotonicity-witness subset_measure does not match table")
+    if measures[superset] != superset_measure:
+        fail("subset-monotonicity-witness superset_measure does not match table")
+    if measures[difference] != difference_measure:
+        fail("subset-monotonicity-witness difference_measure does not match table")
+    if measures[superset] != measures[subset] + measures[difference]:
+        fail("subset-monotonicity-witness must decompose superset measure")
+    if measures[subset] > measures[superset]:
+        fail("subset-monotonicity-witness violates monotonicity")
+
+    subadditivity = checks["finite-union-subadditivity-witness"]
+    if subadditivity["expected_result"] != "sat":
+        fail("finite-union-subadditivity-witness must expect sat")
+    values = single_witness_values(subadditivity, witnesses)
+    universe, measurable_sets = require_sigma_algebra_data("finite union subadditivity sigma algebra", values)
+    union_measures = require_measure_table(
+        "finite union subadditivity measure table",
+        values.get("measures"),
+        universe,
+        measurable_sets,
+    )
+    validate_finite_measure_table(
+        "finite-union-subadditivity-witness",
+        universe,
+        measurable_sets,
+        union_measures,
+    )
+    left = require_subset("finite union subadditivity left", values.get("left"), universe)
+    right = require_subset("finite union subadditivity right", values.get("right"), universe)
+    union = require_subset("finite union subadditivity union", values.get("union"), universe)
+    intersection = require_subset("finite union subadditivity intersection", values.get("intersection"), universe)
+    if union != frozenset(left | right):
+        fail("finite-union-subadditivity-witness union does not match left union right")
+    if intersection != frozenset(left & right):
+        fail("finite-union-subadditivity-witness intersection does not match left intersect right")
+    left_measure = require_fraction("finite union subadditivity left_measure", values.get("left_measure"))
+    right_measure = require_fraction("finite union subadditivity right_measure", values.get("right_measure"))
+    union_measure = require_fraction("finite union subadditivity union_measure", values.get("union_measure"))
+    intersection_measure = require_fraction(
+        "finite union subadditivity intersection_measure",
+        values.get("intersection_measure"),
+    )
+    if union_measures[left] != left_measure:
+        fail("finite-union-subadditivity-witness left_measure does not match table")
+    if union_measures[right] != right_measure:
+        fail("finite-union-subadditivity-witness right_measure does not match table")
+    if union_measures[union] != union_measure:
+        fail("finite-union-subadditivity-witness union_measure does not match table")
+    if union_measures[intersection] != intersection_measure:
+        fail("finite-union-subadditivity-witness intersection_measure does not match table")
+    if union_measure != left_measure + right_measure - intersection_measure:
+        fail("finite-union-subadditivity-witness violates inclusion-exclusion")
+    if union_measure > left_measure + right_measure:
+        fail("finite-union-subadditivity-witness violates finite subadditivity")
+
+    bad_subset = checks["bad-subset-measure-rejected"]
+    if bad_subset["expected_result"] != "unsat" or bad_subset.get("proof_status") != "checked":
+        fail("bad-subset-measure-rejected must be a checked unsat row")
+    data = bad_subset.get("data", {})
+    if data.get("source_witness") != "subset-monotonicity":
+        fail("bad-subset-measure-rejected must cite the subset-monotonicity source witness")
+    claimed_subset_measure = require_fraction(
+        "bad subset claimed_subset_measure",
+        data.get("claimed_subset_measure"),
+    )
+    computed_subset_measure = require_fraction(
+        "bad subset computed_subset_measure",
+        data.get("computed_subset_measure"),
+    )
+    computed_superset_measure = require_fraction(
+        "bad subset computed_superset_measure",
+        data.get("computed_superset_measure"),
+    )
+    if computed_subset_measure != measures[subset]:
+        fail("bad-subset-measure-rejected computed_subset_measure must match replay")
+    if computed_superset_measure != measures[superset]:
+        fail("bad-subset-measure-rejected computed_superset_measure must match replay")
+    if claimed_subset_measure == measures[subset]:
+        fail("bad-subset-measure-rejected must disagree with the replayed subset measure")
+    if claimed_subset_measure <= measures[superset]:
+        fail("bad-subset-measure-rejected must also falsify the displayed monotonicity relation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad subset smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-subset-measure-farkas-conflict.smt2":
+        fail("bad-subset-measure-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad subset smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad subset farkas_regression", farkas_regression)
+    if "finite_measure_monotonicity_bad_subset_measure_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-subset-measure-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad subset certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-subset-measure-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-measure-monotonicity-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-measure-monotonicity-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-measure-monotonicity-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general measure monotonicity target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general measure monotonicity future_checker", data.get("future_checker"))
+
+
 def require_probability(context: str, value: Any) -> Fraction:
     probability = require_fraction(context, value)
     if probability < 0 or probability > 1:
@@ -16122,6 +16270,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_integration(expected)
     if metadata["id"] == "finite-measure-v0":
         validate_finite_measure(expected)
+    if metadata["id"] == "finite-measure-monotonicity-v0":
+        validate_finite_measure_monotonicity(expected)
     if metadata["id"] == "metric-continuity-v0":
         validate_metric_continuity(expected)
     if metadata["id"] == "finite-predicate-v0":

@@ -36,12 +36,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 86 non-template math packs.
-- 432 expected checks.
-- 206 checked proof/evidence rows.
-- 177 replay-only rows.
-- 49 Lean-horizon rows.
-- 86 promoted solver-reuse packs.
+- 87 non-template math packs.
+- 437 expected checks.
+- 207 checked proof/evidence rows.
+- 180 replay-only rows.
+- 50 Lean-horizon rows.
+- 87 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -84,7 +84,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Existing 86 Packs
+### Wave 1: Stabilize The Existing 87 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -210,7 +210,7 @@ Exit criteria:
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, homology | standalone finite-topology lesson and checked missing-empty-set Bool/CNF row landed; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
-| `measure_theory` | finite measures, product measure, integration, random variables | finite measure/additivity and finite product/integration bridge rows landed; promote only distinct monotonicity, convergence-horizon, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
+| `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | LP objective/Farkas and rational convexity/gradient bridge rows landed; add only distinct duality, KKT, separation, SDP, or convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
@@ -286,20 +286,24 @@ Pick one row per commit unless the change is purely navigational.
    the current unclassified solver-reuse queue.
 15. Landed: promote `finite-measure-v0` through a source-linked bad complement
    QF_LRA/Farkas artifact and route regression.
-16. Promote or classify any newly added unclassified packs, starting with compact
+16. Landed: add `finite-measure-monotonicity-v0` with normalized finite
+   measure-table replay, subset monotonicity, union subadditivity, a checked
+   QF_LRA/Farkas bad subset-measure artifact, and a Lean-horizon row for
+   countable/convergence measure theory.
+17. Promote or classify any newly added unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-17. Landed: promote `finite-topology-v0` through a source-linked
+18. Landed: promote `finite-topology-v0` through a source-linked
    missing-empty-set Bool/CNF DIMACS artifact and DRAT/LRAT route regression.
-18. Landed: promote `coordinate-geometry-v0` through a source-linked bad
+19. Landed: promote `coordinate-geometry-v0` through a source-linked bad
    squared-distance QF_LRA/Farkas artifact and route regression.
-19. Landed: promote `finite-operator-v0` through a source-linked bad
+20. Landed: promote `finite-operator-v0` through a source-linked bad
    operator-bound QF_LRA/Farkas artifact and route regression.
-20. Landed: promote `complex-algebraic-v0` through a source-linked bad
+21. Landed: promote `complex-algebraic-v0` through a source-linked bad
    norm-squared QF_LRA/Farkas artifact and route regression.
-21. Landed: promote `bounded-dynamics-v0` through a source-linked bad
+22. Landed: promote `bounded-dynamics-v0` through a source-linked bad
    invariant-bound QF_LRA/Farkas artifact and route regression, closing the
    explicit non-benchmark-horizon queue.
-22. Landed: add `proof-object-anatomy-end-to-end.md`, following
+23. Landed: add `proof-object-anatomy-end-to-end.md`, following
    `proof-methods-refutation-v0` from the PHP(3,2) source claim through
    committed CNF, emitted DRAT/LRAT proof objects, and same-artifact
    corrupted-proof rejection.

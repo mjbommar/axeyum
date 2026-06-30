@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 86 non-template math example packs.
-- 432 expected checks.
-- 206 checked proof/evidence rows.
-- 177 replay-only rows.
-- 49 Lean-horizon rows.
-- 86 promoted solver-reuse packs.
+- 87 non-template math example packs.
+- 437 expected checks.
+- 207 checked proof/evidence rows.
+- 180 replay-only rows.
+- 50 Lean-horizon rows.
+- 87 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -695,6 +695,7 @@ Graduation:
 Current packs:
 
 - `finite-measure-v0`
+- `finite-measure-monotonicity-v0`
 - `finite-integration-v0`
 - `finite-product-measure-v0`
 - `finite-random-variables-v0`
@@ -1203,7 +1204,11 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas`.
-41. Landed: add standalone finite topology and finite measure learner pages.
+41. Landed: add `finite-measure-monotonicity-v0` with normalized finite
+    measure-table replay, subset monotonicity, union subadditivity, checked
+    QF_LRA/Farkas rejection of a false subset-measure row, and a focused
+    learner page.
+42. Landed: add standalone finite topology and finite measure learner pages.
     `docs/learn/math/finite-topology-end-to-end.md` follows
     `finite-topology-v0` through finite topology axiom replay,
     closure/interior, metric-ball replay, and checked Bool/CNF
@@ -1211,7 +1216,7 @@ Pick one item per commit unless the change is purely navigational.
     follows `finite-measure-v0` through finite sigma-algebra replay, exact
     finite additivity, event complements, and checked QF_LRA/Farkas
     bad-complement rejection.
-42. Landed: add standalone linear optimization learner page.
+43. Landed: add standalone linear optimization learner page.
     `docs/learn/math/linear-optimization-end-to-end.md` follows
     `linear-optimization-v0` through exact LP feasible-point replay,
     objective-threshold replay, checked QF_LRA/Farkas infeasible-threshold
@@ -1270,7 +1275,7 @@ Pick one item per commit unless the change is purely navigational.
     infinite-dimensional approximation claims in the Lean-horizon lane.
 51. Landed: add generated measure-theory bridge concepts.
     `bridge_finite_measure_additivity` groups finite event-algebra,
-    additivity, complement, monotonicity, and exact atom-sum replay; and
+    additivity, complement, monotonicity, subadditivity, and exact atom-sum replay; and
     `bridge_finite_product_integration` groups finite product tables,
     marginals, finite Fubini-style sums, simple-function integrals, and
     expectation replay. The generated atlas now validates 46 bridge rows and

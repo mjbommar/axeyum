@@ -134,3 +134,5 @@ remaining horizon -> countable measure, Lebesgue theory, and convergence theorem
 Use this page for the first-principles finite measure story. For the bridge
 from finite topology into sigma-algebras, read
 [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
+For the next finite-measure step, read
+[End To End: Finite Measure Monotonicity](finite-measure-monotonicity-end-to-end.md).

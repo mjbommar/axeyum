@@ -26,6 +26,7 @@ Example packs:
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
+- [finite-measure-monotonicity-v0](../../../artifacts/examples/math/finite-measure-monotonicity-v0/)
 - [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
@@ -40,9 +41,10 @@ Example packs:
 ## What Axeyum Checks
 
 The checkable slice is finite or bounded: finite topological spaces, exact
-metric balls, finite sigma-algebras, exact finite additivity, algebraic real
-shadows, finite simple-function integrals, bounded sequence tails and prefixes,
-finite product-measure tables, rectangle probabilities, finite Fubini sums,
+metric balls, finite sigma-algebras, exact finite additivity, finite measure
+monotonicity, finite union subadditivity, algebraic real shadows, finite
+simple-function integrals, bounded sequence tails and prefixes, finite
+product-measure tables, rectangle probabilities, finite Fubini sums,
 bounded rational interval/ball inclusions, finite generating-function
 coefficient and recurrence-prefix identities, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
@@ -361,6 +363,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-monotonicity-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_monotonicity_bad_subset_measure_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0

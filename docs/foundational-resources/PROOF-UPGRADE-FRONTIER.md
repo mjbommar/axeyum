@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 86
-- learner-linked packs: 86 focused links
-- packs with non-checked proof rows: 75
-- non-checked proof rows: 226
+- math example packs: 87
+- learner-linked packs: 87 focused links
+- packs with non-checked proof rows: 76
+- non-checked proof rows: 230
 
 Candidate route totals:
 
@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 41 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 42 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 56 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 57 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -199,6 +199,9 @@ First targets:
 - [finite-measure-v0](../../artifacts/examples/math/finite-measure-v0/)
   (resource-backed Farkas regression landed for the bad complement-measure row
   after exact finite-measure replay computes the event and total measures)
+- [finite-measure-monotonicity-v0](../../artifacts/examples/math/finite-measure-monotonicity-v0/)
+  (resource-backed Farkas regression landed for the bad subset-measure row
+  after exact finite-measure replay computes the subset and superset measures)
 - [finite-integration-v0](../../artifacts/examples/math/finite-integration-v0/)
   (resource-backed Farkas regression landed for the bad expectation row after
   exact finite weighted-sum replay computes the integral)

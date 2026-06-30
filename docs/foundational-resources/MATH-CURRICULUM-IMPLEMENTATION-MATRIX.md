@@ -97,7 +97,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
 | `topology` | sets, reals, linear algebra | finite topologies, continuous maps, compactness, connectedness, homology | finite replay, QF_LIA/LRA, Lean horizon |
-| `measure_theory` | sets, probability, reals | landed finite measure/additivity and finite product/integration bridge rows; add narrower convergence or monotonicity rows only when reused | finite replay, QF_LRA, Lean horizon |
+| `measure_theory` | sets, probability, reals | landed finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows; add narrower countable-measure or convergence rows only when reused | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
 | `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas and rational convexity/gradient bridge rows; add narrower duality, KKT, SDP, or convergence rows only when reused | QF_LRA/Farkas, NRA shadows |

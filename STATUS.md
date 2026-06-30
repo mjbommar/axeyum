@@ -206,7 +206,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 ## Process/documentation lane (2026-06-27) — `WIP`
 
 - **Proof-upgrade frontier planned.** The learner path sweep is mechanically
-  complete for the current queue (86 focused math packs, 0 path-only links).
+  complete for the current queue (87 focused math packs, 0 path-only links).
   The next resource layer is
   [`PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md):
   classify the two `needs-proof-route` packs, then upgrade CNF/LRAT,
@@ -633,7 +633,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 86-promoted, 0 non-benchmark-horizon, and
+  now records the refreshed 87-promoted, 0 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -641,7 +641,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
-  dashboard groups the 86 non-template math packs into overlapping Bool/CNF,
+  dashboard groups the 87 non-template math packs into overlapping Bool/CNF,
   QF_BV, QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and Lean-horizon
   buckets. It is now part of `check-foundational-resources`, so stale fragment
   planning output fails the same gate as coverage and proof-gap dashboards.
@@ -649,7 +649,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Solver-reuse disposition audit landed.** The generated
   [`solver-reuse-disposition-audit.md`](docs/foundational-resources/generated/solver-reuse-disposition-audit.md)
   dashboard audits every non-template math pack's `solver_reuse` disposition,
-  reporting 86 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
+  reporting 87 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
   It is now part of `check-foundational-resources`, so any newly added
   unclassified pack appears in a freshness-checked queue.
 
@@ -1150,8 +1150,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 86 non-template packs, 86 focused learner links, 0 path-only
-  links, 0 missing learner links, and 75 packs with non-checked proof rows.
+  generated queue: 87 non-template packs, 87 focused learner links, 0 path-only
+  links, 0 missing learner links, and 76 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added
   [`CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
@@ -1172,7 +1172,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Math curriculum detailed build ledger landed.** Added
   [`MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  as the execution ledger for the current 86-pack math resource surface. It
+  as the execution ledger for the current 87-pack math resource surface. It
   records the baseline counts, the R0-R6 gate contract, build waves, the 20
   unclassified solver-reuse packs, field-by-field next steps, curriculum-node
   next steps, and a commit-sized queue. Next resource work should start with
@@ -1186,8 +1186,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It now records the current committed baseline of 65 concept
-  rows, 86 non-template packs, 432 expected checks, 206 checked rows, 177
-  replay-only rows, 49 Lean-horizon rows, and 86 promoted solver-reuse packs,
+  rows, 87 non-template packs, 437 expected checks, 207 checked rows, 180
+  replay-only rows, 50 Lean-horizon rows, and 87 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
   Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
@@ -12078,6 +12078,18 @@ plan is built and committed on the current branch:
   gradient/Hessian replay, residual bounds, eigenpair, and related matrix
   witnesses visible through the public JSON consumer boundary.
 
+- **2026-06-30** — **Finite measure monotonicity resource landed.**
+  Added
+  [`finite-measure-monotonicity-v0`](artifacts/examples/math/finite-measure-monotonicity-v0/README.md)
+  and
+  [`finite-measure-monotonicity-end-to-end.md`](docs/learn/math/finite-measure-monotonicity-end-to-end.md)
+  as the next finite measure-theory bridge. The pack validates normalized
+  finite measure-table replay, subset monotonicity, finite union
+  subadditivity, a source-linked checked QF_LRA/Farkas rejection for a false
+  subset-measure claim, and a convergence/countable-measure Lean-horizon row.
+  The math resource surface now has 87 promoted non-template packs, 437 checks,
+  207 checked rows, 180 replay-only rows, and 50 Lean-horizon rows.
+
 - **2026-06-30** — **Rigid configuration geometry resource landed.**
   Added
   [`rigid-configuration-geometry-v0`](artifacts/examples/math/rigid-configuration-geometry-v0/README.md)
@@ -12087,7 +12099,7 @@ plan is built and committed on the current branch:
   distance-table replay, translation isometry replay, congruent-triangle
   distance replay, a source-linked checked QF_LRA/Farkas rejection for a false
   distance-table claim, and a graph-rigidity/rigid-motion-classification Lean-horizon
-  row. The math resource surface now has 86 promoted non-template packs and the
+  row. The math resource surface then had 86 promoted non-template packs and the
   geometry field has five focused learner-linked packs.
 
 - **2026-06-30** — **Incidence geometry resource landed.**
@@ -12395,10 +12407,10 @@ plan is built and committed on the current branch:
   Added the generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   planning view and wired it into the foundational-resource freshness gate. It
-  groups the 86 non-template math packs into overlapping Bool/CNF, QF_BV,
-  QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and Lean-horizon buckets,
-  making solver/proof demand visible from committed metadata instead of manual
-  scans.
+  groups the then-current 86 non-template math packs into overlapping
+  Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and
+  Lean-horizon buckets, making solver/proof demand visible from committed
+  metadata instead of manual scans.
 
 - **2026-06-29** — **Function composition pack landed.**
   Added

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "finite-measure-monotonicity-v0",
+  "title": "Finite Measure Monotonicity And Subadditivity Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_measure_theory",
+    "field_probability_theory",
+    "field_set_theory_and_foundations",
+    "curriculum_sets",
+    "curriculum_rationals",
+    "curriculum_counting",
+    "bridge_finite_measure_additivity"
+  ],
+  "field_ids": [
+    "measure_theory",
+    "probability_theory",
+    "set_theory_and_foundations"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "rationals",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite sets",
+    "Bool",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-monotonicity-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite measure bad monotonicity QF_LRA/Farkas regression seed",
+    "pressure": "Malformed subset-measure row where exact replay computes mu({a})=1/6 and mu({a,b})=1/2, but the false row claims mu({a})=2/3.",
+    "evidence": [
+      "bad-subset-measure-rejected"
+    ],
+    "next_step": "Promote additional finite-measure rows only when they add distinct exact-linear countable-horizon, domination, convergence, or measure-table pressure; keep arbitrary measure-space theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-measure-monotonicity-end-to-end.md",
+    "artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-subset-measure-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "finite-measure-table",
+    "subset-monotonicity-witness",
+    "finite-union-subadditivity-witness",
+    "bad-subset-measure-rejected",
+    "general-measure-monotonicity-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite sigma-algebra and normalized measure-table checks as deterministic exact-rational replay rows.",
+    "Replay subset monotonicity through finite set difference and exact finite additivity.",
+    "Replay finite union subadditivity through exact inclusion-exclusion.",
+    "Route false finite subset-measure claims through checked QF_LRA/Farkas evidence after exact replay computes the source measure.",
+    "Keep arbitrary measure-space monotonicity, countable subadditivity, convergence theorems, and almost-everywhere reasoning marked Lean-horizon."
+  ]
+}

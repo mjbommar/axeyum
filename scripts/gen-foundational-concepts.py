@@ -374,7 +374,7 @@ FIELD_PACKS = {
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
-    "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
+    "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."),
     "statistics": ("descriptive-statistics-v0", "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
     "optimization_and_convexity": [
@@ -2968,7 +2968,11 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-measure-v0",
-                "Finite sigma-algebra, event measure, complement, monotonicity, and bad complement rows.",
+                "Finite sigma-algebra, event measure, complement, and bad complement rows.",
+            ),
+            (
+                "finite-measure-monotonicity-v0",
+                "Finite subset monotonicity, union subadditivity, and bad subset-measure rows.",
             ),
             (
                 "finite-probability-v0",
@@ -2985,7 +2989,7 @@ BRIDGE_CONCEPTS = [
         ],
         "proof_routes": [
             {
-                "name": "finite measure replay plus QF_LRA/Farkas bad-complement certificate",
+                "name": "finite measure replay plus QF_LRA/Farkas bad-complement and bad-monotonicity certificates",
                 "status": "checked",
                 "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
                 "lean_status": "partial",
@@ -2994,13 +2998,14 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/finite-measure-end-to-end.md",
+                    "docs/learn/math/finite-measure-monotonicity-end-to-end.md",
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
                     "docs/learn/math/probability-and-statistics.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The finite checker recomputes event membership and atom "
-                    "sums exactly; false complement or additivity claims are "
+                    "sums exactly; false complement, monotonicity, or additivity claims are "
                     "promoted only when the exact rational contradiction has "
                     "checked QF_LRA/Farkas evidence."
                 ),
@@ -3068,7 +3073,11 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-measure-v0",
-                "Finite sigma-algebra, measure additivity, complement, and monotonicity replay.",
+                "Finite sigma-algebra, measure additivity, and complement replay.",
+            ),
+            (
+                "finite-measure-monotonicity-v0",
+                "Finite measure monotonicity and union subadditivity replay.",
             ),
             (
                 "finite-product-measure-v0",
