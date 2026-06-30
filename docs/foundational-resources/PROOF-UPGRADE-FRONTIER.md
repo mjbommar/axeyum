@@ -240,6 +240,9 @@ First targets:
   (source-linked Farkas regression landed for the bad stationarity row after
   exact constrained-quadratic KKT replay computes stationarity residual `-1`
   and stationarity error `1`)
+- [finite-active-set-qp-v0](../../artifacts/examples/math/finite-active-set-qp-v0/)
+  (source-linked Farkas regression landed for the bad free-gradient row after
+  exact active-face replay computes stationarity error `2`)
 - [finite-sdp-v0](../../artifacts/examples/math/finite-sdp-v0/)
   (source-linked Farkas regression landed for the bad objective row after exact
   two-by-two SDP replay computes objective value `1` and objective error `1`)

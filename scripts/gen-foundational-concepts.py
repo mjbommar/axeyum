@@ -168,6 +168,10 @@ CURRICULUM_MAP = {
                 "Finite constrained-quadratic KKT replay with checked bad-stationarity rejection.",
             ),
             (
+                "finite-active-set-qp-v0",
+                "Finite active-set quadratic-program replay with checked bad-free-gradient rejection.",
+            ),
+            (
                 "finite-sdp-v0",
                 "Finite two-by-two SDP primal/dual replay with checked bad-objective rejection.",
             ),
@@ -414,6 +418,10 @@ CURRICULUM_MAP = {
                 "Exact constrained-quadratic stationarity and complementary-slackness replay.",
             ),
             (
+                "finite-active-set-qp-v0",
+                "Exact active-face QP replay with inactive-constraint slack and bad-free-gradient rejection.",
+            ),
+            (
                 "finite-sdp-v0",
                 "Exact two-by-two PSD, trace, objective, slack, and dual-gap replay.",
             ),
@@ -462,6 +470,10 @@ CURRICULUM_MAP = {
                 "Finite KKT stationarity and complementary-slackness replay for a constrained quadratic.",
             ),
             (
+                "finite-active-set-qp-v0",
+                "Finite active-set QP replay with active-face and inactive-constraint checks.",
+            ),
+            (
                 "finite-gradient-descent-v0",
                 "Finite exact gradient-descent step replay and convergence-theorem horizon rows.",
             ),
@@ -506,6 +518,7 @@ FIELD_PACKS = {
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
+        ("finite-active-set-qp-v0", "Finite active-set QP replay with checked bad-free-gradient rejection."),
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease rejection."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance rejection."),
@@ -513,7 +526,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold replay with checked bad-proximal-point rejection."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, line equations, distance tables, midpoint, collinearity, and rigid finite configurations."),
     "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
@@ -1338,7 +1351,7 @@ BRIDGE_CONCEPTS = [
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
             "gradient replay, Hessian-minor witnesses, finite gradient-descent, "
-            "Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT "
+            "Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT "
             "stationarity/complementarity, and finite SDP primal/dual slack "
             "rows over rational data while keeping "
             "general convex-analysis theorems separate."
@@ -1364,6 +1377,7 @@ BRIDGE_CONCEPTS = [
             "finite gradient descent replay",
             "finite line search replay",
             "finite Wolfe line search replay",
+            "finite active-set QP replay",
             "finite projected gradient replay",
             "finite KKT replay",
             "finite SDP replay",
@@ -1390,6 +1404,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-kkt-v0",
                 "Finite constrained-quadratic stationarity and complementary-slackness rows over exact rationals.",
+            ),
+            (
+                "finite-active-set-qp-v0",
+                "Finite active-face QP, inactive-constraint slack, and bad-free-gradient rows over exact rationals.",
             ),
             (
                 "finite-gradient-descent-v0",
@@ -1443,7 +1461,7 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
-                    "normal-equation residuals, finite gradient, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
+                    "normal-equation residuals, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
                     "two-by-two SDP slack/objective arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),

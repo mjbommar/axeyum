@@ -10258,6 +10258,270 @@ def validate_finite_kkt(expected: dict[str, Any]) -> None:
     require_string("KKT future_checker", data.get("future_checker"))
 
 
+def diagonal_center_quadratic_value(
+    diagonal: list[Fraction],
+    center: list[Fraction],
+    point: list[Fraction],
+) -> Fraction:
+    require_same_vector_length("diagonal quadratic center", diagonal, center)
+    require_same_vector_length("diagonal quadratic point", center, point)
+    return sum(
+        (
+            coefficient * (point_item - center_item) * (point_item - center_item)
+            for coefficient, center_item, point_item in zip(diagonal, center, point)
+        ),
+        Fraction(0),
+    )
+
+
+def diagonal_center_quadratic_gradient(
+    diagonal: list[Fraction],
+    center: list[Fraction],
+    point: list[Fraction],
+) -> list[Fraction]:
+    require_same_vector_length("diagonal quadratic center", diagonal, center)
+    require_same_vector_length("diagonal quadratic point", center, point)
+    return [
+        2 * coefficient * (point_item - center_item)
+        for coefficient, center_item, point_item in zip(diagonal, center, point)
+    ]
+
+
+def validate_finite_active_set_qp(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    unconstrained = checks["unconstrained-minimizer-replay"]
+    if unconstrained["expected_result"] != "sat":
+        fail("unconstrained-minimizer-replay must expect sat")
+    values = single_witness_values(unconstrained, witnesses)
+    center = require_fraction_vector("active-set QP center", values.get("center"))
+    diagonal = require_fraction_vector(
+        "active-set QP quadratic_diagonal",
+        values.get("quadratic_diagonal"),
+    )
+    unconstrained_point = require_fraction_vector(
+        "active-set QP unconstrained_point",
+        values.get("unconstrained_point"),
+    )
+    unconstrained_gradient = require_fraction_vector(
+        "active-set QP unconstrained_gradient",
+        values.get("unconstrained_gradient"),
+    )
+    unconstrained_value = require_fraction(
+        "active-set QP unconstrained_value",
+        values.get("unconstrained_value"),
+    )
+    active_normal = require_fraction_vector(
+        "active-set QP active_normal",
+        values.get("active_normal"),
+    )
+    active_bound = require_fraction("active-set QP active_bound", values.get("active_bound"))
+    inactive_normal = require_fraction_vector(
+        "active-set QP inactive_normal",
+        values.get("inactive_normal"),
+    )
+    inactive_bound = require_fraction(
+        "active-set QP inactive_bound",
+        values.get("inactive_bound"),
+    )
+    unconstrained_active_violation = require_fraction(
+        "active-set QP unconstrained_active_violation",
+        values.get("unconstrained_active_violation"),
+    )
+    active_candidate = require_fraction_vector(
+        "active-set QP active_candidate",
+        values.get("active_candidate"),
+    )
+    active_candidate_value = require_fraction(
+        "active-set QP active_candidate_value",
+        values.get("active_candidate_value"),
+    )
+    active_candidate_gradient = require_fraction_vector(
+        "active-set QP active_candidate_gradient",
+        values.get("active_candidate_gradient"),
+    )
+    active_constraint_value = require_fraction(
+        "active-set QP active_constraint_value",
+        values.get("active_constraint_value"),
+    )
+    active_constraint_slack = require_fraction(
+        "active-set QP active_constraint_slack",
+        values.get("active_constraint_slack"),
+    )
+    inactive_constraint_value = require_fraction(
+        "active-set QP inactive_constraint_value",
+        values.get("inactive_constraint_value"),
+    )
+    inactive_constraint_slack = require_fraction(
+        "active-set QP inactive_constraint_slack",
+        values.get("inactive_constraint_slack"),
+    )
+    active_multiplier = require_fraction(
+        "active-set QP active_multiplier",
+        values.get("active_multiplier"),
+    )
+    inactive_multiplier = require_fraction(
+        "active-set QP inactive_multiplier",
+        values.get("inactive_multiplier"),
+    )
+    stationarity_residual = require_fraction_vector(
+        "active-set QP stationarity_residual",
+        values.get("stationarity_residual"),
+    )
+    bad_candidate = require_fraction_vector(
+        "active-set QP bad_candidate",
+        values.get("bad_candidate"),
+    )
+    bad_candidate_value = require_fraction(
+        "active-set QP bad_candidate_value",
+        values.get("bad_candidate_value"),
+    )
+    bad_candidate_gradient = require_fraction_vector(
+        "active-set QP bad_candidate_gradient",
+        values.get("bad_candidate_gradient"),
+    )
+    bad_stationarity_residual = require_fraction_vector(
+        "active-set QP bad_stationarity_residual",
+        values.get("bad_stationarity_residual"),
+    )
+    bad_free_stationarity_error = require_fraction(
+        "active-set QP bad_free_stationarity_error",
+        values.get("bad_free_stationarity_error"),
+    )
+
+    require_vector_length("active-set QP center", center, 2)
+    require_vector_length("active-set QP quadratic_diagonal", diagonal, 2)
+    require_vector_length("active-set QP active_normal", active_normal, 2)
+    require_vector_length("active-set QP inactive_normal", inactive_normal, 2)
+    require_vector_length("active-set QP stationarity_residual", stationarity_residual, 2)
+    if any(coefficient <= 0 for coefficient in diagonal):
+        fail("active-set QP quadratic_diagonal entries must be positive")
+    if unconstrained_point != center:
+        fail("unconstrained-minimizer-replay point must equal the quadratic center")
+    if diagonal_center_quadratic_gradient(diagonal, center, unconstrained_point) != unconstrained_gradient:
+        fail("unconstrained-minimizer-replay gradient is incorrect")
+    if any(component != 0 for component in unconstrained_gradient):
+        fail("unconstrained-minimizer-replay gradient must be zero")
+    if diagonal_center_quadratic_value(diagonal, center, unconstrained_point) != unconstrained_value:
+        fail("unconstrained-minimizer-replay value is incorrect")
+    if dot_product(active_normal, unconstrained_point) - active_bound != unconstrained_active_violation:
+        fail("unconstrained-minimizer-replay active violation is incorrect")
+    if unconstrained_active_violation <= 0:
+        fail("unconstrained-minimizer-replay should document an infeasible unconstrained point")
+
+    active_face = checks["active-face-candidate-replay"]
+    if active_face["expected_result"] != "sat":
+        fail("active-face-candidate-replay must expect sat")
+    active_face_values = single_witness_values(active_face, witnesses)
+    if active_face_values != values:
+        fail("active-face-candidate-replay must cite the active-set QP witness")
+    if diagonal_center_quadratic_value(diagonal, center, active_candidate) != active_candidate_value:
+        fail("active-face-candidate-replay candidate value is incorrect")
+    if diagonal_center_quadratic_gradient(diagonal, center, active_candidate) != active_candidate_gradient:
+        fail("active-face-candidate-replay candidate gradient is incorrect")
+    if dot_product(active_normal, active_candidate) != active_constraint_value:
+        fail("active-face-candidate-replay active constraint value is incorrect")
+    if active_bound - active_constraint_value != active_constraint_slack:
+        fail("active-face-candidate-replay active constraint slack is incorrect")
+    if active_constraint_slack != 0:
+        fail("active-face-candidate-replay active constraint must be tight")
+    if active_candidate[1] != center[1]:
+        fail("active-face-candidate-replay free coordinate must solve the active-face subproblem")
+
+    kkt = checks["active-set-kkt-replay"]
+    if kkt["expected_result"] != "sat":
+        fail("active-set-kkt-replay must expect sat")
+    kkt_values = single_witness_values(kkt, witnesses)
+    if kkt_values != values:
+        fail("active-set-kkt-replay must cite the active-set QP witness")
+    if active_multiplier < 0 or inactive_multiplier < 0:
+        fail("active-set-kkt-replay multipliers must be nonnegative")
+    computed_stationarity = vector_add_fraction(
+        vector_add_fraction(active_candidate_gradient, scalar_vec(active_multiplier, active_normal)),
+        scalar_vec(inactive_multiplier, inactive_normal),
+    )
+    if stationarity_residual != computed_stationarity:
+        fail("active-set-kkt-replay stationarity residual is incorrect")
+    if any(component != 0 for component in stationarity_residual):
+        fail("active-set-kkt-replay expected zero stationarity residual")
+    if active_multiplier * active_constraint_slack != 0:
+        fail("active-set-kkt-replay active complementarity product must be zero")
+
+    inactive = checks["inactive-constraint-slack-replay"]
+    if inactive["expected_result"] != "sat":
+        fail("inactive-constraint-slack-replay must expect sat")
+    inactive_values = single_witness_values(inactive, witnesses)
+    if inactive_values != values:
+        fail("inactive-constraint-slack-replay must cite the active-set QP witness")
+    if dot_product(inactive_normal, active_candidate) != inactive_constraint_value:
+        fail("inactive-constraint-slack-replay inactive constraint value is incorrect")
+    if inactive_bound - inactive_constraint_value != inactive_constraint_slack:
+        fail("inactive-constraint-slack-replay inactive slack is incorrect")
+    if inactive_constraint_slack <= 0:
+        fail("inactive-constraint-slack-replay expected a strictly inactive constraint")
+    if inactive_multiplier != 0:
+        fail("inactive-constraint-slack-replay inactive multiplier must be zero")
+    if inactive_multiplier * inactive_constraint_slack != 0:
+        fail("inactive-constraint-slack-replay complementarity product must be zero")
+
+    if diagonal_center_quadratic_value(diagonal, center, bad_candidate) != bad_candidate_value:
+        fail("bad active-set candidate value is incorrect")
+    if diagonal_center_quadratic_gradient(diagonal, center, bad_candidate) != bad_candidate_gradient:
+        fail("bad active-set candidate gradient is incorrect")
+    computed_bad_stationarity = vector_add_fraction(
+        vector_add_fraction(bad_candidate_gradient, scalar_vec(active_multiplier, active_normal)),
+        scalar_vec(inactive_multiplier, inactive_normal),
+    )
+    if bad_stationarity_residual != computed_bad_stationarity:
+        fail("bad active-set stationarity residual is incorrect")
+    if abs(bad_stationarity_residual[1]) != bad_free_stationarity_error:
+        fail("bad active-set free stationarity error is incorrect")
+    if bad_free_stationarity_error <= 0:
+        fail("bad active-set row must have positive free stationarity error")
+
+    bad = checks["bad-active-set-free-gradient-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-active-set-free-gradient-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "box-face-active-set-qp":
+        fail("bad-active-set-free-gradient-rejected must cite the box-face-active-set-qp witness")
+    computed_error = require_fraction(
+        "bad active-set computed_free_stationarity_error",
+        data.get("computed_free_stationarity_error"),
+    )
+    claimed_upper_bound = require_fraction(
+        "bad active-set claimed_error_upper_bound",
+        data.get("claimed_error_upper_bound"),
+    )
+    if computed_error != bad_free_stationarity_error:
+        fail("bad-active-set-free-gradient-rejected computed error does not match replay")
+    if computed_error <= claimed_upper_bound:
+        fail("bad-active-set-free-gradient-rejected malformed bound must contradict replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad active-set smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2":
+        fail("bad-active-set-free-gradient-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad active-set smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad active-set farkas_regression", regression)
+    if "finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas" not in regression:
+        fail("bad-active-set-free-gradient-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad active-set certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-active-set-free-gradient-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-active-set-method-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-active-set-method-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-active-set-method-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("active-set target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("active-set future_checker", data.get("future_checker"))
+
+
 def require_symmetric_matrix2(context: str, value: Any) -> list[list[Fraction]]:
     matrix = require_matrix2(context, value)
     if matrix[0][1] != matrix[1][0]:
@@ -17787,6 +18051,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_fields(expected)
     if metadata["id"] == "finite-algebra-homomorphisms-v0":
         validate_finite_algebra_homomorphisms(expected)
+    if metadata["id"] == "finite-active-set-qp-v0":
+        validate_finite_active_set_qp(expected)
     if metadata["id"] == "finite-groups-v0":
         validate_finite_groups(expected)
     if metadata["id"] == "finite-group-actions-v0":

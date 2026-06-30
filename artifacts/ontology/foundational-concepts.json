@@ -792,6 +792,12 @@
           "notes": "Finite constrained-quadratic KKT replay with checked bad-stationarity rejection."
         },
         {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite active-set quadratic-program replay with checked bad-free-gradient rejection."
+        },
+        {
           "id": "finite-sdp-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-sdp-v0",
@@ -1770,6 +1776,12 @@
           "notes": "Exact constrained-quadratic stationarity and complementary-slackness replay."
         },
         {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Exact active-face QP replay with inactive-constraint slack and bad-free-gradient rejection."
+        },
+        {
           "id": "finite-sdp-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-sdp-v0",
@@ -1895,6 +1907,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-kkt-v0",
           "notes": "Finite KKT stationarity and complementary-slackness replay for a constrained quadratic."
+        },
+        {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite active-set QP replay with active-face and inactive-constraint checks."
         },
         {
           "id": "finite-gradient-descent-v0",
@@ -2854,7 +2872,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack rows over rational data while keeping general convex-analysis theorems separate.",
+      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack rows over rational data while keeping general convex-analysis theorems separate.",
       "prerequisites": [
         "bridge_lp_objective_farkas",
         "bridge_bounded_epsilon_delta_shadow",
@@ -2876,6 +2894,7 @@
         "finite gradient descent replay",
         "finite line search replay",
         "finite Wolfe line search replay",
+        "finite active-set QP replay",
         "finite projected gradient replay",
         "finite KKT replay",
         "finite SDP replay",
@@ -2912,6 +2931,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-kkt-v0",
           "notes": "Finite constrained-quadratic stationarity and complementary-slackness rows over exact rationals."
+        },
+        {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite active-face QP, inactive-constraint slack, and bad-free-gradient rows over exact rationals."
         },
         {
           "id": "finite-gradient-descent-v0",
@@ -2978,7 +3003,7 @@
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
+          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
         }
       ],
       "source_refs": [
@@ -8389,6 +8414,12 @@
           "notes": "Exact Descriptive Statistics Witnesses"
         },
         {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite Active-Set Quadratic Program Checks"
+        },
+        {
           "id": "finite-chebyshev-systems-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
@@ -8969,7 +9000,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -8988,6 +9019,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/calculus-riemann-sum-v0",
           "notes": "Finite Riemann Sum Calculus Checks"
+        },
+        {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite Active-Set Quadratic Program Checks"
         },
         {
           "id": "finite-chebyshev-systems-v0",
@@ -9176,6 +9213,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-kkt-v0",
           "notes": "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."
+        },
+        {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite active-set QP replay with checked bad-free-gradient rejection."
         },
         {
           "id": "finite-sdp-v0",
@@ -9524,6 +9567,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/coordinate-geometry-v0",
           "notes": "Exact Coordinate Geometry Witnesses"
+        },
+        {
+          "id": "finite-active-set-qp-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-active-set-qp-v0",
+          "notes": "Finite Active-Set Quadratic Program Checks"
         },
         {
           "id": "finite-chebyshev-systems-v0",

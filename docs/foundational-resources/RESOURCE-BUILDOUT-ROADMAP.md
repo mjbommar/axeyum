@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 98 non-template math example packs.
-- 495 expected checks.
-- 218 checked proof/evidence rows.
-- 216 replay-only rows.
-- 61 Lean-horizon rows.
-- 98 promoted solver-reuse packs.
+- 99 non-template math example packs.
+- 501 expected checks.
+- 219 checked proof/evidence rows.
+- 220 replay-only rows.
+- 62 Lean-horizon rows.
+- 99 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -187,7 +187,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients | Group recurring gcd/divisibility obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad objective, bad decrease, bad Armijo, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad Armijo, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -608,6 +608,7 @@ Current packs:
 - `finite-root-finding-v0`
 - `finite-separation-v0`
 - `finite-kkt-v0`
+- `finite-active-set-qp-v0`
 - `finite-sdp-v0`
 - `finite-gradient-descent-v0`
 - `finite-line-search-v0`
@@ -640,8 +641,9 @@ Build next:
   QF_LRA/Farkas artifact; keep `finite-separation-v0`'s bad separator row tied
   to its source QF_LRA/Farkas artifact; keep `finite-kkt-v0`'s bad
   stationarity row tied to its source QF_LRA/Farkas artifact; keep
-  `finite-sdp-v0`'s bad objective row tied to its source QF_LRA/Farkas
-  artifact; keep `finite-gradient-descent-v0`'s bad decrease row tied to its
+  `finite-active-set-qp-v0`'s bad free-gradient row tied to its source
+  QF_LRA/Farkas artifact; keep `finite-sdp-v0`'s bad objective row tied to its
+  source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease row tied to its
   source QF_LRA/Farkas artifact; keep `finite-line-search-v0`'s bad Armijo row
   tied to its source QF_LRA/Farkas artifact; keep
   `finite-wolfe-line-search-v0`'s bad curvature row tied to its source
@@ -651,8 +653,8 @@ Build next:
   point row tied to its source QF_LRA/Farkas artifact; and keep general
   convergence, Cauchy completeness, monotone convergence, closed-form
   recurrence solving, root existence, Newton/bisection convergence, separation
-  theorems, KKT sufficiency, SDP duality, descent-rate, Wolfe/line-search
-  convergence, projected-gradient convergence, proximal-gradient convergence,
+  theorems, KKT sufficiency, active-set method theory, SDP duality,
+  descent-rate, Wolfe/line-search convergence, projected-gradient convergence, proximal-gradient convergence,
   asymptotics, and stability in the Lean-horizon lane.
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
@@ -819,6 +821,7 @@ Current packs:
 - `finite-root-finding-v0`
 - `finite-separation-v0`
 - `finite-kkt-v0`
+- `finite-active-set-qp-v0`
 - `finite-sdp-v0`
 - `finite-gradient-descent-v0`
 - `finite-line-search-v0`
@@ -832,19 +835,22 @@ Build next:
   convexity/gradient shadows. Finite root-finding now adds exact iterate and
   residual-decrease replay, and finite separation adds convex-hull/supporting
   face replay. Finite KKT now adds constrained-quadratic stationarity and
-  complementary-slackness replay. Finite SDP now adds two-by-two PSD,
+  complementary-slackness replay. Finite active-set QP now adds exact
+  unconstrained-minimizer replay, active-face candidate replay, inactive slack,
+  and bad free-gradient Farkas evidence. Finite SDP now adds two-by-two PSD,
   trace/objective, slack, and dual-gap replay. Finite gradient descent now adds
   exact quadratic step and descent-bound replay. Finite line search now adds
   Armijo trial rejection and accepted-backtrack replay. Finite Wolfe line
   search now adds sufficient-decrease and curvature replay. Finite projected
   gradient now adds interval projection after a trial step. Finite proximal
   gradient now adds L1 soft-threshold replay after a trial step. Add narrower
-  rows only when multiple packs need distinct duality, active-set variants,
-  higher-dimensional SDP, strong-Wolfe/nonconvex line-search, box-plus-L1, affine
-  monotonicity, or stochastic convergence vocabulary.
-- Promote small infeasible LP/convexity/root-finding/separation/KKT/SDP/descent,
-  line-search, Wolfe-line-search, projected-gradient, and proximal-gradient rows through
-  QF_LRA/Farkas.
+  rows only when multiple packs need distinct duality, degenerate active sets,
+  working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex
+  line-search, box-plus-L1, affine monotonicity, or stochastic convergence
+  vocabulary.
+- Promote small infeasible LP/convexity/root-finding/separation/KKT/active-set
+  QP/SDP/descent, line-search, Wolfe-line-search, projected-gradient, and
+  proximal-gradient rows through QF_LRA/Farkas.
 - Keep general convex analysis, SDP strong duality, KKT sufficiency, and algorithm convergence
   as Lean-horizon until proof support exists.
 
@@ -1433,7 +1439,14 @@ Pick one item per commit unless the change is purely navigational.
     of a false curvature claim, and a Wolfe line-search Lean horizon. The
     learner path now includes a focused finite Wolfe line-search end-to-end
     page.
-69. Continue proof-route promotions or consumer-query examples; revisit the
+69. Landed: add `finite-active-set-qp-v0`.
+    The new optimization/convexity, numerical-analysis, linear-algebra, and
+    real-analysis pack validates exact unconstrained-minimizer replay,
+    active-face candidate replay, inactive-constraint slack, KKT
+    stationarity/complementarity, checked QF_LRA/Farkas rejection of a false
+    free-gradient claim, and an active-set-method Lean horizon. The learner path
+    now includes a focused finite active-set QP end-to-end page.
+70. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

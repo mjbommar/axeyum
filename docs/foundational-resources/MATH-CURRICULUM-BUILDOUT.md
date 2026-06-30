@@ -214,7 +214,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, factorization replay, and a QF_LRA discriminant conflict. |
-| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0`, `finite-root-finding-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, Hessian checks, finite root-finding iteration replay, finite separating-hyperplane replay, finite KKT stationarity replay, finite SDP objective/slack replay, finite gradient-descent step replay, finite Armijo line-search replay, finite Wolfe sufficient-decrease/curvature replay, finite projected-gradient interval replay, and finite proximal-gradient soft-threshold replay; completeness, separation theorems, KKT sufficiency, SDP duality, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, and convergence marked horizon. |
+| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0`, `finite-root-finding-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, Hessian checks, finite root-finding iteration replay, finite separating-hyperplane replay, finite KKT stationarity replay, finite active-set QP face/slack replay, finite SDP objective/slack replay, finite gradient-descent step replay, finite Armijo line-search replay, finite Wolfe sufficient-decrease/curvature replay, finite projected-gradient interval replay, and finite proximal-gradient soft-threshold replay; completeness, separation theorems, KKT sufficiency, active-set method theory, SDP duality, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, and convergence marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, QF_LIA nonunit Diophantine obstruction, modular ring ideals, and quotient rings. |
@@ -225,8 +225,8 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0`, `finite-recurrence-prefix-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, finite monotone-prefix/supremum/tail-gap replay, finite recurrence-prefix and companion-matrix replay, and finite generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-recurrence-prefix-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, finite cycle/sign replay, finite orbit counting, Burnside fixed-point averages, recurrence-prefix replay, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
-| `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, exact rational inner products, Gram matrices, projections, Gram-Schmidt replay, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, Hessians, exact separating-hyperplane dot-product replay, finite KKT stationarity/complementarity replay, finite SDP PSD/slack/objective replay, finite gradient-descent matrix-step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient soft-threshold replay. |
-| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0`, `finite-root-finding-v0`, `finite-kkt-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, finite root-finding iteration replay, finite KKT stationarity replay, finite gradient-descent step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval replay, finite proximal-gradient soft-threshold replay, and algebraic inequalities; general integration, KKT sufficiency, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, and convergence marked Lean-horizon. |
+| `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, exact rational inner products, Gram matrices, projections, Gram-Schmidt replay, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, Hessians, exact separating-hyperplane dot-product replay, finite KKT stationarity/complementarity replay, finite active-face stationarity and inactive-slack replay, finite SDP PSD/slack/objective replay, finite gradient-descent matrix-step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient soft-threshold replay. |
+| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0`, `finite-root-finding-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, finite root-finding iteration replay, finite KKT stationarity replay, finite active-set free-gradient replay, finite gradient-descent step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval replay, finite proximal-gradient soft-threshold replay, and algebraic inequalities; general integration, KKT sufficiency, active-set method theory, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, and convergence marked Lean-horizon. |
 
 ## Field Extensions Beyond The Current Curriculum
 
@@ -240,7 +240,7 @@ losing the curriculum anchor.
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-measure-monotonicity-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue and convergence theory remain horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
-| `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, threshold checks, KKT witnesses, SDP primal/dual slack replay, finite descent-step checks, finite Armijo/Wolfe line-search replay, finite projected-gradient replay, and finite proximal-gradient replay. |
+| `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, threshold checks, KKT witnesses, active-set QP witnesses, SDP primal/dual slack replay, finite descent-step checks, finite Armijo/Wolfe line-search replay, finite projected-gradient replay, and finite proximal-gradient replay. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, `multivariable-calculus-rational-v0`, LU replay, interval bounds, error recurrences, Jacobian/Hessian replay, and finite ODE step replay. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `incidence-geometry-v0`, `rigid-configuration-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, distance, midpoint, collinearity, line equations, distance tables, affine maps, signed area, barycentric replay, finite incidence preservation, and finite isometry shadows. |
@@ -533,6 +533,11 @@ separation-theorem Lean-horizon row.
 `finite-kkt-v0` now validates exact constrained-quadratic grid replay,
 stationarity replay, complementary-slackness replay, checked QF_LRA/Farkas
 rejection of a false stationarity multiplier, and a general KKT-sufficiency
+Lean-horizon row.
+`finite-active-set-qp-v0` now validates exact unconstrained-minimizer replay,
+active-face candidate replay, KKT stationarity/complementarity replay,
+inactive-constraint slack replay, checked QF_LRA/Farkas rejection of a false
+free-coordinate stationarity claim, and a general active-set-method
 Lean-horizon row.
 `finite-sdp-v0` now validates exact two-by-two PSD replay, trace/objective
 arithmetic, dual-slack matrix replay, zero duality-gap checking, checked
@@ -1021,27 +1026,32 @@ Recommended order:
     complementary slackness, and checked QF_LRA/Farkas bad-stationarity
     rejection, while general KKT sufficiency and constraint qualifications
     remain horizon claims.
-36. `finite-sdp-v0`: exact two-by-two PSD replay, trace/objective arithmetic,
+36. `finite-active-set-qp-v0`: exact unconstrained-minimizer replay,
+    active-face candidate replay, KKT stationarity/complementarity,
+    inactive-constraint slack replay, and checked QF_LRA/Farkas
+    bad-free-gradient rejection, while finite termination, degeneracy,
+    anti-cycling, and active-set convergence theorems remain horizon claims.
+37. `finite-sdp-v0`: exact two-by-two PSD replay, trace/objective arithmetic,
     dual-slack matrix replay, zero duality-gap checking, and checked
     QF_LRA/Farkas bad-objective rejection, while general SDP duality and
     convergence theorems remain horizon claims.
-37. `finite-gradient-descent-v0`: exact quadratic gradient replay, descent-step
+38. `finite-gradient-descent-v0`: exact quadratic gradient replay, descent-step
     arithmetic, objective-decrease and descent-bound replay, and checked
     QF_LRA/Farkas bad-decrease rejection, while rate, stochastic, and
     convergence theorems remain horizon claims.
-38. `finite-line-search-v0`: exact Armijo descent-direction replay, trial-step
+39. `finite-line-search-v0`: exact Armijo descent-direction replay, trial-step
     rejection, accepted-backtrack replay, and checked QF_LRA/Farkas bad-Armijo
     rejection, while strong Wolfe variants, projected/stochastic line search, and
     convergence theorems remain horizon claims.
-39. `finite-wolfe-line-search-v0`: exact descent-direction replay, exact
+40. `finite-wolfe-line-search-v0`: exact descent-direction replay, exact
     line-minimizer replay, Wolfe sufficient-decrease/curvature replay, and
     checked QF_LRA/Farkas bad-curvature rejection, while strong Wolfe variants,
     stochastic line search, and convergence theorems remain horizon claims.
-40. `finite-projected-gradient-v0`: exact gradient replay, unconstrained-step
+41. `finite-projected-gradient-v0`: exact gradient replay, unconstrained-step
     arithmetic, interval projection, projected descent, and checked QF_LRA/Farkas
     bad-projection rejection, while active-set, proximal, stochastic, and
     projected-gradient convergence theorems remain horizon claims.
-41. `finite-proximal-gradient-v0`: exact smooth-gradient replay, ordinary
+42. `finite-proximal-gradient-v0`: exact smooth-gradient replay, ordinary
     trial-step arithmetic, L1 soft-threshold replay, composite descent, and
     checked QF_LRA/Farkas bad-proximal-point rejection, while composite
     convex-analysis, stochastic, active-set, and proximal-gradient convergence
@@ -1287,9 +1297,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 98 non-template math example packs validate.
+  Status: 99 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 98 non-template packs have at least one `checked` expected-result row.
+  Status: 99 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1544,6 +1554,10 @@ convex-analysis Lean horizon.
 constrained-quadratic grid replay, KKT stationarity and complementary
 slackness, checked bad-stationarity rejection with QF_LRA/Farkas evidence, and
 the general KKT sufficiency Lean horizon.
+`finite-active-set-qp-v0` now has a learner-facing end-to-end lesson for exact
+unconstrained-minimizer replay, active-face candidate replay, inactive slack,
+KKT stationarity/complementarity, checked bad-free-gradient rejection with
+QF_LRA/Farkas evidence, and the general active-set-method Lean horizon.
 `finite-sdp-v0` now has a learner-facing end-to-end lesson for exact two-by-two
 PSD replay, trace/objective arithmetic, dual-slack matrix replay, checked
 bad-objective rejection with QF_LRA/Farkas evidence, and the general SDP-duality
@@ -1847,6 +1861,9 @@ outside score `4`.
 `finite-kkt-v0` now routes its bad stationarity row through the same checked
 Farkas evidence path after exact KKT replay computes stationarity residual
 `-1` and stationarity error `1`.
+`finite-active-set-qp-v0` now routes its bad free-gradient row through the same
+checked Farkas evidence path after exact active-face replay computes
+free-coordinate stationarity error `2`.
 `finite-sdp-v0` now routes its bad objective row through the same checked
 Farkas evidence path after exact SDP replay computes objective value `1` and
 objective error `1`.
@@ -1928,14 +1945,14 @@ The consumer query layer now also exposes optimization/convexity readiness:
 convexity bridge lookups, and checked optimization/convexity Farkas row
 drill-downs. The foundational-resource smoke check runs the same queries so
 exact LP thresholds, finite convexity shadows, least-squares normal equations,
-gradient/Hessian replay, KKT stationarity replay, finite SDP objective/slack
-replay, finite gradient-descent replay, finite line-search replay, residual
-bounds, finite Wolfe line-search replay, finite projected-gradient replay,
-finite proximal-gradient replay, and
+gradient/Hessian replay, KKT stationarity replay, finite active-set QP replay,
+finite SDP objective/slack replay, finite gradient-descent replay, finite
+line-search replay, residual bounds, finite Wolfe line-search replay, finite
+projected-gradient replay, finite proximal-gradient replay, and
 matrix witnesses stay visible through the public JSON boundary without
 promoting duality, KKT sufficiency, SDP strong duality, gradient-descent,
-line-search, Wolfe line-search, projected-gradient convergence,
-proximal-gradient convergence, or convergence-theorem claims.
+line-search, active-set method theory, Wolfe line-search, projected-gradient
+convergence, proximal-gradient convergence, or convergence-theorem claims.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

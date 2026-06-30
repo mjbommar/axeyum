@@ -20,6 +20,7 @@ Example packs:
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
+- [finite-active-set-qp-v0](../../../artifacts/examples/math/finite-active-set-qp-v0/)
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
@@ -47,9 +48,10 @@ factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
-complementary-slackness replay, finite SDP primal/dual slack replay, finite
-gradient-descent step replay, finite line-search replay, finite Wolfe
-line-search replay, finite projected-gradient replay, finite proximal-gradient replay, LP feasibility and
+complementary-slackness replay, finite active-set QP replay, finite SDP
+primal/dual slack replay, finite gradient-descent step replay, finite
+line-search replay, finite Wolfe line-search replay, finite projected-gradient
+replay, finite proximal-gradient replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -201,6 +203,24 @@ Its bad row changes the multiplier to `1`, computes stationarity residual
 `-1`, and checks the resulting stationarity-error contradiction through
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md).
+
+For a finite active-set QP check, encode a box-constrained quadratic:
+
+```text
+f(x,y) = (x - 2)^2 + (y - 1)^2
+x <= 1
+y >= 0
+active face: x = 1
+candidate = (1,1)
+```
+
+The `finite-active-set-qp-v0` validator recomputes the unconstrained minimizer,
+the active-face candidate, active and inactive slacks, KKT stationarity, and
+complementarity. Its bad row claims `(1,0)` solves the same active-face
+subproblem; exact replay computes free-coordinate stationarity error `2`, and
+the final nonpositive-error contradiction is checked through QF_LRA/Farkas
+evidence. For a focused trace, read
+[End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
 
 For a finite SDP check, encode one trace-one primal matrix and dual slack:
 
@@ -384,6 +404,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
@@ -435,7 +457,8 @@ For exact LP feasibility and Farkas threshold evidence, read
 For exact finite convexity and KKT replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md) and
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact finite
-gradient descent, line search, projected gradient, and proximal gradient, read
+active-set QP, gradient descent, line search, projected gradient, and proximal gradient, read
+[End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md),
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md)
 and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 and [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),

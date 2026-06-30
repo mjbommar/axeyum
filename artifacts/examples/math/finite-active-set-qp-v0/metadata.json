@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-active-set-qp-v0",
+  "title": "Finite Active-Set Quadratic Program Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_calculus",
+    "curriculum_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "field_linear_algebra",
+    "bridge_rational_convexity_shadow"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "numerical_analysis",
+    "real_analysis",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "calculus",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite optimization replay",
+    "finite numerical replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "symbolic gradient replay",
+    "finite active-set QP replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite active-set QP bad free-gradient QF_LRA/Farkas regression seed",
+    "pressure": "Exact active-set replay computes free-coordinate stationarity error 2 for the malformed active-face candidate.",
+    "evidence": [
+      "bad-active-set-free-gradient-rejected"
+    ],
+    "next_step": "Promote additional active-set rows only when they add distinct degenerate active sets, working-set pivots, equality-constrained solves, cycling guards, or convergence pressure; keep general active-set method theory in horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-active-set-qp-end-to-end.md",
+    "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "unconstrained-minimizer-replay",
+    "active-face-candidate-replay",
+    "active-set-kkt-replay",
+    "inactive-constraint-slack-replay",
+    "bad-active-set-free-gradient-rejected",
+    "general-active-set-method-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite active-set QP witnesses as deterministic exact-rational replay rows.",
+    "Replay unconstrained minimizers, active-face candidates, constraint slacks, KKT multipliers, stationarity residuals, and free-coordinate errors over exact rationals.",
+    "Route false active-set candidate claims through checked QF_LRA/Farkas evidence after replay computes the stationarity error.",
+    "Keep general active-set finite termination, cycling, degeneracy, and convergence claims marked Lean-horizon until proof artifacts exist."
+  ]
+}

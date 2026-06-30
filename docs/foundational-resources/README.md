@@ -177,6 +177,10 @@ schemas, examples, and validation workflows.
   validates two-by-two PSD replay, trace/objective arithmetic, dual-slack
   matrix replay, checked rejection of a false objective claim, and a general
   SDP-duality Lean-horizon row.
+- [`artifacts/examples/math/finite-active-set-qp-v0/`](../../artifacts/examples/math/finite-active-set-qp-v0/)
+  validates exact active-set QP replay, active-face candidate arithmetic,
+  inactive-constraint slack, checked rejection of a false free-gradient claim,
+  and an active-set method Lean-horizon row.
 - [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
   validates exact quadratic gradient replay, finite descent-step arithmetic,
   objective-decrease checking, checked rejection of a false decrease claim, and
@@ -346,6 +350,10 @@ schemas, examples, and validation workflows.
   validates exact constrained-quadratic grid replay, KKT stationarity,
   complementary slackness, checked bad-stationarity rejection, and a general
   KKT sufficiency Lean-horizon row.
+- [`artifacts/examples/math/finite-active-set-qp-v0/`](../../artifacts/examples/math/finite-active-set-qp-v0/)
+  validates exact active-face QP replay, active/inactive constraint checks,
+  KKT stationarity, checked bad-free-gradient rejection, and a general
+  active-set method Lean-horizon row.
 - [`artifacts/examples/math/finite-sdp-v0/`](../../artifacts/examples/math/finite-sdp-v0/)
   validates exact two-by-two SDP primal/dual replay, objective arithmetic,
   slack PSD checks, checked bad-objective rejection, and a general
@@ -520,6 +528,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/le
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0

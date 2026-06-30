@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-active-set-qp-v0",
+  "witnesses": [
+    {
+      "id": "box-face-active-set-qp",
+      "description": "A two-variable active-set QP witness for min (x-2)^2 + (y-1)^2 subject to x <= 1 and y >= 0.",
+      "values": {
+        "center": ["2", "1"],
+        "quadratic_diagonal": ["1", "1"],
+        "unconstrained_point": ["2", "1"],
+        "unconstrained_gradient": ["0", "0"],
+        "unconstrained_value": "0",
+        "active_normal": ["1", "0"],
+        "active_bound": "1",
+        "inactive_normal": ["0", "-1"],
+        "inactive_bound": "0",
+        "unconstrained_active_violation": "1",
+        "active_candidate": ["1", "1"],
+        "active_candidate_value": "1",
+        "active_candidate_gradient": ["-2", "0"],
+        "active_constraint_value": "1",
+        "active_constraint_slack": "0",
+        "inactive_constraint_value": "-1",
+        "inactive_constraint_slack": "1",
+        "active_multiplier": "2",
+        "inactive_multiplier": "0",
+        "stationarity_residual": ["0", "0"],
+        "bad_candidate": ["1", "0"],
+        "bad_candidate_value": "2",
+        "bad_candidate_gradient": ["-2", "-2"],
+        "bad_stationarity_residual": ["0", "-2"],
+        "bad_free_stationarity_error": "2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "unconstrained-minimizer-replay",
+      "claim": "The unconstrained minimizer of (x-2)^2 + (y-1)^2 is (2,1), but it violates x <= 1 by one unit.",
+      "expected_result": "sat",
+      "validation": "finite_active_set_unconstrained_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["box-face-active-set-qp"],
+      "notes": "The validator recomputes the objective, gradient, and active-bound violation exactly."
+    },
+    {
+      "id": "active-face-candidate-replay",
+      "claim": "Fixing the active face x=1 and solving the free coordinate gives candidate (1,1) with objective value 1.",
+      "expected_result": "sat",
+      "validation": "finite_active_face_candidate_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["box-face-active-set-qp"],
+      "notes": "The validator checks the active equality, free-coordinate gradient, and exact objective value."
+    },
+    {
+      "id": "active-set-kkt-replay",
+      "claim": "At (1,1), active multiplier 2 and inactive multiplier 0 satisfy KKT stationarity and complementary slackness.",
+      "expected_result": "sat",
+      "validation": "finite_active_set_kkt_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["box-face-active-set-qp"],
+      "notes": "The validator recomputes gradient + lambda*a + mu*b and both multiplier-slack products."
+    },
+    {
+      "id": "inactive-constraint-slack-replay",
+      "claim": "The lower-bound constraint y >= 0 is inactive at (1,1), with slack 1 and zero multiplier.",
+      "expected_result": "sat",
+      "validation": "finite_inactive_constraint_slack_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["box-face-active-set-qp"],
+      "notes": "The validator recomputes the inactive constraint value, slack, and complementarity product."
+    },
+    {
+      "id": "bad-active-set-free-gradient-rejected",
+      "claim": "The feasible point (1,0) solves the same active-face subproblem.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_active_set_free_gradient_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "box-face-active-set-qp",
+        "computed_free_stationarity_error": "2",
+        "claimed_error_upper_bound": "0",
+        "smt2_artifact": "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes free-coordinate stationarity error 2 for (1,0), so the malformed nonpositive-error claim is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "general-active-set-method-lean-horizon",
+      "claim": "General active-set finite termination, degeneracy handling, and convergence theorems require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Finite termination and correctness of active-set methods for convex quadratic programs under nondegeneracy assumptions, plus degeneracy and cycling safeguards",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite active-set QP witnesses"
+      },
+      "notes": "The finite rows check one rational active-face QP instance; active-set algorithm theory remains proof-assistant work."
+    }
+  ]
+}

@@ -21,6 +21,7 @@ Example packs:
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
+- [finite-active-set-qp-v0](../../../artifacts/examples/math/finite-active-set-qp-v0/)
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
@@ -77,6 +78,8 @@ separating-hyperplane score replay, supporting-face checking, and a checked
 QF_LRA/Farkas bad-separator certificate. The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness
 checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
+active-set QP slice adds exact active-face replay, inactive-constraint slack
+checking, and a checked QF_LRA/Farkas bad-free-gradient certificate. The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and a checked QF_LRA/Farkas
 bad-objective certificate. The finite-gradient-descent slice adds exact
@@ -301,6 +304,26 @@ the multiplier to `1`, giving stationarity residual `-1` and stationarity error
 `1`; the final contradiction `error = 1` versus `error = 0` is checked through
 QF_LRA/Farkas evidence.
 
+For a finite active-set QP example, encode one two-variable quadratic and a
+working set:
+
+```text
+minimize (x - 2)^2 + (y - 1)^2
+subject to x <= 1
+           y >= 0
+active face: x = 1
+candidate = (1,1)
+```
+
+The `finite-active-set-qp-v0` validator recomputes the unconstrained minimizer
+`(2,1)`, its violation of `x <= 1`, the active-face candidate `(1,1)`,
+inactive slack for `y >= 0`, KKT stationarity with multiplier `2`, and the
+zero complementarity products. Its bad row claims `(1,0)` solves the same
+active-face subproblem; exact replay computes free stationarity error `2`, and
+the final nonpositive-error contradiction is checked through QF_LRA/Farkas
+evidence. For a focused trace, read
+[End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
+
 For a finite SDP example, encode a two-by-two trace-one PSD matrix and dual
 slack:
 
@@ -459,6 +482,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
@@ -508,6 +533,7 @@ replay, read
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md),
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md),
+[End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md),
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),

@@ -115,7 +115,7 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 98 current math packs,
+The current execution ledger for stabilizing the 99 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
@@ -170,29 +170,32 @@ Fubini-style sum, and simple-function integral replay queryable while keeping
 Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
-finite recurrence-prefix, separation/root-finding, KKT, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
+finite recurrence-prefix, separation/root-finding, KKT, active-set QP, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix
 replay, affine recurrence replay, companion-matrix state replay, exact
 bisection/Newton replay, finite convex-combination/separator replay,
-finite constrained-quadratic KKT replay, finite two-by-two SDP replay, exact
-gradient-descent step replay, exact Armijo line-search replay, exact
-Wolfe line-search replay, exact projected-gradient interval replay, and exact
-L1 proximal-gradient soft-threshold replay, and checked
+finite constrained-quadratic KKT replay, finite active-set QP face/slack
+replay, finite two-by-two SDP replay, exact gradient-descent step replay, exact
+Armijo line-search replay, exact Wolfe line-search replay, exact
+projected-gradient interval replay, and exact L1 proximal-gradient
+soft-threshold replay, and checked
 QF_LRA/Farkas rejection of bad upper-bound, bad finite-value, bad Newton-step,
-bad separator, bad stationarity, bad objective, bad decrease, bad Armijo,
-bad Wolfe-curvature, bad projection, and bad proximal-point rows, while
+bad separator, bad stationarity, bad free-gradient, bad objective, bad
+decrease, bad Armijo, bad Wolfe-curvature, bad projection, and bad
+proximal-point rows, while
 monotone convergence, closed-form recurrence solving, asymptotics, and
-separation/KKT/SDP/descent/Wolfe/line-search/projected-gradient/proximal-gradient/stability/convergence theorems remain Lean-horizon.
+separation/KKT/active-set/SDP/descent/Wolfe/line-search/projected-gradient/proximal-gradient/stability/convergence theorems remain Lean-horizon.
 The optimization/convexity bridge rows now make exact LP feasibility,
 objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
 monotonicity, gradient replay, Hessian-minor witnesses, least-squares
 normal-equation replay, finite root-finding steps, and finite hyperplane
-separation plus finite KKT stationarity/complementarity and finite SDP
-objective/slack replay plus finite gradient-descent step/decrease replay
-and finite line-search rejection/acceptance replay plus finite Wolfe
-line-search replay plus finite projected-gradient interval replay plus finite proximal-gradient soft-threshold
+separation plus finite KKT stationarity/complementarity, finite active-set QP
+face/slack replay, and finite SDP objective/slack replay plus finite
+gradient-descent step/decrease replay and finite line-search
+rejection/acceptance replay plus finite Wolfe line-search replay plus finite
+projected-gradient interval replay plus finite proximal-gradient soft-threshold
 replay queryable while keeping duality, KKT
-sufficiency, SDP strong duality, general separation, and
+sufficiency, active-set method theory, SDP strong duality, general separation, and
 algorithm-convergence claims in the Lean-horizon lane.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
@@ -417,8 +420,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **98 promoted solver-reuse
+the foundational resource dashboards now report **99 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite-active-set-QP bad free-gradient QF_LRA/Farkas promotion,
 the latest finite-wolfe-line-search bad curvature QF_LRA/Farkas promotion,
 the latest finite-proximal-gradient bad proximal-point QF_LRA/Farkas promotion,
 the latest finite-projected-gradient bad projection QF_LRA/Farkas promotion,

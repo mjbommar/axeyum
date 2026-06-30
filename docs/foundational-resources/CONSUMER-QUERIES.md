@@ -192,10 +192,10 @@ For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP
 objective/slack replay, finite gradient-descent replay, and finite
-line-search replay, finite Wolfe line-search replay, finite
-projected-gradient replay, and finite proximal-gradient replay together while
+line-search replay, finite Wolfe line-search replay, finite active-set QP
+replay, finite projected-gradient replay, and finite proximal-gradient replay together while
 leaving duality, KKT sufficiency, SDP strong duality, line-search convergence,
-Wolfe line-search convergence, projected-gradient convergence,
+Wolfe line-search convergence, active-set convergence, projected-gradient convergence,
 proximal-gradient convergence, and convergence
 claims in the proof-horizon lane:
 
@@ -221,8 +221,8 @@ python3 scripts/query-foundational-resources.py concepts \
 ```
 
 To display concrete checked optimization, convexity, finite SDP, finite
-gradient-descent, finite line-search, finite Wolfe line-search, finite
-projected-gradient, finite proximal-gradient, least-squares, gradient,
+active-set QP, finite gradient-descent, finite line-search, finite Wolfe
+line-search, finite projected-gradient, finite proximal-gradient, least-squares, gradient,
 residual, or eigenpair rows, drill
 into checked Farkas examples:
 

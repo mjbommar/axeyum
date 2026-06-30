@@ -55,6 +55,9 @@ const FINITE_SEPARATION_BAD_SEPARATOR: &str = include_str!(
 const FINITE_KKT_BAD_STATIONARITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-kkt-v0/smt2/bad-stationarity-farkas-conflict.smt2"
 );
+const FINITE_ACTIVE_SET_QP_BAD_FREE_GRADIENT: &str = include_str!(
+    "../../../artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2"
+);
 const FINITE_SDP_BAD_OBJECTIVE: &str = include_str!(
     "../../../artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2"
 );
@@ -494,6 +497,14 @@ fn finite_kkt_bad_stationarity_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-kkt-v0 bad-stationarity SMT-LIB artifact",
         FINITE_KKT_BAD_STATIONARITY,
+    );
+}
+
+#[test]
+fn finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-active-set-qp-v0 bad-free-gradient SMT-LIB artifact",
+        FINITE_ACTIVE_SET_QP_BAD_FREE_GRADIENT,
     );
 }
 
