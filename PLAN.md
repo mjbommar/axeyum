@@ -278,8 +278,10 @@ solver-reuse rows, atlas concept lookup, and curriculum field-readiness
 summaries without importing validators or generators. The latest boundary
 review keeps the foundational resources
 JSON-first and in-repo: promoted solver-reuse rows are consumer-readable through
-the query helper, but there is still no external consumer or repeated typed API
-need that would justify a crate or repo split.
+the query helper, and the field-readiness smoke set now covers both
+probability/Farkas and differential-equations/dynamics Farkas lanes, but there
+is still no external consumer or repeated typed API need that would justify a
+crate or repo split.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs

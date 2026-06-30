@@ -369,6 +369,12 @@ Pick one row per commit unless the change is purely navigational.
    monotone invariant checking, checked QF_LRA/Farkas bad-step evidence, and
    the ODE/numerical-analysis Lean horizon out of the combined finite
    dynamics/Euler bridge lesson.
+39. Landed: add dynamics field-readiness consumer query coverage, extending
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh` with a
+   `differential_equations_and_dynamical_systems` plus Farkas field summary so
+   the recent bounded-dynamics, finite-Euler, stochastic-kernel, and
+   hitting-time resources are discoverable from the public JSON contract.
 
 ## Validation Checklist
 

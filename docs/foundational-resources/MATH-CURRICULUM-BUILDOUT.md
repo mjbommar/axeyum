@@ -1104,7 +1104,10 @@ manual scans. The consumer query helper now also exposes field-readiness
 summaries for curriculum navigation across pack counts, check counts, proof
 routes, solver-reuse statuses, and Lean-horizon packs; crates or repo splits
 are deferred until external consumers, generated typed APIs, or shared encoders
-require them.
+require them. The smoke examples now cover probability/Farkas and
+differential-equations/dynamics Farkas readiness, so both table-probability and
+recurrence/Euler-style finite-analysis lanes are exercised at the consumer
+boundary.
 
 Possible boundaries:
 

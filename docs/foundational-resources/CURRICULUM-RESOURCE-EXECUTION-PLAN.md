@@ -90,6 +90,9 @@ Concrete work:
 - Add a generated curriculum-pressure-by-fragment view so solver/proof demand
   is grouped by Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite replay, and
   Lean horizon without hand-maintained scans.
+- Keep consumer field-readiness smokes representative: probability/Farkas now
+  covers finite table-probability resources, and dynamics/Farkas now covers
+  recurrence, Euler, stochastic-kernel, and hitting-time resources.
 - Keep all status changes generated from `curriculum.toml`,
   [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md), and pack metadata.
 

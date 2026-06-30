@@ -133,6 +133,29 @@ Use this view for curriculum navigation, dashboards, or external sites that
 need a field-level readiness summary before drilling into individual packs or
 checks.
 
+For a field where the useful finite slice crosses several recent learner pages,
+query the exact-rational route directly:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field differential_equations_and_dynamical_systems \
+  --route Farkas \
+  --require-any
+```
+
+That gives a compact readiness row for recurrence traces, Euler-step examples,
+stochastic-kernel/hitting-time equations, and invariant-bound conflicts without
+requiring a consumer to know which pack owns each topic. To display concrete
+checked rows for a lesson or catalog card, drill into the check table:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field differential_equations_and_dynamical_systems \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 ## Proof And Check Mining
 
 ```sh
@@ -206,6 +229,7 @@ python3 scripts/query-foundational-resources.py packs --field probability_theory
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

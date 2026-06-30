@@ -1464,7 +1464,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `check-foundational-resources.sh` now runs a small query smoke set for
   summary output, promoted solver-reuse rows, probability/Farkas route pack
   discovery, graph-theory UNSAT rows, example-family atlas rows, and
-  probability/Farkas field-readiness rows.
+  probability/Farkas and dynamics/Farkas field-readiness rows.
 
 - **Foundational example-pack negative fixtures landed.**
   [`check-foundational-negative-fixtures.py`](scripts/check-foundational-negative-fixtures.py)
@@ -11966,6 +11966,16 @@ plan is built and committed on the current branch:
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md) and
   the foundational-resource smoke check so consumer examples now cover
   field-level curriculum readiness as well as pack/check/concept mining.
+
+- **2026-06-30** — **Dynamics field-readiness consumer query landed.**
+  Added a
+  `differential_equations_and_dynamical_systems` plus Farkas field-readiness
+  example and checked-row drill-down to
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
+  The foundational-resource smoke check now covers this dynamics/Farkas lane
+  alongside the probability/Farkas field summary, making the recent
+  bounded-dynamics, finite-Euler, stochastic-kernel, and hitting-time resources
+  visible through the public JSON consumer boundary.
 
 - **2026-06-30** — **Authorization-policy rules/law pack landed.**
   Added

@@ -1233,7 +1233,14 @@ Pick one item per commit unless the change is purely navigational.
     route counts, solver-reuse statuses, sample packs, and Lean-horizon packs
     from the committed JSON contract; the foundational resource smoke check now
     includes a probability/Farkas field-readiness query.
-48. Continue proof-route promotions or consumer-query examples; revisit the
+48. Landed: add dynamics field-readiness consumer query coverage.
+    `docs/foundational-resources/CONSUMER-QUERIES.md` now shows a
+    `differential_equations_and_dynamical_systems` plus Farkas field-readiness
+    query and a checked-row drill-down, tying the recent bounded-dynamics,
+    finite-Euler, stochastic-kernel, and hitting-time resources to the public
+    consumer boundary; the foundational resource smoke check now includes the
+    dynamics/Farkas field-readiness query.
+49. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 
