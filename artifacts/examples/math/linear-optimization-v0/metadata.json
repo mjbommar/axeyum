@@ -43,6 +43,7 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/curriculum/03-destinations/linear-algebra.md",
@@ -57,7 +58,7 @@
   "graduation_criteria": [
     "Encode the fixed LP feasibility and threshold checks as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation.",
-    "Keep the infeasible threshold on Axeyum's checked Farkas evidence path.",
+    "Keep the infeasible threshold on Axeyum's checked Farkas evidence path, including same-artifact tamper rejection.",
     "Add objective-optimality examples only when the certificate route can state primal/dual evidence explicitly."
   ]
 }

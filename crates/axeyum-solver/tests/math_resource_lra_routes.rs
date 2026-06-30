@@ -115,6 +115,40 @@ fn assert_resource_farkas(label: &str, smt2: &str) {
     assert_farkas_checked(label, &script.arena, &assertions);
 }
 
+fn assert_resource_farkas_rejects_tampered_certificate(label: &str, smt2: &str) {
+    let mut script = parse_script(smt2)
+        .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
+    let assertions = script.assertions.clone();
+
+    assert_eq!(
+        check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat,
+        "{label}: resource obligation must be unsat before tampering"
+    );
+
+    let report = produce_lra_evidence(&script.arena, &assertions).unwrap();
+    let Evidence::UnsatFarkas(mut certificate) = report.evidence else {
+        panic!("{label}: expected Farkas-certified unsat");
+    };
+    assert!(
+        certificate.verify(),
+        "{label}: genuine certificate must verify before tampering"
+    );
+    assert!(
+        Evidence::UnsatFarkas(certificate.clone())
+            .check(&script.arena, &assertions)
+            .unwrap(),
+        "{label}: genuine evidence must independently check before tampering"
+    );
+
+    certificate.multipliers[0] = Rational::zero();
+    let bogus = Evidence::UnsatFarkas(certificate);
+    assert!(
+        !bogus.check(&script.arena, &assertions).unwrap(),
+        "{label}: tampering a Farkas multiplier must make evidence reject"
+    );
+}
+
 #[test]
 fn qf_lra_resource_route_rejects_tampered_farkas_certificate() {
     let mut arena = TermArena::new();
@@ -276,6 +310,14 @@ fn linear_optimization_objective_threshold_emits_checked_farkas() {
 #[test]
 fn linear_optimization_objective_threshold_artifact_emits_checked_farkas() {
     assert_resource_farkas(
+        "linear-optimization-v0 objective-threshold SMT-LIB artifact",
+        LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD,
+    );
+}
+
+#[test]
+fn linear_optimization_objective_threshold_rejects_tampered_farkas_certificate() {
+    assert_resource_farkas_rejects_tampered_certificate(
         "linear-optimization-v0 objective-threshold SMT-LIB artifact",
         LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD,
     );

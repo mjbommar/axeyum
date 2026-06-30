@@ -300,9 +300,13 @@ Pick one row per commit unless the change is purely navigational.
    `proof-methods-refutation-v0` from the PHP(3,2) source claim through
    committed CNF, emitted DRAT/LRAT proof objects, and same-artifact
    corrupted-proof rejection.
-23. Add a generated or query-based audit for unclassified solver-reuse packs if
+23. Landed: add `farkas-certificate-anatomy-end-to-end.md`, following
+   `linear-optimization-v0` from the exact LP threshold conflict through source
+   SMT-LIB, emitted `UnsatFarkas` evidence, and same-artifact multiplier tamper
+   rejection.
+24. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-24. Revisit the library boundary after unclassified packs are resolved and at
+25. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

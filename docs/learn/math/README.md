@@ -184,6 +184,9 @@ validated pack data and the repo-root command that replays it.
   bad-gradient rejection, and the analysis Lean horizon.
 - [Linear System And LP Replay](linear-system-end-to-end.md): follows exact
   matrix replay and a tiny checked Farkas-style LP certificate.
+- [Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md):
+  follows an exact LP threshold conflict through source SMT-LIB, emitted
+  `UnsatFarkas` evidence, and corrupted-certificate rejection.
 - [Rational Convexity](convexity-rational-end-to-end.md): follows exact
   midpoint Jensen replay, finite second differences, affine threshold
   monotonicity, bad midpoint-convexity rejection, and the convex-analysis

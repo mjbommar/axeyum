@@ -261,6 +261,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
@@ -275,6 +276,7 @@ derivative/Jacobian replay, exact rational inner-product replay,
 finite-field vector-space replay, finite dual-space replay, and finite module
 replay, read
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
+[End To End: Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md),
 [End To End: Rational Convexity](convexity-rational-end-to-end.md),
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),

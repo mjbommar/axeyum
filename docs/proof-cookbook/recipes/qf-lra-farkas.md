@@ -43,6 +43,11 @@ Tamper coverage is explicit:
 `tampered_farkas_evidence_fails_its_own_check` zeroes a multiplier and verifies
 that the independent checker rejects the proof.
 
+The learner-facing
+[Farkas Certificate Anatomy](../../learn/math/farkas-certificate-anatomy-end-to-end.md)
+page follows the `linear-optimization-v0` objective-threshold artifact through
+checked `UnsatFarkas` evidence and same-artifact multiplier tamper rejection.
+
 ## Lean Reconstruction
 
 Status: checked for covered LRA shapes.
@@ -78,6 +83,9 @@ Canonical examples:
 
 - [Linear Algebra Rational](../../../artifacts/examples/math/linear-algebra-rational-v0/)
   uses a singular inconsistent linear-system row.
+- [Linear Optimization](../../../artifacts/examples/math/linear-optimization-v0/)
+  uses an objective-threshold conflict where `x + y <= 4` and `x + y >= 5`
+  combine to `0 <= -1`.
 - [Finite Probability](../../../artifacts/examples/math/finite-probability-v0/)
   uses bad normalization and Bayes-posterior rows over exact probability
   tables.
