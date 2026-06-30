@@ -240,6 +240,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `long_probability = 1/2`; generated dashboards move promoted solver-reuse
   packs to 20.
 
+- **Finite integration QF_LRA promotion landed.**
+  [`finite-integration-v0`](artifacts/examples/math/finite-integration-v0/)
+  now links `bad-expectation-rejected` to a source-level QF_LRA artifact for
+  the malformed finite expectation row. The shared `math_resource_lra_routes`
+  regression emits and independently rechecks Farkas evidence for
+  `integral_value = 5/2` versus `integral_value = 3`; generated dashboards move
+  promoted solver-reuse packs to 21.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,

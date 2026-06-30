@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const integral_value Real)
+(assert (= integral_value (/ 5 2)))
+(assert (= integral_value 3))
+(check-sat)

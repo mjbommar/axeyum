@@ -26,7 +26,8 @@ The validator recomputes `integral f`, `integral g`, the pointwise function
 Expected result: `unsat`.
 
 The validator rejects the claimed integral `3` because the exact finite
-weighted sum is `5/2`.
+weighted sum is `5/2`. The source-linked QF_LRA artifact records the final
+exact-linear contradiction checked by the shared Farkas route regression.
 
 ## `lebesgue-integration-lean-horizon`
 

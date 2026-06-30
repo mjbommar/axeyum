@@ -33,6 +33,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite integration bad expectation QF_LRA/Farkas regression seed",
+    "pressure": "Malformed finite simple-function expectation row where exact replay computes integral 5/2 but the false row claims 3.",
+    "evidence": [
+      "bad-expectation-rejected"
+    ],
+    "next_step": "Promote additional simple-function, indicator, or finite-linearity rows only when they add distinct exact-linear solver pressure; keep Lebesgue integration and convergence theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -40,6 +49,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -52,7 +64,7 @@
   "graduation_criteria": [
     "Encode finite simple-function integrals as exact rational weighted sums.",
     "Replay finite expectation, indicator-integral, and linearity witnesses through Axeyum model evaluation.",
-    "Emit checked finite counterexample evidence for rejected expectation claims.",
+    "Emit checked finite counterexample evidence for rejected expectation claims; the bad expectation row now has checked QF_LRA/Farkas evidence.",
     "Keep Lebesgue integration, monotone convergence, dominated convergence, and almost-everywhere theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

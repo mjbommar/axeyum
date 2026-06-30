@@ -26,7 +26,9 @@ The examples are:
 
 The validator checks normalized finite atom probabilities, recomputes
 `sum_x f(x) * P(x)`, recomputes event measures, and checks finite linearity of
-the integral. All arithmetic is exact rational arithmetic.
+the integral. The false expectation row is also mirrored by a QF_LRA/Farkas
+regression over the replay-computed integral. All arithmetic is exact rational
+arithmetic.
 
 This pack is checked finite evidence for the bad expectation row. It is not a
 proof of Lebesgue integration, monotone convergence, dominated convergence,

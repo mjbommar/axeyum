@@ -293,6 +293,20 @@ fn finite_random_variables_bad_pushforward_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_integration_bad_expectation_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let integral_value = real(&mut arena, "integral_value");
+    let replay_computed_integral = eq_ratio(&mut arena, integral_value, 5, 2);
+    let false_claimed_integral = eq_ratio(&mut arena, integral_value, 3, 1);
+
+    assert_farkas_checked(
+        "finite-integration-v0 bad-expectation-rejected",
+        &arena,
+        &[replay_computed_integral, false_claimed_integral],
+    );
+}
+
+#[test]
 fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let p10 = real(&mut arena, "p10");

@@ -105,7 +105,8 @@ finite group actions, with a topology/preimage extension for finite continuous
 maps. The measure/probability QF_LRA/Farkas lane now also promotes finite
 product-measure's bad product-probability row through a source-linked exact
 linear contradiction after replay computes the product mass, plus finite
-random-variables' bad pushforward row after replay computes the outcome mass.
+random-variables' bad pushforward row after replay computes the outcome mass
+and finite-integration's bad expectation row after replay computes the integral.
 The foundational concept atlas now also includes twenty-two generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 metric balls, bounded epsilon-delta shadows, compactness shadows,
@@ -127,7 +128,7 @@ QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
 backed by the shared `math_resource_uf_routes` regression.
 The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
-backed by the 27-test `math_resource_lra_routes` regression and scoped to
+backed by the 28-test `math_resource_lra_routes` regression and scoped to
 the optimization/Farkas proof-route lane.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
@@ -213,7 +214,8 @@ determinant conflict, metric continuity now promoted for the finite
 bad-delta output-bound conflict, finite stochastic kernels now promoted for
 the bad kernel-row normalization conflict, and finite product measure now
 promoted for the bad product-probability conflict, with finite random variables
-now promoted for the bad pushforward-distribution conflict. The first secondary
+now promoted for the bad pushforward-distribution conflict and finite
+integration now promoted for the bad expectation conflict. The first secondary
 QF_LRA/Farkas target set is now covered, the initial equality-heavy QF_UF/Alethe
 secondary set is now covered including the finite-ideals quotient
 representative row, and finite group actions now promote a bad identity-action

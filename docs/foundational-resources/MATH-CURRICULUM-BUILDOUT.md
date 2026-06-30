@@ -712,7 +712,8 @@ sigma-algebra axioms, exact finite additivity, and event/complement measure
 replay.
 `artifacts/examples/math/finite-integration-v0/` now validates exact finite
 simple-function integrals, indicator integrals, integral linearity, checked
-rejection of a false expectation, and a Lebesgue-integration Lean-horizon row.
+QF_LRA/Farkas rejection of a false expectation, and a Lebesgue-integration
+Lean-horizon row.
 `artifacts/examples/math/finite-product-measure-v0/` now validates exact
 finite product-measure tables, rectangle probabilities, left and right
 marginals, finite Fubini replay, checked QF_LRA/Farkas rejection of a false
@@ -1222,8 +1223,9 @@ finite algebraic-topology bridge: simplicial closure, oriented boundaries,
 `boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, a checked
 QF_LIA/Diophantine bad-coefficient row, and a homology Lean-horizon row.
 `finite-integration-v0` now adds the exact finite
-simple-function integral bridge between finite measure, probability, and
-statistics. `finite-product-measure-v0` now adds the exact finite product
+simple-function integral bridge and checked QF_LRA/Farkas bad-expectation row
+between finite measure, probability, and statistics.
+`finite-product-measure-v0` now adds the exact finite product
 measure, marginalization, Fubini bridge, and checked QF_LRA/Farkas bad-product
 probability row toward general measure/probability theory.
 `finite-random-variables-v0` now adds the exact finite random-variable
