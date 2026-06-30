@@ -264,6 +264,11 @@ Bool/QF_LIA thresholds, temporal versioning, replayed witnesses, and proof-route
 upgrade targets; source-linked Bool/QF_LIA fixtures now check its consistency,
 coverage, fixed no-exception monotonicity, and active-threshold implementation
 equivalence obligations through the `rules_as_code_examples` solver regression.
+`authorization-policy-v0` now adds the second rules/law pack: finite
+tenant/resource relations, explicit deny precedence, admin tenant guarding,
+intended version-delta witnesses, and checked Bool/QF_LIA fixtures for tenant
+isolation, deny precedence, admin tenant boundaries, and bounded implementation
+equivalence.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

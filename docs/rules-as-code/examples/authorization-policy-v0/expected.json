@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "pack_id": "authorization_policy_v0",
+  "parameters": {
+    "policy_versions": [1, 2],
+    "roles": ["analyst", "admin"],
+    "actions": ["read", "export", "delete"],
+    "tenants": [1, 2]
+  },
+  "sample_domain": {
+    "user_tenants": [1, 2],
+    "resource_tenants": [1, 2],
+    "roles": ["analyst", "admin"],
+    "actions": ["read", "export", "delete"],
+    "policy_versions": [1, 2],
+    "booleans": [false, true]
+  },
+  "witnesses": [
+    {
+      "id": "same_tenant_read_allowed",
+      "facts": {
+        "user_tenant": 1,
+        "resource_tenant": 1,
+        "role": "analyst",
+        "action": "read",
+        "explicit_deny": false,
+        "policy_version": 1
+      },
+      "expected_allow": true,
+      "source_citations": ["Example Policy 2(a)", "Example Policy 2(b)"],
+      "explanation": "An analyst may read a same-tenant resource when no explicit deny applies."
+    },
+    {
+      "id": "cross_tenant_admin_denied",
+      "facts": {
+        "user_tenant": 1,
+        "resource_tenant": 2,
+        "role": "admin",
+        "action": "read",
+        "explicit_deny": false,
+        "policy_version": 2
+      },
+      "expected_allow": false,
+      "source_citations": ["Example Policy 2(a)", "Example Policy 2(d)"],
+      "explanation": "The admin override does not bypass tenant isolation."
+    },
+    {
+      "id": "explicit_deny_blocks_admin",
+      "facts": {
+        "user_tenant": 1,
+        "resource_tenant": 1,
+        "role": "admin",
+        "action": "export",
+        "explicit_deny": true,
+        "policy_version": 2
+      },
+      "expected_allow": false,
+      "source_citations": ["Example Policy 2(c)", "Example Policy 2(d)"],
+      "explanation": "Explicit deny wins even when the user has the admin role."
+    },
+    {
+      "id": "analyst_export_v1_denied",
+      "facts": {
+        "user_tenant": 1,
+        "resource_tenant": 1,
+        "role": "analyst",
+        "action": "export",
+        "explicit_deny": false,
+        "policy_version": 1
+      },
+      "expected_allow": false,
+      "source_citations": ["Example Policy 2(b)", "Example Policy 2(e)"],
+      "explanation": "Policy version 1 does not permit analyst export."
+    },
+    {
+      "id": "analyst_export_v2_allowed",
+      "facts": {
+        "user_tenant": 1,
+        "resource_tenant": 1,
+        "role": "analyst",
+        "action": "export",
+        "explicit_deny": false,
+        "policy_version": 2
+      },
+      "expected_allow": true,
+      "source_citations": ["Example Policy 2(b)", "Example Policy 2(e)"],
+      "explanation": "Policy version 2 intentionally adds analyst export for same-tenant resources."
+    },
+    {
+      "id": "delete_unpermitted",
+      "facts": {
+        "user_tenant": 1,
+        "resource_tenant": 1,
+        "role": "admin",
+        "action": "delete",
+        "explicit_deny": false,
+        "policy_version": 2
+      },
+      "expected_allow": false,
+      "source_citations": ["Example Policy 2(b)", "Example Policy 2(d)"],
+      "explanation": "The toy policy does not grant delete to any role."
+    }
+  ],
+  "checks": [
+    {
+      "id": "tenant_isolation",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Policy 2(a)", "Example Policy 2(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/tenant-isolation-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_tenant_isolation_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "explicit_deny_precedence",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Policy 2(b)", "Example Policy 2(c)", "Example Policy 2(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/explicit-deny-precedence-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_explicit_deny_precedence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "admin_tenant_guard",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Policy 2(a)", "Example Policy 2(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/admin-tenant-guard-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_admin_tenant_guard_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "version_delta",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["analyst_export_v1_denied", "analyst_export_v2_allowed"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Policy 2(e)"]
+    },
+    {
+      "id": "implementation_equivalence",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Policy 2(a)", "Example Policy 2(b)", "Example Policy 2(c)", "Example Policy 2(d)", "Example Policy 2(e)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_implementation_equivalence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB mismatch query encodes the policy model and executable interpretation for the bounded role/action slice and asks for disagreement."
+    }
+  ]
+}

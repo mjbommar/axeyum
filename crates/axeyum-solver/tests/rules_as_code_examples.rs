@@ -19,6 +19,18 @@ const BENEFIT_ELIGIBILITY_MONOTONICITY: &str = include_str!(
 const BENEFIT_ELIGIBILITY_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/benefit-eligibility-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
 );
+const AUTHORIZATION_POLICY_TENANT_ISOLATION: &str = include_str!(
+    "../../../docs/rules-as-code/examples/authorization-policy-v0/smt2/tenant-isolation-bool-qf-lia-conflict.smt2"
+);
+const AUTHORIZATION_POLICY_EXPLICIT_DENY_PRECEDENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/authorization-policy-v0/smt2/explicit-deny-precedence-bool-qf-lia-conflict.smt2"
+);
+const AUTHORIZATION_POLICY_ADMIN_TENANT_GUARD: &str = include_str!(
+    "../../../docs/rules-as-code/examples/authorization-policy-v0/smt2/admin-tenant-guard-bool-qf-lia-conflict.smt2"
+);
+const AUTHORIZATION_POLICY_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/authorization-policy-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
+);
 
 #[test]
 fn benefit_eligibility_consistency_emits_checked_evidence() {
@@ -49,6 +61,38 @@ fn benefit_eligibility_implementation_equivalence_emits_checked_evidence() {
     assert_rule_unsat_evidence(
         "benefit-eligibility-v0 implementation equivalence",
         BENEFIT_ELIGIBILITY_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
+#[test]
+fn authorization_policy_tenant_isolation_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "authorization-policy-v0 tenant isolation",
+        AUTHORIZATION_POLICY_TENANT_ISOLATION,
+    );
+}
+
+#[test]
+fn authorization_policy_explicit_deny_precedence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "authorization-policy-v0 explicit deny precedence",
+        AUTHORIZATION_POLICY_EXPLICIT_DENY_PRECEDENCE,
+    );
+}
+
+#[test]
+fn authorization_policy_admin_tenant_guard_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "authorization-policy-v0 admin tenant guard",
+        AUTHORIZATION_POLICY_ADMIN_TENANT_GUARD,
+    );
+}
+
+#[test]
+fn authorization_policy_implementation_equivalence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "authorization-policy-v0 implementation equivalence",
+        AUTHORIZATION_POLICY_IMPLEMENTATION_EQUIVALENCE,
     );
 }
 

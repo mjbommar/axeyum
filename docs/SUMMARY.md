@@ -29,6 +29,7 @@
 - [Rules-as-Code Verification Lab](rules-as-code/README.md)
   - [Rules-as-Code Roadmap](rules-as-code/ROADMAP.md)
   - [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md)
+  - [Authorization Policy V0](rules-as-code/examples/authorization-policy-v0/README.md)
 
 # Learn
 

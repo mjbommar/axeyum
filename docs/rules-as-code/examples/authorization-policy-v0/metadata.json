@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "authorization_policy_v0",
+  "title": "Example Authorization Policy With Tenant Isolation",
+  "domain": "authorization",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Policy 2(a)", "uri": "source.md#rule-2a-tenants"},
+    {"label": "Example Policy 2(b)", "uri": "source.md#rule-2b-role-permits"},
+    {"label": "Example Policy 2(c)", "uri": "source.md#rule-2c-explicit-deny"},
+    {"label": "Example Policy 2(d)", "uri": "source.md#rule-2d-admin-override"},
+    {"label": "Example Policy 2(e)", "uri": "source.md#rule-2e-version-change"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["user", "policy_engine", "resource_owner"],
+  "inputs": [
+    {"name": "user_tenant", "sort": "Int"},
+    {"name": "resource_tenant", "sort": "Int"},
+    {"name": "role", "sort": "Enum(analyst,admin)"},
+    {"name": "action", "sort": "Enum(read,export,delete)"},
+    {"name": "explicit_deny", "sort": "Bool"},
+    {"name": "policy_version", "sort": "Int"}
+  ],
+  "outputs": [
+    {"name": "allow", "sort": "Bool"}
+  ],
+  "checks": [
+    "tenant_isolation",
+    "explicit_deny_precedence",
+    "admin_tenant_guard",
+    "version_delta",
+    "implementation_equivalence"
+  ],
+  "axeyum_fragments": ["Bool", "QF_LIA", "finite enumeration"],
+  "proof_expectation": "Tenant isolation, explicit deny precedence, admin tenant guarding, and bounded implementation equivalence have source-linked Bool/QF_LIA fixtures with checked Axeyum evidence; the intended policy-version delta remains replayed witness evidence."
+}

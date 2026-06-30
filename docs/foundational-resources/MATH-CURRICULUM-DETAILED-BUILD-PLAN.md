@@ -182,7 +182,9 @@ Build order:
    public contract.
 2. Add rules/law examples only when they reuse existing math-resource patterns:
    finite predicates, thresholds, reachability, precedence, optimization, and
-   proof routes.
+   proof routes. Status: `benefit-eligibility-v0` and
+   `authorization-policy-v0` now exercise the eligibility and access-control
+   slices with replayed witnesses plus checked Bool/QF_LIA proof fixtures.
 3. Add typed accessors only after repeated scripts duplicate parsing logic.
 4. Split a crate or separate repo only after a boundary decision cites at least
    three duplicated consumers or one external release-cadence need.

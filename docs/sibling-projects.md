@@ -58,7 +58,7 @@ and graduation criteria.
 |---|---|---|---|
 | SMT Fragment Atlas | [docs/atlas/](atlas/README.md) | [Atlas roadmap](atlas/ROADMAP.md) | [smt-fragments.json](../artifacts/ontology/smt-fragments.json) plus [schema](../artifacts/ontology/smt-fragments.schema.json) and [validator](../scripts/validate-smt-fragment-atlas.py). |
 | Proof Certificate Cookbook | [docs/proof-cookbook/](proof-cookbook/README.md) | [Cookbook roadmap](proof-cookbook/ROADMAP.md) | Route-by-route recipes for tiny proof/evidence examples. |
-| Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) plus [rules/law crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md) | [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md) with citations, checks, replayed witnesses, schema, validator, four checked Bool/QF_LIA rows, and math-resource reuse map. |
+| Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) plus [rules/law crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md) | [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md) and [Authorization Policy V0](rules-as-code/examples/authorization-policy-v0/README.md) with citations, checks, replayed witnesses, schema, validator, checked Bool/QF_LIA rows, and math-resource reuse map. |
 
 ## Broader Foundational Resource Expansion
 
@@ -224,12 +224,15 @@ incubators:
    - Plan: [Rules-as-code roadmap](rules-as-code/ROADMAP.md).
    - Crosswalk:
      [Rules/Law Crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md).
-   - First artifact:
+   - First artifacts:
      [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md)
+     and [Authorization Policy V0](rules-as-code/examples/authorization-policy-v0/README.md)
      plus [rules-core schema](../artifacts/ontology/rules-core.schema.json)
      and [validator](../scripts/validate-rules-as-code.py).
-   - Include: a small eligibility rule with exceptions, temporal versions, and
-     executable examples; show consistency checks and counterexample generation.
+   - Include: small eligibility and authorization rules with exceptions,
+     precedence, temporal versions, and executable examples; show consistency,
+     tenant isolation, implementation equivalence, and counterexample
+     generation.
    - Value: tests whether law/policy reasoning can become a real Axeyum use
      case without polluting solver core.
 

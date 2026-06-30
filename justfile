@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc foundational-resources links
+check: fmt clippy test doc foundational-resources rules-as-code links
 
 fmt:
     cargo fmt --all --check
@@ -27,6 +27,9 @@ doc:
 
 foundational-resources:
     ./scripts/check-foundational-resources.sh
+
+rules-as-code:
+    python3 scripts/validate-rules-as-code.py
 
 deny:
     cargo deny check

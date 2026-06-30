@@ -39,22 +39,25 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first rule pack has landed:
+The first two rule packs have landed:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
-- [metadata.json](examples/benefit-eligibility-v0/metadata.json)
-- [expected.json](examples/benefit-eligibility-v0/expected.json)
+- [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
 The local validator
-[validate-rules-as-code.py](../../scripts/validate-rules-as-code.py) checks the
-metadata shape, citation file references, expected check records, concrete
-witness replay, and finite-sample consistency/coverage/monotonicity. Solver
-proof integration has started: consistency, coverage, monotonicity, and bounded
-implementation equivalence now have source-linked Bool/QF_LIA fixtures checked
-by `cargo test -p axeyum-solver --test rules_as_code_examples`; threshold and
-temporal-transition rows remain replayed witnesses.
+[validate-rules-as-code.py](../../scripts/validate-rules-as-code.py) discovers
+each pack and checks metadata shape, citation file references, expected check
+records, concrete witness replay, and pack-specific finite-sample invariants.
+Solver proof integration has started: benefit consistency, coverage,
+monotonicity, and bounded implementation equivalence now have source-linked
+Bool/QF_LIA fixtures, and authorization tenant isolation, explicit deny
+precedence, admin tenant guarding, and bounded implementation equivalence do as
+well. They are checked by
+`cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
+and temporal-transition rows plus authorization version-delta rows remain
+replayed witnesses.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -169,6 +172,11 @@ Exit criteria:
 
 ## Second Example Pack: Authorization Policy
 
+Status: landed as
+[Authorization Policy V0](examples/authorization-policy-v0/README.md), with
+source-linked Bool/QF_LIA proof fixtures for tenant isolation, explicit deny
+precedence, admin tenant guarding, and bounded implementation equivalence.
+
 Model a small access-control policy:
 
 - users, roles, resources, actions;
@@ -184,8 +192,8 @@ Checks:
 - Admin override does not bypass tenant isolation unless stated.
 - Policy version N and N+1 differ only on intended requests.
 
-This pack should connect to Cedar/OPA-style policy use cases without depending
-on either implementation.
+This pack connects to Cedar/OPA-style policy use cases without depending on
+either implementation.
 
 ## Third Example Pack: Tax/Benefit Arithmetic
 
@@ -211,6 +219,7 @@ This pack exercises LIA/optimization and counterexample minimization.
 Near-term documentation checks:
 
 ```sh
+just rules-as-code
 ./scripts/check-links.sh
 python3 scripts/validate-rules-as-code.py
 ```

@@ -1189,6 +1189,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   names, and checked-evidence contract. Next work is generated multi-row
   coverage/equivalence queries or the next rules/law pack.
 
+- **Authorization-policy rules/law pack landed.**
+  [`authorization-policy-v0`](docs/rules-as-code/examples/authorization-policy-v0/README.md)
+  is the second rules-as-code pack and reuses finite predicates,
+  tenant/resource relations, precedence, bounded version deltas, and
+  implementation-equivalence checks. The pack has source-linked Bool/QF_LIA
+  fixtures for
+  [`tenant-isolation-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/authorization-policy-v0/smt2/tenant-isolation-bool-qf-lia-conflict.smt2),
+  [`explicit-deny-precedence-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/authorization-policy-v0/smt2/explicit-deny-precedence-bool-qf-lia-conflict.smt2),
+  [`admin-tenant-guard-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/authorization-policy-v0/smt2/admin-tenant-guard-bool-qf-lia-conflict.smt2),
+  and
+  [`implementation-equivalence-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/authorization-policy-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2).
+  The `rules_as_code_examples` regression now checks all four authorization
+  obligations with certified evidence, and
+  [`validate-rules-as-code.py`](scripts/validate-rules-as-code.py) now discovers
+  and validates multiple rules-as-code packs with pack-specific finite replay.
+
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
   is now generated with forty bridge rows. The proof-methodology rows are
@@ -11890,6 +11906,18 @@ plan is built and committed on the current branch:
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md) and
   the foundational-resource smoke check so consumer examples now cover
   field-level curriculum readiness as well as pack/check/concept mining.
+
+- **2026-06-30** — **Authorization-policy rules/law pack landed.**
+  Added
+  [`authorization-policy-v0`](docs/rules-as-code/examples/authorization-policy-v0/README.md)
+  as the second rules-as-code resource pack, with cited source policy, bounded
+  model, expected-result JSON, replayed version-delta witnesses, and checked
+  Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
+  tenant guarding, and bounded implementation equivalence. Generalized
+  [`validate-rules-as-code.py`](scripts/validate-rules-as-code.py) to discover
+  multiple packs and validate pack-specific finite replay. Extended
+  [`rules_as_code_examples`](crates/axeyum-solver/tests/rules_as_code_examples.rs)
+  with the four authorization proof-route regressions.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

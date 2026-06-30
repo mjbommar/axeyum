@@ -29,7 +29,8 @@ step test   cargo test --workspace --all-features
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step foundational-resources ./scripts/check-foundational-resources.sh
-step links  ./scripts/check-links.sh
+step rules-as-code python3 scripts/validate-rules-as-code.py
+step links         ./scripts/check-links.sh
 
 if [ "$fail" -ne 0 ]; then
   echo "check: one or more gates FAILED" >&2

@@ -245,6 +245,9 @@ Build sequence:
    `benefit-eligibility-v0` now has checked Bool/QF_LIA fixtures for
    consistency, coverage, fixed no-exception monotonicity, and active-threshold
    implementation equivalence through `rules_as_code_examples`.
+   `authorization-policy-v0` now adds the access-control slice with checked
+   Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
+   tenant guarding, and bounded implementation equivalence.
 15. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and

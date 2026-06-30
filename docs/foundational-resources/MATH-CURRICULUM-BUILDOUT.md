@@ -1658,6 +1658,11 @@ The structured atlas now records these recurring exact-rational contradictions
 as `family_exact_rational_farkas`, scoped to the optimization/Farkas
 proof-route lane and backed by the shared
 `math_resource_lra_routes` regression.
+The rules/law transfer lane now also has its second concrete pack:
+`authorization-policy-v0` reuses finite predicates, tenant/resource relations,
+explicit deny precedence, bounded version-delta witnesses, and checked
+Bool/QF_LIA evidence for tenant isolation, deny precedence, admin tenant
+boundaries, and implementation equivalence.
 Continue by
 adding the next curriculum-adjacent pack or by replacing finite enumeration
 routes with emitted, checked proof objects where appropriate.

@@ -507,8 +507,12 @@ Next buildout:
     vocabulary. Source-linked Bool/QF_LIA fixtures now check
     `benefit-eligibility-v0` consistency, coverage, fixed no-exception
     monotonicity, and active-threshold implementation equivalence through
-    `crates/axeyum-solver/tests/rules_as_code_examples.rs`; next work is
-    generated multi-row queries or the authorization/tax-benefit packs.
+    `crates/axeyum-solver/tests/rules_as_code_examples.rs`. The second
+    rules/law pack, `authorization-policy-v0`, now reuses finite
+    tenant/resource relations, precedence, bounded version deltas, and checked
+    Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
+    tenant guarding, and implementation equivalence. Next work is generated
+    multi-row queries or the tax-benefit arithmetic pack.
 12. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
 13. Current boundary review: promoted solver-reuse rows are now readable through

@@ -45,7 +45,8 @@ schemas, examples, and validation workflows.
   summaries.
 - [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) maps the math-resource
   patterns into rules/law checks for finite predicates, thresholds, graph
-  reachability, precedence, proof routes, and current rules-as-code packs.
+  reachability, precedence, proof routes, and current rules-as-code packs,
+  including benefit eligibility and authorization policy examples.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.

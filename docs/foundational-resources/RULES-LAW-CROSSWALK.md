@@ -39,11 +39,11 @@ or Lean horizon until the formal dependency is clear.
 | Rule/Policy Need | Math Resource Pattern | Example Packs | Axeyum Route | First Rule-Pack Use |
 |---|---|---|---|---|
 | Complete fact patterns, eligibility predicates, required conditions | finite predicate logic and Boolean replay | [`finite-predicate-v0`](../../artifacts/examples/math/finite-predicate-v0/), [`logic-basics-v0`](../../artifacts/examples/math/logic-basics-v0/) | Bool/CNF, finite replay, later CNF/LRAT | consistency and coverage in [`benefit-eligibility-v0`](../rules-as-code/examples/benefit-eligibility-v0/) |
-| Membership, roles, jurisdictions, actor/resource relations | finite sets, relations, functions, equivalence classes | [`finite-sets-v0`](../../artifacts/examples/math/finite-sets-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/), [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/) | finite replay, QF_UF/Alethe for functional conflicts | authorization subjects, role tables, jurisdiction membership |
+| Membership, roles, jurisdictions, actor/resource relations | finite sets, relations, functions, equivalence classes | [`finite-sets-v0`](../../artifacts/examples/math/finite-sets-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/), [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/) | finite replay, QF_UF/Alethe for functional conflicts | tenant/resource role tables in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Thresholds, ages, dates, deadlines, counts | integer and rational arithmetic | [`integer-lia-v0`](../../artifacts/examples/math/integer-lia-v0/), [`natural-arithmetic-v0`](../../artifacts/examples/math/natural-arithmetic-v0/), [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/) | QF_LIA/Diophantine, arithmetic-DPLL, QF_LRA/Farkas | income threshold, age cutoff, effective date split |
 | Threshold cliffs and monotonicity | optimization and convexity shadows | [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/) | QF_LRA/Farkas for exact-linear impossibility; finite replay for examples | "one dollar above threshold" witness and bad monotonicity query |
-| Workflow state, dependency chains, delegated authority, forbidden paths | graph reachability and cuts | [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/), [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/), [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/) | Bool/CNF with DRAT/LRAT for small refutations; finite replay for paths | authorization and administrative-process packs |
-| Precedence, hierarchy, explicit deny, override, classification levels | finite orders and lattices | [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/) | finite relation replay, QF_UF/Alethe for equality conflicts | deny-over-permit precedence and rule priority checks |
+| Workflow state, dependency chains, delegated authority, forbidden paths | graph reachability and cuts | [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/), [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/), [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/) | Bool/CNF with DRAT/LRAT for small refutations; finite replay for paths | tenant-isolation boundary checks in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
+| Precedence, hierarchy, explicit deny, override, classification levels | finite orders and lattices | [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/) | finite relation replay, QF_UF/Alethe for equality conflicts | explicit deny over role/admin permit in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Versioned rules and transition points | bounded finite dynamics and arithmetic dates | [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/), [`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/) | finite transition replay, QF_LIA/QF_LRA for bounded transitions | old-threshold versus new-threshold eligibility examples |
 | Implementation equivalence | finite functions and bounded counterexample search | [`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/) | finite replay, QF_UF/Alethe when function consistency is the issue | logical model versus executable eligibility function |
 
@@ -81,6 +81,20 @@ Validation for the current pack remains:
 python3 scripts/validate-rules-as-code.py
 ```
 
+## Authorization Policy V0 Mapping
+
+The current
+[`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/)
+pack exercises the access-control slice of this crosswalk:
+
+| Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
+|---|---|---|---|
+| `tenant_isolation` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | membership and tenant/resource relations | broaden from the fixed admin cross-tenant query to generated role/action tenant-boundary queries |
+| `explicit_deny_precedence` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | finite precedence/order checks | add a finite order/lattice rendering of deny-over-permit once a reusable rule-priority vocabulary exists |
+| `admin_tenant_guard` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | delegated authority plus forbidden boundary | add graph/reachability-shaped administrative-process examples when a workflow pack lands |
+| `version_delta` | concrete witnesses replay | versioned finite policy tables | keep only intended version deltas replayable; reject unintended deltas through generated bounded queries |
+| `implementation_equivalence` | source-linked Bool/QF_LIA mismatch fixture with checked Axeyum evidence | bounded equivalence | broaden to generated mismatch queries over all bounded role/action/version rows |
+
 ## Proof Route Reuse
 
 | Proof Route | Rules/Law Use | Existing Recipe |
@@ -98,15 +112,16 @@ exists.
 
 ## Build Order
 
-1. Keep `benefit-eligibility-v0` as the reference pack. Landed: source-linked
+1. Keep `benefit-eligibility-v0` as the first reference pack. Landed: source-linked
    Bool/QF_LIA fixtures for consistency, coverage, fixed no-exception
    monotonicity, and active-threshold implementation equivalence. Next: broaden
-   those one-off fixtures into generated multi-row queries or move to the
-   authorization-policy pack.
-2. Add the authorization-policy pack from the
-   [rules-as-code roadmap](../rules-as-code/ROADMAP.md) and reuse graph
-   reachability plus finite order/lattice checks for tenant isolation and
-   deny-over-permit precedence.
+   those one-off fixtures into generated multi-row queries.
+2. Landed: add the authorization-policy pack from the
+   [rules-as-code roadmap](../rules-as-code/ROADMAP.md), reusing
+   tenant/resource relations, precedence, bounded version deltas, and
+   Bool/QF_LIA proof fixtures for tenant isolation, explicit deny precedence,
+   admin tenant guarding, and implementation equivalence. Next: broaden those
+   one-off fixtures into generated bounded role/action/version queries.
 3. Add the tax/benefit arithmetic pack and reuse QF_LIA/QF_LRA threshold,
    phase-out, cap, and monotonicity patterns.
 4. Promote only those rows that have deterministic replay plus a source-linked

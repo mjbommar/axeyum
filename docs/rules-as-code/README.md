@@ -24,14 +24,17 @@ docs/rules-as-code/
   ROADMAP.md
   examples/
     benefit-eligibility-v0/
+    authorization-policy-v0/
 artifacts/ontology/
   rules-core.schema.json
 scripts/
   validate-rules-as-code.py
 ```
 
-The first example pack is
-[Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md).
+Current example packs:
+
+- [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
+- [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 
 ## Roadmap
 
@@ -56,7 +59,12 @@ Start with a small eligibility rule, not a full statute:
 This is enough to exercise the solver without pretending to parse natural
 language law.
 
-Validate the current pack with:
+The second pack,
+[Authorization Policy V0](examples/authorization-policy-v0/README.md), reuses
+finite predicates, tenant/resource relations, precedence, and bounded
+implementation-equivalence checks for a Cedar/OPA-style access-control shape.
+
+Validate the current packs with:
 
 ```sh
 python3 scripts/validate-rules-as-code.py
