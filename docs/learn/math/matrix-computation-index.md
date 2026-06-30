@@ -5,6 +5,10 @@ claim Axeyum can check today. It is a navigation page, not a new proof route:
 each row points back to a validated pack, a focused lesson, and the existing
 checker or certificate path.
 
+For the promotion boundary between educational examples, solver regressions,
+and benchmark-corpus claims, see
+[Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md).
+
 Concept rows:
 
 - `bridge_lu_replay`, `bridge_rank_nullity`, `bridge_residual_bound`,
@@ -62,6 +66,7 @@ or explicitly experimental artifact.
 
 ## Focused Lessons
 
+- [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Linear System And LP Replay](linear-system-end-to-end.md)
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md)
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md)

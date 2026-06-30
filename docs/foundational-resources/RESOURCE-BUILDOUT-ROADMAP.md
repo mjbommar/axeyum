@@ -1494,7 +1494,13 @@ Pick one item per commit unless the change is purely navigational.
     functional-analysis/operator, and dynamics theorem horizons by current
     finite shadow, checked evidence route, missing Lean/theorem dependency, and
     next build artifact.
-75. Continue proof-route promotions or consumer-query examples; revisit the
+75. Landed: add
+    [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md).
+    The new learner/planning note separates matrix educational resources,
+    solver regressions, benchmark-corpus rows, and theorem-horizon claims, and
+    records the promotion checklist before matrix rows support solver-reuse or
+    performance language.
+76. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

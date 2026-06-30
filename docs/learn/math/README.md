@@ -31,6 +31,9 @@ validated pack data and the repo-root command that replays it.
 
 Companion maps:
 
+- [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md):
+  separates educational matrix resources, solver regressions, benchmark-corpus
+  rows, and theorem horizons.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
@@ -213,6 +216,9 @@ Companion maps:
   rank/nullity, residual, projection, eigenpair, characteristic-polynomial,
   random-matrix, module, tensor, chain-complex, and operator rows by proof
   route and theorem horizon.
+- [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md):
+  separates matrix learner examples and solver regressions from benchmark
+  corpus rows and performance claims.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   groups finite analysis, calculus, optimization, measure, dynamics, and
   operator shadows by the general theorem route needed before graduation.

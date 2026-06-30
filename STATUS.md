@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix corpus/benchmark boundary note landed.**
+  [`matrix-corpus-benchmark-boundary.md`](docs/learn/math/matrix-corpus-benchmark-boundary.md)
+  now separates educational matrix examples, solver regressions,
+  benchmark-corpus rows, and theorem-horizon claims. The atlas generator cites
+  it from the matrix-adjacent bridge rows, and the learner path links it from
+  the top-level math page, the matrix-computation index, and the linear algebra
+  cluster. The resource baseline remains unchanged because no new pack or
+  concept row was added.
+
 - **Analysis/calculus theorem-horizon map landed.**
   [`analysis-calculus-theorem-horizon-map.md`](docs/learn/math/analysis-calculus-theorem-horizon-map.md)
   now maps real completeness, IVT/MVT/FTC, compactness/connectedness, sequence

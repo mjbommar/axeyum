@@ -227,6 +227,10 @@ projection, eigenpair, characteristic-polynomial, finite random-matrix,
 chain-complex, operator, module, and tensor rows by replay, QF_LRA/Farkas,
 QF_UF/Alethe, QF_LIA/Diophantine, Lean-horizon, and numerical-honesty
 boundaries.
+The matrix corpus/benchmark boundary note now separates educational matrix
+examples from solver regressions, benchmark-corpus rows, and theorem-horizon
+claims, so matrix resources can be reused without implying performance,
+parity, numerical-stability, or general-theorem coverage.
 The analysis/calculus theorem-horizon map now groups real completeness,
 IVT/MVT/FTC, compactness/connectedness, sequence and recurrence convergence,
 root-finding convergence, optimization convergence/duality,

@@ -49,6 +49,7 @@ Example packs:
 Companion index:
 
 - [Matrix Computation Index](matrix-computation-index.md)
+- [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 
 ## What Axeyum Checks
@@ -597,6 +598,7 @@ derivative/Jacobian replay, exact rational inner-product replay,
 finite-field vector-space replay, finite dual-space replay, and finite module
 replay, read
 [Matrix Computation Index](matrix-computation-index.md),
+[Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md),
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
 [End To End: Linear Optimization](linear-optimization-end-to-end.md),
 [End To End: Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md),

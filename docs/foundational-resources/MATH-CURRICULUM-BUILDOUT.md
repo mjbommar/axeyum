@@ -1369,8 +1369,9 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `multivariable-calculus-rational-v0`, Phase M4 graph-resource
 group and items 4-31, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
-the route-oriented matrix-computation index, and the analysis/calculus
-theorem-horizon map have landed for the math seed.
+the route-oriented matrix-computation index, the matrix corpus/benchmark
+boundary note, and the analysis/calculus theorem-horizon map have landed for
+the math seed.
 End-to-end lessons now exist for propositional
 logic basics, finite predicate logic, proof by refutation, proof method
 patterns, induction obligations, induction patterns, graph coloring, graph
@@ -2012,6 +2013,11 @@ which groups LU, rank/nullity, residual, projection, eigenpair,
 characteristic-polynomial, finite random-matrix, chain-complex, operator,
 module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
 QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundaries.
+The learner/planning layer now also has
+[`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md),
+which separates educational matrix resources, solver regressions,
+benchmark-corpus rows, and theorem-horizon claims before any matrix row is used
+for solver-reuse, performance, or parity language.
 The learner/planning layer now also has
 [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md),
 which maps real completeness, IVT/MVT/FTC, compactness, convergence,

@@ -397,7 +397,11 @@ Build sequence:
     sequence and recurrence convergence, root-finding convergence,
     optimization convergence and duality, measure/probability convergence,
     functional/operator theory, and dynamics.
-43. Revisit crate/repo boundaries only after three real consumers or repeated
+43. [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md)
+    now separates matrix educational resources, solver regressions,
+    benchmark-corpus rows, and theorem-horizon claims, with promotion criteria
+    before any matrix row is used for solver-reuse or performance language.
+44. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -555,6 +555,12 @@ Pick one row per commit unless the change is purely navigational.
     measure/probability convergence, functional analysis/operator theory, and
     dynamics by current finite shadow, checked evidence route, missing Lean
     dependency, and next build artifact.
+64. Landed: add
+    [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md)
+    as the matrix-resource boundary note. The page separates educational
+    matrix rows, solver regressions, benchmark-corpus rows, and theorem-horizon
+    claims; lists the current matrix families; and records the promotion
+    checklist needed before solver-reuse or performance language is used.
 
 ## Validation Checklist
 

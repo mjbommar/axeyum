@@ -4376,6 +4376,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md"
           ],
@@ -4386,6 +4387,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/linear-system-end-to-end.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
@@ -4474,6 +4476,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
           ],
@@ -4484,6 +4487,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
@@ -4572,6 +4576,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -4583,6 +4588,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -4672,6 +4678,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/spectral-linear-algebra-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
@@ -4683,6 +4690,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/spectral-linear-algebra-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -4767,6 +4775,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/matrix-invariants-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
@@ -4778,6 +4787,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/matrix-invariants-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -4868,6 +4878,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/random-matrix-finite-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -4880,6 +4891,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/random-matrix-finite-end-to-end.md",
         "docs/learn/math/probability-and-statistics.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -5807,6 +5819,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
             "docs/learn/math/finite-vector-spaces-end-to-end.md",
             "docs/learn/math/finite-modules-end-to-end.md",
@@ -5819,6 +5832,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/finite-algebra-homomorphisms-end-to-end.md",
         "docs/learn/math/finite-vector-spaces-end-to-end.md",
         "docs/learn/math/finite-modules-end-to-end.md",
@@ -6109,6 +6123,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/finite-modules-end-to-end.md",
             "docs/learn/math/finite-vector-spaces-end-to-end.md",
             "docs/learn/math/finite-dual-spaces-end-to-end.md",
@@ -6121,6 +6136,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/finite-modules-end-to-end.md",
         "docs/learn/math/finite-vector-spaces-end-to-end.md",
         "docs/learn/math/finite-dual-spaces-end-to-end.md",
@@ -6212,6 +6228,7 @@
             "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/finite-tensor-products-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
           ],
@@ -6223,6 +6240,7 @@
         "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/finite-tensor-products-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
@@ -6646,6 +6664,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -6660,6 +6679,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/inner-product-spaces-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -6753,6 +6773,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -6768,6 +6789,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
+        "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/finite-operator-end-to-end.md",
         "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",

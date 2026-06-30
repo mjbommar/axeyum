@@ -286,8 +286,9 @@ Build plan:
 
 Next useful increments:
 
-- a matrix-corpus note that separates education examples from benchmark claims;
-- a calculus theorem-horizon map from finite shadows to Lean reconstruction;
+- landed matrix-corpus note that separates education examples, solver
+  regressions, benchmark-corpus rows, and theorem-horizon claims;
+- landed calculus theorem-horizon map from finite shadows to Lean reconstruction;
 - finite algorithm-step variants only when they add solver pressure, not just
   another numeric example.
 
@@ -300,7 +301,7 @@ Next useful increments:
 | `discrete_math` | counting, generating functions, graph resources, finite actions | double-counting, recurrence/asymptotic boundary, reusable finite enumeration rows | Bool/CNF, QF_LIA, finite replay | each row names universe size and theorem horizon |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | one representative proof regression per graph family; pathologies with explicit cost counters | Bool/CNF, QF_BV, QF_LIA, finite replay | graph resources query by route and source artifact |
 | `number_theory` | gcd, modular arithmetic, residues, finite fields, bounded Diophantine rows | recurring divisibility/CRT/residue obstructions and fixed-width contrasts | QF_LIA/Diophantine, QF_BV | bounded search and theorem claims are visibly separated |
-| `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariant, optimization/numerical rows | matrix-computation index by LU/rank/nullity/projection/residual/eigen/characteristic/random-moment | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression |
+| `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariant, optimization/numerical rows | matrix-computation index plus matrix-corpus boundary by LU/rank/nullity/projection/residual/eigen/characteristic/random-moment | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression before benchmark claims |
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
 | `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
 | `complex_analysis` | real-pair algebra and transforms | polynomial-root, conjugation/norm, Mobius rows only if distinct; analytic horizon rows | real-pair LRA/NRA, finite replay, Lean horizon | no algebraic row is described as analytic coverage |
@@ -333,9 +334,13 @@ Use one row per commit unless the change is purely navigational.
    recurrence/asymptotics, root-finding convergence, optimization convergence,
    measure/probability convergence, functional analysis, and dynamics from
    finite shadows to missing Lean/theorem reconstruction routes.
-6. Promote one replay-heavy family per route only when a compact source artifact
+6. Landed: add
+   [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md),
+   separating educational matrix rows, solver regressions, benchmark-corpus
+   rows, and theorem-horizon claims before any performance or parity language.
+7. Promote one replay-heavy family per route only when a compact source artifact
    exists and a route-specific regression can check it.
-7. Add rules/law crosswalk examples only by reusing existing math-resource
+8. Add rules/law crosswalk examples only by reusing existing math-resource
    patterns; do not create a separate rule ontology until the current JSON
    boundary is exercised by more consumers.
 
