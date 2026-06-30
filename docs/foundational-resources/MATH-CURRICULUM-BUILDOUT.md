@@ -1394,6 +1394,9 @@ reachability, checked bad invariant-bound rejection with QF_LRA/Farkas
 evidence, explicit Euler replay, exact finite error tables, checked bad
 Euler-step rejection with QF_LRA/Farkas evidence, and the
 ODE/numerical-analysis Lean horizon.
+`proof-methods-refutation-v0` now also has a proof-object anatomy lesson that
+follows the PHP(3,2) source claim through committed CNF, emitted DRAT/LRAT
+proof objects, and same-artifact corrupted-proof rejection.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean

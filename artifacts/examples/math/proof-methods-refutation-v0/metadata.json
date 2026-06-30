@@ -30,6 +30,7 @@
     "docs/proof-cookbook/README.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "docs/learn/math/proof-object-anatomy-end-to-end.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "artifacts/examples/math/proof-methods-refutation-v0/cnf/php-3-2.cnf",
     "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
@@ -37,7 +38,7 @@
   "expected_results": ["php-2-2-sat", "php-3-2-unsat"],
   "graduation_criteria": [
     "Emit the PHP(3,2) Boolean formula as deterministic CNF from Axeyum lowering rather than pack-local data.",
-    "Keep the resource-backed PHP(3,2) CNF regression checking generated DRAT and elaborated LRAT proofs.",
+    "Keep the resource-backed PHP(3,2) CNF regression checking generated DRAT and elaborated LRAT proofs, including corrupted-proof rejection.",
     "Replay the PHP(2,2) witness against the original finite assignment model.",
     "Link any stronger proof-object evidence from the Proof Certificate Cookbook without weakening the finite CNF enumeration check."
   ]

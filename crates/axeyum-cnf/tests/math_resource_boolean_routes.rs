@@ -82,6 +82,52 @@ fn assert_unsat_resource_cnf_checks(
     assert_eq!(check_lrat(&formula, &reparsed), Ok(true));
 }
 
+fn assert_unsat_resource_cnf_rejects_tampered_proofs(label: &str, dimacs: &str) {
+    let formula = parse_dimacs(dimacs).unwrap_or_else(|error| panic!("{label} parses: {error}"));
+    let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&formula) else {
+        panic!("{label} must be unsat");
+    };
+    assert_eq!(
+        check_drat(&formula, &drat),
+        Ok(true),
+        "{label}: generated DRAT proof must independently check before tampering"
+    );
+
+    let mut truncated_drat = drat.clone();
+    truncated_drat.pop();
+    assert_ne!(
+        check_drat(&formula, &truncated_drat),
+        Ok(true),
+        "{label}: removing the empty-clause DRAT step must not certify UNSAT"
+    );
+
+    let lrat = elaborate_drat_to_lrat(&formula, &drat)
+        .unwrap_or_else(|error| panic!("{label}: DRAT elaborates to LRAT: {error}"));
+    assert_eq!(
+        check_lrat(&formula, &lrat),
+        Ok(true),
+        "{label}: elaborated LRAT proof must independently check before tampering"
+    );
+    let mut corrupted_lrat = lrat.clone();
+    let mut cleared_hints = false;
+    for step in &mut corrupted_lrat {
+        if let LratStep::Add { hints, .. } = step {
+            hints.clear();
+            cleared_hints = true;
+            break;
+        }
+    }
+    assert!(
+        cleared_hints,
+        "{label}: expected at least one LRAT addition"
+    );
+    assert_ne!(
+        check_lrat(&formula, &corrupted_lrat),
+        Ok(true),
+        "{label}: clearing LRAT hints must make the certificate reject"
+    );
+}
+
 #[test]
 fn graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat() {
     assert_unsat_resource_cnf_checks(
@@ -119,6 +165,14 @@ fn counting_pigeonhole_3_2_emits_checked_drat_and_lrat() {
         COUNTING_PIGEONHOLE_3_2_CNF,
         6,
         12,
+    );
+}
+
+#[test]
+fn proof_methods_refutation_php_3_2_rejects_tampered_drat_and_lrat() {
+    assert_unsat_resource_cnf_rejects_tampered_proofs(
+        "proof-methods-refutation-v0 php-3-2",
+        PROOF_METHODS_REFUTATION_PHP_3_2_CNF,
     );
 }
 
@@ -234,36 +288,8 @@ fn graph_reachability_disconnected_no_path_emits_checked_drat_and_lrat() {
 
 #[test]
 fn boolean_resource_route_rejects_tampered_drat_and_lrat() {
-    let formula =
-        parse_dimacs(LOGIC_BASICS_TINY_CNF_REFUTATION).expect("logic-basics-v0 tiny CNF parses");
-    let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&formula) else {
-        panic!("logic-basics-v0 tiny CNF must be unsat");
-    };
-    assert_eq!(check_drat(&formula, &drat), Ok(true));
-
-    let mut truncated_drat = drat.clone();
-    truncated_drat.pop();
-    assert_ne!(
-        check_drat(&formula, &truncated_drat),
-        Ok(true),
-        "removing the empty-clause DRAT step must not certify UNSAT"
-    );
-
-    let lrat = elaborate_drat_to_lrat(&formula, &drat).expect("DRAT elaborates to LRAT");
-    assert_eq!(check_lrat(&formula, &lrat), Ok(true));
-    let mut corrupted_lrat = lrat.clone();
-    let mut cleared_hints = false;
-    for step in &mut corrupted_lrat {
-        if let LratStep::Add { hints, .. } = step {
-            hints.clear();
-            cleared_hints = true;
-            break;
-        }
-    }
-    assert!(cleared_hints, "expected at least one LRAT addition");
-    assert_ne!(
-        check_lrat(&formula, &corrupted_lrat),
-        Ok(true),
-        "clearing LRAT hints must make the certificate reject"
+    assert_unsat_resource_cnf_rejects_tampered_proofs(
+        "logic-basics-v0 tiny CNF",
+        LOGIC_BASICS_TINY_CNF_REFUTATION,
     );
 }

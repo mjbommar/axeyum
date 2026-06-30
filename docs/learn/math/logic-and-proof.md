@@ -139,6 +139,7 @@ For fuller traces, read:
 - [End To End: Logic Basics](logic-basics-end-to-end.md)
 - [End To End: Finite Predicate Logic](finite-predicate-end-to-end.md)
 - [End To End: Proof By Refutation](proof-methods-refutation-end-to-end.md)
+- [End To End: Proof Object Anatomy](proof-object-anatomy-end-to-end.md)
 - [End To End: Proof Method Patterns](proof-methods-patterns-end-to-end.md)
 - [End To End: Induction Obligations](induction-obligations-end-to-end.md)
 - [End To End: Induction Patterns](induction-patterns-end-to-end.md)
@@ -154,7 +155,10 @@ finite truth-table rows stay on
 Boolean refutations such as proof-by-contradiction, pigeonhole, and triangle
 non-colorability graduate through
 [Boolean CNF DRAT/LRAT Evidence](../../proof-cookbook/recipes/boolean-cnf-lrat.md)
-when they have a deterministic CNF and checked certificate. Bounded arithmetic
+when they have a deterministic CNF and checked certificate. The
+[Proof Object Anatomy](proof-object-anatomy-end-to-end.md) lesson follows the
+same source CNF through emitted DRAT/LRAT evidence and corrupted-proof
+rejection. Bounded arithmetic
 obstructions in induction obligations and patterns use
 [QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
 General first-order soundness, natural-deduction metatheory, and the full

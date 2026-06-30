@@ -296,8 +296,10 @@ Pick one row per commit unless the change is purely navigational.
 21. Landed: promote `bounded-dynamics-v0` through a source-linked bad
    invariant-bound QF_LRA/Farkas artifact and route regression, closing the
    explicit non-benchmark-horizon queue.
-22. Add a proof-object learner page that follows one resource from source claim
-   to emitted proof and corrupted-proof rejection.
+22. Landed: add `proof-object-anatomy-end-to-end.md`, following
+   `proof-methods-refutation-v0` from the PHP(3,2) source claim through
+   committed CNF, emitted DRAT/LRAT proof objects, and same-artifact
+   corrupted-proof rejection.
 23. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
 24. Revisit the library boundary after unclassified packs are resolved and at

@@ -41,6 +41,9 @@ validated pack data and the repo-root command that replays it.
 - [Proof By Refutation](proof-methods-refutation-end-to-end.md): follows a
   pigeonhole SAT control, checked `PHP(3,2)` CNF truth-table refutation, and
   checked DRAT/LRAT proof-object evidence for the source DIMACS artifact.
+- [Proof Object Anatomy](proof-object-anatomy-end-to-end.md): follows the same
+  `PHP(3,2)` source claim through committed CNF, emitted DRAT/LRAT proof
+  objects, and corrupted-proof rejection.
 - [Proof Method Patterns](proof-methods-patterns-end-to-end.md): follows
   direct proof, contrapositive, proof by cases, contradiction, invalid-converse
   counterexample, and the natural-deduction Lean horizon.

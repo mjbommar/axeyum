@@ -66,6 +66,11 @@ Rejection coverage includes:
 - corrupted LRAT hints;
 - bogus LRAT clauses.
 
+The learner-facing
+[Proof Object Anatomy](../../learn/math/proof-object-anatomy-end-to-end.md)
+page follows the `proof-methods-refutation-v0` PHP source artifact through
+checked DRAT/LRAT evidence and same-artifact tamper rejection.
+
 ## Lean Reconstruction
 
 Status: not complete for the general CNF/DRAT/LRAT route.

@@ -129,6 +129,10 @@ locally.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.
+The first proof-object anatomy learner page now follows
+`proof-methods-refutation-v0` from the PHP(3,2) source claim through committed
+CNF, emitted DRAT/LRAT proof objects, and same-artifact corrupted-proof
+rejection.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

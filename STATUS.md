@@ -569,6 +569,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   84 promoted, 0 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
 
+- **Proof-object anatomy learner page landed.**
+  [`proof-object-anatomy-end-to-end.md`](docs/learn/math/proof-object-anatomy-end-to-end.md)
+  now follows `proof-methods-refutation-v0` from the PHP(3,2) source claim
+  through committed CNF, emitted DRAT/LRAT proof objects, and same-artifact
+  corrupted-proof rejection. The Boolean route regression now includes
+  `proof_methods_refutation_php_3_2_rejects_tampered_drat_and_lrat`, which
+  checks the good proof first, removes the final DRAT empty-clause step, clears
+  LRAT hints, and requires both corrupted certificates to reject.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
   now records the refreshed 84-promoted, 0 non-benchmark-horizon, and
