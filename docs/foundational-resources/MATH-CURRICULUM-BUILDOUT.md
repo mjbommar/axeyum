@@ -1493,11 +1493,12 @@ The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and
 checks both proof objects.
-`proof-methods-patterns-v0` now carries the same CNF/DRAT/LRAT regression
-pattern for the contradiction row `p`, `p -> q`, `not q`.
-`finite-sets-v0` now carries the same CNF/DRAT/LRAT regression pattern for the
-malformed distributive-law counterexample at element `c`, completing the first
-Boolean CNF/LRAT proof-upgrade target set.
+`proof-methods-patterns-v0` now carries promoted solver-reuse metadata for the
+same CNF/DRAT/LRAT regression pattern on the contradiction row `p`, `p -> q`,
+`not q`.
+`finite-sets-v0` now carries promoted solver-reuse metadata for the malformed
+distributive-law counterexample at element `c`, completing the first Boolean
+CNF/LRAT proof-upgrade target set.
 The QF_LRA/Farkas lane now has its first resource-backed proof regression:
 `rationals-lra-v0` closes the fixed trichotomy impossible branches and the
 fixed order-transitivity violating branch with Axeyum `UnsatFarkas` evidence

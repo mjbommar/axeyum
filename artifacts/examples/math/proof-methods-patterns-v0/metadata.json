@@ -25,6 +25,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "proof-by-contradiction Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Tiny propositional contradiction where p, p -> q, and not q cannot be jointly satisfied.",
+    "evidence": [
+      "contradiction-refutation-unsat"
+    ],
+    "next_step": "Promote additional proof-method rows only when they add distinct Boolean proof-pattern pressure; keep general natural-deduction soundness in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/proof-methods.md",
     "docs/curriculum/00-foundations/propositional-logic.md",

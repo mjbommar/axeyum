@@ -72,10 +72,12 @@ First targets:
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/) (first
   DIMACS-backed DRAT/LRAT regression landed for triangle non-2-colorability)
 - [finite-sets-v0](../../artifacts/examples/math/finite-sets-v0/)
-  (DIMACS-backed DRAT/LRAT regression landed for malformed distributive-law
-  rejection)
+  (solver-reuse promotion landed for malformed distributive-law rejection:
+  source-linked DIMACS artifact, DRAT emission, LRAT elaboration, and
+  independent checks)
 - [proof-methods-patterns-v0](../../artifacts/examples/math/proof-methods-patterns-v0/)
-  (DIMACS-backed DRAT/LRAT regression landed for contradiction/refutation)
+  (solver-reuse promotion landed for contradiction/refutation: source-linked
+  DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
 - [logic-basics-v0](../../artifacts/examples/math/logic-basics-v0/)
   (solver-reuse promotion landed for `tiny-cnf-refutation`: source-linked
   DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)

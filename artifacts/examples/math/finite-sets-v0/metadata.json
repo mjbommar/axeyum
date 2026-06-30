@@ -21,6 +21,15 @@
     "BV / enumeration"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite set malformed distributive-law Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Single-element finite-set identity conflict where element c is absent from A intersect (B union C) but present in the malformed right-hand side (A intersect B) union C.",
+    "evidence": [
+      "distributive-law-counterexample-rejected"
+    ],
+    "next_step": "Promote additional finite-set rows only when they add distinct Boolean set-family solver pressure; keep reusable set encoders local until more packs duplicate the same construction."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/sets.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

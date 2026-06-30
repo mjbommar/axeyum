@@ -353,9 +353,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifacts before checking independent Farkas evidence; generated dashboards
   move promoted solver-reuse packs to 60 and leave 24 unclassified packs.
 
+- **Finite set/proof-method Bool/CNF promotion landed.**
+  `finite-sets-v0` and `proof-methods-patterns-v0` now carry promoted
+  `solver_reuse` metadata for their existing DIMACS-backed distributive-law and
+  contradiction rows. The `math_resource_boolean_routes` regression already
+  parses both CNF artifacts and checks generated DRAT plus elaborated LRAT
+  evidence; generated dashboards move promoted solver-reuse packs to 62 and
+  leave 22 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 60-promoted-pack review count. The
+  now records the refreshed 62-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate
