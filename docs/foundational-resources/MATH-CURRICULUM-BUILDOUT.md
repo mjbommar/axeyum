@@ -1332,9 +1332,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 106 non-template math example packs validate.
+  Status: 107 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 106 non-template packs have at least one `checked` expected-result row.
+  Status: 107 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -2228,6 +2228,15 @@ torsion-generator QF_LIA/Diophantine evidence across
 exercises topology torsion lookup plus concept-scoped Diophantine route queries
 while keeping general Smith normal form, universal coefficients, Ext/Tor
 functor laws, exact sequences, and homology invariance in the horizon lane.
+The topology concept layer now also has
+`bridge_finite_universal_coefficient_shadow`. It groups one dual integer
+cochain complex, `H^1 = Z/2`, degree-one Hom/Ext bookkeeping, and checked bad
+`H^1 = 0` QF_UF/Alethe evidence across
+`finite-universal-coefficient-shadow-v0`. The foundational-resource smoke check
+now exercises topology universal-coefficient lookup plus concept-scoped Alethe
+route queries while keeping the universal coefficient theorem, naturality,
+splitting choices, Ext/Tor laws, exact sequences, and invariance in the
+horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

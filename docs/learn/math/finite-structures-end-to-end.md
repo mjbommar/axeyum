@@ -12,6 +12,8 @@ plus finite continuous-map checks in
 [finite-continuous-maps-v0](../../../artifacts/examples/math/finite-continuous-maps-v0/),
 finite chain-complex torsion in
 [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
+the finite universal-coefficient shadow in
+[finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/),
 and finite cochain operations in
 [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/).
 
@@ -36,6 +38,8 @@ Concept rows:
 | `bad-continuous-map-rejected` | `unsat` | checked |
 | `smith-normal-form-replay` | `sat` | replay-only |
 | `qf-lia-bad-torsion-generator` | `unsat` | checked QF_LIA/Diophantine |
+| `degree-one-uct-shadow` | `sat` | replay-only |
+| `qf-uf-bad-uct-h1-zero` | `unsat` | checked QF_UF/Alethe |
 | `cup-product-replay` | `sat` | replay-only |
 | `qf-bv-bad-cup-product` | `unsat` | checked QF_BV/DRAT |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
@@ -157,6 +161,13 @@ false claim that `v` is a boundary through checked QF_LIA/Diophantine evidence
 for `2*k = 1`. For a fuller focused trace, read
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md).
 
+For the finite universal-coefficient shadow, the checker dualizes the same
+`d1=[2]` complex, recomputes `delta0=d1^T`, checks `H^1 = Z/2`, and checks the
+fixed degree-one row `0 -> Ext(H0,Z) -> H^1 -> Hom(H1,Z) -> 0`. It rejects
+the false claim `H^1 = 0` through checked QF_UF/Alethe evidence. For a fuller
+focused trace, read
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md).
+
 For finite simplicial cohomology, the checker keeps the finite complex but
 switches to F2 cochains, recomputes coboundaries, checks `delta^2 = 0`, replays
 finite cohomology ranks, and rejects a bad coboundary value through checked
@@ -185,6 +196,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
@@ -213,6 +226,9 @@ equality conflict.
 The finite-chain-complex-torsion UNSAT row trusts only the explicit integer
 boundary matrix, the replayed divisibility obstruction, and the independent
 Diophantine certificate for `2*k = 1`.
+The finite-universal-coefficient-shadow UNSAT row trusts only the explicit
+integer cochain replay, the replayed `H^1 = Z/2` invariant, and the independent
+Alethe certificate for the final group-identity conflict.
 The finite-cohomology UNSAT row trusts only the explicit F2 coboundary replay
 and the independent Alethe certificate for the final value conflict.
 The finite-cup-product UNSAT row trusts only the explicit ordered-simplex F2

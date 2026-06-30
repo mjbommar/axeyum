@@ -167,6 +167,8 @@ validated 1 foundational example pack(s)
 Start with
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md)
 for boundary matrices and Betti-rank replay. Continue to
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md)
+for the degree-one Hom/Ext shadow built from the same `[2]` complex, and to
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md)
 and
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md)

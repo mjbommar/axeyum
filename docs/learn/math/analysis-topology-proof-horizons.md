@@ -13,7 +13,8 @@ Concept rows:
   `bridge_finite_specialization_order_replay`,
   `bridge_finite_chain_homology_replay`,
   `bridge_finite_torsion_homology_replay`,
-  `bridge_finite_cohomology_replay`, and
+  `bridge_finite_cohomology_replay`,
+  `bridge_finite_universal_coefficient_shadow`, and
   `bridge_finite_cup_product_replay` in the atlas bridge vocabulary for the
   finite topology, topology-to-order, and algebraic-topology slices.
 
@@ -33,6 +34,7 @@ Example packs:
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
+- [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
 - [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
 - [calculus-riemann-sum-v0](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
@@ -73,8 +75,9 @@ finite specialization preorders, singleton-closure characterization, finite
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
 rank checks, fixed Betti-number replay, one-entry Smith diagonal replay,
 finite torsion-generator replay, finite F2 cochain coboundary replay,
-cohomology-rank checks, finite F2 cup-product replay, one finite coboundary
-Leibniz row, and bad boundary-sign, torsion-generator, coboundary-value, or
+cohomology-rank checks, one finite degree-one universal-coefficient shadow,
+finite F2 cup-product replay, one finite coboundary Leibniz row, and bad
+boundary-sign, torsion-generator, `H^1 = 0`, coboundary-value, or
 cup-product-value rejection,
 polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
@@ -317,6 +320,21 @@ QF_LIA/Diophantine evidence for `2*k = 1`. This is a finite quotient-module
 calculation, not a proof of universal coefficients, Ext/Tor laws, or homology
 invariance.
 
+For a finite universal-coefficient shadow, reuse that same two-term complex
+and dualize it:
+
+```text
+C^0 = Hom(C0, Z) = Z<v*>
+C^1 = Hom(C1, Z) = Z<e*>
+delta0 = d1^T = [2]
+```
+
+The `finite-universal-coefficient-shadow-v0` validator checks `delta0 = d1^T`,
+`H^0 = 0`, `H^1 = Z/2`, `Hom(H1,Z) = 0`, and `Ext(H0,Z) = Z/2` for the fixed
+degree-one shape `0 -> Z/2 -> Z/2 -> 0 -> 0`. It rejects the false claim
+`H^1 = 0` with checked QF_UF/Alethe evidence. This is a finite Hom/Ext
+bookkeeping row, not a proof of the universal coefficient theorem.
+
 For a finite cohomology shadow over `F2`, encode cochain values on the same
 three-edge circle:
 
@@ -494,6 +512,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
@@ -548,6 +568,7 @@ replay, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),
 [End To End: Finite Topology](finite-topology-end-to-end.md),

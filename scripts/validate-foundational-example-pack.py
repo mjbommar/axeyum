@@ -14555,6 +14555,84 @@ def require_single_entry_boundary(context: str, matrix: list[list[int]]) -> int:
     return entry
 
 
+def transpose_int_matrix(matrix: list[list[int]]) -> list[list[int]]:
+    if not matrix:
+        return []
+    return [
+        [matrix[row_index][column_index] for row_index in range(len(matrix))]
+        for column_index in range(len(matrix[0]))
+    ]
+
+
+def group_label(free_rank: int, torsion_factors: list[int]) -> str:
+    parts: list[str] = []
+    if free_rank == 1:
+        parts.append("Z")
+    elif free_rank > 1:
+        parts.append(f"Z^{free_rank}")
+    parts.extend(f"Z/{factor}" for factor in torsion_factors)
+    return " + ".join(parts) if parts else "0"
+
+
+def require_group_invariant(context: str, value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be a group-invariant object")
+    require_keys(context, value, {"label", "free_rank", "torsion_factors"})
+    extra_keys = sorted(set(value) - {"label", "free_rank", "torsion_factors"})
+    if extra_keys:
+        fail(f"{context} has unknown keys: {', '.join(extra_keys)}")
+    label = value["label"]
+    require_string(f"{context}.label", label)
+    free_rank = require_nonnegative_int(f"{context}.free_rank", value["free_rank"])
+    torsion_factors = require_int_list(f"{context}.torsion_factors", value["torsion_factors"], nonempty=False)
+    if any(factor <= 1 for factor in torsion_factors):
+        fail(f"{context}.torsion_factors must contain integers greater than one")
+    if torsion_factors != sorted(torsion_factors):
+        fail(f"{context}.torsion_factors must be sorted")
+    expected_label = group_label(free_rank, torsion_factors)
+    if label != expected_label:
+        fail(f"{context}.label must be {expected_label!r} for the listed invariants")
+    return {
+        "label": label,
+        "free_rank": free_rank,
+        "torsion_factors": torsion_factors,
+    }
+
+
+def group_invariants_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    return (
+        left["free_rank"] == right["free_rank"]
+        and left["torsion_factors"] == right["torsion_factors"]
+        and left["label"] == right["label"]
+    )
+
+
+def require_same_group(context: str, actual: dict[str, Any], expected: dict[str, Any]) -> None:
+    if not group_invariants_equal(actual, expected):
+        fail(
+            f"{context} group invariant mismatch: "
+            f"actual={actual['label']} expected={expected['label']}"
+        )
+
+
+def hom_to_z(group: dict[str, Any]) -> dict[str, Any]:
+    free_rank = group["free_rank"]
+    return {
+        "label": group_label(free_rank, []),
+        "free_rank": free_rank,
+        "torsion_factors": [],
+    }
+
+
+def ext_to_z(group: dict[str, Any]) -> dict[str, Any]:
+    torsion_factors = list(group["torsion_factors"])
+    return {
+        "label": group_label(0, torsion_factors),
+        "free_rank": 0,
+        "torsion_factors": torsion_factors,
+    }
+
+
 def validate_finite_chain_complex_torsion(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -14703,6 +14781,164 @@ def validate_finite_chain_complex_torsion(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general universal coefficient target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general universal coefficient future_checker", data.get("future_checker"))
+
+
+def validate_finite_universal_coefficient_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    cochain = checks["integer-cochain-complex-replay"]
+    if cochain["expected_result"] != "sat" or cochain.get("proof_status") != "replay-only":
+        fail("integer-cochain-complex-replay must be a replay-only sat row")
+    values = single_witness_values(cochain, witnesses)
+    c1_basis = require_string_list("UCT cochain c1_basis", values.get("c1_basis"))
+    c0_basis = require_string_list("UCT cochain c0_basis", values.get("c0_basis"))
+    c0_dual_basis = require_string_list("UCT cochain c0_dual_basis", values.get("c0_dual_basis"))
+    c1_dual_basis = require_string_list("UCT cochain c1_dual_basis", values.get("c1_dual_basis"))
+    if len(c0_dual_basis) != len(c0_basis):
+        fail("integer-cochain-complex-replay C0 dual basis length must match C0")
+    if len(c1_dual_basis) != len(c1_basis):
+        fail("integer-cochain-complex-replay C1 dual basis length must match C1")
+    d1 = require_int_matrix("UCT cochain d1", values.get("d1"))
+    if len(d1) != len(c0_basis):
+        fail("integer-cochain-complex-replay d1 height must match C0 basis length")
+    if any(len(row) != len(c1_basis) for row in d1):
+        fail("integer-cochain-complex-replay d1 width must match C1 basis length")
+    delta0 = require_int_matrix("UCT cochain delta0", values.get("delta0"))
+    expected_delta0 = transpose_int_matrix(d1)
+    if delta0 != expected_delta0:
+        fail("integer-cochain-complex-replay delta0 must be the transpose of d1")
+    if len(delta0) != len(c1_dual_basis):
+        fail("integer-cochain-complex-replay delta0 height must match C1 dual basis length")
+    if any(len(row) != len(c0_dual_basis) for row in delta0):
+        fail("integer-cochain-complex-replay delta0 width must match C0 dual basis length")
+    delta1 = require_int_matrix("UCT cochain delta1", values.get("delta1"), allow_empty=True)
+    if delta1 and any(len(row) != len(c1_dual_basis) for row in delta1):
+        fail("integer-cochain-complex-replay delta1 width must match C1 dual basis length")
+    listed_composition = require_int_matrix(
+        "UCT cochain cochain_composition",
+        values.get("cochain_composition"),
+        allow_empty=True,
+    )
+    computed_composition = integer_matrix_product(
+        delta1,
+        delta0,
+        left_width=len(c1_dual_basis),
+        right_width=len(c0_dual_basis),
+    )
+    if computed_composition != listed_composition:
+        fail("integer-cochain-complex-replay cochain composition is incorrect")
+    if any(any(entry != 0 for entry in row) for row in computed_composition):
+        fail("integer-cochain-complex-replay cochain composition did not reduce to zero")
+    entry = abs(require_single_entry_boundary("UCT cochain delta0", delta0))
+    expected_torsion_group = {
+        "label": group_label(0, [entry]),
+        "free_rank": 0,
+        "torsion_factors": [entry],
+    }
+    expected_zero_group = {
+        "label": "0",
+        "free_rank": 0,
+        "torsion_factors": [],
+    }
+    homology = values.get("homology")
+    if not isinstance(homology, dict):
+        fail("integer-cochain-complex-replay homology must be an object")
+    h0 = require_group_invariant("UCT cochain homology.h0", homology.get("h0"))
+    h1 = require_group_invariant("UCT cochain homology.h1", homology.get("h1"))
+    require_same_group("integer-cochain-complex-replay H0", h0, expected_torsion_group)
+    require_same_group("integer-cochain-complex-replay H1", h1, expected_zero_group)
+    cohomology = values.get("cohomology")
+    if not isinstance(cohomology, dict):
+        fail("integer-cochain-complex-replay cohomology must be an object")
+    h0_cohomology = require_group_invariant("UCT cochain cohomology.h0", cohomology.get("h0"))
+    h1_cohomology = require_group_invariant("UCT cochain cohomology.h1", cohomology.get("h1"))
+    require_same_group("integer-cochain-complex-replay H^0", h0_cohomology, expected_zero_group)
+    require_same_group("integer-cochain-complex-replay H^1", h1_cohomology, expected_torsion_group)
+
+    shadow = checks["degree-one-uct-shadow"]
+    if shadow["expected_result"] != "sat" or shadow.get("proof_status") != "replay-only":
+        fail("degree-one-uct-shadow must be a replay-only sat row")
+    values = single_witness_values(shadow, witnesses)
+    if require_int("UCT shadow degree", values.get("degree")) != 1:
+        fail("degree-one-uct-shadow must state degree 1")
+    previous_homology = require_group_invariant("UCT shadow homology_previous", values.get("homology_previous"))
+    current_homology = require_group_invariant("UCT shadow homology_current", values.get("homology_current"))
+    listed_hom = require_group_invariant("UCT shadow hom_current_to_z", values.get("hom_current_to_z"))
+    listed_ext = require_group_invariant("UCT shadow ext_previous_to_z", values.get("ext_previous_to_z"))
+    listed_cohomology = require_group_invariant("UCT shadow cohomology_current", values.get("cohomology_current"))
+    require_same_group("degree-one-uct-shadow previous homology", previous_homology, h0)
+    require_same_group("degree-one-uct-shadow current homology", current_homology, h1)
+    require_same_group("degree-one-uct-shadow Hom(H1,Z)", listed_hom, hom_to_z(current_homology))
+    require_same_group("degree-one-uct-shadow Ext(H0,Z)", listed_ext, ext_to_z(previous_homology))
+    require_same_group("degree-one-uct-shadow H^1", listed_cohomology, h1_cohomology)
+    exact = values.get("short_exact_sequence")
+    if not isinstance(exact, dict):
+        fail("degree-one-uct-shadow short_exact_sequence must be an object")
+    require_keys(
+        "degree-one-uct-shadow short_exact_sequence",
+        exact,
+        {"left", "middle", "right", "left_map", "right_map"},
+    )
+    if exact["left"] != listed_ext["label"]:
+        fail("degree-one-uct-shadow exact sequence left term must be Ext(H0,Z)")
+    if exact["middle"] != listed_cohomology["label"]:
+        fail("degree-one-uct-shadow exact sequence middle term must be H^1")
+    if exact["right"] != listed_hom["label"]:
+        fail("degree-one-uct-shadow exact sequence right term must be Hom(H1,Z)")
+    if exact["left_map"] != "identity" or exact["right_map"] != "zero":
+        fail("degree-one-uct-shadow must document identity left map and zero right map for this fixed row")
+
+    bad = checks["bad-uct-zero-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-uct-zero-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    actual = require_group_invariant("bad UCT actual_h1_cohomology", data.get("actual_h1_cohomology"))
+    claimed = require_group_invariant("bad UCT claimed_h1_cohomology", data.get("claimed_h1_cohomology"))
+    require_same_group("bad-uct-zero-rejected actual H^1", actual, h1_cohomology)
+    if group_invariants_equal(actual, claimed):
+        fail("bad-uct-zero-rejected claimed group unexpectedly matches the replayed H^1")
+    if data.get("distinguishing_invariant") != "torsion_factors":
+        fail("bad-uct-zero-rejected must distinguish by torsion_factors")
+    if data.get("actual_distinguishing_value") != actual["torsion_factors"]:
+        fail("bad-uct-zero-rejected actual_distinguishing_value is incorrect")
+    if data.get("claimed_distinguishing_value") != claimed["torsion_factors"]:
+        fail("bad-uct-zero-rejected claimed_distinguishing_value is incorrect")
+
+    qf_uf = checks["qf-uf-bad-uct-h1-zero"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-uct-h1-zero must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-uct-h1-zero must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-uct-h1-zero must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    if data.get("actual_h1_cohomology") != h1_cohomology["label"]:
+        fail("qf-uf-bad-uct-h1-zero actual_h1_cohomology label is incorrect")
+    if data.get("claimed_h1_cohomology") != claimed["label"]:
+        fail("qf-uf-bad-uct-h1-zero claimed_h1_cohomology label is incorrect")
+    if data.get("distinct_groups") is not True:
+        fail("qf-uf-bad-uct-h1-zero must document distinct_groups=true")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf bad UCT smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad UCT smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("qf-uf bad UCT proof_regression", proof_regression)
+    if "finite_universal_coefficient_bad_h1_zero_emits_checked_alethe" not in proof_regression:
+        fail("qf-uf-bad-uct-h1-zero must link the Alethe resource test")
+    certificate = data.get("certificate")
+    require_string("qf-uf bad UCT certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-uf-bad-uct-h1-zero certificate must document checked Alethe evidence")
+
+    horizon = checks["general-uct-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-uct-theorem-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-uct-theorem-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general UCT theorem target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general UCT theorem future_checker", data.get("future_checker"))
 
 
 def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
@@ -19559,6 +19795,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_simplicial_homology(expected)
     if metadata["id"] == "finite-chain-complex-torsion-v0":
         validate_finite_chain_complex_torsion(expected)
+    if metadata["id"] == "finite-universal-coefficient-shadow-v0":
+        validate_finite_universal_coefficient_shadow(expected)
     if metadata["id"] == "finite-simplicial-cohomology-v0":
         validate_finite_simplicial_cohomology(expected)
     if metadata["id"] == "finite-simplicial-cup-products-v0":

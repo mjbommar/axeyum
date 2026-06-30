@@ -3342,6 +3342,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_chain_homology_replay",
             "bridge_finite_torsion_homology_replay",
             "bridge_finite_cohomology_replay",
+            "bridge_finite_universal_coefficient_shadow",
             "bridge_finite_cup_product_replay",
             "field_topology",
             "bridge_lean_horizon",
@@ -3647,6 +3648,7 @@ BRIDGE_CONCEPTS = [
         "unlocks": [
             "bridge_finite_torsion_homology_replay",
             "bridge_finite_cohomology_replay",
+            "bridge_finite_universal_coefficient_shadow",
             "field_topology",
             "field_linear_algebra",
             "bridge_lean_horizon",
@@ -3747,6 +3749,7 @@ BRIDGE_CONCEPTS = [
         ],
         "unlocks": [
             "bridge_finite_cohomology_replay",
+            "bridge_finite_universal_coefficient_shadow",
             "field_topology",
             "field_linear_algebra",
             "field_abstract_algebra",
@@ -3848,6 +3851,7 @@ BRIDGE_CONCEPTS = [
             "field_topology",
             "field_linear_algebra",
             "field_abstract_algebra",
+            "bridge_finite_universal_coefficient_shadow",
             "bridge_finite_cup_product_replay",
             "bridge_lean_horizon",
         ],
@@ -3917,6 +3921,112 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes simplex closure, F2 coboundaries, delta-squared-zero, F2 ranks, and non-coboundary status exactly.",
                 "Malformed fixed rows link source artifacts and route regressions before claiming checked Alethe evidence.",
                 "Cohomology operations, functoriality, universal coefficients, duality, and topological invariance remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_universal_coefficient_shadow",
+        "title": "Finite Universal Coefficient Shadow Replay",
+        "field_ids": [
+            "topology",
+            "set_theory_and_foundations",
+            "linear_algebra",
+            "abstract_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite universal-coefficient shadow rows state one explicit free "
+            "abelian chain complex, its dual cochain map, homology and "
+            "cohomology invariants, plus the degree-one Hom/Ext bookkeeping. "
+            "The trusted object is exact integer invariant replay plus checked "
+            "QF_UF/Alethe evidence for a malformed fixed group-identification "
+            "row; the universal coefficient theorem itself remains Lean-horizon."
+        ),
+        "prerequisites": [
+            "bridge_finite_boundary_operator_replay",
+            "bridge_finite_chain_homology_replay",
+            "bridge_finite_torsion_homology_replay",
+            "bridge_finite_cohomology_replay",
+            "bridge_gcd_divisibility_witness",
+            "bridge_quotient_map",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "field_topology",
+            "field_linear_algebra",
+            "field_abstract_algebra",
+            "bridge_finite_cup_product_replay",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite chain complexes over Z",
+            "integer cochain complexes",
+            "finitely generated abelian group invariants",
+            "Hom/Ext shadow replay",
+            "QF_UF / Alethe",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-universal-coefficient-shadow-v0",
+                "Two-term chain/cochain replay with d1=[2], H0=Z/2, H1=0, H^1=Z/2, degree-one Hom/Ext shadow, and a checked bad H^1=0 Alethe row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite Hom/Ext shadow replay plus QF_UF/Alethe group-conflict certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-universal-coefficient-shadow-end-to-end.md",
+                    "docs/learn/math/analysis-topology-proof-horizons.md",
+                    "docs/learn/math/matrix-computation-index.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator recomputes delta0=d1^T, the "
+                    "cochain composition, the Z/2 cohomology invariant, "
+                    "Hom(0,Z)=0, and Ext(Z/2,Z)=Z/2 before accepting the "
+                    "degree-one row. The malformed H^1=0 row graduates only "
+                    "because the isolated equality conflict has checked "
+                    "Alethe evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-chain-complex-torsion-end-to-end.md",
+            "docs/learn/math/finite-simplicial-cohomology-end-to-end.md",
+            "docs/learn/math/finite-universal-coefficient-shadow-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "artifacts/examples/math/finite-universal-coefficient-shadow-v0/smt2/bad-uct-h1-zero-alethe-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite universal-coefficient shadow replay checks one fixed two-term chain complex and one degree-one Hom/Ext bookkeeping row; it does not prove the universal coefficient theorem.",
+            "The bad H^1=0 row isolates a fixed group-identity conflict, not arbitrary exact-sequence, naturality, Ext/Tor, quotient, or splitting reasoning.",
+            "Additional universal-coefficient rows should land only when they add distinct Ext/Tor, exact-sequence, quotient-module, or proof-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the free abelian chain groups, dual cochain groups, integer maps, homology and cohomology invariants, Hom term, Ext term, and the fixed short exact-sequence shadow.",
+                "The validator recomputes delta0=d1^T, cochain composition, one-entry invariant factors, Hom(0,Z), Ext(Z/2,Z), and the listed degree-one exact-sequence labels exactly.",
+                "Malformed fixed group-identification rows link source artifacts and route regressions before claiming checked Alethe evidence.",
+                "Universal coefficient theorem schemas, naturality, splitting choices, Ext/Tor functor laws, and arbitrary chain-complex statements remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },

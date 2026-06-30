@@ -24,7 +24,7 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 106 math packs,
+  is the current execution ledger for stabilizing the existing 107 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
@@ -243,6 +243,11 @@ schemas, examples, and validation workflows.
   validates finite F2 cochain coboundary replay, `delta^2 = 0`, cohomology-rank
   replay for a three-edge circle, checked QF_UF/Alethe rejection of a bad
   coboundary value, and a cohomology Lean-horizon row.
+- [`artifacts/examples/math/finite-universal-coefficient-shadow-v0/`](../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
+  validates one integer dual cochain complex, `H^1 = Z/2`, the fixed
+  degree-one `0 -> Ext(H0,Z) -> H^1 -> Hom(H1,Z) -> 0` shadow, checked
+  QF_UF/Alethe rejection of `H^1 = 0`, and the general universal-coefficient
+  theorem Lean horizon.
 - [`artifacts/examples/math/finite-simplicial-cup-products-v0/`](../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
   validates finite F2 cup-product replay on an ordered filled triangle, a
   finite coboundary-Leibniz row, checked QF_BV/DRAT rejection of a bad
@@ -540,6 +545,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0

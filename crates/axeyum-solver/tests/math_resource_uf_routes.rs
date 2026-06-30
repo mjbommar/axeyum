@@ -35,6 +35,9 @@ const FINITE_SPECIALIZATION_ORDER_BAD_T0: &str = include_str!(
 const FINITE_SIMPLICIAL_COHOMOLOGY_BAD_COBOUNDARY: &str = include_str!(
     "../../../artifacts/examples/math/finite-simplicial-cohomology-v0/smt2/bad-coboundary-value-alethe-conflict.smt2"
 );
+const FINITE_UNIVERSAL_COEFFICIENT_BAD_H1_ZERO: &str = include_str!(
+    "../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/smt2/bad-uct-h1-zero-alethe-conflict.smt2"
+);
 const FINITE_PERMUTATION_GROUPS_BAD_NONBIJECTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-permutation-groups-v0/smt2/bad-nonbijection-injectivity-conflict.smt2"
 );
@@ -132,6 +135,14 @@ fn finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-simplicial-cohomology-v0 bad coboundary value",
         FINITE_SIMPLICIAL_COHOMOLOGY_BAD_COBOUNDARY,
+    );
+}
+
+#[test]
+fn finite_universal_coefficient_bad_h1_zero_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-universal-coefficient-shadow-v0 bad H1 zero",
+        FINITE_UNIVERSAL_COEFFICIENT_BAD_H1_ZERO,
     );
 }
 

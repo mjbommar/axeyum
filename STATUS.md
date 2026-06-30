@@ -205,6 +205,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite universal-coefficient shadow resource and bridge landed.**
+  `finite-universal-coefficient-shadow-v0` and
+  `bridge_finite_universal_coefficient_shadow` now make one dual integer
+  cochain complex, `H^1 = Z/2`, degree-one Hom/Ext bookkeeping, checked bad
+  `H^1 = 0` rejection, and source-linked QF_UF/Alethe evidence queryable
+  through the public JSON boundary. The bridge keeps the universal coefficient
+  theorem, naturality, splitting choices, Ext/Tor laws, exact sequences, and
+  invariance in the Lean-horizon lane. `PLAN.md`, the foundational-resource
+  plans, learner pages, `CONSUMER-QUERIES.md`,
+  `FIELD-READINESS-QUERY-MATRIX.md`, `PROOF-ROUTE-QUERY-MATRIX.md`,
+  `PROOF-UPGRADE-FRONTIER.md`, `MATRIX-COMPUTATION-QUERIES.md`, and
+  `check-foundational-resources.sh` now reflect the 107-pack / 64-bridge
+  baseline and exercise topology universal lookup plus concept-scoped Alethe
+  route queries. Focused validation passed for the pack validator, concept
+  validator, query helper, rustfmt, and the
+  `finite_universal_coefficient_bad_h1_zero_emits_checked_alethe` regression;
+  full foundational-resource smoke also passes after staging generated outputs.
+
 - **Finite chain-complex torsion resource and bridge landed.**
   `finite-chain-complex-torsion-v0` and
   `bridge_finite_torsion_homology_replay` now make a two-term integer chain
@@ -216,7 +234,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the Lean-horizon lane. `PLAN.md`, the foundational-resource plans, learner
   pages, `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`,
   `PROOF-ROUTE-QUERY-MATRIX.md`, `MATRIX-COMPUTATION-QUERIES.md`, and
-  `check-foundational-resources.sh` now reflect the 106-pack / 63-bridge
+  `check-foundational-resources.sh` reflected that increment's 106-pack / 63-bridge
   baseline and exercise topology torsion lookup plus concept-scoped
   Diophantine route queries.
 

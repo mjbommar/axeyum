@@ -117,7 +117,7 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 106 current math packs,
+The current execution ledger for stabilizing the 107 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
@@ -137,7 +137,8 @@ Lean-horizon resources.
 The matrix computation consumer query guide is
 [`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
 it records exact concept-plus-route queries for LU, residual, rank/nullity,
-eigenpair, random-matrix, tensor/module, operator, and Chebyshev resources.
+eigenpair, random-matrix, chain/cochain/UCT, tensor/module, operator, and
+Chebyshev resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -146,7 +147,8 @@ Current resource-buildout status (2026-06-30): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with topology/preimage, finite specialization-order,
-finite cohomology, and finite cup-product extensions. The topology
+finite cohomology, finite universal-coefficient shadow, and finite cup-product
+extensions. The topology
 QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
 one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The measure/probability QF_LRA/Farkas lane now
 also promotes finite product-measure's bad product-probability row through a
@@ -161,7 +163,7 @@ finite-martingales' bad conditional-expectation row now promoted after finite
 filtration replay computes the up-block expectation, and finite Markov-chain's
 existing bad stochastic-row artifact now explicitly promoted in solver-reuse
 metadata.
-The foundational concept atlas now also includes 63 generated R1 bridge
+The foundational concept atlas now also includes 64 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
@@ -177,7 +179,8 @@ compactness shadows, connectedness shadows, continuity-by-preimage, finite
 topology closure/interior and homeomorphism replay,
 finite specialization-order replay, finite boundary-operator replay, finite
 chain-complex/homology replay, finite torsion-homology replay, finite
-cohomology replay, finite cup-product replay, LU factorization
+cohomology replay, finite universal-coefficient shadow replay, finite
+cup-product replay, LU factorization
 replay, rank-nullity replay,
 residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
 random-matrix moments, finite measure additivity, finite probability mass
@@ -199,14 +202,15 @@ almost-everywhere reasoning in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 topology lane: Boolean, Alethe, Diophantine, and QF_BV field readiness,
 compactness/preimage/closure/homeomorphism/specialization/boundary/homology/
-torsion/cohomology/cup
+torsion/cohomology/universal/cup
 bridge lookups, concept-scoped finite topology-operator/homeomorphism, finite
 specialization-order, finite boundary-operator, chain-complex/homology, and
-finite torsion-homology/cohomology/cup-product
+finite torsion-homology/cohomology/universal-coefficient/cup-product
 queries, and checked
 Boolean/Alethe/Diophantine/QF_BV rows for finite topology, compactness, connectedness,
 continuous maps, homeomorphism replay, finite specialization order, boundary
-replay, homology, torsion homology, cohomology, finite cup products, metric balls, and bounded epsilon-delta shadows are
+replay, homology, torsion homology, cohomology, finite universal-coefficient
+shadow, finite cup products, metric balls, and bounded epsilon-delta shadows are
 smoke-checked through the committed JSON contract, while arbitrary compactness,
 connectedness, specialization-order theorems, homeomorphism invariance,
 homology/cohomology invariance, exact sequences, universal coefficient theorems,

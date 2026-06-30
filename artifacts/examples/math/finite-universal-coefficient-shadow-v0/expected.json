@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-universal-coefficient-shadow-v0",
+  "witnesses": [
+    {
+      "id": "dual-two-cell-complex",
+      "description": "The dual cochain complex of C1=Z<e> -> C0=Z<v> with d1(e)=2v.",
+      "values": {
+        "c1_basis": ["e"],
+        "c0_basis": ["v"],
+        "d1": [[2]],
+        "c0_dual_basis": ["v_star"],
+        "c1_dual_basis": ["e_star"],
+        "delta0": [[2]],
+        "delta1": [],
+        "cochain_composition": [],
+        "homology": {
+          "h0": {"label": "Z/2", "free_rank": 0, "torsion_factors": [2]},
+          "h1": {"label": "0", "free_rank": 0, "torsion_factors": []}
+        },
+        "cohomology": {
+          "h0": {"label": "0", "free_rank": 0, "torsion_factors": []},
+          "h1": {"label": "Z/2", "free_rank": 0, "torsion_factors": [2]}
+        }
+      }
+    },
+    {
+      "id": "degree-one-uct-summary",
+      "description": "For this fixed complex, H^1 is the Ext term Ext(H0,Z) because H1 is zero.",
+      "values": {
+        "degree": 1,
+        "homology_previous": {"label": "Z/2", "free_rank": 0, "torsion_factors": [2]},
+        "homology_current": {"label": "0", "free_rank": 0, "torsion_factors": []},
+        "hom_current_to_z": {"label": "0", "free_rank": 0, "torsion_factors": []},
+        "ext_previous_to_z": {"label": "Z/2", "free_rank": 0, "torsion_factors": [2]},
+        "cohomology_current": {"label": "Z/2", "free_rank": 0, "torsion_factors": [2]},
+        "short_exact_sequence": {
+          "left": "Z/2",
+          "middle": "Z/2",
+          "right": "0",
+          "left_map": "identity",
+          "right_map": "zero"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "integer-cochain-complex-replay",
+      "claim": "The dual cochain complex has delta0 = [2], delta1 = 0, H^0 = 0, and H^1 = Z/2.",
+      "expected_result": "sat",
+      "validation": "finite_integer_cochain_complex_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["dual-two-cell-complex"],
+      "notes": "The validator checks that delta0 is the transpose of d1, that delta1*delta0 is zero, and that the listed H^0/H^1 invariants match the one-entry Smith diagonal."
+    },
+    {
+      "id": "degree-one-uct-shadow",
+      "claim": "For this finite complex, the degree-one universal-coefficient shadow is 0 -> Ext(H0,Z)=Z/2 -> H^1=Z/2 -> Hom(H1,Z)=0 -> 0.",
+      "expected_result": "sat",
+      "validation": "finite_degree_one_uct_shadow_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["degree-one-uct-summary"],
+      "notes": "The validator recomputes Hom(0,Z)=0 and Ext(Z/2,Z)=Z/2 from the listed finitely generated abelian group invariants."
+    },
+    {
+      "id": "bad-uct-zero-rejected",
+      "claim": "The universal-coefficient shadow makes H^1 equal to the zero group.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_uct_group_refutation",
+      "proof_status": "checked",
+      "data": {
+        "actual_h1_cohomology": {"label": "Z/2", "free_rank": 0, "torsion_factors": [2]},
+        "claimed_h1_cohomology": {"label": "0", "free_rank": 0, "torsion_factors": []},
+        "distinguishing_invariant": "torsion_factors",
+        "actual_distinguishing_value": [2],
+        "claimed_distinguishing_value": []
+      },
+      "notes": "The validator compares finite abelian-group invariants and rejects the false zero-group claim after replay computes a Z/2 torsion factor."
+    },
+    {
+      "id": "qf-uf-bad-uct-h1-zero",
+      "claim": "The computed group H^1 is both Z/2 and zero.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "actual_h1_cohomology": "Z/2",
+        "claimed_h1_cohomology": "0",
+        "distinct_groups": true,
+        "smt2_artifact": "artifacts/examples/math/finite-universal-coefficient-shadow-v0/smt2/bad-uct-h1-zero-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check for H1_cohomology = Z2, H1_cohomology = Zero, and Z2 != Zero"
+      },
+      "notes": "The SMT-LIB artifact isolates the false group-identification row as a pure EUF equality conflict after finite replay computes the group invariant."
+    },
+    {
+      "id": "general-uct-theorem-lean-horizon",
+      "claim": "The universal coefficient theorem and its naturality require future proof resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "universal coefficient theorem for cohomology, naturality, short exact sequence proof, Ext/Tor functor laws, splitting choices, and arbitrary finitely generated chain complexes",
+        "future_checker": "Lean modules for chain complexes over Z, finitely generated abelian groups, Hom/Ext/Tor functors, exact sequences, and proof reconstruction from finite invariant certificates"
+      },
+      "notes": "The finite rows check one explicit chain complex and one degree-one shadow; the theorem schema remains a proof-assistant horizon."
+    }
+  ]
+}

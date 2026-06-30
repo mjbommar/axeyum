@@ -21,6 +21,7 @@ Example packs:
 - [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
+- [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
 - [gcd-bezout-v0](../../../artifacts/examples/math/gcd-bezout-v0/)
 - [modular-arithmetic-v0](../../../artifacts/examples/math/modular-arithmetic-v0/)
 - [number-theory-v0](../../../artifacts/examples/math/number-theory-v0/)
@@ -66,7 +67,9 @@ quotient module tables, kernels, images, and checked QF_UF/Alethe
 bad-submodule refutations. The finite-tensor-products pack checks finite
 tensor-product basis/dimension replay, bilinear maps, factorization through a
 tensor map, Kronecker products, and checked QF_UF/Alethe bad-bilinear-map
-refutations. The gcd/Bezout
+refutations. The finite universal-coefficient shadow pack checks one
+finitely generated abelian-group Hom/Ext bookkeeping row, `H^1 = Z/2`, and a
+checked QF_UF/Alethe bad group-identification row. The gcd/Bezout
 pack adds exact divisibility and fixed linear Diophantine checks. The
 number-theory pack adds bounded CRT
 compatibility, quadratic residues, sum-of-two-squares, and Diophantine replay.
@@ -355,6 +358,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
@@ -397,6 +401,8 @@ data through replay, read
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
 [End To End: Finite Modules](finite-modules-end-to-end.md). For multilinear
 data, read [End To End: Finite Tensor Products](finite-tensor-products-end-to-end.md).
+For finite Hom/Ext bookkeeping, read
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md).
 
 ## Proof Upgrade Notes
 
@@ -420,7 +426,8 @@ arbitrary-field polynomial theory remain
 ## Horizon
 
 General group, permutation-group, monoid, group-action, ring, field, module, isomorphism-theorem, quotient, and
-algebraic-number-theory theorems need Lean-backed concept rows. Near-term
+algebraic-number-theory theorems, plus general Ext/Tor and universal
+coefficient theorem schemas, need Lean-backed concept rows. Near-term
 resource gaps are stronger BV/CNF or EUF/Alethe evidence for finite group,
 finite monoid, finite permutation-group, finite group-action, finite ring, finite homomorphism,
 finite ideal, finite vector-space, finite dual-space, finite-field, finite-module,

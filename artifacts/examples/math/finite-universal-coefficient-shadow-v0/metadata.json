@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "finite-universal-coefficient-shadow-v0",
+  "title": "Finite Universal Coefficient Shadow Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_topology",
+    "field_set_theory_and_foundations",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "bridge_finite_universal_coefficient_shadow",
+    "bridge_finite_torsion_homology_replay",
+    "bridge_finite_cohomology_replay",
+    "bridge_finite_chain_homology_replay",
+    "bridge_quotient_map",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_linear_algebra"
+  ],
+  "field_ids": [
+    "topology",
+    "set_theory_and_foundations",
+    "linear_algebra",
+    "abstract_algebra"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite chain complexes over Z",
+    "integer cochain complexes",
+    "finitely generated abelian group invariants",
+    "universal coefficient shadow",
+    "QF_UF / Alethe",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite universal-coefficient shadow QF_UF/Alethe regression seed",
+    "pressure": "Finite replay computes H^1 = Z/2 for the dual cochain complex of d1=[2], while the malformed row asserts H^1 = 0 against a declared Z/2 != 0 distinction.",
+    "evidence": [
+      "qf-uf-bad-uct-h1-zero"
+    ],
+    "next_step": "Promote additional universal-coefficient rows only when they add distinct Ext/Tor, exact-sequence, quotient, or proof-reconstruction pressure; keep the theorem schema itself in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-universal-coefficient-shadow-end-to-end.md",
+    "docs/learn/math/analysis-topology-proof-horizons.md",
+    "docs/learn/math/matrix-computation-index.md",
+    "artifacts/examples/math/finite-universal-coefficient-shadow-v0/smt2/bad-uct-h1-zero-alethe-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
+  ],
+  "expected_results": [
+    "integer-cochain-complex-replay",
+    "degree-one-uct-shadow",
+    "bad-uct-zero-rejected",
+    "qf-uf-bad-uct-h1-zero",
+    "general-uct-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "State the finite chain complex, dual cochain complex, homology invariants, cohomology invariants, Hom term, Ext term, and degree-one exact-sequence shadow explicitly.",
+    "Replay the integer cochain complex and group-invariant bookkeeping with exact integer arithmetic.",
+    "Keep the promoted bad H^1=0 row tied to a committed SMT-LIB artifact and checked QF_UF/Alethe evidence.",
+    "Add broader Ext/Tor or exact-sequence proof resources only after they have deterministic replay data and route regressions.",
+    "Keep the universal coefficient theorem, naturality, splitting choices, and arbitrary chain-complex statements under Lean horizon until kernel-checked proof routes exist."
+  ]
+}

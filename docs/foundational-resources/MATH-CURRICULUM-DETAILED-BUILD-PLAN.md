@@ -36,14 +36,14 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 63 bridge-concept rows.
+- 64 bridge-concept rows.
 - 5 example-family rows.
-- 106 non-template math packs.
-- 538 expected checks.
-- 229 checked proof/evidence rows.
-- 240 replay-only rows.
-- 69 Lean-horizon rows.
-- 106 promoted solver-reuse packs.
+- 107 non-template math packs.
+- 543 expected checks.
+- 231 checked proof/evidence rows.
+- 242 replay-only rows.
+- 70 Lean-horizon rows.
+- 107 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -86,7 +86,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 106 Packs
+### Wave 1: Stabilize The Current 107 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -768,6 +768,16 @@ Pick one row per commit unless the change is purely navigational.
     homology invariance in the Lean-horizon lane. The topology consumer smoke
     now includes torsion lookup and concept-scoped Diophantine route queries,
     and the atlas now validates 63 bridge rows.
+91. Landed: add `finite-universal-coefficient-shadow-v0` and the finite
+    universal-coefficient shadow bridge row.
+    `bridge_finite_universal_coefficient_shadow` makes one integer dual
+    cochain complex, `H^1 = Z/2`, degree-one Hom/Ext bookkeeping, and checked
+    bad `H^1 = 0` QF_UF/Alethe evidence queryable from one shared atlas
+    concept while keeping the universal coefficient theorem, naturality,
+    splitting choices, Ext/Tor laws, exact sequences, and invariance in the
+    Lean-horizon lane. The topology consumer smoke now includes universal
+    lookup and concept-scoped Alethe route queries, and the atlas now validates
+    64 bridge rows.
 
 ## Validation Checklist
 

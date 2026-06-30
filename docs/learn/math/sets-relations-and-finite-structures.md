@@ -28,6 +28,7 @@ Example packs:
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
 - [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/)
+- [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
 - [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 
@@ -82,6 +83,9 @@ event/complement identities.
 The finite simplicial-cohomology pack checks F2 cochain coboundary replay,
 `delta^2 = 0`, cohomology-rank replay for the same three-edge circle, and a
 checked QF_UF/Alethe bad coboundary-value row.
+The finite universal-coefficient shadow pack dualizes the integer `d1=[2]`
+complex, checks `H^1 = Z/2`, replays the fixed degree-one Hom/Ext row, and
+rejects `H^1 = 0` with checked QF_UF/Alethe evidence.
 The finite simplicial-cup-products pack checks ordered-simplex F2 cup-product
 replay, one finite coboundary-Leibniz row, and a checked QF_BV/DRAT bad
 cup-product value row.
@@ -361,6 +365,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
@@ -390,6 +396,7 @@ and measure replay, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),
 [End To End: Finite Topology, Connectedness, And Measure](finite-structures-end-to-end.md),
@@ -400,12 +407,15 @@ and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end
 The finite set, relation/function, equivalence-class, function-composition,
 finite monoid, finite permutation-group, finite group-action, finite-order/lattice, cardinality,
 cardinality-principles, topology, specialization-order, compactness-shadow, connectedness-shadow, continuous-map,
-finite-simplicial-homology, finite-chain-complex-torsion, finite-simplicial-cohomology, and measure packs are now checked finite artifacts.
+finite-simplicial-homology, finite-chain-complex-torsion, finite-universal-coefficient-shadow, finite-simplicial-cohomology, and measure packs are now checked finite artifacts.
 The finite-simplicial-cup-products pack adds a checked finite cochain-operation
 row without promoting general cohomology-ring laws.
 The finite-simplicial-homology and finite-chain-complex-torsion packs now also
 carry checked QF_LIA/Diophantine certificates for bad integer boundary
-coefficients and bad torsion-generator membership. The Alethe
+coefficients and bad torsion-generator membership. The
+finite-universal-coefficient-shadow pack adds checked QF_UF/Alethe evidence
+for a bad `H^1 = 0` group-identification row without promoting the general
+theorem. The Alethe
 certificate-anatomy page now shows the shared QF_UF proof-object boundary for
 quotient-map congruence and tamper rejection. The next finite-structure gaps
 are narrower EUF/Alethe anatomy for secondary algebra/topology packs and Lean

@@ -40,14 +40,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 63 bridge-concept rows.
+- 64 bridge-concept rows.
 - 5 example-family rows.
-- 106 non-template math example packs.
-- 538 expected checks.
-- 229 checked proof/evidence rows.
-- 240 replay-only rows.
-- 69 Lean-horizon rows.
-- 106 promoted solver-reuse packs.
+- 107 non-template math example packs.
+- 543 expected checks.
+- 231 checked proof/evidence rows.
+- 242 replay-only rows.
+- 70 Lean-horizon rows.
+- 107 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -714,7 +714,9 @@ Current packs:
 - `finite-connectedness-v0`
 - `finite-continuous-maps-v0`
 - `finite-simplicial-homology-v0`
+- `finite-chain-complex-torsion-v0`
 - `finite-simplicial-cohomology-v0`
+- `finite-universal-coefficient-shadow-v0`
 - `finite-simplicial-cup-products-v0`
 
 Build next:
@@ -1671,6 +1673,13 @@ Pick one item per commit unless the change is purely navigational.
      QF_BV/DRAT evidence discoverable without promoting associativity, graded
      commutativity, naturality, cohomology-ring quotienting, universal
      coefficients, or invariance theorems.
+102. Landed: add `finite-universal-coefficient-shadow-v0` and
+     `bridge_finite_universal_coefficient_shadow` plus topology universal
+     lookup and concept-scoped Alethe route smoke queries, making one integer
+     dual cochain complex, `H^1 = Z/2`, degree-one Hom/Ext bookkeeping, and
+     checked bad `H^1 = 0` evidence discoverable without promoting the
+     universal coefficient theorem, naturality, splitting choices, Ext/Tor
+     laws, exact sequences, or invariance theorems.
 
 ## Validation Checklist
 

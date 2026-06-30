@@ -19,6 +19,7 @@ Concept rows:
   `bridge_finite_boundary_operator_replay`,
   `bridge_finite_torsion_homology_replay`,
   `bridge_finite_cohomology_replay`,
+  `bridge_finite_universal_coefficient_shadow`,
   `bridge_finite_cup_product_replay`,
   `bridge_inner_product_projection`, `bridge_module_action`,
   `bridge_tensor_bilinearity`, and
@@ -41,7 +42,7 @@ Concept rows:
 | Modules and tensors | [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/), [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/) | Scalar actions, generated submodules, module homomorphisms, quotients, bilinear maps, tensor basis rows, Kronecker products | finite table replay plus QF_UF/Alethe |
 | Spectral rows | [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/), [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/) | Eigenpairs, orthogonal eigenbasis arithmetic, Rayleigh quotients, spectral reconstruction, trace, determinant, characteristic roots, Cayley-Hamilton, Gershgorin intervals | finite replay plus QF_LRA/Farkas |
 | Random matrices | [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/) | Finite matrix-valued probability tables, trace/determinant moments, expected Gram matrices, rank mixture probabilities | finite expectation replay plus QF_LRA/Farkas |
-| Chain, cochain, cup-product, and torsion matrices | [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/), [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/), [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/), [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/) | Boundary matrices, boundary squared, Betti-rank replay, one-entry Smith diagonal replay, `Z/2` torsion quotient, F2 coboundary matrices, cohomology-rank replay, finite F2 cup-product table replay, bad oriented-boundary coefficient, bad torsion generator, bad coboundary value, bad cup-product value | finite replay plus QF_LIA/Diophantine, QF_UF/Alethe, or QF_BV/DRAT |
+| Chain, cochain, cup-product, and torsion matrices | [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/), [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/), [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/), [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/), [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/) | Boundary matrices, boundary squared, Betti-rank replay, one-entry Smith diagonal replay, `Z/2` torsion quotient, integer dual cochain maps, finite Hom/Ext shadow bookkeeping, F2 coboundary matrices, cohomology-rank replay, finite F2 cup-product table replay, bad oriented-boundary coefficient, bad torsion generator, bad `H^1 = 0`, bad coboundary value, bad cup-product value | finite replay plus QF_LIA/Diophantine, QF_UF/Alethe, or QF_BV/DRAT |
 | Operators and interpolation matrices | [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/), [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/) | Operator norm bounds, matrix action, Chebyshev recurrence, Vandermonde unisolvence, interpolation values, alternating residuals | finite replay plus QF_LRA/Farkas |
 
 ## What The Checker Trusts
@@ -59,12 +60,13 @@ it.
 
 For chain and cochain rows, the trusted work is exact finite matrix arithmetic:
 integer boundary matrices for homology, the one-entry Smith diagonal `[2]` for
-the torsion quotient, and F2 coboundary matrices for cohomology, plus
-ordered-simplex F2 cup-product table replay and a small checked contradiction
-row when a malformed value is claimed. This is useful for finite
+the torsion quotient, integer transpose/cochain replay for the finite
+universal-coefficient shadow, and F2 coboundary matrices for cohomology, plus
+ordered-simplex F2 cup-product table replay and small checked contradiction
+rows when a malformed value or group identity is claimed. This is useful for finite
 algebraic-topology examples, but it is not a proof of homology invariance,
-general Smith normal form, cohomology-ring laws, or cohomology-operation
-invariance.
+general Smith normal form, universal coefficient theorems, cohomology-ring
+laws, or cohomology-operation invariance.
 
 ## What Remains A Horizon
 
@@ -73,8 +75,9 @@ Cayley-Hamilton over arbitrary rings, Hilbert projection, Riesz representation,
 Hahn-Banach, stability or conditioning of numerical algorithms, asymptotic
 random-matrix laws, minimax approximation, general Smith normal form,
 classification of finitely generated abelian groups, homology invariance,
-universal coefficient theorems, cohomology operation laws, cohomology-ring
-quotienting, or cohomology invariance. Those claims remain Lean-horizon or
+universal coefficient theorems, exact sequences, Ext/Tor laws, cohomology
+operation laws, cohomology-ring quotienting, or cohomology invariance. Those
+claims remain Lean-horizon or
 numerical-honesty work until there is a kernel-checked or explicitly
 experimental artifact.
 
@@ -92,6 +95,7 @@ experimental artifact.
 - [Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md)
 - [Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md)
 - [Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md)
+- [Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md)
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md)
 - [Matrix Invariants](matrix-invariants-end-to-end.md)
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md)
@@ -116,6 +120,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/le
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0

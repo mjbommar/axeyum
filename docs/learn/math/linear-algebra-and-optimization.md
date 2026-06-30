@@ -33,6 +33,7 @@ Example packs:
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+- [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
@@ -118,6 +119,9 @@ positive-definite Hessian certificate by leading principal minors. The finite
 homology slice builds boundary matrices for a fixed simplicial complex,
 computes exact ranks, replays Betti numbers over `Q`, and checks a
 QF_LIA/Diophantine bad boundary coefficient certificate. The finite
+universal-coefficient shadow slice dualizes a one-entry integer boundary
+matrix, replays `H^1 = Z/2`, checks the fixed degree-one Hom/Ext row, and
+rejects a bad `H^1 = 0` identity with QF_UF/Alethe evidence. The finite
 convexity slice checks midpoint Jensen replay, finite-grid second differences,
 affine threshold monotonicity, and bad midpoint-convexity rejection over exact
 rational data. The finite
@@ -570,6 +574,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sp
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
@@ -617,6 +622,7 @@ replay, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
@@ -660,7 +666,8 @@ explicit numerical-honesty work, not consequences of these finite rows.
 General spectral theorems, rank theorems, vector-space dimension theorems,
 duality and bidual theorems, Cauchy-Schwarz and Gram-Schmidt as general
 theorems, Hilbert projection/Riesz representation results, topological duals,
-module theory,
+module theory, universal coefficient theorem schemas, exact sequences,
+Ext/Tor laws,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
 numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
 qualifications, and algorithm convergence need proof routes or carefully

@@ -167,5 +167,8 @@ remaining horizon -> general cup-product laws, cohomology rings, functoriality, 
 
 For the boundary and homology side of the same finite complex style, read
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md).
+For the integer Hom/Ext shadow that connects torsion homology to cohomology,
+read
+[End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md).
 For the finite cup-product operation on cochains, read
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md).

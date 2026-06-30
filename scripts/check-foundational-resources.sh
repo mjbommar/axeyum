@@ -52,6 +52,7 @@ python3 scripts/query-foundational-resources.py concepts --field topology --text
 python3 scripts/query-foundational-resources.py concepts --field topology --text homology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text torsion --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text cohomology --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text universal --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text cup --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route alethe --proof-status checked --require-any >/dev/null
@@ -69,6 +70,8 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_to
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_cohomology_replay --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_cohomology_replay --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_universal_coefficient_shadow --route alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_universal_coefficient_shadow --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_cup_product_replay --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_cup_product_replay --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
