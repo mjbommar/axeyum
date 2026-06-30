@@ -13275,6 +13275,11 @@ def validate_finite_random_variables(expected: dict[str, Any]) -> None:
         fail("bad-pushforward-rejected actual_distribution is incorrect")
     if claimed == actual:
         fail("bad-pushforward-rejected must document a false pushforward distribution")
+    require_string("bad pushforward smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad pushforward smt2_artifact", data["smt2_artifact"])
+    require_string("bad pushforward farkas_regression", data.get("farkas_regression"))
+    if "finite_random_variables_bad_pushforward_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-pushforward-rejected must link the Farkas regression")
 
     horizon = checks["general-random-variable-lean-horizon"]
     if horizon["expected_result"] != "not-run":

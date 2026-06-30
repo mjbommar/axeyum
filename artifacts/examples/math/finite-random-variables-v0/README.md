@@ -31,7 +31,8 @@ The validator checks normalized finite atom probabilities, verifies that each
 random variable is total on the atom set, recomputes pushforward probability
 mass by exact summation, recomputes expectation both from atoms and from the
 pushforward distribution, and checks independence by comparing a joint
-distribution to the product of its marginals.
+distribution to the product of its marginals. The false pushforward row is also
+mirrored by a QF_LRA/Farkas regression over the replay-computed outcome mass.
 
 This pack is checked finite evidence for the bad pushforward row. It is not a
 proof of general measurable-function theory, conditional expectation,

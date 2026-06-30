@@ -38,6 +38,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite random-variable bad pushforward QF_LRA/Farkas regression seed",
+    "pressure": "Malformed finite pushforward-distribution row where exact replay sums source atom mass 1/4 for the long outcome but the false distribution claims 1/2.",
+    "evidence": [
+      "bad-pushforward-rejected"
+    ],
+    "next_step": "Promote additional pushforward, expectation, or independence rows only when they add distinct exact-linear solver pressure; keep measurable random variables, conditional expectation, martingales, and continuous distributions in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -46,6 +55,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -58,7 +70,7 @@
   "graduation_criteria": [
     "Encode finite random variables as total finite functions from probability atoms to outcome labels.",
     "Replay finite pushforward, expectation, and independence witnesses through exact rational model evaluation.",
-    "Emit checked finite counterexample evidence for rejected pushforward-distribution claims.",
+    "Emit checked finite counterexample evidence for rejected pushforward-distribution claims; the bad pushforward row now has checked QF_LRA/Farkas evidence.",
     "Keep general measurable functions, conditional expectation, stochastic kernels, martingales, and continuous random variables marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

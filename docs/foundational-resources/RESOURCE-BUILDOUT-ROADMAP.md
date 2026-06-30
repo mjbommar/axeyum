@@ -41,7 +41,7 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 19 promoted solver-reuse packs.
+- 20 promoted solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -1000,7 +1000,12 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_probability_emits_checked_farkas`.
-15. Revisit the library boundary decision after the next four solver-reuse
+15. Landed: promote `finite-random-variables-v0` through a source-linked
+    QF_LRA/Farkas regression for `bad-pushforward-rejected`. The artifact
+    `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_random_variables_bad_pushforward_emits_checked_farkas`.
+16. Revisit the library boundary decision after the next three solver-reuse
     promotions and at least one downstream consumer use.
 
 ## Validation Checklist

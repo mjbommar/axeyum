@@ -719,9 +719,9 @@ marginals, finite Fubini replay, checked QF_LRA/Farkas rejection of a false
 product probability, and a Fubini/Tonelli Lean-horizon row.
 `artifacts/examples/math/finite-random-variables-v0/` now validates exact
 finite random-variable pushforwards, expectation through pushforward
-distributions, finite independence checks, checked rejection of a false
-pushforward distribution, and a general random-variable/conditional-expectation
-Lean-horizon row.
+distributions, finite independence checks, checked QF_LRA/Farkas rejection of
+a false pushforward distribution, and a general random-variable/conditional
+expectation Lean-horizon row.
 `artifacts/examples/math/finite-conditional-expectation-v0/` now validates
 exact finite partition conditional expectations, the law of total expectation,
 the finite tower property over nested partitions, checked QF_LRA/Farkas
@@ -1227,8 +1227,9 @@ statistics. `finite-product-measure-v0` now adds the exact finite product
 measure, marginalization, Fubini bridge, and checked QF_LRA/Farkas bad-product
 probability row toward general measure/probability theory.
 `finite-random-variables-v0` now adds the exact finite random-variable
-pushforward, expectation, and independence bridge toward probability/statistics
-and measure-theory semantics. `finite-conditional-expectation-v0` now adds the
+pushforward, expectation, independence bridge, and checked QF_LRA/Farkas
+bad-pushforward row toward probability/statistics and measure-theory semantics.
+`finite-conditional-expectation-v0` now adds the
 finite partition conditional-expectation, total-expectation, and tower-property
 bridge toward martingales and general conditional expectation.
 `finite-martingales-v0` now adds the exact finite filtration, martingale,

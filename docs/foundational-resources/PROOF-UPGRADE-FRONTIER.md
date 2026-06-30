@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 6 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 26 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 27 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -174,6 +174,9 @@ First targets:
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regression landed for the bad product-probability
   row after exact finite product replay computes the product mass)
+- [finite-random-variables-v0](../../artifacts/examples/math/finite-random-variables-v0/)
+  (resource-backed Farkas regression landed for the bad pushforward-distribution
+  row after exact finite random-variable replay computes the outcome mass)
 - [finite-markov-chain-v0](../../artifacts/examples/math/finite-markov-chain-v0/)
   (resource-backed Farkas regression landed for the bad stochastic row)
 - [finite-hitting-times-v0](../../artifacts/examples/math/finite-hitting-times-v0/)
@@ -222,7 +225,9 @@ Secondary targets:
   contribute a probability/statistics transition-row normalization regression.
   Finite product measure now contributes a measure-theory/product-probability
   exact-linear regression where the nonlinear product itself is replayed before
-  Farkas checks the final contradictory masses.
+  Farkas checks the final contradictory masses, and finite random variables now
+  contribute a pushforward-distribution regression with the same
+  replay-then-Farkas boundary.
 
 Expected artifact:
 

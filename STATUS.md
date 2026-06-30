@@ -231,6 +231,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `product_probability = 1/6` versus `product_probability = 1/5`; generated
   dashboards move promoted solver-reuse packs to 19.
 
+- **Finite random-variable QF_LRA promotion landed.**
+  [`finite-random-variables-v0`](artifacts/examples/math/finite-random-variables-v0/)
+  now links `bad-pushforward-rejected` to a source-level QF_LRA artifact for
+  the malformed pushforward-distribution row. The shared
+  `math_resource_lra_routes` regression emits and independently rechecks
+  Farkas evidence for `long_probability = 1/4` versus
+  `long_probability = 1/2`; generated dashboards move promoted solver-reuse
+  packs to 20.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,

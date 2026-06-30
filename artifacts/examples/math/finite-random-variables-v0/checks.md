@@ -27,7 +27,9 @@ every listed outcome pair.
 Expected result: `unsat`.
 
 The validator rejects the claimed pushforward distribution because the exact
-mass for `long` is `1/4`, not `1/2`.
+mass for `long` is `1/4`, not `1/2`. The source-linked QF_LRA artifact records
+the final exact-linear contradiction checked by the shared Farkas route
+regression.
 
 ## `general-random-variable-lean-horizon`
 

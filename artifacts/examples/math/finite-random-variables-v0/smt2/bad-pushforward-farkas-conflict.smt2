@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const long_probability Real)
+(assert (= long_probability (/ 1 4)))
+(assert (= long_probability (/ 1 2)))
+(check-sat)

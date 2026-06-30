@@ -274,11 +274,14 @@ Build sequence:
 18. `finite-product-measure-v0` now links `bad-product-measure-rejected` to
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-19. Route-specific tamper/rejection regressions now land for the active
+19. `finite-random-variables-v0` now links `bad-pushforward-rejected` to
+    `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`,
+    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+20. Route-specific tamper/rejection regressions now land for the active
     certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource
     certificates and require independent checker rejection.
-20. Revisit crate/repo boundaries only after three real consumers or repeated
+21. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

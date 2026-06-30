@@ -279,6 +279,20 @@ fn finite_product_measure_bad_probability_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_random_variables_bad_pushforward_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let long_probability = real(&mut arena, "long_probability");
+    let replay_computed_mass = eq_ratio(&mut arena, long_probability, 1, 4);
+    let false_claimed_mass = eq_ratio(&mut arena, long_probability, 1, 2);
+
+    assert_farkas_checked(
+        "finite-random-variables-v0 bad-pushforward-rejected",
+        &arena,
+        &[replay_computed_mass, false_claimed_mass],
+    );
+}
+
+#[test]
 fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let p10 = real(&mut arena, "p10");
