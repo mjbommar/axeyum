@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "pack_id": "unknown-witness-reference",
+  "witnesses": [],
+  "checks": [
+    {
+      "id": "uses-missing-witness",
+      "claim": "This row intentionally cites a missing witness.",
+      "expected_result": "sat",
+      "validation": "negative_fixture",
+      "proof_status": "checked",
+      "witnesses": ["missing-witness"],
+      "notes": "The validator must reject the missing witness reference."
+    }
+  ]
+}

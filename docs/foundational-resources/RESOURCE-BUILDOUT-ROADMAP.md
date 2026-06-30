@@ -974,8 +974,9 @@ Pick one item per commit unless the change is purely navigational.
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
-9. Add negative validator fixtures for one resource schema once the schema
-   shape stops changing.
+9. Landed: add negative validator fixtures for the foundational example-pack
+   schema, covering unknown fields, metadata/check id drift, and missing
+   witness references.
 10. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
     dashboards so status means current resource maturity, not historical state.
 11. Add one route-specific tamper/rejection test per proof certificate route.

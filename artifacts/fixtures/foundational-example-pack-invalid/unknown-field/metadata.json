@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "unknown-field",
+  "title": "Invalid Unknown Field Fixture",
+  "domain": "mathematics",
+  "claim_status": "template",
+  "trust_status": "template",
+  "concept_ids": ["field_logic_and_proof"],
+  "field_ids": ["imaginary_field"],
+  "curriculum_nodes": [],
+  "axeyum_fragments": ["Bool / SAT"],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/fixtures/foundational-example-pack-invalid/unknown-field",
+  "source_refs": [
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+  ],
+  "expected_results": [],
+  "graduation_criteria": [
+    "This fixture must remain invalid and must be rejected by the example-pack validator."
+  ]
+}

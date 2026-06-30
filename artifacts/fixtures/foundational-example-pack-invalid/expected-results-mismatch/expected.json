@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "pack_id": "expected-results-mismatch",
+  "witnesses": [],
+  "checks": [
+    {
+      "id": "actual-row",
+      "claim": "This row intentionally does not match metadata.expected_results.",
+      "expected_result": "sat",
+      "validation": "negative_fixture",
+      "proof_status": "checked",
+      "notes": "The validator must reject the metadata/check id mismatch before this row can be treated as evidence."
+    }
+  ]
+}

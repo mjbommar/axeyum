@@ -393,7 +393,12 @@ Next buildout:
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
    and concept queries including field-plus-proof-route discovery, and
    `check-foundational-resources.sh` runs a small query smoke set.
-13. Promote selected packs into solver regression/fuzz corpora with back-links
+13. Landed: add negative fixtures for the foundational example-pack schema.
+   `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
+   packs with unknown fields, metadata/check id drift, and missing witness
+   references fail with expected diagnostics; `check-foundational-resources.sh`
+   runs the negative-fixture check.
+14. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and
@@ -458,6 +463,7 @@ gate plus the generated-resource gate:
 git diff --check
 ./scripts/check-links.sh
 ./scripts/check-foundational-resources.sh
+python3 scripts/check-foundational-negative-fixtures.py
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/<pack>
 ```
 

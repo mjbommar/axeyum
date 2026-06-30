@@ -157,6 +157,10 @@ JSON contract has landed in `scripts/query-foundational-resources.py` and
 pack discovery, field-plus-proof-route discovery, checked-row mining,
 solver-reuse rows, and atlas concept lookup without importing validators or
 generators.
+The foundational example-pack validator now also has committed negative
+fixtures for unknown fields, metadata/check drift, and missing witness
+references, and `check-foundational-resources.sh` requires those invalid packs
+to fail with the expected diagnostics.
 The rules/law transfer lane now has a crosswalk from math resources to concrete
 policy/rule checks, with `benefit-eligibility-v0` mapped to finite predicates,
 Bool/QF_LIA thresholds, temporal versioning, replayed witnesses, and proof-route

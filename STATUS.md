@@ -887,6 +887,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   summary output, promoted solver-reuse rows, probability/Farkas route pack
   discovery, graph-theory UNSAT rows, and example-family atlas rows.
 
+- **Foundational example-pack negative fixtures landed.**
+  [`check-foundational-negative-fixtures.py`](scripts/check-foundational-negative-fixtures.py)
+  now requires three intentionally invalid example-pack fixtures under
+  [`artifacts/fixtures/foundational-example-pack-invalid/`](artifacts/fixtures/foundational-example-pack-invalid/)
+  to fail for the expected reasons: unknown `field_ids`,
+  `metadata.expected_results` drift from `expected.json`, and check rows that
+  cite missing witnesses. The normal
+  [`check-foundational-resources.sh`](scripts/check-foundational-resources.sh)
+  gate runs the negative-fixture check after validating the real math packs.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

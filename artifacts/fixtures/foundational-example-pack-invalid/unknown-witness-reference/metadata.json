@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "unknown-witness-reference",
+  "title": "Invalid Unknown Witness Reference Fixture",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": ["field_logic_and_proof"],
+  "field_ids": ["logic_and_proof"],
+  "curriculum_nodes": [],
+  "axeyum_fragments": ["Bool / SAT"],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/fixtures/foundational-example-pack-invalid/unknown-witness-reference",
+  "source_refs": [
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+  ],
+  "expected_results": ["uses-missing-witness"],
+  "graduation_criteria": [
+    "This fixture must remain invalid and must be rejected by the example-pack validator."
+  ]
+}

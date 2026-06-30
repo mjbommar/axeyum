@@ -1019,8 +1019,9 @@ cookbook route. The curriculum-pressure dashboard groups packs into overlapping
 Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and Lean-horizon buckets
 so solver/proof demand is visible without hand-maintained scans. `just
 foundational-resources` and the plain-shell fallback now regenerate the concept
-atlas, validate it, validate all math example packs, regenerate dashboards, and
-fail if generated atlas or dashboard files are stale; CI runs the same gate
+atlas, validate it, validate all math example packs, require committed invalid
+example-pack fixtures to fail with expected diagnostics, regenerate dashboards,
+and fail if generated atlas or dashboard files are stale; CI runs the same gate
 before docs link checking.
 
 Deliverables:
@@ -1038,7 +1039,9 @@ Exit criteria:
 - Validators run in the normal docs/check workflow or have a documented command.
   Status: landed through `just foundational-resources`,
   `scripts/check-foundational-resources.sh`, `just check`, `scripts/check.sh`,
-  and the CI docs-resources/docs-links job.
+  and the CI docs-resources/docs-links job. The example-pack validator now also
+  has negative fixtures for unknown fields, metadata/check id drift, and
+  missing witness references.
 - Dashboard output names gaps without manual editing.
 
 ### Phase M8: Library Boundary Decision

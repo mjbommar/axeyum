@@ -26,7 +26,7 @@ one generated dashboard change.
 |---|---|---|
 | R0 source anchor | curriculum node or field row | appears in `curriculum.toml` or `MATH-FIELDS.md` |
 | R1 concept row | atlas row with fields, prerequisites, fragments, gaps | `python3 scripts/validate-foundational-concepts.py` |
-| R2 example pack | `README.md`, `metadata.json`, `model.md`, `checks.md`, `expected.json` | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/<pack>` |
+| R2 example pack | `README.md`, `metadata.json`, `model.md`, `checks.md`, `expected.json` | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/<pack>` plus `python3 scripts/check-foundational-negative-fixtures.py` for committed invalid schema fixtures |
 | R3 learner path | focused lesson or named cluster page | `./scripts/check-links.sh` plus generated learner dashboard |
 | R4 checked evidence | replay, DRAT/LRAT, Farkas, Alethe, QF_BV DRAT, or Lean horizon | route-specific cargo test plus pack validator |
 | R5 solver reuse | regression, fuzz seed, benchmark slice, or explicit non-benchmark horizon | back-link from test/corpus metadata to resource pack |
@@ -219,14 +219,18 @@ Build sequence:
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
    and atlas concept lookup over the committed JSON data contract.
-13. Rules/law transfer now lands through
+13. Negative example-pack validator fixtures now land through
+    `scripts/check-foundational-negative-fixtures.py` and
+    `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
+    fields, metadata/check id drift, and missing witness references.
+14. Rules/law transfer now lands through
    [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md): finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes are
    mapped to concrete policy/rule checks before new rule packs are added.
    `benefit-eligibility-v0` now has checked Bool/QF_LIA fixtures for
    consistency, coverage, fixed no-exception monotonicity, and active-threshold
    implementation equivalence through `rules_as_code_examples`.
-14. First solver-reuse promotions landed: `logic-basics-v0` now links
+15. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
     `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS
