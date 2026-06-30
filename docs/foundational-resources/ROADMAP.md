@@ -585,7 +585,8 @@ validates exact rational midpoint convexity, finite-grid second differences,
 affine threshold monotonicity, checked bad midpoint-convexity rejection, and a
 general convex-analysis Lean-horizon row.
 [`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
-validates exact midpoint, collinearity, and squared-distance coordinate checks.
+validates exact midpoint, collinearity, squared-distance coordinate checks, and
+checked rejection of a bad squared-distance claim.
 [`affine-geometry-v0`](../../artifacts/examples/math/affine-geometry-v0/)
 validates exact affine point-image replay, midpoint preservation, collinearity
 preservation, checked rejection of false distance preservation, and an

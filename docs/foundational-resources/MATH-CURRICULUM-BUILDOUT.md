@@ -684,7 +684,8 @@ Jacobian chain-rule matrix replay, Hessian positive-definiteness by principal
 minors, checked rejection of a bad gradient, and a multivariable-calculus
 Lean-horizon row.
 `artifacts/examples/math/coordinate-geometry-v0/` now validates exact midpoint,
-collinearity, and squared-distance coordinate checks.
+collinearity, squared-distance coordinate checks, and checked QF_LRA/Farkas
+rejection of a bad squared-distance claim.
 `artifacts/examples/math/affine-geometry-v0/` now validates exact affine
 point-image replay, midpoint preservation, collinearity preservation, checked
 QF_LRA/Farkas rejection of a false affine distance-preservation claim, and a
@@ -829,8 +830,9 @@ Recommended order:
 7. `coordinate-geometry-v0`, `affine-geometry-v0`, and
    `orientation-area-geometry-v0`: collinearity, midpoint, distance
    constraints, affine maps, signed area/orientation, barycentric replay,
-   finite incidence preservation, QF_LRA/Farkas false distance-preservation
-   rejection, and QF_LRA/Farkas false orientation rejection.
+   finite incidence preservation, QF_LRA/Farkas false squared-distance
+   rejection, QF_LRA/Farkas false distance-preservation rejection, and
+   QF_LRA/Farkas false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior, metric-ball examples, and
    checked Bool/CNF bad-empty-open rejection.
 9. `finite-measure-v0`: finite sigma-algebras, finite measure checks, and
@@ -1376,8 +1378,9 @@ horizon.
 `coordinate-geometry-v0`, `affine-geometry-v0`, and
 `orientation-area-geometry-v0` now have a learner-facing end-to-end lesson for
 exact midpoint, collinearity, squared-distance, affine-map, signed-area,
-area-scaling, barycentric, checked QF_LRA/Farkas bad-distance, checked
-QF_LRA/Farkas bad-orientation, and general geometry Lean-horizon rows.
+area-scaling, barycentric, checked QF_LRA/Farkas bad squared-distance,
+checked QF_LRA/Farkas bad-distance-preservation, checked QF_LRA/Farkas
+bad-orientation, and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, checked Bool/CNF bad-empty-open rejection, finite

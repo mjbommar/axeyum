@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 35 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 36 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -255,6 +255,9 @@ First targets:
 - [affine-geometry-v0](../../artifacts/examples/math/affine-geometry-v0/)
   (resource-backed Farkas regression landed for the bad distance-preservation
   row)
+- [coordinate-geometry-v0](../../artifacts/examples/math/coordinate-geometry-v0/)
+  (source-linked Farkas regression landed for the bad squared-distance row
+  after exact coordinate replay computes the squared distance)
 - [inner-product-spaces-rational-v0](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
   (resource-backed Farkas regression landed for the bad negative-norm row)
 - [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
@@ -301,6 +304,9 @@ Secondary targets:
   boundary: replay the fixed quadratic discriminant, then let Farkas check the
   nonnegative-discriminant contradiction while keeping general SOS/CAD/RCF
   proof as a horizon.
+  Coordinate geometry now contributes the geometry version of the
+  replay-then-Farkas boundary: exact replay computes the squared distance, then
+  Farkas checks the final bad-distance equality conflict.
 
 Expected artifact:
 
@@ -314,6 +320,7 @@ Validation:
 cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
 cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
 ./scripts/check-foundational-resources.sh
 ```

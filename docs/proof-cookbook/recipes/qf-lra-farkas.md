@@ -102,6 +102,9 @@ Canonical examples:
 - [Rational Multivariable Calculus](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   uses a bad gradient-component row after exact bivariate polynomial derivative
   replay computes the gradient.
+- [Coordinate Geometry](../../../artifacts/examples/math/coordinate-geometry-v0/)
+  uses a bad squared-distance row after exact coordinate replay computes the
+  distance between two fixed points.
 - [Sequence And Limit Shadows](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
   uses a bounded Cauchy-tail row after exact finite replay computes the maximum
   pairwise distance.
@@ -164,3 +167,4 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [Rational Multivariable Calculus pack](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [Sequence And Limit Shadows pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [Rational Polynomial Factorization pack](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
+- [Coordinate Geometry pack](../../../artifacts/examples/math/coordinate-geometry-v0/)

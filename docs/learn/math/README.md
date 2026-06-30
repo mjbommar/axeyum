@@ -172,8 +172,8 @@ validated pack data and the repo-root command that replays it.
   tail-count certificate, and the statistical numerical-honesty horizon.
 - [Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md):
   follows exact midpoint, collinearity, distance, affine-map, area-scaling,
-  barycentric, QF_LRA/Farkas bad-distance, and QF_LRA/Farkas bad-orientation
-  checks.
+  barycentric, QF_LRA/Farkas bad squared-distance, QF_LRA/Farkas
+  bad-distance-preservation, and QF_LRA/Farkas bad-orientation checks.
 - [Rational Multivariable Calculus](multivariable-calculus-end-to-end.md):
   follows exact polynomial gradient replay, directional derivatives, Jacobian
   chain-rule matrix multiplication, Hessian minor checks, QF_LRA/Farkas

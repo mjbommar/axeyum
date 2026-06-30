@@ -164,7 +164,10 @@ M = (2, 1)
 
 The checker recomputes both midpoint coordinates. For optimization, encode
 linear constraints and a candidate assignment; the checker evaluates each
-constraint exactly.
+constraint exactly. The coordinate-geometry pack now also rejects a bad
+squared-distance claim: exact replay computes `25` for `(1,1)` to `(4,5)`,
+while the source QF_LRA artifact checks the malformed claim `26` with
+`UnsatFarkas` evidence.
 
 Run the checks from the repository root:
 
@@ -181,6 +184,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0

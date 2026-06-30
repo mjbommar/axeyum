@@ -43,6 +43,9 @@ const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
 const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2"
 );
+const COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED: &str = include_str!(
+    "../../../artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -358,6 +361,14 @@ fn multivariable_calculus_bad_gradient_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "multivariable-calculus-rational-v0 bad-gradient SMT-LIB artifact",
         MULTIVARIABLE_CALCULUS_BAD_GRADIENT,
+    );
+}
+
+#[test]
+fn coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "coordinate-geometry-v0 bad-distance-squared SMT-LIB artifact",
+        COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED,
     );
 }
 

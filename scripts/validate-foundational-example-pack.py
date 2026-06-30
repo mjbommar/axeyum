@@ -10796,6 +10796,42 @@ def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     if (qx - px) * (qx - px) + (qy - py) * (qy - py) != claimed:
         fail("distance-squared witness does not match point coordinates")
 
+    bad_distance = checks["bad-distance-squared-rejected"]
+    if bad_distance["expected_result"] != "unsat" or bad_distance.get("proof_status") != "checked":
+        fail("bad-distance-squared-rejected must be a checked unsat row")
+    data = bad_distance.get("data", {})
+    p = require_point2("bad coordinate distance p", data.get("p"))
+    q = require_point2("bad coordinate distance q", data.get("q"))
+    computed = require_fraction(
+        "bad coordinate computed_distance_squared",
+        data.get("computed_distance_squared"),
+    )
+    claimed = require_fraction(
+        "bad coordinate claimed_distance_squared",
+        data.get("claimed_distance_squared"),
+    )
+    if distance_squared2(p, q) != computed:
+        fail("bad-distance-squared-rejected computed distance is incorrect")
+    if computed == claimed:
+        fail("bad-distance-squared-rejected must document a false distance claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad coordinate smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/coordinate-geometry-v0/smt2/"
+        "bad-distance-squared-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-distance-squared-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad coordinate smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad coordinate farkas_regression", regression)
+    if "coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas" not in regression:
+        fail("bad-distance-squared-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad coordinate certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-distance-squared-rejected certificate must document Farkas evidence")
+
 
 def validate_affine_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)

@@ -57,6 +57,23 @@
       "proof_status": "replay-only",
       "witnesses": ["distance-points"],
       "notes": "The validator recomputes squared Euclidean distance exactly."
+    },
+    {
+      "id": "bad-distance-squared-rejected",
+      "claim": "The listed squared distance between the two fixed points is 26.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_coordinate_bad_distance_refutation",
+      "proof_status": "checked",
+      "data": {
+        "p": ["1", "1"],
+        "q": ["4", "5"],
+        "computed_distance_squared": "25",
+        "claimed_distance_squared": "26",
+        "smt2_artifact": "artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact coordinate replay computes squared distance 25, while the malformed row claims 26; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
     }
   ]
 }

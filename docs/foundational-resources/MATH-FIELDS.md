@@ -156,7 +156,8 @@ one of:
      infeasibility certificate.
 7. `artifacts/examples/math/coordinate-geometry-v0/`
    - Fields: `geometry`, `linear_algebra`, `real_analysis`.
-   - Checks: midpoint, collinearity determinant, squared-distance replay.
+   - Checks: midpoint, collinearity determinant, squared-distance replay,
+     checked bad squared-distance rejection.
 8. `artifacts/examples/math/finite-topology-v0/`
    - Fields: `topology`, `set_theory_and_foundations`, `real_analysis`.
    - Checks: finite topology axioms, closure/interior, metric-ball replay,

@@ -36,5 +36,20 @@ For `P = (1, 1)` and `Q = (4, 5)`, the squared distance is:
 (4 - 1)^2 + (5 - 1)^2 = 25
 ```
 
+### Bad Squared-Distance Claim
+
+The promoted bad row keeps the same fixed points but claims:
+
+```text
+distance_squared(P, Q) = 26
+```
+
+Exact replay computes `25`; the QF_LRA artifact checks only the final conflict:
+
+```text
+distance_squared = 25
+distance_squared = 26
+```
+
 These fixed checks are exact coordinate replay targets. They are not general
 theorems about Euclidean geometry.

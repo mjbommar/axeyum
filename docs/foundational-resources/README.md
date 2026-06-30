@@ -298,7 +298,7 @@ schemas, examples, and validation workflows.
   rejection, and a general convex-analysis Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
-  checks.
+  checks, plus checked rejection of a bad squared-distance claim.
 - [`artifacts/examples/math/affine-geometry-v0/`](../../artifacts/examples/math/affine-geometry-v0/)
   validates exact affine point-image replay, midpoint preservation,
   collinearity preservation, checked rejection of false distance preservation,

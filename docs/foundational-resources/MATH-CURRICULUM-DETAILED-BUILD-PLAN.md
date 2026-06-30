@@ -37,12 +37,12 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 418 expected checks.
-- 200 checked proof/evidence rows.
+- 419 expected checks.
+- 201 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 80 promoted solver-reuse packs.
-- 4 non-benchmark-horizon solver-reuse packs.
+- 81 promoted solver-reuse packs.
+- 3 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -97,7 +97,6 @@ Recently classified as explicit non-benchmark-horizon rows:
 |---|---|
 | `bounded-dynamics-v0` | add a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact |
 | `complex-algebraic-v0` | add a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact |
-| `coordinate-geometry-v0` | add a false collinearity, midpoint, distance, or incidence row with a source-linked QF_LRA/NRA artifact |
 | `finite-operator-v0` | add a false operator-bound, norm inequality, or recurrence row with a source-linked exact-rational artifact |
 
 Exit criteria:
@@ -214,7 +213,7 @@ Exit criteria:
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | add route notes from LP to Farkas and from Hessians to exact matrix checks | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | upgrade bounded dynamics from non-benchmark only with checked invariant/transition counterexamples | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, affine, orientation/area rational geometry | upgrade coordinate geometry from non-benchmark only with source-linked incidence/distance conflicts | QF_LRA/Farkas, finite replay |
+| `geometry` | coordinate, affine, orientation/area rational geometry | coordinate geometry now has a checked bad squared-distance row; add only distinct incidence, collinearity, midpoint, or rigid-configuration pressure | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | keep finite-dimensional operator replay non-benchmark until a checked bad-bound row exists | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
@@ -288,8 +287,8 @@ Pick one row per commit unless the change is purely navigational.
    source-level conflicts where the route is clear.
 17. Landed: promote `finite-topology-v0` through a source-linked
    missing-empty-set Bool/CNF DIMACS artifact and DRAT/LRAT route regression.
-18. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
-   conflict through QF_LRA/Farkas.
+18. Landed: promote `coordinate-geometry-v0` through a source-linked bad
+   squared-distance QF_LRA/Farkas artifact and route regression.
 19. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
 20. Add a generated or query-based audit for unclassified solver-reuse packs if

@@ -529,13 +529,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bad-empty-open-rejected.cnf` isolates the malformed open-set table that
   omits the empty set against the topology axiom requiring it, and
   `math_resource_boolean_routes::finite_topology_bad_empty_open_emits_checked_drat_and_lrat`
-  checks emitted DRAT plus elaborated LRAT evidence. Generated dashboards now
-  report 80 promoted, 4 non-benchmark-horizon, and 0 unclassified solver-reuse
-  packs.
+  checks emitted DRAT plus elaborated LRAT evidence. Generated dashboards then
+  reported 80 promoted, 4 non-benchmark-horizon, and 0 unclassified
+  solver-reuse packs.
+
+- **Coordinate-geometry QF_LRA/Farkas promotion landed.**
+  `coordinate-geometry-v0` now carries promoted `solver_reuse` metadata for
+  its bad squared-distance row. The new source-level artifact
+  `bad-distance-squared-farkas-conflict.smt2` isolates exact replay's computed
+  squared distance `25` against the malformed claim `26`, and
+  `math_resource_lra_routes::coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  81 promoted, 3 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 80-promoted, 4 non-benchmark-horizon, and
+  now records the refreshed 81-promoted, 3 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -1000,8 +1009,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It now records the current committed baseline of 65 concept
-  rows, 84 non-template packs, 418 expected checks, 200 checked rows, 171
-  replay-only rows, 47 Lean-horizon rows, and 80 promoted solver-reuse packs,
+  rows, 84 non-template packs, 419 expected checks, 201 checked rows, 171
+  replay-only rows, 47 Lean-horizon rows, and 81 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
   Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
@@ -11771,7 +11780,15 @@ plan is built and committed on the current branch:
   for the bad empty-open row and wired it into `math_resource_boolean_routes`.
   The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
   row records the checked DRAT/LRAT certificate path, and generated dashboards
-  report 80 promoted, 4 non-benchmark-horizon, and 0 unclassified packs.
+  then reported 80 promoted, 4 non-benchmark-horizon, and 0 unclassified packs.
+
+- **2026-06-30** — **Coordinate-geometry QF_LRA promotion landed.** Added
+  `artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2`
+  for the bad squared-distance row and wired it into `math_resource_lra_routes`.
+  The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
+  row records the checked `UnsatFarkas` certificate path, and generated
+  dashboards report 81 promoted, 3 non-benchmark-horizon, and 0 unclassified
+  packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

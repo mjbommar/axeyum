@@ -20,3 +20,12 @@ Expected result: `sat`.
 
 The validator recomputes the squared distance between `(1, 1)` and `(4, 5)` and
 checks it is exactly `25`.
+
+## `bad-distance-squared-rejected`
+
+Expected result: `unsat`.
+
+The fixed points are still `(1, 1)` and `(4, 5)`, so exact replay computes
+squared distance `25`. The malformed row claims the same squared distance is
+`26`; the source SMT-LIB artifact isolates that final exact-linear conflict and
+the QF_LRA route checks Farkas evidence.

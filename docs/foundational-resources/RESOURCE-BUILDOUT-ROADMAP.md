@@ -40,12 +40,12 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 418 expected checks.
-- 200 checked proof/evidence rows.
+- 419 expected checks.
+- 201 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 80 promoted solver-reuse packs.
-- 4 non-benchmark-horizon solver-reuse packs.
+- 81 promoted solver-reuse packs.
+- 3 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
@@ -858,8 +858,10 @@ Build next:
 - Add concept rows for midpoint, distance, collinearity, affine map, incidence,
   barycentric coordinate, signed area, orientation, determinant scaling,
   isometry shadow, and rigidity horizon.
-- Promote false affine/distance/orientation claims through QF_LRA/Farkas or
-  NRA when exact rational polynomial constraints suffice.
+- Keep `coordinate-geometry-v0`'s promoted bad squared-distance row tied to
+  exact replay plus the source QF_LRA/Farkas artifact.
+- Promote additional false affine/distance/orientation/incidence claims through
+  QF_LRA/Farkas or NRA when exact rational polynomial constraints suffice.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
 

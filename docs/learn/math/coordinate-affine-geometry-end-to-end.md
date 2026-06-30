@@ -23,6 +23,7 @@ Concept rows:
 | `midpoint-witness` | `sat` | replay-only |
 | `collinearity-witness` | `sat` | replay-only |
 | `distance-squared-witness` | `sat` | replay-only |
+| `bad-distance-squared-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `affine-map-point-witness` | `sat` | replay-only |
 | `affine-midpoint-preservation` | `sat` | replay-only |
 | `affine-collinearity-preservation` | `sat` | replay-only |
@@ -68,6 +69,32 @@ distance^2 = (4 - 1)^2 + (5 - 1)^2 = 3^2 + 4^2 = 25
 ```
 
 These are finite coordinate calculations, not diagram reasoning.
+
+## Reject A Bad Squared Distance
+
+The coordinate-geometry bad row keeps the same fixed points:
+
+```text
+P = (1,1)
+Q = (4,5)
+```
+
+Exact replay computes:
+
+```text
+distance^2(P,Q) = 25
+```
+
+The malformed row claims `distance^2(P,Q) = 26`. The source QF_LRA artifact
+checks only the final exact-linear contradiction:
+
+```text
+distance_squared = 25
+distance_squared = 26
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
 
 ## Replay An Affine Map
 
@@ -235,6 +262,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 ```
